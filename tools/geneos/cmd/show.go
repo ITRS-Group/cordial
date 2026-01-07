@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 type showCmdInstanceConfig struct {
@@ -99,29 +100,29 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdValidate {
-			instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Write(output,
-				instance.WriterPrefix("### validation results for %s\n\n"),
-				instance.WriterSuffix("\n\n"),
-				instance.WriterPlainValue(),
+			instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
+				responses.Prefix("### validation results for %s\n\n"),
+				responses.Suffix("\n\n"),
+				responses.PlainValue(),
 			)
 			return
 		}
 
 		if showCmdSetup {
-			instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Write(output,
-				instance.WriterPrefix("<!-- configuration for %s -->\n\n"),
-				instance.WriterSuffix("\n\n"),
-				instance.WriterPlainValue(),
+			instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
+				responses.Prefix("<!-- configuration for %s -->\n\n"),
+				responses.Suffix("\n\n"),
+				responses.PlainValue(),
 			)
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, showInstance).Write(os.Stdout, instance.WriterIndent(true))
+		instance.Do(geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
 		return
 	},
 }
 
-func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 	cf := i.Config()
 
 	setup := cf.GetString("setup")
@@ -191,8 +192,8 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *instance.Resp
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -259,8 +260,8 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *instance.Respon
 	return
 }
 
-func showInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func showInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	// remove aliases
 	nv := config.New()

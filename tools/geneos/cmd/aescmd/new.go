@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var newCmdKeyfile config.KeyFile
@@ -108,7 +109,7 @@ geneos aes new -S gateway
 					return err
 				}
 				for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-					instance.Do(h, ct, names, aesNewSetInstanceShared, crc).Write(os.Stdout)
+					instance.Do(h, ct, names, aesNewSetInstanceShared, crc).Report(os.Stdout)
 				}
 			}
 		} else if newCmdUpdate {
@@ -116,7 +117,7 @@ geneos aes new -S gateway
 			h := geneos.GetHost(cmd.Hostname)
 
 			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				instance.Do(h, ct, names, aesNewSetInstance, kv).Write(os.Stdout)
+				instance.Do(h, ct, names, aesNewSetInstance, kv).Report(os.Stdout)
 			}
 		} else {
 			fmt.Print(kv.String())
@@ -126,8 +127,8 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
 		return
@@ -144,12 +145,12 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *instance.Respons
 		return
 	}
 
-	resp.Line = fmt.Sprintf("keyfile written to %q", keyfile)
+	resp.Summary = fmt.Sprintf("keyfile written to %q", keyfile)
 	return
 }
 
-func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -173,9 +174,9 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *instance.R
 	instance.RollAESKeyFile(i, kv, "-prev")
 	pkp := i.Config().GetString("prevkeyfile")
 	if pkp != "" {
-		resp.Line = fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp)
+		resp.Summary = fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp)
 	} else {
-		resp.Line = fmt.Sprintf("keyfile %q written\n", keyfile)
+		resp.Summary = fmt.Sprintf("keyfile %q written\n", keyfile)
 	}
 	return
 }

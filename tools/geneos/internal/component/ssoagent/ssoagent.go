@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -41,6 +42,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "webserver"
@@ -212,12 +214,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(s, 0)
-	if resp.Err == nil {
-		for _, line := range resp.Lines {
-			fmt.Println(line)
-		}
-	}
+	instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 
 	// copy default configs
 	dir, err := os.Getwd()

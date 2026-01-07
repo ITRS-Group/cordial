@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 // The Instance type is the common data shared by all instances
@@ -173,12 +174,12 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
 	var wg sync.WaitGroup
 
 	instances := Instances(h, ct, FilterNames(names...))
-	responses = make(Responses, len(instances))
-	ch := make(chan *Response, len(instances))
+	rs = make(responses.Responses, len(instances))
+	ch := make(chan *responses.Response, len(instances))
 
 	for _, c := range instances {
 		wg.Add(1)
@@ -194,7 +195,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	close(ch)
 
 	for resp := range ch {
-		responses[resp.Instance.String()] = resp
+		rs[resp.Instance.String()] = resp
 	}
 
 	return

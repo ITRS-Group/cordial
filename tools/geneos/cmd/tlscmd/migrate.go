@@ -29,6 +29,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var migrateCmdDays int
@@ -59,7 +60,7 @@ var migrateCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceCert).Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceCert).Report(os.Stdout)
 	},
 }
 
@@ -68,8 +69,8 @@ var migrateCmd = &cobra.Command{
 // * use certchain to create a full chain in certificate file (without root)
 // * update params from certificate/privatekey/certchain to tls::certificate etc.
 // * update trusted-roots with new roots found in certchain
-func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 	h := i.Host()
@@ -147,6 +148,6 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	return
 }
 
-func migrateNonInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
+func migrateNonInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	return
 }

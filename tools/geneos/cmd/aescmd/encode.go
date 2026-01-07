@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var encodeCmdKeyfile config.KeyFile
@@ -149,8 +150,8 @@ var encodeCmd = &cobra.Command{
 				}
 			}
 
-			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
-				resp = instance.NewResponse(i)
+			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+				resp = responses.NewResponse(i)
 				if !i.Type().UsesKeyfiles {
 					return
 				}
@@ -193,7 +194,7 @@ var encodeCmd = &cobra.Command{
 				resp.Completed = append(resp.Completed, fmt.Sprintf("app key written to %s", dest))
 
 				return
-			}).Write(os.Stdout)
+			}).Report(os.Stdout)
 			return
 		}
 
@@ -234,8 +235,8 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			if len(params) == 0 {
 				resp.Err = geneos.ErrInvalidArgs
@@ -261,7 +262,7 @@ var encodeCmd = &cobra.Command{
 			}
 			resp.Completed = append(resp.Completed, e)
 			return
-		}, plaintext).Write(os.Stdout)
+		}, plaintext).Report(os.Stdout)
 		return
 	},
 }

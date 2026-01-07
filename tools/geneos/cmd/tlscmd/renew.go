@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var renewCmdDays int
@@ -75,17 +76,17 @@ var renewCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
 	},
 }
 
 var chainUpdateMutex sync.Mutex
 
 // renew an instance certificate, reuse private key if it exists
-func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
+func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	var err error
 
-	resp = instance.NewResponse(i)
+	resp = responses.NewResponse(i)
 	cf := i.Config()
 
 	confDir := config.AppConfigDir()
@@ -192,7 +193,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 
-		resp.Lines = []string{
+		resp.Details = []string{
 			fmt.Sprintf("certificate created for %s", i),
 			fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
 			fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),

@@ -20,6 +20,7 @@ package ac2
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "ac2"
@@ -194,10 +196,7 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
+	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)

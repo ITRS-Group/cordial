@@ -43,6 +43,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var backupCmdOutput string
@@ -219,7 +220,7 @@ geneos backup all
 		if archive != "-" {
 			out2 = os.Stdout
 		}
-		resp.Write(out2)
+		resp.Report(out2)
 		if backupCmdIncludeShared {
 			fmt.Println("matching shared directories also included")
 		}
@@ -300,10 +301,10 @@ geneos backup all
 // getInstanceFilePaths returns a list of paths to backup for the
 // instance and returns the results in the string slice pointer in
 // params[0].
-func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *instance.Response) {
+func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Response) {
 	var ignoreDirs, ignoreFiles []string
 
-	resp = instance.NewResponse(i)
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 	ct := i.Type()

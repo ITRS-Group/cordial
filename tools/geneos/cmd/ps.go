@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -83,7 +84,7 @@ var psCmd = &cobra.Command{
 func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Write(os.Stdout, instance.WriterIndent(psCmdIndent))
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Report(os.Stdout, responses.IndentJSON(psCmdIndent))
 	case psCmdToolkit:
 		psCSVWriter := csv.NewWriter(os.Stdout)
 
@@ -154,7 +155,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		}
 		psCSVWriter.Write(columns)
 		resp := instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV)
-		resp.Write(psCSVWriter, instance.WriterIgnoreErr(geneos.ErrDisabled))
+		resp.Report(psCSVWriter, responses.IgnoreErr(geneos.ErrDisabled))
 		switch {
 		case psCmdShowNet:
 		case psCmdShowFiles:
@@ -204,7 +205,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			)
 		}
 		psCSVWriter.Write(columns)
-		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Write(psCSVWriter)
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Report(psCSVWriter)
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdShowNet {
@@ -220,7 +221,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		} else {
 			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\n")
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain).Write(psTabWriter)
+		instance.Do(geneos.GetHost(Hostname), ct, names, psInstancePlain).Report(psTabWriter)
 	}
 }
 
@@ -256,8 +257,8 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 	return
 }
 
-func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
@@ -280,7 +281,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 				if c.RemotePort != 0 {
 					remPort = fmt.Sprint(c.RemotePort)
 				}
-				resp.Lines = append(resp.Lines,
+				resp.Details = append(resp.Details,
 					fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
 						i.Type(),
 						i.Name(),
@@ -310,7 +311,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			return
 		}
 		uid, gid := i.Host().GetFileOwner(hs)
-		resp.Lines = append(resp.Lines,
+		resp.Details = append(resp.Details,
 			fmt.Sprintf("%s\t%s\t%s\tcwd\t%d\t%s\t%s:%s\t%d\t%s\t%s",
 				i.Type(),
 				i.Name(),
@@ -339,7 +340,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 				if m&0200 == 0200 {
 					fdPerm += "w"
 				}
-				resp.Lines = append(resp.Lines,
+				resp.Details = append(resp.Details,
 					fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s:%s\t%d\t%s\t%s",
 						i.Type(),
 						i.Name(),
@@ -372,7 +373,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 
 	p := &instance.ProcessStats{}
 	if err := instance.ProcessStatus(i, p); err == nil && psCmdLong {
-		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+		resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
 			i.Type(),
 			i.Name(),
 			i.Host(),
@@ -398,7 +399,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			p.CStime.Seconds(),
 		)
 	} else {
-		resp.Line = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
+		resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
 			i.Type(),
 			i.Name(),
 			i.Host(),
@@ -417,8 +418,8 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
-func psInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
 		resp.Err = err
@@ -661,8 +662,8 @@ type psInstanceNetwork struct {
 	RXQueue    int64  `json:"rx_queue"`
 }
 
-func psInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
 	if err != nil {
 		return

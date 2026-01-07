@@ -19,6 +19,7 @@ package ca3
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -32,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "ca3"
@@ -206,10 +208,7 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
+	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 
 	// copy default configs
 	dir, err := os.Getwd()

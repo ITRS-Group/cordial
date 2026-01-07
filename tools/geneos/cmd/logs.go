@@ -34,6 +34,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -104,12 +105,12 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Write(os.Stdout)
+			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Report(os.Stdout)
 		case logCmdFollow:
 			// never returns
 			err = followLogs(ct, names, logCmdStderr)
 		default:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance).Write(os.Stdout)
+			instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance).Report(os.Stdout)
 		}
 
 		return
@@ -161,8 +162,8 @@ func outHeaderString(i geneos.Instance, path string) (lines []string) {
 	return
 }
 
-func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
 		lines, err := logTailInstanceFile(i, instance.ComponentFilepath(i, "txt"))
@@ -170,7 +171,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Lines = lines
+		resp.Details = lines
 	}
 
 	if !logCmdNoNormal {
@@ -179,7 +180,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Lines = append(resp.Lines, lines...)
+		resp.Details = append(resp.Details, lines...)
 	}
 
 	if logCmdCALog && i.Type().IsA("netprobe") {
@@ -188,7 +189,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Lines = append(resp.Lines, lines...)
+		resp.Details = append(resp.Details, lines...)
 	}
 
 	return
@@ -343,11 +344,11 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
-		if resp.Lines, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
+		if resp.Details, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
 			return
 		}
 	}
@@ -357,7 +358,7 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Lines = append(resp.Lines, lines...)
+		resp.Details = append(resp.Details, lines...)
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
 		lines, err := logCatInstanceFile(i, instance.PathTo(i, "calogfile"))
@@ -365,7 +366,7 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Lines = append(resp.Lines, lines...)
+		resp.Details = append(resp.Details, lines...)
 	}
 	return
 }
@@ -388,8 +389,8 @@ func logCatInstanceFile(i geneos.Instance, logfile string) (lines []string, err 
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
 		if err := logFollowInstanceFile(i, instance.ComponentFilepath(i, "txt")); err != nil {

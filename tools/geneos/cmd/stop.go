@@ -23,6 +23,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -53,13 +54,13 @@ var stopCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 			return
-		}).Write(os.Stdout,
-			instance.WriterShowTimes(),
-			instance.WriterTimingFormat("%s stopped in %.2fs\n"),
+		}).Report(os.Stdout,
+			responses.ShowTimes(),
+			responses.TimingFormat("%s stopped in %.2fs\n"),
 		)
 	},
 }

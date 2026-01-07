@@ -23,6 +23,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -52,8 +53,8 @@ var enableCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			if !instance.IsDisabled(i) {
 				return
@@ -66,6 +67,6 @@ var enableCmd = &cobra.Command{
 				}
 			}
 			return
-		}).Write(os.Stdout)
+		}).Report(os.Stdout)
 	},
 }

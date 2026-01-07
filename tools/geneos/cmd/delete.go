@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -56,12 +57,12 @@ var deleteCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(command)
-		instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance).Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance).Report(os.Stdout)
 	},
 }
 
-func deleteInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if instance.IsProtected(i) && !deleteCmdForce {
 		resp.Err = geneos.ErrProtected

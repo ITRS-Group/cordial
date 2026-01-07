@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "netprobe"
@@ -206,10 +207,8 @@ func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
+	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
+
 	// default config XML etc.
 	return nil
 }

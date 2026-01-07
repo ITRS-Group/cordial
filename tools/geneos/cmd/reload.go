@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 func init() {
@@ -50,12 +51,12 @@ var reloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, ReloadInstance)
-		responses.Write(os.Stdout)
+		responses.Report(os.Stdout)
 	},
 }
 
-func ReloadInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func ReloadInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if err := i.Reload(); err == nil {
 		resp.Completed = append(resp.Completed, "reload signal sent")

@@ -20,6 +20,7 @@ package floating
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "floating"
@@ -234,10 +236,7 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(s, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
+	instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 
 	// s.Rebuild(true)
 

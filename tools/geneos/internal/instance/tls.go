@@ -33,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 // NewCertificate creates a new certificate for an instance.
@@ -44,16 +45,16 @@ import (
 // this also creates a new private key
 //
 // skip if certificate exists and is valid
-func NewCertificate(i geneos.Instance, days int) (resp *Response) {
+func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 	cf := i.Config()
 
-	resp = NewResponse(i)
+	resp = responses.NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
 	cert, err := ReadCertificate(i)
 	if err == nil {
 		if certs.ValidLeafCert(cert) {
-			resp.Line = "certificate already exists and is valid (use the `renew` command to overwrite)"
+			resp.Summary = "certificate already exists and is valid (use the `renew` command to overwrite)"
 			return
 		}
 	}
@@ -113,8 +114,9 @@ func NewCertificate(i geneos.Instance, days int) (resp *Response) {
 		return
 	}
 
-	// resp.Completed = append(resp.Completed, fmt.Sprintf("certificate created, expires %s", expires.UTC().Format(time.RFC3339)))
-	resp.Lines = []string{
+	resp.Summary = fmt.Sprintf("certificate created, expires %s", expires.UTC().Format(time.RFC3339))
+
+	resp.Details = []string{
 		fmt.Sprintf("certificate created for %s", i),
 		fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
 		fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),

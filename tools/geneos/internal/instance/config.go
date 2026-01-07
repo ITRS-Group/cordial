@@ -35,6 +35,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 // ConfigFileType returns the configuration file extension, defaulting
@@ -443,8 +444,8 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 // and renames the .rc file to .rc.orig to allow Revert to work.
 //
 // Also now check if instance directory path has changed. If so move it.
-func Migrate(i geneos.Instance) (resp *Response) {
-	resp = NewResponse(i)
+func Migrate(i geneos.Instance) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 
@@ -458,7 +459,7 @@ func Migrate(i geneos.Instance) (resp *Response) {
 		if resp.Err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
-		resp.Line = fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe)
+		resp.Summary = fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe)
 	}
 
 	// only migrate if labelled as a .rc file

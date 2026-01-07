@@ -20,6 +20,7 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "gateway"
@@ -264,10 +266,7 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(g, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
+	instance.NewCertificate(g, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 
 	// always create a keyfile ?
 	if err = instance.CreateAESKeyFile(g); err != nil {

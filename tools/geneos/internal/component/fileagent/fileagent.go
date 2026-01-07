@@ -199,7 +199,7 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	// create certs, report success only
 	resp := instance.NewCertificate(n, 0)
 	if resp.Err == nil {
-		fmt.Println(resp.Line)
+		fmt.Println(resp.Summary)
 	}
 
 	// default config XML etc.

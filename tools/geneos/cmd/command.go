@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 
 	"github.com/spf13/cobra"
 )
@@ -60,17 +61,17 @@ var commandCmd = &cobra.Command{
 		ct, names := ParseTypeNames(cmd)
 		if commandCmdJSON {
 			results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
-			results.Write(os.Stdout, instance.WriterIndent(true))
+			results.Report(os.Stdout, responses.IndentJSON(true))
 			return nil
 		}
 		results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
-		results.Write(os.Stdout)
+		results.Report(os.Stdout)
 		return
 	},
 }
 
-func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func commandInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
@@ -102,7 +103,7 @@ func commandInstance(i geneos.Instance, params ...any) (resp *instance.Response)
 		lines = append(lines, fmt.Sprint("\t", e))
 	}
 	lines = append(lines, "")
-	resp.Lines = lines
+	resp.Details = lines
 	return
 }
 
@@ -116,8 +117,8 @@ type command struct {
 	Home     string   `json:"directory"`
 }
 
-func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	cmd, err := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	if err != nil {

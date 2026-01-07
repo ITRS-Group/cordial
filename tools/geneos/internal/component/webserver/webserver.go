@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "webserver"
@@ -211,10 +212,7 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(w, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Lines)
-	}
+	instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
 
 	// copy default configs
 	dir, err := os.Getwd()

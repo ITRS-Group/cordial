@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package instance
+package responses
 
 import (
 	"bytes"
@@ -32,9 +32,10 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 // Responses is a collection of command responses, the key is typically
@@ -45,13 +46,13 @@ type Responses map[string]*Response
 // Response is a consolidated set of responses from commands
 type Response struct {
 	Instance  geneos.Instance
-	Line      string     // single line response,
-	Lines     []string   // Lines of output
+	Summary   string     // single line response
+	Details   []string   // multiple lines of output
+	Completed []string   // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
+	Value     any        // arbitrary value (typically for JSON output)
 	Rows      [][]string // rows of values (for CSV)
-	Value     any
 	Start     time.Time
 	Finish    time.Time
-	Completed []string // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
 	Err       error
 }
 
@@ -100,26 +101,26 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 	}
 
 	switch {
-	case r1.Line != "" && r2.Line != "":
-		resp.Lines = append(resp.Lines, r1.Line, r2.Line)
-	case r1.Line != "":
-		resp.Line = r1.Line
-	case r2.Line != "":
-		resp.Line = r2.Line
+	case r1.Summary != "" && r2.Summary != "":
+		resp.Details = append(resp.Details, r1.Summary, r2.Summary)
+	case r1.Summary != "":
+		resp.Summary = r1.Summary
+	case r2.Summary != "":
+		resp.Summary = r2.Summary
 	}
 
-	r1.Lines = append(r1.Lines, r2.Lines...)
+	r1.Details = append(r1.Details, r2.Details...)
 	return
 }
 
-// Report outputs the responses as a report in the specified format to
+// Formatted outputs the responses as a report in the specified format to
 // writer w. headings are the column headings to use. prequel is any
 // rows to add before the response rows.
 //
 // options are any reporter.ReporterOptions to control the output.
 //
 // If any response has a non-nil Err field then it is skipped.
-func (responses Responses) Report(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
+func (responses Responses) Formatted(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
 	r, err := reporter.NewReporter(format, w, options...)
 	if err != nil {
 		return err
@@ -150,12 +151,12 @@ func (responses Responses) Report(w io.Writer, format string, headings []string,
 	return nil
 }
 
-// Write iterates over responses and outputs a formatted response to
+// Report iterates over responses and outputs a formatted response to
 // writer.
 //
-// If instance.WriterSkipOnErr(true) is set then any response with a
+// If responses.WriterSkipOnErr(true) is set then any response with a
 // non-nil Err field, where errors are not ignored with
-// instance.WriterIgnoreErr() or instance.WriterIgnoreErrs(), then the
+// responses.WriterIgnoreErr() or responses.WriterIgnoreErrs(), then the
 // other outputs are skipped (even if the error writer is the default
 // io.Discard). Errors then written as described below.
 //
@@ -172,13 +173,13 @@ func (responses Responses) Report(w io.Writer, format string, headings []string,
 // elements are output with a trailing newline. Any newline already
 // present is removed to ensure only one newline between lines.
 //
-// If an error writer is set with instance.WriteStderr() then all
+// If an error writer is set with responses.WriteStderr() then all
 // non-ignored errors are written out, prefixed with the
 // Instance.String() and a colon. Note that this format may change if
 // and when structured logging is introduced.
 //
-// Write calls Flush() after writing to CSV or Tab writers.
-func (responses Responses) Write(writer any, options ...WriterOptions) {
+// Report calls Flush() after writing to CSV or Tab writers.
+func (responses Responses) Report(writer any, options ...WriterOptions) {
 	var rows [][]string
 
 	if len(responses) == 0 {
@@ -189,11 +190,11 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	startedJSON := false
 
 	for _, k := range slices.Sorted(maps.Keys(responses)) {
-		r := responses[k]
-		if r.Err != nil && opts.skiponerr {
+		resp := responses[k]
+		if resp.Err != nil && opts.skiponerr {
 			var ignored bool
 			for _, i := range opts.ignoreerr {
-				if errors.Is(r.Err, i) {
+				if errors.Is(resp.Err, i) {
 					ignored = true
 				}
 			}
@@ -204,33 +205,33 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 
 		switch w := writer.(type) {
 		case *reporter.TabWriterReporter:
-			rows = append(rows, r.Rows...)
+			rows = append(rows, resp.Rows...)
 		case *tabwriter.Writer:
-			if r.Line != "" {
-				fmt.Fprintf(w, "%s\n", r.Line)
+			if resp.Summary != "" {
+				fmt.Fprintf(w, "%s\n", resp.Summary)
 			}
-			for _, line := range r.Lines {
+			for _, line := range resp.Details {
 				if line != "" {
 					fmt.Fprintf(w, "%s\n", line)
 				}
 			}
 		case *csv.Writer:
-			w.WriteAll(r.Rows) // WriteAll calls Flush()
+			w.WriteAll(resp.Rows) // WriteAll calls Flush()
 		case io.Writer:
 			// json from values, a bit painful - fix later
 			// only support for an array of "Values", which is unrolled
-			if r.Value != nil {
-				if opts.valuesasJSON {
+			if resp.Value != nil {
+				if opts.asJSON {
 					// encode to a buffer so we can strip the trailing newline
 					var b bytes.Buffer
 					j := json.NewEncoder(&b)
 					j.SetEscapeHTML(false)
-					if opts.indent {
+					if opts.indentJSON {
 						j.SetIndent("    ", "    ")
 					}
 
-					if reflect.TypeOf(r.Value).Kind() == reflect.Slice {
-						s := reflect.ValueOf(r.Value)
+					if reflect.TypeOf(resp.Value).Kind() == reflect.Slice {
+						s := reflect.ValueOf(resp.Value)
 						for i := 0; i < s.Len(); i++ {
 							if s.Index(i).IsValid() {
 								if !startedJSON {
@@ -239,7 +240,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 								} else {
 									fmt.Fprint(w, ",")
 								}
-								if opts.indent {
+								if opts.indentJSON {
 									fmt.Fprint(w, "\n    ")
 								}
 								j.Encode(s.Index(i).Interface())
@@ -256,10 +257,10 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 						} else {
 							fmt.Fprint(w, ",")
 						}
-						if opts.indent {
+						if opts.indentJSON {
 							fmt.Fprint(w, "\n    ")
 						}
-						j.Encode(r.Value)
+						j.Encode(resp.Value)
 
 						if b.Len() > 1 {
 							b.Truncate(b.Len() - 1)
@@ -267,26 +268,26 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 						}
 					}
 				} else {
-					fmt.Fprintf(w, opts.prefixformat, r.Instance)
-					fmt.Fprintf(w, "%s", r.Value)
+					fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+					fmt.Fprintf(w, "%s", resp.Value)
 					fmt.Fprint(w, opts.suffix)
 				}
 			}
 
 			// string(s) - append a newline unless one is present
-			if r.Line != "" {
-				fmt.Fprintf(w, opts.prefixformat, r.Instance)
-				fmt.Fprint(w, strings.TrimSuffix(r.Line, "\n"))
+			if resp.Summary != "" {
+				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+				fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
 				fmt.Fprint(w, opts.suffix)
 			}
 
-			if len(r.Completed) > 0 {
-				fmt.Fprintf(w, opts.prefixformat, r.Instance)
-				fmt.Fprint(w, joinNatural(r.Completed...))
+			if len(resp.Completed) > 0 {
+				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+				fmt.Fprint(w, joinNatural(resp.Completed...))
 				fmt.Fprint(w, opts.suffix)
 			}
 
-			for _, s := range r.Lines {
+			for _, s := range resp.Details {
 				fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 			}
 
@@ -296,7 +297,7 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 
 	if startedJSON {
-		if opts.indent {
+		if opts.indentJSON {
 			fmt.Fprint(writer.(io.Writer), "\n")
 		}
 		fmt.Fprintln(writer.(io.Writer), "]")
@@ -338,6 +339,102 @@ func (responses Responses) Write(writer any, options ...WriterOptions) {
 	}
 }
 
+// Report writes a single response to the writer w given the options.
+func (resp Response) Report(writer any, options ...WriterOptions) {
+	opts := evalWriterOptions(options...)
+
+	if resp.Err != nil && opts.skiponerr {
+		var ignored bool
+		for _, i := range opts.ignoreerr {
+			if errors.Is(resp.Err, i) {
+				ignored = true
+			}
+		}
+		if !ignored {
+			return
+		}
+	}
+
+	switch w := writer.(type) {
+	case *reporter.TabWriterReporter:
+		w.UpdateTable(w.Columns, resp.Rows)
+		w.Render()
+		w.Close()
+	case *tabwriter.Writer:
+		if resp.Summary != "" {
+			fmt.Fprintf(w, "%s\n", resp.Summary)
+		}
+		for _, line := range resp.Details {
+			if line != "" {
+				fmt.Fprintf(w, "%s\n", line)
+			}
+		}
+		w.Flush()
+	case *csv.Writer:
+		w.WriteAll(resp.Rows) // WriteAll calls Flush()
+	case io.Writer:
+		switch {
+		case resp.Value != nil && (opts.outputFields == 0 || opts.outputFields&outputFieldValue != 0):
+			if opts.asJSON {
+				b, err := json.MarshalIndent(resp.Value, "    ", "    ")
+				if err != nil {
+					log.Error().Err(err).Msg("failed to marshal value to JSON")
+					return
+				}
+				fmt.Fprint(w, string(b))
+			} else {
+				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+				fmt.Fprintf(w, "%s", resp.Value)
+				fmt.Fprint(w, opts.suffix)
+			}
+
+		// string(s) - append a newline unless one is present
+		case resp.Summary != "" && (opts.outputFields == 0 || opts.outputFields&outputFieldSummary != 0):
+			fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+			fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
+			fmt.Fprint(w, opts.suffix)
+
+		case len(resp.Completed) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldCompleted != 0):
+			fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+			fmt.Fprint(w, joinNatural(resp.Completed...))
+			fmt.Fprint(w, opts.suffix)
+
+		case len(resp.Details) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0):
+			for _, s := range resp.Details {
+				fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
+			}
+
+		default:
+			// nothing to write
+		}
+
+	default:
+		log.Fatal().Msgf("unknown writer type %T", writer)
+	}
+
+	if opts.stderr != io.Discard {
+		errored := false
+		ignored := false
+		if resp.Err != nil {
+			for _, i := range opts.ignoreerr {
+				if errors.Is(resp.Err, i) {
+					ignored = true
+					break
+				}
+			}
+			if !ignored {
+				fmt.Fprintf(opts.stderr, "%s: %s\n", resp.Instance, resp.Err)
+				errored = true
+			}
+		}
+
+		if !errored && !ignored && opts.showtimes {
+			s := resp.Finish.Sub(resp.Start).Seconds()
+			fmt.Fprintf(opts.stderr, opts.timesformat, resp.Instance, s)
+		}
+	}
+}
+
 // WriteHTML will structure the responses in a way that can be displayed
 // well in an HTML container. Currently does nothing.
 func (responses Responses) WriteHTML(writer any, options ...WriterOptions) {
@@ -364,16 +461,27 @@ func joinNatural(words ...string) string {
 	}
 }
 
+// bitmap of types of output to limit to
+type outputFields int
+
+const (
+	outputFieldSummary outputFields = 1 << iota
+	outputFieldDetails
+	outputFieldCompleted
+	outputFieldValue
+)
+
 type writeOptions struct {
-	indent       bool
 	stderr       io.Writer
+	outputFields outputFields
 	ignoreerr    []error
 	skiponerr    bool
 	showtimes    bool
 	timesformat  string // first arg instance, second arg duration
 	prefixformat string // prefix plain output with this format, parameter is instance name
 	suffix       string // trailing suffix after each response, default "\n"
-	valuesasJSON bool   // output each value as (unrolled) JSON. false is output using plain Print()
+	asJSON       bool   // output each value as (unrolled) JSON. false is output using plain Print()
+	indentJSON   bool
 }
 
 var globalWriteOptions = writeOptions{
@@ -383,10 +491,10 @@ var globalWriteOptions = writeOptions{
 	timesformat:  "%s: command finished in %.3fs\n",
 	prefixformat: "%s ",
 	suffix:       "\n",
-	valuesasJSON: true,
+	asJSON:       true,
 }
 
-// WriterOptions controls to behaviour of the instance.Write method
+// WriterOptions controls to behaviour of the responses.Write method
 type WriterOptions func(*writeOptions)
 
 func evalWriterOptions(options ...WriterOptions) *writeOptions {
@@ -397,99 +505,114 @@ func evalWriterOptions(options ...WriterOptions) *writeOptions {
 	return &opts
 }
 
-// WriterDefaultOptions sets and defaults for calls to instance.Write
-//
-// The defaults, unless otherwise set are to write errors to os.Stderr
-// and to ignore os.ErrProcessDone and geneos.ErrNotSupported errors and
-// to skip other outputs for each response on non-ignored errors.
-func WriterDefaultOptions(options ...WriterOptions) {
-	for _, o := range options {
-		o(&globalWriteOptions)
-	}
-}
-
-// WriterIndent sets the JSON indentation to true or false for the
-// output of Values in instance.Write
-func WriterIndent(indent bool) WriterOptions {
+// IndentJSON sets the JSON indentation to true or false for the output
+// of Values in responses.Write
+func IndentJSON(indent bool) WriterOptions {
 	return func(wo *writeOptions) {
-		wo.indent = indent
+		wo.indentJSON = indent
 	}
 }
 
-// WriteStderr sets the writer to use for errors. It defaults to
-// os.Stderr
-func WriterStderr(stderr io.Writer) WriterOptions {
+// StderrWriter sets the writer to use for errors. It defaults to
+// os.StderrWriter
+func StderrWriter(stderr io.Writer) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.stderr = stderr
 	}
 }
 
-// WriteIgnoreErr adds err to the list of errors for instance.Write to
-// skip.
-func WriterIgnoreErr(err error) WriterOptions {
+// IgnoreErr adds err to the list of errors for responses.Write to skip.
+func IgnoreErr(err error) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.ignoreerr = append(wo.ignoreerr, err)
 	}
 }
 
-// WriterIgnoreErrs sets the errors that the instance.Write method will
+// IgnoreErrs sets the errors that the responses.Write method will
 // skip outputting. It replaces any existing set.
-func WriterIgnoreErrs(errs ...error) WriterOptions {
+func IgnoreErrs(errs ...error) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.ignoreerr = errs
 	}
 }
 
-// WriterSkipOnErr sets the behaviour of instance.Write regarding the
+// SkipOnErr sets the behaviour of responses.Write regarding the
 // output of other responses data if an error is present. If skip is
 // true then any response that has a non-ignored error will output the
 // error (subject to WriterStderr) and skip other returned data.
-func WriterSkipOnErr(skip bool) WriterOptions {
+func SkipOnErr(skip bool) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.skiponerr = skip
 	}
 }
 
-// WriterShowTimes enables the output of the duration of each call. The
+// ShowTimes enables the output of the duration of each call. The
 // format of the output can be changed using WriterTimingFormat.
-func WriterShowTimes() WriterOptions {
+func ShowTimes() WriterOptions {
 	return func(wo *writeOptions) {
 		wo.showtimes = true
 	}
 }
 
-// WriterTimingFormat sets the output format of any timing information.
+// TimingFormat sets the output format of any timing information.
 // It is a Printf-style format with the instance (as a geneos.Instance)
 // and the duration (as a time.Duration) as the two arguments.
-func WriterTimingFormat(format string) WriterOptions {
+func TimingFormat(format string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.timesformat = format
 	}
 }
 
-// WriterPrefix is the Printf-style format to prefix plain text output
+// Prefix is the Printf-style format to prefix plain text output
 // (only once per Lines). It can have one argument, the instance as a
 // geneos.Instance. The default is `"%s "`.
-func WriterPrefix(prefix string) WriterOptions {
+func Prefix(prefix string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.prefixformat = prefix
 	}
 }
 
-// WriterSuffix is the suffix added to plain text output. The default is
+// Suffix is the suffix added to plain text output. The default is
 // a single newline (`\n`).
-func WriterSuffix(suffix string) WriterOptions {
+func Suffix(suffix string) WriterOptions {
 	return func(wo *writeOptions) {
 		wo.suffix = suffix
 	}
 }
 
-// WriterPlainValue overrides the output of Value as JSON and instead it
+// PlainValue overrides the output of Value as JSON and instead it
 // is written as a string, in the format `prefix + value as %s +
-// suffix`, where prefix and suffix can be set ising WriterPrefix and
-// WriterSuffix respectively, if the defaults are not suitable.
-func WriterPlainValue() WriterOptions {
+// suffix`, where prefix and suffix can be set using Prefix and
+// Suffix respectively, if the defaults are not suitable.
+func PlainValue() WriterOptions {
 	return func(wo *writeOptions) {
-		wo.valuesasJSON = false
+		wo.asJSON = false
+	}
+}
+
+// SummaryOnly makes responses.Write only output the Summary field.
+func SummaryOnly() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.outputFields = outputFieldSummary
+	}
+}
+
+// DetailsOnly makes responses.Write only output the Details field.
+func DetailsOnly() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.outputFields = outputFieldDetails
+	}
+}
+
+// CompletedOnly makes responses.Write only output the Completed field.
+func CompletedOnly() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.outputFields = outputFieldCompleted
+	}
+}
+
+func ValueOnly() WriterOptions {
+	return func(wo *writeOptions) {
+		wo.outputFields = outputFieldValue
 	}
 }

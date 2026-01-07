@@ -40,6 +40,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 type listCertType struct {
@@ -134,7 +135,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results["global "+geneos.RootCABasename] = &instance.Response{
+				results["global "+geneos.RootCABasename] = &responses.Response{
 					Value: listCertType{
 						"global",
 						geneos.RootCABasename,
@@ -146,7 +147,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					}}
 			}
 			if geneosCert != nil {
-				results["global "+geneos.SigningCertBasename] = &instance.Response{
+				results["global "+geneos.SigningCertBasename] = &responses.Response{
 					Value: listCertType{
 						"global",
 						geneos.SigningCertBasename,
@@ -158,7 +159,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					}}
 			}
 		}
-		results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
+		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -199,7 +200,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			}
 		}
 		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Write(listCSVWriter)
+		resp.Report(listCSVWriter)
 
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
@@ -254,7 +255,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			}
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
 			os.Stdout,
 			"csv",
 			[]string{
@@ -297,7 +298,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			}
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Report(
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -325,7 +326,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results["global "+geneos.RootCABasename] = &instance.Response{
+				results["global "+geneos.RootCABasename] = &responses.Response{
 					Value: listCertLongType{
 						"global",
 						geneos.RootCABasename,
@@ -345,7 +346,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					}}
 			}
 			if geneosCert != nil {
-				results["global "+geneos.SigningCertBasename] = &instance.Response{
+				results["global "+geneos.SigningCertBasename] = &responses.Response{
 					Value: listCertLongType{
 						"global",
 						geneos.SigningCertBasename,
@@ -365,7 +366,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					}}
 			}
 		}
-		results.Write(os.Stdout, instance.WriterIndent(listCmdIndent))
+		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -430,7 +431,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			}
 		}
 		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Write(listCSVWriter)
+		resp.Report(listCSVWriter)
 
 		// add headlines
 		// add headlines
@@ -517,7 +518,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				})
 			}
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Write(listCSVWriter)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
 
 	default:
 		var prequel [][]string
@@ -561,7 +562,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				})
 			}
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Report(
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -587,8 +588,8 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 	return
 }
 
-func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -627,8 +628,8 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) 
 	return
 }
 
-func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -664,8 +665,8 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *instance.Respons
 	return
 }
 
-func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -721,8 +722,8 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *instance.Res
 	return
 }
 
-func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {

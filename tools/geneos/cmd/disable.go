@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -54,8 +55,8 @@ var disableCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			if instance.IsDisabled(i) {
 				return
@@ -89,6 +90,6 @@ var disableCmd = &cobra.Command{
 
 			resp.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
 			return
-		}).Write(os.Stdout)
+		}).Report(os.Stdout)
 	},
 }

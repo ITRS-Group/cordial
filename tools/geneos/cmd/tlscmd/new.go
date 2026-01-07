@@ -26,6 +26,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var newCmdDays int
@@ -51,10 +52,10 @@ var newCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Report(os.Stdout)
 	},
 }
 
-func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
+func newInstanceCert(i geneos.Instance, _ ...any) *responses.Response {
 	return instance.NewCertificate(i, newCmdDays)
 }

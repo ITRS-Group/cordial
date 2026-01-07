@@ -23,6 +23,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -53,8 +54,8 @@ var rebuildCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			if resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
 				return
@@ -65,7 +66,7 @@ var rebuildCmd = &cobra.Command{
 				return
 			}
 			resp2 := ReloadInstance(i)
-			return instance.MergeResponse(resp, resp2)
-		}).Write(os.Stdout)
+			return responses.MergeResponse(resp, resp2)
+		}).Report(os.Stdout)
 	},
 }

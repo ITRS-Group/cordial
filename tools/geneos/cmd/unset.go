@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -72,8 +73,8 @@ geneos unset san -g Gateway1
 			return
 		}
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			cf := i.Config()
 
@@ -96,6 +97,6 @@ geneos unset san -g Gateway1
 
 			resp.Err = instance.SaveConfig(i)
 			return
-		}).Write(os.Stdout)
+		}).Report(os.Stdout)
 	},
 }

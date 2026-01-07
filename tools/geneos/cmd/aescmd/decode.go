@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var decodeCmdAESFILE, decodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
@@ -129,8 +130,8 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		}
 
 		ct, names, _ := cmd.ParseTypeNamesParams(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 
 			if len(params) == 0 {
 				resp.Err = geneos.ErrInvalidArgs
@@ -164,7 +165,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			}
 			resp.Completed = append(resp.Completed, fmt.Sprintf("decoded as %q", e))
 			return
-		}, ciphertext).Write(os.Stdout)
+		}, ciphertext).Report(os.Stdout)
 		return
 	},
 }

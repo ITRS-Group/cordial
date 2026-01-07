@@ -29,6 +29,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/xpath"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -103,12 +104,12 @@ var snapshotCmd = &cobra.Command{
 			}
 		}
 
-		instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params).Write(os.Stdout, instance.WriterIndent(true))
+		instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params).Report(os.Stdout, responses.IndentJSON(true))
 	},
 }
 
-func snapshotInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs

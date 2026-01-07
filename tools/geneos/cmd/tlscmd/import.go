@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var importCmdCert, importCmdSigningBundle, importCmdChain, importCmdPrivateKey string
@@ -125,7 +126,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 					// return err
 				}
 				k := memguard.NewEnclave(pk)
-				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
+				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Report(os.Stdout)
 				return nil
 			}
 
@@ -148,7 +149,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 			}
 
-			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
+			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Report(os.Stdout)
 			return nil
 		}
 
@@ -177,8 +178,8 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 // tlsWriteInstance expects 3 params, of *x509.Certificate,
 // *memguard.Enclave and a []*x509.Certificate or it will return an
 // error or panic.
-func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 
@@ -207,17 +208,17 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response
 	if resp.Err = instance.WriteCertificate(i, cert); resp.Err != nil {
 		return
 	}
-	resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate written", i))
+	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate written", i))
 
 	if resp.Err = instance.WritePrivateKey(i, key); resp.Err != nil {
 		return
 	}
-	resp.Lines = append(resp.Lines, fmt.Sprintf("%s private key written", i))
+	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	if len(chain) > 0 {
 		chainfile := path.Join(i.Home(), "chain.pem")
 		if err := certs.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
-			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", i))
+			resp.Details = append(resp.Details, fmt.Sprintf("%s certificate chain written", i))
 			if cf.GetString("certchain") == chainfile {
 				return
 			}
