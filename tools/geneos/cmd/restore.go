@@ -117,7 +117,7 @@ geneos restore gateway ABC x.tgz
 		// TODO rewrite as a slices in-place delete/replace
 		var newnames []string
 		for _, n := range names {
-			h2, _, n2 := instance.Decompose(n, h)
+			h2, _, n2 := instance.ParseName(n, h)
 			if h2 != h {
 				// skip any args that don't match destination host, just in case
 				continue

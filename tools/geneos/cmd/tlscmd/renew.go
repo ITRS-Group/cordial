@@ -31,6 +31,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -40,7 +41,7 @@ import (
 )
 
 var renewCmdDays int
-var renewCmdPrepare, renewCmdRoll, renewCmdUnroll bool
+var renewCmdPrepare, renewCmdRoll, renewCmdUnroll, renewCmdSigner bool
 
 const (
 	newFileSuffix = "new"
@@ -50,15 +51,17 @@ const (
 func init() {
 	tlsCmd.AddCommand(renewCmd)
 
-	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Certificate duration in days")
+	renewCmd.Flags().BoolVar(&renewCmdSigner, "signer", false, "Renew the signing certificate instead of instance certificates")
 
-	// renewCmd.Flags().BoolVarP(&renewCmdNewKey, "new-key", "n", false, "Always generate a new private key for the renewed certificate")
+	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Instance certificate duration in days. (No effect for signer)")
 
 	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
 	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
 	renewCmd.Flags().BoolVarP(&renewCmdUnroll, "unroll", "U", false, "Unroll previously rolled certificates to restore backups")
 
 	renewCmd.MarkFlagsMutuallyExclusive("prepare", "roll", "unroll")
+
+	renewCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/renew.md
@@ -74,9 +77,28 @@ var renewCmd = &cobra.Command{
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		if renewCmdSigner {
+			// renew signing certificate
+			confDir := config.AppConfigDir()
+			if confDir == "" {
+				return config.ErrNoUserConfigDir
+			}
+			if signer, err := certs.WriteNewSignerCert(
+				path.Join(confDir, geneos.SigningCertBasename),
+				path.Join(confDir, geneos.RootCABasename),
+				cordial.ExecutableName()+" intermediate certificate",
+			); err != nil {
+				return err
+			} else {
+				fmt.Printf("signing certificate renewed. expires %s\n", signer.NotAfter.Local().Format(time.RFC3339))
+			}
+			return
+		}
+
 		ct, names := cmd.ParseTypeNames(command)
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
+		return
 	},
 }
 
@@ -121,7 +143,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		signingCert, _, err := geneos.ReadSigningCertificate()
+		signingCert, _, err := geneos.ReadSignerCertificate()
 		resp.Err = err
 		if resp.Err != nil {
 			return

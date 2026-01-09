@@ -37,21 +37,54 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var createCmdCN, createCmdDest string
+var createCmdCN, createCmdDestDir string
 var createCmdOverwrite bool
-var createCmdSANs createCmdSAN
+var createCmdSANs certSANs
 var createCmdDays int
+
+type certSANs struct {
+	DNS   values
+	IP    values
+	Email values
+	URL   values
+}
+
+// attribute - name=value
+type values []string
+
+const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
+
+func (i *values) String() string {
+	return ""
+}
+
+func (i *values) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *values) Type() string {
+	return "VALUE"
+}
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
 
-	createCmd.Flags().StringVarP(&createCmdDest, "out", "o", ".", "Output `directory` to write to.\nFor bundles use a dash '-' for stdout.")
+	createCmdSANs = certSANs{}
+
+	createCmd.Flags().StringVarP(&createCmdDestDir, "out", "o", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
 
 	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
-	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given")
-	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run \"tls init\" and force overwrite any existing file in 'dest'")
+
+	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).")
+	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).")
+	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).")
+	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).")
+
+	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in 'out' directory")
 	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
 
+	createCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/create.md
@@ -67,10 +100,6 @@ var createCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		if len(createCmdSANs) == 0 {
-			hostname, _ := os.Hostname()
-			createCmdSANs = []string{hostname}
-		}
 		if createCmdOverwrite {
 			if err = geneos.TLSInit(false, initCmdKeyType); err != nil {
 				return
@@ -83,11 +112,11 @@ var createCmd = &cobra.Command{
 			}
 		}
 
-		if createCmdDest == "-" {
+		if createCmdDestDir == "-" {
 			fmt.Println("Console output only valid for bundles")
 			return nil
 		}
-		err = CreateCert(createCmdDest, createCmdOverwrite, createCmdDays, createCmdCN, createCmdSANs...)
+		err = CreateCert(createCmdDestDir, createCmdOverwrite, createCmdDays, createCmdCN, createCmdSANs)
 		if err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
@@ -103,7 +132,7 @@ var createCmd = &cobra.Command{
 // CreateCert creates a new certificate and private key
 //
 // skip if certificate exists and is valid
-func CreateCert(destination string, overwrite bool, days int, cn string, san ...string) (err error) {
+func CreateCert(destination string, overwrite bool, days int, cn string, san certSANs) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
@@ -112,27 +141,33 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san ...
 	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
 		return os.ErrExist
 	}
-	template := certs.Template(cn, certs.Days(days), certs.DNSNames(san...))
+	template := certs.Template(cn,
+		certs.Days(days),
+		certs.DNSNames(san.DNS...),
+		certs.IPAddresses(san.IP...),
+		certs.EmailAddresses(san.Email...),
+		certs.URIs(san.URL...),
+	)
 	expires := template.NotAfter
 
-	signingCert, _, err := geneos.ReadSigningCertificate()
+	signerCert, _, err := geneos.ReadSignerCertificate()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+	signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificateAndKey(template, signerCert, signerKey)
 	if err != nil {
 		return
 	}
 
-	if err = certs.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signingCert); err != nil {
+	if err = certs.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signerCert); err != nil {
 		return
 	}
 
@@ -146,19 +181,4 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san ...
 	fmt.Printf("SHA256 Fingerprint: %X\n", sha256.Sum256(cert.Raw))
 
 	return
-}
-
-type createCmdSAN []string
-
-func (san *createCmdSAN) Set(name string) (err error) {
-	*san = append(*san, name)
-	return
-}
-
-func (san *createCmdSAN) String() string {
-	return ""
-}
-
-func (san *createCmdSAN) Type() string {
-	return "SAN"
 }

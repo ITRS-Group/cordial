@@ -20,6 +20,7 @@ package tlscmd
 import (
 	"crypto/x509"
 	_ "embed"
+	"fmt"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -69,6 +70,8 @@ var migrateCmd = &cobra.Command{
 // * use certchain to create a full chain in certificate file (without root)
 // * update params from certificate/privatekey/certchain to tls::certificate etc.
 // * update trusted-roots with new roots found in certchain
+//
+// Private key file is unchanged, but the parameter is moved.
 func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
@@ -80,35 +83,37 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 		return
 	}
 
+	// some instances may already have multiple certificated in the
+	// primary file, before migration
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil && !os.IsNotExist(err) {
 		resp.Err = err
 		return
 	}
 	if len(certChain) == 0 {
-		resp.Err = nil
+		resp.Err = fmt.Errorf("no valid certificates found")
 		return
 	}
 
-	var chain []*x509.Certificate
 	if cf.IsSet("certchain") {
+		// var chain []*x509.Certificate
 		log.Debug().Msgf("reading certchain %s", cf.GetString("certchain"))
-		chain, err = certs.ReadCertificates(h, cf.GetString("certchain"))
+		chain, err := certs.ReadCertificates(h, cf.GetString("certchain"))
 		if err != nil && !os.IsNotExist(err) {
 			resp.Err = err
 			return
 		}
+		certChain = append(certChain, chain...)
 	}
-	certChain = append(certChain, chain...)
 
-	leaf, intermediates, root, err := certs.Verify(certChain...)
+	leaf, intermediates, root, err := certs.ParseCertChain(certChain...)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
 	// update trusted-roots file
-	updated, err := certs.UpdateRootCertsFile(h, geneos.TrustedRootsPath(h), root)
+	updated, err := certs.AppendTrustedCertsFile(h, geneos.TrustedRootsPath(h), root)
 	if err != nil {
 		resp.Err = err
 		return

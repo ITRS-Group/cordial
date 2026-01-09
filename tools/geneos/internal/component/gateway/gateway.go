@@ -51,7 +51,7 @@ var Gateway = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Gateway+2", Nexus: "geneos-gateway"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7039,7100-",
+		config.Join(Name, "ports"): "7038-7039,7100-",
 		config.Join(Name, "clean"): strings.Join([]string{
 			"*.history",
 			"*.download",
@@ -104,7 +104,6 @@ var Gateway = geneos.Component{
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=gateway.log`,
-		`port=7039`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64`,
 		`gatewayname={{"${config:name}"}}`,
 		`setup={{join "${config:home}" "gateway.setup.xml"}}`,
@@ -162,7 +161,7 @@ var instances sync.Map
 
 // factory is the factory method for Gateways
 func factory(name string) (gateway geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
@@ -310,7 +309,18 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := instance.FileOf(g, "certificate") != "" && instance.FileOf(g, "privatekey") != ""
+
+	certPath := instance.PathTo(g, cf.Join("tls", "certificate"))
+	if certPath != "" {
+		certPath = instance.PathTo(g, "certificate")
+	}
+	keyPath := instance.PathTo(g, cf.Join("tls", "privatekey"))
+	if keyPath != "" {
+		keyPath = instance.PathTo(g, "privatekey")
+	}
+
+	secure := certPath != "" && keyPath != ""
+	log.Debug().Msgf("gateway cert: %q key: %q secure: %v", certPath, keyPath, secure)
 
 	// if we have certs then connect to Licd securely
 	if secure && cf.GetString("licdsecure") != "true" {

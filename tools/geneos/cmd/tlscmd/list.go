@@ -112,7 +112,7 @@ var listCmd = &cobra.Command{
 			log.Debug().Err(err).Msg("failed to read root cert")
 			return
 		}
-		geneosCert, geneosCertFile, err = geneos.ReadSigningCertificate()
+		geneosCert, geneosCertFile, err = geneos.ReadSignerCertificate()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			log.Debug().Err(err).Msg("failed to read signing cert")
 			return
@@ -778,13 +778,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 // system certs. It also loads the Geneos global chain file and adds the
 // certs to the verification pools after some basic validation.
 func verifyCert(certChain ...*x509.Certificate) bool {
-	roots, n := certs.ReadTrustedCertificates(geneos.TrustedRootsPath(geneos.LOCAL))
-	subjects := roots.Subjects()
-	var subj []string
-	for _, s := range subjects {
-		subj = append(subj, string(s))
-	}
-	log.Debug().Msgf("loaded %d trusted root certificates: %v", n, subj)
+	roots, n := certs.ReadTrustedCertPool(geneos.TrustedRootsPath(geneos.LOCAL))
 
 	if n == 0 {
 		return false

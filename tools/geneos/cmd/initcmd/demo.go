@@ -97,7 +97,11 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "Demo Gateway@"+h.String()); err != nil {
+	port := "7038"
+	if initCmdNoTLS {
+		port = "7039"
+	}
+	if err = cmd.AddInstance(ct, initCmdExtras, []string{"port=" + port}, "Demo Gateway@"+h.String()); err != nil {
 		return
 	}
 	if err = cmd.Set(ct, g, []string{"options=-demo"}); err != nil {
@@ -128,7 +132,11 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(ct, initCmdExtras, []string{}, "demo@"+h.String()); err != nil {
+	port = "8443"
+	if initCmdNoTLS {
+		port = "8080"
+	}
+	if err = cmd.AddInstance(ct, initCmdExtras, []string{"port=" + port}, "demo@"+h.String()); err != nil {
 		return
 	}
 

@@ -103,7 +103,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	// check validity and reserved words here
 	name := names[0]
 
-	h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
+	h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
 
 	if local == "" {
 		local = h.Hostname()
@@ -179,8 +179,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		}
 	}
 
+	log.Debug().Msgf("set extra instance values: %+v", addCmdExtras)
 	instance.SetInstanceValues(i, addCmdExtras, "")
+
+	log.Debug().Msgf("set instance config items: %+v", items)
 	cf.SetKeyValues(items...)
+	log.Debug().Msgf("instance config after setting items: %+v", cf.AllSettings())
 	if err = instance.SaveConfig(i); err != nil {
 		return
 	}

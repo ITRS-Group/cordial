@@ -260,14 +260,13 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 func initCommon() (err error) {
 	initTemplates(geneos.LOCAL)
 
-	if !initCmdNoTLS {
-		if err = geneos.TLSInit(true, certs.DefaultKeyType); err != nil {
-			return
-		}
-		if initCmdSigningBundle != "" {
-			return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey, "")
-		}
+	if initCmdNoTLS {
+		return
 	}
 
-	return
+	if initCmdSigningBundle != "" {
+		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey)
+	}
+
+	return geneos.TLSInit(true, certs.DefaultKeyType)
 }

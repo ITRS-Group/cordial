@@ -106,7 +106,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		destination = src.Name() + destination
 	}
 
-	dHost, _, _ := Decompose(destination, geneos.LOCAL)
+	dHost, _, _ := ParseName(destination, geneos.LOCAL)
 	if !dHost.Exists() {
 		return fmt.Errorf("%w: destination host for %q not found", host.ErrNotExist, destination)
 	}
@@ -138,7 +138,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		}
 	}
 
-	_, _, dName := Decompose(destination, geneos.LOCAL)
+	_, _, dName := ParseName(destination, geneos.LOCAL)
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)

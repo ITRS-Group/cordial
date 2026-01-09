@@ -48,9 +48,9 @@ func (k *KeyType) Type() string {
 	return "KeyType"
 }
 
-// privateKeyType returns the type of the DER encoded private key,
+// PrivateKeyType returns the type of the DER encoded private key,
 // suitable for use to NewPrivateKey
-func privateKeyType(der *memguard.Enclave) (keytype KeyType) {
+func PrivateKeyType(der *memguard.Enclave) (keytype KeyType) {
 	if der == nil {
 		return
 	}
@@ -196,6 +196,10 @@ func PublicKey(key *memguard.Enclave) (publickey crypto.PublicKey, err error) {
 // cert and returns the index of the first match, or -1 if none of the
 // keys match.
 func IndexPrivateKey(keys []*memguard.Enclave, cert *x509.Certificate) int {
+	if cert == nil {
+		return -1
+	}
+
 	for i, key := range keys {
 		if pubkey, err := PublicKey(key); err == nil { // if ok then compare
 			// ensure we have an Equal() method on the opaque key

@@ -142,7 +142,7 @@ var instances sync.Map
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
 func factory(name string) (san geneos.Instance) {
-	h, ct, local := instance.Decompose(name)
+	h, ct, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil

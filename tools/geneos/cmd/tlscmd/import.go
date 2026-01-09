@@ -30,7 +30,6 @@ import (
 	"github.com/spf13/pflag"
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -98,7 +97,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 		}
 
 		if importCmdSigningBundle != "" {
-			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey, importCmdChain)
+			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey)
 		}
 
 		if importCmdCert != "" {
@@ -113,117 +112,83 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 				pfxData, err := os.ReadFile(importCmdCert)
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read PFX file")
-					// return err
 				}
 				key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to decode PFX file")
-					// return err
 				}
 				pk, err := x509.MarshalPKCS8PrivateKey(key)
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to marshal private key")
-					// return err
 				}
 				k := memguard.NewEnclave(pk)
-				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Report(os.Stdout)
+
+				certBundle := certs.CertificateBundle{
+					Leaf:      c,
+					Key:       k,
+					FullChain: chain,
+				}
+				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 				return nil
 			}
 
-			certs, err := config.ReadInputPEMString(importCmdCert, "instance certificate(s)")
+			certChain, err := config.ReadPEMBytes(importCmdCert, "instance certificate(s)")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
-				// return err
 			}
-			key, err := config.ReadInputPEMString(importCmdPrivateKey, "instance key")
+			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read instance key")
-				// return err
 			}
-			c, k, chain, err := geneos.DecomposePEM(certs, key)
+			certBundle, err := certs.ParsePEM2(certChain, key)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to decompose PEM")
-				// return err
 			}
-			if c == nil || k == nil {
+			if certBundle.Leaf == nil || certBundle.Key == nil {
 				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 			}
 
-			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Report(os.Stdout)
+			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 			return nil
 		}
-
-		if importCmdChain == "" {
-			return
-		}
-
-		b, err := os.ReadFile(importCmdChain)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-			return err
-		}
-		_, _, chain, err := geneos.DecomposePEM(string(b))
-		if err != nil {
-			return err
-		}
-		if err = geneos.WriteChainLocal(chain); err != nil {
-			return err
-		}
-		fmt.Printf("%s certificate chain written using %s\n", cordial.ExecutableName(), importCmdChain)
 
 		return
 	},
 }
 
-// tlsWriteInstance expects 3 params, of *x509.Certificate,
-// *memguard.Enclave and a []*x509.Certificate or it will return an
-// error or panic.
+// tlsWriteInstance writes the certificate, key and chain to the instance.
+// It returns a Response indicating success or failure.
 func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
-	cf := i.Config()
-
-	if len(params) != 3 {
+	if len(params) != 1 {
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
 
-	// validate and convert params
-	cert, ok := params[0].(*x509.Certificate)
+	tlsParam, ok := params[0].(certs.CertificateBundle)
 	if !ok {
-		resp.Err = fmt.Errorf("%w: params[0] not a certificate", geneos.ErrInvalidArgs)
-		return
-	}
-	key, ok := params[1].(*memguard.Enclave)
-	if !ok {
-		resp.Err = fmt.Errorf("%w: params[1] not a secure enclave", geneos.ErrInvalidArgs)
-		return
-	}
-	chain, ok := params[2].([]*x509.Certificate)
-	if !ok {
-		resp.Err = fmt.Errorf("%w: params[2] not a slice of certificates", geneos.ErrInvalidArgs)
+		resp.Err = fmt.Errorf("%w: params[0] not a certs.CertificateBundle", geneos.ErrInvalidArgs)
 		return
 	}
 
-	if resp.Err = instance.WriteCertificate(i, cert); resp.Err != nil {
+	if resp.Err = instance.WriteCertificates(i, tlsParam.FullChain); resp.Err != nil {
 		return
 	}
 	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate written", i))
 
-	if resp.Err = instance.WritePrivateKey(i, key); resp.Err != nil {
+	if resp.Err = instance.WritePrivateKey(i, tlsParam.Key); resp.Err != nil {
 		return
 	}
 	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
-	if len(chain) > 0 {
-		chainfile := path.Join(i.Home(), "chain.pem")
-		if err := certs.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
-			resp.Details = append(resp.Details, fmt.Sprintf("%s certificate chain written", i))
-			if cf.GetString("certchain") == chainfile {
-				return
-			}
-			cf.SetString("certchain", chainfile, config.Replace("home"))
-		}
+	var updated bool
+	updated, resp.Err = certs.AppendTrustedCertsFile(i.Host(), geneos.TrustedRootsPath(i.Host()), tlsParam.Root)
+	if resp.Err != nil {
+		return
+	}
+	if updated {
+		resp.Details = append(resp.Details, fmt.Sprintf("%s trusted roots updated", i))
 	}
 
 	resp.Err = instance.SaveConfig(i)

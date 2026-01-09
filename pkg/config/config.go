@@ -572,7 +572,7 @@ var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
 func (c *Config) SetKeyValues(items ...string) (err error) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
-		if len(fields) != 4 {
+		if len(fields) == 0 {
 			return fmt.Errorf("item %q is not a valid setting", item)
 		}
 

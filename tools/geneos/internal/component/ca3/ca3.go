@@ -115,7 +115,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ca3 geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 	// _, local, h := instance.SplitName(name, geneos.LOCAL)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {

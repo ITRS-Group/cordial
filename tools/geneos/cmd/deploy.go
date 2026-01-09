@@ -40,7 +40,7 @@ import (
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
-var deployCmdNoTLS bool
+var deployCmdNoTLS, deployCmdTLS bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
@@ -64,9 +64,10 @@ func init() {
 
 	deployCmd.Flags().BoolVarP(&deployCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
-	// deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
-	deployCmd.Flags().BoolVarP(&deployCmdNoTLS, "insecure", "", false, "Do not initialise TLS subsystem")
+	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
 	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
+
+	deployCmd.Flags().BoolVarP(&deployCmdNoTLS, "insecure", "", false, "Do not initialise TLS subsystem")
 
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
@@ -138,7 +139,7 @@ var deployCmd = &cobra.Command{
 			name = names[0]
 		}
 
-		h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
+		h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
 
 		// if no name is given, use the hostname
 		if local == "" {
@@ -240,7 +241,8 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// check base package for existence, install etc.
+		// Package installation
+
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug().Msgf("version: %s", version)
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
@@ -288,21 +290,19 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// TLS check and init
+		// TLS
+
 		if !deployCmdNoTLS {
-			if err = geneos.TLSInit(true, certs.DefaultKeyType); err != nil {
-				return
+			if deployCmdSigningBundle != "" {
+				if err = geneos.TLSImportBundle(deployCmdSigningBundle, ""); err != nil {
+					return err
+				}
+			} else {
+				if err = geneos.TLSInit(false, certs.DefaultKeyType); err != nil {
+					return
+				}
 			}
 		}
-
-		signingBundle, err := config.ReadInputPEMString(deployCmdSigningBundle, "signing certificate(s)")
-		if err != nil {
-			return err
-		}
-		if signingBundle != "" {
-			RunE(command.Root(), []string{"tls", "import", "--signing-bundle"}, []string{"pem:" + signingBundle})
-		}
-
 		// we are installed and ready to go, drop through to code from `add`
 		i, err := instance.GetWithHost(h, ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -321,38 +321,41 @@ var deployCmd = &cobra.Command{
 		}
 
 		if deployCmdInstanceBundle != "" {
-			certSlice, err := config.ReadInputPEMString(deployCmdInstanceBundle, "instance certificate(s)")
+			certSlice, err := config.ReadPEMBytes(deployCmdInstanceBundle, "instance certificate(s)")
 			if err != nil {
 				return err
 			}
 
-			cert, key, chain, err := geneos.DecomposePEM(certSlice)
+			certBundle, err := certs.ParsePEM2(certSlice)
 			if err != nil {
 				return err
+
 			}
-			if cert == nil || key == nil {
+
+			if !certBundle.Valid {
+				return fmt.Errorf("invalid certificate bundle")
+			}
+
+			if certBundle.Leaf == nil || certBundle.Key == nil {
 				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 			}
 
-			if err = instance.WriteCertificate(i, cert); err != nil {
+			if err = instance.WriteCertificates(i, certBundle.FullChain); err != nil {
 				return err
 			}
 			fmt.Printf("%s certificate written", i)
 
-			if err = instance.WritePrivateKey(i, key); err != nil {
+			if err = instance.WritePrivateKey(i, certBundle.Key); err != nil {
 				return err
 			}
 			fmt.Printf("%s private key written", i)
 
-			if len(chain) > 0 {
-				chainfile := path.Join(i.Home(), "chain.pem")
-				if err = certs.WriteCertificates(i.Host(), chainfile, chain...); err == nil {
-					fmt.Printf("%s certificate chain written", i)
-					if i.Config().GetString("certchain") == chainfile {
-						return err
-					}
-					i.Config().SetString("certchain", chainfile, config.Replace("home"))
-				}
+			var updated bool
+			if updated, err = certs.AppendTrustedCertsFile(h, geneos.TrustedRootsPath(h), certBundle.Root); err != nil {
+				return err
+			}
+			if updated {
+				fmt.Printf("%s trusted roots updated", i)
 			}
 		}
 

@@ -65,7 +65,7 @@ func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 		return
 	}
 
-	signingCert, _, err := geneos.ReadSigningCertificate()
+	signingCert, _, err := geneos.ReadSignerCertificate()
 	if err != nil {
 		resp.Err = err
 		return

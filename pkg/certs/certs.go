@@ -27,232 +27,17 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"os"
-	"path"
 	"slices"
 	"time"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
-
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 const (
 	PEMExtension = "pem"
 	KEYExtension = "key"
 )
-
-// ReadCertificate reads a PEM encoded cert from path on host h, return
-// the first one found. The returned certificate is not verified or
-// validated beyond that of the underlying Go x509 package parsing
-// functions.
-func ReadCertificate(h host.Host, path string) (cert *x509.Certificate, err error) {
-	data, err := h.ReadFile(path)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(data)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate certificate in %q", path)
-		}
-		if p.Type == "CERTIFICATE" {
-			return x509.ParseCertificate(p.Bytes)
-		}
-		data = rest
-	}
-}
-
-// ReadCertificates reads and decodes all certificates from the PEM file on
-// host h at path. If the files cannot be read an error is returned. If no
-// certificates are found in the file then no error is returned.
-func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate, err error) {
-	if path == "" {
-		err = os.ErrInvalid
-		return
-	}
-
-	data, err := h.ReadFile(path)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(data)
-		if p == nil {
-			break
-		}
-		if p.Type == "CERTIFICATE" {
-			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
-				certs = append(certs, c)
-			}
-		}
-		data = rest
-	}
-
-	return
-}
-
-// UpdateCACertsFile updates the certificate chain file at the specified
-// path on the given host. It ensures that all provided certificates are
-// present in the file, appending any that are missing. If the file does
-// not exist or is empty, it will be created with the provided
-// certificates. Returns ok set to true if the file was updated
-// (certificates added or file created), false if no changes were made.
-// Returns an error if writing the certificate chain fails.
-//
-// Root CA or expired certificates in the provided certs slice are
-// ignored. Additionally, any non-CA or expired certificates already
-// present in the existing chain file are removed.
-//
-// The caller is responsible for locking access to the chain file if
-// concurrent access is possible.
-func UpdateCACertsFile(h host.Host, path string, certs ...*x509.Certificate) (ok bool, err error) {
-	// remove nil, non-CA or expired certificates from certs
-	certs = slices.DeleteFunc(certs, func(c *x509.Certificate) bool {
-		return c == nil || !ValidSigningCA(c)
-	})
-
-	existingCerts, err := ReadCertificates(h, path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		return false, err
-	}
-	if len(existingCerts) == 0 {
-		// if no existing certs just write the new ones
-		return true, WriteCertificates(h, path, certs...)
-	}
-
-	// remove non-CA or expired certs
-	existingCerts = slices.DeleteFunc(existingCerts, func(c *x509.Certificate) bool {
-		return !ValidSigningCA(c)
-	})
-
-	added := false
-	for _, cert := range certs {
-		// skip duplicates
-		if slices.ContainsFunc(existingCerts, func(c *x509.Certificate) bool {
-			return cert.Equal(c)
-		}) {
-			continue
-		}
-		existingCerts = append(existingCerts, cert)
-		added = true
-	}
-	if !added {
-		return false, nil
-	}
-
-	return true, WriteCertificates(h, path, existingCerts...)
-}
-
-// UpdateRootCertsFile updates the root certificate file at the
-// specified path on the given host. It ensures that all provided
-// certificates are present in the file, appending any that are missing.
-// If the file does not exist or is empty, it will be created with the
-// provided certificates. Returns true if the file was updated
-// (certificates added or file created), false if no changes were made.
-// Returns an error if writing the root certificate file fails.
-//
-// Any non-root CA or expired certificates in the provided certs slice
-// are ignored. Additionally, any non-root CA or expired certificates already
-// present in the existing root certificate file are removed.
-//
-// The caller is responsible for locking access to the root cert file if
-// concurrent access is possible.
-func UpdateRootCertsFile(h host.Host, path string, certs ...*x509.Certificate) (updated bool, err error) {
-	// remove nil, non-root CA or expired certificates from certs
-	certs = slices.DeleteFunc(certs, func(c *x509.Certificate) bool {
-		return c == nil || !ValidRootCA(c)
-	})
-
-	allCerts, err := ReadCertificates(h, path)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Error().Err(err).Msg("reading existing root certificates failed")
-		return false, err
-	}
-	if allCerts == nil {
-		return true, WriteCertificates(h, path, certs...)
-	}
-
-	// remove non-root CA or expired certs
-	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
-		return !ValidRootCA(c)
-	})
-
-	added := false
-	for _, cert := range certs {
-		// skip duplicates
-		if slices.ContainsFunc(allCerts, func(c *x509.Certificate) bool {
-			return cert.Equal(c)
-		}) {
-			continue
-		}
-		allCerts = append(allCerts, cert)
-		added = true
-	}
-	if !added {
-		return false, nil
-	}
-
-	return true, WriteCertificates(h, path, allCerts...)
-}
-
-// WriteCertificates concatenate certs in PEM format and writes to path
-// on host h. Certificates that are expired are skipped, only errors
-// from writing the resulting file are returned. Certificates are written
-// in the order provided.
-func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate) (err error) {
-	var data []byte
-	for _, cert := range certs {
-		// validate cert as not expired, but it may still be before its
-		// NotBefore date
-		if cert == nil || cert.NotAfter.Before(time.Now()) {
-			continue
-		}
-
-		p := pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert.Raw,
-		})
-		data = append(data, p...)
-	}
-	h.MkdirAll(path.Dir(certpath), 0755)
-	return h.WriteFile(certpath, data, 0644)
-}
-
-// ReadCertPool returns a certificate pool loaded from the file on host
-// h at path. If there is any error a nil pointer is returned.
-func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
-	pool = x509.NewCertPool()
-	if data, err := h.ReadFile(path); err == nil {
-		if ok := pool.AppendCertsFromPEM(data); !ok {
-			return nil
-		}
-	}
-	return
-}
-
-// ReadTrustedCertificates reads multiple trusted root certificates from
-// the specified files and returns a combined *x509.CertPool. Any
-// certificates that are not valid root CAs are ignored.
-func ReadTrustedCertificates(certFiles ...string) (pool *x509.CertPool, n int) {
-	pool = x509.NewCertPool()
-	for _, cf := range certFiles {
-		certSlice, err := ReadCertificates(host.Localhost, cf)
-		if err != nil {
-			continue
-		}
-		for _, c := range certSlice {
-			if ValidRootCA(c) {
-				pool.AddCert(c)
-				n++
-			}
-		}
-	}
-	return
-}
 
 // CreateCertificateAndKey is a wrapper to create a new certificate
 // given the signing cert and key. Returns a certificate and private key.
@@ -267,7 +52,7 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 	}
 
 	// create a new key of the same type as the signing cert key or use a default type
-	keytype := privateKeyType(signerKey)
+	keytype := PrivateKeyType(signerKey)
 	if keytype == "" {
 		keytype = DefaultKeyType
 	}
@@ -309,83 +94,6 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 
 	if cert, err = x509.ParseCertificate(certBytes); err != nil {
 		key = nil
-		return
-	}
-
-	return
-}
-
-// CreateRootCert creates a new root certificate and private key and
-// writes it locally with dir and file basefilepath with .pem and .key
-// extensions. If overwrite is true then any existing certificate and
-// key is overwritten.
-func CreateRootCert(basefilepath string, cn string, keytype KeyType) (err error) {
-	var root *x509.Certificate
-
-	template := Template(cn,
-		Days(10*365),
-		IsCA(),
-		BasicConstraintsValid(),
-		KeyUsage(x509.KeyUsageCertSign|x509.KeyUsageCRLSign),
-		ExtKeyUsage(),
-		MaxPathLen(1),
-	)
-
-	privateKey, _, err := NewPrivateKey(keytype)
-	if err != nil {
-		return
-	}
-
-	root, key, err := CreateCertificateAndKey(template, template, privateKey)
-	if err != nil {
-		return
-	}
-
-	if err = WriteCertificates(host.Localhost, basefilepath+".pem", root); err != nil {
-		return
-	}
-	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
-		return
-	}
-
-	return
-}
-
-// CreateSigningCert creates a new signing certificate and private key
-// with the path and file base name basefilepath. You must provide a
-// valid root certificate and key in rootbasefilepath. If overwrite is
-// true than any existing cert and key are overwritten.
-func CreateSigningCert(basefilepath string, rootbasefilepath string, cn string) (err error) {
-	var signer *x509.Certificate
-
-	template := Template(cn,
-		Days(5*365),
-		IsCA(),
-		BasicConstraintsValid(),
-		KeyUsage(x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign),
-		ExtKeyUsage(),
-		MaxPathLen(0),
-	)
-
-	rootCert, err := ReadCertificate(host.Localhost, rootbasefilepath+".pem")
-	if err != nil {
-		return
-	}
-
-	rootKey, err := ReadPrivateKey(host.Localhost, rootbasefilepath+".key")
-	if err != nil {
-		return
-	}
-
-	signer, key, err := CreateCertificateAndKey(template, rootCert, rootKey)
-	if err != nil {
-		return
-	}
-
-	if err = WriteCertificates(host.Localhost, basefilepath+".pem", signer); err != nil {
-		return
-	}
-	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
 		return
 	}
 
@@ -439,12 +147,30 @@ func ValidLeafCert(cert *x509.Certificate) bool {
 		cert.NotAfter.After(time.Now())
 }
 
-// Verify attempts to verify the provided certificate chain. It returns
-// the leaf certificate, any intermediates and the root certificate
-// found in the chain. It returns an error if verification fails. The
-// first certificate in the certs provided is assumed to be the leaf
-// certificate. The order of the remaining certificates does not matter.
-func Verify(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
+// CertificateBundle holds a leaf certificate and a certificate chain
+// along with an optional private key (of the first cert in the chain,
+// which is normally a leaf) and a root certificate. If there is no leaf
+// certificate then Leaf is nil and FullChain[0] is the first
+// intermediate, if any.
+//
+// Valid should be set to true if the bundle has been verified as
+// consistent from FullChain[0] to root and the private key applies
+// FullChain[0] (but without revocation checks).
+type CertificateBundle struct {
+	Leaf      *x509.Certificate
+	FullChain []*x509.Certificate
+	Root      *x509.Certificate
+	Key       *memguard.Enclave
+	Valid     bool
+}
+
+// ParseCertChain tries to verify the provided certificate chain. It
+// returns the leaf certificate, any intermediates and any root
+// certificate found in the chain. It returns an error if verification
+// fails. The first certificate in the certs provided is assumed to be
+// the leaf certificate. The order of the remaining certificates does
+// not matter.
+func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
 	log.Debug().Msgf("verifying %d certificates", len(cert))
 
 	for _, c := range cert {
@@ -511,3 +237,280 @@ func Verify(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []
 	}
 	return
 }
+
+// ParsePEM parses PEM formatted data blocks and extracts the first leaf
+// (if any) certificate, any CA certs as a chain and a private key as a
+// DER encoded *memguard.Enclave.
+//
+// If no leaf certificate is found, but CA certificates are found, only
+// the chain is returned and cert is nil.
+//
+// The key is matched either to the leaf certificate or, if no leaf,
+// then the first member of the chain that matches any private key in
+// the bundle.
+//
+// Encrypted private keys are not supported and will be skipped.
+func ParsePEM(data ...[]byte) (cert *x509.Certificate, key *memguard.Enclave, chain []*x509.Certificate, err error) {
+	var leaf *x509.Certificate
+	var keys []*memguard.Enclave
+
+	if len(data) == 0 {
+		err = fmt.Errorf("no data to process")
+		return
+	}
+
+	for _, pembytes := range data {
+		for {
+			p, rest := pem.Decode(pembytes)
+			if p == nil {
+				break
+			}
+
+			switch p.Type {
+			case "CERTIFICATE":
+				var c *x509.Certificate
+				c, err = x509.ParseCertificate(p.Bytes)
+				if err != nil {
+					return
+				}
+				if c.IsCA {
+					chain = append(chain, c)
+				} else if leaf == nil {
+					// save first leaf
+					leaf = c
+				}
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+				// save all private keys for later matching
+				keys = append(keys, memguard.NewEnclave(p.Bytes))
+			default:
+				err = fmt.Errorf("unsupported PEM type found: %s, skipping", p.Type)
+				continue
+			}
+			pembytes = rest
+		}
+	}
+
+	if leaf == nil && len(chain) == 0 {
+		err = fmt.Errorf("no certificates found")
+		return
+	}
+
+	// reorder chain to have intermediates in-order first, then root last
+	if leaf != nil {
+		if _, intermediates, roots, err := ParseCertChain(chain...); err == nil {
+			chain = append(intermediates, roots)
+		}
+	}
+
+	// if we got this far then we can start setting returns
+	cert = leaf // which may be nil
+
+	// match key if we have a leaf cert
+	if cert != nil {
+		if i := IndexPrivateKey(keys, cert); i != -1 {
+			key = keys[i]
+		}
+	} else {
+		// no leaf, try to match first cert in chain
+		for _, c := range chain {
+			if i := IndexPrivateKey(keys, c); i != -1 {
+				key = keys[i]
+				break
+			}
+		}
+	}
+
+	err = nil
+	return
+}
+
+// ParsePEM2 parses PEM formatted data blocks and returns a
+// CertificateBundle.
+//
+// Encrypted private keys are not supported and will be skipped.
+func ParsePEM2(data ...[]byte) (bundle *CertificateBundle, err error) {
+	var leaf *x509.Certificate
+	var intermediates []*x509.Certificate
+	var roots []*x509.Certificate
+	var keys []*memguard.Enclave
+
+	if len(data) == 0 {
+		err = fmt.Errorf("no data to process")
+		return
+	}
+
+	bundle = &CertificateBundle{}
+
+	for _, pembytes := range data {
+		for {
+			p, rest := pem.Decode(pembytes)
+			if p == nil {
+				break
+			}
+
+			switch p.Type {
+			case "CERTIFICATE":
+				var c *x509.Certificate
+				c, err = x509.ParseCertificate(p.Bytes)
+				if err != nil {
+					return
+				}
+				if ValidRootCA(c) {
+					roots = append(roots, c)
+				} else if ValidSigningCA(c) {
+					intermediates = append(intermediates, c)
+				} else if ValidLeafCert(c) {
+					// save first leaf, ignore others
+					if leaf == nil {
+						leaf = c
+					}
+				} else {
+					log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
+				}
+			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+				// save all private keys for later matching
+				keys = append(keys, memguard.NewEnclave(p.Bytes))
+			default:
+				err = fmt.Errorf("unsupported PEM type found: %s, skipping", p.Type)
+				continue
+			}
+			pembytes = rest
+		}
+	}
+
+	if leaf == nil && len(intermediates) == 0 {
+		err = fmt.Errorf("no certificates found")
+		return
+	}
+
+	// prepare for validation, regardless of leaf presence
+
+	var chains [][]*x509.Certificate
+
+	// set up cert pools for verification
+	ip := x509.NewCertPool()
+	for _, c := range intermediates {
+		ip.AddCert(c)
+	}
+	rp := x509.NewCertPool()
+	for _, c := range roots {
+		rp.AddCert(c)
+	}
+
+	vopts := x509.VerifyOptions{
+		Intermediates: ip,
+		Roots:         rp,
+	}
+
+	firstCert := leaf
+	if firstCert == nil && len(intermediates) > 0 {
+		firstCert = intermediates[0]
+	}
+	if firstCert == nil && len(roots) > 0 {
+		firstCert = roots[0]
+	}
+
+	if firstCert != nil {
+		if chains, err = firstCert.Verify(vopts); err != nil {
+			log.Debug().Msgf("leaf certificate verification failed: %v", err)
+			return
+		}
+
+		if len(chains) == 0 || len(chains[0]) == 0 {
+			err = errors.New("no valid certificate chain found")
+			return
+		}
+
+		bundle.Valid = true
+		bundle.Leaf = chains[0][0]
+		bundle.Root = chains[0][len(chains[0])-1]
+		// FullChain does not include root
+		bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
+		if i := IndexPrivateKey(keys, bundle.Leaf); i != -1 {
+			bundle.Key = keys[i]
+		}
+	}
+
+	err = nil
+	return
+}
+
+// func ParseCertificatesAndKeys(data ...[]byte) (certificates []*x509.Certificate, keys []*memguard.Enclave, err error) {
+// 	if len(data) == 0 {
+// 		return
+// 	}
+
+// 	// store them unsorted for now
+// 	var ks []*memguard.Enclave
+// 	var leaves, intermediates, roots []*x509.Certificate
+
+// 	for _, b := range data {
+// 		pembytes := b
+// 		for {
+// 			p, rest := pem.Decode(pembytes)
+// 			if p == nil {
+// 				break
+// 			}
+
+// 			switch p.Type {
+// 			case "CERTIFICATE":
+// 				var c *x509.Certificate
+// 				c, err = x509.ParseCertificate(p.Bytes)
+// 				if err != nil {
+// 					return
+// 				}
+// 				if ValidRootCA(c) {
+// 					roots = append(roots, c)
+// 				} else if ValidSigningCA(c) {
+// 					intermediates = append(intermediates, c)
+// 				} else {
+// 					leaves = append(leaves, c)
+// 				}
+// 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+// 				// save first private key found
+// 				ks = append(ks, memguard.NewEnclave(p.Bytes))
+// 			default:
+// 				err = fmt.Errorf("unsupported PEM type found: %s", p.Type)
+// 				return
+// 			}
+// 			pembytes = rest
+// 		}
+// 	}
+
+// 	ip := x509.NewCertPool()
+// 	for _, c := range intermediates {
+// 		ip.AddCert(c)
+// 	}
+// 	rp := x509.NewCertPool()
+// 	for _, c := range roots {
+// 		rp.AddCert(c)
+// 	}
+// 	// sort certs then keys
+// 	vopts := x509.VerifyOptions{
+// 		Intermediates: ip,
+// 		Roots:         rp,
+// 	}
+// 	for _, c := range leaves {
+// 		_, err = c.Verify(vopts)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		certificates = append(certificates, c)
+// 	}
+// 	for _, c := range intermediates {
+// 		_, err = c.Verify(vopts)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		certificates = append(certificates, c)
+// 	}
+// 	for _, c := range roots {
+// 		_, err = c.Verify(vopts)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		certificates = append(certificates, c)
+// 	}
+
+// 	return
+// }

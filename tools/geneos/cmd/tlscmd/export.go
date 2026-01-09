@@ -18,11 +18,14 @@ limitations under the License.
 package tlscmd
 
 import (
+	"crypto/sha1"
+	"crypto/sha256"
 	_ "embed"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -40,6 +43,7 @@ func init() {
 
 	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output destination, default to stdout")
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
+	exportCmd.Flags().MarkDeprecated("no-root", "use --root instead to include the root CA certificate")
 
 	exportCmd.Flags().SortFlags = false
 }
@@ -49,7 +53,7 @@ var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
 	Use:                   "export [flags]",
-	Short:                 "Export certificates",
+	Short:                 "Export signer certificate and private key",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
@@ -69,45 +73,63 @@ $ geneos tls export --output file.pem
 		// gather the rootCA cert, the geneos cert and key
 		root, rootFile, err := geneos.ReadRootCertificate()
 		if err != nil {
-			err = fmt.Errorf("local root certificate (%s) not valid: %w", rootFile, err)
+			err = fmt.Errorf("local root certificate (%q) not valid: %w", rootFile, err)
 			return
 		}
-		signer, signerFile, err := geneos.ReadSigningCertificate()
+		signer, signerFile, err := geneos.ReadSignerCertificate()
 		if err != nil {
-			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
+			err = fmt.Errorf("local signer certificate (%q) not valid: %w", signerFile, err)
 			return
 		}
-		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 		if err != nil {
 			return
 		}
 
-		var pembytes []byte
+		key, _ := signerKey.Open()
+		pemKey := pem.EncodeToMemory(&pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: key.Bytes(),
+		})
+		defer key.Destroy()
 
-		pembytes = pem.EncodeToMemory(&pem.Block{
+		pemSigner := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: signer.Raw,
 		})
 
-		if !exportCmdNoRoot {
-			pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: root.Raw,
-			})...)
-		}
+		pemRoot := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: root.Raw,
+		})
 
-		l, _ := signingKey.Open()
-		pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-			Type:  "PRIVATE KEY",
-			Bytes: l.Bytes(),
-		})...)
-		l.Destroy()
+		output := "# Exported Geneos Root and Signer Certificates and Private Key\n"
+		output += "#\n"
+		output += "# Signer Private Key\n#\n"
+		output += "#   Key Type: " + string(certs.PrivateKeyType(signerKey)) + "\n#\n"
+		output += string(pemKey)
+		output += "# Signer Certificate\n#\n"
+		output += "#   Subject: " + signer.Subject.String() + "\n"
+		output += "#    Issuer: " + signer.Issuer.String() + "\n"
+		output += "#   Expires: " + signer.NotAfter.Format(time.RFC3339) + "\n"
+		output += "#    Serial: " + signer.SerialNumber.String() + "\n"
+		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(signer.Raw)) + "\n"
+		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(signer.Raw)) + "\n#\n"
+		output += string(pemSigner)
+		output += "# Root CA Certificate\n#\n"
+		output += "#   Subject: " + root.Subject.String() + "\n"
+		output += "#   Expires: " + root.NotAfter.Format(time.RFC3339) + "\n"
+		output += "#    Serial: " + root.SerialNumber.String() + "\n"
+		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(root.Raw)) + "\n"
+		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(root.Raw)) + "\n#\n"
+
+		output += string(pemRoot)
 
 		if exportCmdOutput != "" {
-			return os.WriteFile(exportCmdOutput, pembytes, 0600)
+			return os.WriteFile(exportCmdOutput, []byte(output), 0600)
 		}
 
-		fmt.Println(string(pembytes))
+		fmt.Println(output)
 		return
 	},
 }

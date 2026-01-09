@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"net"
+	"net/url"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -63,6 +64,8 @@ type templateOptions struct {
 	maxPathLenZero        bool
 	dnsNames              []string
 	ipAddresses           []net.IP
+	emailAddresses        []string
+	uris                  []*url.URL
 }
 
 func evalTemplateOptions(options ...TemplateOption) (opts *templateOptions) {
@@ -128,8 +131,34 @@ func DNSNames(names ...string) TemplateOption {
 	}
 }
 
-func IPAddresses(ips ...net.IP) TemplateOption {
+func IPAddresses(ips ...string) TemplateOption {
 	return func(opts *templateOptions) {
-		opts.ipAddresses = ips
+		opts.ipAddresses = make([]net.IP, 0, len(ips))
+		for _, ip := range ips {
+			parsed := net.ParseIP(ip)
+			if parsed == nil {
+				continue
+			}
+			opts.ipAddresses = append(opts.ipAddresses, parsed)
+		}
+	}
+}
+
+func EmailAddresses(emails ...string) TemplateOption {
+	return func(opts *templateOptions) {
+		opts.emailAddresses = emails
+	}
+}
+
+func URIs(uris ...string) TemplateOption {
+	return func(opts *templateOptions) {
+		opts.uris = make([]*url.URL, 0, len(uris))
+		for _, u := range uris {
+			parsed, err := url.Parse(u)
+			if err != nil {
+				continue
+			}
+			opts.uris = append(opts.uris, parsed)
+		}
 	}
 }
