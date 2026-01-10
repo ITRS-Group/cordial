@@ -19,14 +19,19 @@ limitations under the License.
 package certs
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"slices"
 	"time"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -92,12 +97,24 @@ func AppendTrustedCertsFile(h host.Host, path string, root ...*x509.Certificate)
 // in the order provided.
 func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate) (err error) {
 	var data []byte
+
 	for _, cert := range certs {
+		var output bytes.Buffer
 		// validate cert as not expired, but it may still be before its
 		// NotBefore date
 		if cert == nil || cert.NotAfter.Before(time.Now()) {
 			continue
 		}
+
+		output.WriteString("\n# Certificate\n#\n")
+		output.WriteString("#   Subject: " + cert.Subject.String() + "\n")
+		output.WriteString("#    Issuer: " + cert.Issuer.String() + "\n")
+		output.WriteString("#   Expires: " + cert.NotAfter.Format(time.RFC3339) + "\n")
+		output.WriteString("#    Serial: " + cert.SerialNumber.String() + "\n")
+		output.WriteString("#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(cert.Raw)) + "\n")
+		output.WriteString("#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(cert.Raw)) + "\n#\n")
+
+		data = append(data, output.Bytes()...)
 
 		p := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
@@ -105,6 +122,7 @@ func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate)
 		})
 		data = append(data, p...)
 	}
+
 	h.MkdirAll(path.Dir(certpath), 0755)
 	return h.WriteFile(certpath, data, 0644)
 }
@@ -182,4 +200,24 @@ func WriteNewSignerCert(basefilepath string, rootbasefilepath string, cn string)
 	}
 
 	return
+}
+
+// WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
+// PEM file to path on host h. sets file permissions to 0600 (before
+// umask)
+func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
+	var output bytes.Buffer
+
+	l, _ := key.Open()
+	defer l.Destroy()
+	output.WriteString("\n# Private Key\n#\n")
+	output.WriteString("#   Key Type: " + string(PrivateKeyType(key)) + "\n#\n")
+	data := output.Bytes()
+
+	data = append(data, pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: l.Bytes(),
+	})...)
+
+	return h.WriteFile(path, data, 0600)
 }

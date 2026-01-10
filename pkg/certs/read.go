@@ -23,7 +23,9 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -109,4 +111,26 @@ func ReadTrustedCertPool(trustedCertsPath string) (pool *x509.CertPool, n int) {
 		}
 	}
 	return
+}
+
+// ReadPrivateKey reads file on host h as an unencrypted,
+// PEM-encoded private key and saves the der format key in a
+// memguard.Enclave
+func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error) {
+	b, err := h.ReadFile(file)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(b)
+		if p == nil {
+			return nil, fmt.Errorf("cannot locate private key")
+		}
+		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
+			key = memguard.NewEnclave(p.Bytes)
+			return
+		}
+		b = rest
+	}
 }

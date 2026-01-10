@@ -255,10 +255,20 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 
 // ReadPrivateKey reads the instance RSA private key
 func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, err error) {
-	if i.Type() == nil || PathTo(i, "privatekey") == "" {
+	var keyPath string
+
+	if i.Type() == nil {
 		return nil, geneos.ErrInvalidArgs
 	}
 
-	keyPath := strings.Join(append([]string{PathTo(i, "privatekey")}, ext...), ".")
-	return certs.ReadPrivateKey(i.Host(), Abs(i, keyPath))
+	cf := i.Config()
+	if cf.IsSet(cf.Join("tls", "privatekey")) {
+		keyPath = cf.GetString(cf.Join("tls", "privatekey"))
+	} else if cf.IsSet("privatekey") {
+		keyPath = cf.GetString("privatekey")
+	} else {
+		return nil, geneos.ErrNotExist
+	}
+
+	return certs.ReadPrivateKey(i.Host(), strings.Join(append([]string{keyPath}, ext...), "."))
 }

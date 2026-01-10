@@ -33,6 +33,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var exportCmdOutput string
@@ -42,6 +44,7 @@ func init() {
 	tlsCmd.AddCommand(exportCmd)
 
 	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output destination, default to stdout")
+
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
 	exportCmd.Flags().MarkDeprecated("no-root", "use --root instead to include the root CA certificate")
 
@@ -52,7 +55,7 @@ func init() {
 var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
-	Use:                   "export [flags]",
+	Use:                   "export [flags] [TYPE] [NAME...]",
 	Short:                 "Export signer certificate and private key",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
@@ -62,10 +65,18 @@ var exportCmd = &cobra.Command{
 $ geneos tls export --output file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
+		cmd.CmdGlobal:        "false",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names := cmd.ParseTypeNames(command)
+
+		if len(names) > 0 || ct != nil {
+			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
+			return
+		}
+
 		confDir := config.AppConfigDir()
 		if confDir == "" {
 			return config.ErrNoUserConfigDir
@@ -132,4 +143,61 @@ $ geneos tls export --output file.pem
 		fmt.Println(output)
 		return
 	},
+}
+
+func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
+
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		resp.Err = fmt.Errorf("cannot read certificates for %s %q: %w", i.Type(), i.Name(), err)
+		return
+	}
+	key, err := instance.ReadPrivateKey(i)
+	if err != nil {
+		resp.Err = fmt.Errorf("cannot read private key for %s %q: %w", i.Type(), i.Name(), err)
+		return
+	}
+
+	keyData, _ := key.Open()
+	pemKey := pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: keyData.Bytes(),
+	})
+	defer keyData.Destroy()
+
+	output := fmt.Sprintf("# Exported Certificate and Private Key for %s %q\n", i.Type(), i.Name())
+	output += "#\n"
+	output += "# Private Key\n#\n"
+	output += "#   Key Type: " + string(certs.PrivateKeyType(key)) + "\n#\n"
+	output += string(pemKey)
+
+	for _, cert := range certChain {
+		pemCert := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: cert.Raw,
+		})
+
+		output += "\n"
+		output += "# Certificate\n#\n"
+		output += "#   Subject: " + cert.Subject.String() + "\n"
+		output += "#    Issuer: " + cert.Issuer.String() + "\n"
+		output += "#   Expires: " + cert.NotAfter.Format(time.RFC3339) + "\n"
+		output += "#    Serial: " + cert.SerialNumber.String() + "\n"
+		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(cert.Raw)) + "\n"
+		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(cert.Raw)) + "\n#\n"
+		output += string(pemCert)
+	}
+
+	if exportCmdOutput != "" {
+		err = os.WriteFile(exportCmdOutput, []byte(output), 0600)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		return
+	}
+
+	resp.Details = []string{output}
+	return
 }

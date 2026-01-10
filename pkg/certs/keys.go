@@ -9,13 +9,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/pem"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/awnumar/memguard"
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 type KeyType string
@@ -117,41 +115,6 @@ func NewPrivateKey(keytype KeyType) (der *memguard.Enclave, publickey any, err e
 		publickey = k.Public()
 	}
 	return
-}
-
-// ReadPrivateKey reads file on host h as an unencrypted,
-// PEM-encoded private key and saves the der format key in a
-// memguard.Enclave
-func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error) {
-	b, err := h.ReadFile(file)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(b)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key")
-		}
-		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = memguard.NewEnclave(p.Bytes)
-			return
-		}
-		b = rest
-	}
-}
-
-// WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
-// PEM file to path on host h. sets file permissions to 0600 (before
-// umask)
-func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
-	l, _ := key.Open()
-	defer l.Destroy()
-	data := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: l.Bytes(),
-	})
-	return h.WriteFile(path, data, 0600)
 }
 
 // PrivateKey parses the DER encoded private key enclave, first as

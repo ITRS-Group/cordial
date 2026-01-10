@@ -87,72 +87,83 @@ $ geneos tls import netprobe localhost -c /path/to/file.pem
 $ geneos tls import --signing-bundle /path/to/file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
+		cmd.CmdGlobal:        "false",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := cmd.ParseTypeNames(command)
-		if len(names) == 0 {
-			return fmt.Errorf("%w: no instance names specified", geneos.ErrInvalidArgs)
-		}
+		var imported bool
 
 		if importCmdSigningBundle != "" {
-			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey)
+			imported = true
+			if err = geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey); err != nil {
+				return err
+			}
 		}
 
-		if importCmdCert != "" {
-			if path.Ext(importCmdCert) == ".pfx" || path.Ext(importCmdCert) == ".p12" {
-				if importCmdPassword.String() == "" {
-					importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
-					if err != nil {
-						log.Fatal().Err(err).Msg("Failed to read password")
-						// return err
-					}
-				}
-				pfxData, err := os.ReadFile(importCmdCert)
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to read PFX file")
-				}
-				key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to decode PFX file")
-				}
-				pk, err := x509.MarshalPKCS8PrivateKey(key)
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to marshal private key")
-				}
-				k := memguard.NewEnclave(pk)
+		ct, names := cmd.ParseTypeNames(command)
 
-				certBundle := certs.CertificateBundle{
-					Leaf:      c,
-					Key:       k,
-					FullChain: chain,
+		if len(names) == 0 || ct == nil {
+			if imported {
+				// we have imported a signing bundle, so can just finish now
+				return
+			}
+			return fmt.Errorf("TYPE and NAME... are required when importing an instance bundle. Use 'all' to import to all instances")
+		}
+
+		if importCmdCert == "" {
+			return fmt.Errorf("--instance-bundle is required when specifying TYPE and NAME")
+		}
+
+		if path.Ext(importCmdCert) == ".pfx" || path.Ext(importCmdCert) == ".p12" {
+			if importCmdPassword.String() == "" {
+				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read password")
+					// return err
 				}
-				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
-				return nil
 			}
+			pfxData, err := os.ReadFile(importCmdCert)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to read PFX file")
+			}
+			key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to decode PFX file")
+			}
+			pk, err := x509.MarshalPKCS8PrivateKey(key)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to marshal private key")
+			}
+			k := memguard.NewEnclave(pk)
 
-			certChain, err := config.ReadPEMBytes(importCmdCert, "instance certificate(s)")
-			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+			certBundle := certs.CertificateBundle{
+				Leaf:      c,
+				Key:       k,
+				FullChain: chain,
 			}
-			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
-			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance key")
-			}
-			certBundle, err := certs.ParsePEM2(certChain, key)
-			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to decompose PEM")
-			}
-			if certBundle.Leaf == nil || certBundle.Key == nil {
-				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-			}
-
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 			return nil
 		}
 
-		return
+		certChain, err := config.ReadPEMBytes(importCmdCert, "instance certificate(s)")
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+		}
+		key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to read instance key")
+		}
+		certBundle, err := certs.ParsePEM2(certChain, key)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to decompose PEM")
+		}
+		if certBundle.Leaf == nil || certBundle.Key == nil {
+			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+		}
+
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
+		return nil
 	},
 }
 

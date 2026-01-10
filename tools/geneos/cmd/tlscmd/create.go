@@ -76,13 +76,14 @@ func init() {
 
 	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
 
+	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
+
 	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).")
 	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).")
 	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).")
 	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).")
 
-	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in 'out' directory")
-	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
+	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
 
 	createCmd.Flags().SortFlags = false
 }
@@ -105,10 +106,15 @@ var createCmd = &cobra.Command{
 				return
 			}
 		}
+
 		if createCmdCN == "" {
-			createCmdCN, err = os.Hostname()
-			if err != nil {
-				return err
+			if len(createCmdSANs.DNS) > 0 {
+				createCmdCN = createCmdSANs.DNS[0]
+			} else {
+				createCmdCN, err = os.Hostname()
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -116,8 +122,8 @@ var createCmd = &cobra.Command{
 			fmt.Println("Console output only valid for bundles")
 			return nil
 		}
-		err = CreateCert(createCmdDestDir, createCmdOverwrite, createCmdDays, createCmdCN, createCmdSANs)
-		if err != nil {
+
+		if err = CreateCert(createCmdDestDir, createCmdOverwrite, createCmdDays, createCmdCN, createCmdSANs); err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
