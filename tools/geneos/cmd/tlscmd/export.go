@@ -18,14 +18,11 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
 	_ "embed"
 	"encoding/pem"
 	"fmt"
 	"os"
 	"path"
-	"time"
 
 	"github.com/spf13/cobra"
 
@@ -114,25 +111,12 @@ $ geneos tls export --output file.pem
 			Bytes: root.Raw,
 		})
 
-		output := "# Exported Geneos Root and Signer Certificates and Private Key\n"
-		output += "#\n"
-		output += "# Signer Private Key\n#\n"
-		output += "#   Key Type: " + string(certs.PrivateKeyType(signerKey)) + "\n#\n"
+		output := "# Geneos Root and Signer Certificates\n#\n"
+		output += string(certs.PrivateKeyComments(signerKey, "Signer Private Key"))
 		output += string(pemKey)
-		output += "# Signer Certificate\n#\n"
-		output += "#   Subject: " + signer.Subject.String() + "\n"
-		output += "#    Issuer: " + signer.Issuer.String() + "\n"
-		output += "#   Expires: " + signer.NotAfter.Format(time.RFC3339) + "\n"
-		output += "#    Serial: " + signer.SerialNumber.String() + "\n"
-		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(signer.Raw)) + "\n"
-		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(signer.Raw)) + "\n#\n"
+		output += string(certs.CertificateComments(signer, "Signer Certificate"))
 		output += string(pemSigner)
-		output += "# Root CA Certificate\n#\n"
-		output += "#   Subject: " + root.Subject.String() + "\n"
-		output += "#   Expires: " + root.NotAfter.Format(time.RFC3339) + "\n"
-		output += "#    Serial: " + root.SerialNumber.String() + "\n"
-		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(root.Raw)) + "\n"
-		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(root.Raw)) + "\n#\n"
+		output += string(certs.CertificateComments(root, "Root CA Certificate"))
 
 		output += string(pemRoot)
 
@@ -166,10 +150,8 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	})
 	defer keyData.Destroy()
 
-	output := fmt.Sprintf("# Exported Certificate and Private Key for %s %q\n", i.Type(), i.Name())
-	output += "#\n"
-	output += "# Private Key\n#\n"
-	output += "#   Key Type: " + string(certs.PrivateKeyType(key)) + "\n#\n"
+	output := fmt.Sprintf("# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
+	output += string(certs.PrivateKeyComments(key))
 	output += string(pemKey)
 
 	for _, cert := range certChain {
@@ -178,14 +160,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 			Bytes: cert.Raw,
 		})
 
-		output += "\n"
-		output += "# Certificate\n#\n"
-		output += "#   Subject: " + cert.Subject.String() + "\n"
-		output += "#    Issuer: " + cert.Issuer.String() + "\n"
-		output += "#   Expires: " + cert.NotAfter.Format(time.RFC3339) + "\n"
-		output += "#    Serial: " + cert.SerialNumber.String() + "\n"
-		output += "#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(cert.Raw)) + "\n"
-		output += "#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(cert.Raw)) + "\n#\n"
+		output += string(certs.CertificateComments(cert))
 		output += string(pemCert)
 	}
 

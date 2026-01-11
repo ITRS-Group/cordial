@@ -99,22 +99,11 @@ func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate)
 	var data []byte
 
 	for _, cert := range certs {
-		var output bytes.Buffer
-		// validate cert as not expired, but it may still be before its
-		// NotBefore date
 		if cert == nil || cert.NotAfter.Before(time.Now()) {
 			continue
 		}
 
-		output.WriteString("\n# Certificate\n#\n")
-		output.WriteString("#   Subject: " + cert.Subject.String() + "\n")
-		output.WriteString("#    Issuer: " + cert.Issuer.String() + "\n")
-		output.WriteString("#   Expires: " + cert.NotAfter.Format(time.RFC3339) + "\n")
-		output.WriteString("#    Serial: " + cert.SerialNumber.String() + "\n")
-		output.WriteString("#      SHA1: " + fmt.Sprintf("%X", sha1.Sum(cert.Raw)) + "\n")
-		output.WriteString("#    SHA256: " + fmt.Sprintf("%X", sha256.Sum256(cert.Raw)) + "\n#\n")
-
-		data = append(data, output.Bytes()...)
+		data = append(data, CertificateComments(cert)...)
 
 		p := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
@@ -125,6 +114,33 @@ func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate)
 
 	h.MkdirAll(path.Dir(certpath), 0755)
 	return h.WriteFile(certpath, data, 0644)
+}
+
+func CertificateComments(cert *x509.Certificate, titles ...string) []byte {
+	output := &bytes.Buffer{}
+
+	if len(titles) > 0 {
+		for _, title := range titles {
+			output.WriteString("# " + title + "\n")
+		}
+	} else {
+		output.WriteString("# Certificate\n")
+	}
+	output.WriteString("#\n")
+	output.WriteString("#   Subject: ")
+	output.WriteString(cert.Subject.String())
+	output.WriteString("\n#    Issuer: ")
+	output.WriteString(cert.Issuer.String())
+	output.WriteString("\n#   Expires: ")
+	output.WriteString(cert.NotAfter.Format(time.RFC3339))
+	output.WriteString("\n#    Serial: ")
+	output.WriteString(cert.SerialNumber.String())
+	output.WriteRune('\n')
+
+	fmt.Fprintf(output, "#      SHA1: %X\n", sha1.Sum(cert.Raw))
+	fmt.Fprintf(output, "#    SHA256: %X\n#\n", sha256.Sum256(cert.Raw))
+
+	return output.Bytes()
 }
 
 // WriteNewRootCert creates a new root certificate and private key and
@@ -206,18 +222,30 @@ func WriteNewSignerCert(basefilepath string, rootbasefilepath string, cn string)
 // PEM file to path on host h. sets file permissions to 0600 (before
 // umask)
 func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
-	var output bytes.Buffer
-
 	l, _ := key.Open()
 	defer l.Destroy()
-	output.WriteString("\n# Private Key\n#\n")
-	output.WriteString("#   Key Type: " + string(PrivateKeyType(key)) + "\n#\n")
-	data := output.Bytes()
 
+	data := PrivateKeyComments(key)
 	data = append(data, pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: l.Bytes(),
 	})...)
 
 	return h.WriteFile(path, data, 0600)
+}
+
+func PrivateKeyComments(key *memguard.Enclave, titles ...string) []byte {
+	output := &bytes.Buffer{}
+
+	if len(titles) > 0 {
+		for _, title := range titles {
+			output.WriteString("# " + title + "\n")
+		}
+	} else {
+		output.WriteString("# Private Key\n")
+	}
+	output.WriteString("#\n")
+	output.WriteString("#   Key Type: " + string(PrivateKeyType(key)) + "\n#\n")
+
+	return output.Bytes()
 }
