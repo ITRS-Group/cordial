@@ -132,6 +132,8 @@ geneos tls export gateway mygateway
 func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
+	h := i.Host()
+
 	instanceCertChain, err := instance.ReadCertificates(i)
 	if err != nil {
 		resp.Err = fmt.Errorf("cannot read certificates for %s %q: %w", i.Type(), i.Name(), err)
@@ -139,10 +141,19 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 
 	// build and test trust chain
-	rootPool, n := certs.ReadRootCertPool(geneos.TrustedRootsPath(i.Host()))
-	if n == 0 {
-		resp.Err = fmt.Errorf("no trusted root CAs found to verify %s %q", i.Type(), i.Name())
-		return
+	rootPool, ok := certs.ReadRootCertPool(h, geneos.TrustedRootsPath(h))
+	if !ok {
+		// if there is no trusted CA file on the host, try local root CA
+		confDir := config.AppConfigDir()
+		if confDir == "" {
+			resp.Err = config.ErrNoUserConfigDir
+			return
+		}
+		rootPool, ok = certs.ReadRootCertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+".pem"))
+		if !ok {
+			resp.Err = fmt.Errorf("no trusted root CAs found to verify %s %q", i.Type(), i.Name())
+			return
+		}
 	}
 
 	intermediatePool := x509.NewCertPool()

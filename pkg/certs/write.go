@@ -37,7 +37,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// AppendTrustedCertsFile appends the given root certificates to the
+// UpdatedCACertsFile appends the given root certificates to the
 // root certificate file at the specified path on the given host. It
 // ensures that all the given certificates are present in the file,
 // appending any that are missing. If the file does not exist or is
@@ -53,7 +53,7 @@ import (
 //
 // The caller is responsible for locking access to the root cert file if
 // concurrent access is possible.
-func AppendTrustedCertsFile(h host.Host, path string, root ...*x509.Certificate) (updated bool, err error) {
+func UpdatedCACertsFile(h host.Host, path string, root ...*x509.Certificate) (updated bool, err error) {
 	// remove nil, non-root CA or expired certificates from certs
 	root = slices.DeleteFunc(root, func(c *x509.Certificate) bool {
 		return c == nil || !IsValidRootCA(c)

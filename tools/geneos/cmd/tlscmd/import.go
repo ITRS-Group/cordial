@@ -194,7 +194,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	var updated bool
-	updated, resp.Err = certs.AppendTrustedCertsFile(i.Host(), geneos.TrustedRootsPath(i.Host()), tlsParam.Root)
+	updated, resp.Err = certs.UpdatedCACertsFile(i.Host(), geneos.TrustedRootsPath(i.Host()), tlsParam.Root)
 	if resp.Err != nil {
 		return
 	}

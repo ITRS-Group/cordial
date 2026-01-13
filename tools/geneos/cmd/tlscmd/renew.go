@@ -108,14 +108,17 @@ var chainUpdateMutex sync.Mutex
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	var err error
 
-	resp = responses.NewResponse(i)
 	cf := i.Config()
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
+		resp = responses.NewResponse(i)
 		resp.Err = config.ErrNoUserConfigDir
 		return
 	}
+
+	// migrate the TLS config, regardless of roll/unroll, at this point
+	resp = migrateInstance(i)
 
 	switch {
 	case renewCmdRoll:
@@ -189,27 +192,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		// root cert optional to create instance specific chain file
-		// rootCert, _, _ := geneos.ReadRootCertificate()
-		// if rootCert == nil {
-		// 	i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-		// } else {
-		// 	chainfile := instance.PathTo(i, "certchain")
-		// 	if chainfile == "" {
-		// 		chainfile = path.Join(i.Home(), "chain.pem")
-		// 		i.Config().SetString("certchain", chainfile, config.Replace("home"))
-		// 	}
-
-		// 	chainUpdateMutex.Lock()
-		// 	if updated, err := certs.UpdateCACertsFile(i.Host(), chainfile, signingCert, rootCert); err != nil {
-		// 		resp.Err = err
-		// 		chainUpdateMutex.Unlock()
-		// 		return
-		// 	} else if updated {
-		// 		resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain %q updated", i, chainfile))
-		// 	}
-		// 	chainUpdateMutex.Unlock()
-		// }
+		// TODO: migrate other settings, create trusted-roots etc.
 
 		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 			return

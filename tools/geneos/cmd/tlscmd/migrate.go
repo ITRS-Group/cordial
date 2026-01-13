@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -61,18 +60,18 @@ var migrateCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceCert).Report(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, migrateInstance).Report(os.Stdout)
 	},
 }
 
-// migrate instance certificates from old layout to new layout:
+// migrate instance TLS from old layout to new layout:
 //
 // * use certchain to create a full chain in certificate file (without root)
 // * update params from certificate/privatekey/certchain to tls::certificate etc.
 // * update trusted-roots with new roots found in certchain
 //
 // Private key file is unchanged, but the parameter is moved.
-func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
 	cf := i.Config()
@@ -83,37 +82,55 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 		return
 	}
 
-	// some instances may already have multiple certificated in the
+	// some instances may already have multiple certificates in the
 	// primary file, before migration
-	certChain, err := instance.ReadCertificates(i)
+	instanceCertChain, err := instance.ReadCertificates(i)
 	if err != nil && !os.IsNotExist(err) {
 		resp.Err = err
 		return
 	}
-	if len(certChain) == 0 {
-		resp.Err = fmt.Errorf("no valid certificates found")
+	if len(instanceCertChain) == 0 {
+		resp.Err = fmt.Errorf("no valid instance certificate found")
 		return
 	}
 
 	if cf.IsSet("certchain") {
-		// var chain []*x509.Certificate
-		log.Debug().Msgf("reading certchain %s", cf.GetString("certchain"))
 		chain, err := certs.ReadCertificates(h, cf.GetString("certchain"))
 		if err != nil && !os.IsNotExist(err) {
 			resp.Err = err
 			return
 		}
-		certChain = append(certChain, chain...)
+		instanceCertChain = append(instanceCertChain, chain...)
 	}
 
-	leaf, intermediates, root, err := certs.ParseCertChain(certChain...)
+	var haveRoot bool
+	for _, c := range instanceCertChain {
+		// prefer the root cert already in the chain
+		if certs.IsValidRootCA(c) {
+			haveRoot = true
+			break
+		}
+	}
+
+	if !haveRoot {
+		// try to make sure we have a full chain by adding root cert
+		rootCert, _, err := geneos.ReadRootCertificate()
+		if err != nil {
+			resp.Err = fmt.Errorf("cannot read root certificate: %w", err)
+			return
+		}
+
+		instanceCertChain = append(instanceCertChain, rootCert)
+	}
+
+	leaf, intermediates, root, err := certs.ParseCertChain(instanceCertChain...)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
 	// update trusted-roots file
-	updated, err := certs.AppendTrustedCertsFile(h, geneos.TrustedRootsPath(h), root)
+	updated, err := certs.UpdatedCACertsFile(h, geneos.TrustedRootsPath(h), root)
 	if err != nil {
 		resp.Err = err
 		return
@@ -121,13 +138,14 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	if updated {
 		resp.Completed = append(resp.Completed, "updated trusted roots")
 	}
+
 	// write fullchain to certificate file - this updates instance parameters for certificate
 	err = instance.WriteCertificates(i, append([]*x509.Certificate{leaf}, intermediates...))
 	if err != nil {
 		resp.Err = err
 		return
 	}
-	resp.Completed = append(resp.Completed, "wrote fullchain to certificate file")
+	resp.Completed = append(resp.Completed, "wrote fullchain to instance certificate file")
 
 	// update instance parameters to new layout
 	cf.Set(cf.Join("tls", "privatekey"), cf.GetString("privatekey"))
@@ -150,9 +168,5 @@ func migrateInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	}
 	resp.Completed = append(resp.Completed, "updated instance configuration")
 
-	return
-}
-
-func migrateNonInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	return
 }

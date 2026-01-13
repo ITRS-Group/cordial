@@ -77,16 +77,16 @@ func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 // root certificates returns a *x509.CertPool and the number of valid
 // root CAs found. Any certificates that are not valid root CAs are
 // skipped.
-func ReadRootCertPool(trustedCertsPath string) (pool *x509.CertPool, n int) {
+func ReadRootCertPool(h host.Host, path string) (pool *x509.CertPool, ok bool) {
 	pool = x509.NewCertPool()
-	trustedCerts, err := ReadCertificates(host.Localhost, trustedCertsPath)
+	trustedCerts, err := ReadCertificates(h, path)
 	if err != nil {
 		return
 	}
 	for _, c := range trustedCerts {
 		if IsValidRootCA(c) {
 			pool.AddCert(c)
-			n++
+			ok = true
 		}
 	}
 	return

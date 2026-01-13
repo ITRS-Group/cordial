@@ -177,14 +177,14 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 		switch {
 		case IsValidLeafCert(c):
 			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
-			if leaf != nil {
+			if leaf != nil && !leaf.Equal(c) {
 				err = errors.New("multiple leaf certificates found")
 				return
 			}
 			leaf = c
 		case IsValidRootCA(c):
 			log.Debug().Msgf("found valid root CA certificate: %s", c.Subject.CommonName)
-			if root != nil {
+			if root != nil && !root.Equal(c) {
 				err = errors.New("multiple root certificates found")
 				return
 			}

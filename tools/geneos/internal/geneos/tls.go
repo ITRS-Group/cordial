@@ -194,7 +194,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+".pem"))
 
-	if updated, err := certs.AppendTrustedCertsFile(LOCAL, TrustedRootsPath(LOCAL), certBundle.Root); err != nil {
+	if updated, err := certs.UpdatedCACertsFile(LOCAL, TrustedRootsPath(LOCAL), certBundle.Root); err != nil {
 		return err
 	} else if updated {
 		fmt.Printf("trusted roots updated with root certificate\n")
@@ -244,7 +244,7 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = certs.AppendTrustedCertsFile(LOCAL, TrustedRootsPath(LOCAL), rootCert)
+	_, err = certs.UpdatedCACertsFile(LOCAL, TrustedRootsPath(LOCAL), rootCert)
 	if err != nil {
 		return err
 	}
@@ -277,7 +277,7 @@ func TLSSync() (err error) {
 
 	for _, h := range allHosts {
 		hostname := h.Hostname()
-		updated, err := certs.AppendTrustedCertsFile(h, h.PathTo("tls", TrustedRootsFilename), allRoots...)
+		updated, err := certs.UpdatedCACertsFile(h, h.PathTo("tls", TrustedRootsFilename), allRoots...)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to update trusted roots on host %s", hostname)
 			continue

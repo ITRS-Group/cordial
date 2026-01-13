@@ -778,9 +778,9 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 // system certs. It also loads the Geneos global chain file and adds the
 // certs to the verification pools after some basic validation.
 func verifyCert(certChain ...*x509.Certificate) bool {
-	roots, n := certs.ReadRootCertPool(geneos.TrustedRootsPath(geneos.LOCAL))
+	roots, ok := certs.ReadRootCertPool(geneos.LOCAL, geneos.TrustedRootsPath(geneos.LOCAL))
 
-	if n == 0 {
+	if !ok {
 		return false
 	}
 
