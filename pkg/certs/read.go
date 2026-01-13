@@ -29,28 +29,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// ReadCertificate reads a PEM encoded cert from path on host h, return
-// the first one found. The returned certificate is not validated beyond
-// the parsing functionality of the underlying Go crypto/x509 package.
-func ReadCertificate(h host.Host, path string) (cert *x509.Certificate, err error) {
-	data, err := h.ReadFile(path)
-	if err != nil {
-		return
-	}
-
-	for {
-		p, rest := pem.Decode(data)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate certificate in %q", path)
-		}
-		if p.Type == "CERTIFICATE" {
-			return x509.ParseCertificate(p.Bytes)
-		}
-		data = rest
-	}
-}
-
-// ReadCertificates reads and decodes all certificates from the PEM file
+// ReadCertificates reads and parses all certificates from the PEM file
 // on host h at path. If the files cannot be read an error is returned.
 // If no certificates are found in the file then no error is returned.
 // The returned certificates are not validated beyond the parsing
@@ -94,18 +73,18 @@ func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 	return
 }
 
-// ReadTrustedCertPool reads a local PEM file containing trusted
+// ReadRootCertPool reads a local PEM file containing trusted
 // root certificates returns a *x509.CertPool and the number of valid
 // root CAs found. Any certificates that are not valid root CAs are
 // skipped.
-func ReadTrustedCertPool(trustedCertsPath string) (pool *x509.CertPool, n int) {
+func ReadRootCertPool(trustedCertsPath string) (pool *x509.CertPool, n int) {
 	pool = x509.NewCertPool()
 	trustedCerts, err := ReadCertificates(host.Localhost, trustedCertsPath)
 	if err != nil {
 		return
 	}
 	for _, c := range trustedCerts {
-		if ValidRootCA(c) {
+		if IsValidRootCA(c) {
 			pool.AddCert(c)
 			n++
 		}

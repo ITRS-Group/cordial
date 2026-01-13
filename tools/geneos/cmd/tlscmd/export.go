@@ -18,6 +18,7 @@ limitations under the License.
 package tlscmd
 
 import (
+	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
 	"fmt"
@@ -43,7 +44,7 @@ func init() {
 	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output destination, default to stdout")
 
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
-	exportCmd.Flags().MarkDeprecated("no-root", "use --root instead to include the root CA certificate")
+	exportCmd.Flags().MarkDeprecated("no-root", "root CA should always be in the exported bnundle")
 
 	exportCmd.Flags().SortFlags = false
 }
@@ -58,8 +59,8 @@ var exportCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-# export 
-$ geneos tls export --output file.pem
+geneos tls export --output file.pem
+geneos tls export gateway mygateway
 `,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:        "false",
@@ -81,19 +82,29 @@ $ geneos tls export --output file.pem
 		// gather the rootCA cert, the geneos cert and key
 		root, rootFile, err := geneos.ReadRootCertificate()
 		if err != nil {
-			err = fmt.Errorf("local root certificate (%q) not valid: %w", rootFile, err)
+			err = fmt.Errorf("root certificate expected at %q is not valid: %w", rootFile, err)
 			return
 		}
+		pemRoot := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: root.Raw,
+		})
+
 		signer, signerFile, err := geneos.ReadSignerCertificate()
 		if err != nil {
-			err = fmt.Errorf("local signer certificate (%q) not valid: %w", signerFile, err)
+			err = fmt.Errorf("signer certificate expected at %q is not valid: %w", signerFile, err)
 			return
 		}
+		pemSigner := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: signer.Raw,
+		})
+
 		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
 		if err != nil {
+			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SigningCertBasename+".key"), err)
 			return
 		}
-
 		key, _ := signerKey.Open()
 		pemKey := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
@@ -101,30 +112,19 @@ $ geneos tls export --output file.pem
 		})
 		defer key.Destroy()
 
-		pemSigner := pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: signer.Raw,
-		})
-
-		pemRoot := pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: root.Raw,
-		})
-
-		output := "# Geneos Root and Signer Certificates\n#\n"
-		output += string(certs.PrivateKeyComments(signerKey, "Signer Private Key"))
-		output += string(pemKey)
-		output += string(certs.CertificateComments(signer, "Signer Certificate"))
-		output += string(pemSigner)
-		output += string(certs.CertificateComments(root, "Root CA Certificate"))
-
-		output += string(pemRoot)
+		output := []byte("# Geneos Root and Signer Certificates\n#\n")
+		output = append(output, certs.PrivateKeyComments(signerKey, "Signer Private Key")...)
+		output = append(output, pemKey...)
+		output = append(output, certs.CertificateComments(signer, "Signer Certificate")...)
+		output = append(output, pemSigner...)
+		output = append(output, certs.CertificateComments(root, "Root CA Certificate")...)
+		output = append(output, pemRoot...)
 
 		if exportCmdOutput != "" {
-			return os.WriteFile(exportCmdOutput, []byte(output), 0600)
+			return os.WriteFile(exportCmdOutput, output, 0600)
 		}
 
-		fmt.Println(output)
+		fmt.Println(string(output))
 		return
 	},
 }
@@ -132,11 +132,35 @@ $ geneos tls export --output file.pem
 func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
-	certChain, err := instance.ReadCertificates(i)
+	instanceCertChain, err := instance.ReadCertificates(i)
 	if err != nil {
 		resp.Err = fmt.Errorf("cannot read certificates for %s %q: %w", i.Type(), i.Name(), err)
 		return
 	}
+
+	// build and test trust chain
+	rootPool, n := certs.ReadRootCertPool(geneos.TrustedRootsPath(i.Host()))
+	if n == 0 {
+		resp.Err = fmt.Errorf("no trusted root CAs found to verify %s %q", i.Type(), i.Name())
+		return
+	}
+
+	intermediatePool := x509.NewCertPool()
+	for _, cert := range instanceCertChain[1:] {
+		intermediatePool.AddCert(cert)
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         rootPool,
+		Intermediates: intermediatePool,
+	}
+
+	validatedCertChain, err := instanceCertChain[0].Verify(opts)
+	if err != nil || len(validatedCertChain) == 0 {
+		resp.Err = fmt.Errorf("cannot verify certificate chain for %s %q: %w", i.Type(), i.Name(), err)
+		return
+	}
+
 	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
 		resp.Err = fmt.Errorf("cannot read private key for %s %q: %w", i.Type(), i.Name(), err)
@@ -150,22 +174,22 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	})
 	defer keyData.Destroy()
 
-	output := fmt.Sprintf("# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
-	output += string(certs.PrivateKeyComments(key))
-	output += string(pemKey)
+	output := []byte(fmt.Sprintf("# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name()))
+	output = append(output, certs.PrivateKeyComments(key)...)
+	output = append(output, pemKey...)
 
-	for _, cert := range certChain {
+	for _, cert := range validatedCertChain[0] {
 		pemCert := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		})
 
-		output += string(certs.CertificateComments(cert))
-		output += string(pemCert)
+		output = append(output, certs.CertificateComments(cert)...)
+		output = append(output, pemCert...)
 	}
 
 	if exportCmdOutput != "" {
-		err = os.WriteFile(exportCmdOutput, []byte(output), 0600)
+		err = os.WriteFile(exportCmdOutput, output, 0600)
 		if err != nil {
 			resp.Err = err
 			return
@@ -173,6 +197,6 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 		return
 	}
 
-	resp.Details = []string{output}
+	resp.Details = []string{"\n", string(output)}
 	return
 }

@@ -597,8 +597,8 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	}
 	log.Debug().Err(err).Msgf("read certs for %s", i)
 	cert := certChain[0]
-	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
-	log.Debug().Msgf("cert valid=%v (%v / %v) for %s", valid, certs.ValidLeafCert(certChain[0]), verifyCert(certChain...), i)
+	valid := certs.IsValidLeafCert(cert) && verifyCert(certChain...)
+	log.Debug().Msgf("cert valid=%v (%v / %v) for %s", valid, certs.IsValidLeafCert(certChain[0]), verifyCert(certChain...), i)
 	chainfile := i.Config().GetString("chainfile")
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -636,7 +636,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 		return
 	}
 	cert := certChain[0]
-	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	valid := certs.IsValidLeafCert(cert) && verifyCert(certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -673,7 +673,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 		return
 	}
 	cert := certChain[0]
-	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	valid := certs.IsValidLeafCert(cert) && verifyCert(certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -730,7 +730,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 		return
 	}
 	cert := certChain[0]
-	valid := certs.ValidLeafCert(cert) && verifyCert(certChain...)
+	valid := certs.IsValidLeafCert(cert) && verifyCert(certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -778,7 +778,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 // system certs. It also loads the Geneos global chain file and adds the
 // certs to the verification pools after some basic validation.
 func verifyCert(certChain ...*x509.Certificate) bool {
-	roots, n := certs.ReadTrustedCertPool(geneos.TrustedRootsPath(geneos.LOCAL))
+	roots, n := certs.ReadRootCertPool(geneos.TrustedRootsPath(geneos.LOCAL))
 
 	if n == 0 {
 		return false

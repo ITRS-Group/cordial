@@ -56,7 +56,7 @@ import (
 func AppendTrustedCertsFile(h host.Host, path string, root ...*x509.Certificate) (updated bool, err error) {
 	// remove nil, non-root CA or expired certificates from certs
 	root = slices.DeleteFunc(root, func(c *x509.Certificate) bool {
-		return c == nil || !ValidRootCA(c)
+		return c == nil || !IsValidRootCA(c)
 	})
 
 	allCerts, err := ReadCertificates(h, path)
@@ -70,7 +70,7 @@ func AppendTrustedCertsFile(h host.Host, path string, root ...*x509.Certificate)
 
 	// remove non-root CA or expired certs
 	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
-		return !ValidRootCA(c)
+		return !IsValidRootCA(c)
 	})
 
 	added := false
@@ -112,35 +112,12 @@ func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate)
 		data = append(data, p...)
 	}
 
+	if len(data) == 0 {
+		return os.ErrInvalid
+	}
+
 	h.MkdirAll(path.Dir(certpath), 0755)
 	return h.WriteFile(certpath, data, 0644)
-}
-
-func CertificateComments(cert *x509.Certificate, titles ...string) []byte {
-	output := &bytes.Buffer{}
-
-	if len(titles) > 0 {
-		for _, title := range titles {
-			output.WriteString("# " + title + "\n")
-		}
-	} else {
-		output.WriteString("# Certificate\n")
-	}
-	output.WriteString("#\n")
-	output.WriteString("#   Subject: ")
-	output.WriteString(cert.Subject.String())
-	output.WriteString("\n#    Issuer: ")
-	output.WriteString(cert.Issuer.String())
-	output.WriteString("\n#   Expires: ")
-	output.WriteString(cert.NotAfter.Format(time.RFC3339))
-	output.WriteString("\n#    Serial: ")
-	output.WriteString(cert.SerialNumber.String())
-	output.WriteRune('\n')
-
-	fmt.Fprintf(output, "#      SHA1: %X\n", sha1.Sum(cert.Raw))
-	fmt.Fprintf(output, "#    SHA256: %X\n#\n", sha256.Sum256(cert.Raw))
-
-	return output.Bytes()
 }
 
 // WriteNewRootCert creates a new root certificate and private key and
@@ -193,10 +170,11 @@ func WriteNewSignerCert(basefilepath string, rootbasefilepath string, cn string)
 		MaxPathLen(0),
 	)
 
-	rootCert, err := ReadCertificate(host.Localhost, rootbasefilepath+".pem")
+	roots, err := ReadCertificates(host.Localhost, rootbasefilepath+".pem")
 	if err != nil {
 		return
 	}
+	rootCert := roots[0]
 
 	rootKey, err := ReadPrivateKey(host.Localhost, rootbasefilepath+".key")
 	if err != nil {
@@ -234,6 +212,41 @@ func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error
 	return h.WriteFile(path, data, 0600)
 }
 
+// CertificateComments returns a byte slice containing comments about
+// the given x509 certificate. If titles are provided they are included
+// at the top of the comments, if not a default title of "Certificate"
+// is used.
+func CertificateComments(cert *x509.Certificate, titles ...string) []byte {
+	output := &bytes.Buffer{}
+
+	if len(titles) > 0 {
+		for _, title := range titles {
+			output.WriteString("# " + title + "\n")
+		}
+	} else {
+		output.WriteString("# Certificate\n")
+	}
+	output.WriteString("#\n")
+	output.WriteString("#   Subject: ")
+	output.WriteString(cert.Subject.String())
+	output.WriteString("\n#    Issuer: ")
+	output.WriteString(cert.Issuer.String())
+	output.WriteString("\n#   Expires: ")
+	output.WriteString(cert.NotAfter.Format(time.RFC3339))
+	output.WriteString("\n#    Serial: ")
+	output.WriteString(cert.SerialNumber.String())
+	output.WriteRune('\n')
+
+	fmt.Fprintf(output, "#      SHA1: %X\n", sha1.Sum(cert.Raw))
+	fmt.Fprintf(output, "#    SHA256: %X\n#\n", sha256.Sum256(cert.Raw))
+
+	return output.Bytes()
+}
+
+// PrivateKeyComments returns a byte slice containing comments about
+// the given private key. If titles are provided they are included
+// at the top of the comments, if not a default title of "Private Key"
+// is used.
 func PrivateKeyComments(key *memguard.Enclave, titles ...string) []byte {
 	output := &bytes.Buffer{}
 

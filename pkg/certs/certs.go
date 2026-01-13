@@ -100,12 +100,12 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 	return
 }
 
-// ValidRootCA returns true if the provided certificate is a valid root
+// IsValidRootCA returns true if the provided certificate is a valid root
 // CA certificate. A valid root CA is self-signed and has appropriate
 // basic constraints as well as either an empty AuthorityKeyId or one
 // that matches the SubjectKeyId. It must also be between its NotBefore
 // and NotAfter dates.
-func ValidRootCA(cert *x509.Certificate) bool {
+func IsValidRootCA(cert *x509.Certificate) bool {
 	if cert == nil {
 		return false
 	}
@@ -117,11 +117,11 @@ func ValidRootCA(cert *x509.Certificate) bool {
 		cert.NotAfter.After(time.Now())
 }
 
-// ValidSigningCA returns true if the provided certificate is a valid
+// IsValidSigningCA returns true if the provided certificate is a valid
 // signing CA certificate. A valid signing CA is a CA certificate with
 // appropriate basic constraints for signing (MaxPathLenZero) and is
 // between its NotBefore and NotAfter dates.
-func ValidSigningCA(cert *x509.Certificate) bool {
+func IsValidSigningCA(cert *x509.Certificate) bool {
 	if cert == nil {
 		return false
 	}
@@ -132,11 +132,11 @@ func ValidSigningCA(cert *x509.Certificate) bool {
 		cert.NotAfter.After(time.Now())
 }
 
-// ValidLeafCert returns true if the provided certificate is a valid
+// IsValidLeafCert returns true if the provided certificate is a valid
 // leaf certificate. A valid leaf certificate is not a CA, has the
 // DigitalSignature key usage, has at least one extended key usage,
 // and is between its NotBefore and NotAfter dates.
-func ValidLeafCert(cert *x509.Certificate) bool {
+func IsValidLeafCert(cert *x509.Certificate) bool {
 	if cert == nil {
 		return false
 	}
@@ -175,21 +175,21 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 
 	for _, c := range cert {
 		switch {
-		case ValidLeafCert(c):
+		case IsValidLeafCert(c):
 			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
 			if leaf != nil {
 				err = errors.New("multiple leaf certificates found")
 				return
 			}
 			leaf = c
-		case ValidRootCA(c):
+		case IsValidRootCA(c):
 			log.Debug().Msgf("found valid root CA certificate: %s", c.Subject.CommonName)
 			if root != nil {
 				err = errors.New("multiple root certificates found")
 				return
 			}
 			root = c
-		case ValidSigningCA(c):
+		case IsValidSigningCA(c):
 			log.Debug().Msgf("found valid intermediate CA certificate: %s", c.Subject.CommonName)
 			intermediates = append(intermediates, c)
 		default:
@@ -238,100 +238,60 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 	return
 }
 
-// ParsePEM parses PEM formatted data blocks and extracts the first leaf
-// (if any) certificate, any CA certs as a chain and a private key as a
-// DER encoded *memguard.Enclave.
-//
-// If no leaf certificate is found, but CA certificates are found, only
-// the chain is returned and cert is nil.
-//
-// The key is matched either to the leaf certificate or, if no leaf,
-// then the first member of the chain that matches any private key in
-// the bundle.
-//
-// Encrypted private keys are not supported and will be skipped.
-func ParsePEM(data ...[]byte) (cert *x509.Certificate, key *memguard.Enclave, chain []*x509.Certificate, err error) {
-	var leaf *x509.Certificate
-	var keys []*memguard.Enclave
+// DecodePEM decodes PEM formatted data and returns the first leaf
+// certificate and slices of certificates (intermediates, roots) and
+// private keys found. Encrypted private keys and other types of blocks
+// are not supported and will be skipped. If there are no certificates
+// or private keys found then empty clients are returned without error.
+func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []*memguard.Enclave, err error) {
+	var block *pem.Block
 
-	if len(data) == 0 {
-		err = fmt.Errorf("no data to process")
-		return
-	}
-
-	for _, pembytes := range data {
+	for _, d := range data {
 		for {
-			p, rest := pem.Decode(pembytes)
-			if p == nil {
+			block, d = pem.Decode(d)
+			if block == nil {
 				break
 			}
 
-			switch p.Type {
+			switch block.Type {
 			case "CERTIFICATE":
 				var c *x509.Certificate
-				c, err = x509.ParseCertificate(p.Bytes)
+				c, err = x509.ParseCertificate(block.Bytes)
 				if err != nil {
 					return
 				}
-				if c.IsCA {
-					chain = append(chain, c)
-				} else if leaf == nil {
-					// save first leaf
-					leaf = c
+				if IsValidRootCA(c) {
+					roots = append(roots, c)
+				} else if IsValidSigningCA(c) {
+					intermediates = append(intermediates, c)
+				} else if IsValidLeafCert(c) {
+					// save first leaf, ignore others
+					if leaf == nil {
+						leaf = c
+					}
+				} else {
+					log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
 				}
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				// save all private keys for later matching
-				keys = append(keys, memguard.NewEnclave(p.Bytes))
+				keys = append(keys, memguard.NewEnclave(block.Bytes))
 			default:
-				err = fmt.Errorf("unsupported PEM type found: %s, skipping", p.Type)
-				continue
-			}
-			pembytes = rest
-		}
-	}
-
-	if leaf == nil && len(chain) == 0 {
-		err = fmt.Errorf("no certificates found")
-		return
-	}
-
-	// reorder chain to have intermediates in-order first, then root last
-	if leaf != nil {
-		if _, intermediates, roots, err := ParseCertChain(chain...); err == nil {
-			chain = append(intermediates, roots)
-		}
-	}
-
-	// if we got this far then we can start setting returns
-	cert = leaf // which may be nil
-
-	// match key if we have a leaf cert
-	if cert != nil {
-		if i := IndexPrivateKey(keys, cert); i != -1 {
-			key = keys[i]
-		}
-	} else {
-		// no leaf, try to match first cert in chain
-		for _, c := range chain {
-			if i := IndexPrivateKey(keys, c); i != -1 {
-				key = keys[i]
-				break
+				log.Warn().Msgf("unsupported PEM type found: %s, skipping", block.Type)
 			}
 		}
 	}
 
-	err = nil
 	return
 }
 
-// ParsePEM2 parses PEM formatted data blocks and returns a
-// CertificateBundle.
+// ParsePEM parses PEM formatted data blocks and returns a
+// CertificateBundle. If it contains a verifiable chain it then it sets
+// Valid to true. Only if Valid is true can the order of the
+// certificates be relied upon.
 //
 // Encrypted private keys are not supported and will be skipped.
-func ParsePEM2(data ...[]byte) (bundle *CertificateBundle, err error) {
-	var leaf *x509.Certificate
-	var intermediates []*x509.Certificate
+func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	var roots []*x509.Certificate
+	var chains [][]*x509.Certificate
 	var keys []*memguard.Enclave
 
 	if len(data) == 0 {
@@ -341,55 +301,36 @@ func ParsePEM2(data ...[]byte) (bundle *CertificateBundle, err error) {
 
 	bundle = &CertificateBundle{}
 
-	for _, pembytes := range data {
-		for {
-			p, rest := pem.Decode(pembytes)
-			if p == nil {
-				break
-			}
+	bundle.Leaf, bundle.FullChain, roots, keys, err = DecodePEM(data...)
 
-			switch p.Type {
-			case "CERTIFICATE":
-				var c *x509.Certificate
-				c, err = x509.ParseCertificate(p.Bytes)
-				if err != nil {
-					return
-				}
-				if ValidRootCA(c) {
-					roots = append(roots, c)
-				} else if ValidSigningCA(c) {
-					intermediates = append(intermediates, c)
-				} else if ValidLeafCert(c) {
-					// save first leaf, ignore others
-					if leaf == nil {
-						leaf = c
-					}
-				} else {
-					log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
-				}
-			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				// save all private keys for later matching
-				keys = append(keys, memguard.NewEnclave(p.Bytes))
-			default:
-				err = fmt.Errorf("unsupported PEM type found: %s, skipping", p.Type)
-				continue
-			}
-			pembytes = rest
-		}
+	if len(roots) > 0 {
+		bundle.Root = roots[0]
 	}
 
-	if leaf == nil && len(intermediates) == 0 {
+	if bundle.Leaf == nil && len(bundle.FullChain) == 0 {
 		err = fmt.Errorf("no certificates found")
 		return
 	}
+	if bundle.Leaf == nil {
+		switch {
+		case len(bundle.FullChain) > 0:
+			bundle.Leaf = bundle.FullChain[0]
+		case len(roots) > 0:
+			bundle.Leaf = bundle.Root
+		default:
+			err = fmt.Errorf("no certificates available for verification")
+			return
+		}
+	}
 
-	// prepare for validation, regardless of leaf presence
-
-	var chains [][]*x509.Certificate
+	// set the key if we can find one that matches the designated leaf cert
+	if i := IndexPrivateKey(keys, bundle.Leaf); i != -1 {
+		bundle.Key = keys[i]
+	}
 
 	// set up cert pools for verification
 	ip := x509.NewCertPool()
-	for _, c := range intermediates {
+	for _, c := range bundle.FullChain {
 		ip.AddCert(c)
 	}
 	rp := x509.NewCertPool()
@@ -397,120 +338,23 @@ func ParsePEM2(data ...[]byte) (bundle *CertificateBundle, err error) {
 		rp.AddCert(c)
 	}
 
-	vopts := x509.VerifyOptions{
+	verifyOpts := x509.VerifyOptions{
 		Intermediates: ip,
 		Roots:         rp,
 	}
 
-	firstCert := leaf
-	if firstCert == nil && len(intermediates) > 0 {
-		firstCert = intermediates[0]
-	}
-	if firstCert == nil && len(roots) > 0 {
-		firstCert = roots[0]
-	}
-
-	if firstCert != nil {
-		if chains, err = firstCert.Verify(vopts); err != nil {
-			log.Debug().Msgf("leaf certificate verification failed: %v", err)
-			return
-		}
-
-		if len(chains) == 0 || len(chains[0]) == 0 {
-			err = errors.New("no valid certificate chain found")
-			return
-		}
-
-		bundle.Valid = true
-		bundle.Leaf = chains[0][0]
-		bundle.Root = chains[0][len(chains[0])-1]
-		// FullChain does not include root
-		bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
-		if i := IndexPrivateKey(keys, bundle.Leaf); i != -1 {
-			bundle.Key = keys[i]
-		}
+	if chains, err = bundle.Leaf.Verify(verifyOpts); err != nil || len(chains) == 0 || len(chains[0]) == 0 {
+		// return an unverified bundle
+		log.Debug().Msgf("certificate verification for %q failed: %v", bundle.Leaf.Subject.String(), err)
+		err = nil
+		return
 	}
 
-	err = nil
+	bundle.Valid = true
+	bundle.Leaf = chains[0][0]
+	// FullChain does not include root
+	bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
+	bundle.Root = chains[0][len(chains[0])-1]
+
 	return
 }
-
-// func ParseCertificatesAndKeys(data ...[]byte) (certificates []*x509.Certificate, keys []*memguard.Enclave, err error) {
-// 	if len(data) == 0 {
-// 		return
-// 	}
-
-// 	// store them unsorted for now
-// 	var ks []*memguard.Enclave
-// 	var leaves, intermediates, roots []*x509.Certificate
-
-// 	for _, b := range data {
-// 		pembytes := b
-// 		for {
-// 			p, rest := pem.Decode(pembytes)
-// 			if p == nil {
-// 				break
-// 			}
-
-// 			switch p.Type {
-// 			case "CERTIFICATE":
-// 				var c *x509.Certificate
-// 				c, err = x509.ParseCertificate(p.Bytes)
-// 				if err != nil {
-// 					return
-// 				}
-// 				if ValidRootCA(c) {
-// 					roots = append(roots, c)
-// 				} else if ValidSigningCA(c) {
-// 					intermediates = append(intermediates, c)
-// 				} else {
-// 					leaves = append(leaves, c)
-// 				}
-// 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-// 				// save first private key found
-// 				ks = append(ks, memguard.NewEnclave(p.Bytes))
-// 			default:
-// 				err = fmt.Errorf("unsupported PEM type found: %s", p.Type)
-// 				return
-// 			}
-// 			pembytes = rest
-// 		}
-// 	}
-
-// 	ip := x509.NewCertPool()
-// 	for _, c := range intermediates {
-// 		ip.AddCert(c)
-// 	}
-// 	rp := x509.NewCertPool()
-// 	for _, c := range roots {
-// 		rp.AddCert(c)
-// 	}
-// 	// sort certs then keys
-// 	vopts := x509.VerifyOptions{
-// 		Intermediates: ip,
-// 		Roots:         rp,
-// 	}
-// 	for _, c := range leaves {
-// 		_, err = c.Verify(vopts)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		certificates = append(certificates, c)
-// 	}
-// 	for _, c := range intermediates {
-// 		_, err = c.Verify(vopts)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		certificates = append(certificates, c)
-// 	}
-// 	for _, c := range roots {
-// 		_, err = c.Verify(vopts)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		certificates = append(certificates, c)
-// 	}
-
-// 	return
-// }

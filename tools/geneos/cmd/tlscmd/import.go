@@ -154,7 +154,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to read instance key")
 		}
-		certBundle, err := certs.ParsePEM2(certChain, key)
+		certBundle, err := certs.ParsePEM(certChain, key)
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to decompose PEM")
 		}

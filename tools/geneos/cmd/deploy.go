@@ -326,7 +326,7 @@ var deployCmd = &cobra.Command{
 				return err
 			}
 
-			certBundle, err := certs.ParsePEM2(certSlice)
+			certBundle, err := certs.ParsePEM(certSlice)
 			if err != nil {
 				return err
 

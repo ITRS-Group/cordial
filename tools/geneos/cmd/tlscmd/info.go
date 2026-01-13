@@ -179,7 +179,6 @@ var infoCmd = &cobra.Command{
 						fmt.Sprintf("%v", infoMap(c.URIs, func(uri *url.URL) string { return uri.String() })),
 						fmt.Sprintf("%X", sha1.Sum(c.Raw)),
 						fmt.Sprintf("%X", sha256.Sum256(c.Raw)),
-						// fmt.Sprintf("%v", matchingKey != nil),
 					})
 				}
 			}

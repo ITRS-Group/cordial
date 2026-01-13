@@ -53,7 +53,7 @@ func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 	// skip if we can load an existing and valid certificate
 	cert, err := ReadCertificate(i)
 	if err == nil {
-		if certs.ValidLeafCert(cert) {
+		if certs.IsValidLeafCert(cert) {
 			resp.Summary = "certificate already exists and is valid (use the `renew` command to overwrite)"
 			return
 		}
@@ -233,24 +233,49 @@ func ReadCertificate(i geneos.Instance, ext ...string) (cert *x509.Certificate, 
 		return nil, geneos.ErrNotExist
 	}
 
-	return certs.ReadCertificate(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
+	certChain, err := certs.ReadCertificates(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
+	if err != nil {
+		return nil, err
+	}
+	if len(certChain) == 0 {
+		return nil, geneos.ErrNotExist
+	}
+	return certChain[0], nil
 }
 
-// ReadCertificates reads the instance certificate chain
-// and returns a slice of certificates.
+// ReadCertificates reads the instance certificate and returns a slice
+// of certificates.
+//
+// For older Geneos versions that do not support full chains, this will
+// check for an also load a chain file. The chain file path is taken
+// from the `certchain` parameter if set and no optional extensions are
+// added.
 func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certificate, err error) {
-	var certPath string
+	var certPath, chainPath string
 
 	cf := i.Config()
 	if cf.IsSet(cf.Join("tls", "certificate")) {
 		certPath = cf.GetString(cf.Join("tls", "certificate"))
 	} else if cf.IsSet("certificate") {
 		certPath = cf.GetString("certificate")
+		chainPath = cf.GetString("certchain")
 	} else {
 		return nil, geneos.ErrNotExist
 	}
 
-	return certs.ReadCertificates(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
+	certChain, err = certs.ReadCertificates(i.Host(), strings.Join(append([]string{certPath}, ext...), "."))
+	if err != nil {
+		return nil, err
+	}
+	if chainPath != "" {
+		chainCerts, err := certs.ReadCertificates(i.Host(), chainPath)
+		if err != nil {
+			return nil, err
+		}
+		certChain = append(certChain, chainCerts...)
+	}
+
+	return
 }
 
 // ReadPrivateKey reads the instance RSA private key

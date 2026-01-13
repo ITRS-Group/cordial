@@ -29,7 +29,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // RootCABasename is the file base name for the root certificate authority
@@ -69,25 +68,17 @@ func ReadRootCertificate() (root *x509.Certificate, file string, err error) {
 		return
 	}
 
-	// move the root certificate to the user app config directory
-	log.Debug().Msgf("migrating root certificate from %s to %s", LOCAL.PathTo("tls", RootCABasename+".pem"), confDir)
-	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".pem"))
-	if file == "" {
-		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
-		log.Debug().Err(err).Msgf("failed to migrate root certificate from %s", LOCAL.PathTo("tls", RootCABasename+".pem"))
-		return
-	}
-	log.Debug().Msgf("reading root certificate %s", file)
+	file = path.Join(confDir, RootCABasename+".pem")
 
-	// speculatively promote the key file, but do not fail if it does
-	// not exist. this is because the root certificate is self-signed and
-	// does not need a key to verify itself.
-	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".key"))
-	root, err = certs.ReadCertificate(LOCAL, file)
+	roots, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
 		return
 	}
-	if !certs.ValidRootCA(root) {
+	if len(roots) == 0 {
+		return nil, file, fmt.Errorf("no certificates found in %q", file)
+	}
+	root = roots[0]
+	if !certs.IsValidRootCA(root) {
 		err = fmt.Errorf("certificate in %q is not valid as a root CA", file)
 	}
 	return
@@ -105,22 +96,18 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 		return
 	}
 
-	// migrate the signing certificate to the user app config directory
-	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
-	if file == "" {
-		err = fmt.Errorf("%w: signing certificate %q not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
-		return
-	}
+	file = path.Join(confDir, SigningCertBasename+".pem")
 
-	// speculatively promote the key file, but do not fail if it does
-	// not exist.
-	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
-	signer, err = certs.ReadCertificate(LOCAL, file)
+	signers, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
 		return
 	}
+	if len(signers) == 0 {
+		return nil, file, fmt.Errorf("no certificates found in %q", file)
+	}
+	signer = signers[0]
 
-	if !certs.ValidSigningCA(signer) {
+	if !certs.IsValidSigningCA(signer) {
 		err = fmt.Errorf("certificate in %q not valid as a signer certificate", file)
 		return
 	}
@@ -148,10 +135,6 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return config.ErrNoUserConfigDir
 	}
 
-	// if err = TLSInit(true, certs.DefaultKeyType); err != nil {
-	// 	return
-	// }
-
 	// speculatively create user config directory. permissions do not
 	// need to be restrictive
 	err = LOCAL.MkdirAll(confDir, 0775)
@@ -169,22 +152,31 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return err
 	}
 
-	certBundle, err := certs.ParsePEM2(signingBundle, privateKey)
+	certBundle, err := certs.ParsePEM(signingBundle, privateKey)
 	if err != nil {
 		return err
 	}
 
-	if len(certBundle.FullChain) == 0 {
+	if certBundle.Leaf == nil {
 		return errors.New("no certificates found in signing bundle")
 	}
 
+	if !certBundle.Valid {
+		return errors.New("signing bundle is not valid")
+	}
+
 	cert := certBundle.Leaf
+
 	key := certBundle.Key
 
 	// basic validation
 	if !cert.BasicConstraintsValid || !cert.IsCA || key == nil {
-		return errors.New("no signing certificate with private key found in bundle")
+		return errors.New("no signing certificate with matching private key found in bundle")
 
+	}
+
+	if certBundle.Root == nil {
+		return errors.New("no root certificate found in signing bundle")
 	}
 
 	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
@@ -197,13 +189,15 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
 
-	var updated bool
-	updated, err = certs.AppendTrustedCertsFile(LOCAL, TrustedRootsPath(LOCAL), certBundle.Root)
-	if err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+".pem"), certBundle.Root); err != nil {
 		return err
 	}
-	if updated {
-		fmt.Printf("trusted roots updated with signing certificate root(s)\n")
+	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+".pem"))
+
+	if updated, err := certs.AppendTrustedCertsFile(LOCAL, TrustedRootsPath(LOCAL), certBundle.Root); err != nil {
+		return err
+	} else if updated {
+		fmt.Printf("trusted roots updated with root certificate\n")
 	}
 
 	return
