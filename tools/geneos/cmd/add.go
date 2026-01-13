@@ -37,6 +37,7 @@ var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 var addCmdImportFiles instance.Filename
 var addCmdKeyfile string
+var addCmdInsecure bool
 
 var addCmdExtras = instance.SetConfigValues{}
 
@@ -55,6 +56,8 @@ func init() {
 	addCmd.Flags().StringVarP(&addCmdTemplate, "template", "T", "", "Template file to use `PATH|URL|-`")
 
 	addCmd.Flags().VarP(&addCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
+
+	addCmd.PersistentFlags().BoolVarP(&addCmdInsecure, "insecure", "", false, "Do not create certificates for TLS support")
 
 	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
 	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
@@ -144,7 +147,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	}
 
 	// call components specific Add()
-	if err = i.Add(addCmdTemplate, addCmdPort); err != nil {
+	if err = i.Add(addCmdTemplate, addCmdPort, addCmdInsecure); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

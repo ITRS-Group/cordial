@@ -40,7 +40,7 @@ import (
 
 const archiveOptionsText = "Directory of releases for installation"
 
-var initCmdLogs, initCmdNoTLS, initCmdForce, initCmdNexus, initCmdSnapshot bool
+var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
 var initCmdDLPassword *config.Plaintext
@@ -69,7 +69,7 @@ func init() {
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle including private key, PEM format")
-	initCmd.PersistentFlags().BoolVarP(&initCmdNoTLS, "insecure", "", false, "Do not create internal certificates for TLS support")
+	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")
 
 	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
 	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
@@ -260,7 +260,7 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 func initCommon() (err error) {
 	initTemplates(geneos.LOCAL)
 
-	if initCmdNoTLS {
+	if initCmdInsecure {
 		return
 	}
 

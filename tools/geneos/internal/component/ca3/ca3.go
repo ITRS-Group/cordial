@@ -192,7 +192,7 @@ func (n *CA3s) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *CA3s) Add(tmpl string, port uint16) (err error) {
+func (n *CA3s) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &CA3)
 	}
@@ -208,7 +208,9 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	// copy default configs
 	dir, err := os.Getwd()

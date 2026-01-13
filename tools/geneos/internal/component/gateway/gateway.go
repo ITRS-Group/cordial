@@ -238,7 +238,7 @@ func (g *Gateways) Config() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) Add(template string, port uint16) (err error) {
+func (g *Gateways) Add(template string, port uint16, insecure bool) (err error) {
 	cf := g.Config()
 
 	if port == 0 {
@@ -265,7 +265,9 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(g, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(g, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	// always create a keyfile ?
 	if err = instance.CreateAESKeyFile(g); err != nil {

@@ -98,7 +98,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		return
 	}
 	port := "7038"
-	if initCmdNoTLS {
+	if initCmdInsecure {
 		port = "7039"
 	}
 	if err = cmd.AddInstance(ct, initCmdExtras, []string{"port=" + port}, "Demo Gateway@"+h.String()); err != nil {
@@ -133,7 +133,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		return
 	}
 	port = "8443"
-	if initCmdNoTLS {
+	if initCmdInsecure {
 		port = "8080"
 	}
 	if err = cmd.AddInstance(ct, initCmdExtras, []string{"port=" + port}, "demo@"+h.String()); err != nil {

@@ -119,7 +119,6 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 func Init(app string) {
 	SigningCertBasename = cordial.ExecutableName()
 	ChainCertFile = cordial.ExecutableName() + "-chain.pem"
-	// TrustedRootsPath = filepath.Join(config.AppConfigDir(), TrustedRootsFilename)
 	RootComponent.Register(nil)
 }
 

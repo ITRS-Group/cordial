@@ -206,7 +206,7 @@ func (s *Floatings) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Floatings) Add(template string, port uint16) (err error) {
+func (s *Floatings) Add(template string, port uint16, insecure bool) (err error) {
 	cf := s.Config()
 
 	cf.SetDefault(cf.Join("config", "template"), templateName)
@@ -236,7 +236,9 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	// s.Rebuild(true)
 

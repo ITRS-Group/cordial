@@ -189,7 +189,7 @@ func (n *Minimals) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *Minimals) Add(tmpl string, port uint16) (err error) {
+func (n *Minimals) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.InstanceHost, &Minimal)
 	}
@@ -203,7 +203,9 @@ func (n *Minimals) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	// default config XML etc.
 	return nil

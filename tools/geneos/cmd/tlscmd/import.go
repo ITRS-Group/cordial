@@ -38,17 +38,16 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var importCmdCert, importCmdSigningBundle, importCmdChain, importCmdPrivateKey string
+var importCmdChain, importCmdPrivateKey string
 var importCmdPassword *config.Plaintext
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmdPassword = &config.Plaintext{}
-	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
-	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Password for private key decryption, if needed, for pfx files")
-
-	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
+	// importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
+	// importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
+	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Plaintext password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
@@ -57,8 +56,8 @@ func init() {
 
 	importCmd.Flags().SortFlags = false
 
-	importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
-	importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
+	// importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
+	// importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
 
 	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
@@ -77,14 +76,14 @@ func init() {
 var importCmdDescription string
 
 var importCmd = &cobra.Command{
-	Use:                   "import [flags] [TYPE] [NAME...]",
+	Use:                   "import [flags] [TYPE] [NAME...] [PATH]",
 	Short:                 "Import certificates",
 	Long:                  importCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-$ geneos tls import netprobe localhost -c /path/to/file.pem
-$ geneos tls import --signing-bundle /path/to/file.pem
+geneos tls import netprobe localhost /path/to/file.pem
+geneos tls import /path/to/file.pem
 `,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:        "false",
@@ -92,38 +91,35 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		var imported bool
+		ct, names, params := cmd.ParseTypeNamesParams(command)
 
-		if importCmdSigningBundle != "" {
-			imported = true
-			if err = geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey); err != nil {
-				return err
-			}
+		if len(params) > 1 {
+			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
 		}
 
-		ct, names := cmd.ParseTypeNames(command)
-
-		if len(names) == 0 || ct == nil {
-			if imported {
-				// we have imported a signing bundle, so can just finish now
-				return
-			}
-			return fmt.Errorf("TYPE and NAME... are required when importing an instance bundle. Use 'all' to import to all instances")
+		var file string
+		if len(params) == 0 {
+			file = "-"
+		} else {
+			file = params[0]
 		}
 
-		if importCmdCert == "" {
-			return fmt.Errorf("--instance-bundle is required when specifying TYPE and NAME")
+		if ct == nil && len(names) == 0 {
+			log.Debug().Str("file", file).Msg("Importing signing bundle")
+			return geneos.TLSImportBundle(file, importCmdPrivateKey)
 		}
 
-		if path.Ext(importCmdCert) == ".pfx" || path.Ext(importCmdCert) == ".p12" {
+		log.Debug().Str("file", file).Msg("Importing instance bundle")
+
+		if path.Ext(file) == ".pfx" || path.Ext(file) == ".p12" {
 			if importCmdPassword.String() == "" {
 				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read password")
-					// return err
+					return err
 				}
 			}
-			pfxData, err := os.ReadFile(importCmdCert)
+			pfxData, err := os.ReadFile(file)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read PFX file")
 			}
@@ -146,7 +142,7 @@ $ geneos tls import --signing-bundle /path/to/file.pem
 			return nil
 		}
 
-		certChain, err := config.ReadPEMBytes(importCmdCert, "instance certificate(s)")
+		certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
 		if err != nil {
 			log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
 		}
@@ -194,12 +190,12 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	var updated bool
-	updated, resp.Err = certs.UpdatedCACertsFile(i.Host(), geneos.TrustedRootsPath(i.Host()), tlsParam.Root)
+	updated, resp.Err = certs.UpdatedCACertsFile(i.Host(), geneos.CABundlePaths(i.Host()), tlsParam.Root)
 	if resp.Err != nil {
 		return
 	}
 	if updated {
-		resp.Details = append(resp.Details, fmt.Sprintf("%s trusted roots updated", i))
+		resp.Details = append(resp.Details, fmt.Sprintf("%s ca-bundle updated", i))
 	}
 
 	resp.Err = instance.SaveConfig(i)

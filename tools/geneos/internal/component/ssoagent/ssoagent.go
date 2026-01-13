@@ -201,7 +201,7 @@ func (w *SSOAgents) Config() *config.Config {
 	return w.Conf
 }
 
-func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
+func (s *SSOAgents) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(s.InstanceHost, &SSOAgent)
 	}
@@ -214,7 +214,9 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	// copy default configs
 	dir, err := os.Getwd()
@@ -240,12 +242,12 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 
 	cf := s.Config()
 
-	trustedRoots := cf.GetString(cf.Join("tls", "trusted-roots"), config.Default(cf.GetString("certchain")))
+	caBundle := cf.GetString(cf.Join("tls", "ca-bundle"), config.Default(cf.GetString("certchain")))
 	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 
-	if trustedRoots != "" && truststorePath != "" {
-		if err = certs.RootsToTrustStore(s.Host(), trustedRoots, truststorePath, truststorePassword); err != nil {
+	if caBundle != "" && truststorePath != "" {
+		if err = certs.RootsToTrustStore(s.Host(), caBundle, truststorePath, truststorePassword); err != nil {
 			return err
 		}
 	}

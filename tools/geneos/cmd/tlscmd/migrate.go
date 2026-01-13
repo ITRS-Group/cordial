@@ -68,7 +68,7 @@ var migrateCmd = &cobra.Command{
 //
 // * use certchain to create a full chain in certificate file (without root)
 // * update params from certificate/privatekey/certchain to tls::certificate etc.
-// * update trusted-roots with new roots found in certchain
+// * update ca-bundle with new roots found in certchain
 //
 // Private key file is unchanged, but the parameter is moved.
 func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
@@ -129,14 +129,14 @@ func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		return
 	}
 
-	// update trusted-roots file
-	updated, err := certs.UpdatedCACertsFile(h, geneos.TrustedRootsPath(h), root)
+	// update ca-bundle file
+	updated, err := certs.UpdatedCACertsFile(h, geneos.CABundlePaths(h), root)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 	if updated {
-		resp.Completed = append(resp.Completed, "updated trusted roots")
+		resp.Completed = append(resp.Completed, "updated ca-bundle")
 	}
 
 	// write fullchain to certificate file - this updates instance parameters for certificate
@@ -149,7 +149,7 @@ func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 	// update instance parameters to new layout
 	cf.Set(cf.Join("tls", "privatekey"), cf.GetString("privatekey"))
-	cf.Set(cf.Join("tls", "trusted-roots"), geneos.TrustedRootsPath(i.Host()))
+	cf.Set(cf.Join("tls", "ca-bundle"), geneos.CABundlePaths(i.Host()))
 
 	if !cf.GetBool("use-chain") {
 		cf.Set(cf.Join("tls", "verify"), false)

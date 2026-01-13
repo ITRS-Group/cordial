@@ -199,7 +199,7 @@ func (w *Webservers) Config() *config.Config {
 	return w.Conf
 }
 
-func (w *Webservers) Add(tmpl string, port uint16) (err error) {
+func (w *Webservers) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(w.InstanceHost, &Webserver)
 	}
@@ -212,7 +212,9 @@ func (w *Webservers) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
+	}
 
 	// copy default configs
 	dir, err := os.Getwd()
@@ -248,14 +250,14 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	// create truststore from trusted-roots
-	trustedRoots := cf.GetString(cf.Join("tls", "trusted-roots"), config.Default(cf.GetString("certchain")))
+	// create truststore from ca-bundle
+	caBundle := cf.GetString(cf.Join("tls", "ca-bundle"), config.Default(cf.GetString("certchain")))
 	truststorePath := sp["trustStore"]
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
 
-	if trustedRoots != "" && truststorePath != "" {
+	if caBundle != "" && truststorePath != "" {
 		truststorePath = instance.Abs(w, truststorePath)
-		if err = certs.RootsToTrustStore(h, trustedRoots, truststorePath, truststorePassword); err != nil {
+		if err = certs.RootsToTrustStore(h, caBundle, truststorePath, truststorePassword); err != nil {
 			return err
 		}
 	}
@@ -326,7 +328,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	javaopts := strings.Fields(cf.GetString("java-options"))
 	args = append(args, javaopts...)
 
-	// add trusted roots if set
+	// add ca-bundle if set
 
 	// truststore is in security.properties, use that and not instance params
 	sp, err := instance.ReadKVConfig(i.Host(), instance.Abs(i, "config/security.properties"))

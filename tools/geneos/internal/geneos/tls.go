@@ -45,15 +45,14 @@ var SigningCertBasename string
 var ChainCertFile string
 
 const (
-	// TrustedRootsFilename is the file name for the trusted roots file
-	// used by Geneos components to verify peer certificates. This file
-	// is located in the geneos home directory on each hoist under
-	// `tls/`
-	TrustedRootsFilename = "trusted-roots.pem"
+	// CABundleFilename is the file name for the ca-bundle file used by
+	// Geneos components to verify peer certificates. This file is
+	// located in the geneos home directory on each hoist under `tls/`
+	CABundleFilename = "ca-bundle.pem"
 )
 
-func TrustedRootsPath(h *Host) string {
-	return h.PathTo("tls", TrustedRootsFilename)
+func CABundlePaths(h *Host) string {
+	return h.PathTo("tls", CABundleFilename)
 }
 
 // ReadRootCertificate reads the root certificate from the user's app
@@ -194,10 +193,10 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+".pem"))
 
-	if updated, err := certs.UpdatedCACertsFile(LOCAL, TrustedRootsPath(LOCAL), certBundle.Root); err != nil {
+	if updated, err := certs.UpdatedCACertsFile(LOCAL, CABundlePaths(LOCAL), certBundle.Root); err != nil {
 		return err
 	} else if updated {
-		fmt.Printf("trusted roots updated with root certificate\n")
+		fmt.Printf("ca-bundle updated with root certificate\n")
 	}
 
 	return
@@ -244,7 +243,7 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = certs.UpdatedCACertsFile(LOCAL, TrustedRootsPath(LOCAL), rootCert)
+	_, err = certs.UpdatedCACertsFile(LOCAL, CABundlePaths(LOCAL), rootCert)
 	if err != nil {
 		return err
 	}
@@ -265,25 +264,25 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	return nil
 }
 
-// TLSSync merges and updates the `TrustedRootsFilename` file on all remote hosts.
+// TLSSync merges and updates the `CABundleFilename` file on all remote hosts.
 func TLSSync() (err error) {
 	allRoots := []*x509.Certificate{}
 	allHosts := append([]*Host{LOCAL}, RemoteHosts(false)...)
 	for _, h := range allHosts {
-		if certSlice, err := certs.ReadCertificates(h, h.PathTo("tls", TrustedRootsFilename)); err == nil {
+		if certSlice, err := certs.ReadCertificates(h, h.PathTo("tls", CABundleFilename)); err == nil {
 			allRoots = append(allRoots, certSlice...)
 		}
 	}
 
 	for _, h := range allHosts {
 		hostname := h.Hostname()
-		updated, err := certs.UpdatedCACertsFile(h, h.PathTo("tls", TrustedRootsFilename), allRoots...)
+		updated, err := certs.UpdatedCACertsFile(h, h.PathTo("tls", CABundleFilename), allRoots...)
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to update trusted roots on host %s", hostname)
+			log.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
 			continue
 		}
 		if updated {
-			fmt.Printf("trusted roots updated on host %s\n", hostname)
+			fmt.Printf("ca-bundle updated on host %s\n", hostname)
 		}
 	}
 

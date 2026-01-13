@@ -19,6 +19,7 @@ package fileagent
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "fa"
@@ -183,7 +185,7 @@ func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
+func (n *FileAgents) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &FileAgent)
 	}
@@ -197,9 +199,8 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.NewCertificate(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Summary)
+	if !insecure {
+		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
 	}
 
 	// default config XML etc.

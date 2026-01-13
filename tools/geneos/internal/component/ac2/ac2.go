@@ -180,7 +180,7 @@ func (n *AC2s) Config() *config.Config {
 }
 
 // Add created a new instance of AC2
-func (n *AC2s) Add(tmpl string, port uint16) (err error) {
+func (n *AC2s) Add(tmpl string, port uint16, insecure bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &AC2)
 	}
@@ -196,7 +196,9 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	if !insecure {
+		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+	}
 
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)

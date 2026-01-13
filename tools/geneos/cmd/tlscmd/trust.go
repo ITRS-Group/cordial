@@ -47,7 +47,7 @@ func init() {
 
 	trustCmdRemove = new(trustCmdRemoveCerts)
 
-	trustCmd.Flags().VarP(trustCmdRemove, "remove", "r", "Remove trusted certificates instead of adding them\nThe argument is either the certificate's CommonName or SHA1 or SHA256 fingerprint\nThis flag can be specified multiple times to remove multiple certificates")
+	trustCmd.Flags().VarP(trustCmdRemove, "remove", "r", "Remove CA certificates instead of adding them\nThe argument is either the certificate's CommonName or SHA1 or SHA256 fingerprint\nThis flag can be specified multiple times to remove multiple certificates")
 
 	trustCmd.Flags().SortFlags = false
 }
@@ -57,7 +57,7 @@ var trustCmdDescription string
 
 var trustCmd = &cobra.Command{
 	Use:                   "trust [flags] [PATH...]",
-	Short:                 "Import trusted certificates",
+	Short:                 "Import CA certificates",
 	Long:                  trustCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,

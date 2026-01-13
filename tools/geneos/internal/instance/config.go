@@ -344,10 +344,10 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	// look for:
 	//   tls::certificate 		--> -ssl-certificate
 	//   tls::privatekey  		--> -ssl-certificate-key
-	//   tls::certchain   		--> -ssl-certificate-chain (--initial)
+	//   tls::certchain   		--> -ssl-certificate-chain (--initial), ignored later
 	//   tls::verify			--> if set but no chain, use Geneos global roots
 	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
-	//   tls::trusted-roots		--> -ssl-certificate-chain (--final)
+	//   tls::ca-bundle 		--> -ssl-certificate-chain (--final)
 
 	if cert := PathTo(i, config.Join("tls", "certificate")); cert != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
@@ -368,13 +368,13 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	if tlsVerify {
-		chain := PathTo(i, config.Join("tls", "trusted-roots"))
+		chain := PathTo(i, config.Join("tls", "ca-bundle"))
 
 		if chain != "" {
 			args = append(args, "-ssl-certificate-chain", chain)
 			fileChecks = append(fileChecks, chain)
 		} else {
-			// use global roots, if one exists, starting with Geneos trusted-roots.pem
+			// use global roots, if one exists, starting with Geneos ca-bundle.pem
 			for _, rc := range certFiles {
 				if _, err := i.Host().Stat(rc); err == nil {
 					log.Debug().Msgf("using root certs %q for %s", rc, i)
@@ -384,8 +384,8 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 				}
 			}
 		}
-
 	}
+
 	// minimum TLS version - from instance, global or 1.2 as a default
 	minTLS := cf.GetString(
 		cf.Join("tls", "minimumversion"),

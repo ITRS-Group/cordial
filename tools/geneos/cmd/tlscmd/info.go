@@ -280,7 +280,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 				case k.IsTrustedCertificateEntry(alias):
 					entry, err := k.GetTrustedCertificateEntry(alias)
 					if err != nil {
-						log.Error().Err(err).Str("alias", alias).Msgf("unable to get trusted certificate entry %q from Java keystore", alias)
+						log.Error().Err(err).Str("alias", alias).Msgf("unable to get CA certificate entry %q from Java keystore", alias)
 						continue
 					}
 					cert, err := x509.ParseCertificate(entry.Certificate.Content)

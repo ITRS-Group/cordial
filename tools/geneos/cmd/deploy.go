@@ -40,7 +40,7 @@ import (
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
-var deployCmdNoTLS, deployCmdTLS bool
+var deployCmdTLS, deployCmdInsecure bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
@@ -67,7 +67,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
 	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
 
-	deployCmd.Flags().BoolVarP(&deployCmdNoTLS, "insecure", "", false, "Do not initialise TLS subsystem")
+	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem")
 
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
@@ -292,7 +292,7 @@ var deployCmd = &cobra.Command{
 
 		// TLS
 
-		if !deployCmdNoTLS {
+		if !deployCmdInsecure {
 			if deployCmdSigningBundle != "" {
 				if err = geneos.TLSImportBundle(deployCmdSigningBundle, ""); err != nil {
 					return err
@@ -351,16 +351,16 @@ var deployCmd = &cobra.Command{
 			fmt.Printf("%s private key written", i)
 
 			var updated bool
-			if updated, err = certs.UpdatedCACertsFile(h, geneos.TrustedRootsPath(h), certBundle.Root); err != nil {
+			if updated, err = certs.UpdatedCACertsFile(h, geneos.CABundlePaths(h), certBundle.Root); err != nil {
 				return err
 			}
 			if updated {
-				fmt.Printf("%s trusted roots updated", i)
+				fmt.Printf("%s ca-bundle updated", i)
 			}
 		}
 
 		// call components specific Add()
-		if err = i.Add(deployCmdTemplate, deployCmdPort); err != nil {
+		if err = i.Add(deployCmdTemplate, deployCmdPort, deployCmdInsecure); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 

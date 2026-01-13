@@ -192,7 +192,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		// TODO: migrate other settings, create trusted-roots etc.
+		// TODO: migrate other settings, create ca-bundle etc.
 
 		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 			return

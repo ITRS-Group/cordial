@@ -141,17 +141,17 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 
 	// build and test trust chain
-	rootPool, ok := certs.ReadRootCertPool(h, geneos.TrustedRootsPath(h))
+	rootPool, ok := certs.ReadCACertPool(h, geneos.CABundlePaths(h))
 	if !ok {
-		// if there is no trusted CA file on the host, try local root CA
+		// if there is no ca-bundle file on the host, try local root CA
 		confDir := config.AppConfigDir()
 		if confDir == "" {
 			resp.Err = config.ErrNoUserConfigDir
 			return
 		}
-		rootPool, ok = certs.ReadRootCertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+".pem"))
+		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+".pem"))
 		if !ok {
-			resp.Err = fmt.Errorf("no trusted root CAs found to verify %s %q", i.Type(), i.Name())
+			resp.Err = fmt.Errorf("no CA certificates found to verify %s %q", i.Type(), i.Name())
 			return
 		}
 	}

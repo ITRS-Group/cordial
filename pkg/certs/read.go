@@ -73,17 +73,16 @@ func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
 	return
 }
 
-// ReadRootCertPool reads a local PEM file containing trusted
-// root certificates returns a *x509.CertPool and the number of valid
-// root CAs found. Any certificates that are not valid root CAs are
-// skipped.
-func ReadRootCertPool(h host.Host, path string) (pool *x509.CertPool, ok bool) {
+// ReadCACertPool reads a local PEM file containing CA certificates and
+// returns a *x509.CertPool and the number of valid root CAs found. Any
+// certificates that are not valid root CAs are skipped.
+func ReadCACertPool(h host.Host, path string) (pool *x509.CertPool, ok bool) {
 	pool = x509.NewCertPool()
-	trustedCerts, err := ReadCertificates(h, path)
+	caBundle, err := ReadCertificates(h, path)
 	if err != nil {
 		return
 	}
-	for _, c := range trustedCerts {
+	for _, c := range caBundle {
 		if IsValidRootCA(c) {
 			pool.AddCert(c)
 			ok = true
