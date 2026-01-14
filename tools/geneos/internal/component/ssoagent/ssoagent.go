@@ -246,7 +246,8 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 
-	if caBundle != "" && truststorePath != "" {
+	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
+	if caBundle != "" && truststorePath != "" && truststorePath != geneos.PathToCABundle(s.Host(), certs.KeystoreExtension) {
 		if err = certs.RootsToTrustStore(s.Host(), caBundle, truststorePath, truststorePassword); err != nil {
 			return err
 		}
