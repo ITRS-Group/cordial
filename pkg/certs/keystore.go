@@ -59,7 +59,7 @@ func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password
 	for _, cert := range roots {
 		alias := cert.Subject.CommonName
 		k.DeleteEntry(alias)
-		if err = k.AddKeystoreCertificate(alias, cert); err != nil {
+		if err = k.AddTrustedCertificate(alias, cert); err != nil {
 			return err
 		}
 	}
@@ -70,6 +70,33 @@ func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password
 	}
 
 	return nil
+}
+
+// WriteTrustStore writes the given root certificates to a keystore at
+// the specified path on the given host. If password is nil, "changeit"
+// is used. Any certificates that are not valid root CAs are ignored.
+// Any existing file is overwritten.
+func WriteTrustStore(h host.Host, path string, password *config.Plaintext, roots ...*x509.Certificate) error {
+	k := &KeyStore{
+		keystore.New(),
+	}
+
+	for _, cert := range roots {
+		if !IsValidRootCA(cert) {
+			continue
+		}
+		alias := cert.Subject.CommonName
+		k.DeleteEntry(alias)
+		if err := k.AddTrustedCertificate(alias, cert); err != nil {
+			return err
+		}
+	}
+
+	if password == nil {
+		password = config.NewPlaintext([]byte("changeit"))
+	}
+
+	return k.WriteKeystore(h, path, password)
 }
 
 // ReadKeystore returns a keystore.
@@ -127,8 +154,8 @@ func (k *KeyStore) WriteKeystore(h host.Host, path string, password *config.Plai
 	return k.Store(w, pw)
 }
 
-// AddKeystoreCertificate adds a certificate to the keystore.
-func (k *KeyStore) AddKeystoreCertificate(alias string, cert *x509.Certificate) (err error) {
+// AddTrustedCertificate adds a trusted certificate to the keystore.
+func (k *KeyStore) AddTrustedCertificate(alias string, cert *x509.Certificate) (err error) {
 	if k == nil || alias == "" || cert == nil {
 		return os.ErrInvalid
 	}
@@ -227,7 +254,7 @@ func readJCEKS(h host.Host, path string, password *config.Plaintext) (k *KeyStor
 		if err != nil {
 			panic(err)
 		}
-		if err = k.AddKeystoreCertificate(c, cert); err != nil {
+		if err = k.AddTrustedCertificate(c, cert); err != nil {
 			panic(err)
 		}
 	}

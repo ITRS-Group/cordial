@@ -351,7 +351,7 @@ var deployCmd = &cobra.Command{
 			fmt.Printf("%s private key written", i)
 
 			var updated bool
-			if updated, err = certs.UpdatedCACertsFile(h, geneos.CABundlePaths(h), certBundle.Root); err != nil {
+			if updated, err = certs.UpdatedCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
 				return err
 			}
 			if updated {

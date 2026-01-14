@@ -246,6 +246,11 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		return nil
 	}
 	sp["port"] = cf.GetString("port")
+
+	sp["trustStore"] = cf.GetString(cf.Join("tls", "truststore"), config.Default(geneos.PathToCABundle(h, certs.KeystoreExtension)))
+	sp["trustStorePassword"] = cf.GetString(cf.Join("tls", "truststore-password"), config.Default("changeit"))
+	sp["trustStoreType"] = "JKS"
+
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
 		return
 	}

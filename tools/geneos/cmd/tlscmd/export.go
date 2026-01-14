@@ -141,7 +141,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 
 	// build and test trust chain
-	rootPool, ok := certs.ReadCACertPool(h, geneos.CABundlePaths(h))
+	rootPool, ok := certs.ReadCACertPool(h, geneos.PathToCABundle(h))
 	if !ok {
 		// if there is no ca-bundle file on the host, try local root CA
 		confDir := config.AppConfigDir()

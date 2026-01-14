@@ -35,8 +35,9 @@ import (
 )
 
 const (
-	PEMExtension = "pem"
-	KEYExtension = "key"
+	PEMExtension      = "pem"
+	KEYExtension      = "key"
+	KeystoreExtension = "db"
 )
 
 // CreateCertificateAndKey is a wrapper to create a new certificate

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
@@ -48,11 +49,14 @@ const (
 	// CABundleFilename is the file name for the ca-bundle file used by
 	// Geneos components to verify peer certificates. This file is
 	// located in the geneos home directory on each hoist under `tls/`
-	CABundleFilename = "ca-bundle.pem"
+	CABundleBasename = "ca-bundle"
 )
 
-func CABundlePaths(h *Host) string {
-	return h.PathTo("tls", CABundleFilename)
+// PathToCABundle returns the path to the ca-bundle file on the given
+// host with extensions from ext, joined with a ".". Without any ext
+// parameter arguments the returned file will be "ca-bundle".
+func PathToCABundle(h *Host, ext ...string) string {
+	return h.PathTo("tls", strings.Join(append([]string{CABundleBasename}, ext...), "."))
 }
 
 // ReadRootCertificate reads the root certificate from the user's app
@@ -193,7 +197,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+".pem"))
 
-	if updated, err := certs.UpdatedCACertsFile(LOCAL, CABundlePaths(LOCAL), certBundle.Root); err != nil {
+	if updated, err := certs.UpdatedCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
 		return err
 	} else if updated {
 		fmt.Printf("ca-bundle updated with root certificate\n")
@@ -243,7 +247,7 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = certs.UpdatedCACertsFile(LOCAL, CABundlePaths(LOCAL), rootCert)
+	_, err = certs.UpdatedCACertsFiles(LOCAL, PathToCABundle(LOCAL), rootCert)
 	if err != nil {
 		return err
 	}
@@ -269,20 +273,24 @@ func TLSSync() (err error) {
 	allRoots := []*x509.Certificate{}
 	allHosts := append([]*Host{LOCAL}, RemoteHosts(false)...)
 	for _, h := range allHosts {
-		if certSlice, err := certs.ReadCertificates(h, h.PathTo("tls", CABundleFilename)); err == nil {
+		if certSlice, err := certs.ReadCertificates(h, PathToCABundle(h, certs.PEMExtension)); err == nil {
 			allRoots = append(allRoots, certSlice...)
 		}
 	}
 
+	log.Debug().Msgf("found %d root certificates to sync", len(allRoots))
+
 	for _, h := range allHosts {
 		hostname := h.Hostname()
-		updated, err := certs.UpdatedCACertsFile(h, h.PathTo("tls", CABundleFilename), allRoots...)
+		updated, err := certs.UpdatedCACertsFiles(h, PathToCABundle(h), allRoots...)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
 			continue
 		}
 		if updated {
 			fmt.Printf("ca-bundle updated on host %s\n", hostname)
+		} else {
+			fmt.Printf("ca-bundle on host %s is already up to date\n", hostname)
 		}
 	}
 

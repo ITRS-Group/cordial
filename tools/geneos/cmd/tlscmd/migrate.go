@@ -130,7 +130,7 @@ func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	}
 
 	// update ca-bundle file
-	updated, err := certs.UpdatedCACertsFile(h, geneos.CABundlePaths(h), root)
+	updated, err := certs.UpdatedCACertsFiles(h, geneos.PathToCABundle(h), root)
 	if err != nil {
 		resp.Err = err
 		return
@@ -149,7 +149,7 @@ func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 	// update instance parameters to new layout
 	cf.Set(cf.Join("tls", "privatekey"), cf.GetString("privatekey"))
-	cf.Set(cf.Join("tls", "ca-bundle"), geneos.CABundlePaths(i.Host()))
+	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundle(i.Host()))
 
 	if !cf.GetBool("use-chain") {
 		cf.Set(cf.Join("tls", "verify"), false)

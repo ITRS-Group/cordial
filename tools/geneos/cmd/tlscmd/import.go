@@ -45,8 +45,6 @@ func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmdPassword = &config.Plaintext{}
-	// importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
-	// importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
 	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Plaintext password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
@@ -123,7 +121,7 @@ geneos tls import /path/to/file.pem
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read PFX file")
 			}
-			key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
+			key, c, caCerts, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to decode PFX file")
 			}
@@ -133,10 +131,18 @@ geneos tls import /path/to/file.pem
 			}
 			k := memguard.NewEnclave(pk)
 
+			leaf, intermediates, root, err := certs.ParseCertChain(append([]*x509.Certificate{c}, caCerts...)...)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to decompose certificate chain")
+			}
+			if leaf == nil || k == nil || !certs.CheckKeyMatch(k, leaf) {
+				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+			}
 			certBundle := certs.CertificateBundle{
-				Leaf:      c,
+				Leaf:      leaf,
 				Key:       k,
-				FullChain: chain,
+				FullChain: append([]*x509.Certificate{leaf}, intermediates...),
+				Root:      root,
 			}
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 			return nil
@@ -190,7 +196,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	var updated bool
-	updated, resp.Err = certs.UpdatedCACertsFile(i.Host(), geneos.CABundlePaths(i.Host()), tlsParam.Root)
+	updated, resp.Err = certs.UpdatedCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)
 	if resp.Err != nil {
 		return
 	}

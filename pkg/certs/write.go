@@ -37,7 +37,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// UpdatedCACertsFile appends the given root certificates to the
+// UpdatedCACertsFiles appends the given root certificates to the
 // root certificate file at the specified path on the given host. It
 // ensures that all the given certificates are present in the file,
 // appending any that are missing. If the file does not exist or is
@@ -53,28 +53,36 @@ import (
 //
 // The caller is responsible for locking access to the root cert file if
 // concurrent access is possible.
-func UpdatedCACertsFile(h host.Host, path string, root ...*x509.Certificate) (updated bool, err error) {
+func UpdatedCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate) (updated bool, err error) {
 	// remove nil, non-root CA or expired certificates from certs
-	root = slices.DeleteFunc(root, func(c *x509.Certificate) bool {
+	roots = slices.DeleteFunc(roots, func(c *x509.Certificate) bool {
 		return c == nil || !IsValidRootCA(c)
 	})
 
-	allCerts, err := ReadCertificates(h, path)
+	allCerts, err := ReadCertificates(h, basePath+"."+PEMExtension)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Error().Err(err).Msg("reading existing root certificates failed")
 		return false, err
 	}
+	log.Debug().Msgf("found %d root certificates to sync", len(roots))
 	if allCerts == nil {
-		return true, WriteCertificates(h, path, root...)
+		if err = WriteCertificates(h, basePath+"."+PEMExtension, roots...); err != nil {
+			return false, err
+		}
+		if err = WriteTrustStore(h, basePath+"."+KeystoreExtension, nil, roots...); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 
 	// remove non-root CA or expired certs
 	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
 		return !IsValidRootCA(c)
 	})
+	log.Debug().Msgf("existing root certificates contains %d valid root CAs", len(allCerts))
 
 	added := false
-	for _, cert := range root {
+	for _, cert := range roots {
 		// skip duplicates
 		if slices.ContainsFunc(allCerts, func(c *x509.Certificate) bool {
 			return cert.Equal(c)
@@ -84,11 +92,21 @@ func UpdatedCACertsFile(h host.Host, path string, root ...*x509.Certificate) (up
 		allCerts = append(allCerts, cert)
 		added = true
 	}
+
+	log.Debug().Msg("updating truststore with root certificates")
+	if err = WriteTrustStore(h, basePath+"."+KeystoreExtension, nil, roots...); err != nil {
+		return false, err
+	}
+
 	if !added {
 		return false, nil
 	}
 
-	return true, WriteCertificates(h, path, allCerts...)
+	if err = WriteCertificates(h, basePath+"."+PEMExtension, allCerts...); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // WriteCertificates concatenate certs in PEM format and writes to path
