@@ -90,11 +90,12 @@ var renewCmd = &cobra.Command{
 				return err
 			}
 			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
-				cordial.ExecutableName()+" intermediate certificate ("+cmd.Hostname+")",
+				cordial.ExecutableName()+" intermediate certificate ("+geneos.LOCALHOST+")",
 			); err != nil {
 				return err
 			} else {
-				fmt.Printf("signing certificate renewed. expires %s\n", signer.NotAfter.Local().Format(time.RFC3339))
+				fmt.Println("signing certificate renewed")
+				fmt.Print(string(certs.CertificateComments(signer)))
 			}
 			return nil
 		}

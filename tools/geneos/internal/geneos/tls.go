@@ -167,22 +167,33 @@ func ReadSignerPrivateKey() (key *memguard.Enclave, file string, err error) {
 // TLSImportBundle processes a PEM formatted signingBundle from a file
 // or an embedded string with either an included private key and chain
 // or separately specified in the same way.
+//
+// If the bundle contains only root certificates then these are added to
+// the ca-bundle only. In this case any privateKeySource parameter is
 func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
-	}
-
-	// speculatively create user config directory. permissions do not
-	// need to be restrictive
-	err = LOCAL.MkdirAll(confDir, 0775)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		// ignored.
 	}
 
 	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
+	}
+
+	leaf, chain, roots, _, err := certs.DecodePEM(signingBundle)
+	if leaf == nil && len(chain) == 0 && len(roots) > 0 {
+		// import roots to ca-bundle only
+		updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), roots...)
+		if err != nil {
+			return err
+		} else if updated {
+			fmt.Printf("ca-bundle updated with root certificate(s)\n")
+		} else {
+			fmt.Printf("ca-bundle is already up to date\n")
+		}
+		return nil
 	}
 
 	privateKey, err := config.ReadPEMBytes(privateKeySource, "signing key")
@@ -270,13 +281,15 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 		return err
 	}
 
-	if _, err := certs.WriteNewRootCert(
+	root, err := certs.WriteNewRootCert(
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
-		keytype); err != nil {
+		keytype)
+	if err != nil {
 		return err
 	}
 	fmt.Printf("CA certificate created for %s\n", RootCABasename)
+	fmt.Print(string(certs.CertificateComments(root)))
 
 	rootCert, _, err := ReadRootCertificate()
 	if err != nil {
@@ -295,12 +308,14 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	if err != nil {
 		return err
 	}
-	if _, err := certs.WriteNewSignerCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
+	signer, err := certs.WriteNewSignerCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
 		cordial.ExecutableName()+" intermediate certificate ("+hostname+")",
-	); err != nil {
+	)
+	if err != nil {
 		return err
 	}
 	fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
+	fmt.Print(string(certs.CertificateComments(signer)))
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {

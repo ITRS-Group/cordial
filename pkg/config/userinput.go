@@ -120,12 +120,18 @@ func ReadPEMBytes(from, prompt string) (data []byte, err error) {
 			return
 		}
 	case from == "-":
-		fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
+		isterm := term.IsTerminal(int(os.Stdin.Fd()))
+		if isterm {
+			// only prompt if STDIN is a terminal session
+			fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
+		}
 		data, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return data, err
 		}
-		fmt.Println()
+		if isterm {
+			fmt.Println()
+		}
 	default:
 		data, err = os.ReadFile(from)
 		if err != nil {

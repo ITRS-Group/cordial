@@ -97,6 +97,13 @@ geneos tls import /path/to/file.pem
 			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
 		}
 
+		for i, n := range names {
+			if n == "-" {
+				params = append(params, n)
+				names = append(names[:i], names[i+1:]...)
+			}
+		}
+
 		var file string
 		if len(params) == 0 {
 			file = "-"

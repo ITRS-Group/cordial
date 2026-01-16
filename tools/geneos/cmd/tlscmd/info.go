@@ -84,7 +84,6 @@ var columns = []string{
 	"IsCA",
 	"ExtKeyUsage",
 	"SANDNSNames",
-	"SANIPAddresses",
 }
 
 var columnsLong = []string{
@@ -158,7 +157,6 @@ var infoCmd = &cobra.Command{
 						strconv.FormatBool(c.IsCA),
 						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
 						fmt.Sprintf("%v", c.DNSNames),
-						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
 					})
 				} else {
 					lines = append(lines, []string{

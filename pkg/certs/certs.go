@@ -384,7 +384,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 		bundle.Root = roots[0]
 	}
 
-	if bundle.Leaf == nil && len(bundle.FullChain) == 0 {
+	if bundle.Leaf == nil && len(bundle.FullChain) == 0 && len(roots) == 0 {
 		err = fmt.Errorf("no certificates found")
 		return
 	}
