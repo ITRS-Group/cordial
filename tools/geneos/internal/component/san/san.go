@@ -252,7 +252,7 @@ func (s *Sans) Add(template string, port uint16, insecure bool) (err error) {
 
 	// create certs, report success only
 	if !insecure {
-		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
+		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// s.Rebuild(true)

@@ -1,20 +1,20 @@
-# `tools/geneos` TLS Certificate Management
+# `tools/geneos` TLS Certificate Management Changes
 
-This document describes the way that the `geneos` tools manages TLS certificates for secure communication starting from version 1.26.0.
+This document describes the changes to the way that the `geneos` tools manages TLS certificates for secure communication starting from cordial release v1.26.0.
 
 ## Overview
 
-Until the v1.26.0 release, the `geneos` tool did not manage TLS certificates as expected by industry best practice. At the time of writing the official Geneos documentation only partly describes the way to create and use certificates, private keys and trusted CA bundles to the various components of Geneos.
+Until the v1.26.0 release, the `geneos` tool did not manage TLS certificates in line with industry best practice. At the time of writing the official Geneos documentation only partly describes the way to create and use certificates, private keys and trusted CA bundles to the various components of Geneos.
 
-The `geneos tls` subsystem commands, and some other commands, create and manage TLS certificates in a more standard and uniform way. This includes:
+The `geneos tls` subsystem commands (and related commands) now create and manage TLS certificates in a more standard and uniform way. This includes:
 
-* Secure connections between Geneos components using TLS will be enabled by default. As the administrator you can disabled this behaviour using `--insecure` flag on the relevant commands.
+* **ENABLED BY DEFAULT** - Secure connections between Geneos components using TLS will be enabled by default. As the administrator you can disabled this behaviour using `--insecure` flag on the relevant commands. This only applies to new installations of Geneos. Existing installations that upgrade to v1.26.0 or later will continue work without TLS if it was not already enabled.
 
 * Unless you, as the administrator, provide your own certificates, private keys and trusted CA bundles, the `geneos` tools will create self-signed certificates for you automatically. It will create a root CA certificate, an intermediate signing certificate, instance certificates and private keys for each component that requires one. Connections will be verified using a trusted CA bundle that can include other trusted CA certificates as well as the root CA certificate created by `geneos`. This last feature is important when connecting to external endpoints from Geneos, such as databases, web sites, IAMs for SSO etc.
 
 * All instance certificate files include the leaf certificate as well as the intermediate signing certificate. This is to ensure that clients can validate the full certificate chain. This is commonly referred to with filenames such as `fullchain.pem` in tools like `certbot` and for common web servers like `nginx`.
 
-* A single trusted CA bundle file is used for each component that requires one. This bundle includes all trusted CA certificates, including the root CA certificate created by `geneos` as well as any other trusted CA certificates you may wish to add.
+* A trusted CA bundle (in `${GENEOS_HOME}/tls/ca-bundle.pem`) is used for each instance that requires one. This bundle includes all trusted CA certificates, including the root CA certificate created by `geneos` as well as any other trusted CA certificates you may wish to add.
 
 ## Java Keystore and Truststore Support
 

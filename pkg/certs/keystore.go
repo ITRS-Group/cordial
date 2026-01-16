@@ -22,16 +22,23 @@ type KeyStore struct {
 	keystore.KeyStore
 }
 
-func CertsToKeyStore(h host.Host, certsPath, privatekeyPath, keystorePath, alias string, password *config.Plaintext) error {
-	certChain, err := ReadCertificates(h, certsPath)
-	if err != nil {
-		return err
+// AddCertChainToKeyStore adds a private key and certificate chain to
+// the keystore at the specified path on the given host. If the keystore
+// does not exist, it is created. If password is nil, "changeit" is used.
+//
+// The alias parameter specifies the alias under which to store the key
+// and certificate chain.
+//
+// Any existing entry with the same alias is deleted before adding the
+// new key and certificate chain.
+//
+// The certChain is not validated; the caller is responsible for ensuring
+// that it is correct.
+func AddCertChainToKeyStore(h host.Host, path string, password *config.Plaintext, alias string, key *memguard.Enclave, certChain ...*x509.Certificate) error {
+	if password == nil {
+		password = config.NewPlaintext([]byte("changeit"))
 	}
-	key, err := ReadPrivateKey(h, privatekeyPath)
-	if err != nil {
-		return err
-	}
-	k, err := ReadKeystore(h, keystorePath, password)
+	k, err := ReadKeystore(h, path, password)
 	if err != nil {
 		// new, empty keystore
 		k = &KeyStore{
@@ -40,13 +47,21 @@ func CertsToKeyStore(h host.Host, certsPath, privatekeyPath, keystorePath, alias
 	}
 	k.DeleteEntry(alias)
 	k.AddKeystoreKey(alias, key, password, certChain...)
-	return k.WriteKeystore(h, keystorePath, password)
+	return k.WriteKeystore(h, path, password)
 }
 
-func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password *config.Plaintext) error {
-	roots, _ := ReadCertificates(h, rootsPath)
+// AddRootsToTrustStore adds the given root certificates to the truststore
+// at the specified path on the given host. If the truststore does not
+// exist, it is created. If password is nil, "changeit" is used.
+//
+// Any existing entries with the same alias as a root certificate are
+// deleted before adding the new root certificates. Aliases are derived
+// from the Subject Common Name of each certificate.
+//
+// Any certificates that are not root CAs are ignored.
+func AddRootsToTrustStore(h host.Host, path string, password *config.Plaintext, roots ...*x509.Certificate) error {
 	k, err := ReadKeystore(h,
-		trustPath,
+		path,
 		password,
 	)
 	if err != nil {
@@ -57,6 +72,9 @@ func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password
 	}
 
 	for _, cert := range roots {
+		if !IsValidRootCA(cert) {
+			continue
+		}
 		alias := cert.Subject.CommonName
 		k.DeleteEntry(alias)
 		if err = k.AddTrustedCertificate(alias, cert); err != nil {
@@ -64,8 +82,7 @@ func RootsToTrustStore(h host.Host, rootsPath string, trustPath string, password
 		}
 	}
 
-	// TODO: temp file dance, after testing
-	if err = k.WriteKeystore(h, trustPath, password); err != nil {
+	if err = k.WriteKeystore(h, path, password); err != nil {
 		return err
 	}
 
@@ -96,6 +113,7 @@ func WriteTrustStore(h host.Host, path string, password *config.Plaintext, roots
 		password = config.NewPlaintext([]byte("changeit"))
 	}
 
+	// a truststore is just a keystore with trusted certs
 	return k.WriteKeystore(h, path, password)
 }
 

@@ -30,11 +30,17 @@ import (
 // used, e.g. "json" or "yaml".
 func ComponentFilename(i geneos.Instance, extensions ...string) string {
 	parts := []string{i.Type().String()}
-	if len(extensions) > 0 {
-		parts = append(parts, extensions...)
-	} else {
+	// strip dot prefixes
+	for _, e := range extensions {
+		e = strings.TrimPrefix(e, ".")
+		if e != "" {
+			parts = append(parts, e)
+		}
+	}
+	if len(extensions) == 0 {
 		parts = append(parts, ConfigFileType())
 	}
+
 	return strings.Join(parts, ".")
 }
 

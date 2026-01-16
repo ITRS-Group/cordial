@@ -33,9 +33,10 @@ func (k KeyType) String() string {
 }
 
 func (k *KeyType) Set(s string) error {
-	switch strings.ToLower(s) {
+	kt := strings.ToLower(s)
+	switch kt {
 	case "rsa", "ecdsa", "ed25519", "ecdh":
-		*k = KeyType(strings.ToLower(s))
+		*k = KeyType(kt)
 		return nil
 	default:
 		return fmt.Errorf("invalid key type %q, must be one of rsa, ecdsa, ed25519 or ecdh", s)
@@ -48,11 +49,11 @@ func (k *KeyType) Type() string {
 
 // PrivateKeyType returns the type of the DER encoded private key,
 // suitable for use to NewPrivateKey
-func PrivateKeyType(der *memguard.Enclave) (keytype KeyType) {
+func PrivateKeyType(der *memguard.Enclave) (keyType KeyType) {
 	if der == nil {
 		return
 	}
-	key, err := PrivateKey(der)
+	key, err := ParsePrivateKey(der)
 	if err != nil {
 		return
 	}
@@ -71,22 +72,23 @@ func PrivateKeyType(der *memguard.Enclave) (keytype KeyType) {
 	}
 }
 
-// NewPrivateKey returns a PKCS#8 DER encoded private key as an enclave.
-func NewPrivateKey(keytype KeyType) (der *memguard.Enclave, publickey any, err error) {
-	var privateKey any
-	switch keytype {
+// GenerateKey returns a PKCS#8 DER encoded private key as an enclave
+// using the keyType specified.
+func GenerateKey(keyType KeyType) (privateKey *memguard.Enclave, publicKey any, err error) {
+	var pKey any
+	switch keyType {
 	case RSA:
-		privateKey, err = rsa.GenerateKey(rand.Reader, 4096)
+		pKey, err = rsa.GenerateKey(rand.Reader, 4096)
 		if err != nil {
 			return
 		}
 	case ECDSA:
-		privateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		pKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return
 		}
 	case ED25519:
-		_, privateKey, err = ed25519.GenerateKey(nil)
+		_, pKey, err = ed25519.GenerateKey(nil)
 		if err != nil {
 			return
 		}
@@ -96,31 +98,32 @@ func NewPrivateKey(keytype KeyType) (der *memguard.Enclave, publickey any, err e
 		if err != nil {
 			return
 		}
-		privateKey, err = ecdsaKey.ECDH()
+		pKey, err = ecdsaKey.ECDH()
 		if err != nil {
 			return
 		}
 	default:
-		err = fmt.Errorf("%w unsupported key type %s", os.ErrInvalid, keytype)
+		err = fmt.Errorf("%w unsupported key type %s", os.ErrInvalid, keyType)
 		return
 	}
 
-	key, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if k, ok := pKey.(crypto.Signer); ok {
+		publicKey = k.Public()
+	}
+
+	key, err := x509.MarshalPKCS8PrivateKey(pKey)
 	if err != nil {
 		return
 	}
-	der = memguard.NewEnclave(key)
+	privateKey = memguard.NewEnclave(key)
 
-	if k, ok := privateKey.(crypto.Signer); ok {
-		publickey = k.Public()
-	}
 	return
 }
 
-// PrivateKey parses the DER encoded private key enclave, first as
+// ParsePrivateKey parses the DER encoded private key enclave, first as
 // PKCS#8 and then as a PKCS#1 and finally as SEC1 (EC) if that fails.
 // It returns the private key or an error.
-func PrivateKey(key *memguard.Enclave) (privatekey any, err error) {
+func ParsePrivateKey(key *memguard.Enclave) (privatekey any, err error) {
 	k, err := key.Open()
 	if err != nil {
 		return
@@ -142,14 +145,14 @@ func PrivateKey(key *memguard.Enclave) (privatekey any, err error) {
 // public key if successful. It will first try as PKCS#8 and then PKCS#1
 // if that fails and finally as SEC1 (EC). Returns an error if parsing
 // fails.
-func PublicKey(key *memguard.Enclave) (publickey crypto.PublicKey, err error) {
-	privatekey, err := PrivateKey(key)
+func PublicKey(key *memguard.Enclave) (publicKey crypto.PublicKey, err error) {
+	privateKey, err := ParsePrivateKey(key)
 	if err != nil {
 		return
 	}
 
-	if k, ok := privatekey.(crypto.Signer); ok {
-		publickey = k.Public()
+	if k, ok := privateKey.(crypto.Signer); ok {
+		publicKey = k.Public()
 	}
 
 	return

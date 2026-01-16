@@ -45,7 +45,12 @@ func init() {
 	tlsCmd.AddCommand(importCmd)
 
 	importCmdPassword = &config.Plaintext{}
-	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Plaintext password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+	importCmd.Flags().VarP(importCmdPassword, "password", "p",
+		`Plaintext password for PFX/PKCS#12 file decryption.
+You will be prompted if not supplied as an argument.
+PFX/PKCS#12 files are identified by the .pfx or .p12
+file extension and only supported for instance bundles`,
+	)
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
 	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
@@ -53,9 +58,6 @@ func init() {
 	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
 
 	importCmd.Flags().SortFlags = false
-
-	// importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
-	// importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
 
 	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
 		switch name {
@@ -85,7 +87,7 @@ geneos tls import /path/to/file.pem
 `,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:        "false",
-		cmd.CmdRequireHome:   "true",
+		cmd.CmdRequireHome:   "false",
 		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
@@ -105,6 +107,11 @@ geneos tls import /path/to/file.pem
 		if ct == nil && len(names) == 0 {
 			log.Debug().Str("file", file).Msg("Importing signing bundle")
 			return geneos.TLSImportBundle(file, importCmdPrivateKey)
+		}
+
+		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
+			command.SetUsageTemplate(" ")
+			return cmd.GeneosUnsetError
 		}
 
 		log.Debug().Str("file", file).Msg("Importing instance bundle")
@@ -196,7 +203,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	var updated bool
-	updated, resp.Err = certs.UpdatedCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)
+	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)
 	if resp.Err != nil {
 		return
 	}

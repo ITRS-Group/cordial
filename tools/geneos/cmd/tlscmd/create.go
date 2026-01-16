@@ -18,15 +18,13 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
+	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -38,34 +36,9 @@ import (
 )
 
 var createCmdCN, createCmdDestDir string
-var createCmdOverwrite bool
+var createCmdOverwrite, createCmdSigner bool
 var createCmdSANs certSANs
 var createCmdDays int
-
-type certSANs struct {
-	DNS   values
-	IP    values
-	Email values
-	URL   values
-}
-
-// attribute - name=value
-type values []string
-
-const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
-
-func (i *values) String() string {
-	return ""
-}
-
-func (i *values) Set(value string) error {
-	*i = append(*i, value)
-	return nil
-}
-
-func (i *values) Type() string {
-	return "VALUE"
-}
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
@@ -74,14 +47,16 @@ func init() {
 
 	createCmd.Flags().StringVarP(&createCmdDestDir, "out", "o", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
 
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname except for --signer")
 
-	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
+	createCmd.Flags().BoolVarP(&createCmdSigner, "signer", "S", false, "Create a new signer certificate and private key instead of a standard certificate")
 
-	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).")
-	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).")
-	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).")
-	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).")
+	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days. Ignored for --signer")
+
+	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signer.")
+	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signer.")
+	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).\nIgnored for --signer.")
+	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).\nIgnored for --signer.")
 
 	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
 
@@ -102,7 +77,7 @@ var createCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if createCmdOverwrite {
-			if err = geneos.TLSInit(false, initCmdKeyType); err != nil {
+			if err = geneos.TLSInit(geneos.LOCALHOST, false, initCmdKeyType); err != nil {
 				return
 			}
 		}
@@ -130,7 +105,6 @@ var createCmd = &cobra.Command{
 			}
 			return
 		}
-		fmt.Printf("Certificate and key created for CN=%q\n", createCmdCN)
 		return
 	},
 }
@@ -144,7 +118,7 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san cer
 		return config.ErrNoUserConfigDir
 	}
 	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
-	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
+	if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 		return os.ErrExist
 	}
 	template := certs.Template(cn,
@@ -154,7 +128,6 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san cer
 		certs.EmailAddresses(san.Email...),
 		certs.URIs(san.URL...),
 	)
-	expires := template.NotAfter
 
 	signerCert, _, err := geneos.ReadSignerCertificate()
 	if err != nil {
@@ -162,29 +135,78 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san cer
 		return
 	}
 
-	signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+	signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	cert, key, err := certs.CreateCertificateAndKey(template, signerCert, signerKey)
+	cert, key, err := certs.CreateCertificate(template, signerCert, signerKey)
 	if err != nil {
 		return
 	}
 
-	if err = certs.WriteCertificates(geneos.LOCAL, basepath+".pem", cert, signerCert); err != nil {
+	var b bytes.Buffer
+	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
 		return
 	}
-
-	if err = certs.WritePrivateKey(geneos.LOCAL, basepath+".key", key); err != nil {
+	if _, err = certs.WriteCertificatesTo(&b, cert, signerCert); err != nil {
 		return
 	}
+	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
 
-	fmt.Printf("certificate created for %s\n", basepath)
-	fmt.Printf("            Expiry: %s\n", expires.UTC().Format(time.RFC3339))
-	fmt.Printf("  SHA1 Fingerprint: %X\n", sha1.Sum(cert.Raw))
-	fmt.Printf("SHA256 Fingerprint: %X\n", sha256.Sum256(cert.Raw))
-
+	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
+	fmt.Print(string(certs.CertificateComments(cert)))
 	return
+}
+
+func CreateSignerCert(destination string, overwrite bool, cn string) (err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return config.ErrNoUserConfigDir
+	}
+	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
+	if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
+		return os.ErrExist
+	}
+	rootCert, _, err := geneos.ReadRootCertificate()
+	if err != nil {
+		err = fmt.Errorf("cannot read root CA: %w", err)
+		return
+	}
+	rootKey, _, err := geneos.ReadRootPrivateKey()
+	if err != nil {
+		err = fmt.Errorf("cannot read root CA private key: %w", err)
+		return
+	}
+	var b bytes.Buffer
+	certs.WriteNewSignerCertTo(&b, rootCert, rootKey, cn)
+	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
+	fmt.Printf("Signer certificate and private key created in %q\n", basepath+certs.PEMExtension)
+	return
+}
+
+type certSANs struct {
+	DNS   values
+	IP    values
+	Email values
+	URL   values
+}
+
+// attribute - name=value
+type values []string
+
+const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
+
+func (i *values) String() string {
+	return ""
+}
+
+func (i *values) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *values) Type() string {
+	return "VALUE"
 }

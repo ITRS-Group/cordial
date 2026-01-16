@@ -327,6 +327,7 @@ func initConfig() {
 		config.IgnoreWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
 		config.UseDefaults(false),
+		config.MustExist(),
 	)
 
 	log.Debug().Msgf("configuration loaded from %s", configPath)

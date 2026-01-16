@@ -26,6 +26,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"slices"
@@ -37,7 +38,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// UpdatedCACertsFiles appends the given root certificates to the
+// UpdateCACertsFiles appends the given root certificates to the
 // root certificate file at the specified path on the given host. It
 // ensures that all the given certificates are present in the file,
 // appending any that are missing. If the file does not exist or is
@@ -53,23 +54,23 @@ import (
 //
 // The caller is responsible for locking access to the root cert file if
 // concurrent access is possible.
-func UpdatedCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate) (updated bool, err error) {
+func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate) (updated bool, err error) {
 	// remove nil, non-root CA or expired certificates from certs
 	roots = slices.DeleteFunc(roots, func(c *x509.Certificate) bool {
 		return c == nil || !IsValidRootCA(c)
 	})
 
-	allCerts, err := ReadCertificates(h, basePath+"."+PEMExtension)
+	allCerts, err := ReadCertificates(h, basePath+PEMExtension)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Error().Err(err).Msg("reading existing root certificates failed")
 		return false, err
 	}
 	log.Debug().Msgf("found %d root certificates to sync", len(roots))
 	if allCerts == nil {
-		if err = WriteCertificates(h, basePath+"."+PEMExtension, roots...); err != nil {
+		if err = WriteCertificates(h, basePath+PEMExtension, roots...); err != nil {
 			return false, err
 		}
-		if err = WriteTrustStore(h, basePath+"."+KeystoreExtension, nil, roots...); err != nil {
+		if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
 			return false, err
 		}
 		return true, nil
@@ -94,7 +95,7 @@ func UpdatedCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificat
 	}
 
 	log.Debug().Msg("updating truststore with root certificates")
-	if err = WriteTrustStore(h, basePath+"."+KeystoreExtension, nil, roots...); err != nil {
+	if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
 		return false, err
 	}
 
@@ -102,7 +103,7 @@ func UpdatedCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificat
 		return false, nil
 	}
 
-	if err = WriteCertificates(h, basePath+"."+PEMExtension, allCerts...); err != nil {
+	if err = WriteCertificates(h, basePath+PEMExtension, allCerts...); err != nil {
 		return false, err
 	}
 
@@ -112,30 +113,48 @@ func UpdatedCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificat
 // WriteCertificates concatenate certs in PEM format and writes to path
 // on host h. Certificates that are expired are skipped, only errors
 // from writing the resulting file are returned. Certificates are written
-// in the order provided.
+// in the order provided. Directories in the path are created with 0755 permissions
+// if they do not already exist. The certificate file is created with
+// 0644 permissions (before umask).
 func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate) (err error) {
-	var data []byte
+	var b bytes.Buffer
+	if _, err = WriteCertificatesTo(&b, certs...); err != nil {
+		return err
+	}
+
+	if err = h.MkdirAll(path.Dir(certpath), 0755); err != nil {
+		return err
+	}
+
+	return h.WriteFile(certpath, b.Bytes(), 0644)
+}
+
+// WriteCertificatesTo writes the given certificates in PEM format to
+// the provided io.Writer. Certificates that are expired are skipped.
+// The total number of bytes written and any error encountered are
+// returned.
+func WriteCertificatesTo(w io.Writer, certs ...*x509.Certificate) (n int, err error) {
+	var m int
 
 	for _, cert := range certs {
 		if cert == nil || cert.NotAfter.Before(time.Now()) {
 			continue
 		}
 
-		data = append(data, CertificateComments(cert)...)
+		if n, err = w.Write(CertificateComments(cert)); err != nil {
+			return
+		}
 
 		p := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		})
-		data = append(data, p...)
+		if m, err = w.Write(p); err != nil {
+			return
+		}
+		n += m
 	}
-
-	if len(data) == 0 {
-		return os.ErrInvalid
-	}
-
-	h.MkdirAll(path.Dir(certpath), 0755)
-	return h.WriteFile(certpath, data, 0644)
+	return
 }
 
 // WriteNewRootCert creates a new root certificate and private key and
@@ -152,20 +171,21 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 		MaxPathLen(1),
 	)
 
-	privateKey, _, err := NewPrivateKey(keytype)
+	privateKey, _, err := GenerateKey(keytype)
 	if err != nil {
 		return
 	}
 
-	root, key, err := CreateCertificateAndKey(template, template, privateKey)
+	root, key, err := CreateCertificate(template, template, privateKey)
 	if err != nil {
 		return
 	}
 
-	if err = WriteCertificates(host.Localhost, basefilepath+".pem", root); err != nil {
+	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, root); err != nil {
 		return
 	}
-	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
+
+	if err = WritePrivateKey(host.Localhost, basefilepath+KEYExtension, key); err != nil {
 		return
 	}
 
@@ -178,7 +198,7 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 // true than any existing cert and key are overwritten.
 //
 // The certificate is returned on success, but the private key is not.
-func WriteNewSignerCert(basefilepath string, rootbasefilepath string, cn string) (signer *x509.Certificate, err error) {
+func WriteNewSignerCert(basefilepath string, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (signer *x509.Certificate, err error) {
 	template := Template(cn,
 		Days(5*365),
 		IsCA(),
@@ -188,46 +208,89 @@ func WriteNewSignerCert(basefilepath string, rootbasefilepath string, cn string)
 		MaxPathLen(0),
 	)
 
-	roots, err := ReadCertificates(host.Localhost, rootbasefilepath+".pem")
-	if err != nil {
-		return
-	}
-	rootCert := roots[0]
-
-	rootKey, err := ReadPrivateKey(host.Localhost, rootbasefilepath+".key")
+	signer, key, err := CreateCertificate(template, rootCert, rootKey)
 	if err != nil {
 		return
 	}
 
-	signer, key, err := CreateCertificateAndKey(template, rootCert, rootKey)
-	if err != nil {
+	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, signer); err != nil {
 		return
 	}
 
-	if err = WriteCertificates(host.Localhost, basefilepath+".pem", signer); err != nil {
-		return
-	}
-	if err = WritePrivateKey(host.Localhost, basefilepath+".key", key); err != nil {
+	if err = WritePrivateKey(host.Localhost, basefilepath+KEYExtension, key); err != nil {
 		return
 	}
 
 	return
 }
 
+func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (n int, err error) {
+	template := Template(cn,
+		Days(5*365),
+		IsCA(),
+		BasicConstraintsValid(),
+		KeyUsage(x509.KeyUsageDigitalSignature|x509.KeyUsageCertSign|x509.KeyUsageCRLSign),
+		ExtKeyUsage(),
+		MaxPathLen(0),
+	)
+
+	signer, key, err := CreateCertificate(template, rootCert, rootKey)
+	if err != nil {
+		return
+	}
+
+	var m int
+	if n, err = WriteCertificatesTo(w, signer); err != nil {
+		return
+	}
+
+	if m, err = WritePrivateKeyTo(w, key); err != nil {
+		return
+	}
+	n += m
+
+	return
+}
+
 // WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
 // PEM file to path on host h. sets file permissions to 0600 (before
-// umask)
-func WritePrivateKey(h host.Host, path string, key *memguard.Enclave) (err error) {
+// umask). Directories in the path are created with 0755 permissions if
+// they do not already exist.
+func WritePrivateKey(h host.Host, keypath string, key *memguard.Enclave) (err error) {
+	var b bytes.Buffer
+	if _, err = WritePrivateKeyTo(&b, key); err != nil {
+		return err
+	}
+
+	if err = h.MkdirAll(path.Dir(keypath), 0755); err != nil {
+		return err
+	}
+	return h.WriteFile(keypath, b.Bytes(), 0600)
+}
+
+// WritePrivateKeyTo writes the given private key in PEM format to
+// the provided io.Writer. The total number of bytes written and any
+// error encountered are returned.
+func WritePrivateKeyTo(w io.Writer, key *memguard.Enclave) (n int, err error) {
+	var m int
+
+	if n, err = w.Write(PrivateKeyComments(key)); err != nil {
+		return
+	}
+
 	l, _ := key.Open()
 	defer l.Destroy()
 
-	data := PrivateKeyComments(key)
-	data = append(data, pem.EncodeToMemory(&pem.Block{
+	p := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: l.Bytes(),
-	})...)
+	})
+	if m, err = w.Write(p); err != nil {
+		return
+	}
+	n += m
 
-	return h.WriteFile(path, data, 0600)
+	return
 }
 
 // CertificateComments returns a byte slice containing comments about

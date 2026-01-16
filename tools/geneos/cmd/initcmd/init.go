@@ -68,7 +68,8 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle including private key, PEM format")
+	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle in PEM format.\nThis bundle must contain an unencrypted private key\nand matching signing certificate and other certificates up to the root CA.")
+
 	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")
 
 	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
@@ -268,5 +269,5 @@ func initCommon() (err error) {
 		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey)
 	}
 
-	return geneos.TLSInit(true, certs.DefaultKeyType)
+	return geneos.TLSInit(geneos.LOCALHOST, true, certs.DefaultKeyType)
 }

@@ -25,6 +25,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
@@ -49,14 +50,20 @@ const (
 	// CABundleFilename is the file name for the ca-bundle file used by
 	// Geneos components to verify peer certificates. This file is
 	// located in the geneos home directory on each hoist under `tls/`
-	CABundleBasename = "ca-bundle"
+	CABundleBasename string = "ca-bundle"
 )
 
 // PathToCABundle returns the path to the ca-bundle file on the given
-// host with extensions from ext, joined with a ".". Without any ext
-// parameter arguments the returned file will be "ca-bundle".
+// host with extensions concatenated from ext. Without any ext parameter arguments
+// the returned file will be "ca-bundle".
 func PathToCABundle(h *Host, ext ...string) string {
-	return h.PathTo("tls", strings.Join(append([]string{CABundleBasename}, ext...), "."))
+	return h.PathTo("tls", strings.Join(append([]string{CABundleBasename}, ext...), ""))
+}
+
+// PathToCABundlePEM returns the path to the ca-bundle PEM file on the given
+// host.
+func PathToCABundlePEM(h *Host) string {
+	return PathToCABundle(h, certs.PEMExtension)
 }
 
 // ReadRootCertificate reads the root certificate from the user's app
@@ -71,7 +78,7 @@ func ReadRootCertificate() (root *x509.Certificate, file string, err error) {
 		return
 	}
 
-	file = path.Join(confDir, RootCABasename+".pem")
+	file = path.Join(confDir, RootCABasename+certs.PEMExtension)
 
 	roots, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
@@ -87,6 +94,20 @@ func ReadRootCertificate() (root *x509.Certificate, file string, err error) {
 	return
 }
 
+// ReadRootPrivateKey reads the root CA private key from the user's app
+// config directory.
+func ReadRootPrivateKey() (key *memguard.Enclave, file string, err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		err = config.ErrNoUserConfigDir
+		return
+	}
+
+	file = path.Join(confDir, RootCABasename+certs.KEYExtension)
+	key, err = certs.ReadPrivateKey(LOCAL, file)
+	return
+}
+
 // ReadSignerCertificate reads the signing certificate from the user's
 // app config directory. It "promotes" old cert and key files from the
 // previous tls directory if files do not already exist in the user app
@@ -99,7 +120,7 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 		return
 	}
 
-	file = path.Join(confDir, SigningCertBasename+".pem")
+	file = path.Join(confDir, SigningCertBasename+certs.PEMExtension)
 
 	signers, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
@@ -126,6 +147,20 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 	_, err = signer.Verify(x509.VerifyOptions{
 		Roots: roots,
 	})
+	return
+}
+
+// ReadSignerPrivateKey reads the signing certificate private key from the
+// user's app config directory.
+func ReadSignerPrivateKey() (key *memguard.Enclave, file string, err error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		err = config.ErrNoUserConfigDir
+		return
+	}
+
+	file = path.Join(confDir, SigningCertBasename+certs.KEYExtension)
+	key, err = certs.ReadPrivateKey(LOCAL, file)
 	return
 }
 
@@ -182,22 +217,22 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return errors.New("no root certificate found in signing bundle")
 	}
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".pem"))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.PEMExtension))
 
-	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+".key"), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.KEYExtension))
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+".pem"), certBundle.Root); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
 		return err
 	}
-	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+".pem"))
+	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+certs.PEMExtension))
 
-	if updated, err := certs.UpdatedCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
+	if updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
 		return err
 	} else if updated {
 		fmt.Printf("ca-bundle updated with root certificate\n")
@@ -211,16 +246,16 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 // later options to allow import of a DCA
 //
 // This is also called from `init`
-func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
+func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error) {
 	if !overwrite {
 		if _, _, err := ReadRootCertificate(); err == nil {
 			// root cert already exists
-			fmt.Printf("root certificate already exists, skipping TLS initialisation\n")
+			log.Debug().Msg("root certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 		if _, _, err := ReadSignerCertificate(); err == nil {
 			// signing cert already exists
-			fmt.Printf("signing certificate already exists, skipping TLS initialisation\n")
+			log.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 	}
@@ -247,15 +282,21 @@ func TLSInit(overwrite bool, keytype certs.KeyType) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = certs.UpdatedCACertsFiles(LOCAL, PathToCABundle(LOCAL), rootCert)
+	_, err = certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), rootCert)
 	if err != nil {
 		return err
 	}
 
-	if _, err := certs.WriteNewSignerCert(
-		path.Join(confDir, SigningCertBasename),
-		path.Join(confDir, RootCABasename),
-		cordial.ExecutableName()+" intermediate certificate",
+	rootCert, _, err = ReadRootCertificate()
+	if err != nil {
+		return err
+	}
+	rootKey, _, err := ReadRootPrivateKey()
+	if err != nil {
+		return err
+	}
+	if _, err := certs.WriteNewSignerCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
+		cordial.ExecutableName()+" intermediate certificate ("+hostname+")",
 	); err != nil {
 		return err
 	}
@@ -282,7 +323,7 @@ func TLSSync() (err error) {
 
 	for _, h := range allHosts {
 		hostname := h.Hostname()
-		updated, err := certs.UpdatedCACertsFiles(h, PathToCABundle(h), allRoots...)
+		updated, err := certs.UpdateCACertsFiles(h, PathToCABundle(h), allRoots...)
 		if err != nil {
 			log.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
 			continue

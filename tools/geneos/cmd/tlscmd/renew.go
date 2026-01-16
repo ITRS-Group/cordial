@@ -18,15 +18,12 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
 	"crypto/x509"
 	_ "embed"
 	"errors"
 	"fmt"
 	"os"
 	"path"
-	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -53,7 +50,7 @@ func init() {
 
 	renewCmd.Flags().BoolVar(&renewCmdSigner, "signer", false, "Renew the signing certificate instead of instance certificates")
 
-	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Instance certificate duration in days. (No effect for signer)")
+	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Instance certificate duration in days.\n(No effect with --signer)")
 
 	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
 	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
@@ -84,16 +81,22 @@ var renewCmd = &cobra.Command{
 			if confDir == "" {
 				return config.ErrNoUserConfigDir
 			}
-			if signer, err := certs.WriteNewSignerCert(
-				path.Join(confDir, geneos.SigningCertBasename),
-				path.Join(confDir, geneos.RootCABasename),
-				cordial.ExecutableName()+" intermediate certificate",
+			rootCert, _, err := geneos.ReadRootCertificate()
+			if err != nil {
+				return err
+			}
+			rootKey, _, err := geneos.ReadRootPrivateKey()
+			if err != nil {
+				return err
+			}
+			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
+				cordial.ExecutableName()+" intermediate certificate ("+cmd.Hostname+")",
 			); err != nil {
 				return err
 			} else {
 				fmt.Printf("signing certificate renewed. expires %s\n", signer.NotAfter.Local().Format(time.RFC3339))
 			}
-			return
+			return nil
 		}
 
 		ct, names := cmd.ParseTypeNames(command)
@@ -101,8 +104,6 @@ var renewCmd = &cobra.Command{
 		return
 	},
 }
-
-var chainUpdateMutex sync.Mutex
 
 // renew an instance certificate, reuse private key if it exists
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
@@ -118,7 +119,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	}
 
 	// migrate the TLS config, regardless of roll/unroll, at this point
-	resp = migrateInstance(i)
+	resp = migrateInstanceTLS(i)
 
 	switch {
 	case renewCmdRoll:
@@ -152,7 +153,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension))
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -164,7 +165,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		)
 		expires := template.NotAfter
 
-		cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
+		cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -198,12 +199,8 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		resp.Details = []string{
-			fmt.Sprintf("certificate created for %s", i),
-			fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
-			fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),
-			fmt.Sprintf("SHA256 Fingerprint: %X", sha256.Sum256(cert.Raw)),
-		}
+		resp.Completed = append(resp.Completed, "certificate renewed")
+		resp.Details = []string{string(certs.CertificateComments(cert))}
 	}
 	return
 }

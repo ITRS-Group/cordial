@@ -18,16 +18,11 @@ limitations under the License.
 package instance
 
 import (
-	"crypto/sha1"
-	"crypto/sha256"
 	"crypto/x509"
-	"fmt"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/awnumar/memguard"
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -46,8 +41,6 @@ import (
 //
 // skip if certificate exists and is valid
 func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
-	cf := i.Config()
-
 	resp = responses.NewResponse(i)
 
 	// skip if we can load an existing and valid certificate
@@ -70,7 +63,7 @@ func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 		resp.Err = err
 		return
 	}
-	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
+	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+certs.KEYExtension))
 	if err != nil {
 		resp.Err = err
 		return
@@ -80,87 +73,26 @@ func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 		certs.DNSNames(i.Host().GetString("hostname")),
 		certs.Days(days),
 	)
-	expires := template.NotAfter
 
-	cert, key, err := certs.CreateCertificateAndKey(template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
-	certPath := ComponentFilepath(i, "pem")
-	log.Debug().Msgf("writing certificate to %q", certPath)
-	if err = certs.WriteCertificates(i.Host(), certPath, cert, signingCert); err != nil {
-		resp.Err = err
-		return
-	}
-	// remove old certificate entry
-	cf.Set("certificate", "")
-	cf.SetString(cf.Join("tls", "certificate"), certPath, config.Replace("home"))
+	WriteCertificates(i, []*x509.Certificate{cert, signingCert})
+	WritePrivateKey(i, key)
 
-	keyPath := ComponentFilepath(i, "key")
-	log.Debug().Msgf("writing private key to %q", keyPath)
-	if err = certs.WritePrivateKey(i.Host(), keyPath, key); err != nil {
-		resp.Err = err
-		return
-	}
-	// remove old private key entry
-	cf.Set("privatekey", "")
-
-	cf.SetString(cf.Join("tls", "privatekey"), keyPath, config.Replace("home"))
-
-	if err = SaveConfig(i); err != nil {
-		resp.Err = err
-		return
-	}
-
-	resp.Summary = fmt.Sprintf("certificate created, expires %s", expires.UTC().Format(time.RFC3339))
-
-	resp.Details = []string{
-		fmt.Sprintf("certificate created for %s", i),
-		fmt.Sprintf("            Expiry: %s", expires.UTC().Format(time.RFC3339)),
-		fmt.Sprintf("  SHA1 Fingerprint: %X", sha1.Sum(cert.Raw)),
-		fmt.Sprintf("SHA256 Fingerprint: %X", sha256.Sum256(cert.Raw)),
-	}
-	return
-}
-
-// WriteCertificate writes the certificate in the instance i directory
-// using standard file name of TYPE.pem and updates the `certificate`
-// parameter. It does not write the instance configuration, expecting
-// the caller to do so after any other updates.
-//
-// If any extensions are passed (as ext), they are appended to the
-// filename with dot separators, e.g. for temporary files and the
-// instance config is not updated.
-func WriteCertificate(i geneos.Instance, cert *x509.Certificate, ext ...string) (err error) {
-	cf := i.Config()
-
-	if i.Type() == nil {
-		return geneos.ErrInvalidArgs
-	}
-	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
-	if err = certs.WriteCertificates(i.Host(), certFile, cert); err != nil {
-		return
-	}
-
-	if len(ext) > 0 || cf.GetString(cf.Join("tls", "certificate")) == certFile {
-		// do not update config if ext is given (used for temp files) or
-		// if it's already set
-		return
-	}
-	cf.Set("certificate", "")
-	cf.SetString(cf.Join("tls", "certificate"), certFile, config.Replace("home"))
-	if err = SaveConfig(i); err != nil {
-		return
-	}
+	resp.Completed = append(resp.Completed, "new certificate and private key created")
+	resp.Details = []string{string(certs.CertificateComments(cert))}
 	return
 }
 
 // WriteCertificates writes the certificates to a single file in the
-// instance i directory using standard file name of TYPE.pem and updates
-// the `certificate` parameter. It does not write the instance
-// configuration, expecting the caller to do so after any other updates.
+// instance i directory using standard file name of
+// TYPE+certs.PEMExtension and updates the `certificate` parameter. It
+// does not write the instance configuration, expecting the caller to do
+// so after any other updates.
 //
 // If any extensions are passed (as ext), they are appended to the
 // filename with dot separators, e.g. for temporary files and the
@@ -171,7 +103,7 @@ func WriteCertificates(i geneos.Instance, certSlice []*x509.Certificate, ext ...
 	if i.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
-	certFile := ComponentFilepath(i, append([]string{"pem"}, ext...)...)
+	certFile := ComponentFilepath(i, append([]string{certs.PEMExtension}, ext...)...)
 	if err = certs.WriteCertificates(i.Host(), certFile, certSlice...); err != nil {
 		return
 	}
@@ -204,7 +136,7 @@ func WritePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (e
 		return geneos.ErrInvalidArgs
 	}
 
-	keyfile := ComponentFilepath(i, append([]string{"key"}, ext...)...)
+	keyfile := ComponentFilepath(i, append([]string{certs.KEYExtension}, ext...)...)
 	if err = certs.WritePrivateKey(i.Host(), keyfile, key); err != nil {
 		return
 	}

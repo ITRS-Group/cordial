@@ -35,15 +35,15 @@ import (
 )
 
 const (
-	PEMExtension      = "pem"
-	KEYExtension      = "key"
-	KeystoreExtension = "db"
+	PEMExtension      = ".pem"
+	KEYExtension      = ".key"
+	KeystoreExtension = ".db"
 )
 
-// CreateCertificateAndKey is a wrapper to create a new certificate
-// given the signing cert and key. Returns a certificate and private key.
-// Keys are usually PKCS#8 encoded and so need parsing after unsealing.
-func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memguard.Enclave) (cert *x509.Certificate, key *memguard.Enclave, err error) {
+// CreateCertificate creates a new certificate and private key given the
+// signing cert and key. Returns a certificate and private key. Keys are
+// usually PKCS#8 encoded and so need parsing after unsealing.
+func CreateCertificate(template, parent *x509.Certificate, signerKey *memguard.Enclave) (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	var certBytes []byte
 	var pub crypto.PublicKey
 
@@ -58,12 +58,12 @@ func CreateCertificateAndKey(template, parent *x509.Certificate, signerKey *memg
 		keytype = DefaultKeyType
 	}
 
-	key, pub, err = NewPrivateKey(keytype)
+	key, pub, err = GenerateKey(keytype)
 	if err != nil {
 		panic(err)
 	}
 
-	priv, err := PrivateKey(signerKey)
+	priv, err := ParsePrivateKey(signerKey)
 	if err != nil {
 		key = nil
 		return
@@ -165,6 +165,82 @@ type CertificateBundle struct {
 	Valid     bool
 }
 
+// Verify verifies the provided certificates as a chain. It
+// returns true if verification is successful. Only one leaf, zero or
+// more intermediates and zero or one root certificate should be
+// provided. If there is no leaf certificate then the first intermediate
+// is used as the leaf. If there is only one or more root certificates
+// then the function returns true.
+func Verify(certs ...*x509.Certificate) (ok bool) {
+	var leaf *x509.Certificate
+	var intermediates []*x509.Certificate
+	var roots []*x509.Certificate
+	var err error
+
+	log.Debug().Msgf("verifying %d certificates", len(certs))
+
+	if len(certs) == 0 {
+		return
+	}
+
+	for _, c := range certs {
+		switch {
+		case IsValidLeafCert(c):
+			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
+			if leaf != nil && !leaf.Equal(c) {
+				err = errors.New("multiple leaf certificates found")
+				log.Debug().Err(err).Msg("")
+				return
+			}
+			leaf = c
+		case IsValidRootCA(c):
+			log.Debug().Msgf("found root CA certificate: %s", c.Subject.CommonName)
+			roots = append(roots, c)
+		case IsValidSigningCA(c):
+			log.Debug().Msgf("found intermediate CA certificate: %s", c.Subject.CommonName)
+			intermediates = append(intermediates, c)
+		default:
+			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)
+			return
+		}
+	}
+
+	if leaf == nil {
+		if len(intermediates) > 0 {
+			leaf = intermediates[0]
+			intermediates = intermediates[1:]
+		} else if len(roots) > 0 {
+			log.Debug().Msg("only root certificate found, verifying self-signed root")
+			return true
+		}
+	}
+
+	opts := x509.VerifyOptions{}
+	if len(roots) > 0 {
+		opts.Roots = x509.NewCertPool()
+		for _, rc := range roots {
+			log.Debug().Msgf("adding root CA certificate %s to pool", rc.Subject.CommonName)
+			opts.Roots.AddCert(rc)
+		}
+	}
+	if len(intermediates) > 0 {
+		opts.Intermediates = x509.NewCertPool()
+		for _, ic := range intermediates {
+			log.Debug().Msgf("adding intermediate CA certificate %s to pool", ic.Subject.CommonName)
+			opts.Intermediates.AddCert(ic)
+		}
+	}
+
+	_, err = leaf.Verify(opts)
+	if err != nil {
+		log.Debug().Msgf("certificate verification failed: %v", err)
+		return
+	}
+
+	log.Debug().Msg("certificate verification succeeded")
+	return true
+}
+
 // ParseCertChain tries to verify the provided certificate chain. It
 // returns the leaf certificate, any intermediates and any root
 // certificate found in the chain. It returns an error if verification
@@ -172,7 +248,7 @@ type CertificateBundle struct {
 // the leaf certificate. The order of the remaining certificates does
 // not matter.
 func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
-	log.Debug().Msgf("verifying %d certificates", len(cert))
+	log.Debug().Msgf("parsing %d certificates", len(cert))
 
 	for _, c := range cert {
 		switch {
@@ -184,14 +260,14 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 			}
 			leaf = c
 		case IsValidRootCA(c):
-			log.Debug().Msgf("found valid root CA certificate: %s", c.Subject.CommonName)
+			log.Debug().Msgf("found root CA certificate: %s", c.Subject.CommonName)
 			if root != nil && !root.Equal(c) {
 				err = errors.New("multiple root certificates found")
 				return
 			}
 			root = c
 		case IsValidSigningCA(c):
-			log.Debug().Msgf("found valid intermediate CA certificate: %s", c.Subject.CommonName)
+			log.Debug().Msgf("found intermediate CA certificate: %s", c.Subject.CommonName)
 			intermediates = append(intermediates, c)
 		default:
 			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)

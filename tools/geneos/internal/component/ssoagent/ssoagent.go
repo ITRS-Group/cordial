@@ -215,7 +215,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16, insecure bool) (err error) {
 
 	// create certs, report success only
 	if !insecure {
-		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard), responses.SummaryOnly())
+		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// copy default configs
@@ -240,15 +240,14 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		return err
 	}
 
-	cf := s.Config()
-
-	caBundle := cf.GetString(cf.Join("tls", "ca-bundle"), config.Default(cf.GetString("certchain")))
 	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 
+	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
+
 	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
-	if caBundle != "" && truststorePath != "" && truststorePath != geneos.PathToCABundle(s.Host(), certs.KeystoreExtension) {
-		if err = certs.RootsToTrustStore(s.Host(), caBundle, truststorePath, truststorePassword); err != nil {
+	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(s.Host(), certs.KeystoreExtension) {
+		if err = certs.AddRootsToTrustStore(s.Host(), truststorePath, truststorePassword, roots...); err != nil {
 			return err
 		}
 	}
@@ -287,12 +286,19 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 
 		alias := ssoconf.GetString(ssoconf.Join("server", "ssl_alias"), config.Default(geneos.ALL.Hostname()))
 
-		certPath := cf.GetString(cf.Join("tls", "certificate"), config.Default(cf.GetString("certificate")))
-		keyPath := cf.GetString(cf.Join("tls", "privatekey"), config.Default(cf.GetString("privatekey")))
-
-		if certPath != "" && keyPath != "" {
-			certs.CertsToKeyStore(s.Host(), certPath, keyPath, keystorePath, alias, keystorePassword)
+		certChain, err := instance.ReadCertificates(s)
+		if err != nil {
+			return err
 		}
+		if len(certChain) == 0 {
+			return err
+		}
+		key, err := instance.ReadPrivateKey(s)
+		if err != nil {
+			return err
+		}
+		keystorePath = instance.Abs(s, keystorePath)
+		return certs.AddCertChainToKeyStore(s.Host(), keystorePath, keystorePassword, alias, key, certChain...)
 	}
 	return
 }
@@ -316,12 +322,12 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 		MaxPathLen:            -1,
 	}
 
-	privateKey, _, err := certs.NewPrivateKey("rsa")
+	privateKey, _, err := certs.GenerateKey("rsa")
 	if err != nil {
 		return
 	}
 
-	return certs.CreateCertificateAndKey(template, template, privateKey)
+	return certs.CreateCertificate(template, template, privateKey)
 }
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {

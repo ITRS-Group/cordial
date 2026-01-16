@@ -284,6 +284,22 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 		// level, ignore all other dirs
 		ctName, rest, _ := strings.Cut(filename, "/")
 
+		// restore top level tls is restoring shared files
+		if ctName == "tls" && restoreCmdShared {
+			if _, ok := sizes["TLS:!SHARED"]; !ok {
+				sizes["TLS:!SHARED"] = -1
+			}
+			if err = writeSharedFile(h, path.Join("tls", rest), tr, hdr); err != nil {
+				if errors.Is(err, os.ErrExist) && restoreCmdList {
+					// up the count regardless of existence when listing
+					sizes["TLS:!SHARED"] += hdr.Size
+				}
+				continue
+			}
+			sizes["TLS:!SHARED"] += hdr.Size
+			continue
+		}
+
 		// check ctName is valid and if ct is not nil, filter for a match
 		nct := geneos.ParseComponent(ctName)
 		if nct == nil {
@@ -308,7 +324,7 @@ func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names
 					if _, ok := sizes[nct.String()+":!SHARED"]; !ok {
 						sizes[nct.String()+":!SHARED"] = -1
 					}
-					if err = writeSharedFile(h, nct, path.Join(nct.String(), ctSubdir, rest), tr, hdr); err != nil {
+					if err = writeSharedFile(h, path.Join(nct.String(), ctSubdir, rest), tr, hdr); err != nil {
 						if errors.Is(err, os.ErrExist) && restoreCmdList {
 							// up the count regardless of existence when listing
 							sizes[nct.String()+":!SHARED"] += hdr.Size
@@ -482,11 +498,7 @@ func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string,
 // permissions as per tar header. Owner and group are ignored. Directory
 // entries are used to create directories with matching permissions,
 // again ignoring owner and group.
-func writeSharedFile(h *geneos.Host, ct *geneos.Component, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
-	if ct == nil {
-		return geneos.ErrInvalidArgs
-	}
-
+func writeSharedFile(h *geneos.Host, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
 	switch hdr.Typeflag {
 	case tar.TypeDir:
 		// create and set permissions

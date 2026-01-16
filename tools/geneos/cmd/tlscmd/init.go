@@ -53,6 +53,6 @@ var initCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return geneos.TLSInit(initCmdOverwrite, initCmdKeyType)
+		return geneos.TLSInit(geneos.LOCALHOST, initCmdOverwrite, initCmdKeyType)
 	},
 }

@@ -247,7 +247,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
-		if ext == ".db" {
+		if ext == certs.KeystoreExtension {
 			if infoCmdPassword.String() == "" {
 				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
 				if err != nil {

@@ -46,7 +46,7 @@ var Webserver = geneos.Component{
 	ArchiveLeaveFirstDir: true,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "8080,8100-",
+		config.Join(Name, "ports"): "8443,8080-",
 		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
 			"logs/",
@@ -86,7 +86,7 @@ var Webserver = geneos.Component{
 		`program={{join "${config:install}" "${config:version}" "JRE/bin/java"}}`,
 		`logdir=logs`,
 		`logfile=WebDashboard.log`,
-		`port=8080`,
+		`port=8443`,
 		`libpaths={{join "${config:install}" "${config:version}" "JRE/lib"}}:{{join "${config:install}" "${config:version}" "lib64"}}`,
 		`maxmem=1024m`,
 		`autostart=true`,
@@ -213,7 +213,7 @@ func (w *Webservers) Add(tmpl string, port uint16, insecure bool) (err error) {
 
 	// create certs, report success only
 	if !insecure {
-		instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr), responses.SummaryOnly())
+		instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// copy default configs
@@ -256,30 +256,35 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	}
 
 	// create truststore from ca-bundle
-	caBundle := cf.GetString(cf.Join("tls", "ca-bundle"), config.Default(cf.GetString("certchain")))
 	truststorePath := sp["trustStore"]
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
 
-	if caBundle != "" && truststorePath != "" {
+	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
+	if len(roots) > 0 && truststorePath != "" {
 		truststorePath = instance.Abs(w, truststorePath)
-		if err = certs.RootsToTrustStore(h, caBundle, truststorePath, truststorePassword); err != nil {
+		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
 			return err
 		}
 	}
 
 	// create keystore from certificate and private key
 	keyStore := sp["keyStore"]
-	ksPassword := cf.ExpandToPassword(sp["keyStorePassword"])
+	keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
 	alias := geneos.ALL.Hostname()
-	certPath := cf.GetString(cf.Join("tls", "certificate"), config.Default(cf.GetString("certificate")))
-	keyPath := cf.GetString(cf.Join("tls", "privatekey"), config.Default(cf.GetString("privatekey")))
 
-	if certPath != "" && keyPath != "" {
-		keyStore = instance.Abs(w, keyStore)
-		certs.CertsToKeyStore(h, certPath, keyPath, keyStore, alias, ksPassword)
+	certChain, err := instance.ReadCertificates(w)
+	if err != nil {
+		return
 	}
-
-	return
+	if len(certChain) == 0 {
+		return
+	}
+	key, err := instance.ReadPrivateKey(w)
+	if err != nil {
+		return
+	}
+	keyStore = instance.Abs(w, keyStore)
+	return certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
 }
 
 func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home string, err error) {

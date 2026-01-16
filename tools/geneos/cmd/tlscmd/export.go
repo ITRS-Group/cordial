@@ -18,6 +18,7 @@ limitations under the License.
 package tlscmd
 
 import (
+	"bytes"
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
@@ -100,9 +101,9 @@ geneos tls export gateway mygateway
 			Bytes: signer.Raw,
 		})
 
-		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
+		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension))
 		if err != nil {
-			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SigningCertBasename+".key"), err)
+			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension), err)
 			return
 		}
 		key, _ := signerKey.Open()
@@ -141,7 +142,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 
 	// build and test trust chain
-	rootPool, ok := certs.ReadCACertPool(h, geneos.PathToCABundle(h))
+	rootPool, ok := certs.ReadCACertPool(h, geneos.PathToCABundlePEM(h))
 	if !ok {
 		// if there is no ca-bundle file on the host, try local root CA
 		confDir := config.AppConfigDir()
@@ -149,7 +150,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 			resp.Err = config.ErrNoUserConfigDir
 			return
 		}
-		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+".pem"))
+		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+certs.PEMExtension))
 		if !ok {
 			resp.Err = fmt.Errorf("no CA certificates found to verify %s %q", i.Type(), i.Name())
 			return
@@ -172,32 +173,23 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 		return
 	}
 
+	var b bytes.Buffer
+	output := fmt.Appendf(nil, "# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
+
 	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
 		resp.Err = fmt.Errorf("cannot read private key for %s %q: %w", i.Type(), i.Name(), err)
 		return
 	}
 
-	keyData, _ := key.Open()
-	pemKey := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: keyData.Bytes(),
-	})
-	defer keyData.Destroy()
-
-	output := []byte(fmt.Sprintf("# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name()))
-	output = append(output, certs.PrivateKeyComments(key)...)
-	output = append(output, pemKey...)
-
-	for _, cert := range validatedCertChain[0] {
-		pemCert := pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: cert.Raw,
-		})
-
-		output = append(output, certs.CertificateComments(cert)...)
-		output = append(output, pemCert...)
+	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
+		return
 	}
+
+	if _, err = certs.WriteCertificatesTo(&b, validatedCertChain[0]...); err != nil {
+		return
+	}
+	output = append(output, b.Bytes()...)
 
 	if exportCmdOutput != "" {
 		err = os.WriteFile(exportCmdOutput, output, 0600)
