@@ -360,9 +360,10 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 }
 
 // ParsePEM parses PEM formatted data blocks and returns a
-// CertificateBundle. If it contains a verifiable chain it then it sets
-// Valid to true. Only if Valid is true can the order of the
-// certificates be relied upon.
+// CertificateBundle. If it contains a verifiable chain and a private
+// key that matches the leaf certificate it then it sets Valid to true.
+// Only if Valid is true can the order of the certificates be relied
+// upon.
 //
 // Encrypted private keys are not supported and will be skipped.
 func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
@@ -378,7 +379,11 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	bundle = &CertificateBundle{}
 
 	bundle.Leaf, bundle.FullChain, roots, keys, err = DecodePEM(data...)
-
+	if err != nil {
+		return
+	}
+	log.Debug().Msgf("decoded %d certificates and %d private keys", len(bundle.FullChain), len(keys))
+	log.Debug().Msgf("bundle contents: %+v", bundle)
 	if len(roots) > 0 {
 		bundle.Root = roots[0]
 	}
@@ -419,7 +424,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 		Roots:         rp,
 	}
 
-	if chains, err = bundle.Leaf.Verify(verifyOpts); err != nil || len(chains) == 0 || len(chains[0]) == 0 {
+	if chains, err = bundle.Leaf.Verify(verifyOpts); err != nil || len(chains) == 0 || len(chains[0]) == 0 || bundle.Key == nil {
 		// return an unverified bundle
 		log.Debug().Msgf("certificate verification for %q failed: %v", bundle.Leaf.Subject.String(), err)
 		err = nil

@@ -50,7 +50,7 @@ func init() {
 
 	createCmd.Flags().StringVarP(&createCmdSigner, "signer", "S", "", "Create a new signer certificate bundle with `NAME`\nas part of the Common Name, typically the hostname\nof the target machine this will be used on.")
 
-	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in days. Ignored for --signer")
+	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signer")
 
 	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
 
@@ -110,7 +110,7 @@ var createCmd = &cobra.Command{
 // CreateCert creates a new certificate and private key
 //
 // skip if certificate exists and is valid
-func CreateCert(destination string, overwrite bool, days int, cn string, san SubjectAltNames) (err error) {
+func CreateCert(destination string, overwrite bool, days int, commonName string, san SubjectAltNames) (err error) {
 	var b bytes.Buffer
 	var basepath string
 
@@ -119,12 +119,16 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san Sub
 		return config.ErrNoUserConfigDir
 	}
 	if destination != "-" {
-		basepath = path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
+		basepath = path.Join(destination, strings.ReplaceAll(commonName, " ", "-"))
 		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 			return os.ErrExist
 		}
 	}
-	template := certs.Template(cn,
+
+	if len(san.DNS) == 0 {
+		san.DNS = append(san.DNS, commonName)
+	}
+	template := certs.Template(commonName,
 		certs.Days(days),
 		certs.DNSNames(san.DNS...),
 		certs.IPAddresses(san.IP...),
@@ -149,10 +153,16 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san Sub
 		return
 	}
 
+	rootCert, _, err := geneos.ReadRootCertificate()
+	if err != nil {
+		err = fmt.Errorf("cannot read root CA: %w", err)
+		return
+	}
+
 	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
 		return
 	}
-	if _, err = certs.WriteCertificatesTo(&b, cert, signerCert); err != nil {
+	if _, err = certs.WriteCertificatesTo(&b, cert, signerCert, rootCert); err != nil {
 		return
 	}
 

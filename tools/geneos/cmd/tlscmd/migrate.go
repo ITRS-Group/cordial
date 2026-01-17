@@ -34,17 +34,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var migrateCmdDays int
-var migrateCmdNewKey, migrateCmdPrepare, migrateCmdRoll, migrateCmdUnroll bool
-
 func init() {
 	tlsCmd.AddCommand(migrateCmd)
-
-	migrateCmd.Flags().BoolVarP(&migrateCmdPrepare, "prepare", "P", false, "Prepare migration without changing existing files")
-	migrateCmd.Flags().BoolVarP(&migrateCmdRoll, "roll", "R", false, "Roll previously prepared migrated files and backup existing ones")
-	migrateCmd.Flags().BoolVarP(&migrateCmdUnroll, "unroll", "U", false, "Unroll previously rolled migrated files to earlier backups")
-
-	migrateCmd.MarkFlagsMutuallyExclusive("prepare", "roll", "unroll")
 }
 
 //go:embed _docs/migrate.md
@@ -52,7 +43,7 @@ var migrateCmdDescription string
 
 var migrateCmd = &cobra.Command{
 	Use:          "migrate [TYPE] [NAME...]",
-	Short:        "Migrate certificates and related files to the updated layout",
+	Short:        "Migrate certificates to the new TLS layout",
 	Long:         migrateCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -66,17 +57,28 @@ var migrateCmd = &cobra.Command{
 	},
 }
 
-// migrate instance TLS from old layout to new layout:
+// migrateInstanceTLS migrates the TLS configuration of an instance to
+// the new layout
 //
-// * use certchain to create a full chain in certificate file (without
-// root) * update params from certificate/privatekey/certchain to
-// tls::certificate etc. * update ca-bundle with new roots found in
-// certchain
+// If a `tls::certificate` parameter is already set then the instance is
+// assumed to have already been migrated and no action is taken.
 //
-// Private key file is unchanged, but the parameter is moved.
+// For Java keystore/truststore based instances (sso-agent, webserver)
+// with their own configurations files referring to keystores and
+// truststores, the first private key entry and its certificate chain is
+// extracted and written to the instance certificate and private key
+// files. Trusted certificates from the truststore are added to the
+// local ca-bundle file.
 //
-// For Java based components extract certs and keys from keystores and
-// trusted CAs from truststores.
+// For all instances, the existing instance certificate file is read
+// (and certchain file if set) and the full certificate chain is built.
+// If the root CA certificate is not present in the chain it is added
+// from the local root certificate. The ca-bundle file is updated with
+// the root and the full chain (minus root) is written to the instance
+// certificate file.
+//
+// Finally, the instance configuration is updated to use the new TLS
+// parameters and old parameters are cleared.
 func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
@@ -181,7 +183,6 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 				resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
 				break // only first key entry
 			}
-
 		}
 	}
 

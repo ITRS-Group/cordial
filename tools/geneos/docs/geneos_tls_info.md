@@ -2,7 +2,7 @@
 
 # `geneos tls info`
 
-`geneos tls info [PATH...]` displays information about a TLS certificate stored at the specified paths.
+This command displays information about TLS certificates in local files.
 
 
 ```text

@@ -35,13 +35,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var importCmdChain, importCmdPrivateKey string
-var importCmdPassword *config.Plaintext
+var importCmdPrivateKey string
+var importCmdPassword = &config.Plaintext{}
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmdPassword = &config.Plaintext{}
 	importCmd.Flags().VarP(importCmdPassword, "password", "p",
 		`Plaintext password for PFX/PKCS#12 file decryption.
 You will be prompted if not supplied as an argument.
@@ -50,9 +49,6 @@ file extension and only supported for instance bundles`,
 	)
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format only")
-
-	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
-	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signer bundles")
 
 	importCmd.Flags().SortFlags = false
 }
@@ -120,6 +116,7 @@ geneos tls import /path/to/file.pem
 				log.Fatal().Err(err).Msg("Failed to parse PFX file")
 				return err
 			}
+
 		} else {
 			certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
 			if err != nil {
@@ -133,9 +130,13 @@ geneos tls import /path/to/file.pem
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to decompose PEM")
 			}
-			if certBundle.Leaf == nil || certBundle.Key == nil {
-				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-			}
+		}
+
+		if !certBundle.Valid {
+			return fmt.Errorf("certificate bundle is not valid, check trust chain and key match")
+		}
+		if certBundle.Leaf == nil || certBundle.Key == nil {
+			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
@@ -153,7 +154,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		return
 	}
 
-	tlsParam, ok := params[0].(certs.CertificateBundle)
+	tlsParam, ok := params[0].(*certs.CertificateBundle)
 	if !ok {
 		resp.Err = fmt.Errorf("%w: params[0] not a certs.CertificateBundle", geneos.ErrInvalidArgs)
 		return

@@ -217,16 +217,15 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return err
 	}
 
-	if certBundle.Leaf == nil {
-		return errors.New("no certificates found in signer bundle")
-	}
-
 	if !certBundle.Valid {
 		return errors.New("signer bundle is not valid")
 	}
 
-	cert := certBundle.Leaf
+	if certBundle.Leaf == nil {
+		return errors.New("no certificates found in signer bundle")
+	}
 
+	cert := certBundle.Leaf
 	key := certBundle.Key
 
 	// basic validation
