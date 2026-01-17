@@ -33,25 +33,36 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// RootCABasename is the file base name for the root certificate authority
-// created with the TLS commands
-var RootCABasename = "rootCA"
-
-// SigningCertBasename is the file base name for the signing certificate
-// created with the TLS commands
-var SigningCertBasename string
-
-// ChainCertFile the is file name (including extension, as this does not
-// need to be used for keys) for the consolidated chain file used to
-// verify instance certificates
-var ChainCertFile string
-
 const (
+	// RootCABasename is the file base name for the root certificate authority
+	// created with the TLS commands
+	RootCABasename = "rootCA"
+
 	// CABundleFilename is the file name for the ca-bundle file used by
 	// Geneos components to verify peer certificates. This file is
 	// located in the geneos home directory on each hoist under `tls/`
 	CABundleBasename string = "ca-bundle"
+
+	// SignerCertLabel is the descriptive label for the signer
+	// certificate created with the TLS commands. It is commonly
+	// prefixed with the executable name and followed by a parenthesised
+	// hostname to indicate where it is being used.
+	SignerCertLabel = "intermediate certificate"
 )
+
+// SignerCertBasename is the file base name for the signer certificate
+// created with the TLS commands. This is initialised to the executable
+// name in the Init() function.
+var SignerCertBasename string
+
+// DeprecatedChainCertFile the is file name (including extension, as
+// this does not need to be used for keys) for the consolidated chain
+// file used to verify instance certificates. This is initialised to
+// the executable name with "-chain.pem" suffix in the Init() function.
+//
+// This is deprecated in favour of using the ca-bundle file.
+// Non-migrated instances may still require this file.
+var DeprecatedChainCertFile string
 
 // PathToCABundle returns the path to the ca-bundle file on the given
 // host with extensions concatenated from ext. Without any ext parameter arguments
@@ -108,7 +119,7 @@ func ReadRootPrivateKey() (key *memguard.Enclave, file string, err error) {
 	return
 }
 
-// ReadSignerCertificate reads the signing certificate from the user's
+// ReadSignerCertificate reads the signer certificate from the user's
 // app config directory. It "promotes" old cert and key files from the
 // previous tls directory if files do not already exist in the user app
 // config directory. The signer certificate is verified against the
@@ -120,7 +131,7 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 		return
 	}
 
-	file = path.Join(confDir, SigningCertBasename+certs.PEMExtension)
+	file = path.Join(confDir, SignerCertBasename+certs.PEMExtension)
 
 	signers, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
@@ -150,7 +161,7 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 	return
 }
 
-// ReadSignerPrivateKey reads the signing certificate private key from the
+// ReadSignerPrivateKey reads the signer certificate private key from the
 // user's app config directory.
 func ReadSignerPrivateKey() (key *memguard.Enclave, file string, err error) {
 	confDir := config.AppConfigDir()
@@ -159,7 +170,7 @@ func ReadSignerPrivateKey() (key *memguard.Enclave, file string, err error) {
 		return
 	}
 
-	file = path.Join(confDir, SigningCertBasename+certs.KEYExtension)
+	file = path.Join(confDir, SignerCertBasename+certs.KEYExtension)
 	key, err = certs.ReadPrivateKey(LOCAL, file)
 	return
 }
@@ -177,7 +188,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		// ignored.
 	}
 
-	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signing certificate(s)")
+	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signer certificate(s)")
 	if err != nil {
 		return err
 	}
@@ -196,7 +207,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return nil
 	}
 
-	privateKey, err := config.ReadPEMBytes(privateKeySource, "signing key")
+	privateKey, err := config.ReadPEMBytes(privateKeySource, "signer key")
 	if err != nil {
 		return err
 	}
@@ -207,11 +218,11 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 
 	if certBundle.Leaf == nil {
-		return errors.New("no certificates found in signing bundle")
+		return errors.New("no certificates found in signer bundle")
 	}
 
 	if !certBundle.Valid {
-		return errors.New("signing bundle is not valid")
+		return errors.New("signer bundle is not valid")
 	}
 
 	cert := certBundle.Leaf
@@ -220,23 +231,23 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 
 	// basic validation
 	if !cert.BasicConstraintsValid || !cert.IsCA || key == nil {
-		return errors.New("no signing certificate with matching private key found in bundle")
+		return errors.New("no signer certificate with matching private key found in bundle")
 
 	}
 
 	if certBundle.Root == nil {
-		return errors.New("no root certificate found in signing bundle")
+		return errors.New("no root certificate found in signer bundle")
 	}
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SignerCertBasename+certs.PEMExtension), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.PEMExtension))
+	fmt.Printf("%s signer certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SignerCertBasename+certs.PEMExtension))
 
-	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SignerCertBasename+certs.KEYExtension), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.KEYExtension))
+	fmt.Printf("%s signer certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SignerCertBasename+certs.KEYExtension))
 
 	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
 		return err
@@ -265,8 +276,8 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 			return nil
 		}
 		if _, _, err := ReadSignerCertificate(); err == nil {
-			// signing cert already exists
-			log.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
+			// signer cert already exists
+			log.Debug().Msg("signer certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 	}
@@ -308,13 +319,13 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	if err != nil {
 		return err
 	}
-	signer, err := certs.WriteNewSignerCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
-		cordial.ExecutableName()+" intermediate certificate ("+hostname+")",
+	signer, err := certs.WriteNewSignerCert(path.Join(confDir, SignerCertBasename), rootCert, rootKey,
+		cordial.ExecutableName()+" "+SignerCertLabel+" ("+hostname+")",
 	)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
+	fmt.Printf("signer certificate created for %s\n", SignerCertBasename)
 	fmt.Print(string(certs.CertificateComments(signer)))
 
 	// sync if geneos root exists

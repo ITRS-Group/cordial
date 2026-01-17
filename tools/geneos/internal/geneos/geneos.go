@@ -117,8 +117,8 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 
 // Init is called from the main command initialisation
 func Init(app string) {
-	SigningCertBasename = cordial.ExecutableName()
-	ChainCertFile = cordial.ExecutableName() + "-chain.pem"
+	SignerCertBasename = cordial.ExecutableName()
+	DeprecatedChainCertFile = cordial.ExecutableName() + "-chain.pem"
 	RootComponent.Register(nil)
 }
 

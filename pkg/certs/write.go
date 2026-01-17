@@ -224,6 +224,11 @@ func WriteNewSignerCert(basefilepath string, rootCert *x509.Certificate, rootKey
 	return
 }
 
+// WriteNewSignerCertTo creates a new signing certificate and private
+// key signed by the given root certificate and key, writing the
+// resulting private key and certificate in PEM format to the provided
+// io.Writer. The total number of bytes written and any error
+// encountered are returned.
 func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (n int, err error) {
 	template := Template(cn,
 		Days(5*365),
@@ -240,11 +245,10 @@ func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memg
 	}
 
 	var m int
-	if n, err = WriteCertificatesTo(w, signer); err != nil {
+	if n, err = WritePrivateKeyTo(w, key); err != nil {
 		return
 	}
-
-	if m, err = WritePrivateKeyTo(w, key); err != nil {
+	if m, err = WriteCertificatesTo(w, signer); err != nil {
 		return
 	}
 	n += m

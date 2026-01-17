@@ -6,7 +6,7 @@
 
 
 ```text
-geneos tls info [flags]
+geneos tls info [PATH...] [flags]
 ```
 
 ### Options
@@ -14,7 +14,7 @@ geneos tls info [flags]
 ```text
   -f, --format string        Output format (column, table, csv, toolkit) (default "column")
   -l, --long                 Output long format (more columns)
-  -p, --password PLAINTEXT   Password for PFX file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
+  -p, --password PLAINTEXT   Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
 ```
 
 ## SEE ALSO

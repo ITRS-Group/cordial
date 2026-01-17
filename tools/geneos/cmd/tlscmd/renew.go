@@ -37,7 +37,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var renewCmdDays int
+var renewCmdExpiry int
 var renewCmdPrepare, renewCmdRoll, renewCmdUnroll, renewCmdSigner bool
 
 const (
@@ -48,9 +48,9 @@ const (
 func init() {
 	tlsCmd.AddCommand(renewCmd)
 
-	renewCmd.Flags().BoolVar(&renewCmdSigner, "signer", false, "Renew the signing certificate instead of instance certificates")
+	renewCmd.Flags().BoolVar(&renewCmdSigner, "signer", false, "Renew the signer certificate instead of instance certificates")
 
-	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Instance certificate duration in days.\n(No effect with --signer)")
+	renewCmd.Flags().IntVarP(&renewCmdExpiry, "expiry", "E", 365, "Instance certificate expiry duration in days.\n(No effect with --signer)")
 
 	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
 	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
@@ -76,7 +76,7 @@ var renewCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if renewCmdSigner {
-			// renew signing certificate
+			// renew signer certificate
 			confDir := config.AppConfigDir()
 			if confDir == "" {
 				return config.ErrNoUserConfigDir
@@ -89,12 +89,12 @@ var renewCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
-				cordial.ExecutableName()+" intermediate certificate ("+geneos.LOCALHOST+")",
+			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SignerCertBasename), rootCert, rootKey,
+				cordial.ExecutableName()+" "+geneos.SignerCertLabel+" ("+geneos.LOCALHOST+")",
 			); err != nil {
 				return err
 			} else {
-				fmt.Println("signing certificate renewed")
+				fmt.Println("signer certificate renewed")
 				fmt.Print(string(certs.CertificateComments(signer)))
 			}
 			return nil
@@ -154,7 +154,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension))
+		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension))
 		resp.Err = err
 		if resp.Err != nil {
 			return
@@ -162,7 +162,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(),
 			certs.DNSNames(i.Host().GetString("hostname")),
-			certs.Days(renewCmdDays),
+			certs.Days(renewCmdExpiry),
 		)
 		expires := template.NotAfter
 

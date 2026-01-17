@@ -36,7 +36,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var logCmdLines int
@@ -70,14 +69,6 @@ func init() {
 	logsCmd.MarkFlagsMutuallyExclusive("cat", "follow")
 
 	logsCmd.Flags().SortFlags = false
-
-	logsCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "nostandard":
-			name = "no-stdout"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed _docs/logs.md

@@ -34,7 +34,6 @@ func init() {
 	GeneosCmd.AddCommand(versionCmd)
 
 	versionCmd.Flags().BoolVarP(&versionCmdToolkit, "toolkit", "t", false, "toolkit formatted CSV output")
-
 }
 
 //go:embed _docs/version.md

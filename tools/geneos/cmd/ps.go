@@ -18,22 +18,18 @@ limitations under the License.
 package cmd
 
 import (
-	"crypto/tls"
 	_ "embed"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io/fs"
 	"net"
-	"net/http"
 	"os"
 	"path"
 	"strings"
 	"text/tabwriter"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/certs"
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -781,37 +777,4 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 	resp.Value = psData
 	return
-}
-
-// live is unused for now
-func live(i geneos.Instance) bool {
-	cf := i.Config()
-	h := i.Host()
-	port := cf.GetInt("port")
-	cert := cf.GetString("certificate")
-	chain := cf.GetString("certchain", config.Default(h.PathTo("tls", geneos.ChainCertFile)))
-
-	scheme := "http"
-	client := http.DefaultClient
-
-	if cert != "" {
-		scheme = "https"
-		roots := certs.ReadCertPool(h, chain)
-
-		client.Transport = &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				RootCAs: roots,
-			},
-		}
-	}
-
-	resp, err := client.Get(fmt.Sprintf("%s://%s:%d/liveness", scheme, h.Hostname(), port))
-	if err == nil {
-		resp.Body.Close()
-		if resp.StatusCode == 200 {
-			return true
-		}
-	}
-	return false
 }

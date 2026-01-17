@@ -42,10 +42,10 @@ var exportCmdNoRoot bool
 func init() {
 	tlsCmd.AddCommand(exportCmd)
 
-	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output destination, default to stdout")
+	exportCmd.Flags().StringVarP(&exportCmdOutput, "dest", "D", "", "Output destination, default to stdout")
 
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
-	exportCmd.Flags().MarkDeprecated("no-root", "root CA should always be in the exported bnundle")
+	exportCmd.Flags().MarkDeprecated("no-root", "root CA should always be in the exported bundle")
 
 	exportCmd.Flags().SortFlags = false
 }
@@ -60,7 +60,7 @@ var exportCmd = &cobra.Command{
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-geneos tls export --output file.pem
+geneos tls export --out file.pem
 geneos tls export gateway mygateway
 `,
 	Annotations: map[string]string{
@@ -101,9 +101,9 @@ geneos tls export gateway mygateway
 			Bytes: signer.Raw,
 		})
 
-		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension))
+		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension))
 		if err != nil {
-			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SigningCertBasename+certs.KEYExtension), err)
+			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension), err)
 			return
 		}
 		key, _ := signerKey.Open()

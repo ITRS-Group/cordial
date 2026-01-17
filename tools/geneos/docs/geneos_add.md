@@ -37,8 +37,14 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
   -p, --port uint16                   Override the default port selection
   -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)
-  -b, --base string                   Select the base version for the
-                                      instance (default "active_prod")
+  -V, --version string                Select the version for the instance. Defaults to 'active_prod'
+                                      which is the default symlink to the installed release. (default "active_prod")
+  -c, --certs-bundle file             Instance certificate bundle file in PEM or PFX/PKCS#12 format.
+                                      Use a dash (`-`) to be prompted for data via stdin.
+      --certs-password PLAINTEXT      Password for PFX/PKCS#12 file decryption.
+                                      You will be prompted if not supplied as an argument.
+                                      PFX/PKCS#12 files are identified by the .pfx or .p12
+                                      file extension and only supported for instance bundles
       --keyfile PATH                  Keyfile PATH
       --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
                                       directory (extension optional)
@@ -57,6 +63,8 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
+      --insecure                      Do not create certificates for TLS support.
+                                      Ignored if --instance-bundle is given.
 ```
 
 ## Examples

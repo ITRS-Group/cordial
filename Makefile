@@ -19,7 +19,9 @@ release: base docs
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
 # 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
-	docker cp cordial-docs:/docs/. release-$(VERSION)/docs/
+	-docker rm cordial-docs-$(VERSION)
+	docker create --name cordial-docs-$(VERSION) cordial-docs:$(VERSION)
+	docker cp cordial-docs-$(VERSION):/docs/. release-$(VERSION)/docs/
 
 .PHONY: build gdna
 

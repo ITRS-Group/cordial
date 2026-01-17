@@ -28,7 +28,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -68,14 +67,14 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle in PEM format.\nThis bundle must contain an unencrypted private key\nand matching signing certificate and other certificates up to the root CA.")
+	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signer-bundle", "C", "", "signer bundle in PEM format.\nThis bundle must contain an unencrypted private key\nand matching signer certificate and other certificates up to the root CA.")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")
 
-	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
-	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
+	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signer private key file, PEM format")
+	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signer-bundle")
 
-	// initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
+	// initCmd.MarkFlagsMutuallyExclusive("tls", "signer-bundle")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
 	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
@@ -90,20 +89,6 @@ func init() {
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
-
-	initCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "makecerts":
-			name = "tls"
-		case "importcert":
-			name = "import-cert"
-		case "importkey":
-			name = "import-key"
-		case "gatewaytemplate":
-			name = "gateway-template"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed README.md

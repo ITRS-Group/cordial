@@ -28,7 +28,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -66,7 +65,7 @@ func init() {
 	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
 	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
 
-	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signer-bundle", "C", "", "signer certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().Var(deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
 
@@ -101,14 +100,6 @@ func init() {
 	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", instance.HeadersOptionsText)
 
 	deployCmd.Flags().SortFlags = false
-
-	deployCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "secure":
-			name = "tls"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed _docs/deploy.md

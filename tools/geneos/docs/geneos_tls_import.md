@@ -37,22 +37,24 @@ The certificate and the key will be applied to any matching instances but, unlik
 A certificate chain file containing multiple certificates in PEM format can be imported using the `--chain`/`-C` option. Only certificates that satisfy the Basic Constraints extension validity check and have the `IsCA` flag are written to the imported chain file, the rest are ignored.
 
 ```text
-geneos tls import [flags] [TYPE] [NAME...]
+geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ```
 
 ### Options
 
 ```text
-  -c, --instance-bundle string   Instance certificate bundle to import, PEM or PFX/PKCS#12 format
-  -p, --password PLAINTEXT       Password for private key decryption, if needed, for pfx files
-  -C, --signing-bundle string    Signing certificate bundle to import, PEM format
+  -p, --password PLAINTEXT   Plaintext password for PFX/PKCS#12 file decryption.
+                             You will be prompted if not supplied as an argument.
+                             PFX/PKCS#12 files are identified by the .pfx or .p12
+                             file extension and only supported for instance bundles
+  -k, --key file             Private key file for certificate, PEM format only
 ```
 
 ## Examples
 
 ```bash
-$ geneos tls import netprobe localhost -c /path/to/file.pem
-$ geneos tls import --signing-bundle /path/to/file.pem
+geneos tls import netprobe localhost /path/to/file.pem
+geneos tls import /path/to/file.pem
 
 ```
 

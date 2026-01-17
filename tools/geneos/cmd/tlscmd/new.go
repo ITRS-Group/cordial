@@ -29,12 +29,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var newCmdDays int
+var newCmdExpiry int
 
 func init() {
 	tlsCmd.AddCommand(newCmd)
 
-	newCmd.Flags().IntVarP(&newCmdDays, "days", "D", 365, "Certificate duration in days")
+	newCmd.Flags().IntVarP(&newCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in days")
 }
 
 //go:embed _docs/new.md
@@ -57,5 +57,5 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *responses.Response {
-	return instance.NewCertificate(i, newCmdDays)
+	return instance.NewCertificate(i, newCmdExpiry)
 }

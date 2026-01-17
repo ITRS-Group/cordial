@@ -144,7 +144,7 @@ COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
 
-WORKDIR /app/cordial/doc-output
+WORKDIR /docs
 COPY tools/geneos/README.md geneos.md
 COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md

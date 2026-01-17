@@ -26,7 +26,6 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -53,21 +52,9 @@ file extension and only supported for instance bundles`,
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format only")
 
 	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
-	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
+	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signer bundles")
 
 	importCmd.Flags().SortFlags = false
-
-	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "privkey":
-			name = "key"
-		case "signing":
-			name = "signing-bundle"
-		case "cert":
-			name = "instance-bundle"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed _docs/import.md
@@ -109,7 +96,7 @@ geneos tls import /path/to/file.pem
 		}
 
 		if ct == nil && len(names) == 0 {
-			log.Debug().Str("file", file).Msg("Importing signing bundle")
+			log.Debug().Str("file", file).Msg("Importing signer bundle")
 			return geneos.TLSImportBundle(file, importCmdPrivateKey)
 		}
 

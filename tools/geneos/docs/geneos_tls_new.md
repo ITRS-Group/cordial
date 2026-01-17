@@ -18,7 +18,7 @@ geneos tls new [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-  -D, --days int   Certificate duration in days (default 365)
+  -E, --expiry int   Certificate expiry duration in days (default 365)
 ```
 
 ## SEE ALSO

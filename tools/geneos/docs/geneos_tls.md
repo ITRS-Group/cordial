@@ -23,7 +23,7 @@ Those components that act as clients and connect to servers, Geneos or otherwise
 | Command / Aliases | Description |
 |-------|-------|
 | [`geneos tls create`](geneos_tls_create.md)	 | Create standalone certificates and keys |
-| [`geneos tls export`](geneos_tls_export.md)	 | Export certificates |
+| [`geneos tls export`](geneos_tls_export.md)	 | Export signer certificate and private key |
 | [`geneos tls import`](geneos_tls_import.md)	 | Import certificates |
 | [`geneos tls info`](geneos_tls_info.md)	 | Info about certificates and keys |
 | [`geneos tls init`](geneos_tls_init.md)	 | Initialise the TLS environment |
@@ -32,7 +32,6 @@ Those components that act as clients and connect to servers, Geneos or otherwise
 | [`geneos tls new`](geneos_tls_new.md)	 | Create instance certificates and keys |
 | [`geneos tls renew`](geneos_tls_renew.md)	 | Renew instance certificates |
 | [`geneos tls sync`](geneos_tls_sync.md)	 | Sync remote hosts certificate chain files |
-| [`geneos tls trust`](geneos_tls_trust.md)	 | Import trusted certificates |
 
 ## SEE ALSO
 

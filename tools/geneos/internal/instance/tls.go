@@ -33,7 +33,7 @@ import (
 
 // NewCertificate creates a new certificate for an instance.
 //
-// If the root and signing certs are readable then create an instance
+// If the root and signer certs are readable then create an instance
 // specific chain file, otherwise set the instance to point to the
 // system chain file.
 //
@@ -63,7 +63,7 @@ func NewCertificate(i geneos.Instance, days int) (resp *responses.Response) {
 		resp.Err = err
 		return
 	}
-	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+certs.KEYExtension))
+	signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SignerCertBasename+certs.KEYExtension))
 	if err != nil {
 		resp.Err = err
 		return

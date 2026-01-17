@@ -197,10 +197,8 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 			}
 			leaf = c
 		case IsValidRootCA(c):
-			log.Debug().Msgf("found root CA certificate: %s", c.Subject.CommonName)
 			roots = append(roots, c)
 		case IsValidSigningCA(c):
-			log.Debug().Msgf("found intermediate CA certificate: %s", c.Subject.CommonName)
 			intermediates = append(intermediates, c)
 		default:
 			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)
@@ -229,7 +227,6 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	if len(intermediates) > 0 {
 		opts.Intermediates = x509.NewCertPool()
 		for _, ic := range intermediates {
-			log.Debug().Msgf("adding intermediate CA certificate %s to pool", ic.Subject.CommonName)
 			opts.Intermediates.AddCert(ic)
 		}
 	}
@@ -270,7 +267,6 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 			}
 			root = c
 		case IsValidSigningCA(c):
-			log.Debug().Msgf("found intermediate CA certificate: %s", c.Subject.CommonName)
 			intermediates = append(intermediates, c)
 		default:
 			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)

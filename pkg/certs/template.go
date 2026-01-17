@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/url"
 	"time"
-
-	"github.com/rs/zerolog/log"
 )
 
 // Template creates a basic x509 certificate template with the given
@@ -49,8 +47,9 @@ func Template(cn string, options ...TemplateOption) (template *x509.Certificate)
 		MaxPathLenZero:        opts.maxPathLenZero,
 		DNSNames:              opts.dnsNames,
 		IPAddresses:           opts.ipAddresses,
+		EmailAddresses:        opts.emailAddresses,
+		URIs:                  opts.uris,
 	}
-	log.Debug().Msgf("created template for %s: %#v", cn, template)
 	return
 }
 
