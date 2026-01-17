@@ -18,17 +18,15 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/x509"
 	_ "embed"
 	"fmt"
 	"os"
 	"path"
+	"slices"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"software.sslmate.com/src/go-pkcs12"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -52,8 +50,8 @@ PFX/PKCS#12 files are identified by the .pfx or .p12
 file extension and only supported for instance bundles`,
 	)
 
-	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
-	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
+	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format only")
+
 	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
 	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
 
@@ -91,23 +89,22 @@ geneos tls import /path/to/file.pem
 		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		var certBundle *certs.CertificateBundle
+
 		ct, names, params := cmd.ParseTypeNamesParams(command)
+
+		// move any "-" names to params
+		if slices.Contains(names, "-") {
+			params = append(params, "-")
+			names = slices.DeleteFunc(names, func(s string) bool { return s == "-" })
+		}
 
 		if len(params) > 1 {
 			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
 		}
 
-		for i, n := range names {
-			if n == "-" {
-				params = append(params, n)
-				names = append(names[:i], names[i+1:]...)
-			}
-		}
-
-		var file string
-		if len(params) == 0 {
-			file = "-"
-		} else {
+		file := "-"
+		if len(params) > 0 {
 			file = params[0]
 		}
 
@@ -131,51 +128,27 @@ geneos tls import /path/to/file.pem
 					return err
 				}
 			}
-			pfxData, err := os.ReadFile(file)
+			certBundle, err = certs.P12ToCertBundle(file, importCmdPassword)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read PFX file")
+				log.Fatal().Err(err).Msg("Failed to parse PFX file")
+				return err
 			}
-			key, c, caCerts, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
+		} else {
+			certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to decode PFX file")
+				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
 			}
-			pk, err := x509.MarshalPKCS8PrivateKey(key)
+			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to marshal private key")
+				log.Fatal().Err(err).Msg("Failed to read instance key")
 			}
-			k := memguard.NewEnclave(pk)
-
-			leaf, intermediates, root, err := certs.ParseCertChain(append([]*x509.Certificate{c}, caCerts...)...)
+			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to decompose certificate chain")
+				log.Fatal().Err(err).Msg("Failed to decompose PEM")
 			}
-			if leaf == nil || k == nil || !certs.CheckKeyMatch(k, leaf) {
+			if certBundle.Leaf == nil || certBundle.Key == nil {
 				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 			}
-			certBundle := certs.CertificateBundle{
-				Leaf:      leaf,
-				Key:       k,
-				FullChain: append([]*x509.Certificate{leaf}, intermediates...),
-				Root:      root,
-			}
-			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
-			return nil
-		}
-
-		certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
-		}
-		key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to read instance key")
-		}
-		certBundle, err := certs.ParsePEM(certChain, key)
-		if err != nil {
-			log.Fatal().Err(err).Msg("Failed to decompose PEM")
-		}
-		if certBundle.Leaf == nil || certBundle.Key == nil {
-			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)

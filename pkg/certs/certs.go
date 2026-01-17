@@ -27,11 +27,14 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -433,5 +436,42 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
 	bundle.Root = chains[0][len(chains[0])-1]
 
+	return
+}
+
+func P12ToCertBundle(pfxPath string, password *config.Plaintext) (certBundle *CertificateBundle, err error) {
+	pfxData, err := os.ReadFile(pfxPath)
+	if err != nil {
+		err = fmt.Errorf("failed to read PFX file: %w", err)
+		return
+	}
+	key, c, caCerts, err := pkcs12.DecodeChain(pfxData, password.String())
+	if err != nil {
+		err = fmt.Errorf("failed to decode PFX file: %w", err)
+		return
+	}
+	pk, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		err = fmt.Errorf("failed to marshal private key: %w", err)
+		return
+	}
+	k := memguard.NewEnclave(pk)
+
+	leaf, intermediates, root, err := ParseCertChain(append([]*x509.Certificate{c}, caCerts...)...)
+	if err != nil {
+		err = fmt.Errorf("failed to decompose certificate chain: %w", err)
+		return
+	}
+	if leaf == nil || k == nil || !CheckKeyMatch(k, leaf) {
+		err = fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+		return
+	}
+	certBundle = &CertificateBundle{
+		Leaf:      leaf,
+		Key:       k,
+		FullChain: append([]*x509.Certificate{leaf}, intermediates...),
+		Root:      root,
+		Valid:     true,
+	}
 	return
 }

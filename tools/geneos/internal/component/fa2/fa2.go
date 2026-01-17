@@ -188,7 +188,7 @@ func (n *FA2s) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FA2s) Add(tmpl string, port uint16, insecure bool) (err error) {
+func (n *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.InstanceHost, &FA2)
 	}
@@ -202,7 +202,7 @@ func (n *FA2s) Add(tmpl string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 

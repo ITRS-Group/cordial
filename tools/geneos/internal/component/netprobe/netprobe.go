@@ -193,7 +193,7 @@ func (n *Netprobes) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *Netprobes) Add(tmpl string, port uint16, insecure bool) (err error) {
+func (n *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &Netprobe)
 	}
@@ -207,7 +207,7 @@ func (n *Netprobes) Add(tmpl string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 

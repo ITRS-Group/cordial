@@ -201,7 +201,7 @@ func (w *SSOAgents) Config() *config.Config {
 	return w.Conf
 }
 
-func (s *SSOAgents) Add(tmpl string, port uint16, insecure bool) (err error) {
+func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(s.InstanceHost, &SSOAgent)
 	}
@@ -214,7 +214,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 

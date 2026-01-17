@@ -199,7 +199,7 @@ func (w *Webservers) Config() *config.Config {
 	return w.Conf
 }
 
-func (w *Webservers) Add(tmpl string, port uint16, insecure bool) (err error) {
+func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(w.InstanceHost, &Webserver)
 	}
@@ -212,7 +212,7 @@ func (w *Webservers) Add(tmpl string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 

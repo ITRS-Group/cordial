@@ -59,7 +59,7 @@ func init() {
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
-	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
+	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
 }
 
 //go:embed _docs/info.md
@@ -108,7 +108,7 @@ var columnsLong = []string{
 }
 
 var infoCmd = &cobra.Command{
-	Use:          "info",
+	Use:          "info [PATH...]",
 	Short:        "Info about certificates and keys",
 	Long:         infoCmdDescription,
 	SilenceUsage: true,
@@ -219,8 +219,6 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
-		ext := strings.ToLower(path.Ext(p))
-
 		if path.Base(p) == "cacerts" {
 			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
 			if err != nil {
@@ -230,20 +228,21 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			for _, alias := range k.Aliases() {
 				entry, err := k.GetTrustedCertificateEntry(alias)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java keystore", alias)
+					log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java truststore", alias)
 					continue
 				}
 				cert, err := x509.ParseCertificate(entry.Certificate.Content)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
+					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java truststore")
 					continue
 				}
-				log.Debug().Str("file", p).Str("alias", alias).Str("cn", cert.Subject.CommonName).Msg("found certificate in Java keystore")
 				certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
 				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
 			}
 			continue
 		}
+
+		ext := strings.ToLower(path.Ext(p))
 
 		if ext == certs.KeystoreExtension {
 			if infoCmdPassword.String() == "" {
@@ -294,6 +293,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 					certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
 					certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
 				default:
+					log.Debug().Str("file", p).Str("alias", alias).Msg("unsupported keystore entry type, skipping")
 					continue
 				}
 			}
@@ -301,7 +301,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 		}
 
 		if ext == ".pfx" || ext == ".p12" {
-			if infoCmdPassword.String() == "" {
+			if infoCmdPassword.IsNil() {
 				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read password")
@@ -338,14 +338,12 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 				if err != nil {
 					return
 				}
-				log.Debug().Str("file", p).Str("cn", c.Subject.CommonName).Msg("found certificate")
 				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 				// save all private keys for later matching
 				certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(block.Bytes))
 			default:
 				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
-				continue
 			}
 			contents = rest
 		}

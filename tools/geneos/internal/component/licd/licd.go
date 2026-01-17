@@ -179,7 +179,7 @@ func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) Add(tmpl string, port uint16, insecure bool) (err error) {
+func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(l.InstanceHost, &Licd)
 	}
@@ -193,7 +193,7 @@ func (l *Licds) Add(tmpl string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(l, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 

@@ -222,7 +222,7 @@ func (s *Sans) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Sans) Add(template string, port uint16, insecure bool) (err error) {
+func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := s.Config()
 
 	if port == 0 {
@@ -251,7 +251,7 @@ func (s *Sans) Add(template string, port uint16, insecure bool) (err error) {
 	}
 
 	// create certs, report success only
-	if !insecure {
+	if !noCerts {
 		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 

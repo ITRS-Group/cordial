@@ -37,13 +37,13 @@ import (
 
 var createCmdCN, createCmdDestDir string
 var createCmdOverwrite, createCmdSigner bool
-var createCmdSANs certSANs
+var createCmdSANs SubjectAltNames
 var createCmdDays int
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
 
-	createCmdSANs = certSANs{}
+	createCmdSANs = SubjectAltNames{}
 
 	createCmd.Flags().StringVarP(&createCmdDestDir, "out", "o", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
 
@@ -112,7 +112,9 @@ var createCmd = &cobra.Command{
 // CreateCert creates a new certificate and private key
 //
 // skip if certificate exists and is valid
-func CreateCert(destination string, overwrite bool, days int, cn string, san certSANs) (err error) {
+func CreateCert(destination string, overwrite bool, days int, cn string, san SubjectAltNames) (err error) {
+	var b bytes.Buffer
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
@@ -146,7 +148,6 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san cer
 		return
 	}
 
-	var b bytes.Buffer
 	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
 		return
 	}
@@ -161,6 +162,8 @@ func CreateCert(destination string, overwrite bool, days int, cn string, san cer
 }
 
 func CreateSignerCert(destination string, overwrite bool, cn string) (err error) {
+	var b bytes.Buffer
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
@@ -179,14 +182,13 @@ func CreateSignerCert(destination string, overwrite bool, cn string) (err error)
 		err = fmt.Errorf("cannot read root CA private key: %w", err)
 		return
 	}
-	var b bytes.Buffer
 	certs.WriteNewSignerCertTo(&b, rootCert, rootKey, cn)
 	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
 	fmt.Printf("Signer certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	return
 }
 
-type certSANs struct {
+type SubjectAltNames struct {
 	DNS   values
 	IP    values
 	Email values
