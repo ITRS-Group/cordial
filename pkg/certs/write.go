@@ -116,17 +116,17 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 // in the order provided. Directories in the path are created with 0755 permissions
 // if they do not already exist. The certificate file is created with
 // 0644 permissions (before umask).
-func WriteCertificates(h host.Host, certpath string, certs ...*x509.Certificate) (err error) {
+func WriteCertificates(h host.Host, certPath string, certs ...*x509.Certificate) (err error) {
 	var b bytes.Buffer
 	if _, err = WriteCertificatesTo(&b, certs...); err != nil {
 		return err
 	}
 
-	if err = h.MkdirAll(path.Dir(certpath), 0755); err != nil {
+	if err = h.MkdirAll(path.Dir(certPath), 0755); err != nil {
 		return err
 	}
 
-	return h.WriteFile(certpath, b.Bytes(), 0644)
+	return h.WriteFile(certPath, b.Bytes(), 0644)
 }
 
 // WriteCertificatesTo writes the given certificates in PEM format to
@@ -154,6 +154,26 @@ func WriteCertificatesTo(w io.Writer, certs ...*x509.Certificate) (n int, err er
 		}
 		n += m
 	}
+	return
+}
+
+// WriteCertificatesAndKeyTo writes the given certificate and optional
+// private key in PEM format to the provided io.Writer. The total number
+// of bytes written and any error encountered are returned.
+func WriteCertificatesAndKeyTo(w io.Writer, key *memguard.Enclave, certChain ...*x509.Certificate) (n int, err error) {
+	var m int
+
+	if key != nil {
+		if n, err = WritePrivateKeyTo(w, key); err != nil {
+			return
+		}
+	}
+
+	if m, err = WriteCertificatesTo(w, certChain...); err != nil {
+		return
+	}
+	n += m
+
 	return
 }
 
@@ -244,16 +264,7 @@ func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memg
 		return
 	}
 
-	var m int
-	if n, err = WritePrivateKeyTo(w, key); err != nil {
-		return
-	}
-	if m, err = WriteCertificatesTo(w, signer); err != nil {
-		return
-	}
-	n += m
-
-	return
+	return WriteCertificatesAndKeyTo(w, key, signer)
 }
 
 // WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded

@@ -160,15 +160,14 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		return
 	}
 
-	if resp.Err = instance.WriteCertificates(i, tlsParam.FullChain); resp.Err != nil {
+	if resp.Err = instance.WriteBundle(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
 		return
 	}
-	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate written", i))
+	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate, trust chain and key written", i))
 
-	if resp.Err = instance.WritePrivateKey(i, tlsParam.Key); resp.Err != nil {
+	if err := instance.SaveConfig(i); err != nil {
 		return
 	}
-	resp.Details = append(resp.Details, fmt.Sprintf("%s private key written", i))
 
 	var updated bool
 	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)

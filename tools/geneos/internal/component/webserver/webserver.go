@@ -213,7 +213,7 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(w, 0).Report(os.Stdout, responses.StderrWriter(os.Stderr))
+		instance.NewCertificate(w).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// copy default configs

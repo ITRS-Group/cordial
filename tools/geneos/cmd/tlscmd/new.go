@@ -23,6 +23,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -57,5 +58,5 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *responses.Response {
-	return instance.NewCertificate(i, newCmdExpiry)
+	return instance.NewCertificate(i, certs.Days(newCmdExpiry))
 }

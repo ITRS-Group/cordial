@@ -200,7 +200,7 @@ func (n *FileAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.

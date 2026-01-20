@@ -18,7 +18,6 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/x509"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -81,13 +80,12 @@ var renewCmd = &cobra.Command{
 			if confDir == "" {
 				return config.ErrNoUserConfigDir
 			}
-			rootCert, _, err := geneos.ReadRootCertificate()
+			rootCert, rootKey, err := geneos.ReadRootCertificateAndKey()
 			if err != nil {
 				return err
 			}
-			rootKey, _, err := geneos.ReadRootPrivateKey()
-			if err != nil {
-				return err
+			if rootKey == nil {
+				return fmt.Errorf("no root private key found")
 			}
 			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SignerCertBasename), rootCert, rootKey,
 				cordial.ExecutableName()+" "+geneos.SignerCertLabel+" ("+geneos.LOCALHOST+")",
@@ -143,25 +141,23 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 	default:
 		// check instance for existing cert, and do nothing if none
-		cert, err := instance.ReadCertificate(i)
+		cert, err := instance.ReadLeafCertificate(i)
 		if cert == nil && errors.Is(err, os.ErrNotExist) {
 			return
 		}
 
-		signingCert, _, err := geneos.ReadSignerCertificate()
-		resp.Err = err
-		if resp.Err != nil {
+		signingCert, signingKey, err := geneos.ReadSignerCertificateAndKey()
+		if err != nil {
+			resp.Err = err
 			return
 		}
-
-		signingKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension))
-		resp.Err = err
-		if resp.Err != nil {
+		if signingKey == nil {
+			resp.Err = fmt.Errorf("no signer private key found")
 			return
 		}
 
 		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(),
-			certs.DNSNames(i.Host().GetString("hostname")),
+			certs.SANsFromCert(cert),
 			certs.Days(renewCmdExpiry),
 		)
 		expires := template.NotAfter
@@ -186,15 +182,9 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		if resp.Err = instance.WriteCertificates(i, []*x509.Certificate{cert, signingCert}); resp.Err != nil {
+		if resp.Err = instance.WriteBundle(i, key, cert, signingCert); resp.Err != nil {
 			return
 		}
-
-		if resp.Err = instance.WritePrivateKey(i, key); resp.Err != nil {
-			return
-		}
-
-		// TODO: migrate other settings, create ca-bundle etc.
 
 		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
 			return

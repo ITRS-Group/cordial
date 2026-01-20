@@ -170,16 +170,12 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 				if len(certChain) == 0 {
 					continue
 				}
-				// write private key
-				if err = instance.WritePrivateKey(i, memguard.NewEnclave(privateKeyEntry.PrivateKey)); err != nil {
-					resp.Err = fmt.Errorf("writing private key from keystore: %w", err)
+
+				if err = instance.WriteBundle(i, memguard.NewEnclave(privateKeyEntry.PrivateKey), certChain...); err != nil {
+					resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
 					return
 				}
-				// write certificates
-				if err = instance.WriteCertificates(i, certChain); err != nil {
-					resp.Err = fmt.Errorf("writing certificates from keystore: %w", err)
-					return
-				}
+
 				resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
 				break // only first key entry
 			}
@@ -218,7 +214,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 
 	if !haveRoot {
 		// try to make sure we have a full chain by adding root cert
-		rootCert, _, err := geneos.ReadRootCertificate()
+		rootCert, _, err := geneos.ReadRootCertificateAndKey()
 		if err != nil {
 			resp.Err = fmt.Errorf("cannot read root certificate: %w", err)
 			return
@@ -243,8 +239,9 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 		resp.Completed = append(resp.Completed, "updated ca-bundle")
 	}
 
-	// write fullchain to certificate file - this updates instance parameters for certificate
-	err = instance.WriteCertificates(i, append([]*x509.Certificate{leaf}, intermediates...))
+	// write leaf and trust chain to certificate file - this updates
+	// instance parameters for certificate
+	err = instance.WriteBundle(i, nil, append([]*x509.Certificate{leaf}, intermediates...)...)
 	if err != nil {
 		resp.Err = err
 		return

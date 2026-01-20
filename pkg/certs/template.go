@@ -124,6 +124,16 @@ func MaxPathLen(len int) TemplateOption {
 	}
 }
 
+// SANsFromCert sets the Subject Alternative Names from an existing certificate
+func SANsFromCert(cert *x509.Certificate) TemplateOption {
+	return func(opts *templateOptions) {
+		opts.dnsNames = cert.DNSNames
+		opts.ipAddresses = cert.IPAddresses
+		opts.emailAddresses = cert.EmailAddresses
+		opts.uris = cert.URIs
+	}
+}
+
 func DNSNames(names ...string) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.dnsNames = names

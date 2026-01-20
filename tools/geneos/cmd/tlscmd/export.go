@@ -80,20 +80,30 @@ geneos tls export gateway mygateway
 		if confDir == "" {
 			return config.ErrNoUserConfigDir
 		}
-		// gather the rootCA cert, the geneos cert and key
-		root, rootFile, err := geneos.ReadRootCertificate()
+
+		// gather the root cert, the signer cert and key
+		root, _, err := geneos.ReadRootCertificateAndKey()
 		if err != nil {
-			err = fmt.Errorf("root certificate expected at %q is not valid: %w", rootFile, err)
+			err = fmt.Errorf("cannot read root certificate: %w", err)
 			return
 		}
+
 		pemRoot := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: root.Raw,
 		})
 
-		signer, signerFile, err := geneos.ReadSignerCertificate()
+		signerFile, err := geneos.SignerCertificatePath()
 		if err != nil {
-			err = fmt.Errorf("signer certificate expected at %q is not valid: %w", signerFile, err)
+			return
+		}
+		signer, signerKey, err := geneos.ReadSignerCertificateAndKey()
+		if err != nil {
+			err = fmt.Errorf("signer certificate cannot be read: %w", signerFile, err)
+			return
+		}
+		if signerKey == nil {
+			err = fmt.Errorf("signer private key cannot be read: %w", signerFile)
 			return
 		}
 		pemSigner := pem.EncodeToMemory(&pem.Block{
@@ -101,11 +111,6 @@ geneos tls export gateway mygateway
 			Bytes: signer.Raw,
 		})
 
-		signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension))
-		if err != nil {
-			err = fmt.Errorf("signer private key expected at %q cannot be read: %w", path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension), err)
-			return
-		}
 		key, _ := signerKey.Open()
 		pemKey := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
@@ -135,7 +140,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 
 	h := i.Host()
 
-	instanceCertChain, err := instance.ReadCertificates(i)
+	instanceCertChain, key, err := instance.ReadCertificatesWithKey(i)
 	if err != nil {
 		resp.Err = fmt.Errorf("cannot read certificates for %s %q: %w", i.Type(), i.Name(), err)
 		return
@@ -176,17 +181,11 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	var b bytes.Buffer
 	output := fmt.Appendf(nil, "# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
 
-	key, err := instance.ReadPrivateKey(i)
-	if err != nil {
-		resp.Err = fmt.Errorf("cannot read private key for %s %q: %w", i.Type(), i.Name(), err)
-		return
-	}
-
 	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
 		return
 	}
 
-	if _, err = certs.WriteCertificatesTo(&b, validatedCertChain[0]...); err != nil {
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, validatedCertChain[0]...); err != nil {
 		return
 	}
 	output = append(output, b.Bytes()...)

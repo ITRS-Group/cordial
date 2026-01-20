@@ -266,7 +266,7 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(g, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(g).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// always create a keyfile ?

@@ -237,7 +237,7 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(s, 0).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// s.Rebuild(true)

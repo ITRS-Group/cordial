@@ -192,15 +192,14 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		if err = instance.WriteCertificates(i, certBundle.FullChain); err != nil {
+		if err = instance.WriteBundle(i, certBundle.Key, certBundle.FullChain...); err != nil {
 			return err
 		}
-		fmt.Printf("%s certificate and chain written\n%s", i, certs.CertificateComments(certBundle.Leaf))
+		fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
 
-		if err = instance.WritePrivateKey(i, certBundle.Key); err != nil {
-			return err
+		if err = instance.SaveConfig(i); err != nil {
+			return
 		}
-		fmt.Printf("%s private key written\n", i)
 
 		var updated bool
 		if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {

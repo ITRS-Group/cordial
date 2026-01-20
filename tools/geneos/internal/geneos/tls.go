@@ -77,68 +77,99 @@ func PathToCABundlePEM(h *Host) string {
 	return PathToCABundle(h, certs.PEMExtension)
 }
 
-// ReadRootCertificate reads the root certificate from the user's app
-// config directory. It "promotes" old cert and key files from the
-// previous tls directory if files do not already exist in the user app
-// config directory. If verify is true then the certificate is verified
-// against itself as a root and if it fails an error is returned.
-func ReadRootCertificate() (root *x509.Certificate, file string, err error) {
+// RootCertificatePath returns the path to the root CA certificate in
+// the user's app config directory.
+func RootCertificatePath() (string, error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
-		err = config.ErrNoUserConfigDir
+		return "", config.ErrNoUserConfigDir
+	}
+	return path.Join(confDir, RootCABasename+certs.PEMExtension), nil
+}
+
+// ReadRootCertificateAndKey reads the root certificate and private key
+// from the user's app config directory. If the private key cannot be
+// found then nil is returned but no error.
+func ReadRootCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+	file, err := RootCertificatePath()
+	if err != nil {
 		return
 	}
-
-	file = path.Join(confDir, RootCABasename+certs.PEMExtension)
 
 	roots, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
 		return
 	}
-	if len(roots) == 0 {
-		return nil, file, fmt.Errorf("no certificates found in %q", file)
+
+	if len(roots) != 1 {
+		err = fmt.Errorf("only one certificate allowed in %q", file)
+		return
 	}
-	root = roots[0]
-	if !certs.IsValidRootCA(root) {
+
+	cert = roots[0]
+	if !certs.IsValidRootCA(cert) {
 		err = fmt.Errorf("certificate in %q is not valid as a root CA", file)
 	}
-	return
-}
 
-// ReadRootPrivateKey reads the root CA private key from the user's app
-// config directory.
-func ReadRootPrivateKey() (key *memguard.Enclave, file string, err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		err = config.ErrNoUserConfigDir
 		return
 	}
 
-	file = path.Join(confDir, RootCABasename+certs.KEYExtension)
-	key, err = certs.ReadPrivateKey(LOCAL, file)
+	if key, err = certs.ReadPrivateKey(LOCAL, path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && errors.Is(err, os.ErrNotExist) {
+		err = nil
+	}
+
 	return
 }
 
-// ReadSignerCertificate reads the signer certificate from the user's
-// app config directory. It "promotes" old cert and key files from the
-// previous tls directory if files do not already exist in the user app
-// config directory. The signer certificate is verified against the
+// SignerCertificatePath returns the path to the signer certificate in
+// the user's app config directory.
+func SignerCertificatePath() (string, error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return "", config.ErrNoUserConfigDir
+	}
+	return path.Join(confDir, SignerCertBasename+certs.PEMExtension), nil
+}
+
+// SignerPrivateKeyPath returns the path to the signer certificate
+// private key in the user's app config directory.
+func SignerPrivateKeyPath() (string, error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return "", config.ErrNoUserConfigDir
+	}
+	return path.Join(confDir, SignerCertBasename+certs.KEYExtension), nil
+}
+
+// ReadSignerCertificateAndKey reads the signer certificate and private
+// key from the user's app config directory.
+func ReadSignerCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+	cert, err = readSignerCertificate()
+	if err != nil {
+		return
+	}
+	key, err = readSignerPrivateKey()
+	return
+}
+
+// readSignerCertificate reads the signer certificate from the user's
+// app config directory. The signer certificate is verified against the
 // default root certificate.
-func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) {
-	confDir := config.AppConfigDir()
-	if confDir == "" {
-		err = config.ErrNoUserConfigDir
+func readSignerCertificate() (signer *x509.Certificate, err error) {
+	file, err := SignerCertificatePath()
+	if err != nil {
 		return
 	}
-
-	file = path.Join(confDir, SignerCertBasename+certs.PEMExtension)
 
 	signers, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
 		return
 	}
 	if len(signers) == 0 {
-		return nil, file, fmt.Errorf("no certificates found in %q", file)
+		return nil, fmt.Errorf("no certificates found in %q", file)
 	}
 	signer = signers[0]
 
@@ -149,7 +180,7 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 
 	// verify against root CA
 	var root *x509.Certificate
-	root, _, err = ReadRootCertificate()
+	root, _, err = ReadRootCertificateAndKey()
 	if err != nil {
 		return
 	}
@@ -161,16 +192,14 @@ func ReadSignerCertificate() (signer *x509.Certificate, file string, err error) 
 	return
 }
 
-// ReadSignerPrivateKey reads the signer certificate private key from the
+// readSignerPrivateKey reads the signer certificate private key from the
 // user's app config directory.
-func ReadSignerPrivateKey() (key *memguard.Enclave, file string, err error) {
-	confDir := config.AppConfigDir()
-	if confDir == "" {
-		err = config.ErrNoUserConfigDir
+func readSignerPrivateKey() (key *memguard.Enclave, err error) {
+	file, err := SignerPrivateKeyPath()
+	if err != nil {
 		return
 	}
 
-	file = path.Join(confDir, SignerCertBasename+certs.KEYExtension)
 	key, err = certs.ReadPrivateKey(LOCAL, file)
 	return
 }
@@ -269,12 +298,12 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 // This is also called from `init`
 func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error) {
 	if !overwrite {
-		if _, _, err := ReadRootCertificate(); err == nil {
+		if _, _, err := ReadRootCertificateAndKey(); err == nil {
 			// root cert already exists
 			log.Debug().Msg("root certificate already exists, skipping TLS initialisation")
 			return nil
 		}
-		if _, _, err := ReadSignerCertificate(); err == nil {
+		if _, err := readSignerCertificate(); err == nil {
 			// signer cert already exists
 			log.Debug().Msg("signer certificate already exists, skipping TLS initialisation")
 			return nil
@@ -301,23 +330,19 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	fmt.Printf("CA certificate created for %s\n", RootCABasename)
 	fmt.Print(string(certs.CertificateComments(root)))
 
-	rootCert, _, err := ReadRootCertificate()
+	rootCert, rootKey, err := ReadRootCertificateAndKey()
 	if err != nil {
 		return err
 	}
+	if rootKey == nil {
+		return fmt.Errorf("no root private key found")
+	}
+
 	_, err = certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), rootCert)
 	if err != nil {
 		return err
 	}
 
-	rootCert, _, err = ReadRootCertificate()
-	if err != nil {
-		return err
-	}
-	rootKey, _, err := ReadRootPrivateKey()
-	if err != nil {
-		return err
-	}
 	signer, err := certs.WriteNewSignerCert(path.Join(confDir, SignerCertBasename), rootCert, rootKey,
 		cordial.ExecutableName()+" "+SignerCertLabel+" ("+hostname+")",
 	)

@@ -37,7 +37,7 @@ import (
 )
 
 var createCmdCN, createCmdDestDir, createCmdSigner string
-var createCmdOverwrite bool
+var createCmdForce bool
 var createCmdSANs = SubjectAltNames{}
 var createCmdExpiry int
 
@@ -52,7 +52,7 @@ func init() {
 
 	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signer")
 
-	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
+	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
 
 	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signer.")
 	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signer.")
@@ -75,7 +75,7 @@ var createCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		if createCmdOverwrite {
+		if createCmdForce {
 			if err = geneos.TLSInit(geneos.LOCALHOST, false, initCmdKeyType); err != nil {
 				return
 			}
@@ -86,8 +86,8 @@ var createCmd = &cobra.Command{
 		}
 
 		if createCmdSigner != "" {
-			if err = CreateSignerCert(createCmdDestDir, createCmdOverwrite, createCmdSigner); err != nil {
-				if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
+			if err = CreateSignerCert(createCmdDestDir, createCmdForce, createCmdSigner); err != nil {
+				if errors.Is(err, os.ErrExist) && !createCmdForce {
 					fmt.Printf("Signer certificate already exists for %q, use --force to overwrite\n", createCmdSigner)
 					return nil
 				}
@@ -96,8 +96,8 @@ var createCmd = &cobra.Command{
 			return
 		}
 
-		if err = CreateCert(createCmdDestDir, createCmdOverwrite, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
-			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
+		if err = CreateCert(createCmdDestDir, createCmdForce, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
+			if errors.Is(err, os.ErrExist) && !createCmdForce {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
 			}
@@ -125,10 +125,17 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		}
 	}
 
+	signerCert, signerKey, err := geneos.ReadSignerCertificateAndKey()
+	if err != nil {
+		log.Error().Err(err).Msg("")
+		return
+	}
+
 	if len(san.DNS) == 0 {
 		san.DNS = append(san.DNS, commonName)
 	}
-	template := certs.Template(commonName,
+	template := certs.Template(
+		commonName,
 		certs.Days(days),
 		certs.DNSNames(san.DNS...),
 		certs.IPAddresses(san.IP...),
@@ -136,33 +143,18 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		certs.URIs(san.URL...),
 	)
 
-	signerCert, _, err := geneos.ReadSignerCertificate()
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
-	signerKey, err := certs.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SignerCertBasename+certs.KEYExtension))
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
 	cert, key, err := certs.CreateCertificate(template, signerCert, signerKey)
 	if err != nil {
 		return
 	}
 
-	rootCert, _, err := geneos.ReadRootCertificate()
+	rootCert, _, err := geneos.ReadRootCertificateAndKey()
 	if err != nil {
-		err = fmt.Errorf("cannot read root CA: %w", err)
+		err = fmt.Errorf("cannot read root certificate: %w", err)
 		return
 	}
 
-	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
-		return
-	}
-	if _, err = certs.WriteCertificatesTo(&b, cert, signerCert, rootCert); err != nil {
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, cert, signerCert, rootCert); err != nil {
 		return
 	}
 
@@ -170,6 +162,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		fmt.Print(b.String())
 		return
 	}
+
 	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
 
 	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
@@ -193,21 +186,19 @@ func CreateSignerCert(destination string, overwrite bool, hostname string) (err 
 			return os.ErrExist
 		}
 	}
-	rootCert, _, err := geneos.ReadRootCertificate()
+	rootCert, rootKey, err := geneos.ReadRootCertificateAndKey()
 	if err != nil {
-		err = fmt.Errorf("cannot read root CA: %w", err)
+		err = fmt.Errorf("cannot read root certificate or key: %w", err)
 		return
 	}
-	rootKey, _, err := geneos.ReadRootPrivateKey()
-	if err != nil {
-		err = fmt.Errorf("cannot read root CA private key: %w", err)
-		return
+	if rootKey == nil {
+		return fmt.Errorf("no root private key found")
 	}
 	fmt.Fprintf(&b, "# Signer Certificate: %s\n#\n", cn)
 	if _, err = certs.WriteNewSignerCertTo(&b, rootCert, rootKey, cn); err != nil {
 		return
 	}
-	if _, err = certs.WriteCertificatesTo(&b, rootCert); err != nil {
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, nil, rootCert); err != nil {
 		return
 	}
 
