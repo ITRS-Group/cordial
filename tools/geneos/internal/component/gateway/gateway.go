@@ -286,8 +286,8 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
-	// always rebuild an instance template
-	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate)
+	// always rebuild an instance template, read-only to prevent accidental editing
+	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate, 0444)
 	if err != nil {
 		return
 	}

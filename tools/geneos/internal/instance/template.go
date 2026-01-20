@@ -19,6 +19,7 @@ package instance
 
 import (
 	"io"
+	"io/fs"
 	"path"
 	"strings"
 	"text/template"
@@ -65,10 +66,16 @@ var fnmap = template.FuncMap{
 
 // ExecuteTemplate loads templates from TYPE/templates/[tmpl]* and parse them,
 // using the instance data write it out to a single file. If tmpl is
-// empty, load all files
-func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
+// empty, load all files. An optional perms parameter can be passed to
+// set the file permissions, defaulting to 0660.
+func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate []byte, perms ...fs.FileMode) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
+
+	perm := fs.FileMode(0660)
+	if len(perms) > 0 {
+		perm = perms[0]
+	}
 
 	cf := i.Config()
 
@@ -80,7 +87,7 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	if out, err = i.Host().Create(p, 0660); err != nil {
+	if out, err = i.Host().Create(p, perm); err != nil {
 		log.Warn().Msgf("Cannot create configuration file for %s %s", i, p)
 		return err
 	}
