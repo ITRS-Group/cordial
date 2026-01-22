@@ -19,6 +19,7 @@ package fileagent
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "fa"
@@ -107,7 +109,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (fileagent geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 	// _, local, h := instance.SplitName(name, geneos.LOCAL)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -183,7 +185,7 @@ func (n *FileAgents) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
+func (n *FileAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &FileAgent)
 	}
@@ -197,9 +199,8 @@ func (n *FileAgents) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
@@ -217,13 +218,19 @@ func (i *FileAgents) Command(skipFileCheck bool) (args, env []string, home strin
 		"-port", i.Config().GetString("port"),
 	}
 	if instance.CompareVersion(i, "6.6.0") >= 0 {
-		secureArgs := instance.SetSecureArgs(i)
-		args = append(args, secureArgs...)
-		for _, arg := range secureArgs {
-			if !strings.HasPrefix(arg, "-") {
-				checks = append(checks, arg)
-			}
+		// secureArgs := instance.SetSecureArgs(i)
+		secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+		if err != nil {
+			return nil, nil, "", err
 		}
+		args = append(args, secureArgs...)
+		env = append(env, secureEnv...)
+		checks = append(checks, fileChecks...)
+		// for _, arg := range secureArgs {
+		// 	if !strings.HasPrefix(arg, "-") {
+		// 		checks = append(checks, arg)
+		// 	}
+		// }
 	}
 	env = append(env, "LOG_FILENAME="+logFile)
 

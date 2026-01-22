@@ -18,9 +18,6 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -28,20 +25,40 @@ import (
 	"path"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var renewCmdDays int
+var renewCmdExpiry int
+var renewCmdPrepare, renewCmdRoll, renewCmdUnroll, renewCmdSigning bool
+
+const (
+	newFileSuffix = "new"
+	oldFileSuffix = "old"
+)
 
 func init() {
 	tlsCmd.AddCommand(renewCmd)
 
-	renewCmd.Flags().IntVarP(&renewCmdDays, "days", "D", 365, "Certificate duration in days")
+	renewCmd.Flags().BoolVar(&renewCmdSigning, "signing", false, "Renew the signing certificate instead of instance certificates")
+
+	renewCmd.Flags().IntVarP(&renewCmdExpiry, "expiry", "E", 365, "Instance certificate expiry duration in days.\n(No effect with --signing)")
+
+	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
+	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
+	renewCmd.Flags().BoolVarP(&renewCmdUnroll, "unroll", "U", false, "Unroll previously rolled certificates to restore backups")
+
+	renewCmd.MarkFlagsMutuallyExclusive("prepare", "roll", "unroll")
+
+	renewCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/renew.md
@@ -57,15 +74,46 @@ var renewCmd = &cobra.Command{
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		if renewCmdSigning {
+			// renew signing certificate
+			confDir := config.AppConfigDir()
+			if confDir == "" {
+				return config.ErrNoUserConfigDir
+			}
+			rootCert, rootKey, err := geneos.ReadRootCertificateAndKey()
+			if err != nil {
+				return err
+			}
+			if rootKey == nil {
+				return fmt.Errorf("no root private key found")
+			}
+			if signing, err := certs.WriteNewSigningCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
+				cordial.ExecutableName()+" "+geneos.SigningCertLabel+" ("+geneos.LOCALHOST+")",
+			); err != nil {
+				return err
+			} else {
+				fmt.Println("signing certificate renewed")
+				fmt.Print(string(certs.CertificateComments(signing)))
+			}
+			return nil
+		}
+
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
+		return
 	},
 }
 
 // renew an instance certificate, reuse private key if it exists
-func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	var err error
+
+	log.Debug().Msgf("renewing certificate for instance %s", i.Name())
+
+	cf := i.Config()
+
+	resp = responses.NewResponse(i)
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
@@ -73,89 +121,81 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		return
 	}
 
-	// check instance for existing cert, and do nothing if none
-	cert, _, _, err := instance.ReadCert(i)
-	if cert == nil && errors.Is(err, os.ErrNotExist) {
-		return
-	}
+	// migrate the TLS config, regardless of roll/unroll, at this point
+	resp = migrateInstanceTLS(i)
 
-	signingCert, _, err := geneos.ReadSigningCert()
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
-
-	hostname, _ := os.Hostname()
-	if !i.Host().IsLocal() {
-		hostname = i.Host().GetString("hostname")
-	}
-
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return
-	}
-	duration := 365 * 24 * time.Hour
-	if renewCmdDays != 0 {
-		duration = 24 * time.Hour * time.Duration(renewCmdDays)
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: fmt.Sprintf("geneos %s %s", i.Type(), i.Name()),
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       []string{hostname},
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	// read existing key or create a new one
-	existingKey, _ := instance.ReadKey(i)
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, existingKey)
-	resp.Err = err
-	if resp.Err != nil {
-		return
-	}
-
-	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
-		return
-	}
-
-	if existingKey == nil {
-		if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
+	switch {
+	case renewCmdRoll:
+		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
+			resp.Err = err
 			return
 		}
-	}
 
-	// root cert optional to create instance specific chain file
-	rootCert, _, _ := geneos.ReadRootCert()
-	if rootCert == nil {
-		i.Config().SetString("certchain", i.Host().PathTo("tls", geneos.ChainCertFile))
-	} else {
-		chainfile := instance.PathOf(i, "certchain")
-		if chainfile == "" {
-			chainfile = path.Join(i.Home(), "chain.pem")
-			i.Config().SetString("certchain", chainfile, config.Replace("home"))
-		}
+		resp.Completed = append(resp.Completed, "new certificate and key deployed, previous versions backed up")
+		return
 
-		if resp.Err = config.WriteCertChain(i.Host(), chainfile, signingCert, rootCert); resp.Err != nil {
+	case renewCmdUnroll:
+		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
+			resp.Err = err
 			return
 		}
-	}
 
-	if resp.Err = instance.SaveConfig(i); resp.Err != nil {
+		resp.Completed = append(resp.Completed, "certificate unrolled, previous versions restored")
 		return
-	}
 
-	resp.Completed = append(resp.Completed, fmt.Sprintf("certificate renewed (expires %s)", expires.UTC().Format(time.RFC3339)))
+	default:
+		// check instance for existing cert, and do nothing if none
+		cert, err := instance.ReadLeafCertificate(i)
+		if cert == nil && errors.Is(err, os.ErrNotExist) {
+			return
+		}
+
+		signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		if signingKey == nil {
+			resp.Err = fmt.Errorf("no signing private key found")
+			return
+		}
+
+		template := certs.Template("geneos "+i.Type().String()+" "+i.Name(),
+			certs.SANsFromCert(cert),
+			certs.Days(renewCmdExpiry),
+		)
+		expires := template.NotAfter
+
+		cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
+		resp.Err = err
+		if resp.Err != nil {
+			return
+		}
+
+		if renewCmdPrepare {
+			// write new files but do not update instance config
+			if err = certs.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem", newFileSuffix), cert, signingCert); err != nil {
+				return
+			}
+
+			if err = certs.WritePrivateKey(i.Host(), instance.ComponentFilepath(i, "key", newFileSuffix), key); err != nil {
+				return
+			}
+
+			resp.Completed = append(resp.Completed, fmt.Sprintf("certificate prepared (expires %s)", expires.UTC().Format(time.RFC3339)))
+			return
+		}
+
+		if resp.Err = instance.WriteCertificateAndKey(i, key, cert, signingCert); resp.Err != nil {
+			return
+		}
+
+		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
+			return
+		}
+
+		resp.Completed = append(resp.Completed, "certificate renewed")
+		resp.Details = []string{string(certs.CertificateComments(cert))}
+	}
 	return
 }

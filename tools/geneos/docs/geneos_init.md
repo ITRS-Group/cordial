@@ -137,19 +137,22 @@ geneos init [flags] [DIRECTORY]
 ### Options
 
 ```text
-  -F, --force                     Be forceful, ignore existing directories.
   -l, --log                       Follow logs after starting instance(s)
+  -F, --force                     Be forceful, ignore existing directories.
   -n, --name string               Use name for instances and configurations instead of the hostname
-  -C, --signing-bundle string     signing bundle including private key, PEM format
   -T, --tls                       Create internal certificates for TLS support
+  -C, --signing-bundle string     signing bundle in PEM format.
+                                  This bundle must contain an unencrypted private key
+                                  and matching signing certificate and other certificates up to the root CA.
+      --insecure                  Do not create internal certificates for TLS support
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots                 Download from nexus snapshots. Requires -N
   -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
-  -u, --username string           Username for downloads
+  -u, --username string           Username for downloads (password prompted)
   -w, --gateway-template string   A gateway template file
-  -e, --env NAME=VALUE            An environment variable for instance start-up
+  -e, --env NAME=VALUE            Environment variable for instance start-up
                                   (Repeat as required)
-      --header NAME=VALUE         An HTTP header in the format NAME=VALUE
+      --header NAME=VALUE         HTTP header in the format NAME=VALUE
                                   (Repeat as required)
 ```
 

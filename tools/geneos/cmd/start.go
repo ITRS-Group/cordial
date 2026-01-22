@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var startCmdLogs bool
@@ -71,8 +72,8 @@ var startCmd = &cobra.Command{
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
 func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-		resp = instance.NewResponse(i)
+	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+		resp = responses.NewResponse(i)
 		if instance.IsAutoStart(i) || autostart {
 			resp.Err = instance.Start(i,
 				instance.StartingExtras(startCmdExtras),
@@ -80,7 +81,7 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string,
 			)
 		}
 		return
-	}).Write(os.Stdout, instance.WriterIgnoreErr(geneos.ErrRunning))
+	}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
 
 	if watchlogs {
 		// also watch STDERR on start-up

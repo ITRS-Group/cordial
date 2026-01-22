@@ -169,12 +169,12 @@ func Sub(key string) *Config {
 }
 
 // Set sets the key to value
-func Set(key string, value interface{}) {
+func Set(key string, value any) {
 	global.Set(key, value)
 }
 
 // Set sets the key to value
-func (c *Config) Set(key string, value interface{}) {
+func (c *Config) Set(key string, value any) {
 	c.mutex.Lock()
 	c.Viper.Set(key, value)
 	c.mutex.Unlock()
@@ -572,7 +572,7 @@ var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
 func (c *Config) SetKeyValues(items ...string) (err error) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
-		if len(fields) != 4 {
+		if len(fields) == 0 {
 			return fmt.Errorf("item %q is not a valid setting", item)
 		}
 

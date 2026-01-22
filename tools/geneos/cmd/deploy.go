@@ -28,9 +28,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -39,19 +39,18 @@ import (
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
-var deployCmdTLS bool
+var deployCmdTLS, deployCmdInsecure bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
-var deployCmdPassword *config.Plaintext
+var deployCmdPassword = &config.Plaintext{}
+var deployCmdBundlePassword = &config.Plaintext{}
 var deployCmdImportFiles instance.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	GeneosCmd.AddCommand(deployCmd)
-
-	deployCmdPassword = &config.Plaintext{}
 
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
@@ -64,8 +63,13 @@ func init() {
 	deployCmd.Flags().BoolVarP(&deployCmdNoSave, "nosave", "n", false, "Do not save a local copy of any downloads")
 
 	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
-	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
-	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "instance-bundle", "c", "", "Instance certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
+
+	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for PEM from console")
+	deployCmd.Flags().Var(deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+
+	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem.\nIgnored if --instance-bundle is given.")
 
 	deployCmd.Flags().StringVar(&deployCmdKeyfile, "keyfile", "", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
 	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
@@ -73,10 +77,10 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
 	deployCmd.Flags().VarP(deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
 
-	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version for the instance")
-	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION`\nDoesn't work for EL8 archives.")
+	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version name for the instance.\nDefaults to 'active_prod' which is the default\nsymlink to the installed release.")
+	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION` of package\nDoesn't work for EL8/9/10 archives.")
 	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local archives only")
-	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "URL or file path to use or a directory to search for local release archives")
+	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "URL or file path to release archive\nor a directory to search for local release archives")
 	deployCmd.Flags().StringVarP(&deployCmdOverride, "override", "O", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
 
 	deployCmd.Flags().BoolVar(&deployCmdNexus, "nexus", false, "Download from nexus.itrsgroup.com\nRequires ITRS internal credentials")
@@ -96,14 +100,6 @@ func init() {
 	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", instance.HeadersOptionsText)
 
 	deployCmd.Flags().SortFlags = false
-
-	deployCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "secure":
-			name = "tls"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed _docs/deploy.md
@@ -134,7 +130,7 @@ var deployCmd = &cobra.Command{
 			name = names[0]
 		}
 
-		h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
+		h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
 
 		// if no name is given, use the hostname
 		if local == "" {
@@ -200,7 +196,7 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// make root component directories, speculatively
+		// make root component directories, in case this is first instance
 		if err = geneos.RootComponent.MakeDirs(h); err != nil {
 			return err
 		}
@@ -236,7 +232,8 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// check base package for existence, install etc.
+		// Package installation
+
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug().Msgf("version: %s", version)
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
@@ -284,21 +281,19 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		// TLS check and init
-		if deployCmdTLS {
-			if err = geneos.TLSInit(true, "ecdh"); err != nil {
-				return
+		// TLS
+
+		if !deployCmdInsecure {
+			if deployCmdSigningBundle != "" {
+				if err = geneos.TLSImportBundle(deployCmdSigningBundle, ""); err != nil {
+					return err
+				}
+			} else {
+				if err = geneos.TLSInit(h.Hostname(), false, certs.DefaultKeyType); err != nil {
+					return
+				}
 			}
 		}
-
-		signingBundle, err := config.ReadInputPEMString(deployCmdSigningBundle, "signing certificate(s)")
-		if err != nil {
-			return err
-		}
-		if signingBundle != "" {
-			RunE(command.Root(), []string{"tls", "import", "--signing-bundle"}, []string{"pem:" + signingBundle})
-		}
-
 		// we are installed and ready to go, drop through to code from `add`
 		i, err := instance.GetWithHost(h, ct, name)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -317,40 +312,61 @@ var deployCmd = &cobra.Command{
 		}
 
 		if deployCmdInstanceBundle != "" {
-			certs, err := config.ReadInputPEMString(deployCmdInstanceBundle, "instance certificate(s)")
-			if err != nil {
-				return err
-			}
-
-			cert, key, chain, err := geneos.DecomposePEM(certs)
-			if err != nil {
-				return err
-			}
-
-			if err = instance.WriteCert(i, cert); err != nil {
-				return err
-			}
-			fmt.Printf("%s certificate written", i)
-
-			if err = instance.WriteKey(i, key); err != nil {
-				return err
-			}
-			fmt.Printf("%s private key written", i)
-
-			if len(chain) > 0 {
-				chainfile := path.Join(i.Home(), "chain.pem")
-				if err = config.WriteCertChain(i.Host(), chainfile, chain...); err == nil {
-					fmt.Printf("%s certificate chain written", i)
-					if i.Config().GetString("certchain") == chainfile {
+			var certBundle *certs.CertificateBundle
+			if path.Ext(deployCmdInstanceBundle) == ".pfx" || path.Ext(deployCmdInstanceBundle) == ".p12" {
+				if deployCmdBundlePassword.String() == "" {
+					deployCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+					if err != nil {
+						log.Fatal().Err(err).Msg("Failed to read password")
 						return err
 					}
-					i.Config().SetString("certchain", chainfile, config.Replace("home"))
 				}
+				certBundle, err = certs.P12ToCertBundle(deployCmdInstanceBundle, deployCmdBundlePassword)
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to parse PFX file")
+					return err
+				}
+			} else {
+				certChain, err := config.ReadPEMBytes(deployCmdInstanceBundle, "instance certificate(s)")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+				}
+				certBundle, err = certs.ParsePEM(certChain, nil)
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to decompose PEM")
+				}
+				if certBundle.Leaf == nil || certBundle.Key == nil {
+					return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+				}
+			}
+
+			if !certBundle.Valid {
+				return fmt.Errorf("invalid certificate bundle")
+			}
+
+			if certBundle.Leaf == nil || certBundle.Key == nil {
+				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+			}
+
+			if err = instance.WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); err != nil {
+				return err
+			}
+			fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
+
+			if err = instance.SaveConfig(i); err != nil {
+				return
+			}
+
+			var updated bool
+			if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
+				return err
+			} else if updated {
+				fmt.Printf("%s ca-bundle updated\n", i)
 			}
 		}
 
 		// call components specific Add()
-		if err = i.Add(deployCmdTemplate, deployCmdPort); err != nil {
+		if err = i.Add(deployCmdTemplate, deployCmdPort, deployCmdInsecure || deployCmdInstanceBundle != ""); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 

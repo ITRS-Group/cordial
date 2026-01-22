@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -72,32 +73,19 @@ geneos unset san -g Gateway1
 			return
 		}
 		ct, names := ParseTypeNames(cmd)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
+
+			cf := i.Config()
 
 			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
 
-			settings := i.Config().AllSettings()
-			delimiter := i.Config().Delimiter()
-
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
-					// check and delete one level of maps
-					if strings.Contains(k, delimiter) {
-						p := strings.SplitN(k, delimiter, 2)
-						switch x := settings[p[0]].(type) {
-						case map[string]interface{}:
-							instance.DeleteSettingFromMap(i, x, p[1])
-							settings[p[0]] = x
-							changed = true
-						default:
-							// nothing yet
-						}
-						continue
+					if cf.IsSet(k) {
+						cf.Set(k, "")
+						changed = true
 					}
-
-					instance.DeleteSettingFromMap(i, settings, k)
-					changed = true
 				}
 			}
 
@@ -107,8 +95,8 @@ geneos unset san -g Gateway1
 				return
 			}
 
-			resp.Err = instance.SaveConfig(i, settings)
+			resp.Err = instance.SaveConfig(i)
 			return
-		}).Write(os.Stdout)
+		}).Report(os.Stdout)
 	},
 }

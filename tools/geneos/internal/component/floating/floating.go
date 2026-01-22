@@ -20,6 +20,7 @@ package floating
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "floating"
@@ -123,7 +125,7 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 var instances sync.Map
 
 func factory(name string) (floating geneos.Instance) {
-	h, ct, local := instance.Decompose(name)
+	h, ct, local := instance.ParseName(name)
 	// ct, local, h := instance.SplitName(name, geneos.LOCAL)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -204,7 +206,7 @@ func (s *Floatings) Config() *config.Config {
 	return s.Conf
 }
 
-func (s *Floatings) Add(template string, port uint16) (err error) {
+func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := s.Config()
 
 	cf.SetDefault(cf.Join("config", "template"), templateName)
@@ -234,9 +236,8 @@ func (s *Floatings) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(s, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
+	if !noCerts {
+		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// s.Rebuild(true)
@@ -309,13 +310,19 @@ func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string
 	}
 	checks = append(checks, cf.GetString("setup"))
 
-	secureArgs := instance.SetSecureArgs(i)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	env = append(env, "LOG_FILENAME="+logFile)
 

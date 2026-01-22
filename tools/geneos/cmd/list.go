@@ -27,6 +27,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +77,7 @@ var listCmd = &cobra.Command{
 		ct, names := ParseTypeNames(cmd)
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Write(os.Stdout, instance.WriterIndent(listCmdIndent))
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
 			listCSVWriter := csv.NewWriter(os.Stdout)
 			listCSVWriter.Write([]string{
@@ -94,7 +95,7 @@ var listCmd = &cobra.Command{
 				"home",
 			})
 			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
-			resp.Write(listCSVWriter)
+			resp.Report(listCSVWriter)
 			fmt.Printf("<!>instances,%d\n", len(resp))
 			for _, ct := range geneos.RealComponents() {
 				var count int
@@ -120,11 +121,11 @@ var listCmd = &cobra.Command{
 				"Version",
 				"Home",
 			})
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Write(listCSVWriter)
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Report(listCSVWriter)
 		default:
 			listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(listTabWriter, "Type\tName\tHost\tFlags\tPort\tVersion\tHome\n")
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Write(listTabWriter)
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Report(listTabWriter)
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -133,8 +134,8 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	var flags string
 
@@ -150,7 +151,8 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsRunning(i) {
 		flags += "R"
 	}
-	if len(instance.SetSecureArgs(i)) > 0 {
+	secureArgs, _, _, _ := instance.SecureArgs(i)
+	if len(secureArgs) > 0 {
 		flags += "T"
 	}
 	if flags == "" {
@@ -161,12 +163,12 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	resp.Line = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), flags, i.Config().GetInt("port"), base, underlying, i.Home())
+	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), flags, i.Config().GetInt("port"), base, underlying, i.Home())
 	return
 }
 
-func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	running := "N"
 	disabled := "N"
@@ -186,7 +188,8 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	if instance.IsAutoStart(i) {
 		autostart = "Y"
 	}
-	if len(instance.SetSecureArgs(i)) > 0 {
+	secureArgs, _, _, _ := instance.SecureArgs(i)
+	if len(secureArgs) > 0 {
 		tls = "Y"
 	}
 	base, underlying, _ := instance.Version(i)
@@ -211,10 +214,11 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *instance.Response) {
 	return
 }
 
-func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	base, underlying, _ := instance.Version(i)
+	secureArgs, _, _, _ := instance.SecureArgs(i)
 	resp.Value = listCmdType{
 		Type:      i.Type().String(),
 		Name:      i.Name(),
@@ -223,7 +227,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *instance.Response) {
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
-		TLS:       len(instance.SetSecureArgs(i)) > 0,
+		TLS:       len(secureArgs) > 0,
 		Port:      i.Config().GetInt64("port"),
 		Version:   fmt.Sprintf("%s:%s", base, underlying),
 		Home:      i.Home(),

@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
+	"maps"
 	"path"
 	"slices"
 	"strings"
@@ -35,6 +35,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 // ConfigFileType returns the configuration file extension, defaulting
@@ -122,7 +123,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	if err != nil {
 		// generic error as no .json or .rc found
-		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), os.ErrNotExist)
+		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), geneos.ErrNotExist)
 	}
 
 	st, err := h.Stat(used)
@@ -250,27 +251,36 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 // SaveConfig writes the first values map or, if none, the instance
 // configuration to the standard file for that instance. All legacy
 // parameter (aliases) are removed from the set of values saved.
+//
+// Any configuration values of an empty string are removed from the
+// saved configuration.
 func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
-	var settings map[string]any
+	var keys []string
+
+	log.Debug().Msgf("saving config for %s", i)
 
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
+	//
+	// TODO: we need to apply any values passed in here too
 	if resp := Migrate(i); resp.Err != nil {
-		return
+		return resp.Err
 	}
 
 	if len(values) > 0 {
-		settings = values[0]
+		keys = slices.Collect(maps.Keys(values[0]))
 	} else {
-		settings = i.Config().AllSettings()
+		keys = i.Config().AllKeys()
 	}
 
 	nv := config.New()
 	lp := i.Type().LegacyParameters
-	for k, v := range settings {
-		// skip aliases
-		if _, ok := lp[k]; ok {
+
+	for _, k := range keys {
+		v := i.Config().Get(k)
+		// skip aliases and empty settings
+		if _, ok := lp[k]; ok || v == "" {
 			continue
 		}
 		nv.Set(k, v)
@@ -281,12 +291,12 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 		config.AddDirs(Home(i)),
 		config.SetAppName(i.Name()),
 	); err != nil {
+		log.Debug().Err(err).Msgf("saving config for %s", i)
 		return
 	}
 
 	if len(values) == 0 {
-		st, err := i.Host().Stat(i.Config().ConfigFileUsed())
-		if err == nil {
+		if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
 			log.Debug().Msg("setting modtime")
 			i.SetLoaded(st.ModTime())
 		}
@@ -294,17 +304,118 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
 	if err = i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
+		log.Debug().Msgf("%s: rebuild not supported", i.String())
 		err = nil
+	}
+
+	log.Debug().Err(err).Msgf("config for %s saved", i)
+	return
+}
+
+// from go crypto/x509/root_unix.go
+//
+// Possible certificate files; stop after finding one.
+var certFiles = []string{
+	"/etc/ssl/certs/ca-certificates.crt",                // Debian/Ubuntu/Gentoo etc.
+	"/etc/pki/tls/certs/ca-bundle.crt",                  // Fedora/RHEL 6
+	"/etc/ssl/ca-bundle.pem",                            // OpenSUSE
+	"/etc/pki/tls/cacert.pem",                           // OpenELEC
+	"/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem", // CentOS/RHEL 7
+	"/etc/ssl/cert.pem",                                 // Alpine Linux
+}
+
+// SecureArgs returns command line arguments, environment variables,
+// and any files that need to be checked for secure connections based on
+// the TLS configuration of the instance.
+//
+// If the instance has not been migrated to the new TLS parameters then
+// it calls SetSecureArgs() instead, but with the addition of file
+// checks for any args that are not prefixed with a dash (`-`).
+func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []string, err error) {
+	cf := i.Config()
+
+	// has this instance been migrated to the new TLS parameters?
+	if !cf.IsSet("tls") {
+		args = setSecureArgs(i)
+		for _, arg := range args {
+			if !strings.HasPrefix(arg, "-") {
+				fileChecks = append(fileChecks, arg)
+			}
+		}
+		return
+	}
+
+	// look for:
+	//   tls::certificate 		--> -ssl-certificate
+	//   tls::privatekey  		--> -ssl-certificate-key
+	//   tls::certchain   		--> -ssl-certificate-chain (--initial), ignored later
+	//   tls::verify			--> if set but no chain, use Geneos global roots
+	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
+	//   tls::ca-bundle 		--> -ssl-certificate-chain (--final)
+
+	if cert := PathTo(i, config.Join("tls", "certificate")); cert != "" {
+		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
+			args = append(args, "-secure")
+		}
+		args = append(args, "-ssl-certificate", cert)
+		fileChecks = append(fileChecks, cert)
+	}
+
+	if privkey := PathTo(i, config.Join("tls", "privatekey")); privkey != "" {
+		args = append(args, "-ssl-certificate-key", privkey)
+		fileChecks = append(fileChecks, privkey)
+	}
+
+	tlsVerify := true
+	if cf.IsSet(cf.Join("tls", "verify")) {
+		tlsVerify = cf.GetBool(cf.Join("tls", "verify"))
+	}
+
+	if tlsVerify {
+		chain := PathTo(i, config.Join("tls", "ca-bundle"))
+
+		if chain != "" {
+			args = append(args, "-ssl-certificate-chain", chain)
+			fileChecks = append(fileChecks, chain)
+		} else {
+			// use global roots, if one exists, starting with Geneos ca-bundle.pem
+			for _, rc := range certFiles {
+				if _, err := i.Host().Stat(rc); err == nil {
+					log.Debug().Msgf("using root certs %q for %s", rc, i)
+					args = append(args, "-ssl-certificate-chain", rc)
+					fileChecks = append(fileChecks, rc)
+					break
+				}
+			}
+		}
+	}
+
+	// minimum TLS version - from instance, global or 1.2 as a default
+	minTLS := cf.GetString(
+		cf.Join("tls", "minimumversion"),
+		config.Default(
+			config.GetString(
+				config.Join("tls", "minimumversion"),
+				config.Default("1.2"),
+			),
+		),
+	)
+	if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
+		env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
+	} else {
+		args = append(args, "-minTLSversion", minTLS)
 	}
 
 	return
 }
 
-// SetSecureArgs returns a slice of arguments to enable secure
+// setSecureArgs returns a slice of arguments to enable secure
 // connections if the correct configuration values are set. The private
 // key may be in the certificate file and the chain is optional.
-func SetSecureArgs(i geneos.Instance) (args []string) {
-	files := Filepaths(i, "certificate", "privatekey", "certchain")
+func setSecureArgs(i geneos.Instance) (args []string) {
+	cf := i.Config()
+
+	files := PathsTo(i, "certificate", "privatekey", "certchain")
 	if len(files) == 0 || files[0] == "" {
 		return
 	}
@@ -321,11 +432,10 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 	}
 
 	if chain == "" {
-		// promote old files that may exist
-		chain = config.MigrateFile(i.Host(), i.Host().PathTo("tls", geneos.ChainCertFile), i.Host().PathTo("tls", "chain.pem"))
+		chain = i.Host().PathTo("tls", geneos.DeprecatedChainCertFile)
 	}
 	s, err := i.Host().Stat(chain)
-	if err == nil && !s.IsDir() && !(i.Config().IsSet("use-chain") && !i.Config().GetBool("use-chain")) {
+	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !cf.GetBool("use-chain")) {
 		args = append(args, "-ssl-certificate-chain", chain)
 	}
 	return
@@ -337,8 +447,8 @@ func SetSecureArgs(i geneos.Instance) (args []string) {
 // and renames the .rc file to .rc.orig to allow Revert to work.
 //
 // Also now check if instance directory path has changed. If so move it.
-func Migrate(i geneos.Instance) (resp *Response) {
-	resp = NewResponse(i)
+func Migrate(i geneos.Instance) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 
@@ -352,7 +462,7 @@ func Migrate(i geneos.Instance) (resp *Response) {
 		if resp.Err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
-		resp.Line = fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe)
+		resp.Summary = fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe)
 	}
 
 	// only migrate if labelled as a .rc file

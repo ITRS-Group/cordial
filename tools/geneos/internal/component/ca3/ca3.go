@@ -19,6 +19,7 @@ package ca3
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"regexp"
@@ -32,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "ca3"
@@ -113,7 +115,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ca3 geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 	// _, local, h := instance.SplitName(name, geneos.LOCAL)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -190,7 +192,7 @@ func (n *CA3s) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *CA3s) Add(tmpl string, port uint16) (err error) {
+func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &CA3)
 	}
@@ -205,12 +207,6 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	// create certs, report success only
-	resp := instance.CreateCert(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
-
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
@@ -218,7 +214,12 @@ func (n *CA3s) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	_ = instance.ImportFiles(n, initialFiles...)
+	instance.ImportFiles(n, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
 	return
 }
 

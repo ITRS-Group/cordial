@@ -55,6 +55,7 @@ type FormattedReporter struct {
 	tablestyle      table.Style
 	htmlpreamble    string
 	htmlpostscript  string
+	orderbycolumns  []int
 	options         []FormattedReporterOptions
 	scrambleColumns []string
 }
@@ -69,13 +70,13 @@ func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOp
 		reporterCommon: reporterCommon{
 			scrambleNames: ropts.scrambleNames,
 		},
-		w:       opts.writer,
-		z:       opts.zipWriter,
-		t:       table.NewWriter(),
-		columns: []string{},
-		options: options,
+		w:              opts.writer,
+		z:              opts.zipWriter,
+		t:              table.NewWriter(),
+		columns:        []string{},
+		options:        options,
+		orderbycolumns: opts.orderbycolumns,
 	}
-	// t.tableWriter.SetOutputMirror(t.writer)
 
 	t.updateReporter(options...)
 	if t.format == "html" {
@@ -103,6 +104,7 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 		options:         fr.options,
 		scrambleColumns: report.ScrambleColumns,
 		rendered:        fr.rendered,
+		orderbycolumns:  fr.orderbycolumns,
 	}
 
 	fr.updateReporter(fr.options...)
@@ -132,8 +134,14 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 		scrambleColumns(columns, fr.scrambleColumns, data)
 	}
 	for _, row := range data {
-		fr.tableOrder = append(fr.tableOrder, row[0])
-		fr.table[row[0]] = row
+		order := ""
+		for _, c := range fr.orderbycolumns {
+			if c < len(row) {
+				order += row[c] + "\000"
+			}
+		}
+		fr.tableOrder = append(fr.tableOrder, order)
+		fr.table[order] = row
 	}
 }
 

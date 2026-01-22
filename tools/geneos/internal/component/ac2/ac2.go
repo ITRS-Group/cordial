@@ -20,6 +20,7 @@ package ac2
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "ac2"
@@ -99,7 +101,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ac2 geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 	// _, local, h := instance.SplitName(name, geneos.LOCAL)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -178,7 +180,7 @@ func (n *AC2s) Config() *config.Config {
 }
 
 // Add created a new instance of AC2
-func (n *AC2s) Add(tmpl string, port uint16) (err error) {
+func (n *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &AC2)
 	}
@@ -186,26 +188,25 @@ func (n *AC2s) Add(tmpl string, port uint16) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	baseDir := instance.BaseVersion(n)
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
 		return
 	}
 
-	// create certs, report success only
-	resp := instance.CreateCert(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
-
+	baseDir := instance.BaseVersion(n)
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 	if err = os.Chdir(baseDir); err != nil {
 		return
 	}
 
-	_ = instance.ImportFiles(n, initialFiles...)
+	instance.ImportFiles(n, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
 	return
 }
 

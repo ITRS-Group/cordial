@@ -20,6 +20,7 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -32,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "gateway"
@@ -49,7 +51,7 @@ var Gateway = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Gateway+2", Nexus: "geneos-gateway"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7039,7100-",
+		config.Join(Name, "ports"): "7038-7039,7100-",
 		config.Join(Name, "clean"): strings.Join([]string{
 			"*.history",
 			"*.download",
@@ -102,7 +104,6 @@ var Gateway = geneos.Component{
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=gateway.log`,
-		`port=7039`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:/usr/lib64`,
 		`gatewayname={{"${config:name}"}}`,
 		`setup={{join "${config:home}" "gateway.setup.xml"}}`,
@@ -160,7 +161,7 @@ var instances sync.Map
 
 // factory is the factory method for Gateways
 func factory(name string) (gateway geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
@@ -237,7 +238,7 @@ func (g *Gateways) Config() *config.Config {
 	return g.Conf
 }
 
-func (g *Gateways) Add(template string, port uint16) (err error) {
+func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := g.Config()
 
 	if port == 0 {
@@ -264,9 +265,8 @@ func (g *Gateways) Add(template string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(g, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
+	if !noCerts {
+		instance.NewCertificate(g).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// always create a keyfile ?
@@ -311,7 +311,18 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := instance.FileOf(g, "certificate") != "" && instance.FileOf(g, "privatekey") != ""
+
+	certPath := instance.PathTo(g, cf.Join("tls", "certificate"))
+	if certPath != "" {
+		certPath = instance.PathTo(g, "certificate")
+	}
+	keyPath := instance.PathTo(g, cf.Join("tls", "privatekey"))
+	if keyPath != "" {
+		keyPath = instance.PathTo(g, "privatekey")
+	}
+
+	secure := certPath != "" && keyPath != ""
+	log.Debug().Msgf("gateway cert: %q key: %q secure: %v", certPath, keyPath, secure)
 
 	// if we have certs then connect to Licd securely
 	if secure && cf.GetString("licdsecure") != "true" {
@@ -418,13 +429,14 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
 	}
 
-	secureArgs := instance.SetSecureArgs(i)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnvs, fileChecks, err := instance.SecureArgs(i)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnvs...)
+	checks = append(checks, fileChecks...)
 
 	// 3 options: set, set to false, not set
 	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {
@@ -432,13 +444,13 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	}
 
 	if cf.GetBool("usekeyfile") {
-		keyfile := instance.PathOf(i, "keyfile")
+		keyfile := instance.PathTo(i, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)
 			checks = append(checks, keyfile)
 		}
 
-		prevkeyfile := instance.PathOf(i, "prevkeyfile")
+		prevkeyfile := instance.PathTo(i, "prevkeyfile")
 		if prevkeyfile != "" {
 			args = append(args, "-previous-key-file", prevkeyfile)
 			checks = append(checks, prevkeyfile)

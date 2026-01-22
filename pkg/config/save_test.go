@@ -18,6 +18,8 @@ limitations under the License.
 package config
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -87,7 +89,7 @@ func TestSave(t *testing.T) {
 			}
 
 			// Check that file was created
-			if _, err := os.Stat(tt.wantFile); os.IsNotExist(err) {
+			if _, err := os.Stat(tt.wantFile); errors.Is(err, fs.ErrNotExist) {
 				t.Errorf("Save() should have created file %s", tt.wantFile)
 			}
 
@@ -128,7 +130,7 @@ func TestSaveGlobal(t *testing.T) {
 	}
 
 	expectedFile := filepath.Join(tempDir, "global-test.json")
-	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+	if _, err := os.Stat(expectedFile); errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Save() should have created file %s", expectedFile)
 	}
 
@@ -166,7 +168,7 @@ func TestSaveWithHost(t *testing.T) {
 	}
 
 	expectedFile := filepath.Join(tempDir, "host-test.json")
-	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+	if _, err := os.Stat(expectedFile); errors.Is(err, fs.ErrNotExist) {
 		t.Errorf("Save() with host should have created file %s", expectedFile)
 	}
 }
@@ -204,10 +206,10 @@ func TestSaveAppConfig(t *testing.T) {
 	expectedDir := filepath.Join(tempDir, "testapp")
 	expectedFile := filepath.Join(expectedDir, "app-config.json")
 
-	if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+	if _, err := os.Stat(expectedFile); errors.Is(err, fs.ErrNotExist) {
 		// If app-specific directory doesn't exist, file might be in root
 		altFile := filepath.Join(tempDir, "app-config.json")
-		if _, err := os.Stat(altFile); os.IsNotExist(err) {
+		if _, err := os.Stat(altFile); errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Save() should have created file in %s or %s", expectedFile, altFile)
 		}
 	}
@@ -233,7 +235,7 @@ func TestSaveFileExtensions(t *testing.T) {
 			}
 
 			expectedFile := filepath.Join(tempDir, "ext-test."+ext)
-			if _, err := os.Stat(expectedFile); os.IsNotExist(err) {
+			if _, err := os.Stat(expectedFile); errors.Is(err, fs.ErrNotExist) {
 				t.Errorf("Save() should have created file %s", expectedFile)
 			}
 		})
@@ -320,7 +322,7 @@ func TestSaveComplexData(t *testing.T) {
 
 	// Set maps
 	envVars := map[string]string{
-		"NODE_ENV": "production",
+		"NODE_ENV":  "production",
 		"LOG_LEVEL": "info",
 	}
 	config.Set("environment", envVars)

@@ -18,42 +18,48 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
+	"bytes"
 	_ "embed"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var createCmdCN, createCmdDest string
-var createCmdOverwrite, createCmdBundle bool
-var createCmdSANs createCmdSAN
-var createCmdDays int
+var createCmdCN, createCmdDestDir, createCmdSigning string
+var createCmdForce bool
+var createCmdSANs = SubjectAltNames{}
+var createCmdExpiry int
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
 
-	createCmd.Flags().BoolVarP(&createCmdBundle, "bundle", "b", false, "Create a certificate bundle, including certificate, key and verification chain")
-	createCmd.Flags().StringVarP(&createCmdDest, "out", "o", ".", "Output `directory` to write to.\nFor bundles use a dash '-' for stdout.")
+	createCmd.Flags().StringVarP(&createCmdDestDir, "dest", "D", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
 
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname")
-	createCmd.Flags().VarP(&createCmdSANs, "san", "s", "Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given")
-	createCmd.Flags().BoolVarP(&createCmdOverwrite, "force", "F", false, "Run \"tls init\" and force overwrite any existing file in 'dest'")
-	createCmd.Flags().IntVarP(&createCmdDays, "days", "D", 365, "Certificate duration in days")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname except for --signing.\nIgnored for --signing.")
 
+	createCmd.Flags().StringVarP(&createCmdSigning, "signing", "S", "", "Create a new signing certificate bundle with `NAME`\nas part of the Common Name, typically the hostname\nof the target machine this will be used on.")
+
+	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signing")
+
+	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signing)\nand overwrite any existing file in the 'out' directory")
+
+	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).\nIgnored for --signing.")
+
+	createCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/create.md
@@ -69,46 +75,34 @@ var createCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		if len(createCmdSANs) == 0 {
-			hostname, _ := os.Hostname()
-			createCmdSANs = []string{hostname}
-		}
-		if createCmdOverwrite {
-			if err = geneos.TLSInit(false, initCmdKeyType); err != nil {
+		if createCmdForce {
+			if err = geneos.TLSInit(geneos.LOCALHOST, false, initCmdKeyType); err != nil {
 				return
 			}
 		}
+
 		if createCmdCN == "" {
-			createCmdCN, _ = os.Hostname()
+			createCmdCN = geneos.LOCALHOST
 		}
-		if createCmdBundle {
-			err = CreateCertBundle(createCmdDest, createCmdOverwrite, 24*time.Hour*time.Duration(createCmdDays), createCmdCN, createCmdSANs...)
-			if err != nil {
-				if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
-					fmt.Printf("Certificate file already exists for CN=%q, use --force to overwrite\n", createCmdCN)
+
+		if createCmdSigning != "" {
+			if err = CreateSigningCert(createCmdDestDir, createCmdForce, createCmdSigning); err != nil {
+				if errors.Is(err, os.ErrExist) && !createCmdForce {
+					fmt.Printf("Signing certificate already exists for %q, use --force to overwrite\n", createCmdSigning)
 					return nil
 				}
 				return
 			}
-			if createCmdDest != "-" {
-				fmt.Printf("Certificate bundle created for CN=%q\n", createCmdCN)
-			}
 			return
 		}
 
-		if createCmdDest == "-" {
-			fmt.Println("Console output only valid for bundles")
-			return nil
-		}
-		err = CreateCert(createCmdDest, createCmdOverwrite, 24*time.Hour*time.Duration(createCmdDays), createCmdCN, createCmdSANs...)
-		if err != nil {
-			if errors.Is(err, os.ErrExist) && !createCmdOverwrite {
+		if err = CreateCert(createCmdDestDir, createCmdForce, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
+			if errors.Is(err, os.ErrExist) && !createCmdForce {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
 				return nil
 			}
 			return
 		}
-		fmt.Printf("Certificate and key created for CN=%q\n", createCmdCN)
 		return
 	},
 }
@@ -116,151 +110,128 @@ var createCmd = &cobra.Command{
 // CreateCert creates a new certificate and private key
 //
 // skip if certificate exists and is valid
-func CreateCert(destination string, overwrite bool, duration time.Duration, cn string, san ...string) (err error) {
+func CreateCert(destination string, overwrite bool, days int, commonName string, san SubjectAltNames) (err error) {
+	var b bytes.Buffer
+	var basepath string
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
 	}
-	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
-	if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
-		return os.ErrExist
-	}
-	serial, err := rand.Prime(rand.Reader, 64)
-	if err != nil {
-		return
-	}
-	if duration == 0 {
-		duration = 365 * 24 * time.Hour
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: cn,
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       san,
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
-	}
-
-	signingCert, _, err := geneos.ReadSigningCert()
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
-	if err != nil {
-		log.Error().Err(err).Msg("")
-		return
-	}
-
-	cert, key, err := config.CreateCertificateAndKey(&template, signingCert, signingKey, nil)
-	if err != nil {
-		return
-	}
-
-	if err = config.WriteCert(geneos.LOCAL, basepath+".pem", cert); err != nil {
-		return
-	}
-
-	if err = config.WritePrivateKey(geneos.LOCAL, basepath+".key", key); err != nil {
-		return
-	}
-
-	fmt.Printf("certificate created for %s (expires %s)\n", basepath, expires.UTC())
-
-	return
-}
-
-func CreateCertBundle(destination string, overwrite bool, duration time.Duration, cn string, san ...string) (err error) {
-	basepath := path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
 	if destination != "-" {
-		if _, err = os.Stat(basepath + ".pem"); err == nil && !overwrite {
+		basepath = path.Join(destination, strings.ReplaceAll(commonName, " ", "-"))
+		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 			return os.ErrExist
 		}
 	}
-	serial, err := rand.Prime(rand.Reader, 64)
+
+	signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 	if err != nil {
+		log.Error().Err(err).Msg("")
 		return
-	}
-	if duration == 0 {
-		duration = 365 * 24 * time.Hour
-	}
-	expires := time.Now().Add(duration)
-	template := x509.Certificate{
-		SerialNumber: serial,
-		Subject: pkix.Name{
-			CommonName: cn,
-		},
-		NotBefore:      time.Now().Add(-60 * time.Second),
-		NotAfter:       expires,
-		KeyUsage:       x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
-		MaxPathLenZero: true,
-		DNSNames:       san,
-		// IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 	}
 
-	root, rootFile, err := geneos.ReadRootCert(true)
-	if err != nil {
-		err = fmt.Errorf("local root certificate (%s) not valid: %w", rootFile, err)
-		return
+	if len(san.DNS) == 0 {
+		san.DNS = append(san.DNS, commonName)
 	}
-	signer, signerFile, err := geneos.ReadSigningCert(true)
-	if err != nil {
-		err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
-		return
-	}
-	signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(config.AppConfigDir(), geneos.SigningCertBasename+".key"))
+	template := certs.Template(
+		commonName,
+		certs.Days(days),
+		certs.DNSNames(san.DNS...),
+		certs.IPAddresses(san.IP...),
+		certs.EmailAddresses(san.Email...),
+		certs.URIs(san.URL...),
+	)
+
+	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
 	if err != nil {
 		return
 	}
 
-	cert, key, err := config.CreateCertificateAndKey(&template, signer, signingKey, nil)
+	rootCert, _, err := geneos.ReadRootCertificateAndKey()
 	if err != nil {
+		err = fmt.Errorf("cannot read root certificate: %w", err)
 		return
 	}
 
-	var pembytes []byte
-	for _, c := range []*x509.Certificate{cert, signer, root} {
-		pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE",
-			Bytes: c.Raw,
-		})...)
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, cert, signingCert, rootCert); err != nil {
+		return
 	}
 
-	l, _ := key.Open()
-	pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: l.Bytes(),
-	})...)
-	l.Destroy()
+	if destination == "-" {
+		fmt.Print(b.String())
+		return
+	}
 
+	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
+
+	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
+	fmt.Print(string(certs.CertificateComments(cert)))
+	return
+}
+
+func CreateSigningCert(destination string, overwrite bool, hostname string) (err error) {
+	var b bytes.Buffer
+	var basepath string
+
+	cn := cordial.ExecutableName() + " " + geneos.SigningCertLabel + " (" + hostname + ")"
+
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return config.ErrNoUserConfigDir
+	}
 	if destination != "-" {
-		return os.WriteFile(basepath+".pem", pembytes, 0600)
+		basepath = path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
+		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
+			return os.ErrExist
+		}
+	}
+	rootCert, rootKey, err := geneos.ReadRootCertificateAndKey()
+	if err != nil {
+		err = fmt.Errorf("cannot read root certificate or key: %w", err)
+		return
+	}
+	if rootKey == nil {
+		return fmt.Errorf("no root private key found")
+	}
+	fmt.Fprintf(&b, "# Signing Certificate: %s\n#\n", cn)
+	if _, err = certs.WriteNewSigningCertTo(&b, rootCert, rootKey, cn); err != nil {
+		return
+	}
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, nil, rootCert); err != nil {
+		return
 	}
 
-	fmt.Println(string(pembytes))
-
+	if destination == "-" {
+		fmt.Print(b.String())
+		return
+	}
+	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	fmt.Printf("Signing certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	return
 }
 
-type createCmdSAN []string
-
-func (san *createCmdSAN) Set(name string) (err error) {
-	*san = append(*san, name)
-	return
+type SubjectAltNames struct {
+	DNS   values
+	IP    values
+	Email values
+	URL   values
 }
 
-func (san *createCmdSAN) String() string {
+// attribute - name=value
+type values []string
+
+const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
+
+func (i *values) String() string {
 	return ""
 }
 
-func (san *createCmdSAN) Type() string {
-	return "SAN"
+func (i *values) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func (i *values) Type() string {
+	return "VALUE"
 }

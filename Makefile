@@ -17,8 +17,11 @@ release: base docs
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
-	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
+# 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
+	-docker rm cordial-docs-$(VERSION)
+	docker create --name cordial-docs-$(VERSION) cordial-docs:$(VERSION)
+	docker cp cordial-docs-$(VERSION):/docs/. release-$(VERSION)/docs/
 
 .PHONY: build gdna
 
@@ -33,6 +36,7 @@ gdna:
 	docker image tag gdna $(NAMESPACE)/gdna:release
 
 docs:
+	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 	cd utils/docs && go build && ./docs
 	cd tools/geneos/utils/docs && go build && ./docs
 	cd gdna/docs && go build && ./docs

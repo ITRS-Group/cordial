@@ -31,6 +31,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/alecthomas/units"
@@ -42,6 +43,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var backupCmdOutput string
@@ -57,7 +59,11 @@ func init() {
 	GeneosCmd.AddCommand(backupCmd)
 
 	backupCmd.Flags().StringVarP(&backupCmdOutput, "output", "o", "",
-		"Write to `DEST`. Without a destination filename the command creates\na file name based on the contents of the archive. If DEST is a directory\nor has a '/' suffix then the file is written to that directory using the\nsame naming format as if no file was given. Directories are created\nas required.",
+		`Write to "DEST". Without a destination filename the command creates
+a file name based on the contents of the archive. If DEST is a directory
+or has a "/" suffix then the file is written to that directory using the
+same naming format as if no file was given. Directories are created
+as required.`,
 	)
 
 	backupCmd.Flags().BoolVarP(&backupCmdIncludeDatetime, "datetime", "D", false,
@@ -69,7 +75,9 @@ func init() {
 	)
 
 	backupCmd.Flags().StringVarP(&backupCmdLimitSize, "size", "s", "2MiB",
-		"Skip files larger than this size unless --all is used. Accepts suffixes\nwith common scale units such as K, M, G with both B and iB units,\ne.g. `2MiB`. `0` (zero) means no limit to file sizes.",
+		`Skip files larger than this size unless --all is used. Accepts suffixes
+with common scale units such as K, M, G with both B and iB units,
+e.g. "2MiB". "0" (zero) means no limit to file sizes.`,
 	)
 
 	backupCmd.Flags().BoolVarP(&backupCmdIncludeAll, "all", "A", false,
@@ -218,7 +226,7 @@ geneos backup all
 		if archive != "-" {
 			out2 = os.Stdout
 		}
-		resp.Write(out2)
+		resp.Report(out2)
 		if backupCmdIncludeShared {
 			fmt.Println("matching shared directories also included")
 		}
@@ -299,10 +307,10 @@ geneos backup all
 // getInstanceFilePaths returns a list of paths to backup for the
 // instance and returns the results in the string slice pointer in
 // params[0].
-func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *instance.Response) {
+func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Response) {
 	var ignoreDirs, ignoreFiles []string
 
-	resp = instance.NewResponse(i)
+	resp = responses.NewResponse(i)
 
 	cf := i.Config()
 	ct := i.Type()
@@ -391,9 +399,21 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *instance.Resp
 		}
 	}
 
+	// add global tls directory when shared and tls flags given
+	if backupCmdIncludeTLS {
+		if err := walkDir(i.Host(), i.Host().PathTo("tls"), "tls", contents, ignoreDirs, ignoreFiles); err != nil {
+			log.Debug().Err(err).Msg("")
+		}
+	}
+
 	return
 }
 
+var contentsMutex sync.Mutex
+
+// walkDir walks the given directory on host h, adding files and directories
+// to contents slice, using relative as the base path. ignoreDirs and ignoreFiles
+// are patterns to skip. walkDir is concurrency safe for the contents slice.
 func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
@@ -413,6 +433,8 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					}
 				}
 			}
+			contentsMutex.Lock()
+			defer contentsMutex.Unlock()
 			*contents = append(*contents, filepath.Join(relative, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
@@ -429,6 +451,8 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					return nil
 				}
 			}
+			contentsMutex.Lock()
+			defer contentsMutex.Unlock()
 			*contents = append(*contents, filepath.Join(relative, file))
 			return nil
 		}

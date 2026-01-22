@@ -1,27 +1,20 @@
 # `geneos tls create`
 
-Create a standalone certificate and private key, or a bundle including parent certificate(s).
+# `geneos tls create`
 
->[!NOTE]
->The `tls create` command differs from `tls new` and `tls renew` by creating a certificate in the current working directory based on the Common Name given. You can use this command when you need to create certificates for manual configuration or to transfer to another location. You will probably want to use `tls new` and `tls renew` for local Geneos instance certificate management.
+Creates a new TLS certificate bundle including a private key and trust chain. This can either be an instance bundle, suitable for use with remote Geneos components, for example Windows Netprobes, or a signing certificate bundle for use on other systems where `geneos` will be used.
 
-Without other options `tls create` will create certificate and private key files (using extensions `.pem` and `.key` respectively) in the current directory, using an existing Geneos signing certificate, for use with Geneos components. The file names will be based on the certificate Common Name (`CN`), which will default to the local hostname.
+By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
-You can set the output directory using the `--out`/`-o` option.
+To change to output directory use the `--dest`/`-D` option. The name of the file is always derived from the common name, with spaces replaced by dashes, and a `.pem` extension. The only exception to this is when using an output destination of `-` which will write the output to standard output instead of a file.
 
-To create a certificate bundle (sometimes referred to as a `fullchain.pem` file) use the `--bundle`/`-b` flag. This created a single `.pem` file using the same options as above unless the `--out`/`-o` directory is given as a dash (`-`) in which case the PEM formatted bundle is output to the console.
+The default expiry period is 365 days (from one minute in the past - this is to allow some overlap with system clock issues) unless you use the `--expiry`/`-E` option. This option is ignored when creating a signing certificate with the `--signer`/`-s` option, as signing certificates always have a fixed validity period of 5 years.
 
-You can set you own Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting files have spaces in the Common Name replaced with dashes.
+If the Geneos installation has not been initialised or the TLS sub-system not been initialised then an error will be returned. With the `--force`/`-F` flags a new root and intermediate certificate are created along with private keys in your user configuration directory unless they already exist. Beware that initialising the TLS subsystem will also result in any new instances you create having certificates automatically created and various options set to trigger the use of TLS by default.
 
-The default expiry period is 365 days from one minute in the past - this is to allow some overlap with system clock issues - unless you use the `--days`/`-D` option.
+You can add Subject Alternative Names (SANs) to the certificate using the `--san-dns`/`-s`, `--san-ip`/`-i`, `--san-email`/`-e` and `--san-url`/`-u` options respectively. These options can be repeated as required to add multiple SANs of each type. SANs are ignored when creating a signing certificate with the `--signer`/`-s` option. If no DNS SANs are specified then the Common Name will be added as a DNS SAN automatically.
 
-If the Geneos installation has not been initialised or the TLS sub-system not been initialised then an error will be returned.
-
-With the `--force`/`-F` flags a new root and intermediate certificate are created along with private keys in your user configuration directory unless they already exist. The act of initialising the TLS subsystem will result in any new Geneos component instances you create having certificates automatically created and various options set to trigger the use of TLS by default - which may not be what you expect, so beware.
-
-To add Subject Alternative Names (`SANs`) use the `--san`/`-s` option and repeat as often as required.
-
-If a file exists with the same name for the PEM file then it, and the corresponding key file with a `.key` extension, will only be overwritten if given the `--force`/`-F` option.
+If a certificate already exists for the specified Common Name then an error will be returned unless you use the `--force`/`-F` option to overwrite it.
 
 ```text
 geneos tls create [flags]
@@ -30,13 +23,24 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -b, --bundle          Create a certificate bundle, including certificate, key and verification chain
-  -c, --cname string    Common Name for certificate. Defaults to hostname
-  -D, --days int        Certificate duration in days (default 365)
-  -F, --force           Run "tls init" and force overwrite any existing file in 'dest'
-  -o, --out directory   Output directory to write to.
-                        For bundles use a dash '-' for stdout. (default ".")
-  -s, --san SAN         Subject-Alternative-Name (repeat for each one required). Defaults to hostname if none given
+  -D, --dest directory    Destination directory to write certificate chain and private key to.
+                          For bundles use a dash '-' for stdout. (default ".")
+  -c, --cname string      Common Name for certificate. Defaults to hostname except for --signing.
+                          Ignored for --signing.
+  -S, --signing NAME      Create a new signing certificate bundle with NAME
+                          as part of the Common Name, typically the hostname
+                          of the target machine this will be used on.
+  -E, --expiry days       Certificate expiry duration in days. Ignored for --signing (default 365)
+  -F, --force             Runs "tls init" (but do not replace existing root and signing)
+                          and overwrite any existing file in the 'out' directory
+  -s, --san-dns VALUE     Subject-Alternative-Name DNS Name (repeat as required).
+                          Ignored for --signing.
+  -i, --san-ip VALUE      Subject-Alternative-Name IP Address (repeat as required).
+                          Ignored for --signing.
+  -e, --san-email VALUE   Subject-Alternative-Name Email Address (repeat as required).
+                          Ignored for --signing.
+  -u, --san-url VALUE     Subject-Alternative-Name URL (repeat as required).
+                          Ignored for --signing.
 ```
 
 ## SEE ALSO

@@ -76,6 +76,7 @@ func init() {
 	cobra.OnInitialize(func() {
 		cordial.LogInit(pkgname)
 		initConfig()
+		geneos.Init(cordial.ExecutableName())
 	})
 
 	config.DefaultKeyDelimiter("::")
@@ -117,7 +118,8 @@ func init() {
 	})
 
 	// run initialisers on internal packages, set the executable name
-	geneos.Init(cordial.ExecutableName())
+	// this has moves to the function called from cobra.OnInitialize
+	// geneos.Init(cordial.ExecutableName())
 }
 
 //go:embed _docs/geneos.md
@@ -325,6 +327,7 @@ func initConfig() {
 		config.IgnoreWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
 		config.UseDefaults(false),
+		config.MustExist(),
 	)
 
 	log.Debug().Msgf("configuration loaded from %s", configPath)

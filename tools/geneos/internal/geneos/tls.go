@@ -18,296 +18,276 @@ limitations under the License.
 package geneos
 
 import (
-	"bytes"
 	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// RootCABasename is the file base name for the root certificate authority
-// created with the TLS commands
-var RootCABasename = "rootCA"
+const (
+	// RootCABasename is the file base name for the root certificate authority
+	// created with the TLS commands
+	RootCABasename = "rootCA"
+
+	// CABundleFilename is the file name for the ca-bundle file used by
+	// Geneos components to verify peer certificates. This file is
+	// located in the geneos home directory on each hoist under `tls/`
+	CABundleBasename string = "ca-bundle"
+
+	// SigningCertLabel is the descriptive label for the signing
+	// certificate created with the TLS commands. It is commonly
+	// prefixed with the executable name and followed by a parenthesised
+	// hostname to indicate where it is being used.
+	SigningCertLabel = "signing certificate"
+)
 
 // SigningCertBasename is the file base name for the signing certificate
-// created with the TLS commands
+// created with the TLS commands. This is initialised to the executable
+// name in the Init() function.
 var SigningCertBasename string
 
-// ChainCertFile the is file name (including extension, as this does not
-// need to be used for keys) for the consolidated chain file used to
-// verify instance certificates
-var ChainCertFile string
+// DeprecatedChainCertFile the is file name (including extension, as
+// this does not need to be used for keys) for the consolidated chain
+// file used to verify instance certificates. This is initialised to
+// the executable name with "-chain.pem" suffix in the Init() function.
+//
+// This is deprecated in favour of using the ca-bundle file.
+// Non-migrated instances may still require this file.
+var DeprecatedChainCertFile string
 
-// ReadRootCert reads the root certificate from the user's app config
-// directory. It "promotes" old cert and key files from the previous tls
-// directory if files do not already exist in the user app config
-// directory. If verify is true then the certificate is verified against
-// itself as a root and if it fails an error is returned.
-func ReadRootCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+// PathToCABundle returns the path to the ca-bundle file on the given
+// host with extensions concatenated from ext. Without any ext parameter arguments
+// the returned file will be "ca-bundle".
+func PathToCABundle(h *Host, ext ...string) string {
+	return h.PathTo("tls", strings.Join(append([]string{CABundleBasename}, ext...), ""))
+}
+
+// PathToCABundlePEM returns the path to the ca-bundle PEM file on the given
+// host.
+func PathToCABundlePEM(h *Host) string {
+	return PathToCABundle(h, certs.PEMExtension)
+}
+
+// RootCertificatePath returns the path to the root CA certificate in
+// the user's app config directory.
+func RootCertificatePath() (string, error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return "", config.ErrNoUserConfigDir
+	}
+	return path.Join(confDir, RootCABasename+certs.PEMExtension), nil
+}
+
+// ReadRootCertificateAndKey reads the root certificate and private key
+// from the user's app config directory. If the private key cannot be
+// found then nil is returned but no error.
+func ReadRootCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+	file, err := RootCertificatePath()
+	if err != nil {
+		return
+	}
+
+	roots, err := certs.ReadCertificates(LOCAL, file)
+	if err != nil {
+		return
+	}
+
+	if len(roots) != 1 {
+		err = fmt.Errorf("only one certificate allowed in %q", file)
+		return
+	}
+
+	cert = roots[0]
+	if !certs.IsValidRootCA(cert) {
+		err = fmt.Errorf("certificate in %q is not valid as a root CA", file)
+	}
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		err = config.ErrNoUserConfigDir
 		return
 	}
-	// move the root certificate to the user app config directory
-	log.Debug().Msgf("migrating root certificate from %s to %s", LOCAL.PathTo("tls", RootCABasename+".pem"), confDir)
-	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".pem"))
-	if file == "" {
-		err = fmt.Errorf("%w: root certificate file %s not found in %s", os.ErrNotExist, RootCABasename+".pem", confDir)
-		log.Debug().Err(err).Msgf("failed to migrate root certificate from %s", LOCAL.PathTo("tls", RootCABasename+".pem"))
-		return
-	}
-	log.Debug().Msgf("reading root certificate %s", file)
 
-	// speculatively promote the key file, but do not fail if it does
-	// not exist. this is because the root certificate is self-signed and
-	// does not need a key to verify itself.
-	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", RootCABasename+".key"))
-	cert, err = config.ParseCertificate(LOCAL, file)
-	if err != nil {
-		return
+	if key, err = certs.ReadPrivateKey(LOCAL, path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && errors.Is(err, os.ErrNotExist) {
+		err = nil
 	}
-	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
-			err = errors.New("root certificate not valid as a signing certificate")
-			return
-		}
-		roots := x509.NewCertPool()
-		roots.AddCert(cert)
-		_, err = cert.Verify(x509.VerifyOptions{
-			Roots: roots,
-		})
-	}
+
 	return
 }
 
-// ReadSigningCert reads the signing certificate from the user's app
-// config directory. It "promotes" old cert and key files from the
-// previous tls directory if files do not already exist in the user app
-// config directory. If verify is true then the signing certificate is
-// checked and verified against the default root certificate.
-func ReadSigningCert(verify ...bool) (cert *x509.Certificate, file string, err error) {
+// SigningCertificatePath returns the path to the signing certificate in
+// the user's app config directory.
+func SigningCertificatePath() (string, error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
-		err = config.ErrNoUserConfigDir
-		return
+		return "", config.ErrNoUserConfigDir
 	}
-	// move the signing certificate to the user app config directory
-	file = config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".pem"))
-	if file == "" {
-		err = fmt.Errorf("%w: signing certificate file %s not found in %s", os.ErrNotExist, SigningCertBasename+".pem", confDir)
-		return
-	}
-	log.Debug().Msgf("reading signing certificate %s", file)
+	return path.Join(confDir, SigningCertBasename+certs.PEMExtension), nil
+}
 
-	// speculatively promote the key file, but do not fail if it does
-	// not exist.
-	config.MigrateFile(host.Localhost, confDir, LOCAL.PathTo("tls", SigningCertBasename+".key"))
-	cert, err = config.ParseCertificate(LOCAL, file)
+// SigningPrivateKeyPath returns the path to the signing certificate
+// private key in the user's app config directory.
+func SigningPrivateKeyPath() (string, error) {
+	confDir := config.AppConfigDir()
+	if confDir == "" {
+		return "", config.ErrNoUserConfigDir
+	}
+	return path.Join(confDir, SigningCertBasename+certs.KEYExtension), nil
+}
+
+// ReadSigningCertificateAndKey reads the signing certificate and private
+// key from the user's app config directory.
+func ReadSigningCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+	cert, err = readSigningCertificate()
 	if err != nil {
 		return
 	}
-	if len(verify) > 0 && verify[0] {
-		if !cert.BasicConstraintsValid || !cert.IsCA {
-			err = errors.New("certificate not valid as a signing certificate")
-			return
-		}
-		var root *x509.Certificate
-		root, _, err = ReadRootCert(verify...)
-		if err != nil {
-			return
-		}
-		roots := x509.NewCertPool()
-		roots.AddCert(root)
-		_, err = cert.Verify(x509.VerifyOptions{
-			Roots: roots,
-		})
-	}
+	key, err = readSigningPrivateKey()
 	return
 }
 
-// DecomposePEM parses PEM formatted data and extracts the leaf
-// certificate, any CA certs as a chain and a private key as a DER
-// encoded *memguard.Enclave. The key is matched to the leaf
-// certificate, and only returned if they match.
-func DecomposePEM(data ...string) (cert *x509.Certificate, der *memguard.Enclave, chain []*x509.Certificate, err error) {
-	var certs []*x509.Certificate
-	var leaf *x509.Certificate
-	var derkeys []*memguard.Enclave
-
-	if len(data) == 0 {
-		err = fmt.Errorf("no PEM data process")
+// readSigningCertificate reads the signing certificate from the user's
+// app config directory. The signing certificate is verified against the
+// default root certificate.
+func readSigningCertificate() (signing *x509.Certificate, err error) {
+	file, err := SigningCertificatePath()
+	if err != nil {
 		return
 	}
 
-	for _, pemstring := range data {
-		pembytes := []byte(pemstring)
-		for {
-			block, rest := pem.Decode(pembytes)
-			if block == nil {
-				break
-			}
-			switch block.Type {
-			case "CERTIFICATE":
-				var c *x509.Certificate
-				c, err = x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return
-				}
-				if c.IsCA {
-					certs = append(certs, c)
-				} else if leaf == nil {
-					// save first leaf
-					leaf = c
-				}
-			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				// save all private keys for later matching
-				derkeys = append(derkeys, memguard.NewEnclave(block.Bytes))
-			default:
-				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
-				return
-			}
-			pembytes = rest
-		}
+	signings, err := certs.ReadCertificates(LOCAL, file)
+	if err != nil {
+		return
 	}
+	if len(signings) == 0 {
+		return nil, fmt.Errorf("no certificates found in %q", file)
+	}
+	signing = signings[0]
 
-	if leaf == nil && len(certs) == 0 {
-		err = fmt.Errorf("no certificates found")
+	if !certs.IsValidSigningCA(signing) {
+		err = fmt.Errorf("certificate in %q not valid as a signing certificate", file)
 		return
 	}
 
-	// if we got this far then we can start setting returns
-	cert = leaf
-	chain = certs
+	// verify against root CA
+	var root *x509.Certificate
+	root, _, err = ReadRootCertificateAndKey()
+	if err != nil {
+		return
+	}
+	roots := x509.NewCertPool()
+	roots.AddCert(root)
+	_, err = signing.Verify(x509.VerifyOptions{
+		Roots: roots,
+	})
+	return
+}
 
-	// if we have no leaf certificate then use the first cert from the
-	// chain BUT do not remove from the chain. order is not checked
-	if cert == nil {
-		cert = chain[0]
+// readSigningPrivateKey reads the signing certificate private key from the
+// user's app config directory.
+func readSigningPrivateKey() (key *memguard.Enclave, err error) {
+	file, err := SigningPrivateKeyPath()
+	if err != nil {
+		return
 	}
 
-	// are we good? check key and return a chain of valid CA certs
-	if i := config.MatchKey(cert, derkeys); i != -1 {
-		der = derkeys[i]
-	}
-
-	err = nil
+	key, err = certs.ReadPrivateKey(LOCAL, file)
 	return
 }
 
 // TLSImportBundle processes a PEM formatted signingBundle from a file
 // or an embedded string with either an included private key and chain
 // or separately specified in the same way.
-func TLSImportBundle(signingBundleSource, privateKeySource, chainSource string) (err error) {
+//
+// If the bundle contains only root certificates then these are added to
+// the ca-bundle only. In this case any privateKeySource parameter is
+func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
+		// ignored.
 	}
 
-	// speculatively create user config directory. permissions do not
-	// need to be restrictive
-	err = LOCAL.MkdirAll(confDir, 0775)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
-	}
-
-	signingBundle, err := config.ReadInputPEMString(signingBundleSource, "signing certificate(s)")
+	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
 	}
 
-	privateKey, err := config.ReadInputPEMString(privateKeySource, "signing key")
+	leaf, chain, roots, _, err := certs.DecodePEM(signingBundle)
+	if leaf == nil && len(chain) == 0 && len(roots) > 0 {
+		// import roots to ca-bundle only
+		updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), roots...)
+		if err != nil {
+			return err
+		} else if updated {
+			fmt.Printf("ca-bundle updated with root certificate(s)\n")
+		} else {
+			fmt.Printf("ca-bundle is already up to date\n")
+		}
+		return nil
+	}
+
+	privateKey, err := config.ReadPEMBytes(privateKeySource, "signing key")
 	if err != nil {
 		return err
 	}
 
-	cert, key, chain, err := DecomposePEM(signingBundle, privateKey)
+	certBundle, err := certs.ParsePEM(signingBundle, privateKey)
 	if err != nil {
 		return err
 	}
+
+	if !certBundle.Valid {
+		return errors.New("signing bundle is not valid")
+	}
+
+	if certBundle.Leaf == nil {
+		return errors.New("no certificates found in signing bundle")
+	}
+
+	cert := certBundle.Leaf
+	key := certBundle.Key
 
 	// basic validation
-	if !cert.BasicConstraintsValid || !cert.IsCA {
-		err = errors.New("signing certificate not valid as a signing certificate")
-		return ErrInvalidArgs
+	if !cert.BasicConstraintsValid || !cert.IsCA || key == nil {
+		return errors.New("no signing certificate with matching private key found in bundle")
+
 	}
 
-	if key == nil {
-		return errors.New("no matching private key found")
+	if certBundle.Root == nil {
+		return errors.New("no root certificate found in signing bundle")
 	}
 
-	// write root cert, but only if it's the only other cert in the
-	// chain (the chain will contain both the signing cert and root, as
-	// there is no leaf cert) and it's self-signed. overwrite any
-	// existing root.
-	if len(chain) == 2 {
-		root := chain[1]
-		rootCA := path.Join(confDir, RootCABasename+".pem")
-
-		if bytes.Equal(root.RawIssuer, root.RawSubject) && root.IsCA {
-			// if st, err := os.Stat(rootCA); !errors.Is(err, os.ErrNotExist) {
-			// 	return errors.New("rootCA.pem is already present in user config directory, will not overwrite")
-			// }
-			if err = config.WriteCert(LOCAL, rootCA, root); err != nil {
-				return err
-			}
-			fmt.Printf("%s root certificate written to %s\n", cordial.ExecutableName(), rootCA)
-		}
-	}
-
-	if err = config.WriteCert(LOCAL, path.Join(confDir, SigningCertBasename+".pem"), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".pem"))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.PEMExtension))
 
-	if err = config.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+".key"), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+".key"))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.KEYExtension))
 
-	if chainSource != "" {
-		b, err := os.ReadFile(chainSource)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-			return err
-		}
-		_, _, chain, err = DecomposePEM(string(b))
-		if err != nil {
-			return err
-		}
-		if err = WriteChainLocal(chain); err != nil {
-			return err
-		}
-	} else if len(chain) > 0 {
-		if err = WriteChainLocal(chain); err != nil {
-			return err
-		}
-	}
-	fmt.Printf("%s certificate chain written to %s\n", cordial.ExecutableName(), path.Join(LOCAL.PathTo("tls"), ChainCertFile))
-	return err
-}
-
-func WriteChainLocal(chain []*x509.Certificate) (err error) {
-	if len(chain) == 0 {
-		return
-	}
-	tlsPath := LOCAL.PathTo("tls")
-	if err = LOCAL.MkdirAll(tlsPath, 0775); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
 		return err
 	}
-	if err = config.WriteCertChain(LOCAL, path.Join(tlsPath, ChainCertFile), chain...); err != nil {
+	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+certs.PEMExtension))
+
+	if updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
 		return err
+	} else if updated {
+		fmt.Printf("ca-bundle updated with root certificate\n")
 	}
+
 	return
 }
 
@@ -316,45 +296,61 @@ func WriteChainLocal(chain []*x509.Certificate) (err error) {
 // later options to allow import of a DCA
 //
 // This is also called from `init`
-func TLSInit(overwrite bool, keytype string) (err error) {
+func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error) {
+	if !overwrite {
+		if _, _, err := ReadRootCertificateAndKey(); err == nil {
+			// root cert already exists
+			log.Debug().Msg("root certificate already exists, skipping TLS initialisation")
+			return nil
+		}
+		if _, err := readSigningCertificate(); err == nil {
+			// signing cert already exists
+			log.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
+			return nil
+		}
+	}
+
 	confDir := config.AppConfigDir()
 	if confDir == "" {
-		err = config.ErrNoUserConfigDir
-		return
-	}
-	// directory permissions do not need to be restrictive
-	err = LOCAL.MkdirAll(confDir, 0775)
-	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		return config.ErrNoUserConfigDir
 	}
 
-	if err := config.CreateRootCert(
-		LOCAL,
+	// directory permissions do not need to be restrictive
+	if err = LOCAL.MkdirAll(confDir, 0775); err != nil {
+		return err
+	}
+
+	root, err := certs.WriteNewRootCert(
 		path.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
-		overwrite,
-		keytype); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		fmt.Printf("root certificate already exists in %s, skipping\n", path.Join(confDir, RootCABasename)+".pem")
-	} else {
-		fmt.Printf("CA created for %s\n", RootCABasename)
+		keytype)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("CA certificate created for %s\n", RootCABasename)
+	fmt.Print(string(certs.CertificateComments(root)))
+
+	rootCert, rootKey, err := ReadRootCertificateAndKey()
+	if err != nil {
+		return err
+	}
+	if rootKey == nil {
+		return fmt.Errorf("no root private key found")
 	}
 
-	if err := config.CreateSigningCert(
-		LOCAL,
-		path.Join(confDir, SigningCertBasename),
-		path.Join(confDir, RootCABasename),
-		cordial.ExecutableName()+" intermediate certificate",
-		overwrite); err != nil {
-		if !errors.Is(err, os.ErrExist) {
-			return err
-		}
-		fmt.Printf("signing certificate already exists in %s, skipping\n", path.Join(confDir, SigningCertBasename)+".pem")
-	} else {
-		fmt.Printf("Signing certificate created for %s\n", SigningCertBasename)
+	_, err = certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), rootCert)
+	if err != nil {
+		return err
 	}
+
+	signing, err := certs.WriteNewSigningCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
+		cordial.ExecutableName()+" "+SigningCertLabel+" ("+hostname+")",
+	)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("signing certificate created for %s\n", SigningCertBasename)
+	fmt.Print(string(certs.CertificateComments(signing)))
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {
@@ -363,44 +359,31 @@ func TLSInit(overwrite bool, keytype string) (err error) {
 	return nil
 }
 
-// TLSSync creates and copies a certificate chain file to all remote
-// hosts
-//
-// If a signing cert and/or a root cert exist, refresh the chain file
-// from it, otherwise copy the chain file (using the configured name) to
-// all remotes.
+// TLSSync merges and updates the `CABundleFilename` file on all remote hosts.
 func TLSSync() (err error) {
-	rootCert, _, err := ReadRootCert(true)
-	if err != nil {
-		rootCert = nil
-	}
-	geneosCert, _, err := ReadSigningCert()
-	if err != nil {
-		return os.ErrNotExist
+	allRoots := []*x509.Certificate{}
+	allHosts := append([]*Host{LOCAL}, RemoteHosts(false)...)
+	for _, h := range allHosts {
+		if certSlice, err := certs.ReadCertificates(h, PathToCABundle(h, certs.PEMExtension)); err == nil {
+			allRoots = append(allRoots, certSlice...)
+		}
 	}
 
-	if rootCert == nil && geneosCert == nil {
-		tlsPath := LOCAL.PathTo("tls")
-		chainpath := path.Join(tlsPath, ChainCertFile)
-		if s, err := LOCAL.Stat(chainpath); err != nil && (s.Mode().IsRegular() || (s.Mode()&fs.ModeSymlink != 0)) {
-			for _, r := range RemoteHosts(false) {
-				host.CopyFile(LOCAL, tlsPath, r, r.PathTo("tls"))
-			}
+	log.Debug().Msgf("found %d root certificates to sync", len(allRoots))
+
+	for _, h := range allHosts {
+		hostname := h.Hostname()
+		updated, err := certs.UpdateCACertsFiles(h, PathToCABundle(h), allRoots...)
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
+			continue
 		}
-		return
+		if updated {
+			fmt.Printf("ca-bundle updated on host %s\n", hostname)
+		} else {
+			fmt.Printf("ca-bundle on host %s is already up to date\n", hostname)
+		}
 	}
 
-	for r := range ALL.OrList() {
-		tlsPath := r.PathTo("tls")
-		if err = r.MkdirAll(tlsPath, 0775); err != nil {
-			return
-		}
-		chainpath := path.Join(tlsPath, ChainCertFile)
-		if err = config.WriteCertChain(r, chainpath, geneosCert, rootCert); err != nil {
-			return
-		}
-
-		fmt.Printf("Updated certificate chain %s pem on %s\n", chainpath, r.String())
-	}
 	return
 }

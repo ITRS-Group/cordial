@@ -91,6 +91,10 @@ func (h *Local) Readlink(file string) (link string, err error) {
 	return os.Readlink(file)
 }
 
+func (h *Local) Mkdir(p string, perm os.FileMode) (err error) {
+	return os.Mkdir(p, perm)
+}
+
 func (h *Local) MkdirAll(p string, perm os.FileMode) (err error) {
 	return os.MkdirAll(p, perm)
 }
@@ -129,6 +133,10 @@ func (h *Local) RemoveAll(name string) (err error) {
 
 func (h *Local) Rename(oldpath, newpath string) (err error) {
 	return os.Rename(oldpath, newpath)
+}
+
+func (h *Local) Link(oldname, newname string) (err error) {
+	return os.Link(oldname, newname)
 }
 
 // Stat wraps the os.Stat and sftp.Stat functions

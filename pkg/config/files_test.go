@@ -18,6 +18,8 @@ limitations under the License.
 package config
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -111,7 +113,7 @@ func TestPromoteFile(t *testing.T) {
 				if got == "" {
 					return // Skip existence check if no file expected
 				}
-				if _, err := os.Stat(got); os.IsNotExist(err) {
+				if _, err := os.Stat(got); errors.Is(err, fs.ErrNotExist) {
 					t.Errorf("PromoteFile() result file %q should exist", got)
 				}
 			}
@@ -145,7 +147,7 @@ func TestPromoteFileWithDirectory(t *testing.T) {
 	}
 
 	if result != "" {
-		if _, err := os.Stat(result); os.IsNotExist(err) {
+		if _, err := os.Stat(result); errors.Is(err, fs.ErrNotExist) {
 			t.Errorf("Promoted file should exist at %q", result)
 		}
 	}
@@ -400,7 +402,7 @@ func TestPromoteFileWithPermissions(t *testing.T) {
 	}
 
 	// Verify the file exists at the target location
-	if _, err := os.Stat(result); os.IsNotExist(err) {
+	if _, err := os.Stat(result); errors.Is(err, fs.ErrNotExist) {
 		t.Error("Promoted file should exist at target location")
 	}
 }

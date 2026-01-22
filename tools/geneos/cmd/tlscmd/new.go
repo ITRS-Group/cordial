@@ -20,21 +20,22 @@ package tlscmd
 import (
 	_ "embed"
 	"os"
-	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var newCmdDays int
+var newCmdExpiry int
 
 func init() {
 	tlsCmd.AddCommand(newCmd)
 
-	newCmd.Flags().IntVarP(&newCmdDays, "days", "D", 365, "Certificate duration in days")
+	newCmd.Flags().IntVarP(&newCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in days")
 }
 
 //go:embed _docs/new.md
@@ -52,10 +53,10 @@ var newCmd = &cobra.Command{
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Write(os.Stdout)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Report(os.Stdout)
 	},
 }
 
-func newInstanceCert(i geneos.Instance, _ ...any) *instance.Response {
-	return instance.CreateCert(i, 24*time.Hour*time.Duration(newCmdDays))
+func newInstanceCert(i geneos.Instance, _ ...any) *responses.Response {
+	return instance.NewCertificate(i, certs.Days(newCmdExpiry))
 }

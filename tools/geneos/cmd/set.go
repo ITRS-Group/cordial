@@ -27,6 +27,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var setCmdKeyfile config.KeyFile
@@ -94,8 +95,8 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 	// set params only once
 	setCmdValues.Params = params
 
-	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
-		resp = instance.NewResponse(i)
+	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+		resp = responses.NewResponse(i)
 
 		cf := i.Config()
 
@@ -111,7 +112,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 		}
 
 		return
-	}, params).Write(os.Stdout)
+	}, params).Report(os.Stdout)
 	return
 }
 

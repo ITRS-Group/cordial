@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 // The Instance type is the common data shared by all instances
@@ -173,12 +174,12 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *Response, values ...any) (responses Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
 	var wg sync.WaitGroup
 
 	instances := Instances(h, ct, FilterNames(names...))
-	responses = make(Responses, len(instances))
-	ch := make(chan *Response, len(instances))
+	rs = make(responses.Responses, len(instances))
+	ch := make(chan *responses.Response, len(instances))
 
 	for _, c := range instances {
 		wg.Add(1)
@@ -194,7 +195,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	close(ch)
 
 	for resp := range ch {
-		responses[resp.Instance.String()] = resp
+		rs[resp.Instance.String()] = resp
 	}
 
 	return
@@ -241,7 +242,7 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 	instance = ct.New(name)
 	if instance == nil {
 		// if no instance is created, check why
-		h, _, _ := Decompose(name)
+		h, _, _ := ParseName(name)
 		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
 			err = geneos.ErrRootNotSet
 			return
@@ -296,9 +297,9 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 
 	if len(opts.names) > 0 {
 		instanceNames = slices.DeleteFunc(instanceNames, func(n string) bool {
-			ih, _, in := Decompose(n, h)
+			ih, _, in := ParseName(n, h)
 			for _, v := range opts.names {
-				h, _, name := Decompose(v, h)
+				h, _, name := ParseName(v, h)
 				if name == in && (h == geneos.ALL || h == ih) {
 					return false
 				}
@@ -308,7 +309,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 	}
 
 	for _, name := range instanceNames {
-		h, ct, name := Decompose(name, h)
+		h, ct, name := ParseName(name, h)
 		instance, err := GetWithHost(h, ct, name)
 		if err != nil {
 			continue
@@ -423,10 +424,10 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 			continue
 		}
 
-		h, _, p := Decompose(pattern, h) // override 'h' inside loop
+		h, _, p := ParseName(pattern, h) // override 'h' inside loop
 
 		for _, name := range InstanceNames(h, ct) {
-			_, _, n := Decompose(name, h)
+			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
 				if h == geneos.ALL {
 					names = append(names, n)
@@ -456,10 +457,10 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 	return
 }
 
-// Decompose returns the parts of an instance name in the format
+// ParseName returns the parts of an instance name in the format
 // [TYPE:]NAME[@HOST]. ct defaults to nil and host to localhost unless
 // an optional default host is passed as a var arg.
-func Decompose(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct *geneos.Component, instance string) {
+func ParseName(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct *geneos.Component, instance string) {
 	var t, h string
 	var found bool
 

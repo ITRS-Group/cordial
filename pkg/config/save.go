@@ -33,7 +33,7 @@ import (
 // The filesystem target for the configuration object is updated to
 // match the remote destination, which can be set by Host() option with
 // a default of "localhost"
-func (cf *Config) Save(name string, options ...FileOptions) (err error) {
+func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	opts := evalSaveOptions(name, options...)
 	r := opts.remote
 	var ok bool
@@ -64,15 +64,15 @@ func (cf *Config) Save(name string, options ...FileOptions) (err error) {
 		return
 	}
 
-	cf.mutex.Lock()
-	defer cf.mutex.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	cf.Viper.SetFs(r.GetFs())
+	c.Viper.SetFs(r.GetFs())
 
 	// write to path with process ID and original extension appended and
 	// then try to atomically rename
 	tmp := fmt.Sprintf("%s.%d%s", p, os.Getpid(), filepath.Ext(p))
-	if err = cf.Viper.WriteConfigAs(tmp); err != nil {
+	if err = c.Viper.WriteConfigAs(tmp); err != nil {
 		return
 	}
 

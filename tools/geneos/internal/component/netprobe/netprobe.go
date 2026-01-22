@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "netprobe"
@@ -111,7 +112,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (netprobe geneos.Instance) {
-	h, ct, local := instance.Decompose(name)
+	h, ct, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
@@ -192,7 +193,7 @@ func (n *Netprobes) Config() *config.Config {
 	return n.Conf
 }
 
-func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
+func (n *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(n.Host(), &Netprobe)
 	}
@@ -206,10 +207,10 @@ func (n *Netprobes) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(n, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
+
 	// default config XML etc.
 	return nil
 }
@@ -240,13 +241,21 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	if cf.IsSet("listenip") {
 		args = append(args, "-listenip", cf.GetString("listenip"))
 	}
-	secureArgs := instance.SetSecureArgs(n)
-	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
+	// secureArgs := instance.SetSecureArgs(n)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
+	if err != nil {
+		return
 	}
+	args = append(args, secureArgs...)
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
+
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	// always set HOSTNAME env for CA

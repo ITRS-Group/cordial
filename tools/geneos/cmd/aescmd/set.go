@@ -28,6 +28,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var setCmdKeyfile string
@@ -76,14 +77,14 @@ var setCmd = &cobra.Command{
 				fmt.Printf("imported keyfile to %s\n", p)
 			}
 
-			instance.Do(h, ct, names, aesSetSharedAESInstance, crc).Write(os.Stdout)
+			instance.Do(h, ct, names, aesSetSharedAESInstance, crc).Report(os.Stdout)
 
 			return nil
 		}
 
 		if setCmdCRC != "" && setCmdKeyfile == "" {
 			// locate a shared keyfile for each matching host/type and set.
-			instance.Do(h, ct, names, aesSetSharedAESInstance, setCmdCRC).Write(os.Stdout)
+			instance.Do(h, ct, names, aesSetSharedAESInstance, setCmdCRC).Report(os.Stdout)
 			return nil
 		}
 
@@ -93,7 +94,7 @@ var setCmd = &cobra.Command{
 				return err
 			}
 			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				instance.Do(h, ct, names, aesSetAESInstance, kv).Write(os.Stdout)
+				instance.Do(h, ct, names, aesSetAESInstance, kv).Report(os.Stdout)
 			}
 			return nil
 		}
@@ -104,8 +105,8 @@ var setCmd = &cobra.Command{
 	},
 }
 
-func aesSetAESInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -128,9 +129,9 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *instance.Respons
 
 		pkp := i.Config().GetString("prevkeyfile")
 		if pkp != "" {
-			resp.Line = fmt.Sprintf("keyfile %s written, existing keyfile renamed to %s and marked a previous keyfile\n", keyfile, pkp)
+			resp.Summary = fmt.Sprintf("keyfile %s written, existing keyfile renamed to %s and marked a previous keyfile\n", keyfile, pkp)
 		} else {
-			resp.Line = fmt.Sprintf("keyfile %s written", keyfile)
+			resp.Summary = fmt.Sprintf("keyfile %s written", keyfile)
 		}
 	} else {
 		keyfile, _, err := instance.WriteAESKeyFile(i, kv)
@@ -139,14 +140,14 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *instance.Respons
 			return
 		}
 		i.Config().Set("keyfile", keyfile)
-		resp.Line = fmt.Sprintf("keyfile %s written", keyfile)
+		resp.Summary = fmt.Sprintf("keyfile %s written", keyfile)
 	}
 	return
 
 }
 
-func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	crc, ok := params[0].(string)
 	if !ok {
@@ -167,19 +168,19 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *instance.R
 		p := cf.GetString("keyfile")
 		if p != "" {
 			if p == kp {
-				resp.Line = fmt.Sprintf("new and existing keyfile have same CRC. Not updating")
+				resp.Summary = fmt.Sprintf("new and existing keyfile have same CRC. Not updating")
 			} else {
 				cf.Set("keyfile", kp)
 				cf.Set("prevkeyfile", p)
-				resp.Line = fmt.Sprintf("keyfile %s set, existing keyfile moved to prevkeyfile", crc)
+				resp.Summary = fmt.Sprintf("keyfile %s set, existing keyfile moved to prevkeyfile", crc)
 			}
 		} else {
 			cf.Set("keyfile", kp)
-			resp.Line = fmt.Sprintf("keyfile %s set", crc)
+			resp.Summary = fmt.Sprintf("keyfile %s set", crc)
 		}
 	} else {
 		cf.Set("keyfile", kp)
-		resp.Line = fmt.Sprintf("keyfile %s set", crc)
+		resp.Summary = fmt.Sprintf("keyfile %s set", crc)
 	}
 
 	resp.Err = instance.SaveConfig(i)

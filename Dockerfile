@@ -7,7 +7,7 @@
 #
 # This is to allow downloading Geneos release archives during the build.
 
-ARG GOVERSION=1.25.5
+ARG GOVERSION=1.25.6
 
 # Note: To build an executable for a modern Mac use something like:
 #
@@ -144,7 +144,7 @@ COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
 
-WORKDIR /app/cordial/doc-output
+WORKDIR /docs
 COPY tools/geneos/README.md geneos.md
 COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
@@ -203,7 +203,7 @@ COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
 COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
 
 # docs
-COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
+# COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
 
 # servicenow
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/bin/
@@ -349,7 +349,7 @@ RUN --mount=type=secret,id=credentials.json,mode=0444,uid=1000,required,target=/
     --mount=type=secret,id=keyfile.aes,mode=0444,uid=1000,required,target=/home/geneos/.config/geneos/keyfile.aes \
     set -eux; \
     mkdir gdna; \
-    geneos deploy gateway "Demo Gateway" --geneos /home/geneos --nosave --port 8100 --tls options="-demo" --include 100:/etc/geneos/gdna/gdna.include.xml; \
+    geneos deploy gateway "Demo Gateway" --geneos /home/geneos --nosave --port 8100 options="-demo" --include 100:/etc/geneos/gdna/gdna.include.xml; \
     geneos deploy netprobe minimal:GDNA --nosave --port 8101; \
     geneos deploy webserver GDNA --nosave --port 8443 --import config/config.xml=/etc/geneos/gdna/web-config.xml;
 ENTRYPOINT [ "/etc/geneos/gdna/start-up.sh" ]

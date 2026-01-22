@@ -24,6 +24,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 
 	"github.com/spf13/cobra"
 )
@@ -61,10 +62,10 @@ geneos clean --full netprobe
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := ParseTypeNames(command)
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 			resp.Err = instance.Clean(i, cleanCmdFull)
 			return
-		}).Write(os.Stdout)
+		}).Report(os.Stdout)
 	},
 }

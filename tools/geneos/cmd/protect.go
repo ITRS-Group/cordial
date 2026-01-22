@@ -23,6 +23,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/spf13/cobra"
 )
 
@@ -51,8 +52,8 @@ var protectCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	Run: func(command *cobra.Command, _ []string) {
 		ct, args := ParseTypeNames(command)
-		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *instance.Response) {
-			resp = instance.NewResponse(i)
+		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
 			cf := i.Config()
 
 			if len(params) == 0 {
@@ -83,6 +84,6 @@ var protectCmd = &cobra.Command{
 			}
 
 			return
-		}, !protectCmdUnprotect).Write(os.Stdout)
+		}, !protectCmdUnprotect).Report(os.Stdout)
 	},
 }

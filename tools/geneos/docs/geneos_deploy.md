@@ -73,12 +73,16 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
   -n, --nosave                        Do not save a local copy of any downloads
-  -T, --tls                           Initialise TLS subsystem if required.
-                                      Use options below to import existing certificate bundles
-  -C, --signing-bundle PEM            Signing certificate bundle file, in PEM format.
+  -C, --signing-bundle PEM            signing certificate bundle file, in PEM format.
                                       Use a dash (`-`) to be prompted for PEM from console
-  -c, --instance-bundle PEM           Instance certificate bundle file, in PEM format.
+  -c, --certs-bundle file             Instance certificate bundle file in PEM or PFX/PKCS#12 format.
                                       Use a dash (`-`) to be prompted for PEM from console
+      --certs-password PLAINTEXT      Password for PFX/PKCS#12 file decryption.
+                                      You will be prompted if not supplied as an argument.
+                                      PFX/PKCS#12 files are identified by the .pfx or .p12
+                                      file extension and only supported for instance bundles
+      --insecure                      Do not initialise TLS subsystem.
+                                      Ignored if --instance-bundle is given.
       --keyfile PATH                  Keyfile PATH to use. Default is to create one
                                       for TYPEs that support them
       --keycrc CRC                    CRC of key file in the component's shared "keyfiles" 
@@ -87,11 +91,14 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Credentials used if not given.
   -P, --password PLAINTEXT            Password for downloads
                                       Prompted if required and not given
-  -b, --base string                   Select the base version for the instance (default "active_prod")
-  -V, --version VERSION               Use this VERSION
-                                      Doesn't work for EL8 archives. (default "latest")
+  -b, --base string                   Select the base version name for the instance.
+                                      Defaults to 'active_prod' which is the default
+                                      symlink to the installed release. (default "active_prod")
+  -V, --version VERSION               Use this VERSION of package
+                                      Doesn't work for EL8/9/10 archives. (default "latest")
   -L, --local                         Install from local archives only
-  -A, --archive string                URL or file path to use or a directory to search for local release archives
+  -A, --archive string                URL or file path to release archive
+                                      or a directory to search for local release archives
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
       --nexus                         Download from nexus.itrsgroup.com
@@ -103,19 +110,19 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       name of the import source or if given it must be
                                       relative to and below the instance directory
                                       (Repeat as required)
-  -e, --env NAME=VALUE                An environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
   -g, --gateway HOSTNAME:PORT         A gateway connection in the format HOSTNAME:PORT
                                       (Repeat as required, san and floating only)
-  -a, --attribute NAME=VALUE          An attribute in the format NAME=VALUE
+  -a, --attribute NAME=VALUE          Attribute in the format NAME=VALUE
                                       (Repeat as required, san only)
   -t, --type NAME                     A type NAME
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
-      --header NAME=VALUE             An HTTP header in the format NAME=VALUE
+      --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
 ```
 

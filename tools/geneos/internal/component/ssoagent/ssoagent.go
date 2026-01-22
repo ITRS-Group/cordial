@@ -23,6 +23,7 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -36,10 +37,12 @@ import (
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "webserver"
@@ -89,8 +92,6 @@ var SSOAgent = geneos.Component{
 		`port=1180`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`autostart=true`,
-		// customised cacerts - can be to a shared one if required - not set by default
-		// `truststore={{join "${config:home}" "conf" "cacerts"}}`,
 	},
 
 	Directories: []string{
@@ -112,7 +113,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ssoagent geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
@@ -200,7 +201,7 @@ func (w *SSOAgents) Config() *config.Config {
 	return w.Conf
 }
 
-func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
+func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(s.InstanceHost, &SSOAgent)
 	}
@@ -212,12 +213,6 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	// create certs, report success only
-	resp := instance.CreateCert(s, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
-	}
-
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
@@ -227,12 +222,17 @@ func (s *SSOAgents) Add(tmpl string, port uint16) (err error) {
 		return
 	}
 
-	_ = instance.ImportFiles(s, initialFiles...)
+	instance.ImportFiles(s, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
+
 	return
 }
 
 func (s *SSOAgents) Rebuild(initial bool) (err error) {
-	cf := s.Config()
 	ssoconf := config.New()
 	if err = ssoconf.MergeHOCONFile(path.Join(s.Home(), "conf/sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -241,34 +241,14 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		return err
 	}
 
-	if ssoconf.IsSet(config.Join("server", "trust_store", "location")) && cf.IsSet("certchain") {
-		trustStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
-		trustStorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
-		log.Debug().Msgf("%s: rebuilding truststore: %q", s.String(), trustStore)
-		certs := config.ReadCertificates(s.Host(), cf.GetString("certchain"))
-		k, err := geneos.ReadKeystore(s.Host(),
-			trustStore,
-			trustStorePassword,
-		)
-		if err != nil {
-			log.Debug().Err(err).Msg("")
-			k = geneos.KeyStore{
-				KeyStore: keystore.New(),
-			}
-		}
+	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
+	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
 
-		// if trust exists, check for existing cert
-		for _, cert := range certs {
-			alias := cert.Subject.CommonName
-			k.DeleteEntry(alias)
-			if err = k.AddKeystoreCert(alias, cert); err != nil {
-				return err
-			}
-		}
+	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
 
-		// TODO: temp file dance, after testing
-		log.Debug().Msgf("%s: writing new truststore to %q", s.String(), trustStore)
-		if err = k.WriteKeystore(s.Host(), trustStore, trustStorePassword); err != nil {
+	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
+	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(s.Host(), certs.KeystoreExtension) {
+		if err = certs.AddRootsToTrustStore(s.Host(), truststorePath, truststorePassword, roots...); err != nil {
 			return err
 		}
 	}
@@ -278,13 +258,13 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	if ssoconf.IsSet(config.Join("server", "key_store", "location")) {
 		var changed bool
 
-		keyStore := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
-		log.Debug().Msgf("%s: rebuilding keystore: %q", s.String(), keyStore)
-		ksPassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
-		ks, err := geneos.ReadKeystore(s.Host(), keyStore, ksPassword)
+		keystorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
+		keystorePassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
+
+		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
 		if err != nil {
 			// new, empty keystore
-			ks = geneos.KeyStore{
+			ks = &certs.KeyStore{
 				KeyStore: keystore.New(),
 			}
 			changed = true
@@ -295,42 +275,36 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			if err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
-			chain := []*x509.Certificate{cert}
-			if err = ks.AddKeystoreKey("ssokey", key, ksPassword, chain); err != nil {
+			if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
 				log.Fatal().Err(err).Msg("")
 			}
 			changed = true
 		}
 
-		// If instance has certificate and private key set, then add
-		// this too. This is for client connections to the sso-agent and
-		// will typically be a "real" certificate.
-		if cf.IsSet("certficate") && cf.IsSet("privatekey") {
-			cert, err := config.ParseCertificate(s.Host(), cf.GetString("certificate"))
-			if err != nil {
-				return err
-			}
-			key, err := config.ReadPrivateKey(s.Host(), cf.GetString("privatekey"))
-			if err != nil {
-				return err
-			}
-			chain := []*x509.Certificate{cert}
-			if cf.IsSet("certchain") {
-				chain = append(chain, config.ReadCertificates(s.Host(), cf.GetString("certchain"))...)
-			}
-			alias := geneos.ALL.Hostname()
-			ks.DeleteEntry(alias)
-			ks.AddKeystoreKey(alias, key, ksPassword, chain)
-			changed = true
+		if changed {
+			err = ks.WriteKeystore(s.Host(), keystorePath, keystorePassword)
 		}
 
-		if changed {
-			err = ks.WriteKeystore(s.Host(), keyStore, ksPassword)
+		alias := ssoconf.GetString(ssoconf.Join("server", "ssl_alias"), config.Default(geneos.ALL.Hostname()))
+
+		certChain, err := instance.ReadCertificates(s)
+		if err != nil {
+			return err
 		}
+		if len(certChain) == 0 {
+			return err
+		}
+		key, err := instance.ReadPrivateKey(s)
+		if err != nil {
+			return err
+		}
+		keystorePath = instance.Abs(s, keystorePath)
+		return certs.AddCertChainToKeyStore(s.Host(), keystorePath, keystorePassword, alias, key, certChain...)
 	}
 	return
 }
 
+// generate a keypair for ssoagent keystore if not present
 func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
@@ -349,18 +323,23 @@ func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
 		MaxPathLen:            -1,
 	}
 
-	privateKeyPEM, err := config.NewPrivateKey("rsa")
+	privateKey, _, err := certs.GenerateKey("rsa")
 	if err != nil {
 		return
 	}
 
-	return config.CreateCertificateAndKey(template, template, privateKeyPEM, nil)
+	return certs.CreateCertificate(template, template, privateKey)
 }
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 	cf := i.Config()
 	home = i.Home()
+
+	ssoconf := config.New()
+	if err = ssoconf.MergeHOCONFile(path.Join(home, "conf/sso-agent.conf")); err != nil {
+		return
+	}
 
 	base := instance.BaseVersion(i)
 	checks = append(checks, path.Join(base, "lib"))
@@ -376,14 +355,16 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	javaopts := strings.Fields(cf.GetString("java-options"))
 	args = append(args, javaopts...)
 
-	if truststorePath := cf.GetString("truststore"); truststorePath != "" {
+	truststorePath := ssoconf.GetString(config.Join("server", "trust_store", "location"))
+	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"))
+
+	if truststorePath != "" {
+		truststorePath = instance.Abs(i, truststorePath)
 		checks = append(checks, truststorePath)
-		if _, err := i.Host().Stat(truststorePath); err == nil {
-			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
-			// fetch password as string as it has to be exposed on the command line anyway
-			if truststorePassword := cf.GetString("truststore-password"); truststorePassword != "" {
-				args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
-			}
+		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
+		if truststorePassword != nil {
+			// the truststore password is optional but has to be in plain text on the command line
+			args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword.String())
 		}
 	}
 

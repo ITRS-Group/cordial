@@ -19,6 +19,7 @@ package licd
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -30,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 const Name = "licd"
@@ -101,7 +103,7 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (licd geneos.Instance) {
-	h, _, local := instance.Decompose(name)
+	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
 		return nil
@@ -177,7 +179,7 @@ func (l *Licds) Config() *config.Config {
 	return l.Conf
 }
 
-func (l *Licds) Add(tmpl string, port uint16) (err error) {
+func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		port = instance.NextFreePort(l.InstanceHost, &Licd)
 	}
@@ -191,9 +193,8 @@ func (l *Licds) Add(tmpl string, port uint16) (err error) {
 	}
 
 	// create certs, report success only
-	resp := instance.CreateCert(l, 0)
-	if resp.Err == nil {
-		fmt.Println(resp.Line)
+	if !noCerts {
+		instance.NewCertificate(l).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
@@ -213,13 +214,17 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 		"-log", logFile,
 	}
 
-	secureArgs := instance.SetSecureArgs(i)
+	// secureArgs := instance.SetSecureArgs(i)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
 	args = append(args, secureArgs...)
-	for _, arg := range secureArgs {
-		if !strings.HasPrefix(arg, "-") {
-			checks = append(checks, arg)
-		}
-	}
+	env = append(env, secureEnv...)
+	checks = append(checks, fileChecks...)
+
+	// for _, arg := range secureArgs {
+	// 	if !strings.HasPrefix(arg, "-") {
+	// 		checks = append(checks, arg)
+	// 	}
+	// }
 
 	if skipFileCheck {
 		return

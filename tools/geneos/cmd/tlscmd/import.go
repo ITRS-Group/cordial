@@ -18,206 +18,159 @@ limitations under the License.
 package tlscmd
 
 import (
-	"crypto/x509"
 	_ "embed"
 	"fmt"
 	"os"
 	"path"
+	"slices"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
-var importCmdCert, importCmdSigningBundle, importCmdChain, importCmdPrivateKey string
-var importCmdPassword *config.Plaintext
+var importCmdPrivateKey string
+var importCmdPassword = &config.Plaintext{}
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().StringVarP(&importCmdCert, "instance-bundle", "c", "", "Instance certificate bundle to import, PEM or PFX/PKCS#12 format")
-	importCmd.Flags().StringVarP(&importCmdSigningBundle, "signing-bundle", "C", "", "Signing certificate bundle to import, PEM format")
+	importCmd.Flags().VarP(importCmdPassword, "password", "p",
+		`Plaintext password for PFX/PKCS#12 file decryption.
+You will be prompted if not supplied as an argument.
+PFX/PKCS#12 files are identified by the .pfx or .p12
+file extension and only supported for instance bundles`,
+	)
 
-	importCmdPassword = &config.Plaintext{}
-	importCmd.Flags().VarP(importCmdPassword, "password", "p", "Password for private key decryption, if needed, for pfx files")
-
-	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format")
-	importCmd.Flags().MarkDeprecated("key", "include the private key in either the instance or signing bundles")
-	importCmd.Flags().StringVar(&importCmdChain, "chain", "", "Certificate chain `file` to import, PEM format")
-	importCmd.Flags().MarkDeprecated("chain", "include the trust chain in either the instance or signing bundles")
+	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format only")
 
 	importCmd.Flags().SortFlags = false
-
-	importCmd.MarkFlagsMutuallyExclusive("instance-bundle", "signing-bundle")
-	importCmd.MarkFlagsOneRequired("instance-bundle", "signing-bundle")
-
-	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "privkey":
-			name = "key"
-		case "signing":
-			name = "signing-bundle"
-		case "cert":
-			name = "instance-bundle"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed _docs/import.md
 var importCmdDescription string
 
 var importCmd = &cobra.Command{
-	Use:                   "import [flags] [TYPE] [NAME...]",
+	Use:                   "import [flags] [TYPE] [NAME...] [PATH]",
 	Short:                 "Import certificates",
 	Long:                  importCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-$ geneos tls import netprobe localhost -c /path/to/file.pem
-$ geneos tls import --signing-bundle /path/to/file.pem
+geneos tls import netprobe localhost /path/to/file.pem
+geneos tls import /path/to/file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
+		cmd.CmdGlobal:        "false",
+		cmd.CmdRequireHome:   "false",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := cmd.ParseTypeNames(command)
-		if len(names) == 0 {
-			return fmt.Errorf("%w: no instance names specified", geneos.ErrInvalidArgs)
+		var certBundle *certs.CertificateBundle
+
+		ct, names, params := cmd.ParseTypeNamesParams(command)
+
+		// move any "-" names to params
+		if slices.Contains(names, "-") {
+			params = append(params, "-")
+			names = slices.DeleteFunc(names, func(s string) bool { return s == "-" })
 		}
 
-		if importCmdSigningBundle != "" {
-			return geneos.TLSImportBundle(importCmdSigningBundle, importCmdPrivateKey, importCmdChain)
+		if len(params) > 1 {
+			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
 		}
 
-		if importCmdCert != "" {
-			if path.Ext(importCmdCert) == ".pfx" || path.Ext(importCmdCert) == ".p12" {
-				if importCmdPassword.String() == "" {
-					importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
-					if err != nil {
-						log.Fatal().Err(err).Msg("Failed to read password")
-						// return err
-					}
-				}
-				pfxData, err := os.ReadFile(importCmdCert)
+		file := "-"
+		if len(params) > 0 {
+			file = params[0]
+		}
+
+		if ct == nil && len(names) == 0 {
+			return geneos.TLSImportBundle(file, importCmdPrivateKey)
+		}
+
+		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
+			command.SetUsageTemplate(" ")
+			return cmd.GeneosUnsetError
+		}
+
+		if path.Ext(file) == ".pfx" || path.Ext(file) == ".p12" {
+			if importCmdPassword.String() == "" {
+				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to read PFX file")
-					// return err
+					return err
 				}
-				key, c, chain, err := pkcs12.DecodeChain(pfxData, importCmdPassword.String())
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to decode PFX file")
-					// return err
-				}
-				pk, err := x509.MarshalPKCS8PrivateKey(key)
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to marshal private key")
-					// return err
-				}
-				k := memguard.NewEnclave(pk)
-				instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
-				return nil
+			}
+			certBundle, err = certs.P12ToCertBundle(file, importCmdPassword)
+			if err != nil {
+				return err
 			}
 
-			certs, err := config.ReadInputPEMString(importCmdCert, "instance certificate(s)")
+		} else {
+			certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
-				// return err
+				return err
 			}
-			key, err := config.ReadInputPEMString(importCmdPrivateKey, "instance key")
+			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance key")
-				// return err
+				return err
 			}
-			c, k, chain, err := geneos.DecomposePEM(certs, key)
+			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to decompose PEM")
-				// return err
 			}
-
-			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, c, k, chain).Write(os.Stdout)
-			return nil
 		}
 
-		if importCmdChain == "" {
-			return
+		if !certBundle.Valid {
+			return fmt.Errorf("certificate bundle is not valid, check trust chain and key match")
+		}
+		if certBundle.Leaf == nil || certBundle.Key == nil {
+			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		b, err := os.ReadFile(importCmdChain)
-		if err != nil {
-			log.Error().Err(err).Msg("")
-			return err
-		}
-		_, _, chain, err := geneos.DecomposePEM(string(b))
-		if err != nil {
-			return err
-		}
-		if err = geneos.WriteChainLocal(chain); err != nil {
-			return err
-		}
-		fmt.Printf("%s certificate chain written using %s\n", cordial.ExecutableName(), importCmdChain)
-
-		return
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
+		return nil
 	},
 }
 
-// tlsWriteInstance expects 3 params, of *x509.Certificate,
-// *memguard.Enclave and a []*x509.Certificate or it will return an
-// error or panic.
-func tlsWriteInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+// tlsWriteInstance writes the certificate, key and chain to the instance.
+// It returns a Response indicating success or failure.
+func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
-	cf := i.Config()
-
-	if len(params) != 3 {
+	if len(params) != 1 {
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
 
-	cert, ok := params[0].(*x509.Certificate)
+	tlsParam, ok := params[0].(*certs.CertificateBundle)
 	if !ok {
-		resp.Err = fmt.Errorf("%w: params[0] not a certificate", geneos.ErrInvalidArgs)
-		return
-	}
-	key, ok := params[1].(*memguard.Enclave)
-	if !ok {
-		resp.Err = fmt.Errorf("%w: params[1] not a secure enclave", geneos.ErrInvalidArgs)
-		return
-	}
-	chain, ok := params[2].([]*x509.Certificate)
-	if !ok {
-		resp.Err = fmt.Errorf("%w: params[2] not a slice of certificates", geneos.ErrInvalidArgs)
+		resp.Err = fmt.Errorf("%w: params[0] not a certs.CertificateBundle", geneos.ErrInvalidArgs)
 		return
 	}
 
-	if resp.Err = instance.WriteCert(i, cert); resp.Err != nil {
+	if resp.Err = instance.WriteCertificateAndKey(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
 		return
 	}
-	resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate written", i))
+	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate, trust chain and key written", i))
 
-	if resp.Err = instance.WriteKey(i, key); resp.Err != nil {
+	if err := instance.SaveConfig(i); err != nil {
 		return
 	}
-	resp.Lines = append(resp.Lines, fmt.Sprintf("%s private key written", i))
 
-	if len(chain) > 0 {
-		chainfile := path.Join(i.Home(), "chain.pem")
-		if err := config.WriteCertChain(i.Host(), chainfile, chain...); err == nil {
-			resp.Lines = append(resp.Lines, fmt.Sprintf("%s certificate chain written", i))
-			if cf.GetString("certchain") == chainfile {
-				return
-			}
-			cf.SetString("certchain", chainfile, config.Replace("home"))
-		}
+	var updated bool
+	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)
+	if resp.Err != nil {
+		return
+	}
+	if updated {
+		resp.Details = append(resp.Details, fmt.Sprintf("%s ca-bundle updated", i))
 	}
 
 	resp.Err = instance.SaveConfig(i)

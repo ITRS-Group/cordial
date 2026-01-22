@@ -26,6 +26,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var importCmdCommon string
@@ -119,8 +120,8 @@ func ImportFiles(ct *geneos.Component, args []string, params []string) (err erro
 // 'geneos import netprobe example3 scripts/=myscript.sh'
 //
 // local directories are created
-func importInstance(i geneos.Instance, params ...any) (resp *instance.Response) {
-	resp = instance.NewResponse(i)
+func importInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs

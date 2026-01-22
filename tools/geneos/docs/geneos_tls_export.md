@@ -1,12 +1,10 @@
 # `geneos tls export`
 
-The `tls export` command gathers and outputs the local Geneos signing certificate and private key and the root CA certificate (but not the private key) as a single PEM file.
+# `geneos tls export`
 
-By default the PEM formatted set of certificates and key is to the console but you can write them to a file using the `--output FILE`/`-o FILE` option. The file is created with 0600 permissions.
+Exports either the local signer private key, certificate and root certificate suitable for importing into another cordial `geneos` installation or, if you specify either component TYPE or instance NAMEs then the private key, instance certificate and other certificates up to and including the trust root for matching instances is output instead.
 
-To not include the root CA certificate, which may be valid in some limited cases, use the `--no-root`/`-N` option.
-
-The resulting PEM data can be imported into another Geneos instance through one of the `geneos deploy --import-cert`, `geneos init --import-cert` or `geneos tls import --signer` commands.
+The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
 
 ```text
 geneos tls export [flags] [TYPE] [NAME...]
@@ -15,15 +13,14 @@ geneos tls export [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -o, --output string   Output destination, default to stdout
-  -N, --no-root         Do not include the root CA certificate
+  -D, --dest string   Output destination, default to stdout
 ```
 
 ## Examples
 
 ```bash
-# export 
-$ geneos tls export --output file.pem
+geneos tls export --out file.pem
+geneos tls export gateway mygateway
 
 ```
 

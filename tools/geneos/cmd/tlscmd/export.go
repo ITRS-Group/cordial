@@ -18,6 +18,8 @@ limitations under the License.
 package tlscmd
 
 import (
+	"bytes"
+	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
 	"fmt"
@@ -26,9 +28,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 var exportCmdOutput string
@@ -37,8 +42,10 @@ var exportCmdNoRoot bool
 func init() {
 	tlsCmd.AddCommand(exportCmd)
 
-	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output destination, default to stdout")
+	exportCmd.Flags().StringVarP(&exportCmdOutput, "dest", "D", "", "Output destination, default to stdout")
+
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
+	exportCmd.Flags().MarkDeprecated("no-root", "root CA should always be in the exported bundle")
 
 	exportCmd.Flags().SortFlags = false
 }
@@ -48,65 +55,150 @@ var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
 	Use:                   "export [flags] [TYPE] [NAME...]",
-	Short:                 "Export certificates",
+	Short:                 "Export signing certificate and private key",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
-# export 
-$ geneos tls export --output file.pem
+geneos tls export --out file.pem
+geneos tls export gateway mygateway
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
+		cmd.CmdGlobal:        "false",
+		cmd.CmdRequireHome:   "true",
+		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names := cmd.ParseTypeNames(command)
+
+		if len(names) > 0 || ct != nil {
+			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
+			return
+		}
+
 		confDir := config.AppConfigDir()
 		if confDir == "" {
 			return config.ErrNoUserConfigDir
 		}
-		// gather the rootCA cert, the geneos cert and key
-		root, rootFile, err := geneos.ReadRootCert(true)
+
+		// gather the root cert, the signing cert and key
+		root, _, err := geneos.ReadRootCertificateAndKey()
 		if err != nil {
-			err = fmt.Errorf("local root certificate (%s) not valid: %w", rootFile, err)
-			return
-		}
-		signer, signerFile, err := geneos.ReadSigningCert(true)
-		if err != nil {
-			err = fmt.Errorf("local signing root certificate (%s) not valid: %w", signerFile, err)
-			return
-		}
-		signingKey, err := config.ReadPrivateKey(geneos.LOCAL, path.Join(confDir, geneos.SigningCertBasename+".key"))
-		if err != nil {
+			err = fmt.Errorf("cannot read root certificate: %w", err)
 			return
 		}
 
-		var pembytes []byte
-
-		pembytes = pem.EncodeToMemory(&pem.Block{
+		pemRoot := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
-			Bytes: signer.Raw,
+			Bytes: root.Raw,
 		})
 
-		if !exportCmdNoRoot {
-			pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: root.Raw,
-			})...)
+		signingFile, err := geneos.SigningCertificatePath()
+		if err != nil {
+			return
 		}
+		signing, signingKey, err := geneos.ReadSigningCertificateAndKey()
+		if err != nil {
+			err = fmt.Errorf("signing certificate cannot be read: %w", signingFile, err)
+			return
+		}
+		if signingKey == nil {
+			err = fmt.Errorf("signing private key cannot be read: %w", signingFile)
+			return
+		}
+		pemSigning := pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: signing.Raw,
+		})
 
-		l, _ := signingKey.Open()
-		pembytes = append(pembytes, pem.EncodeToMemory(&pem.Block{
+		key, _ := signingKey.Open()
+		pemKey := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
-			Bytes: l.Bytes(),
-		})...)
-		l.Destroy()
+			Bytes: key.Bytes(),
+		})
+		defer key.Destroy()
+
+		output := []byte("# Geneos Root and Signing Certificates\n#\n")
+		output = append(output, certs.PrivateKeyComments(signingKey, "Signing Private Key")...)
+		output = append(output, pemKey...)
+		output = append(output, certs.CertificateComments(signing, "Signing Certificate")...)
+		output = append(output, pemSigning...)
+		output = append(output, certs.CertificateComments(root, "Root CA Certificate")...)
+		output = append(output, pemRoot...)
 
 		if exportCmdOutput != "" {
-			return os.WriteFile(exportCmdOutput, pembytes, 0600)
+			return os.WriteFile(exportCmdOutput, output, 0600)
 		}
 
-		fmt.Println(string(pembytes))
+		fmt.Println(string(output))
 		return
 	},
+}
+
+func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	resp = responses.NewResponse(i)
+
+	h := i.Host()
+
+	instanceCertChain, key, err := instance.ReadCertificatesWithKey(i)
+	if err != nil {
+		resp.Err = fmt.Errorf("cannot read certificates for %s %q: %w", i.Type(), i.Name(), err)
+		return
+	}
+
+	// build and test trust chain
+	rootPool, ok := certs.ReadCACertPool(h, geneos.PathToCABundlePEM(h))
+	if !ok {
+		// if there is no ca-bundle file on the host, try local root CA
+		confDir := config.AppConfigDir()
+		if confDir == "" {
+			resp.Err = config.ErrNoUserConfigDir
+			return
+		}
+		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+certs.PEMExtension))
+		if !ok {
+			resp.Err = fmt.Errorf("no CA certificates found to verify %s %q", i.Type(), i.Name())
+			return
+		}
+	}
+
+	intermediatePool := x509.NewCertPool()
+	for _, cert := range instanceCertChain[1:] {
+		intermediatePool.AddCert(cert)
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         rootPool,
+		Intermediates: intermediatePool,
+	}
+
+	validatedCertChain, err := instanceCertChain[0].Verify(opts)
+	if err != nil || len(validatedCertChain) == 0 {
+		resp.Err = fmt.Errorf("cannot verify certificate chain for %s %q: %w", i.Type(), i.Name(), err)
+		return
+	}
+
+	var b bytes.Buffer
+	output := fmt.Appendf(nil, "# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
+
+	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
+		return
+	}
+
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, validatedCertChain[0]...); err != nil {
+		return
+	}
+	output = append(output, b.Bytes()...)
+
+	if exportCmdOutput != "" {
+		err = os.WriteFile(exportCmdOutput, output, 0600)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		return
+	}
+
+	resp.Details = []string{"\n", string(output)}
+	return
 }

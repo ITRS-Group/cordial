@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
@@ -60,12 +61,12 @@ var migrateCmd = &cobra.Command{
 				log.Error().Err(err).Msg("migrating old executables failed")
 			}
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance).Write(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)
 		return
 	},
 }
 
-func migrateInstance(i geneos.Instance, _ ...any) (resp *instance.Response) {
+func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	if resp = instance.Migrate(i); resp.Err != nil {
 		resp.Err = fmt.Errorf("cannot migrate configuration: %w", resp.Err)
 	}

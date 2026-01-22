@@ -173,11 +173,3 @@ func initConfig(cmd *cobra.Command) {
 	log.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
 	log.Debug().Msg(deferredlog)
 }
-
-// func configReloaded(_ fsnotify.Event) {
-// 	// XXX protect this
-// 	cf = nil
-// 	initConfig(nil)
-// 	log.Info().Msg("config reloaded")
-// 	updateJobs()
-// }

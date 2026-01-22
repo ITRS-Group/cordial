@@ -99,7 +99,7 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 
 	so := evalStartOptions(options...)
 
-	binary := PathOf(i, "program")
+	binary := PathTo(i, "program")
 
 	args, env, home, err := i.Command(so.skipfilecheck)
 	if err != nil {

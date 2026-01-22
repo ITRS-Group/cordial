@@ -23,11 +23,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -36,8 +39,9 @@ var addCmdTemplate, addCmdBase, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
 var addCmdImportFiles instance.Filename
-var addCmdKeyfile string
-
+var addCmdKeyfile, addCmdInstanceBundle string
+var addCmdInsecure bool
+var addCmdBundlePassword = &config.Plaintext{}
 var addCmdExtras = instance.SetConfigValues{}
 
 func init() {
@@ -47,7 +51,11 @@ func init() {
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
 	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
-	addCmd.Flags().StringVarP(&addCmdBase, "base", "b", "active_prod", "Select the base version for the\ninstance")
+	addCmd.Flags().StringVarP(&addCmdBase, "version", "V", "active_prod", "Select the version for the instance. Defaults to 'active_prod'\nwhich is the default symlink to the installed release.")
+
+	addCmd.Flags().StringVarP(&addCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for data via stdin.")
+	addCmd.Flags().Var(addCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+	addCmd.PersistentFlags().BoolVarP(&addCmdInsecure, "insecure", "", false, "Do not create certificates for TLS support.\nIgnored if --instance-bundle is given.")
 
 	addCmd.Flags().StringVar(&addCmdKeyfile, "keyfile", "", "Keyfile `PATH`")
 	addCmd.Flags().StringVar(&addCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory (extension optional)")
@@ -103,7 +111,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	// check validity and reserved words here
 	name := names[0]
 
-	h, pkgct, local := instance.Decompose(name, geneos.GetHost(Hostname))
+	h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
 
 	if local == "" {
 		local = h.Hostname()
@@ -143,8 +151,67 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		return
 	}
 
+	if err = instance.SaveConfig(i); err != nil {
+		return
+	}
+
+	if addCmdInstanceBundle != "" {
+		var certBundle *certs.CertificateBundle
+		if path.Ext(addCmdInstanceBundle) == ".pfx" || path.Ext(addCmdInstanceBundle) == ".p12" {
+			if addCmdBundlePassword.String() == "" {
+				addCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+				if err != nil {
+					log.Fatal().Err(err).Msg("Failed to read password")
+					return err
+				}
+			}
+			certBundle, err = certs.P12ToCertBundle(addCmdInstanceBundle, addCmdBundlePassword)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to parse PFX file")
+				return err
+			}
+		} else {
+			certChain, err := config.ReadPEMBytes(addCmdInstanceBundle, "instance certificate(s)")
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+			}
+			certBundle, err = certs.ParsePEM(certChain, nil)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to decompose PEM")
+			}
+			if certBundle.Leaf == nil || certBundle.Key == nil {
+				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+			}
+		}
+
+		if !certBundle.Valid {
+			return fmt.Errorf("invalid certificate bundle")
+		}
+
+		if certBundle.Leaf == nil || certBundle.Key == nil {
+			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+		}
+
+		if err = instance.WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); err != nil {
+			return err
+		}
+		fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
+
+		if err = instance.SaveConfig(i); err != nil {
+			return
+		}
+
+		var updated bool
+		if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
+			return err
+		}
+		if updated {
+			fmt.Printf("%s ca-bundle updated\n", i)
+		}
+	}
+
 	// call components specific Add()
-	if err = i.Add(addCmdTemplate, addCmdPort); err != nil {
+	if err = i.Add(addCmdTemplate, addCmdPort, addCmdInsecure || addCmdInstanceBundle != ""); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
@@ -179,8 +246,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		}
 	}
 
+	log.Debug().Msgf("set extra instance values: %+v", addCmdExtras)
 	instance.SetInstanceValues(i, addCmdExtras, "")
+
+	log.Debug().Msgf("set instance config items: %+v", items)
 	cf.SetKeyValues(items...)
+	log.Debug().Msgf("instance config after setting items: %+v", cf.AllSettings())
 	if err = instance.SaveConfig(i); err != nil {
 		return
 	}

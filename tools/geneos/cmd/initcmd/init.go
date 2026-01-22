@@ -28,9 +28,9 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -39,10 +39,12 @@ import (
 
 const archiveOptionsText = "Directory of releases for installation"
 
-var initCmdLogs, initCmdTLS, initCmdForce, initCmdNexus, initCmdSnapshot bool
+var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
 var initCmdDLPassword *config.Plaintext
+
+var initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
@@ -63,17 +65,22 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
-	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle including private key, PEM format")
-	initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
+	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
+
+	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle in PEM format.\nThis bundle must contain an unencrypted private key\nand matching signing certificate and other certificates up to the root CA.")
+
+	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")
+
+	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
 	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
 
-	initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
+	// initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
 	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads")
+	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads (password prompted)")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 
@@ -82,20 +89,6 @@ func init() {
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
-
-	initCmd.PersistentFlags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
-		switch name {
-		case "makecerts":
-			name = "tls"
-		case "importcert":
-			name = "import-cert"
-		case "importkey":
-			name = "import-key"
-		case "gatewaytemplate":
-			name = "gateway-template"
-		}
-		return pflag.NormalizedName(name)
-	})
 }
 
 //go:embed README.md
@@ -253,13 +246,13 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 func initCommon() (err error) {
 	initTemplates(geneos.LOCAL)
 
-	if initCmdTLS {
-		if err = geneos.TLSInit(true, "ecdh"); err != nil {
-			return
-		}
-	} else if initCmdSigningBundle != "" {
-		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey, "")
+	if initCmdInsecure {
+		return
 	}
 
-	return
+	if initCmdSigningBundle != "" {
+		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey)
+	}
+
+	return geneos.TLSInit(geneos.LOCALHOST, true, certs.DefaultKeyType)
 }

@@ -22,18 +22,19 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var initCmdOverwrite bool
-var initCmdKeyType string
+var initCmdKeyType certs.KeyType
 
 func init() {
 	tlsCmd.AddCommand(initCmd)
 
-	initCmd.Flags().StringVarP(&initCmdKeyType, "keytype", "K", "ecdh", "Key type for root, one of ecdh, ecdsa, ec15529 or rsa")
-	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing certificates")
+	initCmd.Flags().VarP(&initCmdKeyType, "keytype", "K", "Key type for root. One of ecdh, ecdsa, ed25519 or rsa")
+	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing root and signing certificates")
 
 	initCmd.Flags().SortFlags = false
 }
@@ -52,6 +53,6 @@ var initCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return geneos.TLSInit(initCmdOverwrite, initCmdKeyType)
+		return geneos.TLSInit(geneos.LOCALHOST, initCmdOverwrite, initCmdKeyType)
 	},
 }

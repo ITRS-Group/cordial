@@ -51,7 +51,7 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 	return t.ReadLine()
 }
 
-// ReadInputPEMString reads and returns a PEM formatted input (without
+// ReadPEMString reads and returns a PEM formatted input (without
 // validation) from one of these sources:
 //
 //   - If `from` is empty then an empty string is returned
@@ -68,7 +68,33 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 //     returned
 //
 // Any error when reading the input is returned.
-func ReadInputPEMString(from, prompt string) (data string, err error) {
+func ReadPEMString(from, prompt string) (data string, err error) {
+	b, err := ReadPEMBytes(from, prompt)
+	if err != nil {
+		return data, err
+	}
+	data = string(b)
+	return
+}
+
+// ReadPEMBytes reads and returns a PEM formatted input (without
+// validation) from one of these sources:
+//
+//   - If `from` is empty then an empty string is returned
+//   - If `from` is a dash (`-`) then data is read from STDIN the after
+//     the user is prompted with `Paste PEM formatted [PROMPT], end
+//     with newline + CTRL-D:` where `[PROMPT]` is taken from
+//     the prompt argument.
+//   - If `from` has the prefix `pem:` then the data is taken from the
+//     remainder of the argument.
+//   - If `from` has the prefix `http://` or `https://` then the data
+//     is fetched from the URL pointed to by `from` using an HTTP GET
+//     request.
+//   - Otherwise the file at the path pointed to by `from` is read and
+//     returned
+//
+// Any error when reading the input is returned.
+func ReadPEMBytes(from, prompt string) (data []byte, err error) {
 	if from == "" {
 		return
 	}
@@ -76,7 +102,7 @@ func ReadInputPEMString(from, prompt string) (data string, err error) {
 	case from == "":
 		break
 	case strings.HasPrefix(from, "pem:"):
-		data = strings.TrimPrefix(from, "pem:")
+		data = []byte(strings.TrimPrefix(from, "pem:"))
 		return
 	case strings.HasPrefix(from, "http://"), strings.HasPrefix(from, "https://"):
 		resp, err2 := http.Get(from)
@@ -89,26 +115,28 @@ func ReadInputPEMString(from, prompt string) (data string, err error) {
 			err = fmt.Errorf("error fetching %s: %s", from, resp.Status)
 			return
 		}
-		b, err2 := io.ReadAll(resp.Body)
-		if err2 != nil {
-			err = err2
+		data, err = io.ReadAll(resp.Body)
+		if err != nil {
 			return
 		}
-		data = string(b)
 	case from == "-":
-		fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
-		b, err := io.ReadAll(os.Stdin)
+		isterm := term.IsTerminal(int(os.Stdin.Fd()))
+		if isterm {
+			// only prompt if STDIN is a terminal session
+			fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
+		}
+		data, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return data, err
 		}
-		data = string(b)
-		fmt.Println()
+		if isterm {
+			fmt.Println()
+		}
 	default:
-		b, err := os.ReadFile(from)
+		data, err = os.ReadFile(from)
 		if err != nil {
 			return data, err
 		}
-		data = string(b)
 	}
 
 	return
