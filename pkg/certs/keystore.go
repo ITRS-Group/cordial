@@ -265,6 +265,7 @@ func readJCEKS(h host.Host, path string, password *config.Plaintext) (k *KeyStor
 	if err != nil {
 		return
 	}
+	defer r.Close()
 
 	if password.IsNil() {
 		pw = []byte("changeit")
