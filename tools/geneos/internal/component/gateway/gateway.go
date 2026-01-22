@@ -287,7 +287,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
 	// always rebuild an instance template
-	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate)
+	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate, 0444)
 	if err != nil {
 		return
 	}
@@ -364,7 +364,9 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	return instance.ExecuteTemplate(g,
 		setup,
 		instance.FileOf(g, "config::template"),
-		template)
+		template,
+		0664,
+	)
 }
 
 func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
