@@ -19,11 +19,8 @@ package client
 
 import (
 	"context"
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -104,21 +101,18 @@ var queryCmd = &cobra.Command{
 
 		columns := result.Fields
 
-		csv := csv.NewWriter(os.Stdout)
-		csv.Write(columns)
+		fmt.Println(strings.Join(columns, ","))
 
 		for _, line := range result.Results {
 			var fields []string
 			for _, col := range columns {
 				f := line[col]
-				if !strconv.CanBackquote(f) {
-					f = strings.Trim(strconv.QuoteToASCII(f), `"`)
-				}
+				// escape commas for Toolkit input
+				f = strings.ReplaceAll(f, ",", "\\,")
 				fields = append(fields, f)
 			}
-			csv.Write(fields)
+			fmt.Println(strings.Join(fields, ","))
 		}
-		csv.Flush()
 
 		// write headlines for toolkit consumers
 		fmt.Printf("<!>table,%s\n", queryCmdTable)
