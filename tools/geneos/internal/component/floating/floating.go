@@ -289,7 +289,9 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	return instance.ExecuteTemplate(s,
 		setup,
 		instance.FileOf(s, "config::template"),
-		template)
+		template,
+		0664,
+	)
 }
 
 func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string, err error) {

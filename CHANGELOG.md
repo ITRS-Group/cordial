@@ -30,6 +30,13 @@
 
   * Private keys are always replaced with new ones when running `geneos tls renew` to improve security.
 
+## Version v.26.0 Fixes
+
+* `tools/geneos`
+
+  * The Gateway `instance.setup.xml` file is now created with read-only permissions to hint to users that it should not be edited directly.
+  * Other minor fixes to the way templates are executed as well; Now templates are first executed to a temporary file with correct permissions before being moved to the final location. This avoids issues where templates fail to execute due to missing files when the template creates multiple files that depend on each other.
+
 ---
 
 ## Version v1.24.3

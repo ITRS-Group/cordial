@@ -19,6 +19,7 @@ package instance
 
 import (
 	"io"
+	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -63,35 +64,53 @@ var fnmap = template.FuncMap{
 	"valueOf": valueOf,
 }
 
-// ExecuteTemplate loads templates from TYPE/templates/[tmpl]* and parse them,
-// using the instance data write it out to a single file. If tmpl is
-// empty, load all files
-func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate []byte) (err error) {
+// ExecuteTemplate loads the template name from the component
+// `templates` directory on the host for the instance i, parses it and
+// executes it, writing the results to outputPath with the given
+// permissions. If a template file is not found on the host, the
+// defaultTemplate is used instead.
+//
+// The output file is first written to a temporary file with a ".new"
+// suffix, which is then renamed to the final outputPath with the
+// permissions perms.
+//
+// If an error occurs, any temporary file is removed and the error
+// returned. The existing outputPath file is not modified until the
+// final rename step.
+func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultTemplate []byte, perms os.FileMode) (err error) {
 	var out io.WriteCloser
 	// var t *template.Template
 
 	cf := i.Config()
+	h := i.Host()
+
+	outputPathTmp := outputPath + ".new"
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
-	if t, err = t.ParseGlob(i.Host().PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
+	if t, err = t.ParseGlob(h.PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Warn().Msgf("No templates found in %s, using internal defaults", i.Host().PathTo(i.Type(), "templates"))
+		log.Warn().Msgf("No templates found in %s, using internal defaults", h.PathTo(i.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	if out, err = i.Host().Create(p, 0660); err != nil {
-		log.Warn().Msgf("Cannot create configuration file for %s %s", i, p)
+	log.Debug().Msgf("creating configuration file %q with permissions %o", outputPathTmp, perms)
+	if out, err = h.Create(outputPathTmp, perms); err != nil {
+		log.Warn().Msgf("Cannot create configuration file for %s %s", i, outputPathTmp)
 		return err
 	}
 	defer out.Close()
+
 	m := cf.ExpandAllSettings(config.NoDecode(true))
+
 	// viper insists this is a float64, manually override
 	m["port"] = uint16(cf.GetUint("port"))
+
 	// set high level defaults
-	m["root"] = i.Host().GetString("geneos")
+	m["root"] = h.GetString("geneos")
 	m["name"] = i.Name()
 	m["home"] = i.Home()
+
 	// remove aliases and expand the rest
 	for _, k := range cf.AllKeys() {
 		if _, ok := i.Type().LegacyParameters[k]; ok {
@@ -113,7 +132,10 @@ func ExecuteTemplate(i geneos.Instance, p string, name string, defaultTemplate [
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
+		h.Remove(outputPathTmp)
+		return
 	}
 
-	return
+	log.Debug().Msgf("renaming %q to %q", outputPathTmp, outputPath)
+	return h.Rename(outputPathTmp, outputPath)
 }

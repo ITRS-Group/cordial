@@ -113,14 +113,7 @@ func (h *Local) Lchown(name string, uid, gid int) (err error) {
 }
 
 func (h *Local) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
-	var cf *os.File
-	cf, err = os.Create(p)
-	if err != nil {
-		return
-	}
-	out = cf
-	err = cf.Chmod(perms)
-	return
+	return os.OpenFile(p, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perms)
 }
 
 func (h *Local) Remove(name string) (err error) {
