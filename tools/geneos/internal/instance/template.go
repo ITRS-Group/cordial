@@ -99,7 +99,6 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		log.Warn().Msgf("Cannot create configuration file for %s %s", i, outputPathTmp)
 		return err
 	}
-	defer out.Close()
 
 	m := cf.ExpandAllSettings(config.NoDecode(true))
 
@@ -132,10 +131,17 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
+		// close the file first so Windows systems do not break on Remove
+		out.Close()
 		h.Remove(outputPathTmp)
 		return
 	}
 
 	log.Debug().Msgf("renaming %q to %q", outputPathTmp, outputPath)
-	return h.Rename(outputPathTmp, outputPath)
+	// close the file first before renaming, stops Windows systems breaking
+	out.Close()
+	if err = h.Rename(outputPathTmp, outputPath); err != nil {
+		h.Remove(outputPathTmp)
+	}
+	return
 }
