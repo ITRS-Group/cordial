@@ -33,9 +33,9 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -51,7 +51,7 @@ type listCertType struct {
 	Remaining  time.Duration `json:"remaining,omitempty"`
 	Expires    time.Time     `json:"expires,omitempty"`
 	CommonName string        `json:"common_name,omitempty"`
-	Valid      bool          `json:"valid,omitempty"`
+	Valid      string        `json:"valid,omitempty"`
 }
 
 type listCertLongType struct {
@@ -61,7 +61,7 @@ type listCertLongType struct {
 	Remaining         time.Duration `json:"remaining,omitempty"`
 	Expires           time.Time     `json:"expires,omitempty"`
 	CommonName        string        `json:"common_name,omitempty"`
-	Valid             bool          `json:"valid,omitempty"`
+	Valid             string        `json:"valid,omitempty"`
 	Certificate       string        `json:"certificate,omitempty"`
 	PrivateKey        string        `json:"privatekey,omitempty"`
 	Chainfile         string        `json:"chainfile,omitempty"`
@@ -78,7 +78,7 @@ var listJSONEncoder *json.Encoder
 func init() {
 	tlsCmd.AddCommand(listCmd)
 
-	listCmd.Flags().BoolVarP(&listCmdAll, "all", "a", false, "Show all certs, including global and signer certs")
+	listCmd.Flags().BoolVarP(&listCmdAll, "all", "a", false, "Show all certs, including root and signing certs")
 	listCmd.Flags().BoolVarP(&listCmdLong, "long", "l", false, "Long output")
 
 	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
@@ -92,9 +92,9 @@ func init() {
 //go:embed _docs/list.md
 var listCmdDescription string
 
-var rootCert, signerCert *x509.Certificate
-var rootKey, signerKey *memguard.Enclave
-var rootCertFile, signerCertFile string
+var rootCert, signingCert *x509.Certificate
+var rootKey, signingKey *memguard.Enclave
+var rootCertFile, signingCertFile string
 
 var listCmd = &cobra.Command{
 	Use:          "list [flags] [TYPE] [NAME...]",
@@ -111,30 +111,25 @@ var listCmd = &cobra.Command{
 		ct, names, params := cmd.ParseTypeNamesParams(command)
 		rootCertFile, err = geneos.RootCertificatePath()
 		if err != nil {
-			log.Debug().Err(err).Msg("failed to get root cert path")
 			return
 		}
 		rootCert, rootKey, err = geneos.ReadRootCertificateAndKey()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Debug().Err(err).Msg("failed to read root certificate")
 			return
 		}
-		if rootKey == nil {
-			return fmt.Errorf("no root private key found")
-		}
+		// if rootKey == nil {
+		// 	return fmt.Errorf("no root private key found")
+		// }
 
-		signerCertFile, err = geneos.SignerCertificatePath()
+		signingCertFile, err = geneos.SigningCertificatePath()
 		if err != nil {
-			log.Debug().Err(err).Msg("failed to get signer cert path")
 			return
 		}
-		signerCert, signerKey, err = geneos.ReadSignerCertificateAndKey()
+		signingCert, signingKey, err = geneos.ReadSigningCertificateAndKey()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Debug().Err(err).Msg("failed to read signer cert")
 			return
 		}
-		if signerKey == nil {
-			log.Debug().Err(err).Msg("failed to read signer key")
+		if signingKey == nil {
 			return
 		}
 
@@ -155,9 +150,9 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results["global "+geneos.RootCABasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.Response{
 					Value: listCertType{
-						"global",
+						cordial.ExecutableName(),
 						geneos.RootCABasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
@@ -166,16 +161,16 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 						verifyCertWithKey(rootKey, rootCert),
 					}}
 			}
-			if signerCert != nil {
-				results["global "+geneos.SignerCertBasename] = &responses.Response{
+			if signingCert != nil {
+				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.Response{
 					Value: listCertType{
-						"global",
-						geneos.SignerCertBasename,
+						cordial.ExecutableName(),
+						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
-						signerCert.NotAfter,
-						signerCert.Subject.CommonName,
-						verifyCertWithKey(signerKey, signerCert),
+						signingCert.NotAfter,
+						signingCert.Subject.CommonName,
+						verifyCertWithKey(signingKey, signingCert),
 					}}
 			}
 		}
@@ -197,7 +192,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			if rootCert != nil {
 				listCSVWriter.Write([]string{
 					geneos.RootCABasename + "@" + geneos.LOCALHOST,
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
@@ -206,16 +201,16 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					fmt.Sprint(verifyCertWithKey(rootKey, rootCert)),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				listCSVWriter.Write([]string{
-					geneos.SignerCertBasename + "@" + geneos.LOCALHOST,
-					"global",
-					geneos.SignerCertBasename,
+					geneos.SigningCertBasename + "@" + geneos.LOCALHOST,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					fmt.Sprintf("%.f", time.Until(signerCert.NotAfter).Seconds()),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					fmt.Sprint(verifyCertWithKey(signerKey, signerCert)),
+					fmt.Sprintf("%.f", time.Until(signingCert.NotAfter).Seconds()),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					fmt.Sprint(verifyCertWithKey(signingKey, signingCert)),
 				})
 			}
 		}
@@ -253,24 +248,24 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		if listCmdAll {
 			if rootCert != nil {
 				prequel = append(prequel, []string{
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(rootKey, rootCert)),
+					verifyCertWithKey(rootKey, rootCert),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				prequel = append(prequel, []string{
-					"global",
-					geneos.SignerCertBasename,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					strconv.FormatFloat(time.Until(signerCert.NotAfter).Seconds(), 'f', 0, 64),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(signerKey, signerCert)),
+					strconv.FormatFloat(time.Until(signingCert.NotAfter).Seconds(), 'f', 0, 64),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					verifyCertWithKey(signingKey, signingCert),
 				})
 			}
 		}
@@ -296,24 +291,24 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		if listCmdAll {
 			if rootCert != nil {
 				prequel = append(prequel, []string{
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(rootKey, rootCert)),
+					verifyCertWithKey(rootKey, rootCert),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				prequel = append(prequel, []string{
-					"global",
-					geneos.SignerCertBasename,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					strconv.FormatFloat(time.Until(signerCert.NotAfter).Seconds(), 'f', 0, 64),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(signerKey, signerCert)),
+					strconv.FormatFloat(time.Until(signingCert.NotAfter).Seconds(), 'f', 0, 64),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					verifyCertWithKey(signingKey, signingCert),
 				})
 			}
 		}
@@ -346,9 +341,9 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results["global "+geneos.RootCABasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.Response{
 					Value: listCertLongType{
-						"global",
+						cordial.ExecutableName(),
 						geneos.RootCABasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
@@ -365,20 +360,20 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 						fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 					}}
 			}
-			if signerCert != nil {
-				results["global "+geneos.SignerCertBasename] = &responses.Response{
+			if signingCert != nil {
+				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.Response{
 					Value: listCertLongType{
-						"global",
-						geneos.SignerCertBasename,
+						cordial.ExecutableName(),
+						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
 						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
-						signerCert.NotAfter,
-						signerCert.Subject.CommonName,
-						verifyCertWithKey(signerKey, signerCert),
-						signerCertFile,
+						signingCert.NotAfter,
+						signingCert.Subject.CommonName,
+						verifyCertWithKey(signingKey, signingCert),
+						signingCertFile,
 						"",
 						rootCertFile,
-						signerCert.Issuer.CommonName,
+						signingCert.Issuer.CommonName,
 						nil,
 						nil,
 						fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
@@ -412,7 +407,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			if rootCert != nil {
 				listCSVWriter.Write([]string{
 					geneos.RootCABasename + "@" + geneos.LOCALHOST,
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
@@ -429,24 +424,24 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				listCSVWriter.Write([]string{
-					geneos.SignerCertBasename + "@" + geneos.LOCALHOST,
-					"global",
-					geneos.SignerCertBasename,
+					geneos.SigningCertBasename + "@" + geneos.LOCALHOST,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					fmt.Sprintf("%.f", time.Until(signerCert.NotAfter).Seconds()),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					fmt.Sprint(verifyCertWithKey(signerKey, signerCert)),
-					signerCertFile,
+					fmt.Sprintf("%.f", time.Until(signingCert.NotAfter).Seconds()),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					fmt.Sprint(verifyCertWithKey(signingKey, signingCert)),
+					signingCertFile,
 					"",
 					rootCertFile,
-					signerCert.Issuer.CommonName,
+					signingCert.Issuer.CommonName,
 					"",
 					"",
-					fmt.Sprintf("%X", sha1.Sum(signerCert.Raw)),
-					fmt.Sprintf("%X", sha256.Sum256(signerCert.Raw)),
+					fmt.Sprintf("%X", sha1.Sum(signingCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(signingCert.Raw)),
 				})
 			}
 		}
@@ -501,7 +496,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		if listCmdAll {
 			if rootCert != nil {
 				listCSVWriter.Write([]string{
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					fmt.Sprintf("%.f", time.Until(rootCert.NotAfter).Seconds()),
@@ -518,23 +513,23 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				listCSVWriter.Write([]string{
-					"global",
-					geneos.SignerCertBasename,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					fmt.Sprintf("%.f", time.Until(signerCert.NotAfter).Seconds()),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					fmt.Sprint(verifyCertWithKey(signerKey, signerCert)),
-					signerCertFile,
+					fmt.Sprintf("%.f", time.Until(signingCert.NotAfter).Seconds()),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					fmt.Sprint(verifyCertWithKey(signingKey, signingCert)),
+					signingCertFile,
 					"",
 					rootCertFile,
-					signerCert.Issuer.CommonName,
+					signingCert.Issuer.CommonName,
 					"[]",
 					"[]",
-					fmt.Sprintf("%X", sha1.Sum(signerCert.Raw)),
-					fmt.Sprintf("%X", sha256.Sum256(signerCert.Raw)),
+					fmt.Sprintf("%X", sha1.Sum(signingCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(signingCert.Raw)),
 				})
 			}
 		}
@@ -545,13 +540,13 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		if listCmdAll {
 			if rootCert != nil {
 				prequel = append(prequel, []string{
-					"global",
+					cordial.ExecutableName(),
 					geneos.RootCABasename,
 					geneos.LOCALHOST,
 					strconv.FormatFloat(time.Until(rootCert.NotAfter).Seconds(), 'f', 0, 64),
 					rootCert.NotAfter.Format(time.RFC3339),
 					rootCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(rootKey, rootCert)),
+					verifyCertWithKey(rootKey, rootCert),
 					rootCertFile,
 					rootCertFile,
 					"",
@@ -562,23 +557,23 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
 				})
 			}
-			if signerCert != nil {
+			if signingCert != nil {
 				prequel = append(prequel, []string{
-					"global",
-					geneos.SignerCertBasename,
+					cordial.ExecutableName(),
+					geneos.SigningCertBasename,
 					geneos.LOCALHOST,
-					strconv.FormatFloat(time.Until(signerCert.NotAfter).Seconds(), 'f', 0, 64),
-					signerCert.NotAfter.Format(time.RFC3339),
-					signerCert.Subject.CommonName,
-					strconv.FormatBool(verifyCertWithKey(signerKey, signerCert)),
-					signerCertFile,
+					strconv.FormatFloat(time.Until(signingCert.NotAfter).Seconds(), 'f', 0, 64),
+					signingCert.NotAfter.Format(time.RFC3339),
+					signingCert.Subject.CommonName,
+					verifyCertWithKey(signingKey, signingCert),
+					signingCertFile,
 					rootCertFile,
 					"",
-					signerCert.Issuer.CommonName,
+					signingCert.Issuer.CommonName,
 					"",
 					"",
-					fmt.Sprintf("%X", sha1.Sum(signerCert.Raw)),
-					fmt.Sprintf("%X", sha256.Sum256(signerCert.Raw)),
+					fmt.Sprintf("%X", sha1.Sum(signingCert.Raw)),
+					fmt.Sprintf("%X", sha256.Sum256(signingCert.Raw)),
 				})
 			}
 		}
@@ -617,7 +612,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	}
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
-	valid := certs.IsValidLeafCert(cert) && verifyCertWithKey(key, certChain...)
+	valid := verifyCertWithKey(key, certChain...)
 	chainfile := i.Config().GetString("chainfile")
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
@@ -659,7 +654,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 	if err != nil {
 		return
 	}
-	valid := certs.IsValidLeafCert(cert) && verifyCertWithKey(key, certChain...)
+	valid := verifyCertWithKey(key, certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -697,7 +692,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 	}
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
-	valid := certs.IsValidLeafCert(cert) && verifyCertWithKey(key, certChain...)
+	valid := verifyCertWithKey(key, certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -755,7 +750,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 	}
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
-	valid := certs.IsValidLeafCert(cert) && verifyCertWithKey(key, certChain...)
+	valid := verifyCertWithKey(key, certChain...)
 	chainfile := i.Config().GetString("chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -800,16 +795,23 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 
 // verifyCertWithKey checks the certChain after appending the local CA
 // bundle and checks if the private key provided matches the leaf
-// certificate
-func verifyCertWithKey(key *memguard.Enclave, certChain ...*x509.Certificate) bool {
-	if key == nil || len(certChain) == 0 {
-		return false
+// certificate and returns a string that represents the result. "OK" if
+// all is well.
+func verifyCertWithKey(key *memguard.Enclave, certChain ...*x509.Certificate) string {
+	if key == nil || key.Size() == 0 {
+		return "NoKey"
+	}
+	if len(certChain) == 0 {
+		return "NoCert"
 	}
 	roots, _ := certs.ReadCertificates(geneos.LOCAL, geneos.PathToCABundlePEM(geneos.LOCAL))
-	log.Debug().Msgf("loaded %d root CA certificates from %s", len(roots), geneos.PathToCABundlePEM(geneos.LOCAL))
 	certChain = append(certChain, roots...)
 	if !certs.Verify(certChain...) {
-		return false
+		return "NotVerified"
 	}
-	return certs.CheckKeyMatch(key, certChain[0])
+	match := certs.CheckKeyMatch(key, certChain[0])
+	if !match {
+		return "KeyMismatch"
+	}
+	return "OK"
 }

@@ -20,8 +20,11 @@ package tlscmd
 import (
 	"crypto/x509"
 	_ "embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"slices"
 
 	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
@@ -85,13 +88,15 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	cf := i.Config()
 	h := i.Host()
 
-	// first check if already migrated
+	// first check if already the instance already appears to have been
+	// migrated
 	if cf.IsSet(cf.Join("tls", "certificate")) {
-		resp.Completed = append(resp.Completed, "instance already migrated")
+		// resp.Completed = append(resp.Completed, "instance already migrated")
 		return
 	}
 
-	// Java keystore/truststore migration
+	// For components that use Java keystore/truststores, try to use
+	// those for migration and extraction of certs/keys
 	if i.Type().IsA("sso-agent", "webserver") {
 		var truststorePath, keystorePath string
 		var truststorePassword, keystorePassword *config.Plaintext
@@ -122,70 +127,70 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 			keystorePassword = cf.ExpandToPassword(sp["keyStorePassword"])
 		}
 
-		// extract trusted certs from truststore
+		// extract trusted certs from truststore and update the global
+		// ca-bundle files. if this fails, continue with the migration
+		// as we may just need to rebuild the trust chain
 		if truststorePath != "" {
-			k, err := certs.ReadKeystore(h, instance.Abs(i, truststorePath), truststorePassword)
+			updated, err := certs.UpdateCACertsFileFromTrustStore(h, instance.Abs(i, truststorePath), truststorePassword, geneos.PathToCABundle(h))
 			if err != nil {
-				resp.Err = fmt.Errorf("reading truststore: %w", err)
-				return
-			}
-			var roots []*x509.Certificate
-			for _, alias := range k.Aliases() {
-				if c, err := k.GetTrustedCertificateEntry(alias); err == nil {
-					cert, err := x509.ParseCertificate(c.Certificate.Content)
-					if err == nil {
-						roots = append(roots, cert)
-					}
-				}
-			}
-			if updated, _ := certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), roots...); updated {
+				resp.Err = fmt.Errorf("updating ca-bundle from truststore: %w", err)
+			} else if updated {
 				resp.Completed = append(resp.Completed, "updated ca-bundle from truststore")
 			}
 		}
 
+		// extract first private key entry and its cert chain from
+		// keystore and write to instance cert and key files. If this
+		// fails, continue with the migration as we may just need to
+		// rebuild the keystore later (in instance Rebuild())
 		if keystorePath != "" {
 			k, err := certs.ReadKeystore(h, instance.Abs(i, keystorePath), keystorePassword)
 			if err != nil {
 				resp.Err = fmt.Errorf("reading keystore: %w", err)
 				return
-			}
-			for _, alias := range k.Aliases() {
-				// leave the private key alone
-				if i.Type().IsA("sso-agent") && alias == "ssokey" {
-					continue
-				}
+			} else {
+				for _, alias := range k.Aliases() {
+					var certChain []*x509.Certificate
 
-				privateKeyEntry, err := k.GetPrivateKeyEntry(alias, keystorePassword.Bytes())
-				if err != nil {
-					continue
-				}
-				var certChain []*x509.Certificate
-				for _, certData := range privateKeyEntry.CertificateChain {
-					cert, err := x509.ParseCertificate(certData.Content)
+					// leave the private key alone
+					if i.Type().IsA("sso-agent") && alias == "ssokey" {
+						continue
+					}
+
+					key, err := k.GetPrivateKeyEntry(alias, keystorePassword.Bytes())
 					if err != nil {
 						continue
 					}
-					certChain = append(certChain, cert)
-				}
-				if len(certChain) == 0 {
-					continue
-				}
 
-				if err = instance.WriteBundle(i, memguard.NewEnclave(privateKeyEntry.PrivateKey), certChain...); err != nil {
-					resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
-					return
-				}
+					for _, certData := range key.CertificateChain {
+						cert, err := x509.ParseCertificate(certData.Content)
+						if err != nil {
+							continue
+						}
+						certChain = append(certChain, cert)
+					}
 
-				resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
-				break // only first key entry
+					if len(certChain) == 0 {
+						continue
+					}
+
+					if err = instance.WriteCertificateAndKey(i, memguard.NewEnclave(key.PrivateKey), certChain...); err != nil {
+						resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
+						break
+					}
+
+					resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
+					break // only first key entry
+				}
 			}
 		}
 	}
 
 	// some instances may already have multiple certificates in the
-	// primary file, before migration
+	// primary file, before migration, or they have just been created
+	// from a Java keystore above
 	instanceCertChain, err := instance.ReadCertificates(i)
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		resp.Err = err
 		return
 	}
@@ -196,23 +201,14 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 
 	if cf.IsSet("certchain") {
 		chain, err := certs.ReadCertificates(h, cf.GetString("certchain"))
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			resp.Err = err
 			return
 		}
 		instanceCertChain = append(instanceCertChain, chain...)
 	}
 
-	var haveRoot bool
-	for _, c := range instanceCertChain {
-		// prefer the root cert already in the chain
-		if certs.IsValidRootCA(c) {
-			haveRoot = true
-			break
-		}
-	}
-
-	if !haveRoot {
+	if !slices.ContainsFunc(instanceCertChain, certs.IsValidRootCA) {
 		// try to make sure we have a full chain by adding root cert
 		rootCert, _, err := geneos.ReadRootCertificateAndKey()
 		if err != nil {
@@ -223,6 +219,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 		instanceCertChain = append(instanceCertChain, rootCert)
 	}
 
+	// parse the cert chain to get leaf, intermediates and root
 	leaf, intermediates, root, err := certs.ParseCertChain(instanceCertChain...)
 	if err != nil {
 		resp.Err = err
@@ -241,7 +238,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 
 	// write leaf and trust chain to certificate file - this updates
 	// instance parameters for certificate
-	err = instance.WriteBundle(i, nil, append([]*x509.Certificate{leaf}, intermediates...)...)
+	err = instance.WriteCertificateAndKey(i, nil, append([]*x509.Certificate{leaf}, intermediates...)...)
 	if err != nil {
 		resp.Err = err
 		return
@@ -249,15 +246,17 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	resp.Completed = append(resp.Completed, "wrote fullchain to instance certificate file")
 
 	// update instance parameters to new layout
-	cf.Set(cf.Join("tls", "privatekey"), cf.GetString("privatekey"))
+	if pk := cf.GetString("privatekey"); pk != "" {
+		// this may have already been done above in webserver/sso-agent
+		cf.Set("privatekey", "")
+		cf.Set(cf.Join("tls", "privatekey"), pk)
+	}
 	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
-	if !cf.GetBool("use-chain") {
+	if cf.IsSet("use-chain") && !cf.GetBool("use-chain") {
 		cf.Set(cf.Join("tls", "verify"), false)
 	}
 
-	// "certificate" is cleared by WriteCertificates above
-	cf.Set("privatekey", "")
 	cf.Set("certchain", "")
 	cf.Set("use-chain", "")
 	cf.Set("truststore", "")

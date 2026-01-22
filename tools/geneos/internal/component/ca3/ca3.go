@@ -207,11 +207,6 @@ func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	// create certs, report success only
-	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
-	}
-
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
@@ -219,7 +214,12 @@ func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	_ = instance.ImportFiles(n, initialFiles...)
+	instance.ImportFiles(n, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
 	return
 }
 

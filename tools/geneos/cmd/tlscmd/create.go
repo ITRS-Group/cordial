@@ -36,7 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var createCmdCN, createCmdDestDir, createCmdSigner string
+var createCmdCN, createCmdDestDir, createCmdSigning string
 var createCmdForce bool
 var createCmdSANs = SubjectAltNames{}
 var createCmdExpiry int
@@ -46,18 +46,18 @@ func init() {
 
 	createCmd.Flags().StringVarP(&createCmdDestDir, "dest", "D", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
 
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname except for --signer.\nIgnored for --signer.")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname except for --signing.\nIgnored for --signing.")
 
-	createCmd.Flags().StringVarP(&createCmdSigner, "signer", "S", "", "Create a new signer certificate bundle with `NAME`\nas part of the Common Name, typically the hostname\nof the target machine this will be used on.")
+	createCmd.Flags().StringVarP(&createCmdSigning, "signing", "S", "", "Create a new signing certificate bundle with `NAME`\nas part of the Common Name, typically the hostname\nof the target machine this will be used on.")
 
-	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signer")
+	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signing")
 
-	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signer)\nand overwrite any existing file in the 'out' directory")
+	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signing)\nand overwrite any existing file in the 'out' directory")
 
-	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signer.")
-	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signer.")
-	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).\nIgnored for --signer.")
-	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).\nIgnored for --signer.")
+	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.Email, "san-email", "e", "Subject-Alternative-Name Email Address (repeat as required).\nIgnored for --signing.")
+	createCmd.Flags().VarP(&createCmdSANs.URL, "san-url", "u", "Subject-Alternative-Name URL (repeat as required).\nIgnored for --signing.")
 
 	createCmd.Flags().SortFlags = false
 }
@@ -85,10 +85,10 @@ var createCmd = &cobra.Command{
 			createCmdCN = geneos.LOCALHOST
 		}
 
-		if createCmdSigner != "" {
-			if err = CreateSignerCert(createCmdDestDir, createCmdForce, createCmdSigner); err != nil {
+		if createCmdSigning != "" {
+			if err = CreateSigningCert(createCmdDestDir, createCmdForce, createCmdSigning); err != nil {
 				if errors.Is(err, os.ErrExist) && !createCmdForce {
-					fmt.Printf("Signer certificate already exists for %q, use --force to overwrite\n", createCmdSigner)
+					fmt.Printf("Signing certificate already exists for %q, use --force to overwrite\n", createCmdSigning)
 					return nil
 				}
 				return
@@ -125,7 +125,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		}
 	}
 
-	signerCert, signerKey, err := geneos.ReadSignerCertificateAndKey()
+	signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -143,7 +143,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		certs.URIs(san.URL...),
 	)
 
-	cert, key, err := certs.CreateCertificate(template, signerCert, signerKey)
+	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
 	if err != nil {
 		return
 	}
@@ -154,7 +154,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		return
 	}
 
-	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, cert, signerCert, rootCert); err != nil {
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, cert, signingCert, rootCert); err != nil {
 		return
 	}
 
@@ -170,11 +170,11 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 	return
 }
 
-func CreateSignerCert(destination string, overwrite bool, hostname string) (err error) {
+func CreateSigningCert(destination string, overwrite bool, hostname string) (err error) {
 	var b bytes.Buffer
 	var basepath string
 
-	cn := cordial.ExecutableName() + " " + geneos.SignerCertLabel + " (" + hostname + ")"
+	cn := cordial.ExecutableName() + " " + geneos.SigningCertLabel + " (" + hostname + ")"
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
@@ -194,8 +194,8 @@ func CreateSignerCert(destination string, overwrite bool, hostname string) (err 
 	if rootKey == nil {
 		return fmt.Errorf("no root private key found")
 	}
-	fmt.Fprintf(&b, "# Signer Certificate: %s\n#\n", cn)
-	if _, err = certs.WriteNewSignerCertTo(&b, rootCert, rootKey, cn); err != nil {
+	fmt.Fprintf(&b, "# Signing Certificate: %s\n#\n", cn)
+	if _, err = certs.WriteNewSigningCertTo(&b, rootCert, rootKey, cn); err != nil {
 		return
 	}
 	if _, err = certs.WriteCertificatesAndKeyTo(&b, nil, rootCert); err != nil {
@@ -207,7 +207,7 @@ func CreateSignerCert(destination string, overwrite bool, hostname string) (err 
 		return
 	}
 	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
-	fmt.Printf("Signer certificate and private key created in %q\n", basepath+certs.PEMExtension)
+	fmt.Printf("Signing certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	return
 }
 

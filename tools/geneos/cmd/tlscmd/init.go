@@ -34,7 +34,7 @@ func init() {
 	tlsCmd.AddCommand(initCmd)
 
 	initCmd.Flags().VarP(&initCmdKeyType, "keytype", "K", "Key type for root. One of ecdh, ecdsa, ed25519 or rsa")
-	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing root and signer certificates")
+	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing root and signing certificates")
 
 	initCmd.Flags().SortFlags = false
 }

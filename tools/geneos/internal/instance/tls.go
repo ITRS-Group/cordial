@@ -32,7 +32,7 @@ import (
 
 // NewCertificate creates a new certificate for an instance.
 //
-// If the root and signer certs are readable then create an instance
+// If the root and signing certs are readable then create an instance
 // specific chain file, otherwise set the instance to point to the
 // system chain file.
 //
@@ -56,7 +56,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 		}
 	}
 
-	signingCert, signerKey, err := geneos.ReadSignerCertificateAndKey()
+	signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 	if err != nil {
 		resp.Err = err
 		return
@@ -64,13 +64,13 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 
 	template := certs.Template("geneos "+i.Type().String()+" "+i.Name(), options...)
 
-	cert, key, err := certs.CreateCertificate(template, signingCert, signerKey)
+	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
 	if err != nil {
 		resp.Err = err
 		return
 	}
 
-	if err = WriteBundle(i, key, cert, signingCert); err != nil {
+	if err = WriteCertificateAndKey(i, key, cert, signingCert); err != nil {
 		resp.Err = err
 		return
 	}
@@ -84,11 +84,14 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 	return
 }
 
-// WriteBundle writes the certificates and, if given, the private key to
-// the instance i using standard file names and updates the instance
-// configuration. It does not write the instance configuration,
-// expecting the caller to do so after any other updates.
-func WriteBundle(i geneos.Instance, key *memguard.Enclave, certChain ...*x509.Certificate) (err error) {
+// WriteCertificateAndKey writes the certificates and, if given, the
+// private key to the instance i using standard file names and updates
+// the instance configuration. It will set the instance
+// `tls::certificate` and, when given a key, the `tls::privatekey`
+// parameters and clear any values in the old style `certificate` and
+// `privatekey` parameters. It does not write the instance
+// configuration, expecting the caller to do so after any other updates.
+func WriteCertificateAndKey(i geneos.Instance, key *memguard.Enclave, certChain ...*x509.Certificate) (err error) {
 	if err = writeCertificates(i, certChain); err != nil {
 		return
 	}
@@ -122,9 +125,9 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 		return
 	}
 
+	// do not update config if ext is given (used for temp files) or
+	// if it's already set
 	if cf.GetString(cf.Join("tls", "certificate")) == certFile {
-		// do not update config if ext is given (used for temp files) or
-		// if it's already set
 		return
 	}
 	cf.Set("certificate", "")
@@ -151,9 +154,9 @@ func writePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (e
 	if err = certs.WritePrivateKey(i.Host(), keyfile, key); err != nil {
 		return
 	}
+	// do not update config if ext is given (used for temp files) or
+	// if it's already set
 	if len(ext) > 0 || cf.GetString(cf.Join("tls", "privatekey")) == keyfile {
-		// do not update config if ext is given (used for temp files) or
-		// if it's already set
 		return
 	}
 	cf.Set("privatekey", "")

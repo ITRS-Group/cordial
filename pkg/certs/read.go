@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
+
 	"github.com/itrs-group/cordial/pkg/host"
 )
 

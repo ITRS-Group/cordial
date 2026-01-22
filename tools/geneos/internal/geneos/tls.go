@@ -43,17 +43,17 @@ const (
 	// located in the geneos home directory on each hoist under `tls/`
 	CABundleBasename string = "ca-bundle"
 
-	// SignerCertLabel is the descriptive label for the signer
+	// SigningCertLabel is the descriptive label for the signing
 	// certificate created with the TLS commands. It is commonly
 	// prefixed with the executable name and followed by a parenthesised
 	// hostname to indicate where it is being used.
-	SignerCertLabel = "intermediate certificate"
+	SigningCertLabel = "signing certificate"
 )
 
-// SignerCertBasename is the file base name for the signer certificate
+// SigningCertBasename is the file base name for the signing certificate
 // created with the TLS commands. This is initialised to the executable
 // name in the Init() function.
-var SignerCertBasename string
+var SigningCertBasename string
 
 // DeprecatedChainCertFile the is file name (including extension, as
 // this does not need to be used for keys) for the consolidated chain
@@ -124,57 +124,57 @@ func ReadRootCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave,
 	return
 }
 
-// SignerCertificatePath returns the path to the signer certificate in
+// SigningCertificatePath returns the path to the signing certificate in
 // the user's app config directory.
-func SignerCertificatePath() (string, error) {
+func SigningCertificatePath() (string, error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return "", config.ErrNoUserConfigDir
 	}
-	return path.Join(confDir, SignerCertBasename+certs.PEMExtension), nil
+	return path.Join(confDir, SigningCertBasename+certs.PEMExtension), nil
 }
 
-// SignerPrivateKeyPath returns the path to the signer certificate
+// SigningPrivateKeyPath returns the path to the signing certificate
 // private key in the user's app config directory.
-func SignerPrivateKeyPath() (string, error) {
+func SigningPrivateKeyPath() (string, error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return "", config.ErrNoUserConfigDir
 	}
-	return path.Join(confDir, SignerCertBasename+certs.KEYExtension), nil
+	return path.Join(confDir, SigningCertBasename+certs.KEYExtension), nil
 }
 
-// ReadSignerCertificateAndKey reads the signer certificate and private
+// ReadSigningCertificateAndKey reads the signing certificate and private
 // key from the user's app config directory.
-func ReadSignerCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
-	cert, err = readSignerCertificate()
+func ReadSigningCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+	cert, err = readSigningCertificate()
 	if err != nil {
 		return
 	}
-	key, err = readSignerPrivateKey()
+	key, err = readSigningPrivateKey()
 	return
 }
 
-// readSignerCertificate reads the signer certificate from the user's
-// app config directory. The signer certificate is verified against the
+// readSigningCertificate reads the signing certificate from the user's
+// app config directory. The signing certificate is verified against the
 // default root certificate.
-func readSignerCertificate() (signer *x509.Certificate, err error) {
-	file, err := SignerCertificatePath()
+func readSigningCertificate() (signing *x509.Certificate, err error) {
+	file, err := SigningCertificatePath()
 	if err != nil {
 		return
 	}
 
-	signers, err := certs.ReadCertificates(LOCAL, file)
+	signings, err := certs.ReadCertificates(LOCAL, file)
 	if err != nil {
 		return
 	}
-	if len(signers) == 0 {
+	if len(signings) == 0 {
 		return nil, fmt.Errorf("no certificates found in %q", file)
 	}
-	signer = signers[0]
+	signing = signings[0]
 
-	if !certs.IsValidSigningCA(signer) {
-		err = fmt.Errorf("certificate in %q not valid as a signer certificate", file)
+	if !certs.IsValidSigningCA(signing) {
+		err = fmt.Errorf("certificate in %q not valid as a signing certificate", file)
 		return
 	}
 
@@ -186,16 +186,16 @@ func readSignerCertificate() (signer *x509.Certificate, err error) {
 	}
 	roots := x509.NewCertPool()
 	roots.AddCert(root)
-	_, err = signer.Verify(x509.VerifyOptions{
+	_, err = signing.Verify(x509.VerifyOptions{
 		Roots: roots,
 	})
 	return
 }
 
-// readSignerPrivateKey reads the signer certificate private key from the
+// readSigningPrivateKey reads the signing certificate private key from the
 // user's app config directory.
-func readSignerPrivateKey() (key *memguard.Enclave, err error) {
-	file, err := SignerPrivateKeyPath()
+func readSigningPrivateKey() (key *memguard.Enclave, err error) {
+	file, err := SigningPrivateKeyPath()
 	if err != nil {
 		return
 	}
@@ -217,7 +217,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		// ignored.
 	}
 
-	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signer certificate(s)")
+	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return nil
 	}
 
-	privateKey, err := config.ReadPEMBytes(privateKeySource, "signer key")
+	privateKey, err := config.ReadPEMBytes(privateKeySource, "signing key")
 	if err != nil {
 		return err
 	}
@@ -247,11 +247,11 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	}
 
 	if !certBundle.Valid {
-		return errors.New("signer bundle is not valid")
+		return errors.New("signing bundle is not valid")
 	}
 
 	if certBundle.Leaf == nil {
-		return errors.New("no certificates found in signer bundle")
+		return errors.New("no certificates found in signing bundle")
 	}
 
 	cert := certBundle.Leaf
@@ -259,23 +259,23 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 
 	// basic validation
 	if !cert.BasicConstraintsValid || !cert.IsCA || key == nil {
-		return errors.New("no signer certificate with matching private key found in bundle")
+		return errors.New("no signing certificate with matching private key found in bundle")
 
 	}
 
 	if certBundle.Root == nil {
-		return errors.New("no root certificate found in signer bundle")
+		return errors.New("no root certificate found in signing bundle")
 	}
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SignerCertBasename+certs.PEMExtension), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signer certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SignerCertBasename+certs.PEMExtension))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.PEMExtension))
 
-	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SignerCertBasename+certs.KEYExtension), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signer certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SignerCertBasename+certs.KEYExtension))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.KEYExtension))
 
 	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
 		return err
@@ -303,9 +303,9 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 			log.Debug().Msg("root certificate already exists, skipping TLS initialisation")
 			return nil
 		}
-		if _, err := readSignerCertificate(); err == nil {
-			// signer cert already exists
-			log.Debug().Msg("signer certificate already exists, skipping TLS initialisation")
+		if _, err := readSigningCertificate(); err == nil {
+			// signing cert already exists
+			log.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 	}
@@ -343,14 +343,14 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 		return err
 	}
 
-	signer, err := certs.WriteNewSignerCert(path.Join(confDir, SignerCertBasename), rootCert, rootKey,
-		cordial.ExecutableName()+" "+SignerCertLabel+" ("+hostname+")",
+	signing, err := certs.WriteNewSigningCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
+		cordial.ExecutableName()+" "+SigningCertLabel+" ("+hostname+")",
 	)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("signer certificate created for %s\n", SignerCertBasename)
-	fmt.Print(string(certs.CertificateComments(signer)))
+	fmt.Printf("signing certificate created for %s\n", SigningCertBasename)
+	fmt.Print(string(certs.CertificateComments(signing)))
 
 	// sync if geneos root exists
 	if d, err := os.Stat(LocalRoot()); err == nil && d.IsDir() {

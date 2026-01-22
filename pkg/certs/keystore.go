@@ -3,6 +3,7 @@ package certs
 import (
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -148,6 +149,34 @@ func ReadKeystore(h host.Host, path string, password *config.Plaintext) (k *KeyS
 	}
 
 	return
+}
+
+// UpdateCACertsFileFromTrustStore updates the CA bundle file at
+// caBundlePath with any root CA certificates found in the truststore at
+// truststorePath. If password is nil, "changeit" is used. It returns
+// updated true if the CA bundle file was updated.
+func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, truststorePassword *config.Plaintext, caBundlePath string) (updated bool, err error) {
+	var roots []*x509.Certificate
+
+	if truststorePath == "" {
+		return false, fmt.Errorf("truststore path empty")
+	}
+
+	k, err := ReadKeystore(h, truststorePath, truststorePassword)
+	if err != nil {
+		return
+	}
+
+	for _, alias := range k.Aliases() {
+		if c, err := k.GetTrustedCertificateEntry(alias); err == nil {
+			cert, err := x509.ParseCertificate(c.Certificate.Content)
+			if err == nil && IsValidRootCA(cert) {
+				roots = append(roots, cert)
+			}
+		}
+	}
+
+	return UpdateCACertsFiles(h, caBundlePath, roots...)
 }
 
 // WriteKeystore writes the keystore to the given path. If password is

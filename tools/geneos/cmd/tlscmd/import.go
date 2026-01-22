@@ -92,7 +92,6 @@ geneos tls import /path/to/file.pem
 		}
 
 		if ct == nil && len(names) == 0 {
-			log.Debug().Str("file", file).Msg("Importing signer bundle")
 			return geneos.TLSImportBundle(file, importCmdPrivateKey)
 		}
 
@@ -101,30 +100,26 @@ geneos tls import /path/to/file.pem
 			return cmd.GeneosUnsetError
 		}
 
-		log.Debug().Str("file", file).Msg("Importing instance bundle")
-
 		if path.Ext(file) == ".pfx" || path.Ext(file) == ".p12" {
 			if importCmdPassword.String() == "" {
 				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to read password")
 					return err
 				}
 			}
 			certBundle, err = certs.P12ToCertBundle(file, importCmdPassword)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to parse PFX file")
 				return err
 			}
 
 		} else {
 			certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+				return err
 			}
 			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read instance key")
+				return err
 			}
 			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
@@ -160,7 +155,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		return
 	}
 
-	if resp.Err = instance.WriteBundle(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
+	if resp.Err = instance.WriteCertificateAndKey(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
 		return
 	}
 	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate, trust chain and key written", i))

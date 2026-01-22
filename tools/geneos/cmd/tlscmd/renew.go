@@ -25,6 +25,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -37,7 +38,7 @@ import (
 )
 
 var renewCmdExpiry int
-var renewCmdPrepare, renewCmdRoll, renewCmdUnroll, renewCmdSigner bool
+var renewCmdPrepare, renewCmdRoll, renewCmdUnroll, renewCmdSigning bool
 
 const (
 	newFileSuffix = "new"
@@ -47,9 +48,9 @@ const (
 func init() {
 	tlsCmd.AddCommand(renewCmd)
 
-	renewCmd.Flags().BoolVar(&renewCmdSigner, "signer", false, "Renew the signer certificate instead of instance certificates")
+	renewCmd.Flags().BoolVar(&renewCmdSigning, "signing", false, "Renew the signing certificate instead of instance certificates")
 
-	renewCmd.Flags().IntVarP(&renewCmdExpiry, "expiry", "E", 365, "Instance certificate expiry duration in days.\n(No effect with --signer)")
+	renewCmd.Flags().IntVarP(&renewCmdExpiry, "expiry", "E", 365, "Instance certificate expiry duration in days.\n(No effect with --signing)")
 
 	renewCmd.Flags().BoolVarP(&renewCmdPrepare, "prepare", "P", false, "Prepare renewal without overwriting existing certificates")
 	renewCmd.Flags().BoolVarP(&renewCmdRoll, "roll", "R", false, "Roll previously prepared certificates and backup existing ones")
@@ -74,8 +75,8 @@ var renewCmd = &cobra.Command{
 		cmd.CmdWildcardNames: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		if renewCmdSigner {
-			// renew signer certificate
+		if renewCmdSigning {
+			// renew signing certificate
 			confDir := config.AppConfigDir()
 			if confDir == "" {
 				return config.ErrNoUserConfigDir
@@ -87,13 +88,13 @@ var renewCmd = &cobra.Command{
 			if rootKey == nil {
 				return fmt.Errorf("no root private key found")
 			}
-			if signer, err := certs.WriteNewSignerCert(path.Join(confDir, geneos.SignerCertBasename), rootCert, rootKey,
-				cordial.ExecutableName()+" "+geneos.SignerCertLabel+" ("+geneos.LOCALHOST+")",
+			if signing, err := certs.WriteNewSigningCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
+				cordial.ExecutableName()+" "+geneos.SigningCertLabel+" ("+geneos.LOCALHOST+")",
 			); err != nil {
 				return err
 			} else {
-				fmt.Println("signer certificate renewed")
-				fmt.Print(string(certs.CertificateComments(signer)))
+				fmt.Println("signing certificate renewed")
+				fmt.Print(string(certs.CertificateComments(signing)))
 			}
 			return nil
 		}
@@ -108,11 +109,14 @@ var renewCmd = &cobra.Command{
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	var err error
 
+	log.Debug().Msgf("renewing certificate for instance %s", i.Name())
+
 	cf := i.Config()
+
+	resp = responses.NewResponse(i)
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {
-		resp = responses.NewResponse(i)
 		resp.Err = config.ErrNoUserConfigDir
 		return
 	}
@@ -146,13 +150,13 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		signingCert, signingKey, err := geneos.ReadSignerCertificateAndKey()
+		signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 		if err != nil {
 			resp.Err = err
 			return
 		}
 		if signingKey == nil {
-			resp.Err = fmt.Errorf("no signer private key found")
+			resp.Err = fmt.Errorf("no signing private key found")
 			return
 		}
 
@@ -182,7 +186,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		if resp.Err = instance.WriteBundle(i, key, cert, signingCert); resp.Err != nil {
+		if resp.Err = instance.WriteCertificateAndKey(i, key, cert, signingCert); resp.Err != nil {
 			return
 		}
 

@@ -188,25 +188,25 @@ func (n *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	baseDir := instance.BaseVersion(n)
 	n.Config().Set("port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
 		return
 	}
 
-	// create certs, report success only
-	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
-	}
-
+	baseDir := instance.BaseVersion(n)
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 	if err = os.Chdir(baseDir); err != nil {
 		return
 	}
 
-	_ = instance.ImportFiles(n, initialFiles...)
+	instance.ImportFiles(n, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
 	return
 }
 

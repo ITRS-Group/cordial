@@ -15,7 +15,7 @@ geneos tls init
 
 ```text
   -K, --keytype KeyType   Key type for root. One of ecdh, ecdsa, ed25519 or rsa
-  -F, --force             Overwrite any existing root and signer certificates
+  -F, --force             Overwrite any existing root and signing certificates
 ```
 
 ## SEE ALSO

@@ -141,9 +141,9 @@ geneos init [flags] [DIRECTORY]
   -F, --force                     Be forceful, ignore existing directories.
   -n, --name string               Use name for instances and configurations instead of the hostname
   -T, --tls                       Create internal certificates for TLS support
-  -C, --signer-bundle string      signer bundle in PEM format.
+  -C, --signing-bundle string     signing bundle in PEM format.
                                   This bundle must contain an unencrypted private key
-                                  and matching signer certificate and other certificates up to the root CA.
+                                  and matching signing certificate and other certificates up to the root CA.
       --insecure                  Do not create internal certificates for TLS support
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots                 Download from nexus snapshots. Requires -N

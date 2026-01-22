@@ -213,11 +213,6 @@ func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	// create certs, report success only
-	if !noCerts {
-		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
-	}
-
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
@@ -227,7 +222,13 @@ func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	_ = instance.ImportFiles(s, initialFiles...)
+	instance.ImportFiles(s, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
+
 	return
 }
 

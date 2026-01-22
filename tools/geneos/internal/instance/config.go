@@ -257,13 +257,15 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 	var keys []string
 
+	log.Debug().Msgf("saving config for %s", i)
+
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
 	//
 	// TODO: we need to apply any values passed in here too
 	if resp := Migrate(i); resp.Err != nil {
-		return
+		return resp.Err
 	}
 
 	if len(values) > 0 {
@@ -289,12 +291,12 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 		config.AddDirs(Home(i)),
 		config.SetAppName(i.Name()),
 	); err != nil {
+		log.Debug().Err(err).Msgf("saving config for %s", i)
 		return
 	}
 
 	if len(values) == 0 {
-		st, err := i.Host().Stat(i.Config().ConfigFileUsed())
-		if err == nil {
+		if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
 			log.Debug().Msg("setting modtime")
 			i.SetLoaded(st.ModTime())
 		}
@@ -302,9 +304,11 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
 	if err = i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
+		log.Debug().Msgf("%s: rebuild not supported", i.String())
 		err = nil
 	}
 
+	log.Debug().Err(err).Msgf("config for %s saved", i)
 	return
 }
 

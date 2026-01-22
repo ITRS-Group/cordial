@@ -71,6 +71,7 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 			return false, err
 		}
 		if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
+			log.Debug().Err(err).Msg("writing new truststore failed")
 			return false, err
 		}
 		return true, nil
@@ -96,6 +97,7 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 
 	log.Debug().Msg("updating truststore with root certificates")
 	if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
+		log.Debug().Err(err).Msg("writing new truststore failed")
 		return false, err
 	}
 
@@ -212,13 +214,13 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 	return
 }
 
-// WriteNewSignerCert creates a new signing certificate and private key
+// WriteNewSigningCert creates a new signing certificate and private key
 // with the path and file base name basefilepath. You must provide a
 // valid root certificate and key in rootbasefilepath. If overwrite is
 // true than any existing cert and key are overwritten.
 //
 // The certificate is returned on success, but the private key is not.
-func WriteNewSignerCert(basefilepath string, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (signer *x509.Certificate, err error) {
+func WriteNewSigningCert(basefilepath string, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (signing *x509.Certificate, err error) {
 	template := Template(cn,
 		Days(5*365),
 		IsCA(),
@@ -228,12 +230,12 @@ func WriteNewSignerCert(basefilepath string, rootCert *x509.Certificate, rootKey
 		MaxPathLen(0),
 	)
 
-	signer, key, err := CreateCertificate(template, rootCert, rootKey)
+	signing, key, err := CreateCertificate(template, rootCert, rootKey)
 	if err != nil {
 		return
 	}
 
-	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, signer); err != nil {
+	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, signing); err != nil {
 		return
 	}
 
@@ -244,12 +246,12 @@ func WriteNewSignerCert(basefilepath string, rootCert *x509.Certificate, rootKey
 	return
 }
 
-// WriteNewSignerCertTo creates a new signing certificate and private
+// WriteNewSigningCertTo creates a new signing certificate and private
 // key signed by the given root certificate and key, writing the
 // resulting private key and certificate in PEM format to the provided
 // io.Writer. The total number of bytes written and any error
 // encountered are returned.
-func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (n int, err error) {
+func WriteNewSigningCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (n int, err error) {
 	template := Template(cn,
 		Days(5*365),
 		IsCA(),
@@ -259,12 +261,12 @@ func WriteNewSignerCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memg
 		MaxPathLen(0),
 	)
 
-	signer, key, err := CreateCertificate(template, rootCert, rootKey)
+	signing, key, err := CreateCertificate(template, rootCert, rootKey)
 	if err != nil {
 		return
 	}
 
-	return WriteCertificatesAndKeyTo(w, key, signer)
+	return WriteCertificatesAndKeyTo(w, key, signing)
 }
 
 // WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded

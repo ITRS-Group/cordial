@@ -73,7 +73,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
   -n, --nosave                        Do not save a local copy of any downloads
-  -C, --signer-bundle PEM             signer certificate bundle file, in PEM format.
+  -C, --signing-bundle PEM            signing certificate bundle file, in PEM format.
                                       Use a dash (`-`) to be prompted for PEM from console
   -c, --certs-bundle file             Instance certificate bundle file in PEM or PFX/PKCS#12 format.
                                       Use a dash (`-`) to be prompted for PEM from console

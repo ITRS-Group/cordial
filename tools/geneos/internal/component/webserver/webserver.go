@@ -211,12 +211,6 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	// create certs, report success only
-	if !noCerts {
-		instance.NewCertificate(w).Report(os.Stdout, responses.StderrWriter(os.Stderr))
-	}
-
-	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 
@@ -230,7 +224,13 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	_ = instance.ImportFiles(w, initialFiles...)
+	instance.ImportFiles(w, initialFiles...)
+
+	// create certs, report success only
+	if !noCerts {
+		instance.NewCertificate(w).Report(os.Stdout, responses.StderrWriter(os.Stderr))
+	}
+
 	return
 }
 
@@ -243,8 +243,10 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
+		log.Debug().Err(err).Msgf("reading security.properties %q", spPath)
 		return nil
 	}
+
 	sp["port"] = cf.GetString("port")
 
 	sp["trustStore"] = cf.GetString(cf.Join("tls", "truststore"), config.Default(geneos.PathToCABundle(h, certs.KeystoreExtension)))
@@ -252,6 +254,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	sp["trustStoreType"] = "JKS"
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
+		log.Error().Err(err).Msgf("writing security.properties %q", spPath)
 		return
 	}
 
@@ -263,6 +266,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	if len(roots) > 0 && truststorePath != "" {
 		truststorePath = instance.Abs(w, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
+			log.Error().Err(err).Msgf("updating truststore %q", truststorePath)
 			return err
 		}
 	}
@@ -274,6 +278,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 
 	certChain, err := instance.ReadCertificates(w)
 	if err != nil {
+		log.Error().Err(err).Msgf("reading certificate chain for %s", w.String())
 		return
 	}
 	if len(certChain) == 0 {
@@ -281,6 +286,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	}
 	key, err := instance.ReadPrivateKey(w)
 	if err != nil {
+		log.Error().Err(err).Msgf("reading private key for %s", w.String())
 		return
 	}
 	keyStore = instance.Abs(w, keyStore)

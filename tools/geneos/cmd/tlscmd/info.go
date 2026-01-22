@@ -285,15 +285,12 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 						log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
 						continue
 					}
-					log.Debug().Str("file", p).Str("alias", alias).Str("cn", cert.Subject.CommonName).Msg("found certificate in Java keystore")
 					if slices.Contains(certInfos[i].Contents.Alias, alias) {
-						log.Debug().Str("file", p).Str("alias", alias).Msg("duplicate certificate alias in Java keystore, skipping")
 						continue
 					}
 					certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
 					certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
 				default:
-					log.Debug().Str("file", p).Str("alias", alias).Msg("unsupported keystore entry type, skipping")
 					continue
 				}
 			}
@@ -304,23 +301,20 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			if infoCmdPassword.IsNil() {
 				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
 				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to read password")
-					// return err
+					return
 				}
 			}
 
 			key, c, chain, err := pkcs12.DecodeChain(contents, infoCmdPassword.String())
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to decode PFX file")
-				// return err
+				return nil, err
 			}
 			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
 			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, chain...)
 
 			pk, err := x509.MarshalPKCS8PrivateKey(key)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to marshal private key")
-				// return err
+				return nil, err
 			}
 			certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(pk))
 			continue

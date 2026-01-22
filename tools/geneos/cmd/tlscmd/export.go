@@ -55,7 +55,7 @@ var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
 	Use:                   "export [flags] [TYPE] [NAME...]",
-	Short:                 "Export signer certificate and private key",
+	Short:                 "Export signing certificate and private key",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
@@ -81,7 +81,7 @@ geneos tls export gateway mygateway
 			return config.ErrNoUserConfigDir
 		}
 
-		// gather the root cert, the signer cert and key
+		// gather the root cert, the signing cert and key
 		root, _, err := geneos.ReadRootCertificateAndKey()
 		if err != nil {
 			err = fmt.Errorf("cannot read root certificate: %w", err)
@@ -93,36 +93,36 @@ geneos tls export gateway mygateway
 			Bytes: root.Raw,
 		})
 
-		signerFile, err := geneos.SignerCertificatePath()
+		signingFile, err := geneos.SigningCertificatePath()
 		if err != nil {
 			return
 		}
-		signer, signerKey, err := geneos.ReadSignerCertificateAndKey()
+		signing, signingKey, err := geneos.ReadSigningCertificateAndKey()
 		if err != nil {
-			err = fmt.Errorf("signer certificate cannot be read: %w", signerFile, err)
+			err = fmt.Errorf("signing certificate cannot be read: %w", signingFile, err)
 			return
 		}
-		if signerKey == nil {
-			err = fmt.Errorf("signer private key cannot be read: %w", signerFile)
+		if signingKey == nil {
+			err = fmt.Errorf("signing private key cannot be read: %w", signingFile)
 			return
 		}
-		pemSigner := pem.EncodeToMemory(&pem.Block{
+		pemSigning := pem.EncodeToMemory(&pem.Block{
 			Type:  "CERTIFICATE",
-			Bytes: signer.Raw,
+			Bytes: signing.Raw,
 		})
 
-		key, _ := signerKey.Open()
+		key, _ := signingKey.Open()
 		pemKey := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
 			Bytes: key.Bytes(),
 		})
 		defer key.Destroy()
 
-		output := []byte("# Geneos Root and Signer Certificates\n#\n")
-		output = append(output, certs.PrivateKeyComments(signerKey, "Signer Private Key")...)
+		output := []byte("# Geneos Root and Signing Certificates\n#\n")
+		output = append(output, certs.PrivateKeyComments(signingKey, "Signing Private Key")...)
 		output = append(output, pemKey...)
-		output = append(output, certs.CertificateComments(signer, "Signer Certificate")...)
-		output = append(output, pemSigner...)
+		output = append(output, certs.CertificateComments(signing, "Signing Certificate")...)
+		output = append(output, pemSigning...)
 		output = append(output, certs.CertificateComments(root, "Root CA Certificate")...)
 		output = append(output, pemRoot...)
 

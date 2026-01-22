@@ -25,22 +25,22 @@ geneos tls create [flags]
 ```text
   -D, --dest directory    Destination directory to write certificate chain and private key to.
                           For bundles use a dash '-' for stdout. (default ".")
-  -c, --cname string      Common Name for certificate. Defaults to hostname except for --signer.
-                          Ignored for --signer.
-  -S, --signer NAME       Create a new signer certificate bundle with NAME
+  -c, --cname string      Common Name for certificate. Defaults to hostname except for --signing.
+                          Ignored for --signing.
+  -S, --signing NAME      Create a new signing certificate bundle with NAME
                           as part of the Common Name, typically the hostname
                           of the target machine this will be used on.
-  -E, --expiry days       Certificate expiry duration in days. Ignored for --signer (default 365)
-  -F, --force             Runs "tls init" (but do not replace existing root and signer)
+  -E, --expiry days       Certificate expiry duration in days. Ignored for --signing (default 365)
+  -F, --force             Runs "tls init" (but do not replace existing root and signing)
                           and overwrite any existing file in the 'out' directory
   -s, --san-dns VALUE     Subject-Alternative-Name DNS Name (repeat as required).
-                          Ignored for --signer.
+                          Ignored for --signing.
   -i, --san-ip VALUE      Subject-Alternative-Name IP Address (repeat as required).
-                          Ignored for --signer.
+                          Ignored for --signing.
   -e, --san-email VALUE   Subject-Alternative-Name Email Address (repeat as required).
-                          Ignored for --signer.
+                          Ignored for --signing.
   -u, --san-url VALUE     Subject-Alternative-Name URL (repeat as required).
-                          Ignored for --signer.
+                          Ignored for --signing.
 ```
 
 ## SEE ALSO
