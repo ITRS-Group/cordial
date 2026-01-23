@@ -996,11 +996,13 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			pkey, err := certs.ParsePrivateKey(pk)
 			if err != nil {
 				log.Error().Err(err).Msg("parsing private key")
+				return sources, err
 			}
 
 			signedToken, err = token.SignedString(pkey)
 			if err != nil {
 				log.Debug().Err(err).Msg("signing licd JWT token")
+				return sources, err
 			}
 		}
 	}
