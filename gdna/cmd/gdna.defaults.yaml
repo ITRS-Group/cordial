@@ -19,6 +19,7 @@ gdna:
   licd-timeout: 10s
   licd-chain: ""
   licd-skip-verify: false
+  licd-private-key: ""
   log:
     filename: ./gdna.log
     max-size: 10

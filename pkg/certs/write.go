@@ -310,6 +310,25 @@ func WritePrivateKeyTo(w io.Writer, key *memguard.Enclave) (n int, err error) {
 	return
 }
 
+func WritePublicKeyTo(w io.Writer, pubKey any) (n int, err error) {
+	var m int
+
+	der, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return
+	}
+	p := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: der,
+	})
+	if m, err = w.Write(p); err != nil {
+		return
+	}
+	n += m
+
+	return
+}
+
 // CertificateComments returns a byte slice containing comments about
 // the given x509 certificate. If titles are provided they are included
 // at the top of the comments, if not a default title of "Certificate"

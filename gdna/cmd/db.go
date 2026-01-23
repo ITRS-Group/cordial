@@ -36,10 +36,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // openDB opens the given DSN and returns both a *sql.DB object and a
@@ -955,6 +958,53 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 
 	dbUpdated := cf.GetBool("db.updated")
 
+	var signedToken string
+
+	// new authentication, if private key exists
+	if cf.IsSet("gdna.licd-private-key") {
+		if pkFile := cf.GetString("gdna.licd-private-key"); pkFile != "" {
+			pk, err := certs.ReadPrivateKey(host.Localhost, pkFile)
+			if err != nil {
+				log.Error().Err(err).Msgf("parsing licd private key from %s", pkFile)
+				return sources, err
+			}
+
+			pkeyType := certs.PrivateKeyType(pk)
+			var signingMethod jwt.SigningMethod
+			switch pkeyType {
+			case certs.RSA:
+				signingMethod = jwt.SigningMethodRS256
+			case certs.ECDSA:
+				signingMethod = jwt.SigningMethodES256
+			case certs.ED25519:
+				signingMethod = jwt.SigningMethodEdDSA
+			default:
+				log.Error().Msgf("unsupported licd private key type %q", pkeyType)
+				return sources, fmt.Errorf("unsupported licd private key type %q", pkeyType)
+			}
+
+			// create token
+			token := jwt.NewWithClaims(signingMethod, jwt.MapClaims{
+				"iss": "gdna",
+				"sub": "gdna",
+				"aud": "licd",
+				"iat": jwt.NewNumericDate(time.Now()).Unix(),
+				"nbf": jwt.NewNumericDate(time.Now()).Unix(),
+				"exp": jwt.NewNumericDate(time.Now().Add(5 * time.Minute)).Unix(),
+			})
+
+			pkey, err := certs.ParsePrivateKey(pk)
+			if err != nil {
+				log.Error().Err(err).Msg("parsing private key")
+			}
+
+			signedToken, err = token.SignedString(pkey)
+			if err != nil {
+				log.Debug().Err(err).Msg("signing licd JWT token")
+			}
+		}
+	}
+
 	switch u.Scheme {
 	case "https", "http":
 		sources = append(sources, u.Scheme+":"+u.Hostname())
@@ -1002,6 +1052,11 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
+
+		if signedToken != "" {
+			req.Header.Set("Authorization", "Bearer "+signedToken)
+		}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
@@ -1014,14 +1069,6 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			return sources, err
 		}
 		defer resp.Body.Close()
-
-		// set the source time to either the last-modified header or now
-		// if lm := resp.Header.Get("last-modified"); lm != "" {
-		// 	lmt, err := http.ParseTime(lm)
-		// 	if err == nil {
-		// 		ts = lmt
-		// 	}
-		// }
 
 		c := csv.NewReader(resp.Body)
 		c.ReuseRecord = false

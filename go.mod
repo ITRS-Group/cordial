@@ -20,6 +20,7 @@ require (
 	github.com/go-mail/mail/v2 v2.3.0
 	github.com/go-python/cpy3 v0.2.0
 	github.com/go-viper/mapstructure/v2 v2.5.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/go-querystring v1.2.0
 	github.com/google/uuid v1.6.0
 	github.com/gurkankaymak/hocon v1.2.23

@@ -125,8 +125,8 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 	for _, source := range fetchCmdSources {
 		var s []string
 		log.Debug().Msgf("reading from %s", source)
-		if strings.HasPrefix(source, "summary:") {
-			source = strings.TrimPrefix(source, "summary:")
+		if after, ok := strings.CutPrefix(source, "summary:"); ok {
+			source = after
 			log.Debug().Msgf("reading licd report file(s): %s", source)
 			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
 				return
