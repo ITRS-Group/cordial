@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -176,7 +177,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Res
 
 		var output []byte
 		// err is set for validation errors, they are not errors in running
-		_, err = i.Host().Run(cmd, "errors.txt")
+		_, err = i.Host().Run(cmd, host.ProcessErrfile("errors.txt"))
 		if err != nil {
 			log.Debug().Err(err).Msg("run")
 		}
@@ -239,7 +240,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Respo
 
 		var output []byte
 		// we don't care about errors, just the output
-		output, err = i.Host().Run(cmd, "errors.txt")
+		output, err = i.Host().Run(cmd, host.ProcessErrfile("errors.txt"))
 		if err != nil {
 			log.Debug().Msgf("error: %s", output)
 		}

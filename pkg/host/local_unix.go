@@ -29,18 +29,22 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
+func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err error) {
+	po := evalProcessOptions(options...)
+
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+	}
+
 	// if we've set-up privs at all, set the redirection output file to the same
-	if cmd.SysProcAttr != nil && cmd.SysProcAttr.Credential != nil {
+	if cmd.SysProcAttr.Credential != nil {
 		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
 			return
 		}
 	}
-	if detach {
+
+	if po.detach {
 		// detach process by creating a session (fixed start + log)
-		if cmd.SysProcAttr == nil {
-			cmd.SysProcAttr = &syscall.SysProcAttr{}
-		}
 		cmd.SysProcAttr.Setsid = true
 	}
 

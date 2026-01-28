@@ -434,7 +434,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 		setCredentialsFromUsername(cmd, program.Username)
 		cmd.Env = program.Env
 		cmd.Dir = program.WorkingDir
-		if _, err := h.Run(cmd, program.ErrLog); err != nil {
+		if _, err := h.Run(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	case program.Restart:
@@ -445,7 +445,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 				setCredentialsFromUsername(cmd, program.Username)
 				cmd.Env = program.Env
 				cmd.Dir = program.WorkingDir
-				h.Run(cmd, program.ErrLog)
+				h.Run(cmd, host.ProcessErrfile(program.ErrLog))
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)
 				} else {
@@ -458,7 +458,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 		setCredentialsFromUsername(cmd, program.Username)
 		cmd.Env = program.Env
 		cmd.Dir = program.WorkingDir
-		if err = h.Start(cmd, program.ErrLog); err != nil {
+		if err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	}

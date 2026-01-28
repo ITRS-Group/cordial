@@ -82,8 +82,8 @@ type Host interface {
 
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)
-	Start(cmd *exec.Cmd, errfile string) (err error)
-	Run(cmd *exec.Cmd, errfile string) (stdout []byte, err error)
+	Start(cmd *exec.Cmd, options ...ProcessOptions) (err error)
+	Run(cmd *exec.Cmd, options ...ProcessOptions) (stdout []byte, err error)
 }
 
 var (

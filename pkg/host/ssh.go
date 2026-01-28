@@ -670,10 +670,13 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 // shell and backgrounds and redirects. May not work on all remotes and
 // for all processes. errfile has stdout/stderr appended to it, use
 // '/dev/null' if no errfile is wanted.
-func (h *SSHRemote) Start(cmd *exec.Cmd, errfile string) (err error) {
+func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}
+
+	po := evalProcessOptions(options...)
+	errfile := po.errfile
 
 	sess, err := h.NewSession()
 	if err != nil {
@@ -711,10 +714,13 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, errfile string) (err error) {
 // shell and waits for the process status before returning. It returns
 // the output and any error. errfile is an optional (remote) file for
 // stderr output
-func (h *SSHRemote) Run(cmd *exec.Cmd, errfile string) (output []byte, err error) {
+func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOptions) (output []byte, err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}
+
+	po := evalProcessOptions(options...)
+	errfile := po.errfile
 
 	sess, err := h.NewSession()
 	if err != nil {

@@ -44,22 +44,6 @@ func prepareCmd(cmd *exec.Cmd) {
 	}
 }
 
-func setCredentials(cmd *exec.Cmd, user, group any) {
-	uid, _ := strconv.ParseUint(fmt.Sprint(user), 10, 32)
-	gid, _ := strconv.ParseUint(fmt.Sprint(group), 10, 32)
-	creds := &syscall.Credential{
-		Uid: uint32(uid),
-		Gid: uint32(gid),
-	}
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Credential: creds,
-		}
-	} else {
-		cmd.SysProcAttr.Credential = creds
-	}
-}
-
 func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
 	// setting the Credential struct causes errors and confusion if you
 	// are not privileged

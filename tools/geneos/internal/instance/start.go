@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/rs/zerolog/log"
 )
@@ -71,7 +72,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	errfile := ComponentFilepath(i, "txt")
 
 	log.Debug().Msgf("starting '%s'", cmd.String())
-	if err = i.Host().Start(cmd, errfile); err != nil {
+	if err = i.Host().Start(cmd, host.ProcessErrfile(errfile)); err != nil {
 		return
 	}
 	// wait a bit for the process to start before checking
