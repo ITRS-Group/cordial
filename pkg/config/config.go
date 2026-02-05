@@ -477,7 +477,7 @@ func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map
 
 // defaultDecoderConfig returns default mapstructure.DecoderConfig with support
 // of time.Duration values & string slices
-func defaultDecoderConfig(output interface{}, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
+func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
 	c := &mapstructure.DecoderConfig{
 		Metadata:         nil,
 		Result:           output,
@@ -494,7 +494,7 @@ func defaultDecoderConfig(output interface{}, opts ...viper.DecoderConfigOption)
 }
 
 // A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
-func decode(input interface{}, config *mapstructure.DecoderConfig) error {
+func decode(input any, config *mapstructure.DecoderConfig) error {
 	decoder, err := mapstructure.NewDecoder(config)
 	if err != nil {
 		return err
@@ -502,11 +502,11 @@ func decode(input interface{}, config *mapstructure.DecoderConfig) error {
 	return decoder.Decode(input)
 }
 
-func UnmarshalKey(key string, rawVal interface{}, opts ...viper.DecoderConfigOption) error {
+func UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	return global.UnmarshalKey(key, rawVal, opts...)
 }
 
-func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.DecoderConfigOption) error {
+func (c *Config) UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
@@ -515,7 +515,7 @@ func (c *Config) UnmarshalKey(key string, rawVal interface{}, opts ...viper.Deco
 	c.mutex.Unlock()
 
 	if isStringMapInterface(i) {
-		val := i.(map[string]interface{})
+		val := i.(map[string]any)
 		keys := c.AllKeys()
 		for _, k := range keys {
 			if !strings.HasPrefix(k, prefix) {

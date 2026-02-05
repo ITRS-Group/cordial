@@ -184,7 +184,7 @@ func (k *KeyFile) EncodeString(h host.Host, plaintext string, expandable bool) (
 	}
 
 	if expandable {
-		out = fmt.Sprintf("${enc:%s:+encs+%s}", ExpandHome(string(*k)), e)
+		out = fmt.Sprintf("${enc:%s:+encs+%s}", KeyFile(AbbreviateHome(k.String())), e)
 	} else {
 		out = fmt.Sprintf("+encs+%s", e)
 	}

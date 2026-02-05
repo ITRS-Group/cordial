@@ -1,0 +1,30 @@
+# SDP defaults
+
+datacentres:
+  us:
+      auth: https://accounts.zoho.com
+      api: https://sdpondemand.manageengine.com
+  eu:
+      auth: https://accounts.zoho.eu
+      api: https://sdpondemand.manageengine.eu
+  in:
+      auth: https://accounts.zoho.in
+      api: https://sdpondemand.manageengine.in
+  cn:
+      auth: https://accounts.zoho.com.cn
+      api: https://servicedeskplus.cn
+  au:
+      auth: https://accounts.zoho.com.au
+      api: https://servicedeskplus.net.au
+  jp:
+      auth: https://accounts.zoho.jp
+      api: https://servicedeskplus.jp
+  ca:
+      auth: https://accounts.zohocloud.ca
+      api: https://servicedeskplus.ca
+  uk:
+      auth: https://accounts.zoho.uk
+      api: https://servicedeskplus.uk
+  sa:
+      auth: https://accounts.zoho.sa
+      api: https://servicedeskplus.sa
