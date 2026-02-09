@@ -82,6 +82,9 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret *config
 // GET method. On successful return the response body will be closed.
 // endpoint is either a string or a *url.URL relative to the client c
 // base URL.
+//
+// resp.Body will be closed on return, so the caller should not attempt
+// to read from it.
 func (c *Client) Get(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
 	var dest *url.URL
 	switch e := endpoint.(type) {
@@ -143,6 +146,9 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 // JSON body and decoding any returned body into result, if set.
 // endpoint is either a string or a *url.URL relative to the client c
 // base URL.
+//
+// resp.Body will be closed on return, so the caller should not attempt
+// to read from it.
 func (c *Client) Post(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
 	var dest *url.URL
 	switch e := endpoint.(type) {
@@ -187,9 +193,11 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	return
 }
 
-// PUT method
-// endpoint is either a string or a *url.URL relative to the client c
-// base URL.
+// Put method endpoint is either a string or a *url.URL relative to the
+// client c base URL.
+//
+// resp.Body will be closed on return, so the caller should not attempt
+// to read from it.
 func (c *Client) Put(ctx context.Context, endpoint any, request any, response any) (resp *http.Response, err error) {
 	var dest *url.URL
 	switch e := endpoint.(type) {
@@ -235,6 +243,9 @@ func (c *Client) Put(ctx context.Context, endpoint any, request any, response an
 }
 
 // Delete Method
+//
+// resp.Body will be closed on return, so the caller should not attempt
+// to read from it.
 func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp *http.Response, err error) {
 	dest := c.BaseURL.JoinPath(endpoint)
 	req, err := http.NewRequestWithContext(ctx, "DELETE", dest.String(), nil)
