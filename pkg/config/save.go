@@ -26,13 +26,25 @@ import (
 
 // Save a configuration file for the module name.
 //
-// - The file specified by config.SetConfigFile()
-// - A file name.ext in the first directory give with config.AddDirs()
-// - A file name.ext in the user config directory + appname
+// - The file specified by config.SetConfigFile() - A file name.ext in
+// the first directory give with config.AddDirs() - A file name.ext in
+// the user config directory + appname
 //
 // The filesystem target for the configuration object is updated to
 // match the remote destination, which can be set by Host() option with
 // a default of "localhost"
+//
+// Save writes to a temporary file with the process ID and original
+// extension appended and then tries to atomically rename the file to
+// the target name. This is to avoid leaving a partially written file if
+// the write operation is interrupted. It may result in a temporary file
+// being left behind if the rename operation fails, but this is
+// preferable to leaving a corrupted configuration file. The temporary
+// file is named with the process ID to avoid conflicts with other
+// processes that may be writing to the same configuration file. The
+// original extension is preserved to ensure that the temporary file is
+// recognized as a configuration file by any tools that may be
+// monitoring the directory for changes.
 func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	opts := evalSaveOptions(name, options...)
 	r := opts.remote
