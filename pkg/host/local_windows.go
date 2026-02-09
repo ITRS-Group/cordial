@@ -28,13 +28,19 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, detach bool) (err error) {
-	if detach {
+func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err error) {
+	po := evalProcessOptions(options...)
+
+	if po.detach {
 		if cmd.SysProcAttr == nil {
 			cmd.SysProcAttr = &windows.SysProcAttr{}
 		}
 		cmd.SysProcAttr.CreationFlags = windows.CREATE_NEW_PROCESS_GROUP
 	}
+	return
+}
+
+func postStart(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
 	return
 }
 
