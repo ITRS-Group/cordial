@@ -30,17 +30,35 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/rest"
 )
 
-func Client(ctx context.Context, cf *config.Config) (client *http.Client, err error) {
+type Client struct {
+	*rest.Client
+	cf *config.Config
+}
+
+// Client returns an HTTP client which automatically adds a valid access
+// token to requests and handles token refreshes as needed. The client
+// will use the provided config to obtain an initial token if necessary,
+// and will persist any new tokens obtained through refreshes.
+//
+// The scopes parameter is passed to the initial token retrieval
+// process, but is not used for token refreshes since the scopes cannot
+// be changed after the initial token is obtained.
+//
+// Note that for SDP the initial authentication process requires an
+// authorization code which must be obtained through a separate process
+// (e.g. using the auth command) and is not handled by this function.
+// Therefore, if no valid token is found, this function will return an
+// error rather than prompting for the authorization code.
+func NewClient(ctx context.Context, cf *config.Config, scopes ...string) (client *Client, err error) {
 	var tcc *tls.Config
 
 	token, err := LoadToken()
 	if err != nil {
 		return
 	}
-
-	log.Debug().Msgf("loaded token: %+v", token)
 
 	clientID := cf.GetString("client-id")
 	clientSecret := cf.GetPassword("client-secret")
@@ -69,7 +87,7 @@ func Client(ctx context.Context, cf *config.Config) (client *http.Client, err er
 				TokenURL: auth.JoinPath("/oauth/v2/token").String(),
 			},
 			RedirectURL: "https://www.zoho.com",
-			Scopes:      []string{"SDPOnDemand.requests.ALL"},
+			Scopes:      scopes,
 		},
 		Code: nil,
 	}
@@ -97,7 +115,18 @@ func Client(ctx context.Context, cf *config.Config) (client *http.Client, err er
 		}
 	}
 
-	client = oauth2.NewClient(context.WithValue(context.Background(), oauth2.HTTPClient, hc), NewSDPTokenSource(ctx, conf, token))
+	c := oauth2.NewClient(context.WithValue(context.Background(), oauth2.HTTPClient, hc), NewSDPTokenSource(ctx, conf, token))
+
+	client = &Client{
+		Client: rest.NewClient(
+			rest.HTTPClient(c),
+			rest.BaseURLString(cf.GetString(cf.Join("datacentres", cf.GetString("datacentre"), "api"))),
+			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
+				req.Header.Set("Accept", "application/vnd.manageengine.sdp.v3+json")
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			})),
+		cf: cf,
+	}
 
 	return
 }

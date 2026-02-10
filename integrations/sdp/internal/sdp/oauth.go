@@ -163,10 +163,8 @@ func InitialAuth(cf *config.Config, code *config.Plaintext) (tok *oauth2.Token, 
 	log.Debug().Msgf("using client secret %s", clientSecret.String())
 
 	if code == nil || code.IsNil() {
-		code, err = config.ReadPasswordInput(false, 0, "Grant Code")
-		if err != nil {
-			return
-		}
+		err = fmt.Errorf("authorization code is required for initial authentication")
+		return
 	}
 
 	auth, err := url.Parse(cf.GetString(cf.Join("datacentres", cf.GetString("datacentre"), "auth")))

@@ -18,18 +18,16 @@ limitations under the License.
 package cmd
 
 import (
-	"context"
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/integrations/sdp/internal/sdp"
-
-	"github.com/itrs-group/cordial/pkg/rest"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func init() {
@@ -43,42 +41,52 @@ var listCmd = &cobra.Command{
 	Short: "List items from ServiceDesk Plus",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var response sdp.RequestGetListResponse
+		// var response sdp.RequestGetListResponse
 
 		cf := LoadConfigFile()
 
-		client, err := sdp.Client(cmd.Context(), cf)
+		client, err := sdp.NewClient(cmd.Context(), cf, "SDPOnDemand.requests.ALL")
 		if err != nil {
 			return
 		}
 
-		rc := rest.NewClient(
-			rest.HTTPClient(client),
-			rest.BaseURLString(cf.GetString(cf.Join("datacentres", cf.GetString("datacentre"), "api"))),
-			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
-				req.Header.Set("Accept", "application/vnd.manageengine.sdp.v3+json")
-				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			}),
-		)
-
-		v := url.Values{}
-		v.Add("input_data", `{"list_info":{"start_index":"1"}}`)
-
-		endpoint, err := url.JoinPath("app", cf.GetString("portal"), "/api/v3/requests")
-		if err != nil {
+		response, err := client.GetRequests(cmd.Context(), cf.Get("requests.search"))
+		log.Debug().Msgf("response: %+v", response)
+		if response.ResponseStatus[0].StatusCode != 2000 {
+			log.Error().Msgf("API error: %s", response.ResponseStatus[0].Status)
 			return
 		}
-		resp, err := rc.Get(context.Background(), endpoint, v.Encode(), &response)
-		if err != nil {
-			return
-		}
-		defer resp.Body.Close()
 
-		b, err := json.MarshalIndent(response, "", "  ")
-		if err != nil {
-			return
+		columnNames := cf.GetStringSlice("requests.columns")
+		fmt.Println(strings.Join(columnNames, ","))
+
+		for _, req := range response.Requests {
+			var err error
+			b, err := json.MarshalIndent(req, "", "  ")
+			if err != nil {
+				log.Debug().Err(err).Msgf("failed to marshal request")
+				continue
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), string(b))
+
+			r, err := config.Load("request",
+				config.SetAppName("sdp"),
+				config.SetFileExtension("json"),
+				config.SetConfigReader(bytes.NewReader(b)),
+			)
+			if err != nil {
+				continue
+			}
+
+			columns := make([]string, 0, len(columnNames))
+
+			for _, c := range columnNames {
+				columns = append(columns, r.GetString(c))
+			}
+			fmt.Println(strings.Join(columns, ","))
+
+			// log.Debug().Msgf("request: %+v", request.AllSettings())
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), string(b))
 
 		log.Info().Msgf("successfully listed requests from ServiceDesk Plus")
 		return
