@@ -19,6 +19,7 @@ The program logs various actions to a file in the working directory but this can
 | [`gdna email`](gdna_email.md)	 | Email reports |
 | [`gdna fetch`](gdna_fetch.md)	 | Fetch usage data |
 | [`gdna list`](gdna_list.md)	 | List commands |
+| [`gdna pubkey`](gdna_pubkey.md)	 | Print public key |
 | [`gdna remove / rm / delete`](gdna_remove.md)	 |  |
 | [`gdna report`](gdna_report.md)	 | Run ad hoc report(s) |
 | [`gdna restart`](gdna_restart.md)	 | Restart background GDNA process |
