@@ -1,6 +1,6 @@
 module github.com/itrs-group/cordial
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
@@ -35,7 +35,7 @@ require (
 	github.com/lestrrat-go/strftime v1.1.1
 	github.com/mackerelio/go-osstat v0.2.6
 	github.com/maja42/goval v1.6.0
-	github.com/mattn/go-sqlite3 v1.14.33
+	github.com/mattn/go-sqlite3 v1.14.34
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pkg/sftp v1.13.10
@@ -53,14 +53,14 @@ require (
 	github.com/tklauser/go-sysconf v0.3.16
 	github.com/wneessen/go-mail v0.7.2
 	github.com/xuri/excelize/v2 v2.10.0
-	golang.org/x/crypto v0.47.0
-	golang.org/x/net v0.49.0
+	golang.org/x/crypto v0.48.0
+	golang.org/x/net v0.50.0
 	golang.org/x/oauth2 v0.35.0
 	golang.org/x/sys v0.41.0
-	golang.org/x/term v0.39.0
+	golang.org/x/term v0.40.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.44.3
+	modernc.org/sqlite v1.45.0
 	software.sslmate.com/src/go-pkcs12 v0.7.0
 )
 
@@ -76,7 +76,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.1-0.20250404203927-76690c660834 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
-	github.com/charmbracelet/x/exp/slice v0.0.0-20260204111555-7642919e0bee // indirect
+	github.com/charmbracelet/x/exp/slice v0.0.0-20260209194814-eeb2896ac759 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/clipperhouse/displaywidth v0.10.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.6.0 // indirect
@@ -148,8 +148,8 @@ require (
 	go.opentelemetry.io/otel/metric v1.40.0 // indirect
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/exp v0.0.0-20260209203927-2842357ff358 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
