@@ -21,6 +21,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // The Client struct carries the http Client and the url down to
@@ -40,6 +41,13 @@ func NewClient(url *url.URL, options ...Options) (c *Client) {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 	}
+	// clean up idle connections every 30 seconds
+	ticker := time.NewTicker(30 * time.Second)
+	go func() {
+		for range ticker.C {
+			c.CloseIdleConnections()
+		}
+	}()
 	return
 }
 

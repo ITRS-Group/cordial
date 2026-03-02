@@ -9,7 +9,7 @@
 >**BREAKING CHANGES**
 >* `tools/geneos` has potentially breaking changes to how TLS certificates are managed.
 >
->  To better support secure connections between Geneos components using TLS (and also for extrenal connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>  To better support secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
 >  The release version has also skipped v1.25.x to emphasise these breaking changes.
 

@@ -87,7 +87,7 @@ type methodResponse struct {
 	Fault        []members `xml:"fault>value>struct>member"`
 }
 
-func (c Client) post(method string, args ...interface{}) (result methodResponse, err error) {
+func (c Client) post(method string, args ...any) (result methodResponse, err error) {
 	data := &methodCall{Name: method}
 
 	params := []any{}
@@ -109,15 +109,15 @@ func (c Client) post(method string, args ...interface{}) (result methodResponse,
 			}
 			params = append(params, methodScalar{Scalar: methodBool{Value: v}})
 		case []string:
-			strings := []interface{}{}
+			strings := []any{}
 			for _, s := range a {
 				strings = append(strings, methodString{Value: s})
 			}
 			params = append(params, methodArray{Array: methodArrayData{Data: []methodData{{Value: strings}}}})
 		case [][]string:
-			stringstrings := []interface{}{}
+			stringstrings := []any{}
 			for _, ss := range a {
-				strings := []interface{}{}
+				strings := []any{}
 				for _, s := range ss {
 					strings = append(strings, methodString{Value: s})
 				}
