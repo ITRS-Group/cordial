@@ -17,7 +17,10 @@ limitations under the License.
 
 package config
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
 type expandOptions struct {
 	defaultValue       any
@@ -73,9 +76,7 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 
 	if e.externalFuncMaps {
 		defaultFuncMapsMutex.Lock()
-		for k, v := range e.funcMaps {
-			defaultFuncMaps[k] = v
-		}
+		maps.Copy(defaultFuncMaps, e.funcMaps)
 		e.funcMaps = defaultFuncMaps
 		defaultFuncMapsMutex.Unlock()
 	}
