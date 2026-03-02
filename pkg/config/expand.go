@@ -170,8 +170,9 @@ import (
 	"strings"
 
 	"github.com/awnumar/memguard"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/maja42/goval"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // ExpandString returns the global configuration value for input as an
@@ -609,6 +610,7 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 		}
 		return
 	case strings.HasPrefix(s, "config:"), !strings.Contains(s, ":"):
+		// TODO: SHould this dot be a delimiter lookup?
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
 			s = strings.TrimPrefix(s, "config:")
 			if !opts.expandNonString {
@@ -668,15 +670,21 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 			return
 		}
 
+		// CHANGE: Move core to after lookup table loop, giving lookup
+		// tables precedence over environment variables. This is a
+		// change in behaviour but is more consistent with the idea of
+		// lookup tables as a way to override environment variables and
+		// other sources.
+
 		// only lookup env if there are no values maps, NOT if lookups
 		// fail in any given maps
-		if len(opts.lookupTables) == 0 {
-			value = mapEnv(s)
-			if opts.trimSpace {
-				value = strings.TrimSpace(value)
-			}
-			return
-		}
+		// if len(opts.lookupTables) == 0 {
+		// 	value = mapEnv(s)
+		// 	if opts.trimSpace {
+		// 		value = strings.TrimSpace(value)
+		// 	}
+		// 	return
+		// }
 
 		for _, v := range opts.lookupTables {
 			if n, ok := v[s]; ok {
@@ -686,6 +694,11 @@ func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value stri
 				}
 				return
 			}
+		}
+
+		value = mapEnv(s)
+		if opts.trimSpace {
+			value = strings.TrimSpace(value)
 		}
 
 		return

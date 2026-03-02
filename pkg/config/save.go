@@ -19,9 +19,12 @@ package config
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Save a configuration file for the module name.
@@ -81,8 +84,12 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 
 	c.Viper.SetFs(r.GetFs())
 
+	// set the config type as well as the extension to ensure the correct format is used when writing the file
+	c.Viper.SetConfigFile(filepath.Ext(p))
+
 	// write to path with process ID and original extension appended and
 	// then try to atomically rename
+
 	tmp := fmt.Sprintf("%s.%d%s", p, os.Getpid(), filepath.Ext(p))
 	if err = c.Viper.WriteConfigAs(tmp); err != nil {
 		return
@@ -100,4 +107,40 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 // by the component name and options
 func Save(name string, options ...FileOptions) (err error) {
 	return global.Save(name, options...)
+}
+
+// SaveTo writes the configuration to the provided writer. The name and
+// options are used to determine the format of the configuration file,
+// but the actual output is written to the provided writer instead of a
+// file. This can be useful for writing the configuration to a different
+// destination, such as a network connection or an in-memory buffer,
+// rather than a file on disk.
+//
+// options can include both FileOptions and ExpandOptions, which are
+// used to determine the format of the configuration file and to expand
+// any dynamic values in the configuration, respectively. The function
+// will handle both types of options and apply them as needed when
+// writing the configuration to the provided writer.
+func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err error) {
+	opts := evalSaveOptions(name, options...)
+
+	if opts.expandonsave {
+		nc := New() // KeyDelimiter("::"))
+		for _, k := range c.AllKeys() {
+			log.Debug().Msgf("expanding key: %s", k)
+			nc.Set(k, c.ExpandString(c.GetString(k, opts.expandoptions...)))
+		}
+		c = nc
+	}
+
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if opts.userconfdir != "" {
+		c.Viper.SetConfigType(opts.extension)
+	} else {
+		c.Viper.SetConfigType(defaultFileExtension)
+	}
+
+	return c.Viper.WriteConfigTo(w)
 }

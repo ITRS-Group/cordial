@@ -42,6 +42,8 @@ type fileOptions struct {
 	delimiter                   string
 	envprefix                   string
 	envdelimiter                string
+	expandonsave                bool
+	expandoptions               []ExpandOptions
 	internalDefaults            []byte
 	internalDefaultsFormat      string
 	internalDefaultsCheckErrors bool
@@ -376,5 +378,21 @@ func WatchConfig(notify ...func(fsnotify.Event)) FileOptions {
 func StopOnInternalDefaultsErrors() FileOptions {
 	return func(fo *fileOptions) {
 		fo.internalDefaultsCheckErrors = true
+	}
+}
+
+// ExpandOnSave tells Save to pass the configuration through
+// config.Expand before writing it to the file. This allows for dynamic
+// values in the configuration to be expanded on save, for example to
+// include values from the environment or from other configuration
+// items. This is off by default, and the configuration is saved as-is.
+//
+// Typically used with SaveTo() to write to an io.Writer such as
+// os.Stdout or a remote host, where the configuration is not being read
+// back in and so does not need to be expanded on load.
+func ExpandOnSave(options ...ExpandOptions) FileOptions {
+	return func(fo *fileOptions) {
+		fo.expandonsave = true
+		fo.expandoptions = options
 	}
 }

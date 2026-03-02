@@ -502,6 +502,33 @@ func decode(input any, config *mapstructure.DecoderConfig) error {
 	return decoder.Decode(input)
 }
 
+// ExpandFieldsHook returns a mapstructure.DecodeHookFunc that expands
+// string fields using the config.ExpandString function with the options
+// given. This is intended to be used in Unmarshal calls to allow for
+// dynamic values in the configuration file. The hook will only expand
+// string fields, and will leave other types unchanged.
+var ExpandFieldsHook = func(opts ...ExpandOptions) mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+
+		str := data.(string)
+
+		return ExpandString(str, opts...), nil
+	}
+}
+
+func Unmarshal(rawVal any, opts ...viper.DecoderConfigOption) error {
+	return global.Unmarshal(rawVal, opts...)
+}
+
+func (c *Config) Unmarshal(rawVal any, opts ...viper.DecoderConfigOption) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	return viper.Unmarshal(rawVal, opts...)
+}
+
 func UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	return global.UnmarshalKey(key, rawVal, opts...)
 }
