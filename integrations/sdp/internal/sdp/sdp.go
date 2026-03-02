@@ -280,6 +280,6 @@ type DateTime struct {
 }
 
 type NameID struct {
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 	ID   int64  `json:"id,string,omitempty"`
 }

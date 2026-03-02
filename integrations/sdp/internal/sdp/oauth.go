@@ -26,7 +26,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"reflect"
 	"strings"
 	"time"
 
@@ -96,8 +95,8 @@ func LoadToken() (token *oauth2.Token, err error) {
 		}),
 		viper.DecodeHook(
 			mapstructure.ComposeDecodeHookFunc(
+				config.ExpandFieldsHook(),
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
-				expandFieldsHook(),
 			),
 		),
 	); err != nil {
@@ -105,18 +104,6 @@ func LoadToken() (token *oauth2.Token, err error) {
 	}
 
 	return
-}
-
-var expandFieldsHook = func() mapstructure.DecodeHookFunc {
-	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		str := data.(string)
-
-		return config.ExpandString(str), nil
-	}
 }
 
 func saveToken(token *oauth2.Token) (err error) {
