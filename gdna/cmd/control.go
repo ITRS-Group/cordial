@@ -80,7 +80,7 @@ func stop() (err error) {
 		return os.ErrPermission
 	}
 
-	for j := 0; j < 10; j++ {
+	for range 10 {
 		time.Sleep(250 * time.Millisecond)
 		if err = h.Signal(pid, syscall.SIGTERM); err == os.ErrProcessDone {
 			log.Info().Msgf("terminated PID %d", pid)

@@ -2,6 +2,7 @@ package geneos
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -22,13 +23,7 @@ func TestComponentRegistration(t *testing.T) {
 	}
 
 	// Check that "any" is in aliases
-	found := false
-	for _, alias := range RootComponent.Aliases {
-		if alias == "any" {
-			found = true
-			break
-		}
-	}
+	found := slices.Contains(RootComponent.Aliases, "any")
 	if !found {
 		t.Error("RootComponent should have 'any' as an alias")
 	}
@@ -42,7 +37,7 @@ func TestParseComponent(t *testing.T) {
 		nilOK    bool // true if result can be nil when component not registered
 	}{
 		{
-			name:     "alias match for root", 
+			name:     "alias match for root",
 			input:    "any",
 			expected: RootComponentName,
 			nilOK:    false,
@@ -96,7 +91,7 @@ func TestParseComponentWithRegisteredComponents(t *testing.T) {
 		},
 		{
 			name:     "netprobe exact match",
-			input:    "netprobe", 
+			input:    "netprobe",
 			expected: "netprobe",
 		},
 	}
@@ -141,9 +136,9 @@ func TestComponentName(t *testing.T) {
 			expected: "gateway",
 		},
 		{
-			name: "nil component",
+			name:      "nil component",
 			component: nil,
-			expected: "",
+			expected:  "",
 		},
 	}
 
@@ -159,7 +154,7 @@ func TestComponentName(t *testing.T) {
 
 func TestAllComponents(t *testing.T) {
 	components := AllComponents()
-	
+
 	// Should at least contain the root component
 	if len(components) == 0 {
 		t.Error("AllComponents() should return at least the root component")
@@ -352,21 +347,21 @@ func TestComponentDownloadBases(t *testing.T) {
 func TestComponentRegister(t *testing.T) {
 	// Test component registration
 	originalSize := len(registeredComponents)
-	
+
 	testComp := &Component{
 		Name:    "test_register",
 		Aliases: []string{"tr"},
 	}
-	
+
 	// Test that Register method exists and can be called
 	// Note: We can't test the actual Register method without importing the full component
 	// but we can test the registration concept
 	registeredComponents["test_register"] = testComp
-	
+
 	if len(registeredComponents) != originalSize+1 {
 		t.Error("Component registration failed to increase map size")
 	}
-	
+
 	// Clean up
 	delete(registeredComponents, "test_register")
 }

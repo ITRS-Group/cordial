@@ -89,8 +89,7 @@ func main() {
 	}
 	sp.InsecureSkipVerify()
 
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		tick := time.NewTicker(5 * time.Second)
 		defer tick.Stop()
 		for {
@@ -101,8 +100,7 @@ func main() {
 				break
 			}
 		}
-		wg.Done()
-	}()
+	})
 
 	wg.Wait()
 }

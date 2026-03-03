@@ -344,8 +344,8 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 		}
 
 		for _, i := range ignore {
-			if strings.HasSuffix(i, "/") {
-				ignoreDirs = append(ignoreDirs, strings.TrimSuffix(i, "/"))
+			if before, ok0 := strings.CutSuffix(i, "/"); ok0 {
+				ignoreDirs = append(ignoreDirs, before)
 			} else {
 				ignoreFiles = append(ignoreFiles, i)
 			}

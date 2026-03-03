@@ -49,7 +49,7 @@ type listCertType struct {
 	Name       string        `json:"name,omitempty"`
 	Host       string        `json:"host,omitempty"`
 	Remaining  time.Duration `json:"remaining,omitempty"`
-	Expires    time.Time     `json:"expires,omitempty"`
+	Expires    time.Time     `json:"expires"`
 	CommonName string        `json:"common_name,omitempty"`
 	Valid      string        `json:"valid,omitempty"`
 }
@@ -59,7 +59,7 @@ type listCertLongType struct {
 	Name              string        `json:"name,omitempty"`
 	Host              string        `json:"host,omitempty"`
 	Remaining         time.Duration `json:"remaining,omitempty"`
-	Expires           time.Time     `json:"expires,omitempty"`
+	Expires           time.Time     `json:"expires"`
 	CommonName        string        `json:"common_name,omitempty"`
 	Valid             string        `json:"valid,omitempty"`
 	Certificate       string        `json:"certificate,omitempty"`

@@ -49,7 +49,7 @@ type snowResult struct {
 	Error   struct {
 		Message string `json:"message"`
 		Detail  string `json:"detail"`
-	} `json:"error,omitempty"`
+	} `json:"error"`
 	Status string `json:"status,omitempty"`
 }
 

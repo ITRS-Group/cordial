@@ -27,7 +27,7 @@ import (
 )
 
 // getPID only find the first process called ActiveConsole
-func getPID(i interface{}) (pid int, err error) {
+func getPID(i any) (pid int, err error) {
 	switch c := i.(type) {
 	case *AC2s:
 		var pids []int

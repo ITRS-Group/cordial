@@ -154,7 +154,7 @@ func (x *XPath) ResolveTo(element any) *XPath {
 	var nx XPath
 
 	// skip through any pointers
-	for reflect.ValueOf(element).Kind() == reflect.Ptr {
+	for reflect.ValueOf(element).Kind() == reflect.Pointer {
 		element = reflect.Indirect(reflect.ValueOf(element)).Interface()
 	}
 

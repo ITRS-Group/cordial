@@ -33,7 +33,7 @@ type reportBy struct {
 	CreatedBy string    `json:"createdBy,omitempty"`
 	Version   string    `json:"version,omitempty"`
 	Site      string    `json:"site,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
+	Timestamp time.Time `json:"timestamp"`
 	Hostname  string    `json:"hostname,omitempty"`
 	Gateway   string    `json:"gateway,omitempty"`
 	Probes    int       `json:"probes,omitempty"`

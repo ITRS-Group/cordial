@@ -398,10 +398,7 @@ func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config,
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := len(s.Column1)
-				if len(s.Column2) > items {
-					items = len(s.Column2)
-				}
+				items := max(len(s.Column2), len(s.Column1))
 				for i := 0; i < items; i++ {
 					row := []string{
 						e.Name,
@@ -488,10 +485,7 @@ func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *con
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := len(s.Column1)
-				if len(s.Column2) > items {
-					items = len(s.Column2)
-				}
+				items := max(len(s.Column2), len(s.Column1))
 				for i := 0; i < items; i++ {
 					rowname := e.Name + "-" + s.Name
 					if s.Type != "" {

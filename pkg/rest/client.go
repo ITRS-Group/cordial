@@ -332,7 +332,7 @@ func decodeResponse(resp *http.Response, response any) (err error) {
 				return
 			}
 			for d.More() {
-				var s interface{}
+				var s any
 				if err = d.Decode(&s); err != nil {
 					return
 				}
@@ -362,7 +362,7 @@ func decodeResponse(resp *http.Response, response any) (err error) {
 
 // decodeResponseBytes checks the content-type and decodes based on
 // that. On failure it returns the body in b.
-func decodeResponseBytes(resp *http.Response, response interface{}) (b []byte, err error) {
+func decodeResponseBytes(resp *http.Response, response any) (b []byte, err error) {
 	if response == nil {
 		return
 	}
@@ -387,7 +387,7 @@ func decodeResponseBytes(resp *http.Response, response interface{}) (b []byte, e
 				return
 			}
 			for d.More() {
-				var s interface{}
+				var s any
 				if err = d.Decode(&s); err != nil {
 					return
 				}

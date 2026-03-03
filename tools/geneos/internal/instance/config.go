@@ -556,7 +556,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 
 // DeleteSettingFromMap removes key from the map from and if it is
 // registered as an alias it also removes the key that alias refers to.
-func DeleteSettingFromMap(i geneos.Instance, from map[string]interface{}, key string) {
+func DeleteSettingFromMap(i geneos.Instance, from map[string]any, key string) {
 	if a, ok := i.Type().LegacyParameters[key]; ok {
 		// delete any setting this is an alias for, as well as the alias
 		delete(from, a)

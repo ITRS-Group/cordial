@@ -56,9 +56,9 @@ import (
 // specific updates as necessary. currently none, just update version
 func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly bool) (db *sql.DB, err error) {
 	dsn := cf.GetString(dsnBase)
-	if strings.HasPrefix(dsn, "file:") {
+	if after, ok := strings.CutPrefix(dsn, "file:"); ok {
 		// check and replace short form home in a file DSN
-		dsn = "file:" + config.ExpandHome(strings.TrimPrefix(dsn, "file:"))
+		dsn = "file:" + config.ExpandHome(after)
 	}
 	log.Info().Msgf("opening database using DSN `%s`", dsn)
 	db, err = sql.Open(dbtype, dsn)

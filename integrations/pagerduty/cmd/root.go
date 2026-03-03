@@ -162,14 +162,14 @@ func sendEvent(eventType eventType) (err error) {
 		action = "trigger"
 	}
 
-	links := []interface{}{}
-	for _, l := range strings.Split(cf.GetString("pagerduty.event.links"), "\n") {
+	links := []any{}
+	for l := range strings.SplitSeq(cf.GetString("pagerduty.event.links"), "\n") {
 		if l != "" {
 			links = append(links, Link{Href: l})
 		}
 	}
 
-	images := []interface{}{}
+	images := []any{}
 
 	v2event := pagerduty.V2Event{
 		RoutingKey: routing_key,

@@ -81,17 +81,17 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.Response
 		return
 	}
 
-	cmdLine := ""
+	var cmdLine strings.Builder
 	for _, a := range cmd.Args {
 		if strings.Contains(a, " ") {
-			cmdLine += ` "` + a + `"`
+			cmdLine.WriteString(` "` + a + `"`)
 		} else {
-			cmdLine += " " + a
+			cmdLine.WriteString(" " + a)
 		}
 	}
 	lines = append(lines,
 		"command line:",
-		fmt.Sprint("\t", cmdLine),
+		fmt.Sprint("\t", cmdLine.String()),
 		"",
 		"working directory:",
 		fmt.Sprint("\t", cmd.Dir),

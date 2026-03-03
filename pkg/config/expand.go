@@ -287,7 +287,7 @@ func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	}
 
 	if len(value) == 0 {
-		value = []byte(fmt.Sprint(opts.defaultValue))
+		value = fmt.Append(nil, opts.defaultValue)
 	}
 
 	return
@@ -350,7 +350,7 @@ func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value 
 
 	if value == nil || value.Size() == 0 {
 		// return a *copy* of the defaultValue, don't let memguard wipe it!
-		return memguard.NewEnclave([]byte(fmt.Sprint(opts.defaultValue)))
+		return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
 	}
 
 	return
@@ -374,9 +374,9 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 			if b, ok := opts.initialValue.([]byte); ok {
 				return memguard.NewBufferFromBytes(b)
 			}
-			return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.initialValue)))
+			return memguard.NewBufferFromBytes(fmt.Append(nil, opts.initialValue))
 		}
-		return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
 	}
 
 	if input == "" && opts.initialValue != nil {
@@ -396,7 +396,7 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 
 	if value == nil || value.Size() == 0 {
 		// return a *copy* of the defaultvalue, don't let memguard wipe it!
-		return memguard.NewBufferFromBytes([]byte(fmt.Sprint(opts.defaultValue)))
+		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
 	}
 
 	return
@@ -494,7 +494,7 @@ func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value 
 		return
 	}
 
-	for _, k := range strings.Split(keyfiles, "|") {
+	for k := range strings.SplitSeq(keyfiles, "|") {
 		keyfile := KeyFile(ExpandHome(k))
 		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
 		if err != nil {
@@ -520,7 +520,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 		return
 	}
 
-	for _, k := range bytes.Split(keyfiles, []byte("|")) {
+	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
 		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.Decode(host.Localhost, encodedValue)
 		if err != nil {
@@ -546,7 +546,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 		return
 	}
 
-	for _, k := range bytes.Split(keyfiles, []byte("|")) {
+	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
 		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {
@@ -572,7 +572,7 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 		return
 	}
 
-	for _, k := range bytes.Split(keyfiles, []byte("|")) {
+	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
 		keyfile := KeyFile(ExpandHomeBytes(k))
 		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
 		if err != nil {

@@ -271,7 +271,7 @@ type User struct {
 	Site struct {
 		ID   int64  `json:"id,string,omitempty"`
 		Name string `json:"name,omitempty"`
-	} `json:"site,omitempty"`
+	} `json:"site"`
 }
 
 type DateTime struct {

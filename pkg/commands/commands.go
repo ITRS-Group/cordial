@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -44,7 +45,7 @@ type Command struct {
 	Name   string       `json:"command,omitempty"`
 	Target *xpath.XPath `json:"target"`
 	Args   *CommandArgs `json:"args,omitempty"`
-	Scope  Scope        `json:"scope,omitempty"`
+	Scope  Scope        `json:"scope"`
 	Limit  int          `json:"limit,omitempty"`
 }
 
@@ -259,9 +260,7 @@ func cookResponse(raw CommandResponseRaw) (cr CommandResponse) {
 
 	for _, m := range raw.MimeType {
 		cr.MimeType = make(map[string]string)
-		for k, v := range m {
-			cr.MimeType[k] = v
-		}
+		maps.Copy(cr.MimeType, m)
 	}
 
 	for _, s := range raw.StreamData {

@@ -416,7 +416,7 @@ func (c *Config) GetStringSlice(s string, options ...ExpandOptions) (slice []str
 	return
 }
 
-func isStringMapInterface(val interface{}) bool {
+func isStringMapInterface(val any) bool {
 	if val == nil {
 		return false
 	}
@@ -450,7 +450,7 @@ func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map
 	if !isStringMapInterface(i) {
 		return
 	}
-	val := i.(map[string]interface{})
+	val := i.(map[string]any)
 	keys := c.AllKeys()
 	for _, k := range keys {
 		if !strings.HasPrefix(k, prefix) {

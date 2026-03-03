@@ -365,7 +365,7 @@ type VarValue struct {
 type Vars map[string]VarValue
 
 // convertVars updates old style variables items to the new style
-func convertVars(vars map[string]interface{}) {
+func convertVars(vars map[string]any) {
 	for k, v := range vars {
 		switch t := v.(type) {
 		case string:

@@ -31,17 +31,17 @@ type methodCall struct {
 }
 
 type methodParams struct {
-	Params []interface{}
+	Params []any
 }
 
 type methodScalar struct {
 	XMLName xml.Name `xml:"param"`
-	Scalar  interface{}
+	Scalar  any
 }
 
 type methodArray struct {
 	XMLName xml.Name `xml:"param"`
-	Array   interface{}
+	Array   any
 }
 
 type methodArrayData struct {
@@ -50,7 +50,7 @@ type methodArrayData struct {
 }
 
 type methodData struct {
-	Value interface{}
+	Value any
 }
 
 type methodString struct {
@@ -165,7 +165,7 @@ func (c Client) post(method string, args ...any) (result methodResponse, err err
 	return
 }
 
-func (c Client) callMethodBool(method string, args ...interface{}) (result bool, err error) {
+func (c Client) callMethodBool(method string, args ...any) (result bool, err error) {
 	res, err := c.post(method, args...)
 	if err != nil {
 		return
@@ -174,7 +174,7 @@ func (c Client) callMethodBool(method string, args ...interface{}) (result bool,
 	return
 }
 
-func (c Client) callMethodInt(method string, args ...interface{}) (result int, err error) {
+func (c Client) callMethodInt(method string, args ...any) (result int, err error) {
 	res, err := c.post(method, args...)
 	if err != nil {
 		return
@@ -183,7 +183,7 @@ func (c Client) callMethodInt(method string, args ...interface{}) (result int, e
 	return
 }
 
-func (c Client) callMethodString(method string, args ...interface{}) (result string, err error) {
+func (c Client) callMethodString(method string, args ...any) (result string, err error) {
 	res, err := c.post(method, args...)
 	if err != nil {
 		return
@@ -192,7 +192,7 @@ func (c Client) callMethodString(method string, args ...interface{}) (result str
 	return result, err
 }
 
-func (c Client) callMethodStringSlice(method string, args ...interface{}) (strings []string, err error) {
+func (c Client) callMethodStringSlice(method string, args ...any) (strings []string, err error) {
 	result, err := c.post(method, args...)
 	if err != nil {
 		return
@@ -201,7 +201,7 @@ func (c Client) callMethodStringSlice(method string, args ...interface{}) (strin
 	return
 }
 
-func (c Client) callMethod(method string, args ...interface{}) (err error) {
+func (c Client) callMethod(method string, args ...any) (err error) {
 	_, err = c.post(method, args...)
 	return
 }

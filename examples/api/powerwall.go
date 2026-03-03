@@ -79,7 +79,7 @@ func (p PowerwallSampler) DoSample() (err error) {
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	var data map[string]map[string]interface{}
+	var data map[string]map[string]any
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		log.Fatal().Err(err).Msg("")

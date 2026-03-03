@@ -125,7 +125,7 @@ func TestSliceFromAny(t *testing.T) {
 	}
 
 	// Test with interface{} slice
-	inputInterface := []interface{}{"arg1", "arg2", "arg3"}
+	inputInterface := []any{"arg1", "arg2", "arg3"}
 	result, err = sliceFromAny(inputInterface)
 	if err != nil {
 		t.Errorf("sliceFromAny failed: %v", err)

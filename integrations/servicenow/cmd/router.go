@@ -129,7 +129,7 @@ func router() {
 	if !cf.GetBool("api.tls.enabled") {
 		e.Logger.Fatal(e.Start(i))
 	} else if cf.GetBool("api.tls.enabled") {
-		var cert interface{}
+		var cert any
 		certstr := config.GetString("api.tls.certificate")
 		certpem, _ := pem.Decode([]byte(certstr))
 		if certpem == nil {
@@ -138,7 +138,7 @@ func router() {
 			cert = []byte(certstr)
 		}
 
-		var key interface{}
+		var key any
 		keystr := config.GetString("api.tls.key")
 		keypem, _ := pem.Decode([]byte(keystr))
 		if keypem == nil {

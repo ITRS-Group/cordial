@@ -442,7 +442,7 @@ func watchLogs() (tails *sync.Map) {
 
 	go func() {
 		for range ticker.C {
-			tails.Range(func(key, value interface{}) bool {
+			tails.Range(func(key, value any) bool {
 				if value == nil {
 					return true
 				}

@@ -27,7 +27,7 @@ import (
 	"strings"
 )
 
-func webserverGetPID(i interface{}) (pid int, err error) {
+func webserverGetPID(i any) (pid int, err error) {
 	switch w := i.(type) {
 	case *Webservers:
 		var pids []int

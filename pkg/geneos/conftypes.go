@@ -119,7 +119,7 @@ type Reference struct {
 //	    ...
 //	}
 type SingleLineStringVar struct {
-	Parts []interface{}
+	Parts []any
 }
 
 // NewSingleLineString take a plain string and locates any Geneos style
@@ -213,7 +213,7 @@ func (s *SingleLineStringVar) MarshalJSON() (out []byte, err error) {
 
 var _ yaml.Marshaler = (*SingleLineStringVar)(nil)
 
-func (s *SingleLineStringVar) MarshalYAML() (out interface{}, err error) {
+func (s *SingleLineStringVar) MarshalYAML() (out any, err error) {
 	out = s.String()
 	return
 }
@@ -252,7 +252,7 @@ type Value struct {
 // string returns a Data{}. If the string is empty then a nil pointer is
 // returned. Any other value is copied as is. This allows
 // `xml:",omitempty"“ to leave out VarData fields that contain no data.
-func NewValue(in interface{}) (n *Value) {
+func NewValue(in any) (n *Value) {
 	n = &Value{}
 	switch s := in.(type) {
 	case string:

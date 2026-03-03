@@ -72,7 +72,7 @@ type Dataview struct {
 // for ordered objects
 type dataviewRaw struct {
 	Name             string          `json:"name"`
-	SampleTime       time.Time       `json:"sample-time,omitempty"`
+	SampleTime       time.Time       `json:"sample-time"`
 	Snoozed          bool            `json:"snoozed,omitempty"`
 	SnoozedAncestors bool            `json:"snoozed-ancestors,omitempty"`
 	Headlines        json.RawMessage `json:"headlines,omitempty"`
@@ -121,7 +121,7 @@ func (dv *Dataview) UnmarshalJSON(d []byte) (err error) {
 		default:
 			return &json.UnmarshalTypeError{
 				Value:  "",
-				Type:   reflect.TypeOf(dv),
+				Type:   reflect.TypeFor[*Dataview](),
 				Offset: hdec.InputOffset(),
 				Struct: "Dataview",
 				Field:  "Headlines",
@@ -181,7 +181,7 @@ NEXTROW:
 					default:
 						return &json.UnmarshalTypeError{
 							Value:  "",
-							Type:   reflect.TypeOf(dv),
+							Type:   reflect.TypeFor[*Dataview](),
 							Offset: tdec.InputOffset(),
 							Struct: "Dataview",
 							Field:  "Table",
@@ -201,7 +201,7 @@ NEXTROW:
 		default:
 			return &json.UnmarshalTypeError{
 				Value:  "",
-				Type:   reflect.TypeOf(dv),
+				Type:   reflect.TypeFor[*Dataview](),
 				Offset: tdec.InputOffset(),
 				Struct: "Dataview",
 				Field:  "Table",

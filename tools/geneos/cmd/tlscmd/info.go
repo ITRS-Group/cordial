@@ -402,10 +402,5 @@ func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
 }
 
 func containsExtKeyUsage(usages []x509.ExtKeyUsage, usage x509.ExtKeyUsage) bool {
-	for _, u := range usages {
-		if u == usage {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(usages, usage)
 }

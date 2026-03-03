@@ -195,7 +195,7 @@ func (p *GatewaySQLPlugin) String() string {
 }
 
 type GatewaySQLTables struct {
-	Tables []interface{}
+	Tables []any
 }
 
 type GatewaySQLTableDataview struct {

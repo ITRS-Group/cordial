@@ -53,12 +53,12 @@ type Columns map[string]columndetails
 
 // columndetails has to be it's own type so that it can be used as values in maps
 type columndetails struct {
-	tags     string                   // copy of tags for now
-	name     string                   // display name of column. name="OMIT" mean not rendered
-	number   int                      // column index - convenience for now
-	format   string                   // alterative Printf format, default is %v
-	convfunc func(interface{}) string // this may happen - not yet used
-	sort     sortType                 // if this is the sorting column then what type from above
+	tags     string           // copy of tags for now
+	name     string           // display name of column. name="OMIT" mean not rendered
+	number   int              // column index - convenience for now
+	format   string           // alterative Printf format, default is %v
+	convfunc func(any) string // this may happen - not yet used
+	sort     sortType         // if this is the sorting column then what type from above
 }
 
 const (
@@ -85,14 +85,14 @@ const (
 // allows for future shared initialisation code
 
 func (p *Samplers) initSamplerInternal() error {
-	if v, ok := interface{}(p.Plugins).(interface{ InitSampler() error }); ok {
+	if v, ok := any(p.Plugins).(interface{ InitSampler() error }); ok {
 		return v.InitSampler()
 	}
 	return fmt.Errorf("no InitSampler() found in plugin")
 }
 
 func (p *Samplers) doSampleInterval() error {
-	if v, ok := interface{}(p.Plugins).(interface{ DoSample() error }); ok {
+	if v, ok := any(p.Plugins).(interface{ DoSample() error }); ok {
 		return v.DoSample()
 	}
 	return fmt.Errorf("no DoSample() found in plugin")
@@ -152,8 +152,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 	if err = p.initSamplerInternal(); err != nil {
 		return
 	}
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		tick := time.NewTicker(p.Interval())
 		defer tick.Stop()
 		for {
@@ -163,8 +162,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 				break
 			}
 		}
-		wg.Done()
-	}()
+	})
 	return
 }
 
@@ -190,7 +188,7 @@ defined in detail. More docs to follow.
 The input is a type or an zero-ed struct as this method only checks the struct
 tags and doesn't care about the data
 */
-func (s Samplers) ColumnInfo(rowdata interface{}) (cols Columns,
+func (s Samplers) ColumnInfo(rowdata any) (cols Columns,
 	columnnames []string, sorting string, err error) {
 	if rowdata == nil {
 		return
@@ -242,7 +240,7 @@ by the sort column in the initialised ColumnNames member of the Sampler
 Sorting the data is only to define the "natural sort order" of the data
 as it appears in a Geneos Dataview without further client-side sorting.
 */
-func (s *Samplers) UpdateTableFromMap(data interface{}) error {
+func (s *Samplers) UpdateTableFromMap(data any) error {
 	table, _ := s.RowsFromMap(data)
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
@@ -256,7 +254,7 @@ MB etc.)
 The data passed should NOT include column heading slice as it will be
 regenerated from the Columns data
 */
-func (s Samplers) RowsFromMap(rowdata interface{}) (rows [][]string, err error) {
+func (s Samplers) RowsFromMap(rowdata any) (rows [][]string, err error) {
 	if rowdata == nil {
 		return
 	}
@@ -292,14 +290,14 @@ UpdateTableFromSlice - Given an ordered slice of structs of data the
 method renders a simple table of data as defined in the Columns
 part of Samplers
 */
-func (s Samplers) UpdateTableFromSlice(rowdata interface{}) error {
+func (s Samplers) UpdateTableFromSlice(rowdata any) error {
 	table, _ := s.RowsFromSlice(rowdata)
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
 // RowsFromSlice - results are not resorted, they are assumed to be in the order
 // required
-func (s Samplers) RowsFromSlice(rowdata interface{}) (rows [][]string, err error) {
+func (s Samplers) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 	if rowdata == nil {
 		return
 	}
@@ -334,7 +332,7 @@ func (s Samplers) RowsFromSlice(rowdata interface{}) (rows [][]string, err error
 /*
 UpdateTableFromMapDelta
 */
-func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata interface{}, interval time.Duration) error {
+func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata any, interval time.Duration) error {
 	table, _ := s.RowsFromMapDelta(newdata, olddata, interval)
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
@@ -347,7 +345,7 @@ func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata interface{}, interva
 //
 // This is for data like sets of counters that are absolute values over
 // time
-func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata interface{},
+func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata any,
 	interval time.Duration) (rows [][]string, err error) {
 	if newrowdata == nil || oldrowdata == nil {
 		return
@@ -411,8 +409,8 @@ func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	return
 }
 
-func toFloat(f interface{}) (float64, error) {
-	var ft = reflect.TypeOf(float64(0))
+func toFloat(f any) (float64, error) {
+	var ft = reflect.TypeFor[float64]()
 	v := reflect.ValueOf(f)
 	v = reflect.Indirect(v)
 	if !v.Type().ConvertibleTo(ft) {
@@ -459,7 +457,7 @@ func (c Columns) sortRows(rows [][]string, sortcol string) [][]string {
 
 // pivot the struct members to a slice of their values ready to be
 // processed to a slice of strings
-func rowFromStruct(c Columns, rv reflect.Value) (row []interface{}, err error) {
+func rowFromStruct(c Columns, rv reflect.Value) (row []any, err error) {
 	rv = reflect.Indirect(rv)
 	if rv.Kind() != reflect.Struct {
 		err = fmt.Errorf("row data not a struct")
@@ -481,8 +479,8 @@ func parseTags(fieldname string, tag string) (cols columndetails, err error) {
 	cols.name = fieldname
 	cols.format = "%v"
 
-	tags := strings.Split(tag, ",")
-	for _, t := range tags {
+	tags := strings.SplitSeq(tag, ",")
+	for t := range tags {
 		i := strings.IndexByte(t, '=')
 		if i == -1 {
 			if cols.name != fieldname {

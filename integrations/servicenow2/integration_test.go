@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -55,7 +56,7 @@ func MockServiceNowServer() *httptest.Server {
 			})
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"result": results,
 		}
 
@@ -64,20 +65,20 @@ func MockServiceNowServer() *httptest.Server {
 
 	// Mock incident creation endpoint
 	e.POST("/api/now/v2/table/incident", func(c echo.Context) error {
-		var body map[string]interface{}
+		var body map[string]any
 		if err := c.Bind(&body); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		}
 
 		// Mock successful creation
 		result := map[string]string{
-			"sys_id":           "new-incident-id",
-			"number":           "INC0000002",
+			"sys_id":            "new-incident-id",
+			"number":            "INC0000002",
 			"short_description": fmt.Sprintf("%v", body["short_description"]),
-			"state":            "1",
+			"state":             "1",
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"result": []map[string]string{result},
 		}
 
@@ -87,8 +88,8 @@ func MockServiceNowServer() *httptest.Server {
 	// Mock incident update endpoint
 	e.PUT("/api/now/v2/table/incident/:sys_id", func(c echo.Context) error {
 		sysID := c.Param("sys_id")
-		
-		var body map[string]interface{}
+
+		var body map[string]any
 		if err := c.Bind(&body); err != nil {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid JSON"})
 		}
@@ -100,7 +101,7 @@ func MockServiceNowServer() *httptest.Server {
 			"state":  "2", // Updated state
 		}
 
-		response := map[string]interface{}{
+		response := map[string]any{
 			"result": []map[string]string{result},
 		}
 
@@ -109,7 +110,7 @@ func MockServiceNowServer() *httptest.Server {
 
 	// Mock OAuth token endpoint
 	e.POST("/oauth_token.do", func(c echo.Context) error {
-		response := map[string]interface{}{
+		response := map[string]any{
 			"access_token": "mock-access-token",
 			"token_type":   "Bearer",
 			"expires_in":   3600,
@@ -207,9 +208,9 @@ func TestIncidentCreationFlow(t *testing.T) {
 	// Create a test record
 	record := snow.Record{
 		"short_description": "Test incident from integration test",
-		"urgency":          "3",
-		"impact":           "3",
-		"correlation_id":   "test-integration-123",
+		"urgency":           "3",
+		"impact":            "3",
+		"correlation_id":    "test-integration-123",
 	}
 
 	// Create echo context for testing
@@ -251,7 +252,7 @@ func TestIncidentUpdateFlow(t *testing.T) {
 	// Create a test record for update
 	record := snow.Record{
 		"work_notes": "Updated from integration test",
-		"state":     "2",
+		"state":      "2",
 	}
 
 	// Create echo context for testing
@@ -289,7 +290,7 @@ func TestLookupRecordFlow(t *testing.T) {
 	cf.Set("servicenow.password", "testpass")
 	cf.Set("servicenow.url", server.URL)
 	cf.Set("servicenow.path", "/api/now/v2/table")
-	
+
 	// Set up table configuration
 	tables := []snow.TableData{
 		{
@@ -361,7 +362,7 @@ func TestErrorHandling(t *testing.T) {
 func TestTableConfiguration(t *testing.T) {
 	// Test table configuration parsing
 	cf := config.New()
-	
+
 	tables := []snow.TableData{
 		{
 			Name:   "incident",
@@ -414,7 +415,7 @@ func TestTableConfiguration(t *testing.T) {
 
 func TestCommandLineIntegration(t *testing.T) {
 	// Test command line parsing and initialization
-	
+
 	// Save original args
 	originalArgs := os.Args
 	defer func() { os.Args = originalArgs }()
@@ -433,13 +434,7 @@ func TestCommandLineIntegration(t *testing.T) {
 
 	expectedCommands := []string{"client", "proxy"}
 	for _, expected := range expectedCommands {
-		found := false
-		for _, name := range commandNames {
-			if name == expected {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(commandNames, expected)
 		if !found {
 			t.Errorf("Expected command %s to be registered, but it's missing", expected)
 		}
@@ -457,7 +452,7 @@ func TestFullWorkflow(t *testing.T) {
 	cf.Set("servicenow.password", "testpass")
 	cf.Set("servicenow.url", server.URL)
 	cf.Set("servicenow.path", "/api/now/v2/table")
-	
+
 	// Set up table configuration
 	tables := []snow.TableData{
 		{
@@ -492,7 +487,7 @@ func TestFullWorkflow(t *testing.T) {
 		// Step 2a: Update existing incident
 		record := snow.Record{
 			"work_notes": "Updated by integration test",
-			"state":     "2",
+			"state":      "2",
 		}
 
 		number, err := record.UpdateRecord(ctx, sysID)
@@ -505,9 +500,9 @@ func TestFullWorkflow(t *testing.T) {
 		// Step 2b: Create new incident
 		record := snow.Record{
 			"short_description": "New incident from integration test",
-			"correlation_id":   "test-new-123",
-			"urgency":          "3",
-			"impact":           "3",
+			"correlation_id":    "test-new-123",
+			"urgency":           "3",
+			"impact":            "3",
 		}
 
 		number, err := record.CreateRecord(ctx)
@@ -521,12 +516,12 @@ func TestFullWorkflow(t *testing.T) {
 
 func TestJSONSerialization(t *testing.T) {
 	// Test JSON serialization of various data structures
-	
+
 	// Test Record
 	record := snow.Record{
 		"short_description": "Test incident",
-		"urgency":          "3",
-		"correlation_id":   "test-123",
+		"urgency":           "3",
+		"correlation_id":    "test-123",
 	}
 
 	jsonData, err := json.Marshal(record)

@@ -64,7 +64,7 @@ var showCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			values := make(map[string]interface{})
+			values := make(map[string]any)
 			for _, k := range args {
 				v := cf.Get(k)
 				if v != nil {

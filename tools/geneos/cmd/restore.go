@@ -590,10 +590,10 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	nv := "${config:version}"
 
 	for _, p := range filepath.SplitList(cf.GetString("libpaths", config.NoExpand())) {
-		if strings.HasPrefix(p, oldInstall+"/") {
-			subpath := strings.TrimPrefix(p, oldInstall+"/")
-			if strings.HasPrefix(subpath, version) {
-				libpaths = append(libpaths, path.Join(np, nv, strings.TrimPrefix(subpath, version)))
+		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
+			subpath := after
+			if after, ok := strings.CutPrefix(subpath, version); ok {
+				libpaths = append(libpaths, path.Join(np, nv, after))
 			} else {
 				libpaths = append(libpaths, path.Join(np, subpath))
 			}

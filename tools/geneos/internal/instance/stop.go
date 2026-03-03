@@ -50,7 +50,7 @@ func Stop(i geneos.Instance, force, kill bool) (err error) {
 			return os.ErrPermission
 		}
 
-		for j := 0; j < 10; j++ {
+		for range 10 {
 			time.Sleep(250 * time.Millisecond)
 			if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
 				return nil

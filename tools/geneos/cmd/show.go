@@ -45,7 +45,7 @@ type showCmdInstanceConfig struct {
 
 type showCmdConfig struct {
 	Instance      showCmdInstanceConfig `json:"instance"`
-	Configuration interface{}           `json:"configuration,omitempty"`
+	Configuration any                   `json:"configuration,omitempty"`
 }
 
 var showCmdRaw, showCmdSetup, showCmdMerge, showCmdValidate bool

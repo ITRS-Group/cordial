@@ -12,7 +12,7 @@ type MetricsQueryRequest struct {
 	Aggregations []string  `json:"aggregations"`
 	Metrics      []Metric  `json:"metrics"`
 	ZoneID       string    `json:"zoneId,omitempty"`
-	Bucketing    Bucketing `json:"bucketing,omitempty"`
+	Bucketing    Bucketing `json:"bucketing"`
 }
 
 type MetricsQueryResponse struct {
@@ -21,15 +21,15 @@ type MetricsQueryResponse struct {
 }
 
 type Schema struct {
-	Bucketing Bucketing                         `json:"bucketing"`
-	Grouping  []string                          `json:"grouping"`
-	Metrics   map[string]map[string]interface{} `json:"metrics"`
+	Bucketing Bucketing                 `json:"bucketing"`
+	Grouping  []string                  `json:"grouping"`
+	Metrics   map[string]map[string]any `json:"metrics"`
 }
 
 type Data struct {
-	Bucket   time.Time                         `json:"bucket"`
-	Grouping DataGrouping                      `json:"group"`
-	Metrics  map[string]map[string]interface{} `json:"metrics"`
+	Bucket   time.Time                 `json:"bucket"`
+	Grouping DataGrouping              `json:"group"`
+	Metrics  map[string]map[string]any `json:"metrics"`
 }
 
 type DataGrouping struct {

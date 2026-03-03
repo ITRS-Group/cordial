@@ -27,7 +27,7 @@ import (
 type FKMPlugin struct {
 	XMLName xml.Name    `xml:"fkm" json:"-" yaml:"-"`
 	Display *FKMDisplay `xml:"display,omitempty" json:",omitempty" yaml:",omitempty"`
-	Files   FKMFiles    `xml:"files,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"files"`
+	Files   FKMFiles    `xml:"files,omitempty"yaml:",omitempty" mapstructure:"files"`
 }
 
 func (_ *FKMPlugin) String() string {
@@ -83,8 +83,8 @@ type FKMKeyData struct {
 }
 
 type FKMKeys struct {
-	XMLName xml.Name      `xml:"keys" json:"-" yaml:"-"`
-	Keys    []interface{} // should be FKMIgnoreKey or FKMKey
+	XMLName xml.Name `xml:"keys" json:"-" yaml:"-"`
+	Keys    []any    // should be FKMIgnoreKey or FKMKey
 }
 
 // Return an FKMKey struct with keys built from the parameters. The keys

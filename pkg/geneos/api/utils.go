@@ -30,12 +30,12 @@ type Columns map[string]columndetails
 
 // columndetails has to be it's own type so that it can be used as values in maps
 type columndetails struct {
-	tags     string                   // copy of tags for now
-	name     string                   // display name of column. name="OMIT" mean not rendered
-	number   int                      // column index - convenience for now
-	format   string                   // alterative Printf format, default is %v
-	convfunc func(interface{}) string // this may happen - not yet used
-	sort     sortType                 // if this is the sorting column then what type from above
+	tags     string           // copy of tags for now
+	name     string           // display name of column. name="OMIT" mean not rendered
+	number   int              // column index - convenience for now
+	format   string           // alterative Printf format, default is %v
+	convfunc func(any) string // this may happen - not yet used
+	sort     sortType         // if this is the sorting column then what type from above
 }
 
 const (
@@ -67,7 +67,7 @@ defined in detail. More docs to follow.
 The input is a type or an zero-ed struct as this method only checks the struct
 tags and doesn't care about the data
 */
-func ColumnInfo(rowdata interface{}) (cols Columns, columnnames []string, sorting string, err error) {
+func ColumnInfo(rowdata any) (cols Columns, columnnames []string, sorting string, err error) {
 	if rowdata == nil {
 		return
 	}
@@ -147,7 +147,7 @@ func (c Columns) sortRows(rows [][]string, sortcol string) [][]string {
 
 // pivot the struct members to a slice of their values ready to be
 // processed to a slice of strings
-func rowFromStruct(c Columns, rv reflect.Value) (row []interface{}, err error) {
+func rowFromStruct(c Columns, rv reflect.Value) (row []any, err error) {
 	rv = reflect.Indirect(rv)
 	if rv.Kind() != reflect.Struct {
 		err = fmt.Errorf("row data not a struct")
@@ -169,8 +169,8 @@ func parseTags(fieldname string, tag string) (cols columndetails, err error) {
 	cols.name = fieldname
 	cols.format = "%v"
 
-	tags := strings.Split(tag, ",")
-	for _, t := range tags {
+	tags := strings.SplitSeq(tag, ",")
+	for t := range tags {
 		i := strings.IndexByte(t, '=')
 		if i == -1 {
 			if cols.name != fieldname {

@@ -24,6 +24,7 @@ import (
 	"os"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -192,7 +193,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		// if we can decode the provided cert or key then pass them as
 		// []byte to StartTLS to be used directly otherwise pass the
 		// string in as a file path
-		var cert, key interface{}
+		var cert, key any
 
 		certstr := cf.GetString("server.tls.certificate")
 		cert = []byte(certstr)
@@ -246,7 +247,7 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 //
 // The description, Secondary Host and port and logon methods can be replaced with '*' for undefined
 func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
-	var lines string
+	var lines strings.Builder
 
 	cs.Lock()
 	gwlist := cs.gateways
@@ -261,17 +262,17 @@ func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	for _, gw := range gwlist {
 		gateway := GatewayDetails(gw, allGateways)
 
-		lines += fmt.Sprintf("%s~%d~%s~", gateway.Primary, gateway.PrimaryPort, gw)
+		lines.WriteString(fmt.Sprintf("%s~%d~%s~", gateway.Primary, gateway.PrimaryPort, gw))
 		if gateway.Standby != "" && gateway.StandbyPort != 0 {
-			lines += fmt.Sprintf("%s~%d~*~", gateway.Standby, gateway.StandbyPort)
+			lines.WriteString(fmt.Sprintf("%s~%d~*~", gateway.Standby, gateway.StandbyPort))
 		} else {
-			lines += "~~*~"
+			lines.WriteString("~~*~")
 		}
 		if !gateway.Secure {
-			lines += "LM_IN"
+			lines.WriteString("LM_IN")
 		}
-		lines += "SECURE\n"
+		lines.WriteString("SECURE\n")
 	}
 
-	return c.String(http.StatusOK, lines)
+	return c.String(http.StatusOK, lines.String())
 }

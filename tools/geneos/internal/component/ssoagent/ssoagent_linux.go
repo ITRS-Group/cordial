@@ -26,7 +26,7 @@ import (
 	"strconv"
 )
 
-func ssoagentGetPID(i interface{}) (pid int, err error) {
+func ssoagentGetPID(i any) (pid int, err error) {
 	switch s := i.(type) {
 	case *SSOAgents:
 		var pids []int

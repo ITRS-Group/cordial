@@ -101,7 +101,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 	xlsx.SetColStyle(summary, "B", rightAlign)
 	site := cf.GetString("site", config.Default("ITRS"))
 	xlsx.SetColWidth(summary, "A", "B", colWidth(len(site), 40))
-	xlsx.SetSheetCol(summary, "A1", &[]interface{}{
+	xlsx.SetSheetCol(summary, "A1", &[]any{
 		"ITRS Gateway Reporter",
 		"",
 		"Site",
@@ -114,7 +114,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 	})
 
 	hostname, _ := os.Hostname()
-	xlsx.SetSheetCol(summary, "B1", &[]interface{}{
+	xlsx.SetSheetCol(summary, "B1", &[]any{
 		"Version: " + cordial.VERSION,
 		"",
 		site,
@@ -189,7 +189,7 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 		} else if e.Probe.Port != 0 {
 			port = fmt.Sprint(e.Probe.Port)
 		}
-		row := []interface{}{
+		row := []any{
 			e.Name,
 			e.Probe.Name,
 			hostname,
@@ -398,10 +398,7 @@ func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config,
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := len(s.Column1)
-				if len(s.Column2) > items {
-					items = len(s.Column2)
-				}
+				items := max(len(s.Column2), len(s.Column1))
 
 				for i := 0; i < items; i++ {
 					rownum++

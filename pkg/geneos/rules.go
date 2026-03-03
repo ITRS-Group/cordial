@@ -37,7 +37,7 @@ type RuleGroup struct {
 }
 
 type RuleDefault struct {
-	XMLName       xml.Name       `xml:"default,omitempty" json:"default,omitempty"`
+	XMLName       xml.Name       `xml:"default,omitempty" json:"default"`
 	Name          string         `xml:"name,attr"`
 	Contexts      []string       `xml:"rule>contexts>context,omitempty"`
 	PriorityGroup int            `xml:"priorityGroup,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -45,12 +45,12 @@ type RuleDefault struct {
 }
 
 type Rule struct {
-	XMLName       xml.Name      `xml:"rule" json:"-" yaml:"-"`
-	Name          string        `xml:"name,attr"`
-	Disabled      bool          `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Targets       []string      `xml:"targets>target"`
-	PriorityGroup int           `xml:"priorityGroup,omitempty" json:",omitempty" yaml:",omitempty"`
-	Priority      int           `xml:"priority"`
-	Ifs           []interface{} `xml:"ifs,omitempty" json:",omitempty" yaml:",omitempty"`
-	Transactions  []interface{} `xml:"tranactions,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName       xml.Name `xml:"rule" json:"-" yaml:"-"`
+	Name          string   `xml:"name,attr"`
+	Disabled      bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Targets       []string `xml:"targets>target"`
+	PriorityGroup int      `xml:"priorityGroup,omitempty" json:",omitempty" yaml:",omitempty"`
+	Priority      int      `xml:"priority"`
+	Ifs           []any    `xml:"ifs,omitempty" json:",omitempty" yaml:",omitempty"`
+	Transactions  []any    `xml:"tranactions,omitempty" json:",omitempty" yaml:",omitempty"`
 }

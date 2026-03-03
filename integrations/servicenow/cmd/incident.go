@@ -222,8 +222,8 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 		log.Printf("no mapping found for severity %q", severity)
 		return
 	}
-	fields := strings.Split(mapping, ",")
-	for _, field := range fields {
+	fields := strings.SplitSeq(mapping, ",")
+	for field := range fields {
 		// strip spaces from each field
 		field = strings.TrimSpace(field)
 		s := strings.SplitN(field, "=", 2)

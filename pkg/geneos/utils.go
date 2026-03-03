@@ -18,6 +18,7 @@ limitations under the License.
 package geneos
 
 import (
+	"maps"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -281,9 +282,7 @@ func resolveSamplersFromGroup(from ManagedEntityInfo, to *ManagedEntityInfo, typ
 	if to.ResolvedSamplers == nil {
 		to.ResolvedSamplers = map[string]bool{}
 		if from.ResolvedSamplers != nil {
-			for k, v := range from.ResolvedSamplers {
-				to.ResolvedSamplers[k] = v
-			}
+			maps.Copy(to.ResolvedSamplers, from.ResolvedSamplers)
 		}
 	}
 
@@ -318,9 +317,7 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 	if entity.ResolvedSamplers == nil {
 		entity.ResolvedSamplers = map[string]bool{}
 		if group != nil && group.ResolvedSamplers != nil {
-			for k, v := range group.ResolvedSamplers {
-				entity.ResolvedSamplers[k] = v
-			}
+			maps.Copy(entity.ResolvedSamplers, group.ResolvedSamplers)
 		}
 	}
 
@@ -575,7 +572,7 @@ func setDefaults(source any, dest any) {
 		dv := reflect.ValueOf(source).FieldByName(fn)
 
 		switch {
-		case fv.Type() == reflect.PointerTo(reflect.TypeOf((bool)(false))):
+		case fv.Type() == reflect.PointerTo(reflect.TypeFor[bool]()):
 			if fv.IsNil() && !dv.IsNil() && fv.CanSet() {
 				fv.Set(dv)
 			}
@@ -598,13 +595,13 @@ func setDefaults(source any, dest any) {
 
 // GetPlugin searches plugin for the first non-nil/non-empty field and
 // returns it, using reflection
-func GetPlugin(plugin *Plugin) interface{} {
+func GetPlugin(plugin *Plugin) any {
 	if plugin == nil {
 		return nil
 	}
 	v := reflect.ValueOf(plugin).Elem()
-	for i := 0; i < v.NumField(); i++ {
-		fv := v.Field(i)
+	for _, fv := range v.Fields() {
+		fv := fv
 		if fv.Kind() == reflect.String {
 			return fv.String()
 		}

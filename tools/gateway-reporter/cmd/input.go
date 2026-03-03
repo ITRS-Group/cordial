@@ -192,9 +192,9 @@ func printStructYAML(out io.Writer, in any) {
 	fmt.Fprintln(out, string(b))
 }
 
-func pluginName(in interface{}) (name string) {
+func pluginName(in any) (name string) {
 	switch t := in.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		for n := range t {
 			return n
 		}
@@ -204,7 +204,7 @@ func pluginName(in interface{}) (name string) {
 	return ""
 }
 
-func pluginInfo(sampler *Sampler, in interface{}, procdesc map[string]geneos.ProcessDescriptor) {
+func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDescriptor) {
 	// log.Info().Msgf("looking at plugin: %T", in)
 	switch plugin := in.(type) {
 	case *geneos.FKMPlugin:

@@ -122,8 +122,8 @@ func ReservedName(name string) (ok bool) {
 		return true
 	}
 	if reserved := config.GetString("reservednames"); reserved != "" {
-		list := strings.Split(reserved, ",")
-		for _, n := range list {
+		list := strings.SplitSeq(reserved, ",")
+		for n := range list {
 			if strings.EqualFold(name, strings.TrimSpace(n)) {
 				log.Debug().Msgf("%s matches a user defined reserved name %s", name, n)
 				return true

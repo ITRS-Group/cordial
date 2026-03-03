@@ -253,10 +253,10 @@ func initLogging(execname string, logfile string) {
 		Out:        out,
 		TimeFormat: time.RFC3339,
 		NoColor:    nocolor,
-		FormatLevel: func(i interface{}) string {
+		FormatLevel: func(i any) string {
 			return strings.ToUpper(fmt.Sprintf("%s:", i))
 		},
-		FormatMessage: func(i interface{}) string {
+		FormatMessage: func(i any) string {
 			return fmt.Sprintf("%s: %s", execname, i)
 		},
 	})

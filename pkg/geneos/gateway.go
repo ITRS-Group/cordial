@@ -60,7 +60,7 @@ type OperatingEnvironment struct {
 
 type Dataview struct {
 	Name      string            `xml:"name,attr"`
-	Additions DataviewAdditions `xml:"additions,omitempty" json:",omitempty" yaml:",omitempty"`
+	Additions DataviewAdditions `xml:"additions,omitempty"yaml:",omitempty"`
 }
 
 type DataviewAdditions struct {

@@ -82,7 +82,7 @@ func (view *Dataview) Update() (err error) {
 
 // Sorting the data is only to define the "natural sort order" of the data
 // as it appears in a Geneos Dataview without further client-side sorting.
-func (view *Dataview) UpdateTableFromMap(data interface{}) error {
+func (view *Dataview) UpdateTableFromMap(data any) error {
 	table, _ := view.RowsFromMap(data)
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
@@ -94,7 +94,7 @@ func (view *Dataview) UpdateTableFromMap(data interface{}) error {
 
 // The data passed should NOT include column heading slice as it will be
 // regenerated from the Columns data
-func (view *Dataview) RowsFromMap(rowdata interface{}) (rows [][]string, err error) {
+func (view *Dataview) RowsFromMap(rowdata any) (rows [][]string, err error) {
 	if rowdata == nil {
 		return
 	}
@@ -128,14 +128,14 @@ func (view *Dataview) RowsFromMap(rowdata interface{}) (rows [][]string, err err
 // UpdateTableFromSlice - Given an ordered slice of structs of data the
 // method renders a simple table of data as defined in the Columns part
 // of Samplers
-func (view *Dataview) UpdateTableFromSlice(rowdata interface{}) error {
+func (view *Dataview) UpdateTableFromSlice(rowdata any) error {
 	table, _ := view.RowsFromSlice(rowdata)
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
 
 // RowsFromSlice - results are not resorted, they are assumed to be in the order
 // required
-func (view *Dataview) RowsFromSlice(rowdata interface{}) (rows [][]string, err error) {
+func (view *Dataview) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 	if rowdata == nil {
 		return
 	}
@@ -170,7 +170,7 @@ func (view *Dataview) RowsFromSlice(rowdata interface{}) (rows [][]string, err e
 
 // UpdateTableFromMapDelta calculates the difference between the
 // previous values and current, scaled by the interval
-func (view *Dataview) UpdateTableFromMapDelta(newdata, olddata interface{}, interval time.Duration) error {
+func (view *Dataview) UpdateTableFromMapDelta(newdata, olddata any, interval time.Duration) error {
 	table, _ := view.RowsFromMapDelta(newdata, olddata, interval)
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
@@ -183,7 +183,7 @@ func (view *Dataview) UpdateTableFromMapDelta(newdata, olddata interface{}, inte
 //
 // This is for data like sets of counters that are absolute values over
 // time
-func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata interface{},
+func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata any,
 	interval time.Duration) (rows [][]string, err error) {
 	if newrowdata == nil || oldrowdata == nil {
 		return
@@ -248,8 +248,8 @@ func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata interface{},
 	return
 }
 
-func toFloat(f interface{}) (float64, error) {
-	var ft = reflect.TypeOf(float64(0))
+func toFloat(f any) (float64, error) {
+	var ft = reflect.TypeFor[float64]()
 	v := reflect.ValueOf(f)
 	v = reflect.Indirect(v)
 	if !v.Type().ConvertibleTo(ft) {

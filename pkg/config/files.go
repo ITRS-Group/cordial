@@ -103,8 +103,8 @@ func AbbreviateHome(p string) string {
 	if err != nil {
 		return path.Clean(p)
 	}
-	if strings.HasPrefix(p, home) {
-		return filepath.ToSlash("~" + strings.TrimPrefix(p, home))
+	if after, ok := strings.CutPrefix(p, home); ok {
+		return filepath.ToSlash("~" + after)
 	}
 	return path.Clean(p)
 }

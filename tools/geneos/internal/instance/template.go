@@ -46,7 +46,7 @@ func valueOf(s string, sep string) string {
 }
 
 // first returns the first non-empty string argument
-func first(d ...interface{}) string {
+func first(d ...any) string {
 	for _, f := range d {
 		if s, ok := f.(string); ok {
 			if s != "" {

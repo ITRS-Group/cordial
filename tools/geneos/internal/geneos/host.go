@@ -413,7 +413,7 @@ func (h *Host) FullName(name string) string {
 func RemoteHosts(includeHidden bool) (hs []*Host) {
 	hs = []*Host{}
 
-	hosts.Range(func(k, v interface{}) bool {
+	hosts.Range(func(k, v any) bool {
 		h := GetHost(k.(string))
 		if h.Exists() && (includeHidden || !h.hidden) {
 			hs = append(hs, h)
@@ -469,7 +469,7 @@ func LoadHostConfig() {
 		v.SetDefault("username", LOCAL.Username())
 
 		switch m := hostval.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			v.MergeConfigMap(m)
 		default:
 			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", hostval)
@@ -491,7 +491,7 @@ func LoadHostConfig() {
 func SaveHostConfig() error {
 	n := config.New()
 
-	hosts.Range(func(k, v interface{}) bool {
+	hosts.Range(func(k, v any) bool {
 		name := k.(string)
 		switch v := v.(type) {
 		case *Host:

@@ -69,7 +69,7 @@ func (d *Dataview) Remove() (err error) {
 // The value is formatted using %v so this can be passed any concrete value
 //
 // No validation is done on args
-func (d Dataview) UpdateCell(rowname string, column string, value interface{}) (err error) {
+func (d Dataview) UpdateCell(rowname string, column string, value any) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
 		return
@@ -110,7 +110,7 @@ func (d Dataview) AddRow(rowname string) (err error) {
 	return d.addTableRow(d.entityName, d.samplerName, d.String(), rowname)
 }
 
-func (d Dataview) UpdateRow(rowname string, args ...interface{}) (err error) {
+func (d Dataview) UpdateRow(rowname string, args ...any) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
 		return
