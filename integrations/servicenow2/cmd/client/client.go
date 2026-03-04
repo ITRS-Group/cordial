@@ -100,7 +100,7 @@ var clientCmd = &cobra.Command{
 
 		// inline anonymous functions so they have access to `incidents`
 		// fields and more
-		cf.DefaultExpandOptions(
+		cf.SetDefaultExpandOptions(
 			// "match" environment variable against regex and return
 			// "true" or "false" or error. If the environment variable
 			// is not set or empty, return "false"
