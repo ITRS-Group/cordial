@@ -92,10 +92,10 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	return
 }
 
-// DefaultExpandOptions sets defaults to all subsequent calls to
+// SetDefaultExpandOptions sets defaults to all subsequent calls to
 // functions that perform configuration expansion. These defaults can be
-// reset by calling DefaultExpandOptions with no arguments.
-func (c *Config) DefaultExpandOptions(options ...ExpandOptions) {
+// reset by calling SetDefaultExpandOptions with no arguments.
+func (c *Config) SetDefaultExpandOptions(options ...ExpandOptions) {
 	c.defaultExpandOptions = options
 }
 

@@ -85,13 +85,20 @@ func New(options ...FileOptions) *Config {
 		Viper: viper.NewWithOptions(
 			viper.KeyDelimiter(opts.delimiter),
 			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envdelimiter, "-", opts.envdelimiter))),
-		mutex:          &sync.RWMutex{},
-		delimiter:      opts.delimiter,
-		appUserConfDir: appUserConfDir,
+		mutex:                &sync.RWMutex{},
+		delimiter:            opts.delimiter,
+		appUserConfDir:       appUserConfDir,
+		defaultExpandOptions: opts.expandoptions,
 	}
 	if opts.envprefix != "" {
 		cf.SetEnvPrefix(opts.envprefix)
 		cf.AutomaticEnv()
+	}
+
+	if opts.defaultConfig != nil {
+		for k, v := range opts.defaultConfig.AllSettings() {
+			cf.SetDefault(k, v)
+		}
 	}
 	return cf
 }

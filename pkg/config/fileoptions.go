@@ -40,6 +40,7 @@ type fileOptions struct {
 	configFileReader            io.Reader
 	extension                   string // extension without "."
 	delimiter                   string
+	defaultConfig               *Config
 	envprefix                   string
 	envdelimiter                string
 	expandonsave                bool
@@ -198,6 +199,12 @@ func WithDefaults(defaults []byte, format string) FileOptions {
 	return func(c *fileOptions) {
 		c.internalDefaults = defaults
 		c.internalDefaultsFormat = format
+	}
+}
+
+func WithDefaultConfig(cf *Config) FileOptions {
+	return func(c *fileOptions) {
+		c.defaultConfig = cf
 	}
 }
 
@@ -393,6 +400,15 @@ func StopOnInternalDefaultsErrors() FileOptions {
 func ExpandOnSave(options ...ExpandOptions) FileOptions {
 	return func(fo *fileOptions) {
 		fo.expandonsave = true
+		fo.expandoptions = options
+	}
+}
+
+// DefaultExpandOptions sets defaults to all subsequent calls to
+// functions that perform configuration expansion. These defaults can be
+// reset by calling DefaultExpandOptions with no arguments.
+func DefaultExpandOptions(options ...ExpandOptions) FileOptions {
+	return func(fo *fileOptions) {
 		fo.expandoptions = options
 	}
 }
