@@ -15,6 +15,7 @@ import (
 
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/go-querystring/query"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -79,6 +80,30 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret *config
 	c.HTTPClient = conf.Client(ctx)
 }
 
+// Do executes the given method (GET, POST, PUT, DELETE) with the given
+// endpoint, request and response. Endpoint is either a string or a
+// *url.URL relative to the client base URL. Request is either a struct
+// that can be encoded as query parameters (for GET) or JSON (for POST
+// and PUT) or a string or []byte that is sent as-is. Response is a
+// pointer to a struct that can be decoded from JSON, XML or text,
+// depending on the content-type of the response. On failure, the error
+// will contain the status code and any body returned by the server.
+func (c *Client) Do(ctx context.Context, method string, endpoint any, request any, response any) (resp *http.Response, err error) {
+	switch method {
+	case http.MethodGet:
+		return c.Get(ctx, endpoint, request, response)
+	case http.MethodPost:
+		return c.Post(ctx, endpoint, request, response)
+	case http.MethodPut:
+		return c.Put(ctx, endpoint, request, response)
+	case http.MethodDelete:
+		return c.Delete(ctx, endpoint.(string), request)
+	default:
+		err = errors.ErrUnsupported
+		return
+	}
+}
+
 // GET method. On successful return the response body will be closed.
 // endpoint is either a string or a *url.URL relative to the client c
 // base URL.
@@ -103,16 +128,19 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 		req.Header.Add(c.authHeader, c.authValue)
 	}
 
-	switch r := request.(type) {
-	case string:
-		req.URL.RawQuery = r
-	default:
-		if r != nil {
-			v, err := query.Values(r)
-			if err != nil {
-				return resp, err
+	log.Debug().Msgf("request: %T", request)
+	if request != nil {
+		switch r := request.(type) {
+		case string:
+			req.URL.RawQuery = r
+		default:
+			if r != nil {
+				v, err := query.Values(r)
+				if err != nil {
+					return resp, err
+				}
+				req.URL.RawQuery = v.Encode()
 			}
-			req.URL.RawQuery = v.Encode()
 		}
 	}
 
