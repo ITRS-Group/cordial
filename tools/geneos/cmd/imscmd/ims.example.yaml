@@ -1,0 +1,279 @@
+#
+# The client transforms environment variables to IMS fields, plus
+# internal fields (which are all prefixed with two underscores - e.g.
+# `__internal`)
+#
+# This configuration file is also used by the `query` command to reach
+# the proxy process.
+#
+
+# The `ims` section contains the details on where to reach the IMS
+# process, including optional TLS configuration and mandatory authentication
+ims-gateway:
+  # the `type` of IMS, which can be `snow` or `sdp`
+  #
+  # depending on the type, the client may set different internal fields and
+  # the IMS will use different fields to create or update incidents or
+  # tickets.
+  type: snow
+
+  # `url` is the IMS endpoint not including table name and is used
+  # for GET, POST and PUT requests
+  url: http://localhost:3000/ims-gateway/api/v1/${config:ims-gateway.type}
+
+  # snow-specific settings, which are ignored for other IMS types
+  snow:
+    # `default-query` is for the `query` command and is ignored
+    # for the `client` command. This setting can be overridden on the
+    # command line using the `--query/-q` flag.
+    default-query: "active=true^opened_by.user_name=geneos"
+
+  # ServiceDesk Plus-specific settings, which are ignored for other IMS types
+  sdp:
+    default-correlation-field: geneos_id
+
+  # `authentication` contains the chosen authentication between the
+  # client/query commands and the IMS. At the moment only `token` is
+  # supported.
+  authentication:
+    # the `token` can be any string as long as it is the same on both
+    # IMS and client/query side. To protect the plain text, if
+    # required, you can use `geneos aes password` to create an encoded
+    # strings that relies on the security of the key file being private
+    # to the user. This also allows the configuration file to be shared
+    # without sharing the plaintext of the key.
+    token: testing
+
+  # the settings in the `tls` section only take effects if the URL
+  # starts `https://...`
+  tls:
+    # should we ignore the server cert chain and hostname verification.
+    # Note that even with a customer chain (below) the hostname still
+    # needs to match the one in the URL, and this is uncommon for
+    # self-managed certificates.
+    skip-verify: false
+    # chain to validate proxy connection, if not defined (and
+    # skip-verify is false) then use system roots
+    chain: ${file:/path/to/chain.pem}
+
+# default fields
+#
+# The `defaults` section and each of the named entries in the `profiles`
+# section share the same format.
+#
+# The layout is a sequence of mappings The format is an array of objects
+# which are evaluated in array order, but the keys in each object are
+# evaluated according to the rules below
+#
+# the mapping keys are below, and processed in the order shown:
+#
+#   - `if` - this can be either a single string or an array; the values
+#     are evaluated and the result of each parsed as a boolean. As soon
+#     as any `if` value returns a false value, evaluation stops and
+#     evaluation continues with the next array element. If there is no
+#     `if` then this is the same as a `true` values being returned.
+#   - `set` - is a list of name/value pairs (a YAML dictionary) and the
+#     client sets all the fields names (in an undefined order) to the
+#     expanded values on the right
+#   - `unset` - is list of names. unset any fields given.
+#   - `subgroup` - evaluate a subsection, and terminating evaluation if
+#     the subsection uses `break`
+#   - `break` - break stops processing of the level above the block it
+#     appears in, and is used to terminate further evaluation of `if`s
+#     etc.
+#
+# all field names beginning with two underscores (`__`) are treated as
+# internal values between client and proxy and are renamed or removed
+# before being sent to the IMS instance by the proxy.
+#
+# all field values are subject to expansion according to the `cordial`
+# config package `ExpandString` function with some custom functions: 
+defaults:
+  - set:
+      # standard mappings for all Geneos Actions and Effects
+      #
+      # as these are all prefixed with `__itrs_`, they are visible
+      # to the proxy but are removed before the incident is created or
+      # updated
+      __itrs_gateway: ${env:_GATEWAY}
+      __itrs_probe: ${env:_PROBE}
+      __itrs_entity: ${env:_MANAGED_ENTITY}
+      __itrs_sampler: ${env:_SAMPLER}
+      __itrs_dataview: ${env:_DATAVIEW}
+      __itrs_severity: ${env:_SEVERITY}
+      __itrs_value: ${env:_VALUE}
+      __itrs_row: ${env:_ROWNAME}
+      __itrs_column: ${env:_COLUMN}
+      __itrs_headline: ${env:_HEADLINE}
+
+      # `__snow_table` selects the ServiceNow incident table name for
+      # scenarios where there may be multiple incident tables
+      # configured. There must be a corresponding configuration on the
+      # proxy side and this cannot be used to select arbitrary IMS
+      # tables. This setting can be overridden on the command line using
+      # the `--table/-t` flag.
+      __snow_table: incident
+      
+      # values required by the proxy
+      # cmdb_ci: ${CMDB_CI}
+      __snow_cmdb_search: name=${_NETPROBE_HOST}
+      __snow_cmdb_table: cmdb_ci
+      __itrs_correlation_id: ${env:_GATEWAY}${env:_NETPROBE_HOST}${env:_MANAGED_ENTITY}${env:_SAMPLER}${env:_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}
+      __itrs_subject: Geneos Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${env:_ROWNAME} | ${env:_COLUMN}${env:_HEADLINE} is ${env:_VALUE}
+      __itrs_body_text: |
+        Status Message: ${env:_STATUSMESSAGE}
+        Severity: ${env:_SEVERITY}
+        Geneos time: ${env:_ALERT_CREATED}
+        Category: Alert
+        Gateway: ${env:_GATEWAY}
+        Managed Entity: ${env:_MANAGED_ENTITY}
+        Sampler: ${env:_SAMPLER}
+        Row: ${env:_ROWNAME}
+        Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
+        Value: ${env:_VALUE} ${env:_triggerDetails}
+      __itrs_body_html: |
+        <table>
+          <tr><th>Status Message</th><td>${env:_STATUSMESSAGE}</td></tr>
+          <tr><th>Severity</th><td>${env:_SEVERITY}</td></tr>
+          <tr><th>Geneos time</th><td>${env:_ALERT_CREATED}</td></tr>
+          <tr><th>Category</th><td>Alert</td></tr>
+          <tr><th>Gateway</th><td>${env:_GATEWAY}</td></tr>
+          <tr><th>Managed Entity</th><td>${env:_MANAGED_ENTITY}</td></tr>
+          <tr><th>Sampler</th><td>${env:_SAMPLER}</td></tr>
+          <tr><th>Row</th><td>${env:_ROWNAME}</td></tr>
+          <tr><th>Column/Headline</th><td>${env:_COLUMN}${env:_HEADLINE}</td></tr>
+          <tr><th>Value</th><td>${env:_VALUE} ${env:_triggerDetails}</td></tr>
+        </table>
+
+      # other defaults
+      category: Alert
+      assignment_group: ${env:ASSIGNMENT_GROUP}
+      urgency: 3
+      impact: 3
+      state: 1
+  - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
+    set:
+      impact: 1
+      urgency: 1
+  - if: ${match:_SEVERITY:(WARNING|warning|2)}
+    set:
+      impact: 3
+      urgency: 3
+  - if: ${match:_SEVERITY:(OK|ok|1)}
+    set:
+      state: 6
+      close_code: Closed/Resolved by Caller
+      close_notes: Resolved
+    unset: [ urgency, impact ]
+  # - if: ${match:_SEVERITY:critical}
+    # set:
+      # __itrs_profile: infra
+  - if: [ "${match:_PLUGINNAME:FKM}", "${match:_DATAVIEW:name}" ]
+    set:
+      # ${replace:_ROWNAME:/#.*$//}
+      __itrs_correlation_id: ${env:_GATEWAY}${env:_NETPROBE_HOST}${env:_MANAGED_ENTITY}${env:_SAMPLER}${env:_DATAVIEW}${env:_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
+      
+
+# profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
+#
+# format as for `defaults` above
+profiles:
+  # The `default` profile is only applied if no other profile is given.
+  # To set default values for all profiles, use the `defaults` section
+  # above
+  default:
+    - set:
+        # _subject: ${replace:_NETPROBE_HOST:/(think)pad/${1}that/}
+        subcategory: Geneos Alert
+    - set:
+        __itrs_body_text: |
+          Status Message: ${env:_STATUSMESSAGE}
+          Severity: ${env:_SEVERITY}
+          Geneos time: ${env:_ALERT_CREATED}
+          Category: Alert
+          Gateway: ${env:_GATEWAY}
+          Managed Entity: ${select:_MANAGED_ENTITY:Unknown}
+          Sampler: ${select:_SAMPLER:Unknown}
+          Row: ${env:_ROWNAME}
+          Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
+          Value: ${env:_VALUE} ${env:_triggerDetails}
+          Sub-category: ${field:subcategory:None}
+          Impact: ${field:impact:3}
+
+  infra:
+    - set:
+        __example_valuetest: true
+
+  opsview:
+    - set:
+        __itrs_subject: Opsview Alert on ${env:_NETPROBE_HOST} | ${env:_DATAVIEW} | ${env:_ROWNAME} | ${env:_COLUMN}${env:_HEADLINE} is ${env:_VALUE}
+    - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
+      set:
+        subcategory: OpsView Alert 
+      subgroup:
+        - set:
+            key: value
+        - if: ${match:_DATAVIEW:^(Connectivity|Uptime)}
+          set:
+            subcategory: "Network Device Down"
+            impact: 2
+            urgency: 2
+          break: true
+        - if: ${match:_DATAVIEW:^SNMP}
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
+        - if: '${match:_DATAVIEW:^NTP}'
+          set:
+            subcategory: "Network Configuration Error"
+            impact: 3
+            urgency: 3
+          break: true
+        - if: ${match:_DATAVIEW:^(Discards|Errors)}
+          set:
+            subcategory: "Network Performance"
+            impact: 3
+            urgency: 3
+        - if:
+            - ${match:_DATAVIEW:^Discards}
+            - ${match:_STATUSMESSAGE:discards.*(total|in.*out)}
+          set:
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Errors}
+            - ${match:_STATUSMESSAGE:errors.*(total|in.*out)|interface.*down}
+          set:
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Interface}
+            - ${match:_STATUSMESSAGE:Interface.*DOWN}
+          set:
+            subcategory: "Network Port Down"
+            impact: 2
+            urgency: 2
+        - if:
+            - ${match:_DATAVIEW:^Interface}
+            - ${match:_STATUSMESSAGE:SNMP}
+          set:
+            subcategory: "Network Security"
+            impact: 3
+            urgency: 3
+    - set:
+        __itrs_body_text: |
+            Status Message: ${env:_STATUSMESSAGE}
+            Severity: ${env:_SEVERITY}
+            Geneos time: ${env:_ALERT_CREATED}
+            Category: Alert
+            Gateway: ${env:_GATEWAY}
+            Managed Entity: ${env:_MANAGED_ENTITY}
+            Sampler: ${env:_SAMPLER}
+            Row: ${env:_ROWNAME}
+            Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
+            Value: ${env:_VALUE}${env:_triggerDetails}
+            Hashtags: ${env:_TAGS}
+            Sub-category: ${field:subcategory:None}
+            Impact: ${field:impact:3}
+            Urgency: ${field:urgency:3}
+
+
