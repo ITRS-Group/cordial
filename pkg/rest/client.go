@@ -15,7 +15,6 @@ import (
 
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/go-querystring/query"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -128,7 +127,6 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 		req.Header.Add(c.authHeader, c.authValue)
 	}
 
-	log.Debug().Msgf("request: %T", request)
 	if request != nil {
 		switch r := request.(type) {
 		case string:

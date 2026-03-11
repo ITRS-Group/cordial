@@ -66,12 +66,14 @@ type FileOptions func(*fileOptions)
 
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		delimiter:    defaultKeyDelimiter,
-		envdelimiter: "_",
+		delimiter:              defaultKeyDelimiter,
+		envdelimiter:           "_",
+		internalDefaultsFormat: "yaml",
 	}
 	for _, opt := range options {
 		opt(c)
 	}
+
 	return
 }
 

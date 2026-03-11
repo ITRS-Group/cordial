@@ -20,6 +20,7 @@ limitations under the License.
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -93,6 +94,18 @@ func New(options ...FileOptions) *Config {
 	if opts.envprefix != "" {
 		cf.SetEnvPrefix(opts.envprefix)
 		cf.AutomaticEnv()
+	}
+
+	if len(opts.internalDefaults) > 0 {
+		buf := bytes.NewBuffer(opts.internalDefaults)
+		internalDefaults := &Config{
+			Viper: viper.New(),
+			mutex: &sync.RWMutex{},
+		}
+		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
+		if err := internalDefaults.Viper.ReadConfig(buf); err == nil || !opts.internalDefaultsCheckErrors {
+			cf.MergeConfigMap(internalDefaults.AllSettings())
+		}
 	}
 
 	if opts.defaultConfig != nil {
