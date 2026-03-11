@@ -46,18 +46,18 @@ var requestCmd = &cobra.Command{
 			return
 		}
 
-		correlationID := fmt.Sprintf("%X", sha1.Sum(cf.GetBytes("_correlation_id")))
+		correlationID := fmt.Sprintf("%X", sha1.Sum(cf.GetBytes("__itrs_correlation_id")))
 		lookup := map[string]string{
 			"correlation_id": correlationID,
 		}
 
-		log.Debug().Msgf("existing search: %s", cf.Get("requests.existing_search"))
+		log.Debug().Msgf("existing search: %s", cf.Get(cf.Join("requests", "existing_search")))
 
-		if len(cf.GetBytes("_correlation_id")) == 0 {
+		if len(cf.GetBytes("__itrs_correlation_id")) == 0 {
 			return fmt.Errorf("correlation_id is required")
 		}
 
-		response, err := client.GetRequests(cmd.Context(), cf.Get("requests.existing_search"), config.LookupTable(lookup))
+		response, err := client.GetRequests(cmd.Context(), cf.Get(cf.Join("requests", "existing_search")), config.LookupTable(lookup))
 		if err != nil {
 			return
 		}
@@ -67,7 +67,7 @@ var requestCmd = &cobra.Command{
 		log.Debug().Msgf("response: %+v", response)
 		if response.ListInfo.RowCount == 0 {
 			log.Info().Msgf("no existing request found, creating new request")
-			createResponse, err := client.CreateRequest(cmd.Context(), cf, "requests.create", lookup)
+			createResponse, err := client.CreateRequest(cmd.Context(), cf.Sub("sdp"), cf.Join("requests", "create"), lookup)
 			if err != nil {
 				return err
 			}
