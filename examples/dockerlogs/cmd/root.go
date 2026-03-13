@@ -8,7 +8,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
@@ -65,7 +64,7 @@ var rootCmd = &cobra.Command{
 			defer r.Close()
 			log.Info().Msgf("container log for %s open", i.ID)
 			wg.Add(1)
-			go func(i types.Container) {
+			go func(i container.Summary) {
 				defer wg.Done()
 				sout, err := api.OpenStream(c, "localhost", "streams", i.Names[0]+".stdout")
 				if err != nil {
