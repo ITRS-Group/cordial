@@ -20,6 +20,7 @@ package ims
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type results map[string]string
@@ -54,42 +55,40 @@ type SnowResultsResponse struct {
 // include the raw response from the proxy for debugging or logging
 // purposes.
 type Response struct {
-	Status      string     `json:"status,omitempty"`       // as per http.Response.Status from remote IMS, empty if request failed before reaching IMS
-	StatusCode  int        `json:"status_code,omitempty"`  // as per http.Response.StatusCode from remote IMS, empty if request failed before reaching IMS
-	Error       string     `json:"error,omitempty"`        // error message if applicable
-	ErrorDetail string     `json:"error_detail,omitempty"` // error detail if applicable
-	ID          string     `json:"id,omitempty"`           // ID of created or updated incident if applicable
-	Data        []string   `json:"data,omitempty"`         // any additional data returned by the gateway, e.g. for query results
-	DataTable   [][]string `json:"data_table,omitempty"`   // table of data, if applicable. first row is column names, subsequent rows are values
-	RawResponse any        `json:"raw_response,omitempty"`
+	StartTime    time.Time  `json:"start_time,omitzero"`     // time the request was received by the gateway
+	EndTime      time.Time  `json:"end_time,omitzero"`       // time the response is sent by the gateway
+	Duration     float64    `json:"duration,omitzero"`       // duration of processing the request in seconds
+	Status       string     `json:"status,omitempty"`        // as per http.Response.Status from remote IMS, empty if request failed before reaching IMS
+	StatusCode   int        `json:"status_code,omitempty"`   // as per http.Response.StatusCode from remote IMS, empty if request failed before reaching IMS
+	Error        string     `json:"error,omitempty"`         // error message if applicable
+	ResultDetail string     `json:"result_detail,omitempty"` // error or success detail if applicable
+	Action       string     `json:"action,omitempty"`        // action taken by the gateway, e.g. "Created", "Updated", "Ignored", etc.
+	ID           string     `json:"id,omitempty"`            // ID of created or updated incident if applicable
+	Data         []string   `json:"data,omitempty"`          // any additional data returned by the gateway, e.g. for query results
+	DataTable    [][]string `json:"data_table,omitempty"`    // table of data, if applicable. first row is column names, subsequent rows are values
+	RawResponse  any        `json:"raw_response,omitempty"`
 }
 
-func ServiceNowToResponse(snowResponse SnowResultsResponse) Response {
-	var response Response
-
-	response.DataTable = append(response.DataTable, snowResponse.Fields)
-
-	for _, v := range snowResponse.Results {
-		var values []string
-
-		for _, c := range snowResponse.Fields {
-			values = append(values, v[c])
-		}
-		response.DataTable = append(response.DataTable, values)
-	}
-	return response
-}
-
-// WriteJSON writes the given value as JSON to the http.ResponseWriter
+// WriteJSONResponse writes the given value as JSON to the http.ResponseWriter
 // with the specified status code. If there is an error encoding the
 // value to JSON, it returns the error but does not write an error
 // response to the client, as this function is intended to be used for
 // writing successful responses. The caller should handle writing error
 // responses separately if needed.
-func WriteJSON(w http.ResponseWriter, status int, v any) error {
+func WriteJSONResponse(w http.ResponseWriter, r *http.Request, status int) error {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	resp := r.Context().Value(ContextKeyResponse)
+	if resp == nil {
+		return nil // no response to write, but not an error
+	}
+	response, ok := resp.(*Response)
+	if !ok {
+		return nil // response in context is not of expected type, but not an error
+	}
+	response.EndTime = time.Now()
+	response.Duration = response.EndTime.Sub(response.StartTime).Seconds()
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		return err
 	}
 	return nil

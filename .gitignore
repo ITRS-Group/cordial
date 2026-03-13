@@ -32,6 +32,7 @@ release*/
 examples/api/api
 examples/commands
 examples/xpath
+examples/dockerlogs/dockerlogs
 
 gdna/docker-compose.yml
 gdna/docs/docs
@@ -52,6 +53,7 @@ integrations/servicenow/snow_router/snow_router
 integrations/servicenow/snow_router/snow_router.yaml
 integrations/sdp/sdp
 integrations/sdp/sdp.yaml
+tools/ims-gateway/ims-gateway.yaml
 
 libraries/libemail/libemail
 libraries/libemail/libemail.h
@@ -66,6 +68,7 @@ tools/geneos/geneos
 tools/geneos/utils/docs/docs
 tools/sso-diag/sso-diag
 tools/san-config/san-config
+tools/ims-gateway/ims-gateway
 
 utils/docs/docs
 *.xml_*.history

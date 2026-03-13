@@ -113,6 +113,7 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
+		// TODO: this may not be an error
 		rootCert, rootKey, err = geneos.ReadRootCertificateAndKey()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
@@ -125,6 +126,8 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
+
+		// TODO: this may not be an error
 		signingCert, signingKey, err = geneos.ReadSigningCertificateAndKey()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return

@@ -37,10 +37,12 @@ import (
 // flags
 var raiseCmdProfile, raiseCmdTable string
 var raiseCmdConfigFile string
+var raiseCmdIMSType string
 
 func init() {
 	incidentCmd.AddCommand(raiseCmd)
 
+	raiseCmd.Flags().StringVarP(&raiseCmdIMSType, "ims", "i", "", "IMS type, e.g. `snow` or `sdp`. default taken from config file")
 	raiseCmd.Flags().StringVarP(&raiseCmdProfile, "profile", "p", "", "profile to use for field creation")
 	raiseCmd.Flags().StringVarP(&raiseCmdTable, "table", "t", "", "ServiceNow table, defaults typically to incident")
 	raiseCmd.Flags().StringVarP(&raiseCmdConfigFile, "config", "c", "", "config file to use")
@@ -85,7 +87,7 @@ specific API.
 
 		var defaults []ims.ActionGroup
 		var profileGroups []ims.ActionGroup
-		var result map[string]string
+		var result map[string]any
 		var incident = make(ims.Values)
 
 		// override environment variables with command line key=value
@@ -168,10 +170,16 @@ specific API.
 		// drop internal string either way
 		delete(incident, ims.RAW_CORRELATION_ID)
 
+		if raiseCmdIMSType == "" {
+			raiseCmdIMSType = cf.GetString(config.Join("ims-gateway", "type"))
+		}
+
+		log.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
+
 		// iterate through proxy urls
 		for _, r := range cf.GetStringSlice(cf.Join("ims-gateway", "url")) {
 			ccf := &ims.ClientConfig{
-				URL:     r,
+				URL:     r + "/" + raiseCmdIMSType,
 				Token:   cf.GetString(config.Join("ims-gateway", "authentication", "token")),
 				Timeout: cf.GetDuration(config.Join("ims-gateway", "timeout")),
 			}
@@ -179,10 +187,12 @@ specific API.
 			ccf.TLS.Chain = cf.GetBytes(config.Join("ims-gateway", "tls", "chain"))
 			rc := ims.NewClient(ccf)
 
-			if raiseCmdTable == "" {
-				var ok bool
-				if raiseCmdTable, ok = incident[ims.INCIDENT_TABLE]; !ok {
-					raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE]
+			if raiseCmdIMSType == "snow" {
+				if raiseCmdTable == "" {
+					var ok bool
+					if raiseCmdTable, ok = incident[ims.INCIDENT_TABLE]; !ok {
+						raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE]
+					}
 				}
 			}
 			_, err = rc.Post(context.Background(), raiseCmdTable, incident, &result)

@@ -36,7 +36,8 @@ import (
 type ContextKey string
 
 const (
-	ContextKeyConfig ContextKey = "config" // Context key for passing configuration to handlers, type is *config.Config
+	ContextKeyConfig   ContextKey = "config"   // Context key for passing configuration to handlers, type is *config.Config
+	ContextKeyResponse ContextKey = "response" // Context key for passing response to handlers, type is *ims.Response
 )
 
 // temp mappings, while interface is cleaned up

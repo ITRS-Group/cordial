@@ -188,7 +188,7 @@ func getRecords(ctx context.Context, snowCfg *config.Config, table string, optio
 
 	response.Status = result.Status
 	response.Error = result.Error.Message
-	response.ErrorDetail = result.Error.Detail
+	response.ResultDetail = result.Error.Detail
 
 	fields := strings.Split(opts.fields, ",")
 	response.DataTable = append(response.DataTable, fields)

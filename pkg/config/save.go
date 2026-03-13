@@ -128,7 +128,14 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 		nc := New() // KeyDelimiter("::"))
 		for _, k := range c.AllKeys() {
 			log.Debug().Msgf("expanding key: %s", k)
-			nc.Set(k, c.ExpandString(c.GetString(k, opts.expandoptions...)))
+			// test setting numbers
+			s := c.ExpandString(c.GetString(k, opts.expandoptions...))
+			// i, err := strconv.Atoi(s)
+			// if err == nil {
+			// 	nc.Set(k, i)
+			// } else {
+			nc.Set(k, s)
+			// }
 		}
 		c = nc
 	}

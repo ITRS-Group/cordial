@@ -114,16 +114,16 @@ func startGateway(cf *config.Config) {
 
 	for _, endpoint := range ims.Endpoints {
 		mux.HandleFunc(endpoint.Method+" "+basePath+endpoint.Path, func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(context.WithValue(r.Context(), ims.ContextKeyConfig, cf))
 			endpoint.Handler(w, r)
 		})
 		log.Debug().Msgf("registered %s %s endpoint", endpoint.Method, basePath+endpoint.Path)
 	}
 
 	var handler http.Handler = mux
-	handler = withKeyAuth(cf, handler)
 	handler = withRequestLog(cf, handler)
-	handler = withTimestamp(handler)
+	handler = withStartTimestamp(handler)
+	handler = withValues(cf, handler)
+	handler = withKeyAuth(cf, handler)
 
 	log.Debug().Msg("starting HTTP server")
 
@@ -132,10 +132,36 @@ func startGateway(cf *config.Config) {
 	}
 }
 
-func withTimestamp(next http.Handler) http.Handler {
+// withValues is middleware that adds the configuration and a new
+// response object to the request context, so that handlers can access
+// the configuration and set response values as needed. This is used to
+// avoid having to pass the configuration and response object through
+// multiple layers of function calls in the handlers, and allows for
+// more flexible and modular handler implementations. The configuration
+// is added under the ims.ContextKeyConfig key, and the response object
+// is added under the ims.ContextKeyResponse key.
+func withValues(cf *config.Config, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(r.Context(), startTimeKey, time.Now())
-		next.ServeHTTP(w, r.WithContext(ctx))
+		response := &ims.Response{}
+		r = r.WithContext(context.WithValue(r.Context(), ims.ContextKeyConfig, cf))
+		r = r.WithContext(context.WithValue(r.Context(), ims.ContextKeyResponse, response))
+		next.ServeHTTP(w, r)
+	})
+}
+
+// withStartTimestamp is middleware that adds the current time to the
+// request context under the ims.ContextKeyResponse key, which handlers
+// can use to set the StartTime field of the response. This allows for
+// accurate measurement of request processing time, even if the request
+// is rejected by authentication middleware or fails before reaching the
+// handler.
+func withStartTimestamp(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		response := r.Context().Value(ims.ContextKeyResponse)
+		if resp, ok := response.(*ims.Response); ok {
+			resp.StartTime = time.Now()
+		}
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -182,8 +208,12 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 		bytesIn = "0"
 	}
 
-	start, _ := r.Context().Value(startTimeKey).(time.Time)
-	latency := time.Since(start)
+	respValue := r.Context().Value(ims.ContextKeyResponse)
+	response, ok := respValue.(*ims.Response)
+	if !ok {
+		log.Info().Msgf("response not correct type in request context")
+		return
+	}
 
 	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
 		"URL", // cf.GetString(cf.Join("snow", "url")),
@@ -191,7 +221,7 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 		resStatus,
 		bytesIn,
 		resSize,
-		float64(latency.Milliseconds())/1000.0,
+		response.Duration,
 		realIP(r),
 		r.Method,
 		r.URL.String(),

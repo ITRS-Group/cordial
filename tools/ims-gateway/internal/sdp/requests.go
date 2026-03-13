@@ -25,6 +25,7 @@ import (
 	"net/url"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/rs/zerolog/log"
 )
 
 // handle request endpoints
@@ -67,11 +68,13 @@ func (c *Client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 		return
 	}
 
+	log.Debug().Msgf("getRequests request body: %s", v.Encode())
 	_, err = c.Get(ctx, endpoint, v.Encode(), &response)
+	log.Debug().Msgf("getRequests response: %+v", response)
 	return
 }
 
-func (c *Client) CreateRequest(ctx context.Context, sdpCf *config.Config, lookup map[string]string) (response *RequestAttributes, err error) {
+func (c *Client) createRequest(ctx context.Context, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
 	var b bytes.Buffer
 	if err = sdpCf.SaveTo("sdp", &b,
 		config.SetFileExtension("json"),
@@ -100,6 +103,34 @@ func (c *Client) CreateRequest(ctx context.Context, sdpCf *config.Config, lookup
 
 	fmt.Println("request body", b.String())
 
-	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &response)
+	var resp string
+	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp)
+
+	response = config.New(config.WithDefaults([]byte(resp), "json"))
+	return
+}
+
+func (c *Client) updateRequest(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
+	var b bytes.Buffer
+	if err = sdpCf.SaveTo("sdp", &b,
+		config.SetFileExtension("json"),
+		config.ExpandOnSave(
+			config.LookupTable(lookup),
+		),
+	); err != nil {
+		return
+	}
+
+	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), fmt.Sprintf("/api/v3/requests/%d", id))
+	if err != nil {
+		return
+	}
+
+	fmt.Println("request body", b.String())
+
+	var resp *json.RawMessage
+	_, err = c.Put(ctx, endpoint, "input_data="+b.String(), &resp)
+
+	response = config.New(config.WithDefaults(*resp, "json"))
 	return
 }

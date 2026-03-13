@@ -92,7 +92,13 @@ var queryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
 // either json (the default) or `csv`. `fields` is a comma separated
 // list of fields to return.
 func getRecordsHTTP(w http.ResponseWriter, r *http.Request) {
-	var response = &ims.Response{}
+	respValue := r.Context().Value(ims.ContextKeyResponse)
+	response, ok := respValue.(*ims.Response)
+	if !ok {
+		log.Debug().Msgf("response not correct type in request context")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
+	}
 
 	log.Debug().Msgf("handling request for %s", r.URL.Path)
 
@@ -119,7 +125,7 @@ func getRecordsHTTP(w http.ResponseWriter, r *http.Request) {
 	tc, err := tableConfig(cf, table)
 	if err != nil {
 		response.Error = fmt.Sprintf("error retrieving table configuration for %q: %v", table, err)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
@@ -145,28 +151,28 @@ func getRecordsHTTP(w http.ResponseWriter, r *http.Request) {
 	// validate fields
 	if !validateFields(strings.Split(fields, ",")) {
 		response.Error = fmt.Sprintf("field names are invalid or not unique: %q", fields)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
 	// real basic validation of query
 	if !queryRE.MatchString(query) {
 		response.Error = fmt.Sprintf("query %q supplied is invalid", query)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
 	response, err = getRecords(r.Context(), cf.Sub("snow"), tc.Name, Fields(fields), Query(query), Display(fmt.Sprint(!raw)))
 	if err != nil {
 		response.Error = err.Error()
-		ims.WriteJSON(w, http.StatusBadGateway, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadGateway)
 		return
 	}
 
 	response.Status = http.StatusText(http.StatusOK)
 	response.StatusCode = http.StatusOK
 
-	ims.WriteJSON(w, http.StatusOK, response)
+	ims.WriteJSONResponse(w, r, http.StatusOK)
 }
 
 var snowField1 = regexp.MustCompile(`^[\w\.-]+$`)
@@ -253,11 +259,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// set up the response, anticipate failure until we know otherwise
-	response := &Response{
-		Timestamp: time.Now().Local().Format(time.RFC3339),
-		Action:    "Failed",
+	respValue := r.Context().Value(ims.ContextKeyResponse)
+	response, ok := respValue.(*ims.Response)
+	if !ok {
+		log.Debug().Msgf("response not correct type in request context")
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
+
+	response.Action = "Failed"
 
 	// close any request body after we are done
 	if r.Body != nil {
@@ -266,15 +276,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 
 	table, err := tableConfig(cf, tableName)
 	if err != nil {
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			fmt.Sprintf("${_timestamp} Error retrieving table configuration for %q", tableName),
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
@@ -283,30 +293,30 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewDecoder(r.Body).Decode(&incident); err != nil {
 		response.Error = fmt.Sprintf("error decoding request body: %v", err)
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
 		response.Error = "field names are invalid or not unique"
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusBadRequest, response)
+		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
 
@@ -315,15 +325,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 		if query, ok := incident[CMDB_SEARCH]; !ok {
 			if incident[SNOW_CMDB_CI], ok = incident[CMDB_CI_DEFAULT]; !ok {
 				response.Error = "must supply either a _cmdb_ci_default or a _cmdb_search parameter"
-				response.Result = cf.ExpandString(
+				response.ResultDetail = cf.ExpandString(
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
-						"_timestamp": response.Timestamp,
+						"_timestamp": response.StartTime.Format(time.RFC3339),
 					}),
 					config.TrimSpace(false),
 				)
-				ims.WriteJSON(w, http.StatusNotFound, response)
+				ims.WriteJSONResponse(w, r, http.StatusNotFound)
 				return
 			}
 		} else {
@@ -332,15 +342,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			if incident[SNOW_CMDB_CI], err = lookupCmdbCI(r.Context(), cf, incident[CMDB_TABLE], query, incident[CMDB_CI_DEFAULT]); err != nil {
 				response.Error = "failed to look up cmdb_ci: " + err.Error()
-				response.Result = cf.ExpandString(
+				response.ResultDetail = cf.ExpandString(
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
-						"_timestamp": response.Timestamp,
+						"_timestamp": response.StartTime.Format(time.RFC3339),
 					}),
 					config.TrimSpace(false),
 				)
-				ims.WriteJSON(w, http.StatusBadRequest, response)
+				ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 				return
 			}
 		}
@@ -348,15 +358,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if incident[SNOW_CMDB_CI] == "" {
 		response.Error = "cmdb_ci is empty or search resulted in no matches"
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusNotFound, response)
+		ims.WriteJSONResponse(w, r, http.StatusNotFound)
 		return
 	}
 
@@ -374,15 +384,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		response.Error = "error looking up incident: " + err.Error()
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusNotFound, response)
+		ims.WriteJSONResponse(w, r, http.StatusNotFound)
 		return
 	}
 
@@ -415,15 +425,15 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 		for _, i := range s.MustInclude {
 			if _, ok := incident[i]; !ok {
 				response.Error = fmt.Sprintf("missing required field %q", i)
-				response.Result = cf.ExpandString(
+				response.ResultDetail = cf.ExpandString(
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
-						"_timestamp": response.Timestamp,
+						"_timestamp": response.StartTime.Format(time.RFC3339),
 					}),
 					config.TrimSpace(false),
 				)
-				ims.WriteJSON(w, http.StatusBadRequest, response)
+				ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 				return
 			}
 		}
@@ -447,62 +457,62 @@ func acceptRecordHTTP(w http.ResponseWriter, r *http.Request) {
 		number, err := incident.updateRecord(r.Context(), cf, table.Name, incidentID)
 		if err != nil {
 			response.Error = fmt.Sprintf("error updating incident: %v", err)
-			response.Result = cf.ExpandString(
+			response.ResultDetail = cf.ExpandString(
 				table.Response.Failed,
 				config.LookupTable(incident, map[string]string{
 					"_error":     response.Error,
-					"_timestamp": response.Timestamp,
+					"_timestamp": response.StartTime.Format(time.RFC3339),
 				}),
 				config.TrimSpace(false),
 			)
-			ims.WriteJSON(w, http.StatusInternalServerError, response)
+			ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
 			return
 		}
 		response.Action = "Updated"
-		response.Number = number
-		response.Result = cf.ExpandString(
+		response.ID = number
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Updated,
 			config.LookupTable(incidentFields, map[string]string{
 				"_number":    number,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusOK, response)
+		ims.WriteJSONResponse(w, r, http.StatusOK)
 		return
 	}
 
 	if updateOnly, err := strconv.ParseBool(incidentFields[UPDATE_ONLY]); err == nil && updateOnly {
 		response.Action = "Ignored"
-		response.Result = "No Incident Created. '" + UPDATE_ONLY + "' set."
-		ims.WriteJSON(w, http.StatusOK, response)
+		response.ResultDetail = "No Incident Created. '" + UPDATE_ONLY + "' set."
+		ims.WriteJSONResponse(w, r, http.StatusOK)
 		return
 	}
 
 	number, err := incident.createRecord(r.Context(), cf, table.Name)
 	if err != nil {
 		response.Error = fmt.Sprintf("error creating incident: %v", err)
-		response.Result = cf.ExpandString(
+		response.ResultDetail = cf.ExpandString(
 			table.Response.Failed,
 			config.LookupTable(incidentFields, map[string]string{
 				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
+				"_timestamp": response.StartTime.Format(time.RFC3339),
 			}),
 			config.LookupTable(incidentFields),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSON(w, http.StatusInternalServerError, response)
+		ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
 		return
 	}
 	response.Action = "Created"
-	response.Number = number
-	response.Result = cf.ExpandString(
+	response.ID = number
+	response.ResultDetail = cf.ExpandString(
 		table.Response.Created,
 		config.LookupTable(incidentFields, map[string]string{
 			"_number":    number,
-			"_timestamp": response.Timestamp,
+			"_timestamp": response.StartTime.Format(time.RFC3339),
 		}),
 		config.TrimSpace(false),
 	)
-	ims.WriteJSON(w, http.StatusCreated, response)
+	ims.WriteJSONResponse(w, r, http.StatusCreated)
 }
