@@ -150,6 +150,7 @@ Each _action group_ supports the following actions (more details [below](#action
 * `unset` - Removes the field from the currently defined set
 * `subgroup` - Starts a new, lower level, group which is then processed in order and recursively
 * `break` - Stop further processing of the **_containing_** group
+* `exit` - Stop further processing and exit the program immediately with the given exit code
 
 The order that action are defined in a group is not important as they are always processed in the order above.
 
@@ -236,7 +237,9 @@ The standard _cordial_ expansion functions:
 
 Additional custom functions:
 
-* `${match:ENV:PATTERN}` - evaluate PATTERN as a regular expression against the contents of `ENV` environment variable and return `true` or `false`. If ENV is an empty string (or not set) then `matchenv` returns `false`
+* `${match:ENV:PATTERN}` - evaluate PATTERN as a regular expression against the contents of `ENV` environment variable and return `true` or `false`. If ENV is zero-length - e.g. `${match::PATTERN}` (or not set) then `match` returns `false`
+
+* `${nomatch:ENV:PATTERN}` - the opposite of `match`, returns `true` if the pattern does not match the value in the environment variable. If ENV is zero-length - e.g. `${nomatch::PATTERN}` (or not set) then `nomatch` returns `false`
 
 * `${replace:ENV:/PATTERN/TEXT/}` - apply the regular expression `PATTERN` to the value in the `ENV` environment variable and replace all matches with `TEXT`. `PATTERN` and `TEXT` support the features provided by the Go `regexp` package. To include forward slashes (`/`) or closing brackets (`}`) you must escape them with a backslash.
 
@@ -352,6 +355,10 @@ See `break` below as a way of exiting a list of groups based on a test.
       _subject: Alert in ${_SAMPLER}
     break: true
 ```
+
+#### `exit`
+
+`exit` stops further processing and exits the program with the exit code given. The value is passed through expansion like other values.
 
 ### Client Configuration Sections
 
