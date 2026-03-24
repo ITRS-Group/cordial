@@ -1,5 +1,18 @@
 # Change Log
 
+## Version v1.24.4
+
+> [!NOTE]
+> **Released 2026-03-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.24.4 Changes
+
+* `integrations/servicenow2`
+
+  Add a new `exit` action to Action Groups and a `nomatch` expansion option.
+
+---
+
 ## Version v1.24.3
 
 > [!NOTE]
