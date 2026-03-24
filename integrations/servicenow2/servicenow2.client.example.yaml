@@ -125,23 +125,42 @@ defaults:
       urgency: 3
       impact: 3
       state: 1
+
   - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
+    # If this isn't an Alert (but perhaps a Clear or something else)
+    # then we don't want to do anything, so exit immediately with a zero
+    # code to stop further processing of this alert.
+    subgroup:
+      - if: ${nomatch:_ALERT_TYPE:Alert}
+        exit: 0
     set:
       impact: 1
       urgency: 1
+
+  # to support Geneos Alerts where the severity descends from Critical
+  # to Warning but with an escalation interval to introduce a delay,
+  # change the Warning notification to use a Repeat Interval of the same
+  # time as the escalation level and remove the escalation.
   - if: ${match:_SEVERITY:(WARNING|warning|2)}
+    subgroup:
+      - if: ${nomatch:_ALERT_TYPE:Alert}
+        exit: 0
+      - if: ${nomatch:_REPEATCOUNT:1}
+        exit: 0
     set:
       impact: 3
       urgency: 3
-  - if: ${match:_SEVERITY:(OK|ok|1)}
+
+  # Similarly to above, only resolve an incident if the OK severity is
+  # accompanied with an Alert Type of Clear.
+  - if: [ "${match:_SEVERITY:(OK|ok|1)}", "${match:_ALERT_TYPE:Clear}" ]
     set:
       state: 6
-      close_code: Closed/Resolved by Caller
+      close_code: Resolved by Caller
       close_notes: Resolved
+      _update_only: true
     unset: [ urgency, impact ]
-  # - if: ${match:_SEVERITY:critical}
-    # set:
-      # _profile: infra
+
   - if: [ "${match:_PLUGINNAME:FKM}", "${match:_DATAVIEW:name}" ]
     set:
       # ${replace:_ROWNAME:/#.*$//}

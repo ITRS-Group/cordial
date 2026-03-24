@@ -48,6 +48,7 @@ type ActionGroup struct {
 	Unset    []string          `json:"unset,omitempty"`
 	Subgroup []ActionGroup     `json:"subgroup,omitempty"`
 	Break    []string          `json:"break,omitempty"`
+	Exit     []string          `json:"exit,omitempty"`
 }
 
 // flags
@@ -116,8 +117,8 @@ var clientCmd = &cobra.Command{
 				if len(env) == 0 || len(pattern) == 0 {
 					return "false", nil
 				}
-				val := os.Getenv(env)
-				if val == "" {
+				val, ok := os.LookupEnv(env)
+				if !ok {
 					return "false", nil
 				}
 				re, err := regexp.Compile(pattern)
@@ -125,6 +126,29 @@ var clientCmd = &cobra.Command{
 					return "false", err
 				}
 				return fmt.Sprintf("%v", re.MatchString(val)), nil
+			}),
+
+			config.Prefix("nomatch", func(cf *config.Config, s string, trim bool) (result string, err error) {
+				s = strings.TrimPrefix(s, "nomatch:")
+				// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
+				p := strings.SplitN(s, ":", 2)
+				if len(p) != 2 {
+					return "false", fmt.Errorf("invalid args")
+				}
+				env, pattern := p[0], p[1]
+
+				if len(env) == 0 || len(pattern) == 0 {
+					return "false", nil
+				}
+				val, ok := os.LookupEnv(env)
+				if !ok {
+					return "false", nil
+				}
+				re, err := regexp.Compile(pattern)
+				if err != nil {
+					return "false", err
+				}
+				return fmt.Sprintf("%v", !re.MatchString(val)), nil
 			}),
 
 			// "replace" takes a strings with four components of the
@@ -380,6 +404,10 @@ var clientCmd = &cobra.Command{
 //     group includes `break` (after evaluating any `if` actions as true)
 //   - `break`: break returns true to the caller, allow them to stop
 //     processing early. This is used to stop evaluation in a parent
+//   - `exit`: stops further processing and exits the program immediately with
+//     an exit code given. This is used to stop processing in a parent
+//     when the child group has done everything needed and no further
+//     processing is required.
 func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record) bool {
 	for _, i := range ag.If {
 		if b, err := strconv.ParseBool(cf.ExpandString(i)); err != nil || !b {
@@ -402,8 +430,17 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 	}
 
 	for _, i := range ag.Break {
-		if b, err := strconv.ParseBool(cf.ExpandString(i)); err != nil && b {
+		if b, _ := strconv.ParseBool(cf.ExpandString(i)); b {
 			return true
+		}
+	}
+
+	for _, i := range ag.Exit {
+		if code, err := strconv.ParseInt(cf.ExpandString(i), 10, 0); err == nil {
+			os.Exit(int(code))
+		} else {
+			log.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
+			os.Exit(1)
 		}
 	}
 
