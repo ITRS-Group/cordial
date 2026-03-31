@@ -7,7 +7,7 @@
 
 >[!WARNING]
 >**BREAKING CHANGES**
->* `tools/geneos` has potentially breaking changes to how TLS certificates are managed.
+>* `tools/geneos` has breaking changes to how TLS certificates are managed.
 >
 >  To better support secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
@@ -20,22 +20,53 @@
 
 * `tools/geneos`
 
-  * Significant changes to TLS certificate management to better support secure connections between Geneos components using TLS as well as external connections to and from other systems. **You SHOULD read** [TLS changes document](tools/geneos/TLS.md) for full details.
+  * TLS Changes
 
-  * TLS is now enabled by default for all new installations created with `geneos init` and `geneos deploy` unless explicitly disabled.
+    * Significant changes to TLS certificate management to better support secure connections between Geneos components using TLS as well as external connections to and from other systems. **You SHOULD read** [TLS changes document](tools/geneos/TLS.md) for full details.
 
-  * Added a `geneos tls migrate` command to help you update existing instance configurations to use the new TLS features. This command is not reversible so please back up your instance configurations before running this command.
+    * TLS is now enabled by default for all new installations created with `geneos init` and `geneos deploy` unless explicitly disabled.
 
-  * Added support for specifying custom certificate trust chains for Geneos components using TLS. This allows you to use self-signed certificates or those signed by your own CA.
+    * Added a `geneos tls migrate` command to help you update existing instance configurations to use the new TLS features. This command is not reversible so please back up your instance configurations before running this command.
 
-  * Private keys are always replaced with new ones when running `geneos tls renew` to improve security.
+    * Added support for specifying custom certificate trust chains for Geneos components using TLS. This allows you to use self-signed certificates or those signed by your own CA.
 
-## Version v.26.0 Fixes
+    * Private keys are always replaced with new ones when running `geneos tls renew` to improve security.
+
+  * A new `geneos incident` subsystem has been added. See `tools/ims-gateway` below for more details.
+
+* `gdna`
+
+  * GDNA now supports the License Daemon 7.8.0 and later for real-time fetching of license data from the now protected endpoint(s). It does not yet support the new `licd` binary summary files, but this is planned for a future release.
+
+    Additional configuration is required to use this new feature, so please see the updated documentation for details.
+
+* `tools/ims-gateway`
+
+  A new IMS Gateway component supports both ServiceNow and ServiceDesk Plus Incident Management Systems and can be used in conjunction with the new `geneos incident` commands to create, update and resolve incidents based on Geneos Alerts (and Actions).
+
+## Version v1.26.0 Fixes
 
 * `tools/geneos`
 
   * The Gateway `instance.setup.xml` file is now created with read-only permissions to hint to users that it should not be edited directly.
   * Other minor fixes to the way templates are executed as well; Now templates are first executed to a temporary file with correct permissions before being moved to the final location. This avoids issues where templates fail to execute due to missing files when the template creates multiple files that depend on each other.
+
+## Version v1.26.0 Changes
+
+* Update to Go 1.26.1 and update dependencies.
+
+---
+
+## Version v1.24.4
+
+> [!NOTE]
+> **Released 2026-03-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v.1.24.4 Changes
+
+* `integrations/servicenow2`
+
+  Add a new `exit` action to Action Groups and a `nomatch` expansion option.
 
 ---
 

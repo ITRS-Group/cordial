@@ -18,8 +18,9 @@ limitations under the License.
 package imscmd
 
 import (
-	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 func init() {

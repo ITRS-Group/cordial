@@ -33,7 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
-type Client struct {
+type client struct {
 	*rest.Client
 	sdpCf *config.Config
 }
@@ -52,7 +52,7 @@ type Client struct {
 // (e.g. using the auth command) and is not handled by this function.
 // Therefore, if no valid token is found, this function will return an
 // error rather than prompting for the authorization code.
-func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (client *Client, err error) {
+func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *client, err error) {
 	var tcc *tls.Config
 
 	token, err := loadToken()
@@ -92,7 +92,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (cli
 		Code: nil,
 	}
 
-	timeout := sdpCf.GetDuration(sdpCf.Join("proxy", "timeout"))
+	timeout := sdpCf.GetDuration("timeout")
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
@@ -115,11 +115,11 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (cli
 		}
 	}
 
-	c := oauth2.NewClient(context.WithValue(context.Background(), oauth2.HTTPClient, hc), NewSDPTokenSource(ctx, conf, token))
+	hc = oauth2.NewClient(context.WithValue(context.Background(), oauth2.HTTPClient, hc), NewSDPTokenSource(ctx, conf, token))
 
-	client = &Client{
+	c = &client{
 		Client: rest.NewClient(
-			rest.HTTPClient(c),
+			rest.HTTPClient(hc),
 			rest.BaseURLString(sdpCf.GetString(sdpCf.Join("datacentres", sdpCf.GetString("datacentre"), "api"))),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.Header.Set("Accept", "application/vnd.manageengine.sdp.v3+json")

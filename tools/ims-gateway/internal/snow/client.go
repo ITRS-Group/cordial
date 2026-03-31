@@ -23,7 +23,6 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -35,16 +34,15 @@ import (
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
-var snowMutex sync.RWMutex
-var snowConnection *rest.Client
+type client struct {
+	*rest.Client
+}
 
-func NewClient(cf *config.Config) (rc *rest.Client) {
-	snowMutex.RLock()
-	if snowConnection != nil {
-		snowMutex.RUnlock()
-		return snowConnection
-	}
-	snowMutex.RUnlock()
+// var snowMutex sync.RWMutex
+// var snowConnection client
+
+func newClient(cf *config.Config) (c client) {
+	c = client{}
 
 	username := cf.GetString("username")
 	password := cf.GetPassword("password")
@@ -101,13 +99,13 @@ func NewClient(cf *config.Config) (rc *rest.Client) {
 
 		hc = conf.Client(context.WithValue(context.Background(), oauth2.HTTPClient, hc))
 
-		rc = rest.NewClient(
+		c.Client = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
 			rest.Logger(logger),
 		)
 	} else {
-		rc = rest.NewClient(
+		c.Client = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
@@ -117,9 +115,5 @@ func NewClient(cf *config.Config) (rc *rest.Client) {
 		)
 	}
 
-	// cache the connection
-	snowMutex.Lock()
-	snowConnection = rc
-	snowMutex.Unlock()
 	return
 }

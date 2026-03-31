@@ -30,13 +30,11 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/tools/ims-gateway/internal/common"
 )
 
 type result map[string]string
 type results []result
-
-// record is a map of key/value pairs
-type record map[string]string
 
 // snowResult is the response from ServiceNow. It contains the results
 // of the request, which is a slice of results. It also contains an
@@ -75,21 +73,21 @@ type TableResponses struct {
 }
 
 type TableData struct {
-	Name          string              `mapstructure:"name,omitempty"`
-	Search        string              `mapstructure:"search,omitempty"`
-	Query         TableQuery          `mapstructure:"query,omitempty"`
-	Defaults      map[string]string   `mapstructure:"defaults,omitempty"`
-	CurrentStates map[int]TableStates `mapstructure:"current-state,omitempty"`
-	Response      TableResponses      `mapstructure:"response,omitempty"`
+	Name          string                   `mapstructure:"name,omitempty"`
+	Search        string                   `mapstructure:"search,omitempty"`
+	Query         TableQuery               `mapstructure:"query,omitempty"`
+	Defaults      map[string]string        `mapstructure:"defaults,omitempty"`
+	CurrentStates map[int]common.Transform `mapstructure:"current-state,omitempty"`
+	Response      TableResponses           `mapstructure:"response,omitempty"`
 }
 
-func lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOptions) (sysID string, state int, err error) {
+func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOptions) (sysID string, state int, err error) {
 	table, err := tableConfig(cf, tableName)
 	if err != nil {
 		return
 	}
 
-	result, err := doRequest(
+	result, err := c.doRequest(
 		ctx,
 		http.MethodGet,
 		cf.Sub("snow"),
@@ -110,8 +108,8 @@ func lookupRecord(ctx context.Context, cf *config.Config, tableName string, opti
 	return
 }
 
-func lookupCmdbCI(ctx context.Context, cf *config.Config, table, query, cmdbCIDefault string) (cmdbCI string, err error) {
-	result, err := doRequest(
+func (c *client) lookupCmdbCI(ctx context.Context, cf *config.Config, table, query, cmdbCIDefault string) (cmdbCI string, err error) {
+	result, err := c.doRequest(
 		ctx,
 		http.MethodGet,
 		cf.Sub("snow"),
@@ -136,8 +134,8 @@ func lookupCmdbCI(ctx context.Context, cf *config.Config, table, query, cmdbCIDe
 }
 
 // createRecord uses POST to create a ServiceNow record in "table".
-func (record record) createRecord(ctx context.Context, cf *config.Config, table string) (number string, err error) {
-	result, err := doRequest(ctx, http.MethodPost, cf.Sub("snow"), table, record, Fields("number"))
+func (c *client) createRecord(ctx context.Context, cf *config.Config, record ims.Values, table string) (number string, err error) {
+	result, err := c.doRequest(ctx, http.MethodPost, cf.Sub("snow"), table, record, Fields("number"))
 	number = result["number"]
 	return
 }
@@ -145,8 +143,8 @@ func (record record) createRecord(ctx context.Context, cf *config.Config, table 
 // updateRecord uses PUT to update a ServiceNow record in "table" with
 // the given sysID. The record should contain the fields to update, and
 // the number of the updated record is returned.
-func (record record) updateRecord(ctx context.Context, cf *config.Config, table, sysID string) (number string, err error) {
-	result, err := doRequest(ctx, http.MethodPut, cf.Sub("snow"), table, record, Fields("number"), SysID(sysID))
+func (c *client) updateRecord(ctx context.Context, cf *config.Config, record ims.Values, table, sysID string) (number string, err error) {
+	result, err := c.doRequest(ctx, http.MethodPut, cf.Sub("snow"), table, record, Fields("number"), SysID(sysID))
 	number = result["number"]
 	return
 }
@@ -173,15 +171,14 @@ func (x *results) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func getRecords(ctx context.Context, snowCfg *config.Config, table string, options ...Options) (response *ims.Response, err error) {
+func (c *client) getRecords(ctx context.Context, snowCfg *config.Config, table string, options ...Options) (response *ims.Response, err error) {
 	var result snowResult
 
 	response = &ims.Response{}
 
 	opts := evalReqOptions(options...)
 
-	snowClient := NewClient(snowCfg)
-	_, err = snowClient.Get(ctx, assembleURL(table, options...), nil, &result)
+	_, err = c.Get(ctx, assembleURL(table, options...), nil, &result)
 	if err != nil {
 		return response, fmt.Errorf("snow GET records failed: %w", err)
 	}
@@ -203,13 +200,13 @@ func getRecords(ctx context.Context, snowCfg *config.Config, table string, optio
 	return response, nil
 }
 
-func doRequest(ctx context.Context, method string, snowCfg *config.Config, table string, record any, options ...Options) (result result, err error) {
+func (c *client) doRequest(ctx context.Context, method string, snowCfg *config.Config, table string, record any, options ...Options) (result result, err error) {
 	var r snowResult
 
-	rc := NewClient(snowCfg)
+	// rc := newClient(snowCfg)
 	options = append(options, Limit(1))
 
-	_, err = rc.Do(ctx, method, assembleURL(table, options...), record, &r)
+	_, err = c.Do(ctx, method, assembleURL(table, options...), record, &r)
 	if err != nil {
 		return nil, fmt.Errorf("snow GET record failed: %w", err)
 	}

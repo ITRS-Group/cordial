@@ -4,6 +4,10 @@
 
 Creates a new TLS certificate bundle including a private key and trust chain. This can either be an instance bundle, suitable for use with remote Geneos components, for example Windows Netprobes, or a signing certificate bundle for use on other systems where `geneos` will be used.
 
+The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
+
+In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases.
+
 By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
 To change to output directory use the `--dest`/`-D` option. The name of the file is always derived from the common name, with spaces replaced by dashes, and a `.pem` extension. The only exception to this is when using an output destination of `-` which will write the output to standard output instead of a file.
@@ -23,24 +27,28 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -D, --dest directory    Destination directory to write certificate chain and private key to.
-                          For bundles use a dash '-' for stdout. (default ".")
-  -c, --cname string      Common Name for certificate. Defaults to hostname except for --signing.
-                          Ignored for --signing.
-  -S, --signing NAME      Create a new signing certificate bundle with NAME
-                          as part of the Common Name, typically the hostname
-                          of the target machine this will be used on.
-  -E, --expiry days       Certificate expiry duration in days. Ignored for --signing (default 365)
-  -F, --force             Runs "tls init" (but do not replace existing root and signing)
-                          and overwrite any existing file in the 'out' directory
-  -s, --san-dns VALUE     Subject-Alternative-Name DNS Name (repeat as required).
-                          Ignored for --signing.
-  -i, --san-ip VALUE      Subject-Alternative-Name IP Address (repeat as required).
-                          Ignored for --signing.
-  -e, --san-email VALUE   Subject-Alternative-Name Email Address (repeat as required).
-                          Ignored for --signing.
-  -u, --san-url VALUE     Subject-Alternative-Name URL (repeat as required).
-                          Ignored for --signing.
+  -D, --dest directory     Destination directory to write certificate chain and private key to.
+                           For bundles use a dash '-' for stdout. (default ".")
+  -c, --cname string       Common Name for certificate. Defaults to hostname except for --signing.
+                           Ignored for --signing.
+  -S, --signing NAME       Create a new signing certificate bundle with NAME
+                           as part of the Common Name, typically the hostname
+                           of the target machine this will be used on.
+  -E, --expiry days        Certificate expiry duration in days. Ignored for --signing (default 365)
+  -F, --force              Runs "tls init" (but do not replace existing root and signing)
+                           and overwrite any existing file in the 'out' directory
+  -K, --private-key        Create a private key without a certificate. Ignored for --signing.
+  -k, --key-type KeyType   Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
+                           or ecdh). Ignored for --signing. Defaults to the same type as
+                           the signing certificate key or a default type if that cannot be determined.
+  -s, --san-dns VALUE      Subject-Alternative-Name DNS Name (repeat as required).
+                           Ignored for --signing.
+  -i, --san-ip VALUE       Subject-Alternative-Name IP Address (repeat as required).
+                           Ignored for --signing.
+  -e, --san-email VALUE    Subject-Alternative-Name Email Address (repeat as required).
+                           Ignored for --signing.
+  -u, --san-url VALUE      Subject-Alternative-Name URL (repeat as required).
+                           Ignored for --signing.
 ```
 
 ## SEE ALSO

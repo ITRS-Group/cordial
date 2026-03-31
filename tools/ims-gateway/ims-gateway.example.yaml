@@ -73,7 +73,7 @@ sdp:
   client-secret: ${enc:~/.config/geneos/keyfile.aes:+encs+E0411869453CCB6192723624A3D277C1818AADC8289044B2BD2C07E8328F830F8E50BF71378CD271AB4DDBF59ABE49EE}
   requests:
     correlation_id: udf_fields.txt_correlation_id
-    existing_search:
+    search:
       list_info:
         search_criteria:
           - field: ${sdp.requests.correlation_id}
@@ -84,7 +84,7 @@ sdp:
           #   value: Closed
             # logical_operator: and
         fields_required: [ id, status.name ]
-    search:
+    query:
       list_info:
         row_count: 100
         search_criteria:

@@ -6,7 +6,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
-All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web broswers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
 ```text
 geneos tls init
 ```

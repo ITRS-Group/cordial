@@ -17,7 +17,12 @@ limitations under the License.
 
 package sdp
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"regexp"
+	"slices"
+	"strings"
+)
 
 // ErrorResponse represents a typical error response from SDP v3 API.
 type ErrorResponse struct {
@@ -284,4 +289,47 @@ type DateTime struct {
 type NameID struct {
 	Name string `json:"name,omitempty"`
 	ID   int64  `json:"id,string,omitempty"`
+}
+
+var sdpField1 = regexp.MustCompile(`^[\w\.-]+$`)
+
+// validateFields checks all the keys in the snow.Record incident.
+// SDP fields can consist of letters, numbers, underscored and
+// hyphens and cannot begin or end with a hyphen. They cannot be an
+// empty string either.
+//
+// it also lowercases all fields names and if there is a clash it
+// returns false.
+//
+// if there are no keys the function returns false.
+//
+// if there are no invalid fields, the function returns true.
+func validateFields(keys []string) bool {
+	if len(keys) == 0 {
+		return false
+	}
+
+	// check keys are valid (we cannot use a single regexp to check for
+	// non leading hyphen on a single char string)
+	for _, k := range keys {
+		if k == "" || strings.HasPrefix(k, "-") || strings.HasSuffix(k, "-") {
+			return false
+		}
+		if !sdpField1.MatchString(k) {
+			return false
+		}
+	}
+
+	// check keys are unique when lowercased
+	//
+	// NOTE: this could be skipped as viper lowercases all parameters
+	// names from yaml, but we change future YAML parsers
+	slices.SortFunc(keys, func(a, b string) int {
+		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
+	})
+
+	l1 := len(keys)
+	l2 := len(slices.Compact(keys)) // slices.Compact modifies the slice
+
+	return l1 == l2
 }

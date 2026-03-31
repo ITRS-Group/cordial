@@ -139,15 +139,12 @@ func saveToken(token *oauth2.Token) (err error) {
 func InitialAuth(cf *config.Config, code *config.Plaintext) (tok *oauth2.Token, err error) {
 	var tcc *tls.Config
 
-	clientID := cf.GetString("client-id")
-	clientSecret := cf.GetPassword("client-secret")
+	clientID := cf.GetString(cf.Join("sdp", "client-id"))
+	clientSecret := cf.GetPassword(cf.Join("sdp", "client-secret"))
 
 	if clientID == "" || clientSecret.IsNil() {
 		return nil, fmt.Errorf("client-id and/or client-secret are not valid")
 	}
-
-	log.Debug().Msgf("using client ID %s", clientID)
-	log.Debug().Msgf("using client secret %s", clientSecret.String())
 
 	if code == nil || code.IsNil() {
 		err = fmt.Errorf("authorization code is required for initial authentication")
@@ -161,11 +158,11 @@ func InitialAuth(cf *config.Config, code *config.Plaintext) (tok *oauth2.Token, 
 
 	if auth.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
+			InsecureSkipVerify: cf.GetBool(cf.Join("sdp", "tls", "skip-verify")),
 		}
 	}
 
-	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	timeout := cf.GetDuration(cf.Join("sdp", "timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}

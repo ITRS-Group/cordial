@@ -19,7 +19,6 @@ package imscmd
 
 import (
 	"context"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -42,10 +41,13 @@ var raiseCmdIMSType string
 func init() {
 	incidentCmd.AddCommand(raiseCmd)
 
-	raiseCmd.Flags().StringVarP(&raiseCmdIMSType, "ims", "i", "", "IMS type, e.g. `snow` or `sdp`. default taken from config file")
-	raiseCmd.Flags().StringVarP(&raiseCmdProfile, "profile", "p", "", "profile to use for field creation")
-	raiseCmd.Flags().StringVarP(&raiseCmdTable, "table", "t", "", "ServiceNow table, defaults typically to incident")
 	raiseCmd.Flags().StringVarP(&raiseCmdConfigFile, "config", "c", "", "config file to use")
+
+	raiseCmd.Flags().StringVarP(&raiseCmdIMSType, "ims", "i", "", "IMS type, e.g. snow or sdp. default taken from config file")
+
+	raiseCmd.Flags().StringVarP(&raiseCmdProfile, "profile", "p", "", "profile to use for field creation")
+
+	raiseCmd.Flags().StringVarP(&raiseCmdTable, "snow-table", "t", "", "ServiceNow table, typically `incident`")
 
 	raiseCmd.Flags().SortFlags = false
 }
@@ -64,26 +66,33 @@ specific API.
 	`, "|", "`"),
 	SilenceUsage: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		// all keys with a leading "_" are passed to the proxy but the proxy
+		// all keys with a leading `__` are passed to the IMS Gateway but the Gateway
 		// then removes them in addition to other configuration settings. The expected fields are:
 		//
 		// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
-		// _correlation_id - correlation ID, which is SHA1 checksummed before use
+		// __incident_correlation - correlation ID, which is SHA1 checksummed before use
 		//
-		// cmdb_ci or
-		// _cmdb_search - search query for cmdb_ci sys_id - or
-		// _cmdb_ci_default
+		// __incident_subject - short description
+		// __incident_body_text - long text
+		// __incident_body_html - long text with HTML formatting
 		//
-		// _subject - short description
-		// _body_text - long text
-		// _body_html - long text with HTML formatting
-		// _severity - severity, e.g. 1-5 or critical, high, medium, low
-		// _category - category of the incident
-		// _subcategory - subcategory of the incident
-		// _impact - impact of the incident, e.g. 1-5 or high, medium, low
-		// _urgency - urgency of the incident, e.g. 1-5 or high, medium, low
-		// _assignment_group - group to assign the incident to, e.g. "Service Desk"
-		// _assigned_to - user to assign the incident to, e.g. "jsmith"
+		// __itrs_severity - severity, e.g. 0-3 or critical, warning etc.
+		// __itrs_category - category of the incident, usually the `CATEGORY` ME attribute, e.g. "Database", "Application", "Network"
+		// __itrs_subcategory - subcategory of the incident, usually the `SUBCATEGORY` ME attribute, e.g. "MySQL", "Apache", "Router"
+		//
+		// __snow_cmdb_ci or
+		// __snow_cmdb_search - search query for cmdb_ci sys_id - or
+		// __snow_cmdb_ci_default
+		// __snow_impact - impact of the incident, e.g. 1-5 or high, medium, low
+		// __snow_urgency - urgency of the incident, e.g. 1-5 or high, medium, low
+		// __snow_assignment_group - group to assign the incident to, e.g. "Service Desk"
+		// __snow_assigned_to - user to assign the incident to, e.g. "jsmith"
+		//
+		// __sdp_add_note - add a note to the request, e.g. "This is a note"
+		// __sdp_requester - requester of the request, e.g. "jsmith"
+		// __sdp_approver - approver of the request, e.g. "jsmith"
+		// __sdp_group - group to assign the request to, e.g. "Service Desk"
+		// __sdp_item - item to request, e.g. "Laptop"
 
 		var defaults []ims.ActionGroup
 		var profileGroups []ims.ActionGroup
@@ -161,18 +170,18 @@ specific API.
 			}
 		}
 
-		// check correlation ID, prefer a "raw" ID
-		if _, ok := incident[ims.SNOW_CORRELATION_ID]; !ok {
-			if id, ok := incident[ims.RAW_CORRELATION_ID]; ok {
-				incident[ims.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
-			}
-		}
-		// drop internal string either way
-		delete(incident, ims.RAW_CORRELATION_ID)
-
 		if raiseCmdIMSType == "" {
 			raiseCmdIMSType = cf.GetString(config.Join("ims-gateway", "type"))
 		}
+
+		// check correlation ID, prefer a "raw" ID
+		if _, ok := incident[ims.SNOW_CORRELATION_FIELD]; !ok {
+			if id, ok := incident[ims.SNOW_CORRELATION]; ok {
+				incident[ims.SNOW_CORRELATION_FIELD] = ims.CorrelationID(id)
+			}
+		}
+		// drop internal string either way
+		delete(incident, ims.SNOW_CORRELATION)
 
 		log.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
 
@@ -190,8 +199,8 @@ specific API.
 			if raiseCmdIMSType == "snow" {
 				if raiseCmdTable == "" {
 					var ok bool
-					if raiseCmdTable, ok = incident[ims.INCIDENT_TABLE]; !ok {
-						raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE]
+					if raiseCmdTable, ok = incident[ims.SNOW_INCIDENT_TABLE]; !ok {
+						raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE_DEFAULT]
 					}
 				}
 			}
@@ -218,7 +227,7 @@ specific API.
 // This configuration file is different to the global `geneos` config,
 // and is specific to Incident Management Subsystem. It is typically
 // named `${HOME}/.config/geneos/ims.yaml` and contain the relevant
-// configuration for this subsystem, such as proxy types, URLs and
+// configuration for this subsystem, such as gateway types, URLs and
 // profiles.
 func imsLoadConfigFile(name string) (cf *config.Config) {
 	var err error

@@ -18,6 +18,7 @@ limitations under the License.
 package imscmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,7 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/ims"
 )
 
-var queryCmdTable, queryCmdQuery, queryCmdFormat string
+var queryCmdSource, queryCmdQuery, queryCmdFormat string
 var queryCmdRaw bool
 var queryCmdIMSType string
 
@@ -38,7 +39,7 @@ func init() {
 	incidentCmd.AddCommand(queryCmd)
 
 	queryCmd.Flags().StringVarP(&queryCmdIMSType, "ims", "i", "", "IMS type, e.g. `snow` or `sdp`. default taken from config file")
-	queryCmd.Flags().StringVarP(&queryCmdTable, "snow-table", "T", "", "ServiceNow table, defaults to incident")
+	queryCmd.Flags().StringVarP(&queryCmdSource, "snow-table", "T", "", "ServiceNow table, defaults to incident")
 	queryCmd.Flags().BoolVarP(&queryCmdRaw, "snow-raw", "R", false, "turn ServiceNow sys_display off, i.e. return raw values instead of display values")
 
 	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "Q", "", "query")
@@ -57,6 +58,11 @@ type SnowResult struct {
 		Detail  string `json:"detail"`
 	} `json:"error"`
 	Status string `json:"status,omitempty"`
+}
+
+type queryParameters struct {
+	Query string `url:"query,omitempty"`
+	Raw   bool   `url:"raw,omitempty"`
 }
 
 var queryCmd = &cobra.Command{
@@ -91,32 +97,47 @@ var queryCmd = &cobra.Command{
 
 			rc := ims.NewClient(ccf)
 
-			query := struct {
-				Query string `url:"query,omitempty"`
-				Raw   bool   `url:"raw,omitempty"`
-			}{}
+			query := queryParameters{}
 
-			if queryCmdIMSType == "snow" {
-				log.Debug().Msgf("using ServiceNow-specific query parameters: table=%s, raw=%t", queryCmdTable, queryCmdRaw)
-				if queryCmdTable == "" {
-					queryCmdTable = cf.GetString(config.Join("ims-gateway", "snow", "default-table"))
+			switch queryCmdIMSType {
+			case "snow":
+				log.Debug().Msgf("using ServiceNow-specific query parameters: table=%s, raw=%t", queryCmdSource, queryCmdRaw)
+				if queryCmdSource == "" {
+					queryCmdSource = cf.GetString(config.Join("ims-gateway", "snow", "default-table"))
 				}
 
 				if queryCmdQuery == "" {
 					queryCmdQuery = cf.GetString(config.Join("ims-gateway", "snow", "default-query"))
 				}
 
-				query = struct {
-					Query string `url:"query,omitempty"`
-					Raw   bool   `url:"raw,omitempty"`
-				}{
+				query = queryParameters{
 					Query: queryCmdQuery,
 					Raw:   queryCmdRaw,
 				}
+			case "sdp":
+				// queryCmdSource = "requests"
+				log.Debug().Msgf("using ServiceDesk Plus-specific query parameters: query=%s", queryCmdQuery)
+				if queryCmdQuery == "" {
+					var b bytes.Buffer
+					sdpQuery := cf.Sub(config.Join("ims-gateway", "sdp", "default-query"))
+					if err = sdpQuery.SaveTo("sdp", &b, config.SetFileExtension("json")); err != nil {
+						log.Error().Err(err).Msgf("error saving SDP query parameters to buffer: %v", err)
+						return
+					}
+					log.Debug().Msgf("SDP query parameters: %s", b.String())
+					queryCmdQuery = b.String()
+				}
+
+				query = queryParameters{
+					Query: queryCmdQuery,
+				}
+			default:
+				log.Error().Msgf("unsupported IMS type %q", queryCmdIMSType)
+				return
 			}
 
-			log.Debug().Msgf("querying IMS at %s / %s", ccf.URL, queryCmdTable)
-			if _, err = rc.Get(context.Background(), queryCmdTable, query, &response); err == nil {
+			log.Debug().Msgf("querying IMS at %s / %s", ccf.URL, queryCmdSource)
+			if _, err = rc.Get(context.Background(), queryCmdSource, query, &response); err == nil {
 				break LOOP
 			}
 
@@ -143,6 +164,9 @@ var queryCmd = &cobra.Command{
 		}
 
 		columns := response.DataTable[0]
+		for i, col := range columns {
+			columns[i] = strings.ReplaceAll(col, ".", "_")
+		}
 
 		fmt.Println(strings.Join(columns, ","))
 
@@ -160,8 +184,10 @@ var queryCmd = &cobra.Command{
 		}
 
 		// write headlines for toolkit consumers
-		fmt.Printf("<!>table,%s\n", queryCmdTable)
-		fmt.Printf("<!>results,%d\n", len(response.DataTable)-1)
-		fmt.Printf("<!>query,%s\n", queryCmdQuery)
+		if queryCmdIMSType == "sdp" {
+			queryCmdSource = "requests"
+		}
+		fmt.Printf("<!>source,%s\n", queryCmdSource)
+		fmt.Printf("<!>incidents,%d\n", len(response.DataTable)-1)
 	},
 }

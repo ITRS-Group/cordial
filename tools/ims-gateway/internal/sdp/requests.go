@@ -25,7 +25,6 @@ import (
 	"net/url"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 // handle request endpoints
@@ -47,7 +46,7 @@ import (
 // The function will handle the conversion of the search criteria to the
 // appropriate format for the API request, and will return a structured
 // response containing the list of requests.
-func (c *Client) getRequests(ctx context.Context, cf *config.Config, listInfo any, opts ...config.ExpandOptions) (response *RequestGetListResponse, err error) {
+func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo any, opts ...config.ExpandOptions) (response *RequestGetListResponse, err error) {
 	v := url.Values{}
 
 	switch s := listInfo.(type) {
@@ -68,29 +67,18 @@ func (c *Client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 		return
 	}
 
-	log.Debug().Msgf("getRequests request body: %s", v.Encode())
 	_, err = c.Get(ctx, endpoint, v.Encode(), &response)
-	log.Debug().Msgf("getRequests response: %+v", response)
 	return
 }
 
-func (c *Client) createRequest(ctx context.Context, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
+func (c *client) createRequest(ctx context.Context, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
 	var b bytes.Buffer
+	var resp string
+
 	if err = sdpCf.SaveTo("sdp", &b,
 		config.SetFileExtension("json"),
 		config.ExpandOnSave(
 			config.LookupTable(lookup),
-			// config.Prefix("html", func(cf *config.Config, s string, _ bool) (string, error) {
-			// 	s, err = cf.ExpandRawString("config:"+strings.TrimPrefix(s, "html:"), config.LookupTable(lookup))
-			// 	if err != nil {
-			// 		return "", err
-			// 	}
-			// 	// also escape any percent characters to ensure they are
-			// 	// not interpreted as format specifiers in the API
-			// 	s = strings.ReplaceAll(s, "%", "%25;")
-			// 	return s, nil
-
-			// }),
 		),
 	); err != nil {
 		return
@@ -101,18 +89,19 @@ func (c *Client) createRequest(ctx context.Context, sdpCf *config.Config, lookup
 		return
 	}
 
-	fmt.Println("request body", b.String())
-
-	var resp string
 	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp)
 
 	response = config.New(config.WithDefaults([]byte(resp), "json"))
 	return
 }
 
-func (c *Client) updateRequest(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
+func (c *client) editRequest(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
 	var b bytes.Buffer
-	if err = sdpCf.SaveTo("sdp", &b,
+	var resp *json.RawMessage
+
+	sdpReqCf := sdpCf.Sub("edit_request")
+
+	if err = sdpReqCf.SaveTo("sdp", &b,
 		config.SetFileExtension("json"),
 		config.ExpandOnSave(
 			config.LookupTable(lookup),
@@ -126,10 +115,46 @@ func (c *Client) updateRequest(ctx context.Context, id int64, sdpCf *config.Conf
 		return
 	}
 
-	fmt.Println("request body", b.String())
-
-	var resp *json.RawMessage
 	_, err = c.Put(ctx, endpoint, "input_data="+b.String(), &resp)
+
+	if resp == nil {
+		err = fmt.Errorf("empty response from API")
+		return
+	}
+
+	response = config.New(config.WithDefaults(*resp, "json"))
+	return
+}
+
+func (c *client) addNote(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
+	var b bytes.Buffer
+	var resp *json.RawMessage
+
+	// TODO: this is currently the same as updateRequest, but in future
+	// we may want to allow for different fields or processing for notes
+	// vs requests, so keeping it separate for now
+
+	sdpReqnoteCf := sdpCf.Sub("add_note")
+	if err = sdpReqnoteCf.SaveTo("sdp", &b,
+		config.SetFileExtension("json"),
+		config.ExpandOnSave(
+			config.LookupTable(lookup),
+		),
+	); err != nil {
+		return
+	}
+
+	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), fmt.Sprintf("/api/v3/requests/%d/notes", id))
+	if err != nil {
+		return
+	}
+
+	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp)
+
+	if resp == nil {
+		err = fmt.Errorf("empty response from API")
+		return
+	}
 
 	response = config.New(config.WithDefaults(*resp, "json"))
 	return

@@ -20,6 +20,7 @@ limitations under the License.
 package ims
 
 import (
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -40,15 +41,16 @@ const (
 	ContextKeyResponse ContextKey = "response" // Context key for passing response to handlers, type is *ims.Response
 )
 
-// temp mappings, while interface is cleaned up
 const (
-	PROFILE             = "profile"
-	SNOW_CORRELATION_ID = "snow_correlation_id"
-	RAW_CORRELATION_ID  = "raw_correlation_id"
-	INCIDENT_TABLE      = "_table"
-	SNOW_INCIDENT_TABLE = "incident"
+	PROFILE              = "__itrs_profile"
+	INCIDENT_UPDATE_ONLY = "__incident_update_only"
+	INCIDENT_CORRELATION = "__incident_correlation"
 )
 
+// Values is a simple map of string key/value pairs that can be used to
+// represent incident fields and values. This is used throughout the IMS
+// package to represent the fields and values of an incident, as well as
+// the configuration for a variety of operations.
 type Values map[string]string
 
 type ClientConfig struct {
@@ -154,4 +156,8 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func CorrelationID(data string) string {
+	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
 }

@@ -17,23 +17,4 @@ limitations under the License.
 
 package ims
 
-import "net/http"
-
-// register endpoints for IMS functions
-
-type Endpoint struct {
-	Method  string // HTTP method (e.g. "POST", "GET")
-	Path    string // URL path (e.g. "/create", "/update") relative to application base path and including any path parameters (e.g. "/create/{id}")
-	Handler http.HandlerFunc
-}
-
-var Endpoints = []Endpoint{}
-
-func RegisterEndpoint(method, path string, handler http.HandlerFunc) {
-	// TODO: validate method and path
-	Endpoints = append(Endpoints, Endpoint{
-		Method:  method,
-		Path:    path,
-		Handler: handler,
-	})
-}
+// ServiceDesk Plus specific code
