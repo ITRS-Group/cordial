@@ -19,6 +19,7 @@ package tlscmd
 
 import (
 	"bytes"
+	"crypto"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -36,10 +38,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+const (
+	privateKeyBasename = "private-key"
+)
+
 var createCmdCN, createCmdDestDir, createCmdSigning string
-var createCmdForce bool
+var createCmdForce, createCmdPrivateKey bool
 var createCmdSANs = SubjectAltNames{}
 var createCmdExpiry int
+var createCmdKeyType certs.KeyType
 
 func init() {
 	tlsCmd.AddCommand(createCmd)
@@ -53,6 +60,9 @@ func init() {
 	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signing")
 
 	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signing)\nand overwrite any existing file in the 'out' directory")
+
+	createCmd.Flags().BoolVarP(&createCmdPrivateKey, "private-key", "K", false, "Create a private key without a certificate. Ignored for --signing.")
+	createCmd.Flags().VarP(&createCmdKeyType, "key-type", "k", "Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519\nor ecdh). Ignored for --signing. Defaults to the same type as\nthe signing certificate key or a default type if that cannot be determined.")
 
 	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signing.")
 	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signing.")
@@ -96,6 +106,16 @@ var createCmd = &cobra.Command{
 			return
 		}
 
+		if createCmdPrivateKey {
+			if _, _, err = CreateKey(createCmdDestDir, createCmdForce, createCmdKeyType); err != nil {
+				if errors.Is(err, os.ErrExist) && !createCmdForce {
+					fmt.Printf("Private key already exists for %q, use --force to overwrite\n", privateKeyBasename+certs.PEMExtension)
+					return nil
+				}
+			}
+			return
+		}
+
 		if err = CreateCert(createCmdDestDir, createCmdForce, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdForce {
 				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
@@ -105,6 +125,42 @@ var createCmd = &cobra.Command{
 		}
 		return
 	},
+}
+
+// CreateKey creates a new private key of the given type and writes it
+// to the destination given. The key type is determined by the string
+// argument, which can be "rsa", "ecdsa", "ed25519" or "ecdh". If the
+// key type is not recognized, an error is returned.
+func CreateKey(destination string, overwrite bool, keytype certs.KeyType) (key *memguard.Enclave, pub crypto.PublicKey, err error) {
+	var b bytes.Buffer
+	var basepath string
+
+	basename := "private-key"
+
+	if keytype == "" {
+		keytype = certs.DefaultKeyType
+	}
+
+	if destination != "-" {
+		basepath = path.Join(destination, strings.ReplaceAll(basename, " ", "-"))
+		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
+			err = os.ErrExist
+			return
+		}
+	}
+
+	key, pub, err = certs.GenerateKey(keytype)
+	certs.WritePrivateKeyTo(&b, key)
+
+	if destination == "-" {
+		fmt.Print(b.String())
+		return
+	}
+
+	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+
+	fmt.Printf("private key created in %q\n", basepath+certs.PEMExtension)
+	return
 }
 
 // CreateCert creates a new certificate and private key
@@ -143,7 +199,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		certs.URIs(san.URL...),
 	)
 
-	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey)
+	cert, key, err := certs.CreateCertificate(template, signingCert, signingKey, certs.WithKeyType(createCmdKeyType))
 	if err != nil {
 		return
 	}
@@ -163,7 +219,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		return
 	}
 
-	geneos.LOCAL.WriteFile(basepath+".pem", b.Bytes(), 0600)
+	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
 
 	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	fmt.Print(string(certs.CertificateComments(cert)))

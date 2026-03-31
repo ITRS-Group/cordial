@@ -2,6 +2,10 @@
 
 Creates a new TLS certificate bundle including a private key and trust chain. This can either be an instance bundle, suitable for use with remote Geneos components, for example Windows Netprobes, or a signing certificate bundle for use on other systems where `geneos` will be used.
 
+The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
+
+In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases.
+
 By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
 To change to output directory use the `--dest`/`-D` option. The name of the file is always derived from the common name, with spaces replaced by dashes, and a `.pem` extension. The only exception to this is when using an output destination of `-` which will write the output to standard output instead of a file.

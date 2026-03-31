@@ -46,17 +46,35 @@ const (
 // CreateCertificate creates a new certificate and private key given the
 // signing cert and key. Returns a certificate and private key. Keys are
 // usually PKCS#8 encoded and so need parsing after unsealing.
-func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.Enclave) (cert *x509.Certificate, key *memguard.Enclave, err error) {
+//
+// To create a private key of a specific type, use the WithKeyType
+// option. If the signing key is not nil and the WithKeyType option is
+// not used then the new key will be of the same type as the signing
+// key. If there is no signing key and the WithKeyType option is not
+// used then a default key type will be used.
+func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.Enclave, options ...CreateCertOptions) (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	var certBytes []byte
 	var pub crypto.PublicKey
+	var keytype KeyType
+
+	opts, err := evalCreateCertOptions(options...)
+	if err != nil {
+		return
+	}
+	if opts.keytype != "" {
+		keytype = KeyType(opts.keytype)
+	}
 
 	if template != parent && signingKey == nil {
 		err = errors.New("parent key empty but not self-signing")
 		return
 	}
 
-	// create a new key of the same type as the signing cert key or use a default type
-	keytype := PrivateKeyType(signingKey)
+	if keytype == "" {
+		// create a new key of the same type as the signing cert key or use a default type
+		keytype = PrivateKeyType(signingKey)
+	}
+
 	if keytype == "" {
 		keytype = DefaultKeyType
 	}
