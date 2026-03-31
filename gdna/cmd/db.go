@@ -367,12 +367,14 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 			// all good, end of CSV input, just return
 			break
 		}
-		if err != nil {
+		if err != nil && !errors.Is(err, csv.ErrFieldCount) {
+			log.Error().Err(err).Msgf("error reading CSV line in %s", source)
 			return err
 		}
 
-		if len(fields) != len(colNames) {
-			panic("number of fields in CSV differs from heading for " + source)
+		if len(fields) < len(colNames) {
+			line, _ := c.FieldPos(0)
+			panic(fmt.Sprintf("number of fields in CSV at line %d is less than headings for %s", line, source))
 		}
 
 		values := make(map[string]string, len(colNames))
@@ -1089,6 +1091,10 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
+
+		if signedToken != "" {
+			req.Header.Set("Authorization", "Bearer "+signedToken)
+		}
 		resp, err = client.Do(req)
 		if err != nil {
 			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
@@ -1101,14 +1107,6 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			return sources, err
 		}
 		defer resp.Body.Close()
-
-		// set the source time to either the last-modified header or now
-		// if lm := resp.Header.Get("last-modified"); lm != "" {
-		// 	lmt, err := http.ParseTime(lm)
-		// 	if err == nil {
-		// 		ts = lmt
-		// 	}
-		// }
 
 		c = csv.NewReader(resp.Body)
 		c.ReuseRecord = true

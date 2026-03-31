@@ -21,6 +21,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
 	"os"
 	"os/signal"
 	"path"
@@ -138,6 +139,7 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 			}
 		} else if s, err = readLicdReports(ctx, cf, tx, source); err != nil {
 			log.Error().Err(err).Msgf("readLicenseReports for %s failed", source)
+			continue
 		}
 		sources = append(sources, s...)
 	}
@@ -152,6 +154,11 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 	}
 
 	slices.Sort(sources)
+
+	if len(sources) == 0 {
+		err = errors.New("no valid data sources found")
+		return
+	}
 
 	if err = runPostInsertHooks(ctx, cf, tx); err != nil {
 		return
