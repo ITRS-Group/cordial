@@ -8,6 +8,12 @@ Output the public key corresponding to a licd private key, if set in `gdna.licd-
 gdna pubkey
 ```
 
+### Options
+
+```text
+  -o, --output string   Output file for public key (default: stdout)
+```
+
 ## SEE ALSO
 
 * [gdna](gdna.md)	 - Process Geneos License Usage Data
