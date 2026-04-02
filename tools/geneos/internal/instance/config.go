@@ -353,7 +353,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
 	//   tls::ca-bundle 		--> -ssl-certificate-chain (--final)
 
-	if cert := PathTo(i, config.Join("tls", "certificate")); cert != "" {
+	if cert := PathTo(i, config.Join(TLSBASE, CERTIFICATE)); cert != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {
 			args = append(args, "-secure")
 		}
@@ -361,18 +361,18 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 		fileChecks = append(fileChecks, cert)
 	}
 
-	if privkey := PathTo(i, config.Join("tls", "privatekey")); privkey != "" {
+	if privkey := PathTo(i, config.Join(TLSBASE, PRIVATEKEY)); privkey != "" {
 		args = append(args, "-ssl-certificate-key", privkey)
 		fileChecks = append(fileChecks, privkey)
 	}
 
 	tlsVerify := true
-	if cf.IsSet(cf.Join("tls", "verify")) {
-		tlsVerify = cf.GetBool(cf.Join("tls", "verify"))
+	if cf.IsSet(cf.Join(TLSBASE, TLSVERIFY)) {
+		tlsVerify = cf.GetBool(cf.Join(TLSBASE, TLSVERIFY))
 	}
 
 	if tlsVerify {
-		chain := PathTo(i, config.Join("tls", "ca-bundle"))
+		chain := PathTo(i, config.Join(TLSBASE, CABUNDLE))
 
 		if chain != "" {
 			args = append(args, "-ssl-certificate-chain", chain)
@@ -415,7 +415,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 func setSecureArgs(i geneos.Instance) (args []string) {
 	cf := i.Config()
 
-	files := PathsTo(i, "certificate", "privatekey", "certchain")
+	files := PathsTo(i, CERTIFICATE, PRIVATEKEY, CERTCHAIN)
 	if len(files) == 0 || files[0] == "" {
 		return
 	}
@@ -432,7 +432,7 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 	}
 
 	if chain == "" {
-		chain = i.Host().PathTo("tls", geneos.DeprecatedChainCertFile)
+		chain = i.Host().PathTo(TLSBASE, geneos.DeprecatedChainCertFile)
 	}
 	s, err := i.Host().Stat(chain)
 	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !cf.GetBool("use-chain")) {

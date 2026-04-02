@@ -30,11 +30,16 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
+const (
+	TLSBASE     = "tls"
+	CERTIFICATE = "certificate"
+	PRIVATEKEY  = "privatekey"
+	TLSVERIFY   = "verify"
+	CABUNDLE    = "ca-bundle"
+	CERTCHAIN   = "certchain"
+)
+
 // NewCertificate creates a new certificate for an instance.
-//
-// If the root and signing certs are readable then create an instance
-// specific chain file, otherwise set the instance to point to the
-// system chain file.
 //
 // this also creates a new private key
 //
@@ -74,6 +79,10 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 		resp.Err = err
 		return
 	}
+
+	// update the instance reference to the ca-bundle, in all cases
+	cf := i.Config()
+	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if err = SaveConfig(i); err != nil {
 		return
@@ -127,11 +136,11 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 
 	// do not update config if ext is given (used for temp files) or
 	// if it's already set
-	if cf.GetString(cf.Join("tls", "certificate")) == certFile {
+	if cf.GetString(cf.Join(TLSBASE, CERTIFICATE)) == certFile {
 		return
 	}
-	cf.Set("certificate", "")
-	cf.SetString(cf.Join("tls", "certificate"), certFile, config.Replace("home"))
+	cf.Set(CERTIFICATE, "")
+	cf.SetString(cf.Join(TLSBASE, CERTIFICATE), certFile, config.Replace("home"))
 	return
 }
 
@@ -175,10 +184,10 @@ func ReadLeafCertificate(i geneos.Instance, ext ...string) (cert *x509.Certifica
 
 	cf := i.Config()
 
-	if cf.IsSet(cf.Join("tls", "certificate")) {
-		certPath = cf.GetString(cf.Join("tls", "certificate"))
-	} else if cf.IsSet("certificate") {
-		certPath = cf.GetString("certificate")
+	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
+		certPath = cf.GetString(cf.Join(TLSBASE, CERTIFICATE))
+	} else if cf.IsSet(CERTIFICATE) {
+		certPath = cf.GetString(CERTIFICATE)
 	} else {
 		return nil, geneos.ErrNotExist
 	}
@@ -227,11 +236,11 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 
 	cf := i.Config()
 
-	if cf.IsSet(cf.Join("tls", "certificate")) {
-		certPath = cf.GetString(cf.Join("tls", "certificate"))
-	} else if cf.IsSet("certificate") {
-		certPath = cf.GetString("certificate")
-		chainPath = cf.GetString("certchain")
+	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
+		certPath = cf.GetString(cf.Join(TLSBASE, CERTIFICATE))
+	} else if cf.IsSet(CERTIFICATE) {
+		certPath = cf.GetString(CERTIFICATE)
+		chainPath = cf.GetString(CERTCHAIN)
 	} else {
 		return nil, geneos.ErrNotExist
 	}

@@ -3,7 +3,7 @@
 ## Version v1.26.0-beta1
 
 >[!IMPORTANT]
-> This is an **alpha** release of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
+> This is an **beta** release of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
 
 >[!WARNING]
 >**BREAKING CHANGES**

@@ -353,15 +353,18 @@ var deployCmd = &cobra.Command{
 			}
 			fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
 
-			if err = instance.SaveConfig(i); err != nil {
-				return
-			}
-
 			var updated bool
 			if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
 				return err
-			} else if updated {
+			}
+			cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+
+			if updated {
 				fmt.Printf("%s ca-bundle updated\n", i)
+			}
+
+			if err = instance.SaveConfig(i); err != nil {
+				return
 			}
 		}
 

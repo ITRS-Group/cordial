@@ -97,6 +97,16 @@ configs:
           - "https://LICDHOST:7041"  
           # To access the host that the container is running on, use this URL:
           # - "https://host.docker.internal: host-gateway:7041"
+
+        # For licd release 7.8.0 and above, you must use a private key to
+        # connect to the licd license report endpoints. The `licd-private-key`
+        # setting is either a PEM encoded RSA private key in-line or a path to
+        # the PEM encoded private key file to use for authentication.
+        #
+        # If provided and you are connecting to an older licd instance then it
+        # will have no effect.
+        licd-private-key: /home/geneos/gdna/gdna.key
+
         licd-skip-verify: true
 
         # licd-reports:

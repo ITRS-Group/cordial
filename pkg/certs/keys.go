@@ -124,6 +124,10 @@ func GenerateKey(keyType KeyType) (privateKey *memguard.Enclave, publicKey any, 
 // PKCS#8 and then as a PKCS#1 and finally as SEC1 (EC) if that fails.
 // It returns the private key or an error.
 func ParsePrivateKey(key *memguard.Enclave) (privatekey any, err error) {
+	if key == nil {
+		err = fmt.Errorf("no key provided")
+		return
+	}
 	k, err := key.Open()
 	if err != nil {
 		return
@@ -146,6 +150,10 @@ func ParsePrivateKey(key *memguard.Enclave) (privatekey any, err error) {
 // if that fails and finally as SEC1 (EC). Returns an error if parsing
 // fails.
 func PublicKey(key *memguard.Enclave) (publicKey crypto.PublicKey, err error) {
+	if key == nil {
+		err = fmt.Errorf("no key provided")
+		return
+	}
 	privateKey, err := ParsePrivateKey(key)
 	if err != nil {
 		return

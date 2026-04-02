@@ -197,16 +197,21 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		}
 		fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
 
-		if err = instance.SaveConfig(i); err != nil {
-			return
-		}
-
 		var updated bool
 		if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
 			return err
 		}
+
 		if updated {
 			fmt.Printf("%s ca-bundle updated\n", i)
+		}
+
+		// always set the ca-bundle path, updated or not
+		log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
+		cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+
+		if err = instance.SaveConfig(i); err != nil {
+			return
 		}
 	}
 

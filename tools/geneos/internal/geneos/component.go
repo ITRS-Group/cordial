@@ -228,7 +228,7 @@ type Instance interface {
 	SetLoaded(time.Time)
 
 	// actions
-	Add(template string, port uint16, insecure bool) error
+	Add(template string, port uint16, noCerts bool) error
 	Command(bool) ([]string, []string, string, error)
 	Reload() (err error)
 	Rebuild(bool) error

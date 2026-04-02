@@ -38,6 +38,10 @@ import (
 
 const Name = "gateway"
 
+const (
+	INSTANCEXML = "instance.setup.xml"
+)
+
 var Gateway = geneos.Component{
 	Initialise:   initialise,
 	Name:         "gateway",
@@ -287,11 +291,12 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	cf := g.Config()
 
 	// always rebuild an instance template
-	err = instance.ExecuteTemplate(g, instance.Abs(g, "instance.setup.xml"), instanceTemplateName, instanceTemplate, 0444)
+	log.Debug().Msgf("rebuilding %s instance template %q with config %#v", g, instanceTemplateName, cf.AllSettings())
+	err = instance.ExecuteTemplate(g, instance.Abs(g, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444)
 	if err != nil {
 		return
 	}
-	log.Debug().Msgf("%s instance template %q rebuilt", g, "instance.setup.xml")
+	log.Debug().Msgf("%s instance template %q rebuilt", g, INSTANCEXML)
 
 	configrebuild := cf.GetString("config::rebuild")
 

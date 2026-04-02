@@ -117,17 +117,21 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		}
 	}
 
-	// tls migration, pull in new settings to old
-	if m["certificate"] == nil && m["privatekey"] == nil {
-		if t, ok := m["tls"]; ok {
+	// tls migration, for now lift new settings up to old names
+	c, c_ok := m[CERTIFICATE].(string)
+	p, p_ok := m[PRIVATEKEY].(string)
+	if (!c_ok || c == "") && (!p_ok || p == "") {
+		if t, ok := m[TLSBASE]; ok {
 			if ts, ok := t.(map[string]any); ok {
-				if ts["certificate"] != nil && ts["privatekey"] != nil {
-					m["certificate"] = ts["certificate"]
-					m["privatekey"] = ts["privatekey"]
+				if ts[CERTIFICATE] != nil && ts[PRIVATEKEY] != nil {
+					m[CERTIFICATE] = ts[CERTIFICATE]
+					m[PRIVATEKEY] = ts[PRIVATEKEY]
 				}
 			}
 		}
 	}
+
+	log.Debug().Msgf("executing template %q to create %q with data %#v", name, outputPathTmp, m)
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
