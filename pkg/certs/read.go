@@ -113,3 +113,21 @@ func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error)
 		b = rest
 	}
 }
+
+// ReadPrivateKeyFromPEM reads a PEM-encoded private key from the given
+// byte slice and returns it as a memguard.Enclave. The input data
+// should contain an unencrypted private key in PEM format. If the key
+// cannot be found or parsed, an error is returned.
+func ReadPrivateKeyFromPEM(pemData []byte) (key *memguard.Enclave, err error) {
+	for {
+		p, rest := pem.Decode(pemData)
+		if p == nil {
+			return nil, fmt.Errorf("cannot locate private key")
+		}
+		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
+			key = memguard.NewEnclave(p.Bytes)
+			return
+		}
+		pemData = rest
+	}
+}
