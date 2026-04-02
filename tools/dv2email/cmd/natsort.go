@@ -17,9 +17,11 @@ import (
 	"strconv"
 )
 
-// Less does a 'natural' comparison on the two strings.
+// Less compares two strings using a natural sort order, i.e. "10" is
+// greater than "2". It returns true if a < b.
 //
-// It treats digits as decimal numbers, so that Less("10", "2") return false.
+// It treats digits as decimal numbers, so that Less("10", "2") return
+// false.
 //
 // This function does no memory allocation.
 func Less(a, b string) bool {
@@ -55,7 +57,7 @@ func Less(a, b string) bool {
 	}
 }
 
-// NatsortStringSlice attaches the methods of Interface to []string, sorting in
+// NatsortStringSlice satisfies the sort.Interface for []string, sorting in
 // increasing order using natural order.
 type NatsortStringSlice []string
 

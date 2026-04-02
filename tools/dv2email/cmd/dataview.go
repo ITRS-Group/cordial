@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path"
 	"slices"
@@ -104,6 +105,9 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	return
 }
 
+// getDataview fetches a dataview and applies filters and ordering based
+// on the configuration. It returns the resulting dataview or an error
+// if the fetch fails.
 func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headlineList, rowList, columnList, rowOrder string) (dataview *commands.Dataview, err error) {
 	dataview, err = gw.Snapshot(dv, "", commands.Scope{Value: true, Severity: true})
 	if err != nil {
@@ -111,20 +115,24 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		return
 	}
 
-	// filter here
-
-	headlines := match(dataview.Name, "headline-filter", headlineList)
-	if len(headlines) > 0 {
-		nh := map[string]commands.DataItem{}
-		for _, h := range headlines {
-			h = strings.TrimSpace(h)
-			for oh, headline := range dataview.Headlines {
-				if ok, err := path.Match(h, oh); err == nil && ok {
-					nh[oh] = headline
+	// first, filter headlineFilter. There is no ordering as they are always
+	// displayed in alphabetical order in the Active Console
+	headlineFilter := match(dataview.Name, "headline-filter", headlineList)
+	if len(headlineFilter) > 0 && len(dataview.Headlines) > 0 {
+		// remove headlines that do not match the filters
+		maps.DeleteFunc(dataview.Headlines, func(k string, _ commands.DataItem) bool {
+			return slices.ContainsFunc(headlineFilter, func(h string) bool {
+				h = strings.TrimSpace(h)
+				ok, err := path.Match(h, k)
+				if err != nil {
+					log.Error().Err(err).Msgf("invalid headline filter %q", h)
+					// if the filter is invalid then do not filter out
+					// the headline based on that filter
+					return false
 				}
-			}
-		}
-		dataview.Headlines = nh
+				return !ok
+			})
+		})
 	}
 
 	// the first column is either from `first-column` in config
@@ -147,51 +155,83 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 
 	cols := match(dataview.Name, "column-filter", columnList)
 	if len(cols) > 0 {
-		nc := []string{rowname}
-		for _, c := range cols {
+		// remove columns that do not match the filters
+		dataview.ColumnOrder = slices.DeleteFunc(dataview.ColumnOrder, func(c string) bool {
 			c = strings.TrimSpace(c)
-			for _, oc := range dataview.ColumnOrder {
-				if oc == rowname {
+			return slices.ContainsFunc(cols, func(col string) bool {
+				ok, err := path.Match(col, c)
+				if err != nil {
+					log.Error().Err(err).Msgf("invalid column filter %q", col)
+					// if the filter is invalid then do not filter out
+					// the column based on that filter
+					return false
+				}
+				return !ok
+			})
+		})
+	}
+
+	// order the resulting columns (after filters above) by their names.
+	// this doesn't filter columns and so any not listed will be left in
+	// their existing order but after those explicitly selected. the
+	// first column, the row name, is always first and cannot be sorted
+	// with the others.
+	//
+	// as a special case, if there is a single column-order value and it
+	// is "asc" or "desc" then all column names are sorted in ascending
+	// or descending order respectively.
+	matches := match(dataview.Name, "column-order", "")
+	if len(matches) == 1 && (strings.EqualFold(matches[0], "asc") || strings.EqualFold(matches[0], "desc")) {
+		slices.Sort(dataview.ColumnOrder[1:])
+		if strings.EqualFold(matches[0], "desc") {
+			slices.Reverse(dataview.ColumnOrder[1:])
+		}
+	} else if len(matches) > 0 {
+		// remove columns from oc as we match them
+		oc := slices.Clone(dataview.ColumnOrder)
+
+		nc := make([]string, 0, len(dataview.ColumnOrder))
+		for _, m := range matches {
+			m = strings.TrimSpace(m)
+			for i, c := range oc {
+				ok, err := path.Match(m, c)
+				if err != nil {
+					log.Error().Err(err).Msgf("invalid column order filter %q", m)
 					continue
 				}
-				if ok, err := path.Match(c, oc); err == nil && ok {
-					nc = append(nc, oc)
+				if ok {
+					oc = slices.Delete(oc, i, i+1)
+					nc = append(nc, c)
 				}
 			}
 		}
-
+		// now add back any leftovers
+		nc = append(nc, oc...)
 		dataview.ColumnOrder = nc
-	} else {
-		matches := match(dataview.Name, "column-order", "")
-		if len(matches) > 0 {
-			m := matches[0]
-			switch {
-			case strings.HasPrefix(m, "desc"):
-				slices.Sort(dataview.ColumnOrder[1:])
-				slices.Reverse(dataview.ColumnOrder[1:])
-			case strings.HasPrefix(m, "asc"):
-				slices.Sort(dataview.ColumnOrder[1:])
-			}
-		}
 	}
 
 	rows := match(dataview.Name, "row-filter", rowList)
-	if len(rows) > 0 {
-		nr := map[string]map[string]commands.DataItem{}
-		for _, r := range rows {
-			r = strings.TrimSpace(r)
-			for rowname, row := range dataview.Table {
-				if ok, err := path.Match(r, rowname); err == nil && ok {
-					nr[rowname] = row
+	if len(rows) > 0 && len(dataview.Table) > 0 {
+		maps.DeleteFunc(dataview.Table, func(k string, _ map[string]commands.DataItem) bool {
+			return slices.ContainsFunc(rows, func(r string) bool {
+				r = strings.TrimSpace(r)
+				ok, err := path.Match(r, k)
+				if err != nil {
+					log.Error().Err(err).Msgf("invalid row filter %q", r)
+					// if the filter is invalid then do not filter out
+					// the row based on that filter
+					return false
 				}
-			}
-		}
-		dataview.Table = nr
+				return !ok
+			})
+		})
 	}
 
+	// order rows based on the value in a column, or based on the row
+	// name if he column is the literal `rowname`
 	asc := true
-	matches := match(dataview.Name, "row-order", rowOrder)
-	if len(matches) > 0 {
+	matches = match(dataview.Name, "row-order", rowOrder)
+	if len(matches) > 0 && len(dataview.Table) > 0 {
 		colname := matches[0]
 		switch {
 		case strings.HasSuffix(colname, "-"):

@@ -97,14 +97,16 @@ files: [ xlsx, html ]
 # Data matching and filtering
 
 # The order of the columns cannot be guaranteed in the Gateway snapshot
-# output, nor is the name of the first column (the 'rowName') given. Use
-# this section to match (using shell globbing rules and not regular
-# expressions) the name of the dataview to select the columns to output
-# and in which order. The first column is always set to the environment
-# variable `_FIRSTCOLUMN` or it defaults to the literal string
-# `rowname`. Note that if an environment variable '__COLUMNS' (case
-# sensitive name, comma separated values) is passed to the program
-# that will override these settings.
+# output, nor is the name of the first column (the 'rowName') given.
+#
+# Use this section to match (using shell globbing rules and not regular
+# expressions) the name of the dataview to select the columns to output.
+#
+# The first column is always set to the environment variable
+# `_FIRSTCOLUMN`, the value in `first-column` below, or it defaults to
+# the literal string `rowname`. Note that if an environment variable
+# '__COLUMNS' (case sensitive name, comma separated values) is passed to
+# the program that will override these settings.
 #
 # `_FIRSTCOLUMN` is only set by the Gateway for Actions or Alerts on
 # table cells and will not be set for headline cells or rules on non
@@ -116,6 +118,13 @@ files: [ xlsx, html ]
 # Apart from the first column (see above) you can use further patterns
 # to match multiple columns and any columns not listed are excluded from
 # the output
+#
+# `column-filter` does not order the columns, it only filters them. The
+# order of the columns is determined by the order of the columns in the
+# dataview, or by the `column-order` setting below.
+#
+# if the dataview does not match a pattern then the columns are left
+# alone.
 column-filter:
   # 'dvname*': [ list, of, columns ]
   # toolkit: [ passwd, uid, gid, gcos, homedir, shell ]
@@ -128,6 +137,7 @@ first-column:
   '*': rowname
 
 # column-order:
+  # dvname*: [ list, of, columns ]
   # '*': ascending
 
 # similar to the above, these settings let you filter rows from being
@@ -137,6 +147,15 @@ first-column:
 row-filter:
   # '*': [ sys*, root ]
 
+# Order rows by the values in a single named column, which can be
+# suffixed by '-' or '+ to indicate ascending or descending order, the
+# default is '+', for ascending. If the column name is "rowname" then
+# the row name is used for ordering. If the column name is not found in
+# a dataview then that dataview is not ordered.
+#
+# Ordering is done in "natural sort order" which means that numbers in
+# the values are sorted as numbers and not as text. For example "item2"
+# will be sorted before "item10"
 row-order:
   # toolkit: username+
 

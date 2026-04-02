@@ -362,15 +362,16 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
 #### Filters, Ordering and First Column
 
-* `column-filter` - default from Environment Variable `__COLUMNS` (two underscores)
-* `row-filter` - default from Environment Variable `__ROWS` (two underscores)
-* `headline-filter` - default from Environment Variable `__HEADLINES` (two underscores)
-* `first-column` - default from Environment Variable `_FIRSTCOLUMN` (single underscore)
+* `headline-filter` - default from Environment Variable `__HEADLINES` (note: two underscores)
+* `column-filter` - default from Environment Variable `__COLUMNS` (note: two underscores)
+* `column-order` - order of columns, defaults to the matching order above if not given
+* `row-filter` - default from Environment Variable `__ROWS` (note: two underscores)
 * `row-order` - default first column ascending
+* `first-column` - default from Environment Variable `_FIRSTCOLUMN` (note: one underscore)
 
-  These five configuration settings influence the way that Dataview cells are passed into the templates.
+  These six configuration settings influence the way that Dataview cells are passed into the templates.
   
-  The three `filter` items all work the same way but have some difference depending on the dimension of data they apply to. The configuration formats all follow the same pattern:
+  The three `filter` items all work the same way but have some differences depending on the dimension of data they apply to. The configuration formats all follow the same pattern:
 
   ```yaml
   column-filter:
@@ -383,13 +384,34 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
   Once the list of items is matched they are then applied to the data set in the following ways:
 
+  * headlines
+  
+    Headline cells are filtered by applying the items in order as patterns to `path.Match`. Headlines cannot be ordered. e.g.
+
+    ```yaml
+    headline-filter:
+      'SOMEDATAVIEW': [ 'Headline1', 'Headline2', 'another*' ]
+      '*': [ 'Headline*' ]
+    ```
+
+  * columns
+  
+    Column names are matched against the items listed, with the exception of the first column which is the special row name, and the order of the columns is determined by how they matched the items unless a `column-order` is also specified.
+
+    The first column, the literal `rowname`, is special and is always included. If the program is called from the Gateway on a Dataview table cell then the environment variable `_FIRSTCOLUMN` is set and this is used instead of the literal `rowname`. The configuration item `first-column` can be used, with the same syntax as for the filters above, to define the name on a per-Dataview basis.
+
+    ```yaml
+    column-filter:
+      'SOMEDATAVIEW': [ 'Column1', 'Column2', 'another*' ]
+      '*': [ 'Column*' ]
+    column-order:
+      'SOMEDATAVIEW': [ 'Column2', 'Column1', 'another*' ]
+      '*': [ 'Column*' ]
+    ```
+
   * rows - each item is matched against the rowname using the same `globbing` rules as above. The total set of rows matched is passed to the template in the `Rows` slice. The order of `Rows` is further refined by the `row-order` item (see below).
 
-  * columns - each item is matched against the columns names (except the first column, see below) and the order of the columns is determined by how they matched the items.
 
-    The first column, the `rowname`, is special and is always included. If the program is called from the Gateway on a Dataview table cell then the environment variable `_FIRSTCOLUMN` is set and this is used instead of the literal `rowname`. The configuration item `first-column` can be used, with the same syntax as for the filters above, to define the name on a per-Dataview basis.
-
-  * headlines - Headline cells are treated in a similar way to columns and for all the patterns that match the Dataview name, each item is matched against all the available headlines and all that match are passed into the template. Headlines are not ordered in anyway.
 
   Rows can be ordered by one column, including the name of the first column (or `rowname` if none is defined) using a similar pattern match to the filters above. Only the first item is used and it must be an exact match for a column name followed by an option '+' or '-' to indicate ascending or descending order, respectively.
 
