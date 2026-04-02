@@ -20,6 +20,7 @@ package imscmd
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -38,12 +39,14 @@ var queryCmdIMSType string
 func init() {
 	incidentCmd.AddCommand(queryCmd)
 
-	queryCmd.Flags().StringVarP(&queryCmdIMSType, "ims", "i", "", "IMS type, e.g. `snow` or `sdp`. default taken from config file")
+	queryCmd.Flags().StringVarP(&queryCmdIMSType, "ims", "i", "", "IMS type, e.g. \"snow\" or \"sdp\". default taken from config file")
+
 	queryCmd.Flags().StringVarP(&queryCmdSource, "snow-table", "T", "", "ServiceNow table, defaults to incident")
 	queryCmd.Flags().BoolVarP(&queryCmdRaw, "snow-raw", "R", false, "turn ServiceNow sys_display off, i.e. return raw values instead of display values")
 
-	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "Q", "", "query")
+	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "Q", "", "query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. default taken from config file")
 	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv", "output format: `csv` or json")
+
 	queryCmd.Flags().SortFlags = false
 }
 
@@ -65,12 +68,13 @@ type queryParameters struct {
 	Raw   bool   `url:"raw,omitempty"`
 }
 
-var queryCmd = &cobra.Command{
-	Use:   "query [FLAGS]",
-	Short: "Query IMS",
-	Long: strings.ReplaceAll(`
+//go:embed _docs/query.md
+var queryCmdDoc string
 
-`, "|", "`"),
+var queryCmd = &cobra.Command{
+	Use:          "query [FLAGS]",
+	Short:        "Query IMS",
+	Long:         queryCmdDoc,
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
 		cf := imsLoadConfigFile("ims")

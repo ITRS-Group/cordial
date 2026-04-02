@@ -19,6 +19,7 @@ package imscmd
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -52,18 +53,13 @@ func init() {
 	raiseCmd.Flags().SortFlags = false
 }
 
-var raiseCmd = &cobra.Command{
-	Use:   "raise [FLAGS] [field=value ...]",
-	Short: "Create or update an incident",
-	Long: strings.ReplaceAll(`
-Create or update an incident from ITRS Geneos.
+//go:embed _docs/raise.md
+var raiseCmdDoc string
 
-This command is the client-side of the ITRS Geneos to various
-incident integrations. The program takes command line flags, arguments
-and environment variables to create a submission to a proxy
-which is responsible for sending the request to the
-specific API.
-	`, "|", "`"),
+var raiseCmd = &cobra.Command{
+	Use:          "raise [FLAGS] [field=value ...]",
+	Short:        "Create or update an incident",
+	Long:         raiseCmdDoc,
 	SilenceUsage: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		// all keys with a leading `__` are passed to the IMS Gateway but the Gateway

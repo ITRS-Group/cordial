@@ -13,6 +13,9 @@
 >
 >  The release version has also skipped v1.25.x to emphasise these breaking changes.
 
+>[!IMPORTANT]
+> In this beta release GDNA does not support docker as an installation method when used with licd version 7.8.0 and above. We hope to address this in a future beta or the final release.
+
 > [!NOTE]
 > **Released 2026-01-22** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 

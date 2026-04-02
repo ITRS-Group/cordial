@@ -39,6 +39,12 @@ server:
     token: testing
 
 sdp:
+  # list of datacentres to use for authentication and API requests. The
+  # datacentre to use is selected by the `datacentre` parameter below.
+  #
+  # for an up-to-date list see:
+  #
+  # https://www.zoho.com/analytics/api/v2/api-specification.html
   datacentres:
     us:
         auth: https://accounts.zoho.com
@@ -67,71 +73,115 @@ sdp:
     sa:
         auth: https://accounts.zoho.sa
         api: https://servicedeskplus.sa
+
+  # which datacentre to use for authentication and API requests,
+  # selected from the list above
   datacentre: eu
-  portal: petertest
+
+  # the `portal` is the name of the portal to use within the datacentre,
+  # this is typically the same as the instance name shown in the URL
+  # when you log in to the web interface, e.g. `mycompany` if your URL
+  # is `https://mycompany.sdp.com`.
+  portal: mycompany
+
   client-id: ${enc:~/.config/geneos/keyfile.aes:+encs+FEC17073E98847711F56E0A04AC4CF089F6FF28307AB836ED4F359A1FCD971E076E2B457C7FECA34A9EC8B5DC3A7890D}
   client-secret: ${enc:~/.config/geneos/keyfile.aes:+encs+E0411869453CCB6192723624A3D277C1818AADC8289044B2BD2C07E8328F830F8E50BF71378CD271AB4DDBF59ABE49EE}
+
   requests:
+    # the names of the user defined field used to store the
+    # correlation-ID.
+    #
+    # It is of the format `udf_fields.txt_FIELDNAME` where `FIELDNAME`
+    # is the name of the user defined field in ServiceDesk Plus. This is
+    # used to correlate incidents created or updated by this integration
+    # with the incoming requests, so that updates to existing incidents
+    # can be made instead of creating new ones.
+    #
+    # We suggest either `geneos_id` or `correlation_id`
     correlation_id: udf_fields.txt_correlation_id
+
+    # search for an existing incident request
+    #
+    # the YAML from `list_info` is "expanded" and converted to JSON and
+    # then passed to the SDP API as the body of the search request. This
+    # allows you to refer to other configuration values in the proxy
+    # configuration file as `${config:sdp.parameter}`, as well as
+    # dynamically set parameters available such as `${correlation_id}`.
+    #
+    # The available parameters are defined here:
+    #
+    # https://www.manageengine.com/products/service-desk/sdpod-v3-api/getting-started/input-data.html
+    # https://www.manageengine.com/products/service-desk/sdpod-v3-api/getting-started/search-criteria.html
     search:
       list_info:
         search_criteria:
-          - field: ${sdp.requests.correlation_id}
+          - field: ${requests.correlation_id}
             condition: is
-            value: "fdgdsfgsdgsdfgdsgfsdg" # ${correlation_id}
-          # - field: status.name
-          #   condition: is not
-          #   value: Closed
-            # logical_operator: and
+            value: ${correlation_id}
+          - field: status.name
+            condition: is
+            value: Open
+            logical_operator: and
         fields_required: [ id, status.name ]
-    query:
+
+    # similar to search, above, this is used to get a list of requests from SDP
+    get:
       list_info:
         row_count: 100
         search_criteria:
-          # - field: ${requests.correlation_id}
-          #   condition: is
-          #   value: fdgdsfgsdgsdfgdsgfsdg
-          # - field: template.name
-          #   condition: is
-          #   value: Default Request
           - field: status.name
             condition: is
-          #   logical_operator: and
             value: Open
-          # - field: category.name
-          #   condition: is
-          #   logical_operator: and
-          #   value: Hardware
-          # - field: subcategory.name
-          #   condition: is
-          #   logical_operator: and
-          #   value: Production Servers
-          # - field: item.name
-          #   condition: is
-          #   logical_operator: and
-          #   value: AIX
         fields_required: [ impact_details, udf_fields, subject, requester, template, status, request_type, has_notes ]
+    # list of columns for `get` above
     columns:
       - id
-      # - display_id
       - subject
       - status.name
       - template.name
       - ${config:requests.correlation_id}
+
+    # create a new request using these fields. the YAML from `request`
+    # (inclusive) is "expanded" and converted to JSON and then passed to
+    # the SDP API as the body of the create request. This allows you to
+    # refer to other configuration values in the proxy configuration
+    # file as `${config:sdp.parameter}`
     create:
       request:
+        request_type:
+          name: Incident
         template:
           name: Default Request
-        subject: Geneos Alert - ${_SEVERITY}
-        description: ${html:html}
+        subject: ${__incident_subject}
+        description: ${__incident_body_html}
         category:
-          name: ${CATEGORY}
+          name: ${__itrs_category}
         subcategory:
-          name: ${SUBCATEGORY}
+          name: ${__itrs_subcategory}
         item:
-          name: ${_MANAGED_ENTITY}
+          name: ${__itrs_entity}
         udf_fields:
           txt_correlation_id: ${correlation_id}
+
+    # similar to `create`, above, this is used to update an existing
+    # request, the YAML from `edit_request.request` (inclusive) is
+    # "expanded" and converted to JSON and then passed to the SDP API as
+    # the body of the update request. The YAML from
+    # `add_note.request_note` (inclusive) is "expanded" and converted to
+    # JSON and then passed to the SDP API as the body of the add note
+    # request.
+    #
+    # You must include `request` in both sections below
+    update:
+      edit_request:
+        request:
+          status:
+            name: ${__sdp_status}
+      add_note:
+        request_note:
+          description: ${__incident_body_html}
+
+  # enable tracing of requests and responses.
   trace: false
 
 snow:
@@ -146,7 +196,7 @@ snow:
   # requests and responses to/from ServiceNow. This is useful for
   # debugging issues with the API, but should be disabled in production
   # environments to avoid logging sensitive information.
-  trace: true
+  trace: false
 
   tables:
     # multiple tables are supported through the client side `--table`

@@ -23,6 +23,7 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos aes`](geneos_aes.md)	 | AES256 Key File Operations |
 | [`geneos config`](geneos_config.md)	 | Configure Command Behaviour |
 | [`geneos host`](geneos_host.md)	 | Remote Host Operations |
+| [`geneos incident`](geneos_incident.md)	 | Commands for working with incidents |
 | [`geneos init`](geneos_init.md)	 | Initialise The Installation |
 | [`geneos package`](geneos_package.md)	 | Package Operations |
 | [`geneos tls`](geneos_tls.md)	 | TLS Certificate Operations |

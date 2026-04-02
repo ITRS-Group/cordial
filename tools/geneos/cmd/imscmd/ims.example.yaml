@@ -1,43 +1,57 @@
 #
-# The client transforms environment variables to IMS fields, plus
-# internal fields (which are all prefixed with two underscores - e.g.
-# `__internal`)
+# The client transforms environment variables to Servicenow fields, plus
+# internal fields (which are all prefixed with underscores - e.g.
+# `_internal`)
 #
 # This configuration file is also used by the `query` command to reach
 # the proxy process.
 #
 
-# The `ims` section contains the details on where to reach the IMS
+# The `ims-gateway` section contains the details on where to reach the proxy
 # process, including optional TLS configuration and mandatory authentication
 ims-gateway:
-  # the `type` of IMS, which can be `snow` or `sdp`
+  # the default IMS type, which can be "snow" or "sdp"
   #
-  # depending on the type, the client may set different internal fields and
-  # the IMS will use different fields to create or update incidents or
-  # tickets.
-  type: snow
+  # depending on the type, the client may set different internal fields
+  # and the gateway will use different fields to create or update
+  # incidents or tickets.
+  type: sdp
 
-  # `url` is the IMS endpoint not including table name and is used
+  # `url` is the proxy endpoint not including table name and is used
   # for GET, POST and PUT requests
-  url: http://localhost:3000/ims-gateway/api/v1/${config:ims-gateway.type}
+  url: http://localhost:3000/ims-gateway/api/v1
 
-  # snow-specific settings, which are ignored for other IMS types
+  # servicenow specific settings, which are ignored for other IMS types
   snow:
     # `default-query` is for the `query` command and is ignored
     # for the `client` command. This setting can be overridden on the
     # command line using the `--query/-q` flag.
-    default-query: "active=true^opened_by.user_name=geneos"
+    default-table: incident
+    default-query: "active=true^opened_by.user_name=admin"
 
   # ServiceDesk Plus-specific settings, which are ignored for other IMS types
   sdp:
     default-correlation-field: geneos_id
+    # default-query is encoded as JSON and sent to the Gateway. If not
+    # defined then the Gateway will use it's own default query
+    #
+    # parameters available for the query are:
+    #
+    #    `correlation_id` - the value of the `__incident_correlation` field after expansion and hashing
+    default-query:
+      list_info:
+        row_count: 100
+        search_criteria:
+          - field: status.name
+            condition: is
+            value: Open
 
   # `authentication` contains the chosen authentication between the
-  # client/query commands and the IMS. At the moment only `token` is
+  # client/query commands and the proxy. At the moment only `token` is
   # supported.
   authentication:
     # the `token` can be any string as long as it is the same on both
-    # IMS and client/query side. To protect the plain text, if
+    # proxy and client/query side. To protect the plain text, if
     # required, you can use `geneos aes password` to create an encoded
     # strings that relies on the security of the key file being private
     # to the user. This also allows the configuration file to be shared
@@ -56,7 +70,10 @@ ims-gateway:
     # skip-verify is false) then use system roots
     chain: ${file:/path/to/chain.pem}
 
-# default fields
+  # trace: true
+
+# default field values and transformations to apply to all profiles,
+# unless overridden in the profile itself
 #
 # The `defaults` section and each of the named entries in the `profiles`
 # section share the same format.
@@ -82,9 +99,9 @@ ims-gateway:
 #     appears in, and is used to terminate further evaluation of `if`s
 #     etc.
 #
-# all field names beginning with two underscores (`__`) are treated as
+# all field names beginning with an underscore (`_`) are treated as
 # internal values between client and proxy and are renamed or removed
-# before being sent to the IMS instance by the proxy.
+# before being sent to the ServiceNow instance by the proxy.
 #
 # all field values are subject to expansion according to the `cordial`
 # config package `ExpandString` function with some custom functions: 
@@ -93,11 +110,11 @@ defaults:
       # standard mappings for all Geneos Actions and Effects
       #
       # as these are all prefixed with `__itrs_`, they are visible
-      # to the proxy but are removed before the incident is created or
+      # to the IMS Gateway but are removed before the incident is created or
       # updated
       __itrs_gateway: ${env:_GATEWAY}
       __itrs_probe: ${env:_PROBE}
-      __itrs_entity: ${env:_MANAGED_ENTITY}
+      __itrs_entity: AIX # ${env:_MANAGED_ENTITY}
       __itrs_sampler: ${env:_SAMPLER}
       __itrs_dataview: ${env:_DATAVIEW}
       __itrs_severity: ${env:_SEVERITY}
@@ -105,6 +122,17 @@ defaults:
       __itrs_row: ${env:_ROWNAME}
       __itrs_column: ${env:_COLUMN}
       __itrs_headline: ${env:_HEADLINE}
+
+      # for SDP these should be set to fallback to known values or the create/update will fail
+      __itrs_category: ${select:CATEGORY:None}
+      __itrs_subcategory: ${select:SUBCATEGORY:None}
+
+      # ServiceNow-specific fields, which are ignored by other proxy
+      # types. These are all prefixed with `__snow_` so that they are
+      # visible to the IMS Gateway but removed before the incident is
+      # created or updated. The IMS Gateway will use these to determine
+      # how to create or update the incident, but they cannot be used to
+      # select arbitrary fields in the ServiceNow instance.
 
       # `__snow_table` selects the ServiceNow incident table name for
       # scenarios where there may be multiple incident tables
@@ -118,63 +146,113 @@ defaults:
       # cmdb_ci: ${CMDB_CI}
       __snow_cmdb_search: name=${_NETPROBE_HOST}
       __snow_cmdb_table: cmdb_ci
-      __itrs_correlation_id: ${env:_GATEWAY}${env:_NETPROBE_HOST}${env:_MANAGED_ENTITY}${env:_SAMPLER}${env:_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}
-      __itrs_subject: Geneos Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${env:_ROWNAME} | ${env:_COLUMN}${env:_HEADLINE} is ${env:_VALUE}
-      __itrs_body_text: |
+
+      __snow_assignment_group: ${env:ASSIGNMENT_GROUP}
+      __snow_state: 1
+
+      # ServiceDesk Plus-specific fields, which are ignored by other IMS
+      # Gateway types. These are all prefixed with `__sdp_` so that they
+      # are visible to the IMS Gateway but removed before the ticket is
+      # created or updated. The IMS Gateway will use these to determine
+      # how to create or update the ticket, but they cannot be used to
+      # select arbitrary fields in the ServiceDesk Plus instance.
+
+      # __sdp_xxx: value
+      __sdp_status: Open
+
+      # Incident correlation and content fields, which are used by the
+      # IMS Gateway to correlate and create or update incidents or
+      # tickets, but are not sent to the ServiceNow instance. These are
+      # all prefixed with `__incident_` so that they are visible to the
+      # IMS Gateway but removed before the incident is created or
+      # updated. The IMS Gateway will use these to determine how to
+      # create or update the incident, but they cannot be used to select
+      # arbitrary fields in the ServiceNow instance.
+
+      __itrs_urgency: 3
+      __itrs_impact: 3
+
+      __incident_correlation: ${env:_GATEWAY}${env:_NETPROBE_HOST}${env:_MANAGED_ENTITY}${env:_SAMPLER}${env:_DATAVIEW}${select:_ROWNAME+$_COLUMN:_HEADLINE:}
+      __incident_subject: Geneos Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${env:_ROWNAME} | ${env:_COLUMN}${env:_HEADLINE} is ${env:_VALUE}
+
+      __incident_body_text: |
         Status Message: ${env:_STATUSMESSAGE}
         Severity: ${env:_SEVERITY}
         Geneos time: ${env:_ALERT_CREATED}
-        Category: Alert
+        Category: ${env:_CATEGORY}
+        Subcategory: ${env:_SUBCATEGORY}
         Gateway: ${env:_GATEWAY}
         Managed Entity: ${env:_MANAGED_ENTITY}
         Sampler: ${env:_SAMPLER}
         Row: ${env:_ROWNAME}
         Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
         Value: ${env:_VALUE} ${env:_triggerDetails}
-      __itrs_body_html: |
+
+      # The HTML body is optional and the IMS Gateway may use it if the
+      # remote IMS supports it, but it is not required. If the IMS
+      # Gateway does not support an HTML body, then the
+      # `__incident_body_text` field will be used instead. A
+      # `__incident_body_text` field is always required, but a
+      # `__incident_body_html` field is optional.
+      __incident_body_html: |
         <table>
-          <tr><th>Status Message</th><td>${env:_STATUSMESSAGE}</td></tr>
-          <tr><th>Severity</th><td>${env:_SEVERITY}</td></tr>
-          <tr><th>Geneos time</th><td>${env:_ALERT_CREATED}</td></tr>
-          <tr><th>Category</th><td>Alert</td></tr>
-          <tr><th>Gateway</th><td>${env:_GATEWAY}</td></tr>
-          <tr><th>Managed Entity</th><td>${env:_MANAGED_ENTITY}</td></tr>
-          <tr><th>Sampler</th><td>${env:_SAMPLER}</td></tr>
-          <tr><th>Row</th><td>${env:_ROWNAME}</td></tr>
-          <tr><th>Column/Headline</th><td>${env:_COLUMN}${env:_HEADLINE}</td></tr>
-          <tr><th>Value</th><td>${env:_VALUE} ${env:_triggerDetails}</td></tr>
+          <tr><th style="text-align: right">Status Message:</th><td>${env:_STATUSMESSAGE}</td></tr>
+          <tr><th style="text-align: right">Severity:</th><td>${env:_SEVERITY}</td></tr>
+          <tr><th style="text-align: right">Geneos time:</th><td>${env:_ALERT_CREATED}</td></tr>
+          <tr><th style="text-align: right">Category:</th><td>Alert</td></tr>
+          <tr><th style="text-align: right">Gateway:</th><td>${env:_GATEWAY}</td></tr>
+          <tr><th style="text-align: right">Managed Entity:</th><td>${env:_MANAGED_ENTITY}</td></tr>
+          <tr><th style="text-align: right">Sampler:</th><td>${env:_SAMPLER}</td></tr>
+          <tr><th style="text-align: right">Row:</th><td>${env:_ROWNAME}</td></tr>
+          <tr><th style="text-align: right">Column/Headline:</th><td>${env:_COLUMN}${env:_HEADLINE}</td></tr>
+          <tr><th style="text-align: right">Value:</th><td>${env:_VALUE} ${env:_triggerDetails}</td></tr>
         </table>
 
-      # other defaults
-      category: Alert
-      assignment_group: ${env:ASSIGNMENT_GROUP}
-      urgency: 3
-      impact: 3
-      state: 1
   - if: ${match:_SEVERITY:(CRITICAL|critical|3)}
+    # If this isn't an Alert (but perhaps a Clear or something else)
+    # then we don't want to do anything, so exit immediately with a zero
+    # code to stop further processing of this alert.
+    subgroup:
+      - if: ${nomatch:_ALERT_TYPE:Alert}
+        exit: 0
     set:
-      impact: 1
-      urgency: 1
+      __itrs_impact: 1
+      __itrs_urgency: 1
+
+  # to support Geneos Alerts where the severity descends from Critical
+  # to Warning but with an escalation interval to introduce a delay,
+  # change the Warning notification to use a Repeat Interval of the same
+  # time as the escalation level and remove the escalation.
   - if: ${match:_SEVERITY:(WARNING|warning|2)}
+    subgroup:
+      - if: ${nomatch:_ALERT_TYPE:Alert}
+        exit: 0
+      - if: ${nomatch:_REPEATCOUNT:1}
+        exit: 0
     set:
-      impact: 3
-      urgency: 3
-  - if: ${match:_SEVERITY:(OK|ok|1)}
+      __itrs_impact: 3
+      __itrs_urgency: 3
+
+  # Similarly to above, only resolve an incident if the OK severity is
+  # accompanied with an Alert Type of Clear.
+  - if: [ "${match:_SEVERITY:(OK|ok|1)}", "${match:_ALERT_TYPE:Clear}" ]
     set:
-      state: 6
-      close_code: Closed/Resolved by Caller
-      close_notes: Resolved
+      __snow_state: 6
+      __snow_close_code: Resolved by Caller
+      __snow_close_notes: Resolved
+
+      __sdp_status: Resolved
+
+      __incident_update_only: true
     unset: [ urgency, impact ]
-  # - if: ${match:_SEVERITY:critical}
-    # set:
-      # __itrs_profile: infra
+
   - if: [ "${match:_PLUGINNAME:FKM}", "${match:_DATAVIEW:name}" ]
     set:
       # ${replace:_ROWNAME:/#.*$//}
-      __itrs_correlation_id: ${env:_GATEWAY}${env:_NETPROBE_HOST}${env:_MANAGED_ENTITY}${env:_SAMPLER}${env:_DATAVIEW}${env:_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
-      
+      __incident_correlation: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
+      __incident_subject: FKM Alert on ${select:_MANAGED_ENTITY:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${env:_filename} | ${replace:_triggerDetails:^[\d-]+\s[\d-]+::} is ${env:_VALUE}
 
-# profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
+# profiles, selected from command line; e.g. `INFRA`, `Apps`
 #
 # format as for `defaults` above
 profiles:
@@ -183,97 +261,5 @@ profiles:
   # above
   default:
     - set:
-        # _subject: ${replace:_NETPROBE_HOST:/(think)pad/${1}that/}
-        subcategory: Geneos Alert
-    - set:
-        __itrs_body_text: |
-          Status Message: ${env:_STATUSMESSAGE}
-          Severity: ${env:_SEVERITY}
-          Geneos time: ${env:_ALERT_CREATED}
-          Category: Alert
-          Gateway: ${env:_GATEWAY}
-          Managed Entity: ${select:_MANAGED_ENTITY:Unknown}
-          Sampler: ${select:_SAMPLER:Unknown}
-          Row: ${env:_ROWNAME}
-          Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
-          Value: ${env:_VALUE} ${env:_triggerDetails}
-          Sub-category: ${field:subcategory:None}
-          Impact: ${field:impact:3}
-
-  infra:
-    - set:
-        __example_valuetest: true
-
-  opsview:
-    - set:
-        __itrs_subject: Opsview Alert on ${env:_NETPROBE_HOST} | ${env:_DATAVIEW} | ${env:_ROWNAME} | ${env:_COLUMN}${env:_HEADLINE} is ${env:_VALUE}
-    - if: [ '${match:_TAGS:\b(core|access|distribution)\b}' ]
-      set:
-        subcategory: OpsView Alert 
-      subgroup:
-        - set:
-            key: value
-        - if: ${match:_DATAVIEW:^(Connectivity|Uptime)}
-          set:
-            subcategory: "Network Device Down"
-            impact: 2
-            urgency: 2
-          break: true
-        - if: ${match:_DATAVIEW:^SNMP}
-          set:
-            subcategory: "Network Security"
-            impact: 3
-            urgency: 3
-        - if: '${match:_DATAVIEW:^NTP}'
-          set:
-            subcategory: "Network Configuration Error"
-            impact: 3
-            urgency: 3
-          break: true
-        - if: ${match:_DATAVIEW:^(Discards|Errors)}
-          set:
-            subcategory: "Network Performance"
-            impact: 3
-            urgency: 3
-        - if:
-            - ${match:_DATAVIEW:^Discards}
-            - ${match:_STATUSMESSAGE:discards.*(total|in.*out)}
-          set:
-            urgency: 2
-        - if:
-            - ${match:_DATAVIEW:^Errors}
-            - ${match:_STATUSMESSAGE:errors.*(total|in.*out)|interface.*down}
-          set:
-            urgency: 2
-        - if:
-            - ${match:_DATAVIEW:^Interface}
-            - ${match:_STATUSMESSAGE:Interface.*DOWN}
-          set:
-            subcategory: "Network Port Down"
-            impact: 2
-            urgency: 2
-        - if:
-            - ${match:_DATAVIEW:^Interface}
-            - ${match:_STATUSMESSAGE:SNMP}
-          set:
-            subcategory: "Network Security"
-            impact: 3
-            urgency: 3
-    - set:
-        __itrs_body_text: |
-            Status Message: ${env:_STATUSMESSAGE}
-            Severity: ${env:_SEVERITY}
-            Geneos time: ${env:_ALERT_CREATED}
-            Category: Alert
-            Gateway: ${env:_GATEWAY}
-            Managed Entity: ${env:_MANAGED_ENTITY}
-            Sampler: ${env:_SAMPLER}
-            Row: ${env:_ROWNAME}
-            Column/Headline: ${env:_COLUMN}${env:_HEADLINE}
-            Value: ${env:_VALUE}${env:_triggerDetails}
-            Hashtags: ${env:_TAGS}
-            Sub-category: ${field:subcategory:None}
-            Impact: ${field:impact:3}
-            Urgency: ${field:urgency:3}
-
-
+      # __incident_category: "Default"
+      # __incident_subcategory: "Default"

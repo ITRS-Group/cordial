@@ -33,6 +33,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     cd /app/cordial/tools/geneos; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build --ldflags '-s -w'; \
+    cd /app/cordial/tools/ims-gateway; \
+    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build --ldflags '-s -w'; \
     # gateway-reporter (in Windows version)
     cd /app/cordial/tools/gateway-reporter; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
@@ -146,6 +149,7 @@ COPY gdna /app/cordial/gdna
 
 WORKDIR /docs
 COPY tools/geneos/README.md geneos.md
+COPY tools/ims-gateway/*.md ims-gateway/
 COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
@@ -192,6 +196,8 @@ COPY --from=build /app/cordial/README.md /cordial/docs/
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
+COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway /cordial/bin/
+COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 

@@ -18,10 +18,15 @@ limitations under the License.
 package imscmd
 
 import (
+	_ "embed"
+
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
+
+//go:embed README.md
+var incidentCmdDescription string
 
 func init() {
 	cmd.GeneosCmd.AddCommand(incidentCmd)
@@ -30,7 +35,7 @@ func init() {
 var incidentCmd = &cobra.Command{
 	Use:          "incident",
 	Short:        "Commands for working with incidents",
-	Long:         "Commands for working with incidents",
+	Long:         incidentCmdDescription,
 	GroupID:      cmd.CommandGroupSubsystems,
 	SilenceUsage: true,
 	Annotations: map[string]string{
