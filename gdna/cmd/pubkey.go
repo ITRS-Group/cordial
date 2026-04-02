@@ -31,8 +31,12 @@ import (
 //go:embed _docs/pubkey.md
 var pubkeyCmdDescription string
 
+var pubkeyCmdOutput string
+
 func init() {
 	GDNACmd.AddCommand(pubkeyCmd)
+
+	pubkeyCmd.Flags().StringVarP(&pubkeyCmdOutput, "output", "o", "", "Output file for public key (default: stdout)")
 }
 
 var pubkeyCmd = &cobra.Command{
@@ -51,17 +55,30 @@ var pubkeyCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if pubkeyCmdOutput != "" {
+			file, err := os.Create(pubkeyCmdOutput)
+			if err != nil {
+				log.Error().Err(err).Msgf("creating output file %s", pubkeyCmdOutput)
+				return err
+			}
+			defer file.Close()
+			os.Stdout = file
+		}
+
 		return printPublicKey()
 	},
 }
 
 func printPublicKey() error {
 	if cf.IsSet("gdna.licd-private-key") {
-		if pkFile := cf.GetString("gdna.licd-private-key"); pkFile != "" {
-			pk, err := certs.ReadPrivateKey(host.Localhost, pkFile)
+		if privateKey := cf.GetPassword("gdna.licd-private-key"); !privateKey.IsNil() {
+			pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 			if err != nil {
-				log.Error().Err(err).Msgf("parsing licd private key from %s", pkFile)
-				return err
+				privateKeyPath := privateKey.String()
+				pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
+				if err != nil {
+					log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
+				}
 			}
 			pubKey, err := certs.PublicKey(pk)
 			if err != nil {

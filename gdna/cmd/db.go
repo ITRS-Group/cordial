@@ -962,50 +962,56 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 
 	var signedToken string
 
-	// new authentication, if private key exists
-	if cf.IsSet("gdna.licd-private-key") {
-		if pkFile := cf.GetString("gdna.licd-private-key"); pkFile != "" {
-			pk, err := certs.ReadPrivateKey(host.Localhost, pkFile)
+	// new authentication, if private key exists.
+	//
+	// first try to parse the value, as it may be embedded PEM,
+	// otherwise try to read it as a file path.
+	if privateKey := cf.GetPassword("gdna.licd-private-key"); !privateKey.IsNil() {
+		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
+		if err != nil {
+			privateKeyPath := privateKey.String()
+			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
-				log.Error().Err(err).Msgf("parsing licd private key from %s", pkFile)
+				log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
 				return sources, err
 			}
+		}
 
-			pkeyType := certs.PrivateKeyType(pk)
-			var signingMethod jwt.SigningMethod
-			switch pkeyType {
-			case certs.RSA:
-				signingMethod = jwt.SigningMethodRS256
-			case certs.ECDSA:
-				signingMethod = jwt.SigningMethodES256
-			case certs.ED25519:
-				signingMethod = jwt.SigningMethodEdDSA
-			default:
-				log.Error().Msgf("unsupported licd private key type %q", pkeyType)
-				return sources, fmt.Errorf("unsupported licd private key type %q", pkeyType)
-			}
+		pkey, err := certs.ParsePrivateKey(pk)
+		if err != nil {
+			log.Error().Err(err).Msg("parsing private key")
+			return sources, err
+		}
 
-			// create token
-			token := jwt.NewWithClaims(signingMethod, jwt.MapClaims{
-				"iss": "gdna",
-				"sub": "gdna",
-				"aud": "licd",
-				"iat": jwt.NewNumericDate(time.Now()).Unix(),
-				"nbf": jwt.NewNumericDate(time.Now()).Unix(),
-				"exp": jwt.NewNumericDate(time.Now().Add(5 * time.Minute)).Unix(),
-			})
+		var signingMethod jwt.SigningMethod
 
-			pkey, err := certs.ParsePrivateKey(pk)
-			if err != nil {
-				log.Error().Err(err).Msg("parsing private key")
-				return sources, err
-			}
+		pkeyType := certs.PrivateKeyType(pk)
+		switch pkeyType {
+		case certs.RSA:
+			signingMethod = jwt.SigningMethodRS256
+		case certs.ECDSA:
+			signingMethod = jwt.SigningMethodES256
+		case certs.ED25519:
+			signingMethod = jwt.SigningMethodEdDSA
+		default:
+			log.Error().Msgf("unsupported licd private key type %q", pkeyType)
+			return sources, fmt.Errorf("unsupported licd private key type %q", pkeyType)
+		}
 
-			signedToken, err = token.SignedString(pkey)
-			if err != nil {
-				log.Debug().Err(err).Msg("signing licd JWT token")
-				return sources, err
-			}
+		// create token
+		token := jwt.NewWithClaims(signingMethod, jwt.MapClaims{
+			"iss": "gdna",
+			"sub": "gdna",
+			"aud": "licd",
+			"iat": jwt.NewNumericDate(time.Now()).Unix(),
+			"nbf": jwt.NewNumericDate(time.Now()).Unix(),
+			"exp": jwt.NewNumericDate(time.Now().Add(5 * time.Minute)).Unix(),
+		})
+
+		signedToken, err = token.SignedString(pkey)
+		if err != nil {
+			log.Debug().Err(err).Msg("signing licd JWT token")
+			return sources, err
 		}
 	}
 

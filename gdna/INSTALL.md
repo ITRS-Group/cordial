@@ -1,5 +1,8 @@
 # GDNA Installation
 
+>[!WARNING]
+> The docker installation will not work at this time, for the cordial v1.26.0-beta releases. This will be addressed before the final release.
+
 The most straight-forward way to get GDNA up and running is using docker. We recommend using docker to get up and running in minutes, as well as making future updates easier. If docker is not available in your environment you can also run GDNA as a stand-alone process. Both of these methods are described below.
 
 > [!NOTE]
@@ -206,6 +209,17 @@ configs:
           - "https://LICDHOST:7041"
           # To access the host that the container is running on, use this URL:
           # - "https://host.docker.internal: host-gateway:7041"
+
+        # For licd 7.8.0 and above, you must use a private key to connect to the
+        # licd license report endpoints. The `licd-private-key` is either a PEM
+        # encoded RSA private key in-line or a path to a file containing the key.
+        # If provided and you are connecting to an older licd instance then it will
+        # have no effect.
+
+        # licd-private-key: |
+        #   -----PRIVATE KEY-----
+        # licd-private-key: /path/xxx
+
         licd-skip-verify: true
 
         # licd-reports:
@@ -349,6 +363,8 @@ Docker will not always be available on the server where you want to run GDNA. It
 
 * You will either need to add a new Netprobe, as in the instructions below, or if you want to use an existing Netprobe you will have to adjust the configuration to suit, including the TCP connection details and perhaps the Managed Entity and Sampler names. If you want to change the latter two then more complex changes may be required to make the dashboards work - see the section below.
 
+* For licd releases 7.8.0 and above, you **MUST** use a private key to connect to the licd license report endpoints. The `gdna.licd-private-key` setting is either a PEM encoded RSA private key in-line or a path to the PEM encoded private key file to use for authentication.
+
 ### Standalone Connectivity
 
 ```mermaid
@@ -477,13 +493,55 @@ The program looks for its configuration file in the following directories, using
 
 You can also specify an alternative location with the `--config PATH`/`-f PATH` command line option to any of the `gdna` commands.
 
-You can start without a configuration file or with just an empty `gdna.yaml` and add sections for the settings you want to change. The example below, after you change the URL to your `licd`, is enough to get started:
+>[!IMPORTANT]
+> Starting with licd release 7.8.0 you MUST use a private key to connect to the licd license report endpoints. The `gdna.licd-private-key` setting is either a PEM encoded RSA private key in-line or a path to the PEM encoded private key file to use for authentication.
+
+Create an RSA private key. This can be done using the `geneos tls create` command as follows:
+
+```bash
+geneos tls create -K -k rsa -D - > gdna.key
+```
+
+After you have created the key, you can either place the PEM encoded private key in-line in the `gdna.yaml` file or save it to a file and reference that file in the configuration. If you choose to place it in-line then make sure to use the `|` YAML operator to preserve the formatting of the PEM encoded key, as shown in the example below.
+
+```yaml
+gdna:
+  # ...
+  licd-private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEogIBAAKCAQEAzZy2qLh1+V9nYqvXj3GQ5sH2aZt+X9mL5e5z5s5z5s5z
+    ...
+    -----END RSA PRIVATE KEY-----
+```
+
+The _licd_ instance must be updated to use the public key extracted from the private key above. _licd_ will use the public key to verify the inbound connection is coming from a trusted endpoint. You can extract the public key from the private key configured for GDNA like this:
+
+```bash
+gdna pubkey -o gdna.pub
+```
+
+Copy the public key to the `licd` server and add it to the `licd` configuration using:
+
+```bash
+geneos import licd /path/to/gdna.pub
+geneos set licd options+=' -jwt-public-key ${config:home}/gdna.pub'
+```
+
+>[!NOTE]
+> Note the use of single quotes in the second line above to prevent the shell from trying to expand the `${config:home}` variable. Also, remember to replace `gdna.pub` with the actual name of the public key file if you saved it with a different name, and to replace `/path/to/gdna.pub` with the actual path to the public key file on the `licd` server.
+
+For other settings, uou can start with a very simple configuration file. The example below, after you change the URL to your `licd`, is enough to get started:
 
 ```yaml
 gdna:
   licd-sources:
     - "https://LICDHOST:7041"  
   licd-skip-verify: true
+  licd-private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    MIIEogIBAAKCAQEAzZy2qLh1+V9nYqvXj3GQ5sH2aZt+X9mL5e5z5s5z5s5z
+    ...
+    -----END RSA PRIVATE KEY-----
 ```
 
 If you are not sure where to put the configuration file then you should put it into your Geneos user's configuration directory, which may need creating if it does not exist:

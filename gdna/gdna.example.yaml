@@ -75,6 +75,15 @@ gdna:
     - "~/geneos/licd/licds/*/reporting/summary*"
     - "~/licd/licds/*/reporting/summary*"
 
+  # For licd release 7.8.0 and above, you must use a private key to
+  # connect to the licd license report endpoints. The `licd-private-key`
+  # setting is either a PEM encoded RSA private key in-line or a path to
+  # the PEM encoded private key file to use for authentication.
+  #
+  # If provided and you are connecting to an older licd instance then it
+  # will have no effect.
+  licd-private-key: ""
+
   # `schedule` is a crontab-like schedule for `start`. The format
   # supported is that given here:
   # <https://pkg.go.dev/github.com/robfig/cron/v3#hdr-CRON_Expression_Format>

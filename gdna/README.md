@@ -4,10 +4,9 @@ The Geneos Dynamic Netprobe Analysis ("**GDNA**") tool provides an overview of G
 
 For many users installing GDNA this is as straight forward as creating a `docker-compose.yml` file, adding data sources and starting it up. For those without docker it can also be set-up as a standalone process.
 
-> [!NOTE]
-> This guide is for the GDNA shipped as part of cordial release v1.18.0.
+>[!IMPORTANT]
 >
-> New features in GDNA rely on the additional license data introduced in Geneos 7.0.0 and later. For complete data you should have updated to 7.0.0 for both the License Daemon and the Gateways. GDNA will work with older version of both but will not show complete data. We have tried to clearly indicate which data will not be available in the report / Dataview descriptions in this document.
+> The release of Geneos _licd_ 7.8.x introduced changes to the availability of real-time licence usage reports. GDNA can still connect to _licd_ and collect licence usage information but requires additional configuration. Please review the updated [INSTALL.md](INSTALL.md) file for details.
 
 ## Getting Started
 
