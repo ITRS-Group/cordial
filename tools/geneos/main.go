@@ -76,7 +76,7 @@ func main() {
 		memguard.SafeExit(0)
 	}
 
-	// otherwise emulate core ctl commands
+	// otherwise emulate legacy ctl commands
 	ct := geneos.ParseComponent(strings.TrimSuffix(execname, "ctl"))
 	if len(os.Args) > 1 {
 		name := os.Args[1]

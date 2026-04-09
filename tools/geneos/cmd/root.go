@@ -38,7 +38,9 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
 )
 
-const pkgname = "cordial"
+const (
+	packageName = "cordial"
+)
 
 var cfgFile string
 
@@ -72,9 +74,8 @@ You can do one of the following:
 `, "|", "`"))
 
 func init() {
-	// cordial.LogInit(pkgname)
 	cobra.OnInitialize(func() {
-		cordial.LogInit(pkgname)
+		cordial.LogInit(packageName)
 		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
