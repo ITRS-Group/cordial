@@ -786,15 +786,23 @@ func GetFloat64(key string) float64 {
 	return global.GetFloat64(key)
 }
 
-func (c *Config) GetDuration(key string) (value time.Duration) {
+func (c *Config) GetDuration(key string, options ...ExpandOptions) (value time.Duration) {
+	opts := evalExpandOptions(c, options...)
+	if opts.defaultValue != nil {
+		if d, ok := opts.defaultValue.(time.Duration); ok {
+			value = d
+		}
+	}
 	c.mutex.RLock()
-	value = c.Viper.GetDuration(key)
+	if c.Viper.IsSet(key) {
+		value = c.Viper.GetDuration(key)
+	}
 	c.mutex.RUnlock()
 	return
 }
 
-func GetDuration(key string) time.Duration {
-	return global.GetDuration(key)
+func GetDuration(key string, options ...ExpandOptions) time.Duration {
+	return global.GetDuration(key, options...)
 }
 
 func (c *Config) IsSet(key string) (value bool) {

@@ -684,8 +684,9 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		return unicode.IsSpace(r) || r == ','
 	})
 
+	timeout := config.GetDuration(config.Join("download", "timeout"), config.Default(60*time.Second))
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: timeout,
 	}
 
 	for _, bp := range basepaths {
@@ -879,9 +880,11 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 	}
 
+	timeout := config.GetDuration(config.Join("download", "timeout"), config.Default(60*time.Second))
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: timeout,
 	}
+
 	var req *http.Request
 
 	artifacts := strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {

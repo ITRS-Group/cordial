@@ -266,8 +266,8 @@ func TestGlobalVariables(t *testing.T) {
 
 func TestPackageConstants(t *testing.T) {
 	// Test package constants
-	if pkgname != "cordial" {
-		t.Errorf("pkgname = %q, want %q", pkgname, "cordial")
+	if packageName != "cordial" {
+		t.Errorf("pkgname = %q, want %q", packageName, "cordial")
 	}
 }
 
