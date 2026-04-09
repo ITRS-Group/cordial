@@ -70,15 +70,13 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 	opts := evalOptions(options...)
 
 	if !opts.downloadonly {
+		// try to open the given source directly first, if it exists and
+		// is not a directory then return it
+
 		log.Debug().Msgf("source %q", opts.source)
 		body, filename, filesize, err = openSource(opts.source, options...)
 		if err == nil {
 			log.Debug().Msgf("source opened, returning")
-			return
-		} else if !errors.Is(err, ErrIsADirectory) {
-			// if success or the error indicates it's a directory,
-			// just return
-			log.Debug().Err(err).Msgf("source %q not opened as %q, returning error", opts.source, filename)
 			return
 		}
 		if IsDir(opts.source) && opts.source != path.Join(LocalRoot(), "packages", "downloads") {
@@ -163,6 +161,12 @@ func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, 
 	if opts.nosave {
 		err = nil
 		body = resp.Body
+		return
+	}
+
+	// ensure destination directory exists
+	if err = LOCAL.MkdirAll(opts.source, 0775); err != nil {
+		log.Debug().Err(err).Msgf("cannot create directory for archive: %q", opts.source)
 		return
 	}
 
