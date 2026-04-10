@@ -51,7 +51,7 @@ var sdpAuthCmd = &cobra.Command{
 			}
 		}
 
-		if _, err = sdp.InitialAuth(cf, sdpAuthCmdCode); err != nil {
+		if _, err = sdp.InitialAuth(cf.Sub("sdp"), sdpAuthCmdCode); err != nil {
 			log.Error().Msgf("failed to authenticate against ServiceDesk Plus: %v", err)
 			return
 		}

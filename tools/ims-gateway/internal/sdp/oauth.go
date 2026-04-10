@@ -136,11 +136,11 @@ func saveToken(token *oauth2.Token) (err error) {
 //
 // The oauth2/clientcredentials package tries to use the code twice, once to get the token
 // and once to refresh it, which fails. So we have to do this manually.
-func InitialAuth(cf *config.Config, code *config.Plaintext) (tok *oauth2.Token, err error) {
+func InitialAuth(sdpCf *config.Config, code *config.Plaintext) (tok *oauth2.Token, err error) {
 	var tcc *tls.Config
 
-	clientID := cf.GetString(cf.Join("sdp", "client-id"))
-	clientSecret := cf.GetPassword(cf.Join("sdp", "client-secret"))
+	clientID := sdpCf.GetString("client-id")
+	clientSecret := sdpCf.GetPassword("client-secret")
 
 	if clientID == "" || clientSecret.IsNil() {
 		return nil, fmt.Errorf("client-id and/or client-secret are not valid")
@@ -151,18 +151,18 @@ func InitialAuth(cf *config.Config, code *config.Plaintext) (tok *oauth2.Token, 
 		return
 	}
 
-	auth, err := url.Parse(cf.GetString(cf.Join("datacentres", cf.GetString("datacentre"), "auth")))
+	auth, err := url.Parse(sdpCf.GetString(sdpCf.Join("datacentres", sdpCf.GetString("datacentre"), "auth")))
 	if err != nil {
 		return
 	}
 
 	if auth.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: cf.GetBool(cf.Join("sdp", "tls", "skip-verify")),
+			InsecureSkipVerify: sdpCf.GetBool(sdpCf.Join("tls", "skip-verify")),
 		}
 	}
 
-	timeout := cf.GetDuration(cf.Join("sdp", "timeout"))
+	timeout := sdpCf.GetDuration(sdpCf.Join("timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}

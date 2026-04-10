@@ -9,6 +9,9 @@ The client side is currently provided by the `geneos incident` commands, which c
 Currently ServiceNow and ServiceDesk Plus are supported as target IMS platforms, but the IMS Gateway is designed to be extensible and can be easily extended to support additional platforms in the future. The IMS Gateway is implemented in Go and uses a plugin architecture to allow for easy addition of new target platforms without requiring changes to the core IMS Gateway code.
 
 
+## ServiceDesk Plus Authentication
+
+The IMS Gateway supports authentication against ServiceDesk Plus using OAuth2 Client Credentials Grant. This allows you to securely authenticate with ServiceDesk Plus and obtain access tokens that can be used to create and update incidents in ServiceDesk Plus. The authentication process involves obtaining a `client_id` and `client_secret` from the ServiceDesk Plus admin console, generating a grant token, and then using that grant token to obtain access and refresh tokens that are stored securely in the user's configuration directory. The IMS Gateway will automatically handle token refreshes as needed, so you don't have to worry about manually refreshing tokens. For more details on how to set up and use ServiceDesk Plus authentication, please refer to the [ServiceDesk Plus OAuth2 Authentication](SDP-AUTH.md) documentation.
 
 
 ## Fields
@@ -17,7 +20,7 @@ Any fields passed by clients to the IMS Gateway that have a prefix of two unders
 
 After the prefix an additional identifier can be used to highlight the functional group of the field. For example, `__snow_` and `__sdp_` are used to identify fields that are specific to ServiceNow and ServiceDesk Plus respectively.
 
-## Special Fields
+## Reserved Field Names
 
 ### Incident
 
