@@ -43,15 +43,21 @@ var reloadCmd = &cobra.Command{
 	Aliases:      []string{"refresh"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
 	DisableFlagsInUseLine: true,
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return err
+		}
 		responses := instance.Do(geneos.GetHost(Hostname), ct, names, ReloadInstance)
 		responses.Report(os.Stdout)
+		return nil
 	},
 }
 

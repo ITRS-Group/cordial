@@ -119,14 +119,19 @@ geneos backup all
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "false",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "false",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var archive string
 
-		ct, names := ParseTypeNames(command)
+		ct, names, _, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
 
 		if ct == nil && len(names) == 0 {
 			return command.Usage()

@@ -52,7 +52,10 @@ var copyCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names, params := ParseTypeNamesParams(cmd)
+		ct, names, params, err := FetchArgs(cmd)
+		if err != nil {
+			return err
+		}
 		if len(names) > 2 {
 			if !strings.HasPrefix(names[len(names)-1], "@") {
 				return errors.New("when copying more than one instance the last argument must be of the form @HOST")

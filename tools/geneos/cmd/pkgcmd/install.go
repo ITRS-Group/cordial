@@ -107,7 +107,10 @@ geneos install netprobe -b active_dev -U
 			}
 		}
 
-		ct, args, params := cmd.ParseTypeNamesParams(command)
+		ct, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		log.Debug().Msgf("args %v params: %v", args, params)
 		params = append(args, params...)

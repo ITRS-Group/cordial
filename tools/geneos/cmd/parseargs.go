@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -35,6 +36,16 @@ const (
 	// CmdWildcardNames should be "true" or "false". True will pass all
 	// names through a path.Match style lookup
 	CmdWildcardNames = "wildcard"
+
+	// CmdNonInstanceArgsError should be "true" to cause a failure if
+	// any args do not match any instances. This should prevent
+	// misspelled instance names from dropping through as parameters.
+	CmdNonInstanceArgsError = "noninstanceargserror"
+
+	// CmdAllInstancesMustMatch should be "true" to cause a failure if
+	// any instance name patterns do not match any instances. This
+	// should prevent misspelled instance names from being ignored.
+	CmdAllInstancesMustMatch = "allmustmatch"
 
 	// CmdKeepHosts should be "true" to not expand "@host", for command
 	// like copy/move
@@ -71,46 +82,50 @@ const (
 // component, if given, is always first
 // instances can be empty to match everything for most commands, glob-wildcards for matching etc.
 // flags are processed before parsing other args
-// parameters are everything after the first non instance name?
+// parameters are all items that are not valid instance names (syntax, not existence)
 //
 
 // ParseArgs does the heavy lifting of sorting out non-flag command line
-// ares for the various commands. The results are passed back in the
-// command Annotations map as `AnnotationNames` and `AnnotationsParams`
-//
-// given a list of args (after command has been seen), check if first
-// arg is a component type and de-dup the names. A name of "all" will
-// will override the rest and result in a lookup being done
-//
-// args with an '=' should be checked and only allowed if there are
-// names?
-//
-// support glob style wildcards for instance names - allow through, let
-// loopCommand* deal with them
-//
-// process command args in a standard way flags will have been handled
-// by another function before this one any args with '=' are treated as
-// parameters
-//
-// a bare argument with a '@' prefix means all instance of type on a
-// host
-//
-
+// ares for the various commands. The results are passed in the command
+// context value "data" as a CmdValType struct. The main RunE function
+// for each command can then call ParseTypeNames or ParseTypeNamesParams
+// to get the results.
 func ParseArgs(c *cobra.Command, args []string) (err error) {
+	// given a list of args (after command has been seen), check if first
+	// arg is a component type and de-dup the names. A name of "all" will
+	// will override the rest and result in a lookup being done
+	//
+	// args with an '=' should be checked and only allowed if there are
+	// names?
+	//
+	// support glob style wildcards for instance names - allow through, let
+	// loopCommand* deal with them
+	//
+	// process command args in a standard way flags will have been handled
+	// by another function before this one any args with '=' are treated as
+	// parameters
+	//
+	// a bare argument with a '@' prefix means all instance of type on a
+	// host
+
 	var ct *geneos.Component
 	// default host from `-H` flag (default `localhost`)
 	h := geneos.GetHost(Hostname)
 
-	cmdGlobal := c.Annotations[CmdGlobal]
-	cmdWildcardNames := c.Annotations[CmdWildcardNames]
-	cmdKeepHosts := c.Annotations[CmdKeepHosts]
+	cmdGlobal, _ := strconv.ParseBool(c.Annotations[CmdGlobal])
+
+	cmdKeepHosts, _ := strconv.ParseBool(c.Annotations[CmdKeepHosts])
+	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
+	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
+
+	log.Debug().Msgf("cmdGlobal %v, cmdKeepHosts %v, cmdWildcardNames %v, cmdAllInstancesMustMatch %v", cmdGlobal, cmdKeepHosts, cmdWildcardNames, cmdAllInstancesMustMatch)
 
 	cd := cmddata(c)
 	if cd == nil {
 		return fmt.Errorf("command context not found")
 	}
 
-	if cmdGlobal == "true" {
+	if cmdGlobal {
 		cd.Lock()
 		cd.globals = true
 		cd.Unlock()
@@ -132,7 +147,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// if there are no arguments check for "no args means all instances"
 	// annotation and return
 	if len(args) == 0 {
-		if cmdGlobal == "true" {
+		if cmdGlobal {
 			// return everything that matches, at this point any
 			// hostname h and component ct are set
 			names := instance.InstanceNames(h, ct)
@@ -150,7 +165,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// glob patterns) put then rest into params
 	var names, params []string
 	for i, a := range args {
-		if cmdKeepHosts == "true" && strings.HasPrefix(a, "@") {
+		if cmdKeepHosts && strings.HasPrefix(a, "@") {
 			names = append(names, a)
 			continue
 		}
@@ -164,8 +179,8 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	}
 
 	// names is now a list of instance names or patterns, process and remove dups
-	if cmdWildcardNames == "true" {
-		names = instance.Match(h, ct, cmdKeepHosts == "true", names...)
+	if cmdWildcardNames {
+		names, err = instance.Match(h, ct, cmdKeepHosts, cmdAllInstancesMustMatch, names...)
 	}
 
 	log.Debug().Msgf("names %v", names)
@@ -179,28 +194,26 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	return
 }
 
-// ParseTypeNames parses the ct, args and params set by ParseArgs in a
-// Pre run and returns the ct and a slice of names. Parameters are
-// ignored.
-func ParseTypeNames(command *cobra.Command) (ct *geneos.Component, args []string) {
+// FetchArgs parses the ct, args and params set by ParseArgs in a Pre
+// run and returns the ct and a slice of names and a slice of params.
+//
+// If the command annotation CmdNonInstanceArgsError is "true" then an
+// error will be returned if any params are found, otherwise they are
+// returned as a slice of strings.
+func FetchArgs(command *cobra.Command) (ct *geneos.Component, args, params []string, err error) {
+	// ct, args = ParseTypeNames(command)
 	d := cmddata(command)
 	if d == nil {
 		return
 	}
 	ct = d.component
 	args = d.names
-	return
-}
-
-// ParseTypeNamesParams parses the ct, args and params set by ParseArgs
-// in a Pre run and returns the ct and a slice of names and a slice of
-// params.
-func ParseTypeNamesParams(command *cobra.Command) (ct *geneos.Component, args, params []string) {
-	ct, args = ParseTypeNames(command)
-	d := cmddata(command)
-	if d == nil {
-		return
-	}
 	params = d.params
+
+	cmdNonInstanceArgsError, _ := strconv.ParseBool(command.Annotations[CmdNonInstanceArgsError])
+	if cmdNonInstanceArgsError && len(params) > 0 {
+		err = fmt.Errorf("unexpected parameters: %v", params)
+	}
+
 	return
 }

@@ -56,7 +56,10 @@ var demoCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
+		ct, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
@@ -151,7 +154,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 		}
 	}
 
-	if err = cmd.Start(nil, initCmdLogs, true, empty, empty); err != nil {
+	if err = cmd.Start(nil, initCmdLogs, true, empty); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)

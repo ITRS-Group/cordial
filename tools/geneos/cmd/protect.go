@@ -45,13 +45,18 @@ var protectCmd = &cobra.Command{
 	Long:         protectCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
 	DisableFlagsInUseLine: true,
-	Run: func(command *cobra.Command, _ []string) {
-		ct, args := ParseTypeNames(command)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, args, _, err := FetchArgs(command)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 			cf := i.Config()
@@ -85,5 +90,6 @@ var protectCmd = &cobra.Command{
 
 			return
 		}, !protectCmdUnprotect).Report(os.Stdout)
+		return
 	},
 }

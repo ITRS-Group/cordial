@@ -48,12 +48,17 @@ var rebuildCmd = &cobra.Command{
 	Long:         rebuildCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 
@@ -68,5 +73,6 @@ var rebuildCmd = &cobra.Command{
 			resp2 := ReloadInstance(i)
 			return responses.MergeResponse(resp, resp2)
 		}).Report(os.Stdout)
+		return
 	},
 }

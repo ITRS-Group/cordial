@@ -69,7 +69,10 @@ geneos uninstall --version 5.14.1
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args := cmd.ParseTypeNames(command)
+		ct, args, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return err
+		}
 		h := geneos.GetHost(cmd.Hostname)
 
 		// allow version to be the first arg unless the flag is given

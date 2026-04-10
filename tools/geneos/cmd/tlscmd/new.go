@@ -47,13 +47,19 @@ var newCmd = &cobra.Command{
 	Long:         newCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "true",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "true",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdNonInstanceArgsError:  "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
-		ct, names := cmd.ParseTypeNames(command)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Report(os.Stdout)
+		return
 	},
 }
 

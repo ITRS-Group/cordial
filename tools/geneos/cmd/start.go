@@ -51,18 +51,23 @@ var startCmd = &cobra.Command{
 	Long:         startCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) error {
-		ct, names, params := ParseTypeNamesParams(cmd)
 		var autostart bool
+
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return err
+		}
 		// if we have a TYPE and at least one NAME then autostart is on
 		if ct != nil && len(origargs) > 1 {
 			autostart = true
 		}
-		return Start(ct, startCmdLogs, autostart, names, params)
+		return Start(ct, startCmdLogs, autostart, names)
 	},
 }
 
@@ -71,7 +76,7 @@ var startCmd = &cobra.Command{
 // flag to, well, watch logs while autostart is a flag to indicate if
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
-func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string, params []string) (err error) {
+func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string) (err error) {
 	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		resp = responses.NewResponse(i)
 		if instance.IsAutoStart(i) || autostart {

@@ -68,7 +68,10 @@ var setCmd = &cobra.Command{
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		_, args, params := cmd.ParseTypeNamesParams(command)
+		_, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		if len(args) == 0 {
 			hosts = geneos.RemoteHosts(false)

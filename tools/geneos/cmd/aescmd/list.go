@@ -81,8 +81,11 @@ geneos aes ls -S gateway -H localhost -c
 		cmd.CmdWildcardNames: "true",
 		cmd.CmdAllowRoot:     "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
-		ct, names := cmd.ParseTypeNames(command)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		h := geneos.GetHost(cmd.Hostname)
 
@@ -138,6 +141,7 @@ geneos aes ls -S gateway -H localhost -c
 				instance.Do(h, ct, names, aesListInstance).Report(w)
 			}
 		}
+		return
 	},
 }
 

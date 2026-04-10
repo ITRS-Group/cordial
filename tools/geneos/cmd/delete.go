@@ -51,13 +51,19 @@ var deleteCmd = &cobra.Command{
 	Long:         deleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "false",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "false",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(command)
+	RunE: func(command *cobra.Command, _ []string) error {
+		ct, names, _, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, deleteInstance).Report(os.Stdout)
+		return nil
 	},
 }
 

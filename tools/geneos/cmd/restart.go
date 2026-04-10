@@ -57,12 +57,17 @@ var restartCmd = &cobra.Command{
 	Long:         restartCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 			resp.Err = instance.Stop(i, restartCmdForce, false)
@@ -77,5 +82,6 @@ var restartCmd = &cobra.Command{
 			// never returns
 			followLogs(ct, names, true)
 		}
+		return
 	},
 }

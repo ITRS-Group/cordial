@@ -56,16 +56,22 @@ geneos clean --full netprobe
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(command *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(command)
+	RunE: func(command *cobra.Command, _ []string) error {
+		ct, names, _, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 			resp.Err = instance.Clean(i, cleanCmdFull)
 			return
 		}).Report(os.Stdout)
+		return nil
 	},
 }

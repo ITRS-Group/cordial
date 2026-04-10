@@ -73,12 +73,16 @@ geneos import gateway -c shared common_include.xml
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, params := ParseTypeNamesParams(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, params, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		return ImportFiles(ct, names, params)
 	},
 }

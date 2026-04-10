@@ -92,7 +92,10 @@ geneos aes new -S gateway
 
 		if newCmdShared {
 			log.Debug().Msg("new shared keyfile")
-			ct, names := cmd.ParseTypeNames(command)
+			ct, names, _, err := cmd.FetchArgs(command)
+			if err != nil {
+				return err
+			}
 			h := geneos.GetHost(cmd.Hostname)
 
 			paths, _, err := geneos.WriteSharedKeyValues(h, ct, kv)
@@ -113,7 +116,10 @@ geneos aes new -S gateway
 				}
 			}
 		} else if newCmdUpdate {
-			ct, names := cmd.ParseTypeNames(command)
+			ct, names, _, err := cmd.FetchArgs(command)
+			if err != nil {
+				return err
+			}
 			h := geneos.GetHost(cmd.Hostname)
 
 			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {

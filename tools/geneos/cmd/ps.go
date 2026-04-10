@@ -66,13 +66,17 @@ var psCmd = &cobra.Command{
 	Aliases:      []string{"status"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
-		CmdAllowRoot:     "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdAllowRoot:            "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names, params := ParseTypeNamesParams(cmd)
+		ct, names, params, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		CommandPS(ct, names, params)
 	},
 }

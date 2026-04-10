@@ -59,12 +59,17 @@ var setCmd = &cobra.Command{
 	Long:         setCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "false",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "false",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdAllInstancesMustMatch: "true",
+		cmd.CmdNonInstanceArgsError:  "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := cmd.ParseTypeNames(command)
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return err
+		}
 
 		h := geneos.GetHost(cmd.Hostname)
 

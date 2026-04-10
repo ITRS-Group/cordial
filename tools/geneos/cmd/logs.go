@@ -82,13 +82,17 @@ var logsCmd = &cobra.Command{
 	Aliases:      []string{"log"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
-		CmdAllowRoot:     "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdAllowRoot:            "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names := ParseTypeNames(cmd)
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 
 		// if we have match or exclude with other defaults, then turn on logcat
 		if (logCmdMatch != "" || logCmdIgnore != "") && !logCmdFollow {

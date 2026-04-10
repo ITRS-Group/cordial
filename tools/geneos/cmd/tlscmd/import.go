@@ -67,14 +67,18 @@ geneos tls import netprobe localhost /path/to/file.pem
 geneos tls import /path/to/file.pem
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "false",
-		cmd.CmdRequireHome:   "false",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "false",
+		cmd.CmdRequireHome:           "false",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var certBundle *certs.CertificateBundle
 
-		ct, names, params := cmd.ParseTypeNamesParams(command)
+		ct, names, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		// move any "-" names to params
 		if slices.Contains(names, "-") {

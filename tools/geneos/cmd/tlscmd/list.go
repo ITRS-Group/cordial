@@ -103,13 +103,17 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "true",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
-		cmd.CmdAllowRoot:     "true",
+		cmd.CmdGlobal:               "true",
+		cmd.CmdRequireHome:          "true",
+		cmd.CmdWildcardNames:        "true",
+		cmd.CmdAllowRoot:            "true",
+		cmd.CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names, params := cmd.ParseTypeNamesParams(command)
+		ct, names, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 		rootCertFile, err = geneos.RootCertificatePath()
 		if err != nil {
 			return

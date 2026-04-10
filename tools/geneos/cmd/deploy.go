@@ -120,7 +120,11 @@ var deployCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var name string
 
-		ct, names, params := ParseTypeNamesParams(command)
+		ct, names, params, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
+
 		if ct == nil {
 			fmt.Println("component type must be given for a deployment")
 			return nil

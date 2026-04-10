@@ -51,10 +51,12 @@ func init() {
 	encodeCmd.Flags().StringVarP(&encodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
 	encodeCmd.Flags().BoolVarP(&encodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
-	encodeCmdClientID = &config.Plaintext{}
-	encodeCmdClientSecret = &config.Plaintext{}
 	encodeCmd.Flags().StringVarP(&encodeCmdProvider, "app-key", "A", "", "SSO `PROVIDER`, one of ssoAgent, obcerv, gatewayHub")
+
+	encodeCmdClientID = &config.Plaintext{}
 	encodeCmd.Flags().VarP(encodeCmdClientID, "client-id", "C", "Client ID for --app-key, prompted if not set")
+
+	encodeCmdClientSecret = &config.Plaintext{}
 	encodeCmd.Flags().VarP(encodeCmdClientSecret, "client-secret", "S", "Client Secret for --app-key, prompted if not set")
 	encodeCmd.Flags().StringVarP(&encodeCmdAppKeyFile, "app-key-file", "a", "", "App-key filename, if saving per instance, otherwise defaults to STDOUT")
 
@@ -72,9 +74,11 @@ var encodeCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "true",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "true",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdNonInstanceArgsError:  "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)
@@ -84,7 +88,10 @@ var encodeCmd = &cobra.Command{
 				return errors.New("--app-key PROVIDER must be one of `obcerv`, `ssoAgent` or `gatewayHub`")
 			}
 
-			ct, args := cmd.ParseTypeNames(command)
+			ct, args, _, err2 := cmd.FetchArgs(command)
+			if err2 != nil {
+				return err2
+			}
 			if ct == nil {
 				ct = geneos.ParseComponent("gateway")
 			}
@@ -214,7 +221,10 @@ var encodeCmd = &cobra.Command{
 			}
 		}
 
-		ct, args := cmd.ParseTypeNames(command)
+		ct, args, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return err
+		}
 
 		if encodeCmdKeyfile != "" || encodeCmdCRC != "" {
 			for h := range h.OrList() {
