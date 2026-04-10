@@ -407,7 +407,7 @@ func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 //
 // Patterns that have no globbing special characters are returned as-is
 // and the caller is expected to validate them.
-func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...string) (names []string) {
+func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool, patterns ...string) (names []string, err error) {
 	for _, pattern := range patterns {
 		if pattern == "all" {
 			pattern = "*"
@@ -418,23 +418,25 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 			pattern = "*" + pattern
 		}
 
-		// check for glob chars, if none then just add the pattern as-is and loop
-		if !strings.ContainsAny(pattern, `*?[`) {
-			names = append(names, pattern)
-			continue
-		}
-
 		h, _, p := ParseName(pattern, h) // override 'h' inside loop
 
+		var matched bool
 		for _, name := range InstanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
+				log.Debug().Msgf("pattern %q matches instance name %q", pattern, name)
+				matched = true
 				if h == geneos.ALL {
 					names = append(names, n)
 				} else {
 					names = append(names, n+"@"+h.String())
 				}
 			}
+		}
+
+		if mustMatch && !matched {
+			err = fmt.Errorf("%q does not match any instance names", pattern)
+			return
 		}
 	}
 
@@ -452,9 +454,9 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, patterns ...str
 	// if the result is no matches but we were given patterns, return
 	// those patterns and let the caller fail them when loading
 	if len(names) == 0 && len(patterns) > 0 {
-		return patterns
+		return patterns, nil
 	}
-	return
+	return names, nil
 }
 
 // ParseName returns the parts of an instance name in the format

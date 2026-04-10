@@ -85,7 +85,10 @@ geneos restore gateway ABC x.tgz
 		CmdWildcardNames: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		ct, names, params := ParseTypeNamesParams(command)
+		ct, names, params, err := FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		names = append(names, params...)
 

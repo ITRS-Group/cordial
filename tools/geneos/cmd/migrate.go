@@ -49,13 +49,17 @@ var migrateCmd = &cobra.Command{
 	Long:         migrateCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names := ParseTypeNames(cmd)
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
 				log.Error().Err(err).Msg("migrating old executables failed")

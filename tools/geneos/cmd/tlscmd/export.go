@@ -55,7 +55,7 @@ var exportCmdDescription string
 
 var exportCmd = &cobra.Command{
 	Use:                   "export [flags] [TYPE] [NAME...]",
-	Short:                 "Export signing certificate and private key",
+	Short:                 "Export certificate bundle including private key",
 	Long:                  exportCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
@@ -64,13 +64,18 @@ geneos tls export --out file.pem
 geneos tls export gateway mygateway
 `,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "false",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
-		cmd.CmdAllowRoot:     "true",
+		cmd.CmdGlobal:                "false",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdAllowRoot:             "true",
+		cmd.CmdNonInstanceArgsError:  "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := cmd.ParseTypeNames(command)
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		if len(names) > 0 || ct != nil {
 			instance.Do(geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)

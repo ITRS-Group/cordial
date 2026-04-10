@@ -76,7 +76,10 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 			cmd.Usage()
 			return
 		}
-		ct, names, params := ParseTypeNamesParams(cmd)
+		ct, names, params, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 
 		// check if secure args are set, prompt once for each without a supplied value
 

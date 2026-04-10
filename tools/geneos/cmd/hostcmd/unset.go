@@ -67,7 +67,10 @@ geneos host unset rem2 -i /path/to/id_rsa
 			command.Usage()
 			return
 		}
-		_, args := cmd.ParseTypeNames(command)
+		_, args, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		hosts = geneos.RemoteHosts(false)
 		for _, a := range args {

@@ -49,9 +49,15 @@ geneos config set geneos="/opt/geneos"
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
 	},
-	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		_, _, params := cmd.ParseTypeNamesParams(command)
-		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
+	RunE: func(command *cobra.Command, args []string) (err error) {
+		_, _, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
+		if len(params) == 0 {
+			return command.Usage()
+		}
+		if len(args) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
 		cf, err := config.Load(cordial.ExecutableName(),

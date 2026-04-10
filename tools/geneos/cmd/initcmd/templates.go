@@ -47,7 +47,10 @@ var templatesCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, _ := cmd.ParseTypeNames(command)
+		ct, _, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		// none of the arguments can be a reserved type
 		if ct != nil {

@@ -65,7 +65,10 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
+		ct, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
@@ -150,7 +153,7 @@ func initAll(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
 	if err = cmd.AddInstance(webserverCT, initCmdExtras, []string{}, initCmdName); err != nil {
 		return
 	}
-	if err = cmd.Start(nil, initCmdLogs, true, e, e); err != nil {
+	if err = cmd.Start(nil, initCmdLogs, true, e); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)

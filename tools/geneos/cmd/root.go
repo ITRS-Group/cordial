@@ -134,6 +134,9 @@ type CmdKeyType string
 
 const CmdKey = CmdKeyType("data")
 
+// CmdValType is the struct used to store the results of parsing the
+// command line arguments in a PreRun function and pass them to the main
+// RunE function.
 type CmdValType struct {
 	sync.Mutex
 
@@ -150,6 +153,8 @@ type CmdValType struct {
 	params []string
 }
 
+// cmddata is a helper to get the command data struct from the command
+// context. It returns nil if not found or of the wrong type.
 func cmddata(command *cobra.Command) *CmdValType {
 	ctx := command.Context()
 	if ctx == nil {

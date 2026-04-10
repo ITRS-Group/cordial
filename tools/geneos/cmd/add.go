@@ -91,8 +91,11 @@ geneos add netprobe infraprobe12 --start --log
 		CmdGlobal:      "false",
 		CmdRequireHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, params := ParseTypeNamesParams(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, params, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		return AddInstance(ct, addCmdExtras, params, names...)
 	},
 }

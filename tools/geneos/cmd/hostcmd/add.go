@@ -97,7 +97,10 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		cf := config.New()
 
-		_, args, params := cmd.ParseTypeNamesParams(command)
+		_, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 		args = append(args, params...)
 
 		switch len(args) {

@@ -71,7 +71,10 @@ geneos package update netprobe --version 5.13.2
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, args, params := cmd.ParseTypeNamesParams(command)
+		ct, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {

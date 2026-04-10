@@ -48,12 +48,17 @@ var stopCmd = &cobra.Command{
 	Long:         stopCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
@@ -62,5 +67,6 @@ var stopCmd = &cobra.Command{
 			responses.ShowTimes(),
 			responses.TimingFormat("%s stopped in %.2fs\n"),
 		)
+		return
 	},
 }

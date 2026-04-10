@@ -83,9 +83,11 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "true",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "true",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdNonInstanceArgsError:  "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
@@ -129,7 +131,11 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return fmt.Errorf("decode failed with key file(s) provided")
 		}
 
-		ct, names, _ := cmd.ParseTypeNamesParams(command)
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return err
+		}
+
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 

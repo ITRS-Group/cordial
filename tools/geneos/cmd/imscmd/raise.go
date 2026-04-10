@@ -104,7 +104,10 @@ var raiseCmd = &cobra.Command{
 		// line fields can also be used to remove fields by setting the
 		// value to an empty string.
 		envRE := regexp.MustCompile(`^([A-Z_][A-Z0-9_]*)=(.*)$`)
-		_, _, params := cmd.ParseTypeNamesParams(command)
+		_, _, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 		for _, p := range params {
 			if !envRE.MatchString(p) {
 				log.Debug().Msgf("ignoring non key=value parameter %s", p)

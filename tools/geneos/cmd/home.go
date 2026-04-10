@@ -51,16 +51,19 @@ cat $(geneos home gateway example2)/gateway.txt
 		CmdAllowRoot:   "true",
 	},
 	DisableFlagsInUseLine: true,
-	RunE: func(cmd *cobra.Command, _ []string) error {
-		ct, names, _ := ParseTypeNamesParams(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 
 		if len(names) == 0 {
 			if ct == nil {
 				fmt.Println(geneos.LocalRoot())
-				return nil
+				return
 			}
 			fmt.Println(geneos.LOCAL.PathTo(ct))
-			return nil
+			return
 		}
 
 		h, _, n := instance.ParseName(names[0], geneos.GetHost(Hostname))
@@ -69,12 +72,12 @@ cat $(geneos home gateway example2)/gateway.txt
 
 			if err != nil {
 				fmt.Println(geneos.LocalRoot())
-				return nil
+				return err
 			}
 			fmt.Println(i.Home())
 		} else {
 			fmt.Println(geneos.LocalRoot())
 		}
-		return nil
+		return
 	},
 }

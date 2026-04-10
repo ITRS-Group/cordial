@@ -47,12 +47,17 @@ var enableCmd = &cobra.Command{
 	Long:         enableCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "false",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "false",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 
@@ -68,5 +73,6 @@ var enableCmd = &cobra.Command{
 			}
 			return
 		}).Report(os.Stdout)
+		return
 	},
 }

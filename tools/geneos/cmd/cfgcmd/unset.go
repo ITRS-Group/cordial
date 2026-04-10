@@ -42,13 +42,18 @@ var unsetCmd = &cobra.Command{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
 	},
-	RunE: func(command *cobra.Command, origargs []string) error {
+	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var changed bool
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
 
-		_, args := cmd.ParseTypeNames(command)
+		_, args, params, err := cmd.FetchArgs(command)
+		if err != nil {
+			return err
+		}
+		args = append(args, params...)
+
 		orig, err := config.Load(cordial.ExecutableName(),
 			config.IgnoreWorkingDir(),
 			config.IgnoreSystemDir(),

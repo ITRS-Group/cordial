@@ -70,9 +70,11 @@ var renewCmd = &cobra.Command{
 	Long:         renewCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:        "true",
-		cmd.CmdRequireHome:   "true",
-		cmd.CmdWildcardNames: "true",
+		cmd.CmdGlobal:                "true",
+		cmd.CmdRequireHome:           "true",
+		cmd.CmdWildcardNames:         "true",
+		cmd.CmdNonInstanceArgsError:  "true",
+		cmd.CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if renewCmdSigning {
@@ -99,7 +101,10 @@ var renewCmd = &cobra.Command{
 			return nil
 		}
 
-		ct, names := cmd.ParseTypeNames(command)
+		ct, names, _, err := cmd.FetchArgs(command)
+		if err != nil {
+			return
+		}
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
 		return
 	},

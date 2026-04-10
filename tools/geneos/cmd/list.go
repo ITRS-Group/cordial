@@ -69,13 +69,18 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
-		CmdAllowRoot:     "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdAllowRoot:            "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names := ParseTypeNames(cmd)
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
+
 		switch {
 		case listCmdJSON, listCmdIndent:
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Report(os.Stdout, responses.IndentJSON(listCmdIndent))

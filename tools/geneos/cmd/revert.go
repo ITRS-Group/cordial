@@ -52,13 +52,18 @@ var revertCmd = &cobra.Command{
 	Long:         revertCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
+		CmdGlobal:                "true",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
 	},
 	DisableFlagsInUseLine: true,
-	Run: func(cmd *cobra.Command, _ []string) {
-		ct, names := ParseTypeNames(cmd)
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		ct, names, _, err := FetchArgs(cmd)
+		if err != nil {
+			return
+		}
 		if revertCmdExecutables {
 			revertCommands()
 			return
@@ -99,6 +104,7 @@ var revertCmd = &cobra.Command{
 			resp.Completed = append(resp.Completed, "reverted to RC config")
 			return
 		}).Report(os.Stdout)
+		return
 	},
 }
 

@@ -78,13 +78,17 @@ var showCmd = &cobra.Command{
 	Aliases:      []string{"details"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:        "true",
-		CmdRequireHome:   "true",
-		CmdWildcardNames: "true",
-		CmdAllowRoot:     "true",
+		CmdGlobal:               "true",
+		CmdRequireHome:          "true",
+		CmdWildcardNames:        "true",
+		CmdAllowRoot:            "true",
+		CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		ct, names := ParseTypeNames(command)
+		ct, names, _, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
 		output := os.Stdout
 		if showCmdOutput != "" {
 			output, err = os.Create(showCmdOutput)
