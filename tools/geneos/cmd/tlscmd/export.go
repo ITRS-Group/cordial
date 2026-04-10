@@ -67,6 +67,7 @@ geneos tls export gateway mygateway
 		cmd.CmdGlobal:        "false",
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
+		cmd.CmdAllowRoot:     "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := cmd.ParseTypeNames(command)

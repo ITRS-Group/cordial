@@ -73,6 +73,8 @@ You can do one of the following:
 
 `, "|", "`"))
 
+var AllowRoot bool
+
 func init() {
 	cobra.OnInitialize(func() {
 		cordial.LogInit(packageName)
@@ -88,6 +90,8 @@ func init() {
 			config.IgnoreUserConfDir(),
 			config.IgnoreWorkingDir())+
 		")")
+
+	GeneosCmd.PersistentFlags().BoolVar(&AllowRoot, "allow-root", false, "allow running as root (not recommended)")
 	GeneosCmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "all", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
 	GeneosCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	GeneosCmd.PersistentFlags().MarkHidden("debug")
@@ -172,6 +176,7 @@ geneos restart
 	// SilenceUsage: true,
 	Annotations: map[string]string{
 		CmdRequireHome: "true",
+		CmdAllowRoot:   "true",
 	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -188,6 +193,16 @@ geneos restart
 		// "manually" parse root flags so that legacy commands get conf
 		// file, debug etc.
 		command.Root().ParseFlags(args)
+
+		// check if user is root, and only proceed if conditions are met:
+		// * the command has the `allow-root` annotation set to "true", or
+		// * the command is `help`, or
+		// * the global `allow-root` flag is set to true (which sets the
+		//   `allow-root` annotation to "true" for all commands)
+		// otherwise return an error
+		if os.Geteuid() == 0 && !AllowRoot && command.Annotations[CmdAllowRoot] != "true" && command.Name() != "help" {
+			return fmt.Errorf("running as root is not allowed, use --allow-root to override")
+		}
 
 		// check for AnnotationReplacedBy annotation, warn the user, run the new
 		// command later (after prerun) but if the help flag is set

@@ -52,6 +52,14 @@ const (
 	// CmdGlobal should be "true" if an empty list of instances should
 	// mean all instances.
 	CmdGlobal = "global"
+
+	// CmdAllowRoot should be "true" to allow running as root, otherwise
+	// the command will fail if the effective user ID is 0. This can be
+	// overridden by the `--allow-root` flag, which will set this
+	// annotation to "true" for the duration of the command, or the
+	// global configuration option `allow-root` which will set this
+	// annotation to "true" for all commands.
+	CmdAllowRoot = "allowroot"
 )
 
 // REFRESH:
