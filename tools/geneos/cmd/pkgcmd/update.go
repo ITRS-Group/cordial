@@ -55,9 +55,10 @@ func init() {
 var updateCmdDescription string
 
 var updateCmd = &cobra.Command{
-	Use:   "update [flags] [TYPE] [VERSION]",
-	Short: "Update the active version of installed Geneos package",
-	Long:  updateCmdDescription,
+	Use:     "update [flags] [TYPE] [VERSION]",
+	Short:   "Update the active version of installed Geneos package",
+	Long:    updateCmdDescription,
+	Aliases: []string{"upgrade"},
 	Example: strings.ReplaceAll(`
 geneos package update gateway -b active_prod
 geneos package update gateway -b active_dev -V 5.11
