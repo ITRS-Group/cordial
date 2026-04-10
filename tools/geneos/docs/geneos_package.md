@@ -16,11 +16,12 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 | [`geneos package install`](geneos_package_install.md)	 | Install Geneos releases |
 | [`geneos package list / ls`](geneos_package_list.md)	 | List packages available for update command |
 | [`geneos package uninstall / delete / remove / rm`](geneos_package_uninstall.md)	 | Uninstall Geneos releases |
-| [`geneos package update`](geneos_package_update.md)	 | Update the active version of installed Geneos package |
+| [`geneos package update / upgrade`](geneos_package_update.md)	 | Update the active version of installed Geneos package |
 
 ### Options inherited from parent commands
 
 ```text
+      --allow-root      allow running as root (not recommended)
   -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```

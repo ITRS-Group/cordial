@@ -1,6 +1,6 @@
 # Change Log
 
-## Version v1.26.0-beta1
+## Version v1.26.0-beta2  
 
 >[!IMPORTANT]
 > This is an **beta** release of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
@@ -37,6 +37,8 @@
 
   * A new `geneos incident` subsystem has been added. See `tools/ims-gateway` below for more details.
 
+  * Changes to protect against typos on the command line have been implemented.
+
 * `gdna`
 
   * GDNA now supports the License Daemon 7.8.0 and later for real-time fetching of license data from the now protected endpoint(s). It does not yet support the new `licd` binary summary files, but this is planned for a future release.
@@ -52,11 +54,20 @@
 * `tools/geneos`
 
   * The Gateway `instance.setup.xml` file is now created with read-only permissions to hint to users that it should not be edited directly.
+
   * Other minor fixes to the way templates are executed as well; Now templates are first executed to a temporary file with correct permissions before being moved to the final location. This avoids issues where templates fail to execute due to missing files when the template creates multiple files that depend on each other.
+
+  * The `geneos package install` command now ensures the `${GENEOS}/packages/download` directory exists before attempting to download packages to it, which fixes the command when run on a clean installation.
 
 ## Version v1.26.0 Changes
 
-* Update to Go 1.26.1 and update dependencies.
+* Update to Go 1.26.2 and update dependencies.
+
+* `tools/geneos`
+
+  * If you run `geneos` as root then most commands will refuse to run unless given the `--allow-root` flag. This is to prevent accidental damage to the system by running `geneos` commands with elevated privileges. This can also be overridden globally by adding a configuration option `allow-root=true` to the user configuration file, but this is not recommended.
+
+  * Added a download timeout option for package downloads. See `geneos help package install` for details.
 
 ---
 

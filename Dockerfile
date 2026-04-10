@@ -7,7 +7,7 @@
 #
 # This is to allow downloading Geneos release archives during the build.
 
-ARG GOVERSION=1.26.1
+ARG GOVERSION=1.26.2
 
 # Note: To build an executable for a modern Mac use something like:
 #

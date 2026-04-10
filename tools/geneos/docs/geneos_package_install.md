@@ -34,6 +34,8 @@ Finally, if you just want to download releases and not install them - so you can
 
 To use a proxy, when direct connectivity from your server may not be available, set the appropriate environment variables as detailed in the Go documentation: <https://pkg.go.dev/net/http#ProxyFromEnvironment>. The values of these variables are the same as for the industry-standard examples you will find on the web.
 
+The default timeout for a single timeout is 60 seconds. This may be too short for larger downloads or if your network connection is slow. You can change this with the `download::timeout` configuration parameter, e.g. `geneos config set download::timeout=120s` to set it to 120 seconds. The value must be a valid Go duration string, e.g. `30s`, `1m`, `1h30m` and so on.
+
 ```text
 geneos package install [flags] [TYPE] [FILE|URL...]
 ```
