@@ -81,6 +81,7 @@ var showCmd = &cobra.Command{
 		CmdGlobal:        "true",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
+		CmdAllowRoot:     "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names := ParseTypeNames(command)

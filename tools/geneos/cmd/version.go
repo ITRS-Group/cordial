@@ -49,6 +49,7 @@ var versionCmd = &cobra.Command{
 	Annotations: map[string]string{
 		CmdGlobal:      "false",
 		CmdRequireHome: "false",
+		CmdAllowRoot:   "true",
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {

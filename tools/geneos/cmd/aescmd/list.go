@@ -79,6 +79,7 @@ geneos aes ls -S gateway -H localhost -c
 		cmd.CmdGlobal:        "true",
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
+		cmd.CmdAllowRoot:     "true",
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names := cmd.ParseTypeNames(command)

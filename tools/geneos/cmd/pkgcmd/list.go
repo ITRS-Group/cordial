@@ -60,6 +60,7 @@ var listCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "true",
+		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		ct, _ := cmd.ParseTypeNames(command)

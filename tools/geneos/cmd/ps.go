@@ -69,6 +69,7 @@ var psCmd = &cobra.Command{
 		CmdGlobal:        "true",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
+		CmdAllowRoot:     "true",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		ct, names, params := ParseTypeNamesParams(cmd)

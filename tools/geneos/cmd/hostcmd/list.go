@@ -71,6 +71,7 @@ var listCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
+		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		switch {

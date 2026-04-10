@@ -54,6 +54,7 @@ var showCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
+		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host

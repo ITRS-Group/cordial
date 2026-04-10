@@ -55,6 +55,7 @@ var commandCmd = &cobra.Command{
 		CmdGlobal:        "true",
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
+		CmdAllowRoot:     "true",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
