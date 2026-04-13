@@ -183,7 +183,7 @@ var deployCmd = &cobra.Command{
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
 				config.Set(cordial.ExecutableName(), deployCmdGeneosHome)
-				if err = geneos.SaveConfig(cordial.ExecutableName()); err != nil {
+				if err = geneos.SaveGlobalConfig(cordial.ExecutableName()); err != nil {
 					return err
 				}
 

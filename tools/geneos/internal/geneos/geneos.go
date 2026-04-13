@@ -93,7 +93,7 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 	if h.IsLocal() {
 		log.Debug().Msgf("setting %q to %q", cordial.ExecutableName(), opts.geneosdir)
 		config.Set(cordial.ExecutableName(), opts.geneosdir)
-		if err = SaveConfig(cordial.ExecutableName()); err != nil {
+		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {
 			return err
 		}
 
@@ -129,10 +129,11 @@ func LocalRoot() string {
 	return config.GetString(cordial.ExecutableName(), config.Default(config.GetString("itrshome")))
 }
 
-// SaveConfig saves the global configuration (in config.Global) but
-// excludes any values that still have their defaults, by iterating
-// through registered components and checking.
-func SaveConfig(name string) error {
+// SaveGlobalConfig saves the global configuration (in config.Global)
+// but excludes any values that still have their defaults, by iterating
+// through registered components and checking. Any empty/zero values are
+// also excluded from the saved configuration.
+func SaveGlobalConfig(name string) error {
 	cf := config.New()
 	globalsettings := make(map[string]string)
 	for _, ct := range AllComponents() {
@@ -158,5 +159,7 @@ func SaveConfig(name string) error {
 			cf.Set(k, config.GetString(k))
 		}
 	}
-	return cf.Save(name)
+	return cf.Save(name) // config.SetAppName(cordial.ExecutableName()),
+	// config.IgnoreEmptyValues(),
+
 }
