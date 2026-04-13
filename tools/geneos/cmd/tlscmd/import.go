@@ -58,12 +58,14 @@ var importCmdDescription string
 
 var importCmd = &cobra.Command{
 	Use:                   "import [flags] [TYPE] [NAME...] [PATH]",
-	Short:                 "Import certificates",
+	Short:                 "Import certificates (signer if no instances specified)",
 	Long:                  importCmdDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
 	Example: `
+# Import a certificate bundle for the netprobe instance on localhost from a PEM file
 geneos tls import netprobe localhost /path/to/file.pem
+# Import a signer bundle from a PEM file
 geneos tls import /path/to/file.pem
 `,
 	Annotations: map[string]string{
@@ -80,7 +82,7 @@ geneos tls import /path/to/file.pem
 			return
 		}
 
-		// move any "-" names to params
+		// move any "-" names to params, which is STDIN
 		if slices.Contains(names, "-") {
 			params = append(params, "-")
 			names = slices.DeleteFunc(names, func(s string) bool { return s == "-" })
@@ -90,6 +92,9 @@ geneos tls import /path/to/file.pem
 			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
 		}
 
+		// default to STDIN if no file is specified, which is consistent
+		// with other import commands and allows for piping and
+		// redirection without needing to explicitly specify "-"
 		file := "-"
 		if len(params) > 0 {
 			file = params[0]
