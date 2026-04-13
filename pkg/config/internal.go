@@ -758,9 +758,9 @@ func (c *Config) setStringSlice(key string, values []string, options ...ExpandOp
 // SetStringMapString iterates over a map[string]string and sets each
 // key to the value given. Viper's Set() doesn't support maps until the
 // configuration is written to and read back from a file.
-func (c *Config) setStringMapString(m string, vals map[string]string, options ...ExpandOptions) {
+func (c *Config) setStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
 	for k, v := range vals {
-		c.setString(m+c.delimiter+k, v, options...)
+		c.setString(key+c.delimiter+k, v, options...)
 	}
 }
 

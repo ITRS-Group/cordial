@@ -131,21 +131,18 @@ func (c *Config) AppConfigDir() string {
 // Join returns a configuration key made up of parts joined with the
 // default delimiter for the global configuration object.
 func Join(parts ...string) string {
-	return global.Join(parts...)
-	// elems := []string{}
-	// return strings.Join(append(elems, parts...), global.delimiter)
+	return strings.Join(append([]string{}, parts...), global.delimiter)
 }
 
 // Join returns a configuration settings key joined with the delimiter
 // for the c config object.
 func (c *Config) Join(parts ...string) string {
-	elems := []string{}
-	return strings.Join(append(elems, parts...), c.delimiter)
+	return strings.Join(append([]string{}, parts...), c.delimiter)
 }
 
 // Delimiter returns the global config key delimiter
 func Delimiter() string {
-	return global.Delimiter()
+	return global.delimiter
 }
 
 // Delimiter returns the config c key delimiter
@@ -251,21 +248,19 @@ func SetStringSlice(key string, values []string, options ...ExpandOptions) {
 }
 
 // SetStringMapString iterates over a map[string]string and sets each
-// key to the value given. Viper's Set() doesn't support maps until the
-// configuration is written to and read back from a file.
-func (c *Config) SetStringMapString(m string, vals map[string]string, options ...ExpandOptions) {
+// key to the value given.
+func (c *Config) SetStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.setStringMapString(m, vals, options...)
+	c.setStringMapString(key, vals, options...)
 }
 
-// SetStringMapString iterates over a map[string]string and sets each key to the
-// value given. Viper's Set() doesn't support maps until the
-// configuration is written to and read back from a file.
-func SetStringMapString(m string, vals map[string]string, options ...ExpandOptions) {
+// SetStringMapString iterates over a map[string]string and sets each
+// key to the value given.
+func SetStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
-	global.setStringMapString(m, vals, options...)
+	global.setStringMapString(key, vals, options...)
 }
 
 //
