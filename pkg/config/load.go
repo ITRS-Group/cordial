@@ -75,12 +75,12 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
 
-	if opts.setglobals {
+	if opts.setGlobals {
 		ResetConfig(options...)
 		cf = global
 		// update config directory if available
-		if opts.userconfdir != "" {
-			cf.appUserConfDir = path.Join(opts.userconfdir, opts.appname)
+		if opts.userConfDir != "" {
+			cf.appUserConfDir = path.Join(opts.userConfDir, opts.appName)
 		}
 	} else {
 		cf = New(options...)
@@ -98,7 +98,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 
 	defaults := New(options...)
 
-	if opts.usedefaults && len(opts.internalDefaults) > 0 {
+	if opts.useDefaults && len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults := New(options...)
 		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
@@ -116,14 +116,14 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	// 3. The user configuration directory plus `AppName`, unless IgnoreUserConfDir() is used
 	// 4. The system configuration directory plus `AppName`, unless IgnoreSystemDir() is used
 	confDirs := opts.configDirs
-	if opts.workingdir != "" {
-		confDirs = append(confDirs, opts.workingdir)
+	if opts.workingDir != "" {
+		confDirs = append(confDirs, opts.workingDir)
 	}
-	if opts.userconfdir != "" {
-		confDirs = append(confDirs, path.Join(opts.userconfdir, opts.appname))
+	if opts.userConfDir != "" {
+		confDirs = append(confDirs, path.Join(opts.userConfDir, opts.appName))
 	}
-	if opts.systemdir != "" {
-		confDirs = append(confDirs, path.Join(opts.systemdir, opts.appname))
+	if opts.systemDir != "" {
+		confDirs = append(confDirs, path.Join(opts.systemDir, opts.appName))
 	}
 
 	// if we are merging, then we load in reverse order to ensure lower
@@ -135,7 +135,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	// search directories for defaults unless UseDefault(false) is used
 	// as an option to Load(). Do this even if the config file itself is
 	// set using option SetConfigFile()
-	if opts.usedefaults {
+	if opts.useDefaults {
 		if opts.merge {
 			for _, dir := range confDirs {
 				d := New(options...)
@@ -198,7 +198,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 		if err = ncf.Viper.ReadInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
-				if opts.mustexist {
+				if opts.mustExist {
 					return
 				}
 			} else {
@@ -237,7 +237,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			cf.MergeConfigMap(d.AllSettings())
 		}
 		// return an error if no files read and MustExist() set
-		if found == 0 && opts.mustexist {
+		if found == 0 && opts.mustExist {
 			return cf, fs.ErrNotExist
 		}
 	} else if len(confDirs) > 0 {
@@ -266,16 +266,16 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		// when we get here we have either loaded the first default
 		// file or not found one. if err check opts.mustexist of just
 		// give up
-		if err != nil && opts.mustexist {
+		if err != nil && opts.mustExist {
 			return
 		}
 		// otherwise return no error
 		err = nil
 	}
 
-	if opts.watchconfig {
-		if opts.notifyonchange != nil {
-			cf.Viper.OnConfigChange(opts.notifyonchange)
+	if opts.watchConfig {
+		if opts.notifyOnChange != nil {
+			cf.Viper.OnConfigChange(opts.notifyOnChange)
 		}
 		cf.Viper.WatchConfig()
 	}
@@ -301,7 +301,7 @@ func Path(name string, options ...FileOptions) string {
 	r := opts.remote
 
 	if opts.configFile != "" {
-		if !opts.mustexist {
+		if !opts.mustExist {
 			return opts.configFile
 		}
 
@@ -312,14 +312,14 @@ func Path(name string, options ...FileOptions) string {
 	}
 
 	confDirs := opts.configDirs
-	if opts.workingdir != "" {
-		confDirs = append(confDirs, opts.workingdir)
+	if opts.workingDir != "" {
+		confDirs = append(confDirs, opts.workingDir)
 	}
-	if opts.userconfdir != "" {
-		confDirs = append(confDirs, path.Join(opts.userconfdir, opts.appname))
+	if opts.userConfDir != "" {
+		confDirs = append(confDirs, path.Join(opts.userConfDir, opts.appName))
 	}
-	if opts.systemdir != "" {
-		confDirs = append(confDirs, path.Join(opts.systemdir, opts.appname))
+	if opts.systemDir != "" {
+		confDirs = append(confDirs, path.Join(opts.systemDir, opts.appName))
 	}
 
 	if opts.merge {
@@ -339,7 +339,7 @@ func Path(name string, options ...FileOptions) string {
 				return p
 			}
 		}
-		if !opts.mustexist {
+		if !opts.mustExist {
 			return filepath.Join(confDirs[0], filename)
 		}
 	}
@@ -348,7 +348,7 @@ func Path(name string, options ...FileOptions) string {
 		return "internal defaults"
 	}
 
-	if opts.mustexist {
+	if opts.mustExist {
 		return ""
 	}
 

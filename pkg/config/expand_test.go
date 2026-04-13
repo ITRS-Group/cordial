@@ -532,7 +532,7 @@ func TestExpandWithCustomPrefix(t *testing.T) {
 	config := New()
 
 	// Custom prefix function that reverses the string
-	reverseFunc := func(c *Config, s string, trim bool) (string, error) {
+	reverseFunc := func(_ map[string]any, s string, trim bool) (string, error) {
 		s = strings.TrimPrefix(s, "reverse:")
 		runes := []rune(s)
 		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {

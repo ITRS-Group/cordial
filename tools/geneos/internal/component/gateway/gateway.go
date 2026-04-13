@@ -362,6 +362,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	if changed {
 		if err = instance.SaveConfig(g); err != nil {
+			log.Error().Err(err).Msg("Cannot save configuration")
 			return
 		}
 	}

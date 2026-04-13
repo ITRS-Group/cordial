@@ -161,84 +161,41 @@ limitations under the License.
 package config
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-
 	"github.com/awnumar/memguard"
-	"github.com/maja42/goval"
-
-	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // ExpandString returns the global configuration value for input as an
 // expanded string. The returned string is always a freshly allocated
 // value.
 func ExpandString(input string, options ...ExpandOptions) (value string) {
-	return global.ExpandString(input, options...)
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return global.expandString(input, options...)
 }
 
 // ExpandString returns the configuration c value for input as an
 // expanded string. The returned string is always a freshly allocated
 // value.
 func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
-	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
-		if input != "" {
-			return strings.Clone(input)
-		}
-		// return a *copy* of the initialValue or defaultValue
-		if opts.initialValue != nil {
-			return fmt.Sprint(opts.initialValue)
-		}
-		return fmt.Sprint(opts.defaultValue)
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = expand(input, func(s string) (r string) {
-		if strings.HasPrefix(s, "enc:") {
-			if opts.nodecode {
-				// return string and restore containing ${...}
-				return `${` + s + `}`
-			}
-			return c.expandEncodedString(s[4:], options...)
-		}
-		r, _ = c.ExpandRawString(s, options...)
-		return
-	})
-
-	if opts.trimSpace {
-		value = strings.TrimSpace(value)
-	}
-
-	if value == "" {
-		value = fmt.Sprint(opts.defaultValue)
-	}
-
-	// return a clone
-	return strings.Clone(value)
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expandString(input, options...)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
 func ExpandStringSlice(input []string, options ...ExpandOptions) []string {
-	return global.ExpandStringSlice(input, options...)
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return global.expandStringSlice(input, options...)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
 func (c *Config) ExpandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
-	for _, v := range input {
-		vals = append(vals, c.ExpandString(v, options...))
-	}
-	return
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expandStringSlice(input, options...)
 }
 
 // Expand behaves like ExpandString but returns a byte slice.
@@ -246,160 +203,65 @@ func (c *Config) ExpandStringSlice(input []string, options ...ExpandOptions) (va
 // This should be used where the return value may contain sensitive data
 // and an immutable string cannot be destroyed after use.
 func Expand(input string, options ...ExpandOptions) (value []byte) {
-	return global.Expand(input, options...)
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return global.expand(input, options...)
 }
 
 // Expand behaves like the ExpandString method but returns a byte
 // slice.
 func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
-	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
-		if input != "" {
-			return bytes.Clone([]byte(input))
-		}
-		if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return bytes.Clone(b)
-			}
-			return fmt.Append(value, opts.initialValue)
-		}
-		return fmt.Append(value, opts.defaultValue)
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
-		if bytes.HasPrefix(s, []byte("enc:")) {
-			if opts.nodecode {
-				// return string and restore containing ${...}
-				return fmt.Append([]byte{}, `${`, s, `}`)
-			}
-			return c.expandEncodedBytes(s[4:], options...)
-		}
-		str, _ := c.ExpandRawString(string(s), options...)
-		return []byte(str)
-	})
-
-	if opts.trimSpace {
-		value = bytes.TrimSpace(value)
-	}
-
-	if len(value) == 0 {
-		value = fmt.Append(nil, opts.defaultValue)
-	}
-
-	return
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expand(input, options...)
 }
 
 // ExpandPassword expands the input string and returns a *Plaintext. The
 // TrimSPace option is ignored.
 func ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
-	return &Plaintext{global.ExpandToEnclave(input, options...)}
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return &Plaintext{global.expandToEnclave(input, options...)}
 }
 
 // ExpandPassword expands the input string and returns a *Plaintext. The
 // TrimSPace option is ignored.
 func (c *Config) ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
-	return &Plaintext{c.ExpandToEnclave(input, options...)}
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return &Plaintext{c.expandToEnclave(input, options...)}
 }
 
 // ExpandToEnclave expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
 func ExpandToEnclave(input string, options ...ExpandOptions) *memguard.Enclave {
-	return global.ExpandToEnclave(input, options...)
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return global.expandToEnclave(input, options...)
 }
 
 // ExpandToEnclave expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
 func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
-	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
-		if input != "" {
-			return memguard.NewEnclave([]byte(input))
-		}
-
-		// fallback to any default value or, failing that, an initial value
-		if opts.defaultValue != nil {
-			return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
-		} else if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return memguard.NewEnclave(b)
-			} else {
-				return memguard.NewEnclave(fmt.Append(nil, opts.initialValue))
-			}
-		}
-		return &memguard.Enclave{}
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
-		if bytes.HasPrefix(s, []byte("enc:")) {
-			if opts.nodecode {
-				return memguard.NewEnclave(fmt.Append(nil, `${`, s, `}`))
-			}
-			return c.expandEncodedBytesEnclave(s[4:], options...)
-		}
-		str, _ := c.ExpandRawString(string(s), options...)
-		return memguard.NewEnclave([]byte(str))
-	})
-
-	if value == nil || value.Size() == 0 {
-		// return a *copy* of the defaultValue, don't let memguard wipe it!
-		return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
-	}
-
-	return
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expandToEnclave(input, options...)
 }
 
 // ExpandToLockedBuffer expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
 func ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	return global.ExpandToLockedBuffer(input, options...)
+	global.mutex.RLock()
+	defer global.mutex.RUnlock()
+	return global.expandToLockedBuffer(input, options...)
 }
 
 // ExpandToLockedBuffer expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
 func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
-		if input != "" {
-			return memguard.NewBufferFromBytes([]byte(input))
-		}
-		if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return memguard.NewBufferFromBytes(b)
-			}
-			return memguard.NewBufferFromBytes(fmt.Append(nil, opts.initialValue))
-		}
-		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
-		if bytes.HasPrefix(s, []byte("enc:")) {
-			if opts.nodecode {
-				return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
-			}
-			return c.expandEncodedBytesLockedBuffer(s[4:], options...)
-		}
-		str, _ := c.ExpandRawString(string(s), options...)
-		return memguard.NewBufferFromBytes([]byte(str))
-	})
-
-	if value == nil || value.Size() == 0 {
-		// return a *copy* of the defaultvalue, don't let memguard wipe it!
-		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
-	}
-
-	return
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expandToLockedBuffer(input, options...)
 }
 
 // ExpandAllSettings returns all the settings from config structure c
@@ -407,393 +269,9 @@ func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (v
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
 func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]any) {
-	as := c.AllSettings()
-	all = make(map[string]any, len(as))
-
-	for k, v := range as {
-		switch ev := v.(type) {
-		case string:
-			all[k] = c.ExpandString(ev, options...)
-		case []string:
-			ns := []string{}
-			for _, s := range ev {
-				ns = append(ns, c.ExpandString(s, options...))
-			}
-			all[k] = ns
-		case map[string]any:
-			nm := make(map[string]any, len(ev))
-			for kk, vv := range ev {
-				if vvs, ok := vv.(string); ok {
-					nm[kk] = c.ExpandString(vvs, options...)
-				} else {
-					nm[kk] = vv
-				}
-			}
-			all[k] = nm
-		default:
-			all[k] = ev
-		}
-	}
-	return
-
-}
-
-// splitEncFields breaks the string enc into two strings, the first the
-// keyfile(s) and the second the ciphertext. The split is done on the
-// *last* colon and not the first, otherwise Windows drive letter paths
-// would be considered the split point.
-func splitEncFields(enc string) (keyfiles, ciphertext string) {
-	c := strings.LastIndexByte(enc, ':')
-	if c == -1 {
-		return
-	}
-	keyfiles = enc[:c]
-	if len(enc) > c+1 {
-		ciphertext = enc[c+1:]
-	}
-	return
-}
-
-// splitEncFieldsBytes breaks the string enc into two strings, the first the
-// keyfile(s) and the second the ciphertext. The split is done on the
-// *last* colon and not the first, otherwise Windows drive letter paths
-// would be considered the split point.
-func splitEncFieldsBytes(enc []byte) (keyfiles, ciphertext []byte) {
-	c := bytes.LastIndexByte(enc, ':')
-	if c == -1 {
-		return
-	}
-	keyfiles = enc[:c]
-	if len(enc) > c+1 {
-		ciphertext = enc[c+1:]
-	}
-	return
-}
-
-// expandEncodedString accepts input of the form:
-//
-//	[enc:]keyfile[,keyfile...]:[+encs+HEX|external]
-//
-// Each keyfile is tried until the first that does not return a decoding
-// error. `keyfile` may be prefixed `~/` in which case the file is
-// relative to the user's home directory. If the encoded string is
-// prefixed with `+encs+` (standard Geneos usage) then it is used
-// directly, otherwise the value is looked-up using the normal
-// conventions for external access, e.g. file or URL.
-func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFields(s)
-	if opts.usekeyfile != "" {
-		keyfiles = opts.usekeyfile
-	}
-
-	if !strings.HasPrefix(encodedValue, "+encs+") {
-		encodedValue, _ = c.ExpandRawString(encodedValue, options...)
-	}
-	if encodedValue == "" {
-		return
-	}
-
-	for k := range strings.SplitSeq(keyfiles, "|") {
-		keyfile := KeyFile(ExpandHome(k))
-		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		return p
-	}
-	return ""
-}
-
-func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value []byte) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
-	}
-
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.ExpandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
-	}
-	if len(encodedValue) == 0 {
-		return
-	}
-
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.Decode(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		return p
-	}
-	return
-}
-
-func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
-	}
-
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.ExpandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
-	}
-	if len(encodedValue) == 0 {
-		return
-	}
-
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		return p
-	}
-	return
-}
-
-func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
-	}
-
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.ExpandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
-	}
-	if len(encodedValue) == 0 {
-		return
-	}
-
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		value, _ = p.Open()
-		return
-	}
-	return
-}
-
-// ExpandRawString expands the string s using the same rules and options
-// as [ExpandString] but treats the whole of s as if it were wrapped in
-// '${...}'. The function does most of the core work for configuration
-// expansion but is also exported for use without the decoration
-// required for configuration values, allowing use against command line
-// flag values, for example.
-//
-// With the ExpandNonStringToCSV() or ExpandNonStringToJSON() options,
-// if the item to be expanded is a configuration value (either `config:`
-// prefixed or without a prefix but containing a `.`) and the value
-// resolved is not a plain string then it is either, for a slice of
-// values, returned as a string containing comma-separated strings found
-// or as a JSON encoded representation of the value.
-func (c *Config) ExpandRawString(s string, options ...ExpandOptions) (value string, err error) {
-	opts := evalExpandOptions(c, options...)
-	switch {
-	case strings.Contains(s, "/") && !strings.Contains(s, ":"):
-		// check if defaults disabled
-		if _, ok := opts.funcMaps["file"]; ok {
-			if _, err = os.Stat(s); err != nil {
-				return
-			}
-			return fetchFile(c, s, opts.trimSpace)
-		}
-		return
-	case strings.HasPrefix(s, "config:"), !strings.Contains(s, ":"):
-		// TODO: SHould this dot be a delimiter lookup?
-		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
-			s = strings.TrimPrefix(s, "config:")
-			if !opts.expandNonString {
-				// this call to GetString() must NOT be recursive
-				c.mutex.RLock()
-				value = c.Viper.GetString(s)
-				c.mutex.RUnlock()
-				if opts.trimSpace {
-					value = strings.TrimSpace(value)
-				}
-				return
-			}
-
-			c.mutex.RLock()
-			v := c.Viper.Get(s)
-			c.mutex.RUnlock()
-
-			switch w := v.(type) {
-			case string:
-				// strings still get returned "as-is"
-				value = w
-				if opts.trimSpace {
-					value = strings.TrimSpace(value)
-				}
-			case []any:
-				if opts.expandNonStringCSV {
-					var u []string
-					for _, i := range w {
-						s, ok := i.(string)
-						if ok {
-							u = append(u, s)
-						}
-					}
-					value = strings.Join(u, ",")
-				} else {
-					// type switches do not support fallthrough, so
-					// duplicate code here
-					u, err := json.Marshal(w)
-					if err != nil {
-						return "", err
-					}
-					value = string(u)
-				}
-			default:
-				// if caller has asked for CSV then do not return JSON
-				if opts.expandNonStringCSV {
-					value = ""
-					return
-				}
-				u, err := json.Marshal(w)
-				if err != nil {
-					return "", err
-				}
-				value = string(u)
-			}
-
-			return
-		}
-
-		// CHANGE: Move core to after lookup table loop, giving lookup
-		// tables precedence over environment variables. This is a
-		// change in behaviour but is more consistent with the idea of
-		// lookup tables as a way to override environment variables and
-		// other sources.
-
-		// only lookup env if there are no values maps, NOT if lookups
-		// fail in any given maps
-		// if len(opts.lookupTables) == 0 {
-		// 	value = mapEnv(s)
-		// 	if opts.trimSpace {
-		// 		value = strings.TrimSpace(value)
-		// 	}
-		// 	return
-		// }
-
-		for _, v := range opts.lookupTables {
-			if n, ok := v[s]; ok {
-				value = n
-				if opts.trimSpace {
-					value = strings.TrimSpace(value)
-				}
-				return
-			}
-		}
-
-		value = mapEnv(s)
-		if opts.trimSpace {
-			value = strings.TrimSpace(value)
-		}
-
-		return
-	case strings.HasPrefix(s, "env:"):
-		value = mapEnv(strings.TrimPrefix(s, "env:"))
-		if opts.trimSpace {
-			value = strings.TrimSpace(value)
-		}
-		return
-	default:
-		// check for any registered functions and call that with the
-		// whole of the config string. there must be a ":" here, else
-		// the above test would have picked it up. it is up to the
-		// function called to trim whitespace, if required.
-		f := strings.SplitN(s, ":", 2)
-		if fn, ok := opts.funcMaps[f[0]]; ok {
-			if opts.trimPrefix {
-				value, err = fn(c, f[1], opts.trimSpace)
-			} else {
-				value, err = fn(c, s, opts.trimSpace)
-			}
-			return
-		}
-	}
-
-	return
-}
-
-func fetchURL(cf *Config, url string, trim bool) (s string, err error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	if !trim {
-		s = string(b)
-	} else {
-		s = strings.TrimSpace(string(b))
-	}
-	return
-}
-
-func fetchFile(_ *Config, p string, trim bool) (s string, err error) {
-	b, err := os.ReadFile(ExpandHome(strings.TrimPrefix(p, "file:")))
-	if err != nil {
-		return
-	}
-	if !trim {
-		s = string(b)
-	} else {
-		s = strings.TrimSpace(string(b))
-	}
-	return
-}
-
-func expr(cf *Config, expression string, trim bool) (s string, err error) {
-	eval := goval.NewEvaluator()
-	vars := cf.AllSettings()
-	env := make(map[string]string)
-	for _, e := range os.Environ() {
-		s := strings.SplitN(e, "=", 2)
-		env[s[0]] = s[1]
-	}
-	vars["env"] = env
-	result, err := eval.Evaluate(expression, vars, nil)
-	if err != nil {
-		return
-	}
-	if !trim {
-		s = fmt.Sprint(result)
-	} else {
-		s = strings.TrimSpace(fmt.Sprint(result))
-	}
-	return
-}
-
-// mapEnv is for special case mappings of environment variables across
-// platforms. If a settings is not found via os.GetEnv() then defaults
-// can be substituted. Currently only HOME is supported for Windows.
-func mapEnv(e string) (s string) {
-	if s = os.Getenv(e); s != "" {
-		return
-	}
-	switch e {
-	case "HOME":
-		h, err := UserHomeDir()
-		if err == nil {
-			s = h
-		}
-	}
-	return
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.expandAllSettings(options...)
 }
 
 // the functions below are based on code copied from the Go sources but
@@ -803,8 +281,8 @@ func mapEnv(e string) (s string) {
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 //
-// expand replaces ${var} in the string based on the mapping function.
-func expand(s string, mapping func(string) string) string {
+// expandString replaces ${var} in the string based on the mapping function.
+func expandString(s string, mapping func(string) string) string {
 	var buf []byte
 	// ${} is all ASCII, so bytes are fine for this operation.
 	i := 0

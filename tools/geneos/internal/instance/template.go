@@ -81,6 +81,8 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	var out io.WriteCloser
 	// var t *template.Template
 
+	log.Debug().Msgf("executing template %q for instance %s", name, i)
+
 	cf := i.Config()
 	h := i.Host()
 
@@ -103,7 +105,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	m := cf.ExpandAllSettings(config.NoDecode(true))
 
 	// viper insists this is a float64, manually override
-	m["port"] = uint16(cf.GetUint("port"))
+	m["port"] = config.Get[uint16](cf, "port")
 
 	// set high level defaults
 	m["root"] = h.GetString("geneos")

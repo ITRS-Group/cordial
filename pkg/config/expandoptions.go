@@ -28,7 +28,7 @@ type expandOptions struct {
 	expandNonStringCSV bool
 	expressions        bool
 	externalFuncMaps   bool
-	funcMaps           map[string]func(*Config, string, bool) (string, error)
+	funcMaps           map[string]func(configItems map[string]any, name string, trim bool) (string, error)
 	initialValue       any
 	lookupTables       []map[string]string
 	nodecode           bool
@@ -51,7 +51,7 @@ type ExpandOptions func(*expandOptions)
 
 // use a normal map, protected with mutex and not sync.Map as this is
 // copied into a normal map later on
-var defaultFuncMaps = map[string]func(*Config, string, bool) (string, error){
+var defaultFuncMaps = map[string]func(configItems map[string]any, name string, trim bool) (string, error){
 	"http":  fetchURL,
 	"https": fetchURL,
 	"file":  fetchFile,
@@ -61,7 +61,7 @@ var defaultFuncMapsMutex sync.Mutex
 func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 	e = &expandOptions{
 		externalFuncMaps: true,
-		funcMaps:         map[string]func(*Config, string, bool) (string, error){},
+		funcMaps:         map[string]func(configItems map[string]any, name string, trim bool) (string, error){},
 		replacements:     []string{},
 		trimSpace:        true,
 	}
@@ -144,11 +144,17 @@ func LookupTables(values []map[string]string) ExpandOptions {
 // Prefix defines a custom mapping for the given prefix to an
 // expand-like function. The prefix should not include the terminating
 // ":". If the configuration prefix matches during expansion then the
-// function is called with the config data and the contents of the
-// expansion including the prefix (for URLs) but stripped of the opening
-// `${` and closing `}`. A boolean parameter trims white space from the
-// result if true.
-func Prefix(prefix string, fn func(*Config, string, bool) (string, error)) ExpandOptions {
+// function is called with the config data as a map[string]any, and the
+// contents of the expansion including the prefix (for URLs) but
+// stripped of the opening `${` and closing `}`. A boolean parameter
+// trims white space from the final result if true.
+//
+// The function MUST NOT call other configuration functions or lock the
+// configuration mutex as the calling function will have already done
+// so. The function should return an error if the prefix matches but the
+// value is invalid for any reason, such as a network error when
+// fetching a URL or a missing file when fetching from the file system.
+func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool) (string, error)) ExpandOptions {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}

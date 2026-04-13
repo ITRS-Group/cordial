@@ -457,12 +457,12 @@ func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Rea
 // Owner and group are ignored. Directory entries are used to create
 // directories with matching permissions, again ignoring owner and
 // group.
-func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
+func writeFile(h *geneos.Host, ct *geneos.Component, i string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
 	if ct == nil {
 		return geneos.ErrInvalidArgs
 	}
 
-	instanceDir := h.PathTo(ct, ct.String()+"s", instance)
+	instanceDir := h.PathTo(ct, ct.String()+"s", i)
 	destPath := path.Join(instanceDir, fp)
 
 	switch hdr.Typeflag {
@@ -477,8 +477,11 @@ func writeFile(h *geneos.Host, ct *geneos.Component, instance string, fp string,
 			return
 		}
 
+		// if the file is the instance config, then call rebuild to
+		// update paths and ports as required, and to remove legacy
+		// parameters, instead of just writing the file out
 		if fp == ct.String()+".json" {
-			return rebuildConfig(h, ct, instance, instanceDir, tr)
+			return rebuildConfig(h, ct, i, instanceDir, tr)
 		}
 
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
@@ -610,6 +613,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 		config.Host(h),
 		config.AddDirs(instanceDir),
 		config.SetAppName(i),
+		config.IgnoreEmptyValues(),
 	); err != nil {
 		return err
 	}

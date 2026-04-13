@@ -109,7 +109,7 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 // "match" environment variable against regex and return
 // "true" or "false" or error. If the environment variable
 // is not set or empty, return "false"
-func matchPrefix(cf *config.Config, s string, trim bool) (result string, err error) {
+func matchPrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "match:")
 	// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
 	p := strings.SplitN(s, ":", 2)
@@ -132,7 +132,7 @@ func matchPrefix(cf *config.Config, s string, trim bool) (result string, err err
 	return fmt.Sprintf("%v", re.MatchString(val)), nil
 }
 
-func noMatchPrefix(cf *config.Config, s string, trim bool) (result string, err error) {
+func noMatchPrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "nomatch:")
 	// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
 	p := strings.SplitN(s, ":", 2)
@@ -163,7 +163,7 @@ func noMatchPrefix(cf *config.Config, s string, trim bool) (result string, err e
 // regexp.ReplaceAllString(). If the environment variable is
 // empty or not defined, an empty string is returned. If
 // parsing the PATTERN fails then no substitution is done
-func replacePrefix(cf *config.Config, s string, trim bool) (result string, err error) {
+func replacePrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "replace:")
 	env, expr, found := strings.Cut(s, ":")
 	if !found || len(env) == 0 || len(expr) == 0 {
@@ -210,9 +210,8 @@ func replacePrefix(cf *config.Config, s string, trim bool) (result string, err e
 // Extend: Each ENV can be made up of multiple environment
 // variable names concatenated with either a plus (`+`) (as
 // a zero-length separator), two plus symbols for a single
-// symbol in the output (`+`) or one of a space (` `), dash
-// (`-`) or forward slash (`/`).
-func selectPrefix(cf *config.Config, s string, trim bool) (result string, err error) {
+// symbol in the output (`+`) or one of a space (` `), dash (`-`) or forward slash (`/`).
+func selectPrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	// const validSeparators = "+ /-"
 	var r strings.Builder
 
@@ -285,7 +284,7 @@ func selectPrefix(cf *config.Config, s string, trim bool) (result string, err er
 // string if no field is set use `${field:FIELD:}` noting the colon just
 // before the closing brace. In all other cases it returns an empty
 // string.
-func fieldPrefix(cf *config.Config, s string, trim bool) (result string, err error) {
+func fieldPrefix(ci map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "field:")
 	fields := strings.Split(s, ":")
 	if len(fields) == 0 {
@@ -294,7 +293,10 @@ func fieldPrefix(cf *config.Config, s string, trim bool) (result string, err err
 	last := len(fields) - 1
 	def := fields[last]
 	fields = fields[:last]
-	incident := cf.GetStringMapString("incident_fields")
+	incident, ok := ci["incident_fields"].(map[string]string)
+	if !ok {
+		return def, nil
+	}
 
 	for _, field := range fields {
 		if r, ok := incident[field]; ok {

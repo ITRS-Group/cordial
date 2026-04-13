@@ -351,7 +351,11 @@ func initConfig() {
 		config.MustExist(),
 	)
 
-	log.Debug().Msgf("configuration loaded from %s", configPath)
+	if configPath != "" {
+		log.Debug().Msgf("configuration loaded from %s", configPath)
+	} else {
+		log.Debug().Msg("no configuration file found, using defaults and environment variables")
+	}
 
 	// support old set-ups
 	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")
@@ -366,6 +370,7 @@ func initConfig() {
 
 	// initialise after config loaded
 	geneos.InitHosts(cordial.ExecutableName())
+	log.Debug().Msg("hosts loaded")
 
 	// for now, always load profiles, even if not used
 	_, err = profiles.Load()

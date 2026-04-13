@@ -139,9 +139,12 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 
 		attrs := entity.GetSliceStringMapString("attributes",
 			config.LookupTable(mappings),
-			config.Prefix("uuid", func(c *config.Config, s string, b bool) (string, error) {
+			config.Prefix("uuid", func(ci map[string]any, s string, b bool) (string, error) {
 				s = strings.TrimPrefix(s, "uuid:")
-				uuidSource := c.GetString(s, config.TrimPrefix(), config.LookupTable(mappings))
+				uuidSource, ok := ci[s].(string) // c.GetString(s, config.TrimPrefix(), config.LookupTable(mappings))
+				if !ok {
+					return "", nil
+				}
 				if b {
 					uuidSource = strings.TrimSpace(uuidSource)
 				}

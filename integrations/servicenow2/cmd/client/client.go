@@ -105,7 +105,7 @@ var clientCmd = &cobra.Command{
 			// "match" environment variable against regex and return
 			// "true" or "false" or error. If the environment variable
 			// is not set or empty, return "false"
-			config.Prefix("match", func(cf *config.Config, s string, trim bool) (result string, err error) {
+			config.Prefix("match", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "match:")
 				// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
 				p := strings.SplitN(s, ":", 2)
@@ -128,7 +128,7 @@ var clientCmd = &cobra.Command{
 				return fmt.Sprintf("%v", re.MatchString(val)), nil
 			}),
 
-			config.Prefix("nomatch", func(cf *config.Config, s string, trim bool) (result string, err error) {
+			config.Prefix("nomatch", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "nomatch:")
 				// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
 				p := strings.SplitN(s, ":", 2)
@@ -159,7 +159,7 @@ var clientCmd = &cobra.Command{
 			// regexp.ReplaceAllString(). If the environment variable is
 			// empty or not defined, an empty string is returned. If
 			// parsing the PATTERN fails then no substitution is done
-			config.Prefix("replace", func(cf *config.Config, s string, trim bool) (result string, err error) {
+			config.Prefix("replace", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "replace:")
 				env, expr, found := strings.Cut(s, ":")
 				if !found || len(env) == 0 || len(expr) == 0 {
@@ -208,7 +208,7 @@ var clientCmd = &cobra.Command{
 			// a zero-length separator), two plus symbols for a single
 			// symbol in the output (`+`) or one of a space (` `), dash
 			// (`-`) or forward slash (`/`).
-			config.Prefix("select", func(cf *config.Config, s string, trim bool) (result string, err error) {
+			config.Prefix("select", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				// const validSeparators = "+ /-"
 				var r strings.Builder
 
@@ -281,7 +281,7 @@ var clientCmd = &cobra.Command{
 			// string if no field is set use `${field:FIELD:}` noting the colon just
 			// before the closing brace. In all other cases it returns an empty
 			// string.
-			config.Prefix("field", func(cf *config.Config, s string, trim bool) (result string, err error) {
+			config.Prefix("field", func(ci map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "field:")
 				fields := strings.Split(s, ":")
 				if len(fields) == 0 {

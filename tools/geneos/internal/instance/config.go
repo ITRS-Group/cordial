@@ -248,15 +248,11 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 	return
 }
 
-// SaveConfig writes the first values map or, if none, the instance
-// configuration to the standard file for that instance. All legacy
-// parameter (aliases) are removed from the set of values saved.
-//
-// Any configuration values of an empty string are removed from the
-// saved configuration.
-func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
-	var keys []string
-
+// SaveConfig writes the instance configuration to the standard file for
+// that instance. All legacy parameter (aliases) are removed from the
+// set of values saved. Any empty configuration values are removed from
+// the saved configuration.
+func SaveConfig(i geneos.Instance) (err error) {
 	log.Debug().Msgf("saving config for %s", i)
 
 	// speculatively migrate the config, in case there is a legacy .rc
@@ -268,38 +264,22 @@ func SaveConfig(i geneos.Instance, values ...map[string]any) (err error) {
 		return resp.Err
 	}
 
-	if len(values) > 0 {
-		keys = slices.Collect(maps.Keys(values[0]))
-	} else {
-		keys = i.Config().AllKeys()
-	}
+	lpKeys := slices.Collect(maps.Keys(i.Type().LegacyParameters))
 
-	nv := config.New()
-	lp := i.Type().LegacyParameters
-
-	for _, k := range keys {
-		v := i.Config().Get(k)
-		// skip aliases and empty settings
-		if _, ok := lp[k]; ok || v == "" {
-			continue
-		}
-		nv.Set(k, v)
-	}
-
-	if err = nv.Save(i.Type().String(),
+	if err = i.Config().Save(i.Type().String(),
 		config.Host(i.Host()),
 		config.AddDirs(Home(i)),
 		config.SetAppName(i.Name()),
+		config.IgnoreEmptyValues(),
+		config.IgnoreKeys(lpKeys...),
 	); err != nil {
 		log.Debug().Err(err).Msgf("saving config for %s", i)
 		return
 	}
 
-	if len(values) == 0 {
-		if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
-			log.Debug().Msg("setting modtime")
-			i.SetLoaded(st.ModTime())
-		}
+	if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
+		log.Debug().Msg("setting modtime")
+		i.SetLoaded(st.ModTime())
 	}
 
 	// rebuild on every save, but skip errors from any components that do not support rebuilds

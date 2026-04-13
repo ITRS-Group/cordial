@@ -34,30 +34,32 @@ var (
 )
 
 type fileOptions struct {
-	appname                     string
+	appName                     string
 	configDirs                  []string
 	configFile                  string
 	configFileReader            io.Reader
 	extension                   string // extension without "."
 	delimiter                   string
 	defaultConfig               *Config
-	envprefix                   string
-	envdelimiter                string
-	expandonsave                bool
-	expandoptions               []ExpandOptions
+	envPrefix                   string
+	envDelimiter                string
+	expandOnSave                bool
+	expandOptions               []ExpandOptions
+	ignoreEmptyValues           bool
+	ignoreKeys                  []string
 	internalDefaults            []byte
 	internalDefaultsFormat      string
 	internalDefaultsCheckErrors bool
 	merge                       bool
-	mustexist                   bool
-	notifyonchange              func(fsnotify.Event)
+	mustExist                   bool
+	notifyOnChange              func(fsnotify.Event)
 	remote                      host.Host
-	setglobals                  bool
-	systemdir                   string
-	usedefaults                 bool
-	userconfdir                 string
-	watchconfig                 bool
-	workingdir                  string
+	setGlobals                  bool
+	systemDir                   string
+	useDefaults                 bool
+	userConfDir                 string
+	watchConfig                 bool
+	workingDir                  string
 }
 
 // FileOptions can be passed to the Load or Save functions to
@@ -67,7 +69,7 @@ type FileOptions func(*fileOptions)
 func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
 		delimiter:              defaultKeyDelimiter,
-		envdelimiter:           "_",
+		envDelimiter:           "_",
 		internalDefaultsFormat: "yaml",
 	}
 	for _, opt := range options {
@@ -80,15 +82,15 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	// init defaults
 	c = &fileOptions{
-		envdelimiter: "_",
+		envDelimiter: "_",
 		remote:       host.Localhost,
 		configDirs:   []string{},
-		workingdir:   ".",
-		systemdir:    "/etc", // UNIX/Linux only!
-		usedefaults:  true,
+		workingDir:   ".",
+		systemDir:    "/etc", // UNIX/Linux only!
+		useDefaults:  true,
 		delimiter:    defaultKeyDelimiter,
 	}
-	c.userconfdir = "placeholder"
+	c.userConfDir = "placeholder"
 
 	for _, opt := range options {
 		opt(c)
@@ -99,18 +101,18 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		c.internalDefaultsFormat = "yaml"
 	}
 
-	if c.appname == "" {
-		c.appname = configName
+	if c.appName == "" {
+		c.appName = configName
 	}
 
 	// if not cleared by options...
-	if c.userconfdir == "placeholder" {
+	if c.userConfDir == "placeholder" {
 		var err error
-		c.userconfdir, err = UserConfigDir()
+		c.userConfDir, err = UserConfigDir()
 		// if lookup fails, for example a domain account and we are
 		// built without CGO for static linking, then set none.
 		if err != nil {
-			c.userconfdir = ""
+			c.userConfDir = ""
 			return
 		}
 	}
@@ -133,13 +135,13 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		appname:    configName,
+		appName:    configName,
 		extension:  defaultFileExtension,
 		remote:     host.Localhost,
 		configDirs: []string{},
 	}
 
-	c.userconfdir, _ = UserConfigDir()
+	c.userConfDir, _ = UserConfigDir()
 
 	for _, opt := range options {
 		opt(c)
@@ -147,7 +149,7 @@ func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions)
 
 	if len(c.configDirs) == 0 {
 		dir, _ := UserConfigDir()
-		c.configDirs = append(c.configDirs, path.Join(dir, c.appname))
+		c.configDirs = append(c.configDirs, path.Join(dir, c.appName))
 	}
 	return
 }
@@ -172,7 +174,7 @@ func DefaultFileExtension(extension string) {
 // configuration is then returned by [Load].
 func UseGlobal() FileOptions {
 	return func(c *fileOptions) {
-		c.setglobals = true
+		c.setGlobals = true
 	}
 }
 
@@ -184,7 +186,7 @@ func UseGlobal() FileOptions {
 // may be located elsewhere to the main configuration.
 func UseDefaults(b bool) FileOptions {
 	return func(c *fileOptions) {
-		c.usedefaults = b
+		c.useDefaults = b
 	}
 }
 
@@ -214,7 +216,7 @@ func WithDefaultConfig(cf *Config) FileOptions {
 // not found. This does not apply to default configuration files.
 func MustExist() FileOptions {
 	return func(lo *fileOptions) {
-		lo.mustexist = true
+		lo.mustExist = true
 	}
 }
 
@@ -231,7 +233,7 @@ func MustExist() FileOptions {
 //	${HOME}/.config/basename/myprogram.yaml
 func SetAppName(name string) FileOptions {
 	return func(c *fileOptions) {
-		c.appname = name
+		c.appName = name
 	}
 }
 
@@ -289,9 +291,9 @@ func AddDirs(paths ...string) FileOptions {
 func FromDir(dir string) FileOptions {
 	return func(lo *fileOptions) {
 		lo.configDirs = []string{dir}
-		lo.workingdir = ""
-		lo.systemdir = ""
-		lo.userconfdir = ""
+		lo.workingDir = ""
+		lo.systemDir = ""
+		lo.userConfDir = ""
 	}
 }
 
@@ -300,7 +302,7 @@ func FromDir(dir string) FileOptions {
 // when the caller may be running from an unknown or untrusted location.
 func IgnoreWorkingDir() FileOptions {
 	return func(c *fileOptions) {
-		c.workingdir = ""
+		c.workingDir = ""
 	}
 }
 
@@ -309,7 +311,7 @@ func IgnoreWorkingDir() FileOptions {
 // [os.UserConfDir]
 func IgnoreUserConfDir() FileOptions {
 	return func(c *fileOptions) {
-		c.userconfdir = ""
+		c.userConfDir = ""
 	}
 }
 
@@ -318,7 +320,7 @@ func IgnoreUserConfDir() FileOptions {
 // is normally `/etc` and a sub-directory of AppName.
 func IgnoreSystemDir() FileOptions {
 	return func(c *fileOptions) {
-		c.systemdir = ""
+		c.systemDir = ""
 	}
 }
 
@@ -359,8 +361,8 @@ func KeyDelimiter(delimiter string) FileOptions {
 // underscore.
 func WithEnvs(prefix string, delimiter string) FileOptions {
 	return func(fo *fileOptions) {
-		fo.envprefix = prefix
-		fo.envdelimiter = delimiter
+		fo.envPrefix = prefix
+		fo.envDelimiter = delimiter
 	}
 }
 
@@ -373,9 +375,9 @@ func WithEnvs(prefix string, delimiter string) FileOptions {
 // viper.OnConfigChange. Only the first notify function is used.
 func WatchConfig(notify ...func(fsnotify.Event)) FileOptions {
 	return func(fo *fileOptions) {
-		fo.watchconfig = true
+		fo.watchConfig = true
 		if len(notify) > 0 {
-			fo.notifyonchange = notify[0]
+			fo.notifyOnChange = notify[0]
 		}
 	}
 }
@@ -401,8 +403,8 @@ func StopOnInternalDefaultsErrors() FileOptions {
 // back in and so does not need to be expanded on load.
 func ExpandOnSave(options ...ExpandOptions) FileOptions {
 	return func(fo *fileOptions) {
-		fo.expandonsave = true
-		fo.expandoptions = options
+		fo.expandOnSave = true
+		fo.expandOptions = options
 	}
 }
 
@@ -411,6 +413,29 @@ func ExpandOnSave(options ...ExpandOptions) FileOptions {
 // reset by calling DefaultExpandOptions with no arguments.
 func DefaultExpandOptions(options ...ExpandOptions) FileOptions {
 	return func(fo *fileOptions) {
-		fo.expandoptions = options
+		fo.expandOptions = options
+	}
+}
+
+// IgnoreEmptyValues tells Save to ignore any keys with empty values
+// when writing the configuration to a file. This is off by default, and
+// all keys are saved regardless of their value. This can be useful to
+// avoid writing empty values to a configuration file, which can help to
+// keep the file clean and easier to read.
+func IgnoreEmptyValues() FileOptions {
+	return func(fo *fileOptions) {
+		fo.ignoreEmptyValues = true
+	}
+}
+
+// IgnoreKeys tells Save to ignore the specified keys when writing the
+// configuration to a file. This is off by default, and all keys are
+// saved regardless of their name. This can be useful to avoid writing
+// certain keys to a configuration file, for example if they contain
+// sensitive information or if they are not relevant to the
+// configuration being saved.
+func IgnoreKeys(keys ...string) FileOptions {
+	return func(fo *fileOptions) {
+		fo.ignoreKeys = append(fo.ignoreKeys, keys...)
 	}
 }
