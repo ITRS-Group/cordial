@@ -27,7 +27,13 @@ COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
+ENV GOCACHE=/root/.cache/go-build
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=cache,target="/root/.cache/go-build" \
     set -eux; \
     # build geneos (in Windows version)
     cd /app/cordial/tools/geneos; \
@@ -78,7 +84,13 @@ COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
+ENV GOCACHE=/root/.cache/go-build
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=cache,target="/root/.cache/go-build" \
     set -eux; \
     # libemail
     cd /app/cordial/libraries/libemail; \
