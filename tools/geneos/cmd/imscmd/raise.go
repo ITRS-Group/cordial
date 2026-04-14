@@ -25,6 +25,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -188,11 +189,11 @@ var raiseCmd = &cobra.Command{
 		for _, r := range cf.GetStringSlice(cf.Join("ims-gateway", "url")) {
 			ccf := &ims.ClientConfig{
 				URL:     r + "/" + raiseCmdIMSType,
-				Token:   cf.GetString(config.Join("ims-gateway", "authentication", "token")),
-				Timeout: cf.GetDuration(config.Join("ims-gateway", "timeout")),
+				Token:   config.Get[string](cf, config.Join("ims-gateway", "authentication", "token")),
+				Timeout: config.Get[time.Duration](cf, config.Join("ims-gateway", "timeout")),
 			}
-			ccf.TLS.SkipVerify = cf.GetBool(config.Join("ims-gateway", "tls", "skip-verify"))
-			ccf.TLS.Chain = cf.GetBytes(config.Join("ims-gateway", "tls", "chain"))
+			ccf.TLS.SkipVerify = config.Get[bool](cf, config.Join("ims-gateway", "tls", "skip-verify"))
+			ccf.TLS.Chain = config.Get[[]byte](cf, config.Join("ims-gateway", "tls", "chain"))
 			rc := ims.NewClient(ccf)
 
 			if raiseCmdIMSType == "snow" {

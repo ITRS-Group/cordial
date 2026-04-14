@@ -165,7 +165,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	// update existing request if found with the same correlation ID
 
 	reqCf := config.New(config.WithDefaults(*resp.Requests[0], "json"))
-	requestID := reqCf.GetInt64("id")
+	requestID := config.Get[int64](reqCf, "id")
 
 	log.Debug().Msgf("existing request ID: %d", requestID)
 

@@ -281,8 +281,8 @@ func (c *Config) ExpandAllSettings(options ...ExpandOptions) (all map[string]any
 // source code is governed by a BSD-style license that can be found in
 // the LICENSE file.
 //
-// expandString replaces ${var} in the string based on the mapping function.
-func expandString(s string, mapping func(string) string) string {
+// _expandString replaces ${var} in the string based on the mapping function.
+func _expandString(s string, mapping func(string) string) string {
 	var buf []byte
 	// ${} is all ASCII, so bytes are fine for this operation.
 	i := 0
@@ -320,7 +320,7 @@ func expandString(s string, mapping func(string) string) string {
 }
 
 // as above but for byte slices directly
-func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
+func _expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 	var buf []byte
 	// ${} is all UTF-8, so bytes are fine for this operation.
 	i := 0
@@ -357,7 +357,7 @@ func expandBytes(s []byte, mapping func([]byte) []byte) []byte {
 	return append(buf, s[i:]...)
 }
 
-func expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
+func _expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
 	var buf []byte
 	// ${} is all UTF-8, so bytes are fine for this operation.
 	i := 0
@@ -402,7 +402,7 @@ func expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard
 	return memguard.NewEnclave(buf)
 }
 
-func expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
+func _expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
 	var buf []byte
 	// ${} is all UTF-8, so bytes are fine for this operation.
 	i := 0

@@ -94,11 +94,12 @@ var snapshotCmd = &cobra.Command{
 			return
 		}
 
+		cf := config.GetConfig()
 		if snapshotCmdUsername == "" {
-			snapshotCmdUsername = config.GetString(config.Join("snapshot", "username"))
+			snapshotCmdUsername = cf.GetString(cf.Join("snapshot", "username"))
 		}
 
-		snapshotCmdPassword = config.GetPassword(config.Join("snapshot", "password"))
+		snapshotCmdPassword = config.Get[*config.Plaintext](cf, cf.Join("snapshot", "password"))
 
 		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
 			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
@@ -143,7 +144,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		// from the command line or user/global config or credentials
 		// file
 		username := i.Config().GetString(config.Join("snapshot", "username"))
-		password := i.Config().GetPassword(config.Join("snapshot", "password"))
+		password := config.Get[*config.Plaintext](i.Config(), config.Join("snapshot", "password"))
 
 		if username == "" {
 			username = snapshotCmdUsername
@@ -160,11 +161,11 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				username = creds.GetString("username")
-				password = creds.GetPassword("password")
+				password = config.Get[*config.Plaintext](creds, "password")
 			} else {
 				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(cordial.ExecutableName())); creds != nil {
 					username = creds.GetString("username")
-					password = creds.GetPassword("password")
+					password = config.Get[*config.Plaintext](creds, "password")
 				}
 			}
 		}

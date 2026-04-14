@@ -565,7 +565,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 			continue
 		case "port":
 			ports := instance.GetAllPorts(h)
-			if ports[cf.GetUint16(k)] {
+			if ports[config.Get[uint16](cf, k)] {
 				// port already in use, get the next one
 				cf.Set(k, instance.NextFreePort(h, ct))
 			}

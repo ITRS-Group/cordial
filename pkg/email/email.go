@@ -77,7 +77,7 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 	if conf.GetString("_smtp_username") != "" {
 		mailOpts = append(mailOpts,
 			mail.WithUsername(conf.GetString("_smtp_username")),
-			mail.WithPassword(conf.GetPassword("_smtp_password").String()),
+			mail.WithPassword(config.Get[string](conf, "_smtp_password")),
 			mail.WithSMTPAuth(mail.SMTPAuthLogin),
 		)
 	} else {
@@ -88,8 +88,8 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 
 	// override port policy if we are told to, but zero skips through
 	// sometimes, so check that too
-	if conf.IsSet("_smtp_port") && conf.GetInt("_smtp_port") != 0 {
-		mailOpts = append(mailOpts, mail.WithPort(conf.GetInt("_smtp_port")))
+	if conf.IsSet("_smtp_port") && config.Get[int](conf, "_smtp_port") != 0 {
+		mailOpts = append(mailOpts, mail.WithPort(config.Get[int](conf, "_smtp_port")))
 	}
 
 	if conf.GetBool("_smtp_tls_insecure") {
@@ -211,14 +211,14 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 		smtpserver = cf.GetString("email.smtp")
 
 		if eusername != "" {
-			epassword = cf.GetPassword("email.password")
+			epassword = config.Get[*config.Plaintext](cf, "email.password")
 		}
 
 		if eusername == "" {
 			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
 			if creds != nil {
 				eusername = creds.GetString("username")
-				epassword = creds.GetPassword("password")
+				epassword = config.Get[*config.Plaintext](creds, "password")
 			}
 		}
 	}
@@ -228,8 +228,8 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	em.SetDefault("_smtp_server", smtpserver)
 	if cf != nil {
 		em.SetDefault("_smtp_tls", cf.GetString("email.use-tls"))
-		em.SetDefault("_smtp_tls_insecure", cf.GetBool("email.tls-skip-verify"))
-		em.SetDefault("_smtp_port", cf.GetInt("email.port"))
+		em.SetDefault("_smtp_tls_insecure", config.Get[bool](cf, "email.tls-skip-verify"))
+		em.SetDefault("_smtp_port", config.Get[int](cf, "email.port"))
 		em.SetDefault("_from", cf.GetString("email.from"))
 		em.SetDefault("_to", cf.GetString("email.to"))
 		em.SetDefault("_cc", cf.GetString("email.cc"))

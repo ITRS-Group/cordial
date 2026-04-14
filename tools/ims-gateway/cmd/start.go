@@ -235,8 +235,8 @@ func startHTTPServer(cf *config.Config, listen string, handler http.Handler) err
 		return http.ListenAndServe(listen, handler)
 	}
 
-	certPEM := config.GetBytes(cf.Join("server", "tls", "certificate"))
-	keyPEM := config.GetBytes(cf.Join("server", "tls", "private-key"))
+	certPEM := config.Get[[]byte](cf, cf.Join("server", "tls", "certificate"))
+	keyPEM := config.Get[[]byte](cf, cf.Join("server", "tls", "private-key"))
 
 	cert, err := tls.X509KeyPair(certPEM, keyPEM)
 	if err != nil {

@@ -41,7 +41,7 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 	password := &config.Plaintext{}
 
 	if username != "" {
-		password = cf.GetPassword("gateway.password")
+		password = config.Get[*config.Plaintext](cf, "gateway.password")
 	}
 
 	if username == "" {
@@ -53,12 +53,12 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 		}
 		if creds != nil {
 			username = creds.GetString("username")
-			password = creds.GetPassword("password")
+			password = config.Get[*config.Plaintext](creds, "password")
 		}
 	}
 
 	return commands.DialGateway(u,
 		commands.SetBasicAuth(username, password),
-		commands.AllowInsecureCertificates(cf.GetBool("gateway.allow-insecure")),
+		commands.AllowInsecureCertificates(config.Get[bool](cf, "gateway.allow-insecure")),
 	)
 }

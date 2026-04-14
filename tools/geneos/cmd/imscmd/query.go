@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -92,12 +93,12 @@ var queryCmd = &cobra.Command{
 		for _, r := range cf.GetStringSlice(cf.Join("ims-gateway", "url")) {
 			ccf := &ims.ClientConfig{
 				URL:     r + "/" + queryCmdIMSType,
-				Token:   cf.GetString(cf.Join("ims-gateway", "authentication", "token")),
-				Timeout: cf.GetDuration(cf.Join("ims-gateway", "timeout")),
+				Token:   config.Get[string](cf, config.Join("ims-gateway", "authentication", "token")),
+				Timeout: config.Get[time.Duration](cf, config.Join("ims-gateway", "timeout")),
 			}
-			ccf.TLS.SkipVerify = cf.GetBool(cf.Join("ims-gateway", "tls", "skip-verify"))
-			ccf.TLS.Chain = cf.GetBytes(cf.Join("ims-gateway", "tls", "chain"))
-			ccf.Trace = cf.GetBool(cf.Join("ims-gateway", "trace"))
+			ccf.TLS.SkipVerify = config.Get[bool](cf, config.Join("ims-gateway", "tls", "skip-verify"))
+			ccf.TLS.Chain = config.Get[[]byte](cf, config.Join("ims-gateway", "tls", "chain"))
+			ccf.Trace = config.Get[bool](cf, config.Join("ims-gateway", "trace"))
 
 			rc := ims.NewClient(ccf)
 

@@ -96,6 +96,13 @@ func NewPlaintext(buf []byte) *Plaintext {
 	return &Plaintext{memguard.NewEnclave(buf)}
 }
 
+// NewPlaintextFromString returns a memguard Enclave initialised with the
+// string in buf. The caller must ensure that the string is not retained
+// elsewhere in the program.
+func NewPlaintextFromString(str string) *Plaintext {
+	return &Plaintext{memguard.NewEnclave([]byte(str))}
+}
+
 // IsNil returns true if the secret or the underlying memguard Enclave
 // is nil
 func (secret *Plaintext) IsNil() bool {

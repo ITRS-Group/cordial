@@ -216,6 +216,7 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	importFrom := instance.BaseVersion(w)
 	if err = os.Chdir(importFrom); err != nil {
+		log.Debug().Err(err).Msgf("instance config %#v", w.Config().AllSettings())
 		return
 	}
 

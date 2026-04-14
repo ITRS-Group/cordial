@@ -86,7 +86,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	}
 
 	if slices.Contains(cf.GetStringSlice("email.contents"), "images") {
-		for name, path := range cf.GetStringMapString("images") {
+		for name, path := range config.Get[map[string]string](cf, "images") {
 			if _, err := os.Stat(path); err != nil {
 				log.Error().Err(err).Msg("skipping")
 				continue

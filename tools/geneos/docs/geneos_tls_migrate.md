@@ -34,6 +34,12 @@ Each component type will use the above parameters as appropriate. For example, t
 geneos tls migrate [TYPE] [NAME...] [flags]
 ```
 
+### Options
+
+```text
+  -c, --check   check if instance is already migrated
+```
+
 ## SEE ALSO
 
 * [geneos tls](geneos_tls.md)	 - TLS Certificate Operations

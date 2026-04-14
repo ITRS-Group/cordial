@@ -275,15 +275,15 @@ func showInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	for _, k := range i.Config().AllKeys() {
 		// skip any names in the alias table
 		if _, ok := aliases[k]; !ok {
-			nv.Set(k, i.Config().Get(k))
+			nv.Set(k, config.Get[any](i.Config(), k))
 		}
 	}
 
-	as := nv.ExpandAllSettings(config.NoDecode(true))
-	if showCmdRaw {
-		as = nv.AllSettings()
+	as := nv.AllSettings()
+	if !showCmdRaw {
+		as = nv.ExpandAllSettings(config.NoDecode(true))
 	}
-	cf := &showCmdConfig{
+	resp.Value = &showCmdConfig{
 		Instance: showCmdInstanceConfig{
 			Name:      i.Name(),
 			Host:      i.Host().String(),
@@ -294,6 +294,5 @@ func showInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		Configuration: as,
 	}
 
-	resp.Value = cf
 	return
 }

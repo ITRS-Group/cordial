@@ -224,13 +224,14 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 	log.Debug().Msgf("using %q as root", root)
 	options = append(options, geneos.UseRoot(root))
 
+	cf := config.GetConfig()
 	// download authentication
 	if initCmdDLUsername == "" {
-		initCmdDLUsername = config.GetString(config.Join("download", "username"))
+		initCmdDLUsername = cf.GetString(cf.Join("download", "username"))
 	}
 
 	if initCmdDLUsername != "" {
-		initCmdDLPassword = config.GetPassword(config.Join("download", "password"))
+		initCmdDLPassword = config.Get[*config.Plaintext](cf, cf.Join("download", "password"))
 
 		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
 			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)

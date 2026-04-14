@@ -237,11 +237,12 @@ geneos install netprobe -b active_dev -U
 
 		// don't look for credentials if we are only installing fom local sources
 		if !installCmdLocal {
+			cf := config.GetConfig()
 			if installCmdUsername == "" {
-				installCmdUsername = config.GetString(config.Join("download", "username"))
+				installCmdUsername = cf.GetString(cf.Join("download", "username"))
 			}
 
-			installCmdPassword = config.GetPassword(config.Join("download", "password"))
+			installCmdPassword = config.Get[*config.Plaintext](cf, cf.Join("download", "password"))
 
 			if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
 				installCmdPassword, err = config.ReadPasswordInput(false, 0)

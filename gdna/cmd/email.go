@@ -198,19 +198,19 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
 				reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
 				reporter.XLSXScramble(cf.GetBool("email.scramble")),
-				reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
+				reporter.XLSXPassword(config.Get[*config.Plaintext](cf, "xlsx.password")),
 				reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
-				reporter.IntFormat(cf.GetInt("xlsx.formats.int", config.Default(1))),
-				reporter.PercentFormat(cf.GetInt("xlsx.formats.percent", config.Default(9))),
+				reporter.IntFormat(config.Get[int](cf, "xlsx.formats.int", config.Default(1))),
+				reporter.PercentFormat(config.Get[int](cf, "xlsx.formats.percent", config.Default(9))),
 				reporter.SeverityColours(
 					cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF")),
 					cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C")),
 					cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057")),
 					cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668")),
 				),
-				reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
-				reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
-				reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
+				reporter.MinColumnWidth(config.Get[float64](cf, "xlsx.formats.min-width")),
+				reporter.MaxColumnWidth(config.Get[float64](cf, "xlsx.formats.max-width")),
+				reporter.XLSXHeadlines(config.Get[int](cf, "xlsx.headlines")),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Render()
@@ -325,7 +325,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	server := cf.GetString("email.smtp-server", config.Default("localhost"))
 
 	if username != "" {
-		password = cf.GetPassword("email.password")
+		password = config.Get[*config.Plaintext](cf, "email.password")
 	}
 
 	if username == "" {
@@ -335,13 +335,13 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 		)
 		if creds != nil {
 			username = creds.GetString("username")
-			password = creds.GetPassword("password", config.UseKeyfile(cf.GetString("email.key-file")))
+			password = config.Get[*config.Plaintext](creds, "password", config.UseKeyfile(cf.GetString("email.key-file")))
 		}
 	}
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithTimeout(time.Duration(cf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
+		mail.WithTimeout(time.Duration(config.Get[int](cf, "_smtp_timeout", config.Default(10))) * time.Second),
 	}
 
 	if username != "" {

@@ -29,7 +29,9 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ## Examples
 
 ```bash
+# Import a certificate bundle for the netprobe instance on localhost from a PEM file
 geneos tls import netprobe localhost /path/to/file.pem
+# Import a signer bundle from a PEM file
 geneos tls import /path/to/file.pem
 
 ```

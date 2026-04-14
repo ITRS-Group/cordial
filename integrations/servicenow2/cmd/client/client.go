@@ -461,7 +461,7 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		}
 
 		if !skip {
-			if chain := cf.GetBytes(cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
+			if chain := config.Get[[]byte](cf, cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
 					log.Warn().Msg("error reading cert chain")
 				}

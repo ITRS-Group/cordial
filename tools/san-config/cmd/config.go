@@ -50,7 +50,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 	cs.RUnlock()
 
 	// build `unknown` mappings table as default, use inventory.mappings
-	mappings := conf.GetStringMapString("inventory.mappings")
+	mappings := config.Get[map[string]string](conf, "inventory.mappings")
 	mappings["hostname"] = hostname
 	mappings["hosttype"] = "unknown"
 
@@ -218,10 +218,10 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 			return
 		}
 
-		gateways = append(gateways, GatewayDetails(gatewayNames[0], []map[string]string{conf.GetStringMapString("geneos.fallback-gateway")}))
+		gateways = append(gateways, GatewayDetails(gatewayNames[0], []map[string]string{config.Get[map[string]string](conf, "geneos.fallback-gateway")}))
 	}
 
-	maxGateways := cf.GetInt("geneos.sans.gateways", config.Default(1))
+	maxGateways := config.Get[int](cf, "geneos.sans.gateways", config.Default(1))
 	log.Debug().Msgf("selecting up to %d gateways for host %s with prefix %s", maxGateways, hostname, netprobeID)
 
 	i := 0

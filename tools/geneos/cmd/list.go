@@ -25,6 +25,7 @@ import (
 	"path"
 	"text/tabwriter"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -40,7 +41,7 @@ type listCmdType struct {
 	Protected bool   `json:"protected"`
 	AutoStart bool   `json:"autostart"`
 	TLS       bool   `json:"tls"`
-	Port      int64  `json:"port,omitempty"`
+	Port      uint16 `json:"port,omitempty"`
 	Version   string `json:"version,omitempty"`
 	Home      string `json:"home,omitempty"`
 }
@@ -234,7 +235,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
 		TLS:       len(secureArgs) > 0,
-		Port:      i.Config().GetInt64("port"),
+		Port:      config.Get[uint16](i.Config(), "port"),
 		Version:   fmt.Sprintf("%s:%s", base, underlying),
 		Home:      i.Home(),
 	}

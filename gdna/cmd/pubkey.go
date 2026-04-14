@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -71,7 +72,7 @@ var pubkeyCmd = &cobra.Command{
 
 func printPublicKey() error {
 	if cf.IsSet("gdna.licd-private-key") {
-		if privateKey := cf.GetPassword("gdna.licd-private-key"); !privateKey.IsNil() {
+		if privateKey := config.Get[*config.Plaintext](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
 			pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 			if err != nil {
 				privateKeyPath := privateKey.String()

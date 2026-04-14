@@ -344,14 +344,14 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	if secure && cf.GetInt64("port") == 7039 {
+	if secure && config.Get[uint16](cf, "port") == 7039 {
 		if _, ok := ports[7038]; !ok {
 			cf.Set("port", 7038)
 		} else {
 			cf.Set("port", nextport)
 		}
 		changed = true
-	} else if !secure && cf.GetInt64("port") == 7038 {
+	} else if !secure && config.Get[uint16](cf, "port") == 7038 {
 		if _, ok := ports[7039]; !ok {
 			cf.Set("port", 7039)
 		} else {
@@ -433,8 +433,8 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 		args = append(args, "-licd-host", cf.GetString("licdhost"))
 	}
 
-	if cf.GetInt64("licdport") != 0 {
-		args = append(args, "-licd-port", fmt.Sprint(cf.GetString("licdport")))
+	if licdport := config.Get[uint16](cf, "licdport"); licdport != 0 {
+		args = append(args, "-licd-port", fmt.Sprint(licdport))
 	}
 
 	// secureArgs := instance.SetSecureArgs(i)

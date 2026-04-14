@@ -966,7 +966,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	//
 	// first try to parse the value, as it may be embedded PEM,
 	// otherwise try to read it as a file path.
-	if privateKey := cf.GetPassword("gdna.licd-private-key"); !privateKey.IsNil() {
+	if privateKey := config.Get[*config.Plaintext](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 		if err != nil {
 			privateKeyPath := privateKey.String()

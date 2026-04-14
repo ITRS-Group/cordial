@@ -31,7 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 )
@@ -92,7 +91,7 @@ func New(options ...FileOptions) *Config {
 	}
 	if opts.envPrefix != "" {
 		cf.SetEnvPrefix(opts.envPrefix)
-		cf.AutomaticEnv()
+		cf.automaticEnv()
 	}
 
 	if len(opts.internalDefaults) > 0 {
@@ -299,35 +298,6 @@ func (c *Config) GetString(s string, options ...ExpandOptions) string {
 	return get[string](c, s, options...)
 }
 
-// GetPassword returns a sealed enclave containing the configuration item
-// identified by key and expanded using the Expand function with the
-// options supplied.
-func GetPassword(key string, options ...ExpandOptions) *Plaintext {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return &Plaintext{memguard.NewEnclave(get[[]byte](global, key, options...))}
-}
-
-// GetPassword returns a sealed enclave containing the configuration item
-// identified by key and expanded using the Expand function with the
-// options supplied.
-func (c *Config) GetPassword(key string, options ...ExpandOptions) *Plaintext {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return &Plaintext{memguard.NewEnclave(get[[]byte](c, key, options...))}
-}
-
-// GetInt functions like [viper.GetInt] but additionally calls
-// [ExpandString] with the configuration value, passing any "values"
-// maps. If the conversion fails then the value returned will be the one
-// from [strconv.ParseInt] - typically 0 but can be the maximum integer
-// value
-func GetInt(key string, options ...ExpandOptions) (i int) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[int](global, key, options...)
-}
-
 // GetInt functions like [viper.GetInt] on a Config instance, but
 // additionally calls [ExpandString] with the configuration value,
 // passing any "values" maps, before converting the result to an int. If
@@ -337,46 +307,6 @@ func (c *Config) GetInt(key string, options ...ExpandOptions) (i int) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[int](c, key, options...)
-}
-
-// GetInt64 functions like [viper.GetInt] but additionally calls
-// [ExpandString] with the configuration value, passing any "values"
-// maps. If the conversion fails then the value returned will be the one
-// from [strconv.ParseInt] - typically 0 but can be the maximum integer
-// value
-func GetInt64(key string, options ...ExpandOptions) (i int64) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[int64](global, key, options...)
-}
-
-// GetInt64 functions like [viper.GetInt] on a Config instance, but
-// additionally calls [ExpandString] with the configuration value,
-// passing any "values" maps, before converting the result to an int. If
-// the conversion fails then the value returned will be the one from
-// [strconv.ParseInt] - typically 0 but can be the maximum integer value
-func (c *Config) GetInt64(key string, options ...ExpandOptions) (i int64) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[int64](c, key, options...)
-}
-
-// GetBytes functions like [viper.GetString] but additionally calls
-// [Expand] with the configuration value, passing any "values" maps and
-// returning a byte slice
-func GetBytes(key string, options ...ExpandOptions) []byte {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[[]byte](global, key, options...)
-}
-
-// GetBytes functions like [viper.GetString] on a Config instance, but
-// additionally calls [Expand] with the configuration value, passing
-// any "values" maps and returning a byte slice
-func (c *Config) GetBytes(key string, options ...ExpandOptions) []byte {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[[]byte](c, key, options...)
 }
 
 // GetStringSlice functions like [viper.GetStringSlice] but additionally calls
@@ -396,71 +326,10 @@ func (c *Config) GetStringSlice(key string, options ...ExpandOptions) (slice []s
 	return get[[]string](c, key, options...)
 }
 
-// GetStringMapString functions like [viper.GetStringMapString] but additionally calls
-// [ExpandString] on each value element of the map, passing any "values" maps
-func GetStringMapString(s string, options ...ExpandOptions) map[string]string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[map[string]string](global, s, options...)
-}
-
-// GetStringMapString functions like [viper.GetStringMapString] on a
-// Config instance but additionally calls [ExpandString] on each value
-// element of the map, passing any "values" maps
-//
-// Use a version of https://github.com/spf13/viper/pull/1504 to fix viper bug #1106
-func (c *Config) GetStringMapString(key string, options ...ExpandOptions) (m map[string]string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[map[string]string](c, key, options...)
-}
-
 func (c *Config) GetBool(key string) (value bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[bool](c, key)
-}
-
-func GetBool(key string) bool {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[bool](global, key)
-}
-
-func (c *Config) GetUint16(key string) (value uint16) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[uint16](c, key)
-}
-
-func GetUint16(key string) uint16 {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[uint16](global, key)
-}
-
-func (c *Config) GetUint(key string) (value uint) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[uint](c, key)
-}
-
-func GetUint(key string) uint {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[uint](global, key)
-}
-
-func (c *Config) GetFloat64(key string) (value float64) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[float64](c, key)
-}
-
-func GetFloat64(key string) float64 {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[float64](global, key)
 }
 
 func (c *Config) GetDuration(key string, options ...ExpandOptions) (value time.Duration) {

@@ -462,7 +462,7 @@ OUTER:
 		if len(groups) == 0 {
 			log.Debug().Msgf("%s not in filters file, checking default", category)
 
-			defaults := cf.GetBytes(config.Join("filters", "group", category, "default"))
+			defaults := config.Get[[]byte](cf, config.Join("filters", "group", category, "default"))
 			if len(defaults) == 0 {
 				log.Debug().Msgf("default %q len 0", config.Join("filters", "group", category, "default"))
 				continue OUTER
@@ -583,7 +583,7 @@ OUTER:
 		if len(allocations) == 0 {
 			log.Debug().Msgf("%s not in filters file, checking default", category)
 
-			defaults := cf.GetBytes(config.Join("filters", "allocations", category, "default"))
+			defaults := config.Get[[]byte](cf, config.Join("filters", "allocations", category, "default"))
 			if len(defaults) == 0 {
 				log.Debug().Msgf("default %q len 0", config.Join("filters", "allocations", category, "default"))
 				continue OUTER

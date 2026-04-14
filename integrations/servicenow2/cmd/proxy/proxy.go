@@ -158,8 +158,8 @@ func proxy(cf *config.Config) {
 	if cf.GetBool(cf.Join("server", "tls", "enabled")) {
 		e.Logger.Fatal(e.StartTLS(
 			listen,
-			config.GetBytes(cf.Join("server", "tls", "certificate")),
-			config.GetBytes(cf.Join("server", "tls", "private-key")),
+			config.Get[[]byte](cf, cf.Join("server", "tls", "certificate")),
+			config.Get[[]byte](cf, cf.Join("server", "tls", "private-key")),
 		))
 	}
 

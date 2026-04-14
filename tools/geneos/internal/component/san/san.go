@@ -284,7 +284,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	// recheck check certs/keys
 	var changed bool
 	secure := instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != ""
-	gws := cf.GetStringMapString("gateways")
+	gws := config.Get[map[string]string](cf, "gateways")
 	for gw := range gws {
 		port := gws[gw]
 		if secure && port == "7039" {

@@ -648,7 +648,9 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	// cannot fetch partial versions for OSes with platformID set - restriction on download search interface
 	platform := getPlatformId(opts.platformId)
 
-	baseurl := config.GetString(config.Join("download", "url"))
+	cf := config.GetConfig()
+
+	baseurl := config.Get[string](cf, cf.Join("download", "url"))
 	downloadURL, _ := url.Parse(baseurl)
 
 	os := opts.host.GetString("os")
@@ -688,7 +690,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		return unicode.IsSpace(r) || r == ','
 	})
 
-	timeout := config.GetDuration(config.Join("download", "timeout"), config.Default(60*time.Second))
+	timeout := config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.Default(60*time.Second))
 	client := &http.Client{
 		Timeout: timeout,
 	}
@@ -753,7 +755,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			creds := config.FindCreds(source, config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				opts.username = creds.GetString("username")
-				opts.password = creds.GetPassword("password")
+				opts.password = config.Get[*config.Plaintext](creds, "password")
 			}
 		}
 
@@ -880,7 +882,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		creds := config.FindCreds(baseurl, config.SetAppName(cordial.ExecutableName()))
 		if creds != nil {
 			opts.username = creds.GetString("username")
-			opts.password = creds.GetPassword("password")
+			opts.password = config.Get[*config.Plaintext](creds, "password")
 		}
 	}
 

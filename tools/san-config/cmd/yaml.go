@@ -94,7 +94,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 		Timeout: timeout,
 	}
 
-	lookup := cf.GetStringMapString("inventory.mappings")
+	lookup := config.Get[map[string]string](cf, "inventory.mappings")
 
 	defFetchopts := []FetchOptions{InventoryType("yaml")}
 
@@ -107,7 +107,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 	case "basic":
 		defFetchopts = append(defFetchopts,
 			BasicAuth(cf.GetString("inventory.authentication.username"),
-				cf.GetPassword("inventory.authentication.password"),
+				config.Get[*config.Plaintext](cf, "inventory.authentication.password"),
 			))
 	}
 

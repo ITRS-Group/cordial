@@ -122,10 +122,10 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 			return
 		}
 
-		truststorePath = ssoConf.GetString(config.Join("server", "trust_store", "location"))
-		truststorePassword = ssoConf.GetPassword(config.Join("server", "trust_store", "password"))
-		keystorePath = ssoConf.GetString(config.Join("server", "key_store", "location"))
-		keystorePassword = ssoConf.GetPassword(config.Join("server", "key_store", "password"))
+		truststorePath = ssoConf.GetString(ssoConf.Join("server", "trust_store", "location"))
+		truststorePassword = config.Get[*config.Plaintext](ssoConf, ssoConf.Join("server", "trust_store", "password"))
+		keystorePath = ssoConf.GetString(ssoConf.Join("server", "key_store", "location"))
+		keystorePassword = config.Get[*config.Plaintext](ssoConf, ssoConf.Join("server", "key_store", "password"))
 	case i.Type().IsA("webserver"):
 		spPath := instance.Abs(i, "config/security.properties")
 

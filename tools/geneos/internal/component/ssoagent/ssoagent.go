@@ -242,7 +242,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	}
 
 	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
-	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"), config.Default("changeit"))
+	truststorePassword := config.Get[*config.Plaintext](ssoconf,
+		config.Join("server", "trust_store", "password"),
+		config.Default(config.NewPlaintextFromString("changeit")),
+	)
 
 	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
 
@@ -259,7 +262,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		var changed bool
 
 		keystorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
-		keystorePassword := ssoconf.GetPassword(config.Join("server", "key_store", "password"), config.Default("changeit"))
+		keystorePassword := config.Get[*config.Plaintext](ssoconf,
+			config.Join("server", "key_store", "password"),
+			config.Default(config.NewPlaintextFromString("changeit"))),
+		)
 
 		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
 		if err != nil {
@@ -356,7 +362,7 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	args = append(args, javaopts...)
 
 	truststorePath := ssoconf.GetString(config.Join("server", "trust_store", "location"))
-	truststorePassword := ssoconf.GetPassword(config.Join("server", "trust_store", "password"))
+	truststorePassword := config.Get[*config.Plaintext](ssoconf, config.Join("server", "trust_store", "password"))
 
 	if truststorePath != "" {
 		truststorePath = instance.Abs(i, truststorePath)

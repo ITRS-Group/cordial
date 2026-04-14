@@ -45,10 +45,10 @@ func newClient(cf *config.Config) (c client) {
 	c = client{}
 
 	username := cf.GetString("username")
-	password := cf.GetPassword("password")
+	password := config.Get[*config.Plaintext](cf, "password")
 
 	clientID := cf.GetString("client-id")
-	clientSecret := cf.GetPassword("client-secret")
+	clientSecret := config.Get[*config.Plaintext](cf, "client-secret")
 
 	sn, err := url.Parse(cf.GetString("url"))
 	if err != nil {

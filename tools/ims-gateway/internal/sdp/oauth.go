@@ -140,7 +140,7 @@ func InitialAuth(sdpCf *config.Config, code *config.Plaintext) (tok *oauth2.Toke
 	var tcc *tls.Config
 
 	clientID := sdpCf.GetString("client-id")
-	clientSecret := sdpCf.GetPassword("client-secret")
+	clientSecret := config.Get[*config.Plaintext](sdpCf, "client-secret")
 
 	if clientID == "" || clientSecret.IsNil() {
 		return nil, fmt.Errorf("client-id and/or client-secret are not valid")

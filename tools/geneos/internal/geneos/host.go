@@ -476,11 +476,12 @@ func LoadHostConfig() {
 			continue
 		}
 
-		r := host.NewSSHRemote(v.GetString("name"),
+		r := host.NewSSHRemote(
+			v.GetString("name"),
 			host.Username(v.GetString("username")), // username is the login name for the remote host
 			host.Hostname(v.GetString("hostname")),
-			host.Port(uint16(v.GetInt("port"))),
-			host.Password(v.GetPassword("password").Enclave),
+			host.Port(config.Get[uint16](v, "port")),
+			host.Password(config.Get[*config.Plaintext](v, "password").Enclave),
 			host.PrivateKeyFiles(v.GetStringSlice("privatekeys")...),
 		)
 		hosts.Store(v.GetString("name"), &Host{r, v, v.GetBool("hidden"), true})

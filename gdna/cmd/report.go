@@ -244,19 +244,19 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		r, _ = reporter.NewReporter("xlsx", w,
 			reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
 			reporter.Scramble(scrambleNames || cf.GetBool("xlsx.scramble")),
-			reporter.XLSXPassword(cf.GetPassword("xlsx.password")),
+			reporter.XLSXPassword(config.Get[*config.Plaintext](cf, "xlsx.password")),
 			reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
-			reporter.IntFormat(cf.GetInt("xlsx.formats.int", config.Default(1))),
-			reporter.PercentFormat(cf.GetInt("xlsx.formats.percent", config.Default(9))),
+			reporter.IntFormat(config.Get[int](cf, "xlsx.formats.int", config.Default(1))),
+			reporter.PercentFormat(config.Get[int](cf, "xlsx.formats.percent", config.Default(9))),
 			reporter.SeverityColours(
 				cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF")),
 				cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C")),
 				cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057")),
 				cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668")),
 			),
-			reporter.MinColumnWidth(cf.GetFloat64("xlsx.formats.min-width")),
-			reporter.MaxColumnWidth(cf.GetFloat64("xlsx.formats.max-width")),
-			reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
+			reporter.MinColumnWidth(config.Get[float64](cf, "xlsx.formats.min-width")),
+			reporter.MaxColumnWidth(config.Get[float64](cf, "xlsx.formats.max-width")),
+			reporter.XLSXHeadlines(config.Get[int](cf, "xlsx.headlines")),
 		)
 	case "dataview":
 		fallthrough
@@ -585,7 +585,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
-	groups := cf.GetStringMapString(report.Grouping)
+	groups := config.Get[map[string]string](cf, report.Grouping)
 
 	groupnames := []string{}
 	for k, v := range groups {

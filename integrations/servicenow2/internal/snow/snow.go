@@ -54,10 +54,10 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	snowMutex.RUnlock()
 
 	username := cf.GetString("username")
-	password := cf.GetPassword("password")
+	password := config.Get[*config.Plaintext](cf, "password")
 
 	clientID := cf.GetString("client-id")
-	clientSecret := cf.GetPassword("client-secret")
+	clientSecret := config.Get[*config.Plaintext](cf, "client-secret")
 
 	sn, err := url.Parse(cf.GetString("url"))
 	if err != nil {
@@ -71,7 +71,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		}
 	}
 
-	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	timeout := config.Get[time.Duration](cf, cf.Join("proxy", "timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}

@@ -107,7 +107,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 	rowStripes := cf.GetBool("xlsx.row-stripes")
 
 	// if zero then auto-size based on widest value, else fixed
-	columnWidth := cf.GetFloat64("xlsx.column-width")
+	columnWidth := config.Get[float64](cf, "xlsx.column-width")
 
 	x := excelize.NewFile()
 

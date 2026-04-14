@@ -32,6 +32,7 @@ import (
 
 	"github.com/tklauser/go-sysconf"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -126,7 +127,7 @@ func ProcessStatus(i geneos.Instance, pstats any) (err error) {
 
 	h := i.Host()
 	// allow clock tick override for systems
-	scClkTck := h.GetInt64("SC_CLK_TCK")
+	scClkTck := config.Get[int64](h.Config, "SC_CLK_TCK")
 	if h == geneos.LOCAL {
 		scClkTck, _ = sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	}

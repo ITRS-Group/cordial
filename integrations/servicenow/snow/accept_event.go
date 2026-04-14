@@ -97,7 +97,7 @@ func AcceptEvent(c echo.Context) (err error) {
 			for _, si := range sv {
 				// trim spaces as YAML comma lists leave spaces in
 				si = strings.ToLower(strings.TrimSpace(si))
-				configDefaults(incident, vc.GetStringMapString("servicenow.incidentstatedefaults."+si))
+				configDefaults(incident, config.Get[map[string]string](vc, "servicenow.incidentstatedefaults."+si))
 			}
 		}
 	}

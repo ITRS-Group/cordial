@@ -200,12 +200,14 @@ func TrimSpace(trim bool) ExpandOptions {
 }
 
 // Default sets a default value to be returned if the resulting
-// expansion of the whole config value is empty (after any optional
-// trimming of leading and trailing spaces). This includes cases where
-// external lookups fail or a configuration item is not found. If the
-// TrimSpace option is set to false and the expanded value consists
-// wholly of whitespace then that is returned and not the default given
-// here.
+// expansion of the config key is the zero value for the type (after any
+// optional trimming of leading and trailing spaces).
+//
+// The type of the default value must be the same as the type of the
+// configuration item being used, otherwise the default value is
+// ignored. e.g.
+//
+//	config.Get[uint16]("config.value", config.Default(uint16(1234)))
 func Default(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.defaultValue = value

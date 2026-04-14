@@ -18,6 +18,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/maja42/goval"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 )
 
@@ -55,7 +56,7 @@ func (c *Config) expand(input string, options ...ExpandOptions) (value []byte) {
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = expandBytes([]byte(input), func(s []byte) (r []byte) {
+	value = _expandBytes([]byte(input), func(s []byte) (r []byte) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			if opts.nodecode {
 				// return string and restore containing ${...}
@@ -255,6 +256,9 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 func (c *Config) expandRawString(s string, options ...ExpandOptions) (value string, err error) {
 	opts := evalExpandOptions(c, options...)
 	switch {
+	// if the string looks like a file path and there is a "file"
+	// function registered then try to read the file and return its
+	// contents.
 	case strings.Contains(s, "/") && !strings.Contains(s, ":"):
 		// check if defaults disabled
 		if _, ok := opts.funcMaps["file"]; ok {
@@ -265,9 +269,13 @@ func (c *Config) expandRawString(s string, options ...ExpandOptions) (value stri
 			return fetchFile(ci, s, opts.trimSpace)
 		}
 		return
+
+	// if the string is either a `config:` or a plain reference to a
+	// config item, i.e. no colon
 	case strings.HasPrefix(s, "config:"), !strings.Contains(s, ":"):
-		// TODO: SHould this dot be a delimiter lookup?
-		if strings.HasPrefix(s, "config:") || strings.Contains(s, ".") {
+		// if the string is a config reference or contains a delimiter,
+		// implying a config item, then try to resolve it
+		if strings.HasPrefix(s, "config:") || strings.Contains(s, c.delimiter) {
 			s = strings.TrimPrefix(s, "config:")
 			if !opts.expandNonString {
 				// this call to GetString() must NOT be recursive
@@ -338,12 +346,16 @@ func (c *Config) expandRawString(s string, options ...ExpandOptions) (value stri
 		}
 
 		return
+
+	// if the string is an environment variable reference then try to
+	// resolve it
 	case strings.HasPrefix(s, "env:"):
 		value = mapEnv(strings.TrimPrefix(s, "env:"))
 		if opts.trimSpace {
 			value = strings.TrimSpace(value)
 		}
 		return
+
 	default:
 		// check for any registered functions and call that with the
 		// whole of the config string. there must be a ":" here, else
@@ -385,7 +397,7 @@ func (c *Config) expandString(input string, options ...ExpandOptions) (value str
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = expandString(input, func(s string) (r string) {
+	value = _expandString(input, func(s string) (r string) {
 		if strings.HasPrefix(s, "enc:") {
 			if opts.nodecode {
 				// return string and restore containing ${...}
@@ -401,7 +413,7 @@ func (c *Config) expandString(input string, options ...ExpandOptions) (value str
 		value = strings.TrimSpace(value)
 	}
 
-	if value == "" {
+	if value == "" && !isZero(opts.defaultValue) {
 		value = fmt.Sprint(opts.defaultValue)
 	}
 
@@ -444,7 +456,7 @@ func (c *Config) expandToEnclave(input string, options ...ExpandOptions) (value 
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
+	value = _expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			if opts.nodecode {
 				return memguard.NewEnclave(fmt.Append(nil, `${`, s, `}`))
@@ -484,7 +496,7 @@ func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (v
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
+	value = _expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
 		if bytes.HasPrefix(s, []byte("enc:")) {
 			if opts.nodecode {
 				return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
@@ -504,6 +516,19 @@ func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (v
 }
 
 func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
+	// return the zero value for the type if the key doesn't exist
+	if !c.isSet(key) {
+		opts := evalExpandOptions(c, options...)
+		if !isZero(opts.defaultValue) {
+			if v, ok := opts.defaultValue.(T); ok {
+				return v
+			}
+			log.Debug().Msgf("default value for key %q is not of type %T, returning zero value", key, value)
+		}
+		var zero T
+		return zero
+	}
+
 	switch any(*new(T)).(type) {
 	case bool:
 		return any(c.getBool(key, options...)).(T)
@@ -531,6 +556,8 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 		return any(c.getSliceStringMapString(key, options...)).(T)
 	case time.Duration:
 		return any(c.getDuration(key, options...)).(T)
+	case *Plaintext:
+		return any(&Plaintext{memguard.NewEnclave(c.getBytes(key, options...))}).(T)
 	default:
 		return any(c.get(key)).(T)
 	}
@@ -577,12 +604,12 @@ func (c *Config) getFloat64(key string) (value float64) {
 }
 
 func (c *Config) getBytes(key string, options ...ExpandOptions) (value []byte) {
-	str := c.Viper.GetString(key)
+	str := c.getString(key, options...)
 	return []byte(str)
 }
 
 // getString functions like [viper.GetString] on a Config instance, but
-// additionally calls [ExpandString] with the configuration value, passing
+// additionally calls [expandString] with the configuration value, passing
 // any "values" maps
 func (c *Config) getString(s string, options ...ExpandOptions) string {
 	str := c.Viper.GetString(s)
@@ -616,17 +643,25 @@ func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []s
 	return
 }
 
-// getStringMap functions like [viper.GetStringMap] on a Config instance
-func (c *Config) getStringMap(key string) (value map[string]any) {
+// getStringMap functions like [viper.GetStringMap] on a Config
+// instance, expand values with [expandString] and returns a
+// map[string]any. If the value is not set then an empty map is
+// returned.
+func (c *Config) getStringMap(key string, options ...ExpandOptions) (value map[string]any) {
 	value = c.Viper.GetStringMap(key)
 	if value == nil {
 		value = make(map[string]any)
+	}
+	for k, v := range value {
+		if s, ok := v.(string); ok {
+			value[k] = c.expandString(s, options...)
+		}
 	}
 	return
 }
 
 // getStringMapString functions like [viper.GetStringMapString] on a
-// Config instance but additionally calls [ExpandString] on each value
+// Config instance but additionally calls [expandString] on each value
 // element of the map, passing any "values" maps
 //
 // Use a version of https://github.com/spf13/viper/pull/1504 to fix viper bug #1106
@@ -982,7 +1017,8 @@ func expr(configItems map[string]any, expression string, trim bool) (s string, e
 
 // mapEnv is for special case mappings of environment variables across
 // platforms. If a settings is not found via os.GetEnv() then defaults
-// can be substituted. Currently only HOME is supported for Windows.
+// can be substituted. Currently only HOME is supported as a special
+// case for Windows.
 func mapEnv(e string) (s string) {
 	if s = os.Getenv(e); s != "" {
 		return

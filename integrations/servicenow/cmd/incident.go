@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
+	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -127,10 +128,10 @@ func incident(args []string) {
 	}
 
 	// map severity
-	mapSeverity(severity, incident, cf.GetStringMapString("servicenow.geneosseveritymap"))
+	mapSeverity(severity, incident, config.Get[map[string]string](cf, "servicenow.geneosseveritymap"))
 
 	// and read defaults for any unset fields
-	configDefaults(incident, cf.GetStringMapString("servicenow.incidentdefaults"))
+	configDefaults(incident, config.Get[map[string]string](cf, "servicenow.incidentdefaults"))
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {

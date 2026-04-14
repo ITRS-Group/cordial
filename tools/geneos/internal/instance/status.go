@@ -63,6 +63,7 @@ func BaseVersion(i geneos.Instance) (dir string) {
 	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
+
 	pkgtype := i.Config().GetString("pkgtype", config.Default(t))
 	return i.Host().PathTo("packages", pkgtype, i.Config().GetString("version"))
 }

@@ -25,6 +25,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -187,23 +188,23 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 				dPort := NextFreePort(dHost, dst.Type())
 				ncf.Set("port", dPort)
 			} else {
-				ncf.Set("port", src.Config().GetUint16("port"))
+				ncf.Set("port", config.Get[uint16](src.Config(), "port"))
 			}
 		} else {
-			sPort := src.Config().GetUint16("port")
+			sPort := config.Get[uint16](src.Config(), "port")
 			dPortsInUse := GetAllPorts(dHost)
 			if _, ok := dPortsInUse[sPort]; ok {
 				log.Debug().Msgf("found port in use: %d", sPort)
 				dPort := NextFreePort(dHost, dst.Type())
 				ncf.Set("port", dPort)
 			} else {
-				ncf.Set("port", src.Config().GetUint16("port"))
+				ncf.Set("port", config.Get[uint16](src.Config(), "port"))
 			}
 		}
 	}
 
 	// update any component name only if the same as the instance name
-	log.Debug().Msgf("src name: %s, setting dst to %s", src.Config().GetString("name"), destination)
+	log.Debug().Msgf("src name: %s, setting dst to %s", config.Get[string](src.Config(), "name"), destination)
 	// _, _, newname := Decompose(destination, geneos.LOCAL)
 	ncf.Set("name", dName)
 
