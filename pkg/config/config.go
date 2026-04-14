@@ -266,6 +266,32 @@ func SetStringMapString(key string, vals map[string]string, options ...ExpandOpt
 // Get functions
 //
 
+// Get returns the value associated with the key in the configuration
+// structure c, applying the options given. The type T is the expected
+// type of the value, which can be one of:
+//
+//   - bool
+//   - int
+//   - int64
+//   - uint
+//   - uint16
+//   - float64
+//   - string
+//   - []string
+//   - []byte
+//   - map[string]any
+//   - map[string]string
+//   - []map[string]string
+//   - time.Duration
+//   - *config.Plaintext
+//
+// Other types are returned as-is and the caller is expected to do any
+// necessary type assertion. Other specific types may be added in the
+// future.
+//
+// If the option [`config.Default`] is used, then the type must be
+// identical to T. If it is not, then the default value is the zero
+// value for the type T.
 func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
