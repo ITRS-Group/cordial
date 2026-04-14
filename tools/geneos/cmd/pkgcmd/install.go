@@ -357,7 +357,6 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 			}
 			if err = geneos.Install(h, ct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
-					fmt.Printf("%s installation already exists, skipping", ct)
 					err = nil
 					installed++
 					continue

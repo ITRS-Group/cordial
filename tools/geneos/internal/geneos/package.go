@@ -174,18 +174,15 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 
 	if dest, err := unarchive(h, ct, archive, filename, filesize, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
-			log.Debug().Msgf("%s on %s already installed as %q\n", ct, h, dest)
+			fmt.Printf("%s release on %s %q version already installed in %s\n", ct, h, opts.version, dest)
 			if opts.doupdate {
-				log.Debug().Msg("update true")
 				return Update(h, ct, options...)
 			}
-			return nil
 		}
 		return err
 	}
 
 	if opts.doupdate {
-		log.Debug().Msg("update true")
 		return Update(h, ct, options...)
 	}
 	return
@@ -282,7 +279,7 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	// if we get here from a package install then that will have already
 	// been filtered for "force" in the caller
 	if existing == version {
-		log.Debug().Msgf("existing == version %s", version)
+		fmt.Printf("%s release on %s %q already %q\n", ct, h, opts.basename, version)
 		return nil
 	}
 
@@ -309,6 +306,6 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if err = h.Symlink(version, basepath); err != nil {
 		return err
 	}
-	fmt.Printf("%s %q on %s updated to %s\n", ct, path.Base(basepath), h, version)
+	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
 	return nil
 }
