@@ -47,9 +47,7 @@ var AC2 = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(Name, "ports"): "7040-",
-		config.Join(Name, "clean"): strings.Join([]string{
-			"*.old",
-		}, ":"),
+		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
 		config.Join(Name, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
