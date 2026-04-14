@@ -264,7 +264,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		keystorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
 		keystorePassword := config.Get[*config.Plaintext](ssoconf,
 			config.Join("server", "key_store", "password"),
-			config.Default(config.NewPlaintextFromString("changeit"))),
+			config.Default(config.NewPlaintextFromString("changeit")),
 		)
 
 		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
