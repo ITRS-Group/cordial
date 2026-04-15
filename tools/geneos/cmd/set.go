@@ -107,7 +107,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 			return
 		}
 
-		if cf.Type == "rc" {
+		if cf.ConfigType() == "rc" {
 			respM := instance.Migrate(i)
 			resp.Err = respM.Err
 		} else {

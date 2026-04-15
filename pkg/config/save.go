@@ -117,15 +117,15 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	}
 	c.mutex.RUnlock()
 
-	nv.Viper.SetFs(h.GetFs())
+	nv.setFs(h.GetFs())
 
 	// set the config type as well as the extension to ensure the correct format is used when writing the file
-	nv.Viper.SetConfigFile(filepath.Ext(p))
+	nv.setConfigFile(filepath.Ext(p))
 
 	// write to path with process ID and original extension appended and
 	// then try to atomically rename
 	tmpFile := fmt.Sprintf("%s.%d.%d%s", p, os.Getpid(), counter.Add(1), filepath.Ext(p))
-	if err = nv.Viper.WriteConfigAs(tmpFile); err != nil {
+	if err = nv.writeConfigAs(tmpFile); err != nil {
 		return
 	}
 
@@ -183,12 +183,12 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 	c.mutex.RUnlock()
 
 	if opts.userConfDir != "" {
-		nv.Viper.SetConfigType(opts.extension)
+		nv.setConfigType(opts.extension)
 	} else {
-		nv.Viper.SetConfigType(defaultFileExtension)
+		nv.setConfigType(defaultFileExtension)
 	}
 
-	return nv.Viper.WriteConfigTo(w)
+	return nv.writeConfigTo(w)
 }
 
 // isZero checks if the given value is the zero value for its type. If

@@ -109,7 +109,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 			return
 		} else {
 			used = ComponentFilepath(i, "rc")
-			i.Config().Type = "rc"
+			i.Config().SetConfigType("rc")
 		}
 	}
 
@@ -192,7 +192,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	}
 
 	// label the type as an "rc" to make it easy to check later
-	cf.Type = "rc"
+	cf.SetConfigType("rc")
 
 	return
 }
@@ -446,7 +446,7 @@ func Migrate(i geneos.Instance) (resp *responses.Response) {
 	}
 
 	// only migrate if labelled as a .rc file
-	if cf.Type != "rc" {
+	if cf.ConfigType() != "rc" {
 		return
 	}
 
@@ -463,11 +463,11 @@ func Migrate(i geneos.Instance) (resp *responses.Response) {
 	}
 
 	// remove type label before save
-	cf.Type = ""
+	cf.SetConfigType("")
 
 	if resp.Err = SaveConfig(i); resp.Err != nil {
 		// restore label on error
-		cf.Type = "rc"
+		cf.SetConfigType("rc")
 		log.Error().Err(resp.Err).Msg("failed to write new configuration file")
 		return
 	}

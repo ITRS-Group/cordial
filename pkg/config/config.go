@@ -37,9 +37,9 @@ import (
 
 // Config embeds Viper
 type Config struct {
-	Viper                *viper.Viper
+	viper                *viper.Viper
 	mutex                *sync.RWMutex // mutex to protect concurrent access to the above viper
-	Type                 string        // The type of configuration file loaded
+	configType           string        // The type of configuration file loaded ("rc", "json", "yaml" etc) - this is not the same as the config type used for unmarshalling, which is determined by the file extension or SetConfigType() call and is stored in viper.ConfigType()
 	defaultExpandOptions []ExpandOptions
 	delimiter            string
 	appUserConfDir       string
@@ -47,6 +47,9 @@ type Config struct {
 
 // global is the default configuration container for non-method callers
 var global *Config
+
+// globalMutex protects the global configuration object for concurrent access
+var globalMutex sync.Mutex
 
 func init() {
 	global = New()
@@ -61,13 +64,12 @@ func GetConfig() *Config {
 // settings will be copied over. This is primarily to be able to change
 // the default delimiter after start-up.
 func ResetConfig(options ...FileOptions) {
-	var mt sync.Mutex
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
 
-	mt.Lock()
 	tmp := global.AllSettings()
 	global = New(options...)
 	global.MergeConfigMap(tmp)
-	mt.Unlock()
 }
 
 // New returns a Config instance initialised with a new viper instance.
@@ -81,7 +83,7 @@ func New(options ...FileOptions) *Config {
 		appUserConfDir = path.Join(userConfDir, opts.appName)
 	}
 	cf := &Config{
-		Viper: viper.NewWithOptions(
+		viper: viper.NewWithOptions(
 			viper.KeyDelimiter(opts.delimiter),
 			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envDelimiter, "-", opts.envDelimiter))),
 		mutex:                &sync.RWMutex{},
@@ -97,11 +99,11 @@ func New(options ...FileOptions) *Config {
 	if len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults := &Config{
-			Viper: viper.New(),
+			viper: viper.New(),
 			mutex: &sync.RWMutex{},
 		}
-		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
-		if err := internalDefaults.Viper.ReadConfig(buf); err == nil || !opts.internalDefaultsCheckErrors {
+		internalDefaults.setConfigType(opts.internalDefaultsFormat)
+		if err := internalDefaults.readConfig(buf); err == nil || !opts.internalDefaultsCheckErrors {
 			cf.MergeConfigMap(internalDefaults.AllSettings())
 		}
 	}
@@ -147,6 +149,18 @@ func Delimiter() string {
 // Delimiter returns the config c key delimiter
 func (c *Config) Delimiter() string {
 	return c.delimiter
+}
+
+func (c *Config) ConfigType() string {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return c.configType
+}
+
+func (c *Config) SetConfigType(t string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.configType = t
 }
 
 // Sub returns a Config instance rooted at the key passed. If key does

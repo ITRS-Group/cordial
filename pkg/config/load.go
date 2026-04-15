@@ -84,7 +84,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 	} else {
 		cf = New(options...)
-		cf.Type = opts.extension
+		cf.configType = opts.extension
 	}
 
 	// return first error after initialising the config structure.
@@ -94,15 +94,15 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		return
 	}
 
-	cf.Viper.SetFs(r.GetFs())
+	cf.setFs(r.GetFs())
 
 	defaults := New(options...)
 
 	if opts.useDefaults && len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults := New(options...)
-		internalDefaults.Viper.SetConfigType(opts.internalDefaultsFormat)
-		if err = internalDefaults.Viper.ReadConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
+		internalDefaults.setConfigType(opts.internalDefaultsFormat)
+		if err = internalDefaults.readConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
 			return
 		}
 		defaults.MergeConfigMap(internalDefaults.AllSettings())
@@ -139,9 +139,9 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		if opts.merge {
 			for _, dir := range confDirs {
 				d := New(options...)
-				d.Viper.SetFs(r.GetFs())
-				d.Viper.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
-				if err = d.Viper.ReadInConfig(); err != nil {
+				d.setFs(r.GetFs())
+				d.setConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				if err = d.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
@@ -153,9 +153,9 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			}
 		} else if len(confDirs) > 0 {
 			for _, dir := range confDirs {
-				defaults.Viper.SetFs(r.GetFs())
-				defaults.Viper.SetConfigFile(path.Join(dir, name+".defaults."+opts.extension))
-				if err = defaults.Viper.ReadInConfig(); err != nil {
+				defaults.setFs(r.GetFs())
+				defaults.setConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				if err = defaults.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
@@ -178,10 +178,10 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	// fixed configuration file, skip directory search
 	if opts.configFileReader != nil {
 		ncf := New(options...)
-		ncf.Viper.SetFs(r.GetFs())
-		ncf.Viper.SetConfigType(opts.extension)
+		ncf.setFs(r.GetFs())
+		ncf.setConfigType(opts.extension)
 
-		if err = ncf.Viper.ReadConfig(opts.configFileReader); err != nil {
+		if err = ncf.readConfig(opts.configFileReader); err != nil {
 			return cf, fmt.Errorf("error reading config: %w", err)
 		}
 
@@ -190,13 +190,13 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		return cf, nil
 	} else if opts.configFile != "" {
 		ncf := New(options...)
-		ncf.Viper.SetFs(r.GetFs())
+		ncf.setFs(r.GetFs())
+		ncf.setConfigFile(opts.configFile)
 
-		ncf.Viper.SetConfigFile(opts.configFile)
 		if opts.extension != "" {
-			ncf.Viper.SetConfigType(opts.extension)
+			ncf.setConfigType(opts.extension)
 		}
-		if err = ncf.Viper.ReadInConfig(); err != nil {
+		if err = ncf.readInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 				if opts.mustExist {
 					return
@@ -207,7 +207,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 
 		// set the config file we found and loaded, so WatchConfig works
-		cf.Viper.SetConfigFile(opts.configFile)
+		cf.setConfigFile(opts.configFile)
 
 		// merge into main config
 		cf.MergeConfigMap(ncf.AllSettings())
@@ -219,19 +219,19 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		found := 0
 		for _, dir := range confDirs {
 			d := New(options...)
-			d.Viper.SetFs(r.GetFs())
-			d.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
-			if err = d.Viper.ReadInConfig(); err != nil {
+			d.setFs(r.GetFs())
+			d.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			if err = d.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
 					continue
 				} else {
-					return cf, fmt.Errorf("error reading config (%s): %w", d.Viper.ConfigFileUsed(), err)
+					return cf, fmt.Errorf("error reading config (%s): %w", d.configFileUsed(), err)
 				}
 			}
 			found++
 			// set the config file we found and loaded, so WatchConfig works
-			cf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
+			cf.setConfigFile(path.Join(dir, name+"."+opts.extension))
 
 			// merge, continue on failure
 			cf.MergeConfigMap(d.AllSettings())
@@ -242,10 +242,10 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 	} else if len(confDirs) > 0 {
 		ncf := New(options...)
-		ncf.Viper.SetFs(r.GetFs())
+		ncf.setFs(r.GetFs())
 		for _, dir := range confDirs {
-			ncf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
-			if err = ncf.Viper.ReadInConfig(); err != nil {
+			ncf.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			if err = ncf.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
@@ -254,7 +254,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			}
 
 			// set the config file we found and loaded, so WatchConfig works
-			cf.Viper.SetConfigFile(path.Join(dir, name+"."+opts.extension))
+			cf.setConfigFile(path.Join(dir, name+"."+opts.extension))
 
 			// merge into main config
 			cf.MergeConfigMap(ncf.AllSettings())
@@ -275,9 +275,9 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 
 	if opts.watchConfig {
 		if opts.notifyOnChange != nil {
-			cf.Viper.OnConfigChange(opts.notifyOnChange)
+			cf.onConfigChange(opts.notifyOnChange)
 		}
-		cf.Viper.WatchConfig()
+		cf.watchConfig()
 	}
 
 	return cf, nil

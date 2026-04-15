@@ -15,10 +15,13 @@ import (
 	"time"
 
 	"github.com/awnumar/memguard"
+	"github.com/fsnotify/fsnotify"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/maja42/goval"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/afero"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -27,12 +30,71 @@ import (
 // methods that do the locking and also by other internal methods that
 // need to call Viper methods without locking, such as Sub() and Save().
 
+// internal placeholders, for now
+
 func (c *Config) allKeys() (keys []string) {
-	return c.Viper.AllKeys()
+	return c.viper.AllKeys()
 }
 
 func (c *Config) allSettings() (value map[string]any) {
-	return c.Viper.AllSettings()
+	return c.viper.AllSettings()
+}
+
+func (c *Config) setFs(fs afero.Fs) {
+	c.viper.SetFs(fs)
+}
+
+func (c *Config) setConfigType(t string) {
+	c.viper.SetConfigType(t)
+}
+
+func (c *Config) setConfigFile(f string) {
+	c.viper.SetConfigFile(f)
+}
+
+func (c *Config) readInConfig() (err error) {
+	return c.viper.ReadInConfig()
+}
+
+func (c *Config) readConfig(r io.Reader) (err error) {
+	return c.viper.ReadConfig(r)
+}
+
+func (c *Config) writeConfigAs(path string) (err error) {
+	return c.viper.WriteConfigAs(path)
+}
+
+func (c *Config) writeConfigTo(w io.Writer) (err error) {
+	return c.viper.WriteConfigTo(w)
+}
+
+func (c *Config) configFileUsed() (f string) {
+	return c.viper.ConfigFileUsed()
+}
+
+func (c *Config) onConfigChange(run func(in fsnotify.Event)) {
+	c.viper.OnConfigChange(run)
+}
+
+func (c *Config) watchConfig() {
+	c.viper.WatchConfig()
+}
+
+func (c *Config) automaticEnv() {
+	c.viper.AutomaticEnv()
+}
+
+func (c *Config) bindEnv(input ...string) error {
+	return c.viper.BindEnv(input...)
+}
+
+func (c *Config) registerAlias(alias, key string) {
+	c.viper.RegisterAlias(alias, key)
+}
+
+// BindPFlag binds a pflag.Flag to a key in the configuration.
+func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
+	return c.viper.BindPFlag(key, flag)
 }
 
 // expand behaves like the expandString method but returns a byte
@@ -77,6 +139,44 @@ func (c *Config) expand(input string, options ...ExpandOptions) (value []byte) {
 	}
 
 	return
+}
+
+// as above but for byte slices directly
+func _expandBytes(s []byte, mapping func([]byte) []byte) []byte {
+	var buf []byte
+	// ${} is all UTF-8, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getContents(string(s[j+1:]))
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
+			} else {
+				buf = append(buf, mapping([]byte(name))...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return append(buf, s[i:]...)
 }
 
 // ExpandAllSettings returns all the settings from config structure c
@@ -279,14 +379,14 @@ func (c *Config) expandRawString(s string, options ...ExpandOptions) (value stri
 			s = strings.TrimPrefix(s, "config:")
 			if !opts.expandNonString {
 				// this call to GetString() must NOT be recursive
-				value = c.Viper.GetString(s)
+				value = c.viper.GetString(s)
 				if opts.trimSpace {
 					value = strings.TrimSpace(value)
 				}
 				return
 			}
 
-			v := c.Viper.Get(s)
+			v := c.viper.Get(s)
 
 			switch w := v.(type) {
 			case string:
@@ -421,6 +521,52 @@ func (c *Config) expandString(input string, options ...ExpandOptions) (value str
 	return strings.Clone(value)
 }
 
+// the function below (and similar) are based on code copied from the Go
+// sources but modified to NOT support $val, only ${val}
+//
+// Copyright 2010 The Go Authors. All rights reserved. Use of this
+// source code is governed by a BSD-style license that can be found in
+// the LICENSE file.
+//
+// _expandString replaces ${var} in the string based on the mapping
+// function.
+func _expandString(s string, mapping func(string) string) string {
+	var buf []byte
+	// ${} is all ASCII, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getContents(s[j+1:])
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
+			} else {
+				buf = append(buf, mapping(name)...)
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		return s
+	}
+	return string(buf) + s[i:]
+}
+
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
 func (c *Config) expandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
@@ -475,6 +621,51 @@ func (c *Config) expandToEnclave(input string, options ...ExpandOptions) (value 
 	return
 }
 
+func _expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
+	var buf []byte
+	// ${} is all UTF-8, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getContents(string(s[j+1:]))
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
+			} else {
+				e := mapping([]byte(name))
+				if e != nil {
+					l, _ := e.Open()
+					buf = append(buf, l.Bytes()...)
+					l.Destroy()
+				}
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		// if no expansion, return as is in enclave
+		return memguard.NewEnclave(s)
+	}
+
+	buf = append(buf, s[i:]...)
+	return memguard.NewEnclave(buf)
+}
+
 // ExpandToLockedBuffer expands the input string and returns a sealed
 // enclave. The option TrimSpace is ignored.
 func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
@@ -513,6 +704,92 @@ func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (v
 	}
 
 	return
+}
+
+func _expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
+	var buf []byte
+	// ${} is all UTF-8, so bytes are fine for this operation.
+	i := 0
+	for j := 0; j < len(s); j++ {
+		if s[j] == '$' && j+1 < len(s) {
+			if buf == nil {
+				buf = make([]byte, 0, 2*len(s))
+			}
+			buf = append(buf, s[i:j]...)
+			name, w := getContents(string(s[j+1:]))
+			if name == "" {
+				if w == 1 {
+					// if invalid after opening `${` then return them
+					// unchanged
+					buf = append(buf, s[j:j+2]...)
+				} else if w > 0 {
+					// Encountered invalid syntax; eat the
+					// characters.
+				} else {
+					// Valid syntax, but $ was not followed by a
+					// name. Leave the dollar character untouched.
+					buf = append(buf, s[j])
+				}
+			} else {
+				e := mapping([]byte(name))
+				if e != nil {
+					buf = append(buf, e.Bytes()...)
+					e.Destroy()
+				}
+			}
+			j += w
+			i = j + 1
+		}
+	}
+	if buf == nil {
+		// if no expansion, return as is in enclave
+		return memguard.NewBufferFromBytes(s)
+	}
+
+	buf = append(buf, s[i:]...)
+	return memguard.NewBufferFromBytes(buf)
+}
+
+// getContents returns the string inside braces, checking for embedded
+// braces and the number of bytes consumed to extract it. The contents
+// must be enclosed in {} and two more bytes are needed than the length
+// of the name.
+//
+// CHANGE: return if string does not start with an opening bracket
+//
+// CHANGE: skip any character after a backslash, including closing
+// braces
+//
+// CHANGE: match embedded opening braces and closing ones inside the
+// string.
+func getContents(s string) (string, int) {
+	// must start with an opening brace
+	if s[0] != '{' {
+		// skip
+		return "", 0
+	}
+
+	// Scan to closing brace, skipping backslash+next and stacking opening braces
+	var depth int
+	for i := 1; i < len(s); i++ {
+		switch s[i] {
+		case '\\':
+			i++
+		case '{':
+			depth++
+		case '}':
+			if depth > 0 {
+				depth--
+				continue
+			}
+			if i == 1 {
+				return "", 2 // Bad syntax; eat "${}"
+			}
+			return s[1:i], i + 1
+		default:
+		}
+	}
+	return "", 1 // Bad syntax; eat "${"
 }
 
 func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
@@ -564,7 +841,7 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 }
 
 func (c *Config) get(key string) (value any) {
-	return c.Viper.Get(key)
+	return c.viper.Get(key)
 }
 
 func (c *Config) getBool(key string, options ...ExpandOptions) (value bool) {
@@ -592,15 +869,15 @@ func (c *Config) getInt64(key string, options ...ExpandOptions) (value int64) {
 }
 
 func (c *Config) getUint(key string) (value uint) {
-	return c.Viper.GetUint(key)
+	return c.viper.GetUint(key)
 }
 
 func (c *Config) getUint16(key string) (value uint16) {
-	return c.Viper.GetUint16(key)
+	return c.viper.GetUint16(key)
 }
 
 func (c *Config) getFloat64(key string) (value float64) {
-	return c.Viper.GetFloat64(key)
+	return c.viper.GetFloat64(key)
 }
 
 func (c *Config) getBytes(key string, options ...ExpandOptions) (value []byte) {
@@ -612,7 +889,7 @@ func (c *Config) getBytes(key string, options ...ExpandOptions) (value []byte) {
 // additionally calls [expandString] with the configuration value, passing
 // any "values" maps
 func (c *Config) getString(s string, options ...ExpandOptions) string {
-	str := c.Viper.GetString(s)
+	str := c.viper.GetString(s)
 
 	return c.expandString(str, options...)
 }
@@ -626,7 +903,7 @@ func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []s
 	opts := evalExpandOptions(c, options...)
 
 	if c.isSet(key) {
-		result = c.Viper.GetStringSlice(key)
+		result = c.viper.GetStringSlice(key)
 	} else if init, ok := opts.initialValue.([]string); ok {
 		result = init
 	}
@@ -648,7 +925,7 @@ func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []s
 // map[string]any. If the value is not set then an empty map is
 // returned.
 func (c *Config) getStringMap(key string, options ...ExpandOptions) (value map[string]any) {
-	value = c.Viper.GetStringMap(key)
+	value = c.viper.GetStringMap(key)
 	if value == nil {
 		value = make(map[string]any)
 	}
@@ -671,7 +948,7 @@ func (c *Config) getStringMapString(key string, options ...ExpandOptions) (m map
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
-	i := c.Viper.Get(key)
+	i := c.viper.Get(key)
 
 	if !isStringMapInterface(i) {
 		return
@@ -717,15 +994,15 @@ func (c *Config) getSliceStringMapString(s string, options ...ExpandOptions) (re
 }
 
 func (c *Config) getStringMapStringSlice(key string, options ...ExpandOptions) (m map[string][]string) {
-	return c.Viper.GetStringMapStringSlice(key)
+	return c.viper.GetStringMapStringSlice(key)
 }
 
 func (c *Config) isSet(key string) (value bool) {
-	return c.Viper.IsSet(key)
+	return c.viper.IsSet(key)
 }
 
 func (c *Config) mergeConfigMap(vals map[string]any) (err error) {
-	return c.Viper.MergeConfigMap(vals)
+	return c.viper.MergeConfigMap(vals)
 }
 
 // set a value without locking. This is used by the public Set() method
@@ -733,31 +1010,15 @@ func (c *Config) mergeConfigMap(vals map[string]any) (err error) {
 // acquire the lock multiple times. It assumes that the caller has
 // already acquired the lock if needed.
 func (c *Config) set(key string, value any) {
-	c.Viper.Set(key, value)
+	c.viper.Set(key, value)
 }
 
 func (c *Config) setDefault(key string, value any) {
-	c.Viper.SetDefault(key, value)
+	c.viper.SetDefault(key, value)
 }
 
 func (c *Config) setEnvPrefix(prefix string) {
-	c.Viper.SetEnvPrefix(prefix)
-}
-
-func (c *Config) automaticEnv() {
-	c.Viper.AutomaticEnv()
-}
-
-func (c *Config) bindEnv(input ...string) error {
-	return c.Viper.BindEnv(input...)
-}
-
-func (c *Config) registerAlias(alias, key string) {
-	c.Viper.RegisterAlias(alias, key)
-}
-
-func (c *Config) configFileUsed() (f string) {
-	return c.Viper.ConfigFileUsed()
+	c.viper.SetEnvPrefix(prefix)
 }
 
 // setString is the internal version of SetString that doesn't acquire
@@ -840,15 +1101,15 @@ func (c *Config) setKeyValues(items ...string) (err error) {
 // sub-configs for saving. It assumes that the caller has already
 // acquired the read lock if needed.
 func (c *Config) sub(key string) *Config {
-	vcf := c.Viper.Sub(key)
+	vcf := c.viper.Sub(key)
 
 	if vcf == nil {
 		vcf = viper.New()
 	}
 	return &Config{
-		Viper:                vcf,
+		viper:                vcf,
 		mutex:                &sync.RWMutex{}, // never copy mutex, always create a new one
-		Type:                 c.Type,
+		configType:           c.configType,
 		delimiter:            c.delimiter,
 		defaultExpandOptions: c.defaultExpandOptions,
 		appUserConfDir:       c.appUserConfDir,
@@ -863,7 +1124,7 @@ func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfi
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
-	i := c.Viper.Get(key)
+	i := c.viper.Get(key)
 
 	if isStringMapInterface(i) {
 		val := i.(map[string]any)

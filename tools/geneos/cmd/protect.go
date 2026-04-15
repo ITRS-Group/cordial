@@ -72,7 +72,7 @@ var protectCmd = &cobra.Command{
 
 			cf.Set("protected", protect)
 
-			if cf.Type == "rc" {
+			if cf.ConfigType() == "rc" {
 				respM := instance.Migrate(i)
 				resp.Err = respM.Err
 			} else {

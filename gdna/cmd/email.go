@@ -84,22 +84,22 @@ var emailCmd = &cobra.Command{
 		defer db.Close()
 
 		if emailCmdContents != "" {
-			cf.Viper.BindPFlag("email.contents", cmd.Flags().Lookup("contents"))
+			cf.BindPFlag("email.contents", cmd.Flags().Lookup("contents"))
 		}
 		if emailCmdSubject != "" {
-			cf.Viper.BindPFlag("email.subject", cmd.Flags().Lookup("subject"))
+			cf.BindPFlag("email.subject", cmd.Flags().Lookup("subject"))
 		}
 		if emailCmdFrom != "" {
-			cf.Viper.BindPFlag("email.from", cmd.Flags().Lookup("from"))
+			cf.BindPFlag("email.from", cmd.Flags().Lookup("from"))
 		}
 		if emailCmdTo != "" {
-			cf.Viper.BindPFlag("email.to", cmd.Flags().Lookup("to"))
+			cf.BindPFlag("email.to", cmd.Flags().Lookup("to"))
 		}
 		if emailCmdCc != "" {
-			cf.Viper.BindPFlag("email.cc", cmd.Flags().Lookup("cc"))
+			cf.BindPFlag("email.cc", cmd.Flags().Lookup("cc"))
 		}
 		if emailCmdBcc != "" {
-			cf.Viper.BindPFlag("email.bcc", cmd.Flags().Lookup("bcc"))
+			cf.BindPFlag("email.bcc", cmd.Flags().Lookup("bcc"))
 		}
 
 		return doEmail(ctx, cf, db, reportNames)

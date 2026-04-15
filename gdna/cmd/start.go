@@ -81,12 +81,12 @@ var startCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		cf.Viper.BindPFlag("geneos.netprobe.hostname", cmd.Flags().Lookup("host"))
-		cf.Viper.BindPFlag("geneos.netprobe.port", cmd.Flags().Lookup("port"))
-		cf.Viper.BindPFlag("geneos.netprobe.secure", cmd.Flags().Lookup("secure"))
-		cf.Viper.BindPFlag("geneos.netprobe.skip-verify", cmd.Flags().Lookup("skip-verify"))
-		cf.Viper.BindPFlag("geneos.entity", cmd.Flags().Lookup("entity"))
-		cf.Viper.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
+		cf.BindPFlag("geneos.netprobe.hostname", cmd.Flags().Lookup("host"))
+		cf.BindPFlag("geneos.netprobe.port", cmd.Flags().Lookup("port"))
+		cf.BindPFlag("geneos.netprobe.secure", cmd.Flags().Lookup("secure"))
+		cf.BindPFlag("geneos.netprobe.skip-verify", cmd.Flags().Lookup("skip-verify"))
+		cf.BindPFlag("geneos.entity", cmd.Flags().Lookup("entity"))
+		cf.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := make(chan os.Signal, 1)
