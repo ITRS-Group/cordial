@@ -177,34 +177,69 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			fmt.Printf("<!>disabled,%d\n", disabled)
 		}
 	case psCmdCSV:
+		var columns []string
+		switch {
+		case psCmdShowNet:
+			columns = []string{
+				"Type",
+				"Name",
+				"Host",
+				"PID",
+				"FD",
+				"Protocol",
+				"Local Addr",
+				"Local Port",
+				"Remote Addr",
+				"Remote Port",
+				"Status",
+				"TXQueue",
+				"RXQueue",
+			}
+		case psCmdShowFiles:
+			columns = []string{
+				"Type",
+				"Name",
+				"Host",
+				"PID",
+				"FD",
+				"Permissions",
+				"User",
+				"Group",
+				"Size",
+				"Last Modified",
+				"Path",
+			}
+		default:
+			columns = []string{
+				"Type",
+				"Name",
+				"Host",
+				"PID",
+				"Ports",
+				"User",
+				"Group",
+				"Starttime",
+				"Version",
+				"Home",
+			}
+			if psCmdLong {
+				columns = append(columns,
+					"State",
+					"Threads",
+					"Open Files",
+					"Open Sockets",
+					"RSS",
+					"RSSAnon",
+					"RSSMax",
+					"TotalUserTime",
+					"TotalKernelTime",
+					"TotalChildUserTime",
+					"TotalChildKernelTime",
+				)
+			}
+		}
+
 		psCSVWriter := csv.NewWriter(os.Stdout)
-		columns := []string{
-			"Type",
-			"Name",
-			"Host",
-			"PID",
-			"Ports",
-			"User",
-			"Group",
-			"Starttime",
-			"Version",
-			"Home",
-		}
-		if psCmdLong {
-			columns = append(columns,
-				"State",
-				"Threads",
-				"Open Files",
-				"Open Sockets",
-				"RSS",
-				"RSSAnon",
-				"RSSMax",
-				"TotalUserTime",
-				"TotalKernelTime",
-				"TotalChildUserTime",
-				"TotalChildKernelTime",
-			)
-		}
 		psCSVWriter.Write(columns)
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Report(psCSVWriter)
 	default:
@@ -313,7 +348,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		}
 		uid, gid := i.Host().GetFileOwner(hs)
 		resp.Details = append(resp.Details,
-			fmt.Sprintf("%s\t%s\t%s\tcwd\t%d\t%s\t%s:%s\t%d\t%s\t%s",
+			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
 				i.Type(),
 				i.Name(),
 				i.Host(),
@@ -325,14 +360,10 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 				hs.ModTime().Local().Format(time.RFC3339),
 				homedir,
 			))
-		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
 				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
-				if strings.HasPrefix(path, homedir) {
-					path = strings.Replace(path, homedir, "", 1)
-				}
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
 				if m&0400 == 0400 {
@@ -522,14 +553,10 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		)
 		resp.Rows = append(resp.Rows, row)
 
-		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
 				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
-				if strings.HasPrefix(path, homedir) {
-					path = strings.Replace(path, homedir, "", 1)
-				}
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
 				if m&0400 == 0400 {
@@ -725,14 +752,10 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			Path:     homedir,
 		})
 
-		homedir += "/"
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
 				uid, gid := i.Host().GetFileOwner(fd.Stat)
 				path := fd.Path
-				if strings.HasPrefix(path, homedir) {
-					path = strings.Replace(path, homedir, "", 1)
-				}
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
 				if m&0400 == 0400 {
