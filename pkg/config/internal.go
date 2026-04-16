@@ -751,16 +751,32 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 		}
 		return any(v).(T)
 	case map[string]string:
-		return any(c.getStringMapString(key, options...)).(T)
+		var result map[string]string
+		if err := c.unmarshalKey(key, &result); err != nil {
+			return
+		}
+		for k, v := range result {
+			result[k] = expand[string](c, v, options...)
+		}
+		return any(result).(T)
 	case []map[string]string:
-		return any(c.getSliceStringMapString(key, options...)).(T)
+		var result []map[string]string
+		if err := c.unmarshalKey(key, &result); err != nil {
+			return
+		}
+		for _, m := range result {
+			for k, v := range m {
+				m[k] = expand[string](c, v, options...)
+			}
+		}
+		return any(result).(T)
 	case time.Duration:
-		v, _ := time.ParseDuration(c.getString(key, options...))
+		v, _ := time.ParseDuration(expand[string](c, c.viper.GetString(key), options...))
 		return any(v).(T)
 	case *Plaintext:
-		return any(&Plaintext{memguard.NewEnclave(c.getBytes(key, options...))}).(T)
+		return any(&Plaintext{memguard.NewEnclave(expand[[]byte](c, c.viper.GetString(key), options...))}).(T)
 	default:
-		return any(c.get(key)).(T)
+		return any(c.viper.Get(key)).(T)
 	}
 }
 
@@ -786,159 +802,6 @@ func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	default:
 		c.viper.Set(key, value)
 	}
-}
-
-func (c *Config) get(key string) (value any) {
-	return c.viper.Get(key)
-}
-
-func (c *Config) getBool(key string, options ...ExpandOptions) (value bool) {
-	s := c.getString(key, options...)
-	value, _ = strconv.ParseBool(s)
-	return
-}
-
-func (c *Config) getDuration(key string, options ...ExpandOptions) (value time.Duration) {
-	s := c.getString(key, options...)
-	value, _ = time.ParseDuration(s)
-	return
-}
-
-func (c *Config) getInt(key string, options ...ExpandOptions) (value int) {
-	s := c.getString(key, options...)
-	value, _ = strconv.Atoi(s)
-	return
-}
-
-func (c *Config) getInt64(key string, options ...ExpandOptions) (value int64) {
-	s := c.getString(key, options...)
-	value, _ = strconv.ParseInt(s, 10, 64)
-	return
-}
-
-func (c *Config) getUint(key string) (value uint) {
-	return c.viper.GetUint(key)
-}
-
-func (c *Config) getUint16(key string) (value uint16) {
-	return c.viper.GetUint16(key)
-}
-
-func (c *Config) getFloat64(key string) (value float64) {
-	return c.viper.GetFloat64(key)
-}
-
-func (c *Config) getBytes(key string, options ...ExpandOptions) (value []byte) {
-	str := c.getString(key, options...)
-	return []byte(str)
-}
-
-// getString functions like [viper.GetString] on a Config instance, but
-// additionally calls [expandString] with the configuration value, passing
-// any "values" maps
-func (c *Config) getString(s string, options ...ExpandOptions) string {
-	str := c.viper.GetString(s)
-
-	return expand[string](c, str, options...)
-}
-
-// getStringSlice is the internal function that does not lock the
-// configuration structure and functions like [viper.GetStringSlice] on
-// a Config instance but additionally calls [expand] on each
-// element of the slice, passing any "values" maps
-func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []string) {
-	var result []string
-	opts := evalExpandOptions(c, options...)
-
-	if c.isSet(key) {
-		result = c.viper.GetStringSlice(key)
-	} else if init, ok := opts.initialValue.([]string); ok {
-		result = init
-	}
-
-	if len(result) == 0 {
-		if def, ok := opts.defaultValue.([]string); ok {
-			result = def
-		}
-	}
-
-	for _, n := range result {
-		slice = append(slice, expand[string](c, n, options...))
-	}
-	return
-}
-
-// getStringMap functions like [viper.GetStringMap] on a Config
-// instance, expand values with [expand] and returns a
-// map[string]any. If the value is not set then an empty map is
-// returned.
-func (c *Config) getStringMap(key string, options ...ExpandOptions) (value map[string]any) {
-	value = c.viper.GetStringMap(key)
-	if value == nil {
-		value = make(map[string]any)
-	}
-	for k, v := range value {
-		if s, ok := v.(string); ok {
-			value[k] = expand[string](c, s, options...)
-		}
-	}
-	return
-}
-
-// getStringMapString functions like [viper.GetStringMapString] on a
-// Config instance but additionally calls [expand] on each value
-// element of the map, passing any "values" maps
-//
-// Use a version of https://github.com/spf13/viper/pull/1504 to fix viper bug #1106
-func (c *Config) getStringMapString(key string, options ...ExpandOptions) (m map[string]string) {
-	m = make(map[string]string)
-
-	key = strings.ToLower(key)
-	prefix := key + c.delimiter
-
-	i := c.viper.Get(key)
-
-	if !isStringMapInterface(i) {
-		return
-	}
-	val := i.(map[string]string)
-	keys := c.allKeys()
-	for _, k := range keys {
-		if !strings.HasPrefix(k, prefix) {
-			continue
-		}
-		mk := strings.TrimPrefix(key, prefix)
-		mk = strings.Split(mk, c.delimiter)[0]
-		if _, exists := val[mk]; exists {
-			continue
-		}
-		mv := get[string](c, key+c.delimiter+mk)
-		if mv == "" {
-			continue
-		}
-		val[mk] = mv
-	}
-
-	for k, v := range val {
-		m[k] = expand[string](c, fmt.Sprint(v), options...)
-	}
-
-	return
-}
-
-// GetSliceStringMapString returns a slice of string maps for the key s,
-// it iterates over all values in all maps and applies the Expand
-// with the options given
-func (c *Config) getSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
-	if err := c.unmarshalKey2(s, &result); err != nil {
-		return
-	}
-	for _, m := range result {
-		for k, v := range m {
-			m[k] = expand[string](c, v, options...)
-		}
-	}
-	return
 }
 
 func (c *Config) isSet(key string) (value bool) {
@@ -1014,35 +877,6 @@ func (c *Config) sub(key string) *Config {
 }
 
 func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
-	key = strings.ToLower(key)
-	prefix := key + c.delimiter
-
-	i := c.viper.Get(key)
-	if isStringMapInterface(i) {
-		val := i.(map[string]any)
-		keys := c.allKeys()
-		for _, k := range keys {
-			if !strings.HasPrefix(k, prefix) {
-				continue
-			}
-			mk := strings.TrimPrefix(k, prefix)
-			mk = strings.Split(mk, c.delimiter)[0]
-			if _, exists := val[mk]; exists {
-				continue
-			}
-			mv := c.get(key + c.delimiter + mk)
-			if mv == nil {
-				continue
-			}
-			val[mk] = mv
-		}
-		i = val
-	}
-
-	return decode(i, defaultDecoderConfig(rawVal, opts...))
-}
-
-func (c *Config) unmarshalKey2(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
 }
 
@@ -1053,7 +887,7 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 	opts := evalExpandOptions(c, options...)
 
 	for _, r := range opts.replacements {
-		sub := c.getString(r)
+		sub := expand[string](c, c.viper.GetString(r), options...)
 
 		// simple case, no expand substrings
 		if !strings.Contains(value, "${") {

@@ -107,7 +107,7 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 		if slices.Contains(opts.ignoreKeys, k) {
 			continue
 		}
-		v := c.get(k)
+		v := get[any](c, k)
 		// if given the IgnoreEmptyValues option, skip aliases and keys
 		// with zero/empty values
 		if opts.ignoreEmptyValues && isZero(v) {
@@ -167,7 +167,7 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 		if slices.Contains(opts.ignoreKeys, k) {
 			continue
 		}
-		v := c.get(k)
+		v := get[any](c, k)
 		if opts.ignoreEmptyValues && isZero(v) {
 			continue
 		}
