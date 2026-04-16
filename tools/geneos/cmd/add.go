@@ -271,7 +271,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	_ = instance.ImportFiles(i, addCmdImportFiles...)
 
-	fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
+	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
 	if addCmdStart || addCmdLogs {
 		if err = instance.Start(i); err != nil {

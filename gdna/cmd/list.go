@@ -146,7 +146,7 @@ var listExcludeCmd = &cobra.Command{
 
 func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 	var reports []string
-	for name := range cf.GetStringMap("reports") {
+	for name := range config.Get[map[string]any](cf, "reports") {
 		reports = append(reports, name)
 	}
 	slices.Sort(reports)

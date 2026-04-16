@@ -102,12 +102,12 @@ map and submit incidents.
 			cordial.SetLogfile(logFile),
 			cordial.LumberjackOptions(&lumberjack.Logger{
 				Filename:   logFile,
-				MaxSize:    cf.GetInt("server.log.max-size"),
-				MaxBackups: cf.GetInt("server.log.max-backups"),
-				MaxAge:     cf.GetInt("server.log.stale-after"),
-				Compress:   cf.GetBool("server.log.compress"),
+				MaxSize:    config.Get[int](cf, cf.Join("server", "log", "max-size")),
+				MaxBackups: config.Get[int](cf, cf.Join("server", "log", "max-backups")),
+				MaxAge:     config.Get[int](cf, cf.Join("server", "log", "stale-after")),
+				Compress:   config.Get[bool](cf, cf.Join("server", "log", "compress")),
 			}),
-			cordial.RotateOnStart(cf.GetBool("server.log.rotate-on-start")),
+			cordial.RotateOnStart(config.Get[bool](cf, cf.Join("server", "log", "rotate-on-start"))),
 		)
 		proxy(cf)
 	},
@@ -155,7 +155,7 @@ func proxy(cf *config.Config) {
 	// init connection or fail early
 	snow.ServiceNow(cf.Sub("servicenow"))
 
-	if cf.GetBool(cf.Join("server", "tls", "enabled")) {
+	if config.Get[bool](cf, cf.Join("server", "tls", "enabled")) {
 		e.Logger.Fatal(e.StartTLS(
 			listen,
 			config.Get[[]byte](cf, cf.Join("server", "tls", "certificate")),

@@ -186,7 +186,7 @@ var raiseCmd = &cobra.Command{
 		log.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
 
 		// iterate through proxy urls
-		for _, r := range cf.GetStringSlice(cf.Join("ims-gateway", "url")) {
+		for _, r := range config.Get[[]string](cf, cf.Join("ims-gateway", "url")) {
 			ccf := &ims.ClientConfig{
 				URL:     r + "/" + raiseCmdIMSType,
 				Token:   config.Get[string](cf, config.Join("ims-gateway", "authentication", "token")),

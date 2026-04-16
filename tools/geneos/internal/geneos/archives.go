@@ -648,7 +648,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	// cannot fetch partial versions for OSes with platformID set - restriction on download search interface
 	platform := getPlatformId(opts.platformId)
 
-	cf := config.GetConfig()
+	cf := config.Global()
 
 	baseurl := config.Get[string](cf, cf.Join("download", "url"))
 	downloadURL, _ := url.Parse(baseurl)
@@ -690,7 +690,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		return unicode.IsSpace(r) || r == ','
 	})
 
-	timeout := config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.Default(60*time.Second))
+	timeout := config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second))
 	client := &http.Client{
 		Timeout: timeout,
 	}
@@ -847,7 +847,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 
 	baseurl := config.GetString(
 		config.Join("download", "nexus", "url"),
-		config.Default("https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"),
+		config.DefaultValue("https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"),
 	)
 	downloadURL, _ := url.Parse(baseurl)
 
@@ -886,7 +886,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 	}
 
-	timeout := config.GetDuration(config.Join("download", "timeout"), config.Default(60*time.Second))
+	timeout := config.Get[time.Duration](config.Global(), config.Join("download", "timeout"), config.DefaultValue(60*time.Second))
 	client := &http.Client{
 		Timeout: timeout,
 	}

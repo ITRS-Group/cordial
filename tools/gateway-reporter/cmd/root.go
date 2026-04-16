@@ -159,7 +159,7 @@ var RootCmd = &cobra.Command{
 		dir := cf.GetString("output.directory")
 		_ = os.MkdirAll(dir, 0775)
 
-		for format, filename := range cf.GetStringMap("output.formats") {
+		for format, filename := range config.Get[map[string]any](cf, "output.formats") {
 			if filename == "" {
 				continue
 			}
@@ -237,12 +237,12 @@ func initLogging(execname string, logfile string) {
 	if logfile != "" {
 		l := &lumberjack.Logger{
 			Filename:   logfile,
-			MaxBackups: cf.GetInt("server.logs.backups"),
-			MaxSize:    cf.GetInt("server.logs.size"),
-			MaxAge:     cf.GetInt("server.logs.age"),
-			Compress:   cf.GetBool("server.logs.compress"),
+			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
+			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),
+			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "age")),
+			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
 		}
-		if cf.GetBool("server.logs.rotate-at-start") {
+		if config.Get[bool](cf, cf.Join("server", "logs", "rotate-at-start")) {
 			l.Rotate()
 		}
 		out = l

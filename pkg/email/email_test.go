@@ -145,8 +145,8 @@ func TestNewEmailConfig(t *testing.T) {
 		t.Errorf("Expected server 'smtp.example.com', got '%s'", emailConf.GetString("_smtp_server"))
 	}
 
-	if emailConf.GetInt("_smtp_port") != 587 {
-		t.Errorf("Expected port 587, got %d", emailConf.GetInt("_smtp_port"))
+	if config.Get[uint16](emailConf, "_smtp_port") != 587 {
+		t.Errorf("Expected port 587, got %d", config.Get[uint16](emailConf, "_smtp_port"))
 	}
 
 	// Check that the address arguments are set
@@ -213,13 +213,13 @@ func TestEmailConfigurationDefaults(t *testing.T) {
 
 	// Test that the function works with default values
 	// Note: The defaults are used internally in the Dial function, not stored in the config
-	if conf.GetInt("_smtp_timeout") != 0 {
-		t.Errorf("Expected unset timeout 0, got %d", conf.GetInt("_smtp_timeout"))
+	if config.Get[int](conf, "_smtp_timeout") != 0 {
+		t.Errorf("Expected unset timeout 0, got %d", config.Get[int](conf, "_smtp_timeout"))
 	}
 
 	// Test default TLS policy
-	if conf.GetString("_smtp_tls") != "" {
-		t.Errorf("Expected unset TLS policy '', got '%s'", conf.GetString("_smtp_tls"))
+	if config.Get[string](conf, "_smtp_tls") != "" {
+		t.Errorf("Expected unset TLS policy '', got '%s'", config.Get[string](conf, "_smtp_tls"))
 	}
 }
 

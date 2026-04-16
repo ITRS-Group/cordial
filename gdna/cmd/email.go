@@ -142,28 +142,28 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	// always build a multipart body
 	data.HTMLBodyPart = &bytes.Buffer{}
 	r, _ := reporter.NewReporter("html", data.HTMLBodyPart,
-		reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
-		reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
-		reporter.Scramble(cf.GetBool("email.scramble")),
+		reporter.HTMLPreamble(config.Get[string](cf, cf.Join("email", "html-preamble"))),
+		reporter.HTMLPostscript(config.Get[string](cf, cf.Join("email", "html-postscript"))),
+		reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
 		reporter.DataviewCSSClass("gdna-dataview"),
 		reporter.HeadlineCSSClass("gdna-headlines"),
 	)
-	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
+	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
 	r.Render()
 	r.Close()
 	log.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
 
 	data.TextBodyPart = &bytes.Buffer{}
 	r, _ = reporter.NewReporter("table", data.TextBodyPart,
-		reporter.Scramble(cf.GetBool("email.scramble")),
+		reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
 	)
-	runReports(ctx, cf, tx, r, cf.GetString("email.body-reports"), -1)
+	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
 	r.Render()
 	r.Close()
 	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
 	var contents []string
-	c := cf.Get("email.contents")
+	c := config.Get[any](cf, cf.Join("email", "contents"))
 	switch c2 := c.(type) {
 	case []any:
 		for _, v := range c2 {
@@ -183,9 +183,9 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			}
 			data.HTMLAttachment = &bytes.Buffer{}
 			r, _ := reporter.NewReporter("html", data.HTMLAttachment,
-				reporter.HTMLPreamble(cf.GetString("email.html-preamble")),
-				reporter.HTMLPostscript(cf.GetString("email.html-postscript")),
-				reporter.Scramble(cf.GetBool("email.scramble")),
+				reporter.HTMLPreamble(config.Get[string](cf, cf.Join("email", "html-preamble"))),
+				reporter.HTMLPostscript(config.Get[string](cf, cf.Join("email", "html-postscript"))),
+				reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
 				reporter.DataviewCSSClass("gdna-dataview"),
 				reporter.HeadlineCSSClass("gdna-headlines"),
 			)
@@ -196,21 +196,21 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
 			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
-				reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
-				reporter.XLSXScramble(cf.GetBool("email.scramble")),
-				reporter.XLSXPassword(config.Get[*config.Plaintext](cf, "xlsx.password")),
-				reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
-				reporter.IntFormat(config.Get[int](cf, "xlsx.formats.int", config.Default(1))),
-				reporter.PercentFormat(config.Get[int](cf, "xlsx.formats.percent", config.Default(9))),
+				reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
+				reporter.XLSXScramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
+				reporter.XLSXPassword(config.Get[*config.Plaintext](cf, cf.Join("xlsx", "password"))),
+				reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
+				reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
+				reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
 				reporter.SeverityColours(
-					cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF")),
-					cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C")),
-					cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057")),
-					cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668")),
+					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "undefined"), config.DefaultValue("BFBFBF")),
+					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "ok"), config.DefaultValue("5BB25C")),
+					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "warning"), config.DefaultValue("F9B057")),
+					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "critical"), config.DefaultValue("FF5668")),
 				),
-				reporter.MinColumnWidth(config.Get[float64](cf, "xlsx.formats.min-width")),
-				reporter.MaxColumnWidth(config.Get[float64](cf, "xlsx.formats.max-width")),
-				reporter.XLSXHeadlines(config.Get[int](cf, "xlsx.headlines")),
+				reporter.MinColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "min-width"))),
+				reporter.MaxColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "max-width"))),
+				reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Render()
@@ -261,23 +261,23 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 		err = fmt.Errorf("%w: setting From", err)
 		return
 	}
-	if err = m.ToFromString(emailConfToString(cf.Get("email.to"))); err != nil {
+	if err = m.ToFromString(emailConfToString(config.Get[any](cf, "email.to"))); err != nil {
 		err = fmt.Errorf("%w: setting To", err)
 		return
 	}
-	if len(cf.GetStringSlice("email.cc")) > 0 {
-		if err = m.CcFromString(emailConfToString(cf.Get("email.cc"))); err != nil {
+	if len(config.Get[[]string](cf, "email.cc")) > 0 {
+		if err = m.CcFromString(emailConfToString(config.Get[any](cf, "email.cc"))); err != nil {
 			err = fmt.Errorf("%w: setting Cc", err)
 			return
 		}
 	}
-	if len(cf.GetStringSlice("email.bcc")) > 0 {
-		if err = m.BccFromString(emailConfToString(cf.Get("email.bcc"))); err != nil {
+	if len(config.Get[[]string](cf, "email.bcc")) > 0 {
+		if err = m.BccFromString(emailConfToString(config.Get[any](cf, "email.bcc"))); err != nil {
 			err = fmt.Errorf("%w: setting Bcc", err)
 			return
 		}
 	}
-	m.Subject(cf.GetString("email.subject", config.Default("ITRS GDNA EMail Report")))
+	m.Subject(cf.GetString("email.subject", config.DefaultValue("ITRS GDNA EMail Report")))
 
 	// we either have a multipart body or text or html - but we have to
 	// have something
@@ -310,7 +310,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	// build smtp connection details
 	var tlsPolicy mail.TLSPolicy
 
-	switch strings.ToLower(cf.GetString("email.tls", config.Default("default"))) {
+	switch strings.ToLower(cf.GetString("email.tls", config.DefaultValue("default"))) {
 	case "force":
 		tlsPolicy = mail.TLSMandatory
 	case "none":
@@ -322,7 +322,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	password := &config.Plaintext{}
 
 	username := cf.GetString("email.username")
-	server := cf.GetString("email.smtp-server", config.Default("localhost"))
+	server := cf.GetString("email.smtp-server", config.DefaultValue("localhost"))
 
 	if username != "" {
 		password = config.Get[*config.Plaintext](cf, "email.password")
@@ -341,7 +341,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithTimeout(time.Duration(config.Get[int](cf, "_smtp_timeout", config.Default(10))) * time.Second),
+		mail.WithTimeout(time.Duration(config.Get[int](cf, "_smtp_timeout", config.DefaultValue(10))) * time.Second),
 	}
 
 	if username != "" {
@@ -358,11 +358,11 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	// override port policy if we are told to, but zero skips through
 	// sometimes, so check that too
-	if cf.IsSet("email.port") && cf.GetInt("email.port") != 0 {
-		mailOpts = append(mailOpts, mail.WithPort(cf.GetInt("email.port")))
+	if cf.IsSet("email.port") && config.Get[uint16](cf, cf.Join("email", "port")) != 0 {
+		mailOpts = append(mailOpts, mail.WithPort(int(config.Get[uint16](cf, cf.Join("email", "port")))))
 	}
 
-	if cf.GetBool("email.tls-insecure") {
+	if config.Get[bool](cf, cf.Join("email", "tls-insecure")) {
 		mailOpts = append(mailOpts, mail.WithTLSConfig(&tls.Config{
 			InsecureSkipVerify: true,
 		}))

@@ -42,7 +42,7 @@ func IsDisabled(i geneos.Instance) bool {
 
 // IsProtected returns true if instance i is marked protected
 func IsProtected(i geneos.Instance) bool {
-	return i.Config().GetBool("protected")
+	return config.Get[bool](i.Config(), "protected")
 }
 
 // IsRunning returns true if the instance is running
@@ -53,7 +53,7 @@ func IsRunning(i geneos.Instance) bool {
 
 // IsAutoStart returns true is the instance is set to autostart
 func IsAutoStart(i geneos.Instance) bool {
-	return i.Config().GetBool("autostart")
+	return config.Get[bool](i.Config(), "autostart")
 }
 
 // BaseVersion returns the absolute path of the base package directory
@@ -64,7 +64,7 @@ func BaseVersion(i geneos.Instance) (dir string) {
 		t = i.Type().ParentType.String()
 	}
 
-	pkgtype := i.Config().GetString("pkgtype", config.Default(t))
+	pkgtype := i.Config().GetString("pkgtype", config.DefaultValue(t))
 	return i.Host().PathTo("packages", pkgtype, i.Config().GetString("version"))
 }
 
@@ -82,7 +82,7 @@ func Version(i geneos.Instance) (base string, version string, err error) {
 	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
-	pkgtype := cf.GetString("pkgtype", config.Default(t))
+	pkgtype := cf.GetString("pkgtype", config.DefaultValue(t))
 	ct := geneos.ParseComponent(pkgtype)
 
 	version, err = geneos.CurrentVersion(i.Host(), ct, base)
@@ -116,7 +116,7 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
-	pkgtype := cf.GetString("pkgtype", config.Default(t))
+	pkgtype := cf.GetString("pkgtype", config.DefaultValue(t))
 	ct := geneos.ParseComponent(pkgtype)
 
 	version, err = geneos.CurrentVersion(i.Host(), ct, base)

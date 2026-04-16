@@ -330,7 +330,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		os.Stdout,
 		reporter.DataviewCSSClass("gdna-dataview"),
 		reporter.HeadlineCSSClass("gdna-headlines"),
-		reporter.XLSXHeadlines(cf.GetInt("xlsx.headlines")),
+		reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
 	)
 	if category != "" {
 		rows := [][]string{}
@@ -363,7 +363,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	}
 
 	var rows [][]string
-	for category := range cf.GetStringMap(config.Join("filters", filterType)) {
+	for category := range config.Get[map[string]any](cf, config.Join("filters", filterType)) {
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
@@ -410,8 +410,8 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	))
 
 OUTER:
-	for f := range cf.GetStringMap(config.Join("filters", filterType)) {
-		table := cf.GetString(config.Join("filters", filterType, f, "table"))
+	for f := range config.Get[map[string]any](cf, cf.Join("filters", filterType)) {
+		table := config.Get[string](cf, cf.Join("filters", filterType, f, "table"))
 
 		// if we are called between reporting db rebuilds, delete existing contents
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
@@ -420,7 +420,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", filterType, f, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(cf.Join("filters", filterType, f, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
@@ -428,7 +428,7 @@ OUTER:
 		defer insertStmt.Close()
 
 		var x []*Filter
-		if err = ig.UnmarshalKey(config.Join("filters", filterType, f), &x,
+		if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
 			)); err != nil {
@@ -436,7 +436,7 @@ OUTER:
 		}
 		// if nothing on-disk then load any defaults
 		if len(x) == 0 {
-			for _, entry := range cf.GetStringSlice(config.Join("filters", filterType, f, "default")) {
+			for _, entry := range config.Get[[]string](cf, config.Join("filters", filterType, f, "default")) {
 				if _, err = insertStmt.ExecContext(ctx,
 					sql.Named("name", entry),
 					sql.Named("user", nil),

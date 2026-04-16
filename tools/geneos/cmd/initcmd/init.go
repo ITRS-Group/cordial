@@ -224,7 +224,7 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 	log.Debug().Msgf("using %q as root", root)
 	options = append(options, geneos.UseRoot(root))
 
-	cf := config.GetConfig()
+	cf := config.Global()
 	// download authentication
 	if initCmdDLUsername == "" {
 		initCmdDLUsername = cf.GetString(cf.Join("download", "username"))

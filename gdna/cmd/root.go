@@ -92,8 +92,8 @@ var GDNACmd = &cobra.Command{
 
 		initConfig(cmd)
 
-		if !cf.IsSet("gdna.version") {
-			cf.Set("gdna.version", cordial.VERSION)
+		if !cf.IsSet(cf.Join("gdna", "version")) {
+			cf.Set(cf.Join("gdna", "version"), cordial.VERSION)
 		}
 
 		return
@@ -150,12 +150,12 @@ func initConfig(cmd *cobra.Command) {
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,
-			MaxSize:    cf.GetInt("gdna.log.max-size"),
-			MaxBackups: cf.GetInt("gdna.log.max-backups"),
-			MaxAge:     cf.GetInt("gdna.log.stale-after"),
-			Compress:   cf.GetBool("gdna.log.compress"),
+			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size")),
+			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups")),
+			MaxAge:     config.Get[int](cf, cf.Join("gdna", "log", "stale-after")),
+			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress")),
 		}),
-		cordial.RotateOnStart(cf.GetBool("gdna.log.rotate-on-start")),
+		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
 	)
 
 	switch {

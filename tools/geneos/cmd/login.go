@@ -74,7 +74,7 @@ var loginCmd = &cobra.Command{
 			if err2 != nil {
 				return err2
 			}
-			for d := range cr.GetStringMap("credentials") {
+			for d := range config.Get[map[string]any](cr, "credentials") {
 				fmt.Println(d)
 			}
 

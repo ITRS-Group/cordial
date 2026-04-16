@@ -265,7 +265,7 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.Default(hostname)))
+	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.DefaultValue(hostname)))
 
 	if skipFileCheck {
 		return

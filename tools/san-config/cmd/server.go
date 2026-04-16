@@ -74,10 +74,10 @@ var serverCmd = &cobra.Command{
 		initConfig(cmd)
 
 		var usetls string
-		if cf.GetBool("server.tls.enable") {
+		if config.Get[bool](cf, "server.tls.enable") {
 			usetls = "s"
 		}
-		log.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", cordial.ExecutableName(), cordial.VERSION, "http"+usetls, cf.GetString("server.host"), cf.GetInt("server.port"))
+		log.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", cordial.ExecutableName(), cordial.VERSION, "http"+usetls, config.Get[string](cf, "server.host"), config.Get[uint16](cf, "server.port"))
 		cs, e := initServer(cf)
 		go cs.startServer(e)
 		<-done
@@ -126,7 +126,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 			break
 		}
 		log.Error().Err(err).Msg("retrying until first inventory load(s) succeeds")
-		check := cs.conf.GetDuration("inventory.check-interval")
+		check := config.Get[time.Duration](cs.conf, "inventory.check-interval")
 		if check == 0 {
 			check = 60 * time.Second
 		}
@@ -137,7 +137,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 	// check for live gateways
 	go func(cs *ConfigServer) {
 		for {
-			check := cs.conf.GetDuration("geneos.check-interval")
+			check := config.Get[time.Duration](cs.conf, "geneos.check-interval")
 			if check == 0 {
 				check = 60 * time.Second
 			}
@@ -154,7 +154,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 	go func(cs *ConfigServer) {
 		for {
 			// update each time in case configuration has changed
-			check := cs.conf.GetDuration("inventory.check-interval")
+			check := config.Get[time.Duration](cs.conf, "inventory.check-interval")
 			if check == 0 {
 				check = 60 * time.Second
 			}
@@ -181,8 +181,8 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 
 	// loop forever trying to listen on configured port
 	for {
-		if !cf.GetBool("server.tls.enable") {
-			err = e.Start(fmt.Sprintf("%s:%d", cf.GetString("server.host"), cf.GetInt("server.port")))
+		if !config.Get[bool](cf, "server.tls.enable") {
+			err = e.Start(fmt.Sprintf("%s:%d", config.Get[string](cf, "server.host"), config.Get[uint16](cf, "server.port")))
 			if err != nil {
 				log.Error().Err(err).Msg("retrying in 5 seconds")
 				time.Sleep(5 * time.Second)
@@ -209,7 +209,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 			key = config.ExpandHome(keystr)
 		}
 
-		listen := fmt.Sprintf("%s:%d", cf.GetString("server.host", config.Default("0.0.0.0")), cf.GetInt("server.port", config.Default(6543)))
+		listen := fmt.Sprintf("%s:%d", config.Get[string](cf, cf.Join("server", "host"), config.DefaultValue("0.0.0.0")), config.Get[uint16](cf, cf.Join("server", "port"), config.DefaultValue(6543)))
 		err = e.StartTLS(listen, cert, key)
 
 		if err != nil {
@@ -257,7 +257,7 @@ func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	gwlist = slices.Compact(gwlist)
 
 	// only lookup allGateways once
-	allGateways := cs.conf.GetSliceStringMapString("geneos.gateways")
+	allGateways := config.Get[[]map[string]string](cs.conf, "geneos.gateways")
 
 	for _, gw := range gwlist {
 		gateway := GatewayDetails(gw, allGateways)

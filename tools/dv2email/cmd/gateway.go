@@ -28,20 +28,20 @@ import (
 func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 	u := &url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", cf.GetString("gateway.host"), cf.GetInt("gateway.port")),
+		Host:   fmt.Sprintf("%s:%d", cf.GetString("gateway.host"), config.Get[uint16](cf, cf.Join("gateway", "port"))),
 	}
 
-	if cf.GetBool("gateway.use-tls") {
+	if config.Get[bool](cf, cf.Join("gateway", "use-tls")) {
 		u.Scheme = "https"
 	}
 
-	username := cf.GetString("gateway.username")
-	gateway := cf.GetString("gateway.name")
+	username := config.Get[string](cf, cf.Join("gateway", "username"))
+	gateway := config.Get[string](cf, cf.Join("gateway", "name"))
 
 	password := &config.Plaintext{}
 
 	if username != "" {
-		password = config.Get[*config.Plaintext](cf, "gateway.password")
+		password = config.Get[*config.Plaintext](cf, cf.Join("gateway", "password"))
 	}
 
 	if username == "" {

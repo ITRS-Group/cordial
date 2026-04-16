@@ -104,7 +104,7 @@ var (
 )
 
 func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err error) {
-	rowStripes := cf.GetBool("xlsx.row-stripes")
+	rowStripes := config.Get[bool](cf, cf.Join("xlsx", "row-stripes"))
 
 	// if zero then auto-size based on widest value, else fixed
 	columnWidth := config.Get[float64](cf, "xlsx.column-width")
@@ -240,11 +240,11 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		err = x.AddTable(sheetname, &excelize.Table{
 			Range:             dataviewTable + ":" + end,
 			Name:              tablename,
-			StyleName:         cf.GetString("xlsx.style", config.Default("TableStyleMedium2")),
+			StyleName:         cf.GetString("xlsx.style", config.DefaultValue("TableStyleMedium2")),
 			ShowFirstColumn:   true,
 			ShowLastColumn:    false,
 			ShowRowStripes:    &rowStripes,
-			ShowColumnStripes: cf.GetBool("xlsx.column-stripes"),
+			ShowColumnStripes: config.Get[bool](cf, cf.Join("xlsx", "column-stripes")),
 		})
 		if err != nil {
 			log.Error().Err(err).Msg("")

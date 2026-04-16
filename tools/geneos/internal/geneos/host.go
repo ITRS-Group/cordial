@@ -138,7 +138,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		h.Set("os", os)
 		h.Set("arch", arch)
 	}
-	h.Set(cordial.ExecutableName(), config.GetString(cordial.ExecutableName(), config.Default(config.GetString("itrshome"))))
+	h.Set(cordial.ExecutableName(), config.GetString(cordial.ExecutableName(), config.DefaultValue(config.GetString("itrshome"))))
 	return
 }
 
@@ -287,7 +287,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			h.Set("homedir", dir)
 		}
 	}
-	h.SetStringMapString("osinfo", osinfo)
+	config.Set(h.Config, "osinfo", osinfo)
 	return
 }
 
@@ -459,7 +459,7 @@ func LoadHostConfig() {
 
 	hosts = sync.Map{}
 
-	for name, hostval := range h.GetStringMap("hosts") {
+	for name, hostval := range config.Get[map[string]any](h, "hosts") {
 		v := config.New()
 
 		// set defaults ?
@@ -478,13 +478,13 @@ func LoadHostConfig() {
 
 		r := host.NewSSHRemote(
 			v.GetString("name"),
-			host.Username(v.GetString("username")), // username is the login name for the remote host
-			host.Hostname(v.GetString("hostname")),
+			host.Username(config.Get[string](v, "username")), // username is the login name for the remote host
+			host.Hostname(config.Get[string](v, "hostname")),
 			host.Port(config.Get[uint16](v, "port")),
 			host.Password(config.Get[*config.Plaintext](v, "password").Enclave),
-			host.PrivateKeyFiles(v.GetStringSlice("privatekeys")...),
+			host.PrivateKeyFiles(config.Get[[]string](v, "privatekeys")...),
 		)
-		hosts.Store(v.GetString("name"), &Host{r, v, v.GetBool("hidden"), true})
+		hosts.Store(v.GetString("name"), &Host{r, v, config.Get[bool](v, "hidden"), true})
 	}
 }
 

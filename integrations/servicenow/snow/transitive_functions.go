@@ -61,12 +61,12 @@ func InitializeConnection(vc *config.Config) *Connection {
 	}
 	password := strings.TrimSpace(string(pw))
 
-	username := vc.GetString("servicenow.username")
-	clientid := vc.GetString("servicenow.clientid")
-	clientsecret := vc.GetString("servicenow.clientsecret")
-	instance := vc.GetString("servicenow.instance")
-	path := vc.GetString("servicenow.path", config.Default("/api/now/v2"))
-	trace := vc.GetBool(config.Join("servicenow", "trace"))
+	username := config.Get[string](vc, vc.Join("servicenow", "username"))
+	clientid := config.Get[string](vc, vc.Join("servicenow", "clientid"))
+	clientsecret := config.Get[string](vc, vc.Join("servicenow", "clientsecret"))
+	instance := config.Get[string](vc, vc.Join("servicenow", "instance"))
+	path := config.Get[string](vc, vc.Join("servicenow", "path"), config.DefaultValue("/api/now/v2"))
+	trace := config.Get[bool](vc, vc.Join("servicenow", "trace"))
 
 	if clientid != "" && clientsecret != "" && !strings.Contains(instance, ".") {
 		params := make(url.Values)

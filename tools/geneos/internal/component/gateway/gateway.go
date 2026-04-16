@@ -447,11 +447,11 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	checks = append(checks, fileChecks...)
 
 	// 3 options: set, set to false, not set
-	if cf.GetBool("licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {
+	if config.Get[bool](cf, "licdsecure") || (!cf.IsSet("licdsecure") && instance.FileOf(i, "certificate") != "") {
 		args = append(args, "-licd-secure")
 	}
 
-	if cf.GetBool("usekeyfile") {
+	if config.Get[bool](cf, "usekeyfile") {
 		keyfile := instance.PathTo(i, "keyfile")
 		if keyfile != "" {
 			args = append(args, "-key-file", keyfile)

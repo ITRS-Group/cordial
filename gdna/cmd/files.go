@@ -51,12 +51,12 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		tr := &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: cf.GetBool("gdna.licd-skip-verify"),
+				InsecureSkipVerify: config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify")),
 			},
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   cf.GetDuration("gdna.licd-timeout"),
+			Timeout:   config.Get[time.Duration](cf, cf.Join("gdna", "licd-timeout")),
 		}
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
@@ -79,7 +79,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		}
 		client := &http.Client{
 			Transport: tr,
-			Timeout:   cf.GetDuration("gdna.licd-timeout"),
+			Timeout:   config.Get[time.Duration](cf, "gdna.licd-timeout"),
 		}
 		u = u.JoinPath(DetailsPath)
 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)

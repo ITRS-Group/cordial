@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -65,7 +66,7 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 	var totalCount int
 
 	httpClient := http.Client{
-		Timeout: cf.GetDuration("geneos.timeout"),
+		Timeout: config.Get[time.Duration](cf, "geneos.timeout"),
 	}
 	httpsClient := http.Client{
 		Transport: &http.Transport{
@@ -74,10 +75,10 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 				InsecureSkipVerify: true, // we just want to know if it responds, let the client check certs
 			},
 		},
-		Timeout: cf.GetDuration("geneos.timeout"),
+		Timeout: config.Get[time.Duration](cf, "geneos.timeout"),
 	}
 
-	for i, g := range cf.GetSliceStringMapString("geneos.gateways") {
+	for i, g := range config.Get[[]map[string]string](cf, "geneos.gateways") {
 		if g["name"] == "" && g["primary"] == "" {
 			log.Debug().Msgf("no name or primary defined for gateway %d, skipping", i)
 		}

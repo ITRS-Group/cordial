@@ -26,6 +26,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/wneessen/go-mail"
@@ -85,7 +86,7 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		return
 	}
 
-	if slices.Contains(cf.GetStringSlice("files"), "texttable") {
+	if slices.Contains(config.Get[[]string](cf, "files"), "texttable") {
 		var files []dataFile
 		files, err = buildTextTableFiles(cf, data, run)
 
@@ -106,7 +107,7 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		}
 	}
 
-	if slices.Contains(cf.GetStringSlice("files"), "html") {
+	if slices.Contains(config.Get[[]string](cf, "files"), "html") {
 		m := mail.NewMsg()
 
 		if err = buildHTMLAttachments(cf, m, data, run); err != nil {
@@ -130,7 +131,7 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		}
 	}
 
-	if slices.Contains(cf.GetStringSlice("files"), "xlsx") {
+	if slices.Contains(config.Get[[]string](cf, "files"), "xlsx") {
 		var files []dataFile
 		files, err = buildXLSXFiles(cf, data, run)
 		if err != nil {

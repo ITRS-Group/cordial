@@ -29,13 +29,12 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/viper"
 )
 
-// Config embeds Viper
+// Config structure
 type Config struct {
 	viper                *viper.Viper
 	mutex                *sync.RWMutex // mutex to protect concurrent access to the above viper
@@ -55,8 +54,8 @@ func init() {
 	global = New()
 }
 
-// GetConfig returns the global Config instance
-func GetConfig() *Config {
+// Global returns the global Config instance
+func Global() *Config {
 	return global
 }
 
@@ -165,8 +164,7 @@ func (c *Config) SetConfigType(t string) {
 
 // Sub returns a Config instance rooted at the key passed. If key does
 // not exist then an empty config structure is returned, unlike viper
-// which returns nil. It uses the mutex pointer from the caller so that
-// locking of sub-config objects also applies to the original.
+// which returns nil.
 //
 // Note that viper.Sub() does NOT merge defaults
 func (c *Config) Sub(key string) *Config {
@@ -177,8 +175,7 @@ func (c *Config) Sub(key string) *Config {
 
 // Sub returns a Config instance rooted at the key passed. If key does
 // not exist then an empty config structure is returned, unlike viper
-// which returns nil. It uses the mutex pointer from the caller so that
-// locking of sub-config objects also applies to the original.
+// which returns nil.
 //
 // Note that viper.Sub() does NOT merge defaults
 func Sub(key string) *Config {
@@ -187,93 +184,17 @@ func Sub(key string) *Config {
 	return global.sub(key)
 }
 
-// Set sets the key to value in the global configuration structure
-func Set(key string, value any) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.set(key, value)
+func Set[T any](c *Config, key string, value T, options ...ExpandOptions) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	set(c, key, value, options...)
 }
 
 // Set sets the key to value in the config structure c
 func (c *Config) Set(key string, value any) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	c.set(key, value)
-}
-
-// SetString sets the given key in the configuration structure c to the
-// string given after processing options. Options include replacing
-// substrings with configuration items that match *at the time of the
-// SetString call*. This allows the abstraction of a static string based
-// on the other config values given. E.g.
-//
-//	cf.SetString("setup", "/path/to/myname/setup.json", config.Replace("name"))
-//
-// This would check the value of the "name" key in cf and do a global
-// replace. Multiple Replace options are processed in order. If "name"
-// was "myname" at the time of the call then the resulting value is
-// `/path/to/${config:name}/setup.json`
-//
-// Existing expand options are left unchanged. All replacements are case
-// sensitive.
-func (c *Config) SetString(key, value string, options ...ExpandOptions) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.setString(key, value, options...)
-}
-
-// SetString sets the given key in the global configuration structure to
-// the string given after processing options. Options include replacing
-// substrings with configuration items that match *at the time of the
-// SetString call*. This allows the abstraction of a static string based
-// on the other config values given. E.g.
-//
-//	cf.SetString("setup", "/path/to/myname/setup.json", config.Replace("name"))
-//
-// This would check the value of the "name" key in cf and do a global
-// replace. Multiple Replace options are processed in order. If "name"
-// was "myname" at the time of the call then the resulting value is
-// `/path/to/${config:name}/setup.json`
-//
-// Existing expand options are left unchanged. All replacements are case
-// sensitive.
-func SetString(key, value string, options ...ExpandOptions) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.setString(key, value, options...)
-}
-
-// SetStringSlice sets the key to a slice of strings applying the
-// replacement options as for SetString to each member of the slice
-func (c *Config) SetStringSlice(key string, values []string, options ...ExpandOptions) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.setStringSlice(key, values, options...)
-}
-
-// SetStringSlice sets the given key in the global configuration
-// structure to a slice of strings applying the replacement options as
-// for SetString to each member of the slice
-func SetStringSlice(key string, values []string, options ...ExpandOptions) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.setStringSlice(key, values, options...)
-}
-
-// SetStringMapString iterates over a map[string]string and sets each
-// key to the value given.
-func (c *Config) SetStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.setStringMapString(key, vals, options...)
-}
-
-// SetStringMapString iterates over a map[string]string and sets each
-// key to the value given.
-func SetStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.setStringMapString(key, vals, options...)
+	set(c, key, value)
 }
 
 //
@@ -312,15 +233,6 @@ func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	return get[T](c, key, options...)
 }
 
-// Get returns the value associated with the key in the configuration
-// structure c. It is the caller's responsibility to do any type
-// assertion on returned value.
-func (c *Config) Get(key string) (value any) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[any](c, key)
-}
-
 // GetString functions like [viper.GetString] but additionally calls
 // [ExpandString] with the configuration value, passing any "values" maps
 func GetString(s string, options ...ExpandOptions) string {
@@ -336,52 +248,6 @@ func (c *Config) GetString(s string, options ...ExpandOptions) string {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[string](c, s, options...)
-}
-
-// GetInt functions like [viper.GetInt] on a Config instance, but
-// additionally calls [ExpandString] with the configuration value,
-// passing any "values" maps, before converting the result to an int. If
-// the conversion fails then the value returned will be the one from
-// [strconv.ParseInt] - typically 0 but can be the maximum integer value
-func (c *Config) GetInt(key string, options ...ExpandOptions) (i int) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[int](c, key, options...)
-}
-
-// GetStringSlice functions like [viper.GetStringSlice] but additionally calls
-// [ExpandString] on each element of the slice, passing any "values" maps
-func GetStringSlice(key string, options ...ExpandOptions) []string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[[]string](global, key, options...)
-}
-
-// GetStringSlice functions like [viper.GetStringSlice] on a Config
-// instance but additionally calls [ExpandString] on each element of the
-// slice, passing any "values" maps
-func (c *Config) GetStringSlice(key string, options ...ExpandOptions) (slice []string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[[]string](c, key, options...)
-}
-
-func (c *Config) GetBool(key string) (value bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[bool](c, key)
-}
-
-func (c *Config) GetDuration(key string, options ...ExpandOptions) (value time.Duration) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[time.Duration](c, key, options...)
-}
-
-func GetDuration(key string, options ...ExpandOptions) time.Duration {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[time.Duration](global, key, options...)
 }
 
 // ExpandFieldsHook returns a mapstructure.DecodeHookFunc that expands
@@ -401,46 +267,10 @@ var ExpandFieldsHook = func(opts ...ExpandOptions) mapstructure.DecodeHookFunc {
 	}
 }
 
-func Unmarshal(rawVal any, opts ...viper.DecoderConfigOption) error {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	return global.unmarshal(rawVal, opts...)
-}
-
-func (c *Config) Unmarshal(rawVal any, opts ...viper.DecoderConfigOption) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.unmarshal(rawVal, opts...)
-}
-
-func UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	return global.unmarshalKey(key, rawVal, opts...)
-}
-
 func (c *Config) UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.unmarshalKey(key, rawVal, opts...)
-}
-
-// GetSliceStringMapString returns a slice of string maps for the key s,
-// it iterates over all values in all maps and applies the ExpandString
-// with the options given
-func (c *Config) GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.getSliceStringMapString(s, options...)
-}
-
-// GetSliceStringMapString returns a slice of string maps for the key s,
-// it iterates over all values in all maps and applies the ExpandString
-// with the options given
-func GetSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.getSliceStringMapString(s, options...)
 }
 
 var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
@@ -456,15 +286,6 @@ func (c *Config) SetKeyValues(items ...string) (err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.setKeyValues(items...)
-}
-
-// SetKeyValues takes a list of `key-value` pairs as strings and
-// applies them to the global configuration object. Items without an `=`
-// are skipped.
-func SetKeyValues(items ...string) (err error) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	return global.setKeyValues(items...)
 }
 
 func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
@@ -509,46 +330,16 @@ func (c *Config) SetEnvPrefix(prefix string) {
 	c.setEnvPrefix(prefix)
 }
 
-func SetEnvPrefix(prefix string) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.setEnvPrefix(prefix)
-}
-
-func (c *Config) GetStringMap(key string) (value map[string]any) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.getStringMap(key)
-}
-
-func GetStringMap(key string) any {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.getStringMap(key)
-}
-
 func (c *Config) AutomaticEnv() {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.automaticEnv()
 }
 
-func AutomaticEnv() {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.automaticEnv()
-}
-
 func (c *Config) SetDefault(key string, value any) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.setDefault(key, value)
-}
-
-func SetDefault(key string, value any) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.setDefault(key, value)
 }
 
 func (c *Config) IsSet(key string) (value bool) {
@@ -597,18 +388,6 @@ func BindEnv(input ...string) error {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 	return global.bindEnv(input...)
-}
-
-func (c *Config) GetStringMapStringSlice(key string) (values map[string][]string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.getStringMapStringSlice(key)
-}
-
-func GetStringMapStringSlice(key string) map[string][]string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.getStringMapStringSlice(key)
 }
 
 // UserHomeDir returns the home directory for username, or if none given

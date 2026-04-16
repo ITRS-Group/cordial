@@ -193,9 +193,9 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		h := geneos.NewHost(name,
 			host.Hostname(cf.GetString("hostname")),
 			host.Username(cf.GetString("username")),
-			host.Port(uint16(cf.GetInt("port"))),
+			host.Port(uint16(config.Get[int](cf, "port"))),
 			host.Password(pw.Enclave),
-			host.PrivateKeyFiles(cf.GetStringSlice("privatekeys")...),
+			host.PrivateKeyFiles(config.Get[[]string](cf, "privatekeys")...),
 		)
 
 		h.MergeConfigMap(cf.AllSettings())
@@ -206,7 +206,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
-			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", cf.GetString("hostname"), cf.GetInt("port"), cf.GetString("username"))
+			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", cf.GetString("hostname"), config.Get[uint16](cf, "port"), cf.GetString("username"))
 			return
 		}
 

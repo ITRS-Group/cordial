@@ -170,7 +170,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), flags, i.Config().GetInt("port"), base, underlying, i.Home())
+	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), flags, config.Get[uint16](i.Config(), "port"), base, underlying, i.Home())
 	return
 }
 
@@ -214,7 +214,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		protected,
 		running,
 		tls,
-		fmt.Sprint(i.Config().GetInt("port")),
+		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
 		fmt.Sprintf("%s:%s", base, underlying), i.Home(),
 	)
 	resp.Rows = append(resp.Rows, row)

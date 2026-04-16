@@ -50,7 +50,7 @@ var pushCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		client := xmlrpc.NewClient(gurl, xmlrpc.Secure(cf.GetBool("push.secure")))
+		client := xmlrpc.NewClient(gurl, xmlrpc.Secure(config.Get[bool](cf, cf.Join("push", "secure"))))
 		if !client.Connected() {
 			return errors.New("gateway not connected to netprobe")
 		}

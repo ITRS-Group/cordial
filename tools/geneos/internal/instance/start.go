@@ -98,6 +98,8 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 	var env []string
 	var home string
 
+	cf := i.Config()
+
 	so := evalStartOptions(options...)
 
 	binary := PathTo(i, "program")
@@ -107,17 +109,17 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *e
 		return
 	}
 
-	opts := strings.Fields(i.Config().GetString("options"))
+	opts := strings.Fields(config.Get[string](cf, "options"))
 	args = append(args, opts...)
 
 	args = append(args, so.extras...)
 
 	libs := []string{}
-	if i.Config().GetString("libpaths") != "" {
-		libs = append(libs, i.Config().GetString("libpaths"))
+	if config.Get[string](cf, "libpaths") != "" {
+		libs = append(libs, config.Get[string](cf, "libpaths"))
 	}
 
-	for _, e := range i.Config().GetStringSlice("env", config.NoDecode(noDecode)) {
+	for _, e := range config.Get[[]string](cf, "env", config.NoDecode(noDecode)) {
 		switch {
 		case strings.HasPrefix(e, "LD_LIBRARY_PATH="):
 			libs = append(libs, strings.TrimPrefix(e, "LD_LIBRARY_PATH="))

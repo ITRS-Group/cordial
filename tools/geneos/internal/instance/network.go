@@ -91,7 +91,7 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
-		if port := c.Config().GetInt("port"); port != 0 {
+		if port := config.Get[int](c.Config(), c.Config().Join("port")); port != 0 {
 			ports[uint16(port)] = true
 		}
 	}
@@ -127,7 +127,7 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 // not concurrency safe at this time
 func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 	log.Debug().Msgf("looking for %s, default %s", ct.PortRange, ct.ConfigAliases[ct.PortRange])
-	from := config.GetString(ct.PortRange, config.Default(ct.ConfigAliases[ct.PortRange]))
+	from := config.GetString(ct.PortRange, config.DefaultValue(ct.ConfigAliases[ct.PortRange]))
 	used := GetAllPorts(h)
 	for p := range strings.SplitSeq(from, ",") {
 		// split on dash or ".."

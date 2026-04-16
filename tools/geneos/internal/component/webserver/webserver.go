@@ -250,8 +250,8 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 
 	sp["port"] = cf.GetString("port")
 
-	sp["trustStore"] = cf.GetString(cf.Join("tls", "truststore"), config.Default(geneos.PathToCABundle(h, certs.KeystoreExtension)))
-	sp["trustStorePassword"] = cf.GetString(cf.Join("tls", "truststore-password"), config.Default("changeit"))
+	sp["trustStore"] = cf.GetString(cf.Join("tls", "truststore"), config.DefaultValue(geneos.PathToCABundle(h, certs.KeystoreExtension)))
+	sp["trustStorePassword"] = cf.GetString(cf.Join("tls", "truststore-password"), config.DefaultValue("changeit"))
 	sp["trustStoreType"] = "JKS"
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
@@ -324,7 +324,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 		"-Djava.library.path="+cf.GetString("libpaths"),
 		"-Dlog4j2.configurationFile=file:"+path.Join(home, "config/log4j2.properties"),
 		"-Dworking.directory="+home,
-		"-Dvalid.host.header="+cf.GetString("valid-host-header", config.Default(".*")),
+		"-Dvalid.host.header="+cf.GetString("valid-host-header", config.DefaultValue(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
 		"-Dcom.itrsgroup.sso.config.file="+path.Join(home, "config/sso.properties"),

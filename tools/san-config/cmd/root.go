@@ -186,12 +186,12 @@ func initConfig(cmd *cobra.Command) {
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,
-			MaxSize:    cf.GetInt("server.logs.max-size"),
-			MaxBackups: cf.GetInt("server.logs.max-backups"),
-			MaxAge:     cf.GetInt("server.logs.stale-after"),
-			Compress:   cf.GetBool("server.logs.compress"),
+			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "max-size")),
+			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "max-backups")),
+			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "stale-after")),
+			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
 		}),
-		cordial.RotateOnStart(cf.GetBool("server.logs.rotate-on-start")),
+		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
 	)
 
 	switch {

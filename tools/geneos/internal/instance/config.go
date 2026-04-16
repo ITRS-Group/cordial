@@ -348,7 +348,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 
 	tlsVerify := true
 	if cf.IsSet(cf.Join(TLSBASE, TLSVERIFY)) {
-		tlsVerify = cf.GetBool(cf.Join(TLSBASE, TLSVERIFY))
+		tlsVerify = config.Get[bool](cf, cf.Join(TLSBASE, TLSVERIFY))
 	}
 
 	if tlsVerify {
@@ -373,10 +373,10 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	// minimum TLS version - from instance, global or 1.2 as a default
 	minTLS := cf.GetString(
 		cf.Join("tls", "minimumversion"),
-		config.Default(
+		config.DefaultValue(
 			config.GetString(
 				config.Join("tls", "minimumversion"),
-				config.Default("1.2"),
+				config.DefaultValue("1.2"),
 			),
 		),
 	)
@@ -415,7 +415,7 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 		chain = i.Host().PathTo(TLSBASE, geneos.DeprecatedChainCertFile)
 	}
 	s, err := i.Host().Stat(chain)
-	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !cf.GetBool("use-chain")) {
+	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !config.Get[bool](cf, "use-chain")) {
 		args = append(args, "-ssl-certificate-chain", chain)
 	}
 	return

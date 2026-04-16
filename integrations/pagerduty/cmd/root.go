@@ -140,16 +140,16 @@ func sendEvent(eventType eventType) (err error) {
 	}
 
 	details := config.Get[map[string]string](payload, "details")
-	if cf.GetBool("pagerduty.send-env") {
+	if config.Get[bool](cf, "pagerduty.send-env") {
 		for _, e := range os.Environ() {
 			s := strings.SplitN(e, "=", 2)
 			details[s[0]] = s[1]
 		}
 	}
 
-	alertType := strings.ToLower(cf.GetString("pagerduty.alert-type"))
-	severityMap := cf.Sub("pagerduty.severity-map")
-	severity := severityMap.GetString(payload.GetString("severity"))
+	alertType := strings.ToLower(config.Get[string](cf, cf.Join("pagerduty", "alert-type")))
+	severityMap := cf.Sub(cf.Join("pagerduty", "severity-map"))
+	severity := config.Get[string](severityMap, config.Get[string](payload, "severity"))
 
 	switch {
 	case eventType == Resolve, severity == "ok", alertType == "clear":
@@ -163,7 +163,7 @@ func sendEvent(eventType eventType) (err error) {
 	}
 
 	links := []any{}
-	for l := range strings.SplitSeq(cf.GetString("pagerduty.event.links"), "\n") {
+	for l := range strings.SplitSeq(config.Get[string](cf, cf.Join("pagerduty", "event", "links")), "\n") {
 		if l != "" {
 			links = append(links, Link{Href: l})
 		}

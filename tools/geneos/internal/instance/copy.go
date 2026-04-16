@@ -182,7 +182,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	ncf.Set("home", path.Join(dst.Type().InstancesDir(dHost), dName))
 
 	// only set a new port if not set through command line parameters
-	if ncf.GetInt("port") == 0 {
+	if config.Get[int](ncf, "port") == 0 {
 		if src.Host() == dHost {
 			if !opts.move {
 				dPort := NextFreePort(dHost, dst.Type())
@@ -218,14 +218,14 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		// need the *source* home directory
 		k := strings.Replace(keyfile, src.Home(), "${config:home}", 1)
 		log.Debug().Msgf("setting keyfile: %q", k)
-		ncf.SetString("keyfile", k)
+		config.Set(ncf, "keyfile", k)
 	}
 	prevkeyfile := ncf.GetString("prevkeyfile")
 	if keyfile != "" {
 		// cannot use SetString(..., config.Replace("home") here as we
 		// need the *source* home directory
 		k := strings.Replace(prevkeyfile, src.Home(), "${config:home}", 1)
-		ncf.SetString("prevkeyfile", k)
+		config.Set(ncf, "prevkeyfile", k)
 	}
 
 	// config changes don't matter until writing config succeeds

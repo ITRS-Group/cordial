@@ -50,7 +50,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	}
 	_ = m.SetBodyTextTemplate(tt, data)
 
-	if slices.Contains(cf.GetStringSlice("email.contents"), "text+html") {
+	if slices.Contains(config.Get[[]string](cf, "email.contents"), "text+html") {
 		ht, err := htemplate.New("dataview").Parse(cf.GetString("html.template"))
 		if err != nil {
 			return err
@@ -58,7 +58,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 		_ = m.AddAlternativeHTMLTemplate(ht, data)
 	}
 
-	if slices.Contains(cf.GetStringSlice("email.contents"), "texttable") {
+	if slices.Contains(config.Get[[]string](cf, "email.contents"), "texttable") {
 		files, err := buildTextTableFiles(cf, data, run)
 		if err != nil {
 			return err
@@ -68,13 +68,13 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 		}
 	}
 
-	if slices.Contains(cf.GetStringSlice("email.contents"), "html") {
+	if slices.Contains(config.Get[[]string](cf, "email.contents"), "html") {
 		if err := buildHTMLAttachments(cf, m, data, run); err != nil {
 			return err
 		}
 	}
 
-	if slices.Contains(cf.GetStringSlice("email.contents"), "xlsx") {
+	if slices.Contains(config.Get[[]string](cf, "email.contents"), "xlsx") {
 		files, err := buildXLSXFiles(cf, data, run)
 		if err != nil {
 			return err
@@ -85,7 +85,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 		}
 	}
 
-	if slices.Contains(cf.GetStringSlice("email.contents"), "images") {
+	if slices.Contains(config.Get[[]string](cf, "email.contents"), "images") {
 		for name, path := range config.Get[map[string]string](cf, "images") {
 			if _, err := os.Stat(path); err != nil {
 				log.Error().Err(err).Msg("skipping")

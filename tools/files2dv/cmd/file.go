@@ -39,13 +39,13 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	dataview.Name = dv.GetString("name")
 	columns := []Column{}
 
-	max := dv.GetInt("row-limit")
+	max := config.Get[int](dv, "row-limit")
 	var n int
 
 	ignores := []*regexp.Regexp{}
 	var matches int
 
-	for _, i := range dv.GetStringSlice("ignore-lines") {
+	for _, i := range config.Get[[]string](dv, "ignore-lines") {
 		if r, err := regexp.Compile(i); err != nil {
 			log.Error().Err(err).Msgf("compile of '%s' failed", i)
 		} else {
@@ -58,12 +58,12 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	if err != nil {
 		// reset columns
 		columns = []Column{}
-		cols := dv.GetStringSlice("columns", config.NoExpand())
+		cols := config.Get[[]string](dv, "columns")
 		if len(cols) == 0 {
 			err = errors.New("columns is not either an array or strings or maps of the right type")
 			return
 		}
-		values := dv.GetStringSlice("values", config.NoExpand())
+		values := config.Get[[]string](dv, "values")
 		if len(values) != len(cols) {
 			err = errors.New("number of columns does not match number of values")
 			return
@@ -89,7 +89,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	// fileErrors := 0
 	// fileFails := 0
 
-	for _, pattern := range dv.GetStringSlice("paths") {
+	for _, pattern := range config.Get[[]string](dv, "paths") {
 		var path string
 		path, err = geneos.ExpandFileDates(pattern, time.Now())
 		if err != nil {
@@ -109,7 +109,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		fileCount += len(files)
 
 		if len(files) == 0 {
-			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
+			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "match") {
 				continue
 			}
 			fullpath, err := filepath.Abs(path)
@@ -178,7 +178,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				log.Error().Err(err).Msgf("cannot open %s", file)
 				continue
 			}
-			maxlines := dv.GetInt("max-lines")
+			maxlines := config.Get[int](dv, "max-lines")
 
 			s := bufio.NewScanner(inp)
 		LINE:
@@ -254,7 +254,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 
 	headlinesLookup := map[string]string{}
 
-	for _, h := range dv.GetSliceStringMapString("headlines", config.NoExpand()) {
+	for _, h := range config.Get[[]map[string]string](dv, "headlines", config.NoExpand()) {
 		dataview.Headlines = append(dataview.Headlines, Headline{
 			Name:  h["name"],
 			Value: dv.ExpandString(h["value"], config.LookupTable(headlinesLookup)),

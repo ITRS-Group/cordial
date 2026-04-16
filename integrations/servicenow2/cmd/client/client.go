@@ -360,7 +360,7 @@ var clientCmd = &cobra.Command{
 		delete(incident, proxy.RAW_CORRELATION_ID)
 
 		// iterate through proxy urls
-		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
+		for _, r := range config.Get[[]string](cf, cf.Join("proxy", "url")) {
 			rc := newRestClient(cf, r)
 
 			if clientCmdTable == "" {
@@ -454,7 +454,7 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 	var tcc *tls.Config
 
 	if strings.HasPrefix(r, "https:") {
-		skip := cf.GetBool(cf.Join("proxy", "tls", "skip-verify"))
+		skip := config.Get[bool](cf, cf.Join("proxy", "tls", "skip-verify"))
 		roots, err := x509.SystemCertPool()
 		if err != nil {
 			log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
@@ -474,7 +474,7 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		}
 	}
 
-	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	timeout := config.Get[time.Duration](cf, cf.Join("proxy", "timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}

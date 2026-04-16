@@ -74,7 +74,7 @@ func outputJSON(cf *config.Config, gateway string, entities []Entity, probes map
 		Report: reportBy{
 			CreatedBy: "ITRS Gateway Reporter",
 			Version:   cordial.VERSION,
-			Site:      cf.GetString("site", config.Default("ITRS")),
+			Site:      cf.GetString("site", config.DefaultValue("ITRS")),
 			Timestamp: startTime,
 			Hostname:  hostname,
 			Gateway:   gateway,

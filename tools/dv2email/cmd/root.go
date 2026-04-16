@@ -229,7 +229,7 @@ func match(name, confkey, override string) (matches []string) {
 	}
 
 	name = strings.ToLower(name)
-	checks := cf.GetStringMapStringSlice(confkey)
+	checks := config.Get[map[string][]string](cf, confkey)
 	if len(checks) == 0 {
 		return
 	}

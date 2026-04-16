@@ -90,7 +90,7 @@ var queryCmd = &cobra.Command{
 		log.Debug().Msgf("querying IMS type %s", queryCmdIMSType)
 
 	LOOP:
-		for _, r := range cf.GetStringSlice(cf.Join("ims-gateway", "url")) {
+		for _, r := range config.Get[[]string](cf, cf.Join("ims-gateway", "url")) {
 			ccf := &ims.ClientConfig{
 				URL:     r + "/" + queryCmdIMSType,
 				Token:   config.Get[string](cf, config.Join("ims-gateway", "authentication", "token")),

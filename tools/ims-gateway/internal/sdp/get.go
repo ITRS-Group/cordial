@@ -41,7 +41,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := sdpCf.Get(sdpCf.Join("requests", "get"))
+	query := config.Get[any](sdpCf, sdpCf.Join("requests", "get"))
 
 	q := r.URL.Query().Get("query")
 	if q != "" {
@@ -59,7 +59,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 	response.Status = resp.ResponseStatus[0].Status
 	response.StatusCode = resp.ResponseStatus[0].StatusCode
 
-	columns := sdpCf.GetStringSlice(sdpCf.Join("requests", "columns"))
+	columns := config.Get[[]string](sdpCf, sdpCf.Join("requests", "columns"))
 	response.DataTable = append(response.DataTable, columns) // add column headers as first row
 
 	for _, r := range resp.Requests {

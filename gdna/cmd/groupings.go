@@ -373,20 +373,21 @@ var listGroupCmd = &cobra.Command{
 
 		ig, _ := config.Load(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.SetConfigFile(cf.GetString(cf.Join("filters", "file"))),
 		)
 
 		log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.SetConfigFile(cf.GetString(cf.Join("filters", "file"))),
 		))
 
 		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
 
 		var rows [][]string
-		for category := range cf.GetStringMap(config.Join("filters", "group")) {
+		for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
+			log.Debug().Msgf("processing category %q", category)
 			var groups []Group
-			if err = ig.UnmarshalKey(config.Join("filters", "group", category),
+			if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 				&groups,
 				viper.DecodeHook(
 					mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -394,6 +395,8 @@ var listGroupCmd = &cobra.Command{
 			); err != nil {
 				panic(err)
 			}
+
+			log.Debug().Msgf("groups: %#v, len %d", groups, len(groups))
 
 			for _, group := range groups {
 				rows = append(rows, []string{
@@ -408,9 +411,11 @@ var listGroupCmd = &cobra.Command{
 				})
 			}
 		}
-		slices.SortFunc(rows[1:], func(a, b []string) int {
-			return strings.Compare(a[0], b[0])
-		})
+		if len(rows) > 0 {
+			slices.SortFunc(rows[1:], func(a, b []string) int {
+				return strings.Compare(a[0], b[0])
+			})
+		}
 		r.UpdateTable([]string{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"}, rows)
 		r.Render()
 
@@ -432,8 +437,8 @@ func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	))
 
 OUTER:
-	for category := range cf.GetStringMap(config.Join("filters", "group")) {
-		table := cf.GetString(config.Join("filters", "group", category, "table"))
+	for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
+		table := config.Get[string](cf, cf.Join("filters", "group", category, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			log.Info().Err(err).Msgf("delete from %q %q failed", category, table)
@@ -441,7 +446,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", "group", category, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(cf.Join("filters", "group", category, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
@@ -449,7 +454,7 @@ OUTER:
 		defer insertStmt.Close()
 
 		var groups []Group
-		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
+		if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 			&groups,
 			viper.DecodeHook(
 				mapstructure.StringToTimeHookFunc(time.RFC3339),
@@ -553,7 +558,7 @@ func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) erro
 	))
 
 OUTER:
-	for category := range cf.GetStringMap(config.Join("filters", "allocations")) {
+	for category := range config.Get[map[string]any](cf, cf.Join("filters", "allocations")) {
 		table := cf.GetString(config.Join("filters", "allocations", category, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {

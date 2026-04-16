@@ -32,7 +32,7 @@ type expandOptions struct {
 	initialValue       any
 	lookupTables       []map[string]string
 	nodecode           bool
-	rawstring          bool
+	noexpand           bool
 	replacements       []string
 	trimPrefix         bool
 	trimSpace          bool
@@ -99,17 +99,20 @@ func (c *Config) SetDefaultExpandOptions(options ...ExpandOptions) {
 	c.defaultExpandOptions = options
 }
 
-// NoExpand overrides all other options except Default and returns the
-// value (or the default) as-is with no expansion applied. This is to
-// allow the normal functions and methods to be called but to receive
-// the underlying configuration item, such as an encoded password.
+// NoExpand overrides all other options except DefaultValue() and
+// InitialValue() and returns the value as-is with no expansion applied.
+// This is to allow the normal functions and methods to be called but to
+// receive the underlying configuration item, such as an encoded
+// password.
 func NoExpand() ExpandOptions {
 	return func(e *expandOptions) {
-		e.rawstring = true
+		e.noexpand = true
 	}
 }
 
-// NoDecode disables the expansion of encoded values.
+// NoDecode disables the expansion of encoded (`enc:`) values. Use this
+// option if you want the expanded value of the configuration item but
+// without decoding sensitive data such as secrets and passwords.
 func NoDecode(n bool) ExpandOptions {
 	return func(e *expandOptions) {
 		e.nodecode = n
@@ -199,7 +202,7 @@ func TrimSpace(trim bool) ExpandOptions {
 	}
 }
 
-// Default sets a default value to be returned if the resulting
+// DefaultValue sets a default value to be returned if the resulting
 // expansion of the config key is the zero value for the type (after any
 // optional trimming of leading and trailing spaces).
 //
@@ -207,21 +210,21 @@ func TrimSpace(trim bool) ExpandOptions {
 // configuration item being used, otherwise the default value is
 // ignored. e.g.
 //
-//	config.Get[uint16]("config.value", config.Default(uint16(1234)))
-func Default(value any) ExpandOptions {
+//	config.Get[uint16]("config.value", config.DefaultValue(uint16(1234)))
+func DefaultValue(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.defaultValue = value
 	}
 }
 
-// Initial sets an initial default value to be used if the configuration
-// item is empty (or nil) to start. This differs from Default() which
+// InitialValue sets an initial value to be used if the configuration
+// item is empty (or nil) to start. This differs from DefaultValue() which
 // supplies a value to use if the value if empty after expansion. The
 // initial value, if used, is expanded as would any configuration value.
 //
-// If config.NoExpand() is also used then this initial value is used as a
-// secondary default - i.e. if config.Default() is empty.
-func Initial(value any) ExpandOptions {
+// If config.NoExpand() is also used then this initial value is used as
+// a secondary default - i.e. if config.DefaultValue() is empty.
+func InitialValue(value any) ExpandOptions {
 	return func(e *expandOptions) {
 		e.initialValue = value
 	}

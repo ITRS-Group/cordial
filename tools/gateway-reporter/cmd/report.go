@@ -157,7 +157,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 	}
 	_ = os.MkdirAll(dir, 0775)
 
-	for format, filename := range cf.GetStringMap("output.formats") {
+	for format, filename := range config.Get[map[string]any](cf, "output.formats") {
 		if filename == "" {
 			continue
 		}
@@ -175,7 +175,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 			if err != nil {
 				break
 			}
-			if cf.GetBool("output.toolkit-include.enable") {
+			if config.Get[bool](cf, cf.Join("output", "toolkit-include", "enable")) {
 				log.Debug().Msg("building include")
 				err = outputToolkitInclude(cf, gateway, destdir, csvFiles)
 			}

@@ -76,14 +76,14 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 	}
 
 	// if `db.on-open` exists, run it
-	onOpen := cf.GetString("db.on-open")
+	onOpen := cf.GetString(cf.Join("db", "on-open"))
 	if onOpen != "" {
 		if _, err = db.ExecContext(ctx, onOpen); err != nil {
 			return
 		}
 	}
 
-	versionQuery := cf.GetString("db.gdna-version.query")
+	versionQuery := cf.GetString(cf.Join("db", "gdna-version", "query"))
 	if versionQuery != "" {
 		var version string
 		if err = db.QueryRowContext(ctx, versionQuery).Scan(&version); err != nil {
@@ -91,22 +91,19 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 			// yet exist (as the ping and on-open did not error above)
 			//
 			// create a new version table and update it
-			createVersion := cf.GetString("db.gdna-version.create")
+			createVersion := cf.GetString(cf.Join("db", "gdna-version", "create"))
 			if _, err := db.ExecContext(ctx, createVersion); err != nil {
 				return db, err
 			}
 		}
-		insertVersion := cf.GetString("db.gdna-version.insert")
+		insertVersion := cf.GetString(cf.Join("db", "gdna-version", "insert"))
 		_, err = db.ExecContext(ctx, insertVersion, sql.Named("version", cordial.VERSION))
 		if err != nil {
 			log.Error().Err(err).Msg("updating gdna_version")
 		}
 	}
 
-	if err = updateSchema(ctx, db, cf); err != nil {
-		return
-	}
-
+	err = updateSchema(ctx, db, cf)
 	return
 }
 
@@ -599,7 +596,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 	}
 
 	valid := true
-	if maxAge := cf.GetDuration("gdna.stale-after"); maxAge > 0 && time.Since(sourceTimestamp) > maxAge {
+	if maxAge := config.Get[time.Duration](cf, "gdna.stale-after"); maxAge > 0 && time.Since(sourceTimestamp) > maxAge {
 		valid = false
 	}
 
@@ -788,7 +785,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 	// configurations or a config item that contains multiple table
 	// configurations, by name
 	var createQueries []string
-	switch r := cf.Get(root).(type) {
+	switch r := config.Get[any](cf, root).(type) {
 	case []any:
 		// an indirect list of table names
 		for _, t := range r {
@@ -832,8 +829,8 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 func runPostInsertHooks(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
 	log.Debug().Msg("running post-insert hooks")
 
-	for _, table := range cf.GetStringSlice("db.main-tables") {
-		if postInsertQuery := cf.GetString(config.Join("db", table, "post-insert")); postInsertQuery != "" {
+	for _, table := range config.Get[[]string](cf, cf.Join("db", "main-tables")) {
+		if postInsertQuery := cf.GetString(cf.Join("db", table, "post-insert")); postInsertQuery != "" {
 			log.Trace().Msgf("post-insert %s:\n%s", table, postInsertQuery)
 			if _, err = tx.ExecContext(ctx, postInsertQuery); err != nil {
 				log.Error().Err(err).Msgf("post-insert for %s failed", table)
@@ -850,7 +847,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 	// update sources `valid` column
 	var oldestTime time.Time
 	var oldestTimeUnix int64
-	maxAge := cf.GetDuration("gdna.stale-after")
+	maxAge := config.Get[time.Duration](cf, cf.Join("gdna", "stale-after"))
 	if maxAge != 0 {
 		// subtract stale-after from current time for comparison in update
 		oldestTime = time.Now().Add(-maxAge)
@@ -958,7 +955,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		return
 	}
 
-	dbUpdated := cf.GetBool("db.updated")
+	dbUpdated := config.Get[bool](cf, cf.Join("db", "updated"))
 
 	var signedToken string
 
@@ -966,7 +963,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	//
 	// first try to parse the value, as it may be embedded PEM,
 	// otherwise try to read it as a file path.
-	if privateKey := config.Get[*config.Plaintext](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
+	if privateKey := config.Get[*config.Plaintext](cf, cf.Join("gdna", "licd-private-key")); !privateKey.IsNil() {
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 		if err != nil {
 			privateKeyPath := privateKey.String()
@@ -1025,14 +1022,14 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		tc := &tls.Config{}
 
 		if u.Scheme == "https" {
-			skip := cf.GetBool("gdna.licd-skip-verify")
+			skip := config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify"))
 			roots, err := x509.SystemCertPool()
 			if err != nil {
 				log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
 			}
 
 			if !skip {
-				if chainfile := cf.GetString("gdna.licd-chain"); chainfile != "" {
+				if chainfile := config.Get[string](cf, cf.Join("gdna", "licd-chain")); chainfile != "" {
 					if chainbytes, err := os.ReadFile(chainfile); err != nil {
 						log.Warn().Err(err).Msg("cannot read licd certificate chain, continuing with system certificates only")
 					} else {
@@ -1052,7 +1049,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 				Proxy:           http.ProxyFromEnvironment,
 				TLSClientConfig: tc,
 			},
-			Timeout: cf.GetDuration("gdna.licd-timeout"),
+			Timeout: config.Get[time.Duration](cf, "gdna.licd-timeout"),
 		}
 
 		// read summary data

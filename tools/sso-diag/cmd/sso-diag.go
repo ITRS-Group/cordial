@@ -133,22 +133,22 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 
 	e.GET("/status", statusPage)
 
-	if vc.GetBool("server.key_store.enable_public_key_endpoint") {
+	if config.Get[bool](vc, "server.key_store.enable_public_key_endpoint") {
 		e.GET("/public_key", publicKeyPage)
 	}
 
 	e.GET("/testuser", echo.WrapHandler(spnego.SPNEGOKRB5Authenticate(http.HandlerFunc(testuserPage), kt, service.KeytabPrincipal(username))))
 	e.GET("/authorize", echo.WrapHandler(spnego.SPNEGOKRB5Authenticate(http.HandlerFunc(authorizePage), kt, service.KeytabPrincipal(username))))
 
-	i := fmt.Sprintf("%s:%d", vc.GetString("server.bind_address"), vc.GetInt("server.port"))
+	i := fmt.Sprintf("%s:%d", config.Get[string](vc, "server.bind_address"), config.Get[int](vc, "server.port"))
 
-	if !vc.GetBool("server.enable_ssl") {
+	if !config.Get[bool](vc, "server.enable_ssl") {
 		e.Logger.Fatal(e.Start(i))
 	}
 
 	// this doesn't work, get cert from keystore...
 	var cert any
-	certstr := config.GetString("api.tls.certificate")
+	certstr := config.Get[string](vc, "api.tls.certificate")
 	certpem, _ := pem.Decode([]byte(certstr))
 	if certpem == nil {
 		cert = certstr
@@ -157,7 +157,7 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 	}
 
 	var key any
-	keystr := config.GetString("api.tls.key")
+	keystr := config.Get[string](vc, "api.tls.key")
 	keypem, _ := pem.Decode([]byte(keystr))
 	if keypem == nil {
 		key = keystr
@@ -292,8 +292,8 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 	query := fmt.Sprintf("(&%s(%s=%s))", qf, vc.GetString("ldap.fields.user"), user)
 	fmt.Fprintf(w, "LDAP Query: %s\n", query)
 	log.Printf("LDAP query: %s", query)
-	search := ldap.NewSearchRequest(vc.GetString("ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		query, vc.GetStringSlice("ldap.fields"), []ldap.Control{})
+	search := ldap.NewSearchRequest(config.Get[string](vc, "ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		query, config.Get[[]string](vc, "ldap.fields"), []ldap.Control{})
 
 	result, err := l.Search(search)
 	if err != nil {

@@ -124,7 +124,7 @@ func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {
 	if username == "" {
 		username = "-"
 	}
-	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), username, h.GetString("hostname"), flags, h.GetInt("port", config.Default(22)), h.GetString(cordial.ExecutableName()))
+	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), username, h.GetString("hostname"), flags, config.Get[uint16](h.Config, "port", config.DefaultValue(22)), h.GetString(cordial.ExecutableName()))
 	return
 }
 
@@ -141,7 +141,7 @@ func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
 		username,
 		h.GetString("hostname"),
 		flags,
-		config.Get[string](h.Config, "port", config.Default(22)),
+		config.Get[string](h.Config, "port", config.DefaultValue(22)),
 		h.GetString(cordial.ExecutableName()),
 	})
 	return
@@ -159,7 +159,7 @@ func hostListInstanceJSONHosts(h *geneos.Host, w any) (err error) {
 		username,
 		h.GetString("hostname"),
 		flags,
-		config.Get[uint16](h.Config, "port", config.Default(22)),
+		config.Get[uint16](h.Config, "port", config.DefaultValue(22)),
 		h.GetString(cordial.ExecutableName()),
 	})
 	return

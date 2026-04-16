@@ -139,8 +139,8 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 	if cf.GetString(cf.Join(TLSBASE, CERTIFICATE)) == certFile {
 		return
 	}
-	cf.Set(CERTIFICATE, "")
-	cf.SetString(cf.Join(TLSBASE, CERTIFICATE), certFile, config.Replace("home"))
+	config.Set(cf, CERTIFICATE, "")
+	config.Set(cf, cf.Join(TLSBASE, CERTIFICATE), certFile, config.Replace("home"))
 	return
 }
 
@@ -168,8 +168,8 @@ func writePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (e
 	if len(ext) > 0 || cf.GetString(cf.Join("tls", "privatekey")) == keyfile {
 		return
 	}
-	cf.Set("privatekey", "")
-	cf.SetString(cf.Join("tls", "privatekey"), keyfile, config.Replace("home"))
+	config.Set(cf, "privatekey", "")
+	config.Set(cf, cf.Join("tls", "privatekey"), keyfile, config.Replace("home"))
 	return
 }
 

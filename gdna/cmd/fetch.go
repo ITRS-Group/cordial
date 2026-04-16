@@ -114,12 +114,12 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 	}
 	defer tx.Rollback()
 
-	if err = createTables(ctx, cf, tx, "db.main-tables", "create"); err != nil {
+	if err = createTables(ctx, cf, tx, cf.Join("db", "main-tables"), "create"); err != nil {
 		return
 	}
 
 	if len(fetchCmdSources) == 0 {
-		fetchCmdSources = cf.GetStringSlice("gdna.licd-sources")
+		fetchCmdSources = config.Get[[]string](cf, cf.Join("gdna", "licd-sources"))
 	}
 	log.Debug().Msgf("sources: %v", fetchCmdSources)
 
@@ -144,7 +144,7 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		sources = append(sources, s...)
 	}
 
-	for _, source := range cf.GetStringSlice("gdna.licd-reports") {
+	for _, source := range config.Get[[]string](cf, "gdna.licd-reports") {
 		var s []string
 		log.Debug().Msgf("reading licd report file(s): %s", source)
 		if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {

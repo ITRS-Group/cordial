@@ -58,11 +58,11 @@ func newClient(cf *config.Config) (c client) {
 	var tcc *tls.Config
 	if sn.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
+			InsecureSkipVerify: config.Get[bool](cf, cf.Join("tls", "skip-verify")),
 		}
 	}
 
-	timeout := cf.GetDuration(cf.Join("proxy", "timeout"))
+	timeout := config.Get[time.Duration](cf, cf.Join("proxy", "timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
@@ -80,7 +80,7 @@ func newClient(cf *config.Config) (c client) {
 		Timeout: timeout,
 	}
 
-	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))
+	p := sn.JoinPath(cf.GetString("path", config.DefaultValue("/api/now/v2/table")))
 
 	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &log.Logger}.NewZerologHandler())
 

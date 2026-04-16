@@ -170,7 +170,7 @@ import (
 func ExpandString(input string, options ...ExpandOptions) (value string) {
 	global.mutex.RLock()
 	defer global.mutex.RUnlock()
-	return global.expandString(input, options...)
+	return expand[string](global, input, options...)
 }
 
 // ExpandString returns the configuration c value for input as an
@@ -179,7 +179,7 @@ func ExpandString(input string, options ...ExpandOptions) (value string) {
 func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.expandString(input, options...)
+	return expand[string](c, input, options...)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
@@ -205,7 +205,7 @@ func (c *Config) ExpandStringSlice(input []string, options ...ExpandOptions) (va
 func Expand(input string, options ...ExpandOptions) (value []byte) {
 	global.mutex.RLock()
 	defer global.mutex.RUnlock()
-	return global.expand(input, options...)
+	return expand[[]byte](global, input, options...)
 }
 
 // Expand behaves like the ExpandString method but returns a byte
@@ -213,7 +213,7 @@ func Expand(input string, options ...ExpandOptions) (value []byte) {
 func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return c.expand(input, options...)
+	return expand[[]byte](c, input, options...)
 }
 
 // ExpandPassword expands the input string and returns a *Plaintext. The

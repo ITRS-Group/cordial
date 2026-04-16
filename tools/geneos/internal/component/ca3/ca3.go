@@ -243,8 +243,8 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 	checks = append(checks, cf.GetString("config"))
 
 	args = []string{
-		"-Xms" + cf.GetString("minheap", config.Default("512M")),
-		"-Xmx" + cf.GetString("maxheap", config.Default("512M")),
+		"-Xms" + cf.GetString("minheap", config.DefaultValue("512M")),
+		"-Xmx" + cf.GetString("maxheap", config.DefaultValue("512M")),
 		"-Dlogback.configurationFile=" + logback,
 		"-cp", path.Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + n.Home(),
@@ -257,12 +257,12 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 		hostname = "localhost"
 	}
 
-	checks = append(checks, cf.GetString("plugins", config.Default(path.Join(classPath, "plugins"))))
+	checks = append(checks, config.Get[string](cf, "plugins", config.DefaultValue(path.Join(classPath, "plugins"))))
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", cf.GetString("plugins", config.Default(path.Join(classPath, "plugins")))),
-		fmt.Sprintf("HEALTH_CHECK_PORT=%d", cf.GetInt("health-check-port", config.Default(9136))),
-		fmt.Sprintf("TCP_REPORTER_PORT=%d", cf.GetInt("tcp-reporter-port", config.Default(9137))),
-		fmt.Sprintf("HOSTNAME=%s", cf.GetString(("hostname"), config.Default(hostname))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(path.Join(classPath, "plugins")))),
+		fmt.Sprintf("HEALTH_CHECK_PORT=%d", config.Get[uint16](cf, "health-check-port", config.DefaultValue(9136))),
+		fmt.Sprintf("TCP_REPORTER_PORT=%d", config.Get[uint16](cf, "tcp-reporter-port", config.DefaultValue(9137))),
+		fmt.Sprintf("HOSTNAME=%s", config.Get[string](cf, "hostname", config.DefaultValue(hostname))),
 	}
 
 	if skipFileCheck {

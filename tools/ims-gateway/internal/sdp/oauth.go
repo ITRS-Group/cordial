@@ -151,18 +151,18 @@ func InitialAuth(sdpCf *config.Config, code *config.Plaintext) (tok *oauth2.Toke
 		return
 	}
 
-	auth, err := url.Parse(sdpCf.GetString(sdpCf.Join("datacentres", sdpCf.GetString("datacentre"), "auth")))
+	auth, err := url.Parse(config.Get[string](sdpCf, sdpCf.Join("datacentres", config.Get[string](sdpCf, "datacentre"), "auth")))
 	if err != nil {
 		return
 	}
 
 	if auth.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: sdpCf.GetBool(sdpCf.Join("tls", "skip-verify")),
+			InsecureSkipVerify: config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify")),
 		}
 	}
 
-	timeout := sdpCf.GetDuration(sdpCf.Join("timeout"))
+	timeout := config.Get[time.Duration](sdpCf, sdpCf.Join("timeout"))
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}

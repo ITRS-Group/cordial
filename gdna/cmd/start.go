@@ -100,7 +100,7 @@ func start() (err error) {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 
-	db, err := openDB(ctx, cf, "db.dsn", false)
+	db, err := openDB(ctx, cf, cf.Join("db", "dsn"), false)
 	if err != nil {
 		return
 	}
@@ -115,6 +115,7 @@ func start() (err error) {
 		return
 	}
 
+	log.Debug().Msg("starting scheduler")
 	sched.Start()
 
 	// save these as a global for config updates
@@ -146,20 +147,21 @@ func start() (err error) {
 	}
 
 	mainjob, err = sched.NewJob(
-		gocron.CronJob(cf.GetString("gdna.schedule"), false),
+		gocron.CronJob(cf.GetString(cf.Join("gdna", "schedule")), false),
 		maintask,
 		gocron.WithName("main"),
 		gocron.WithSingletonMode(gocron.LimitModeReschedule),
 		listeners,
 	)
 	if err != nil {
+		log.Error().Err(err).Msg("scheduling main job")
 		return
 	}
 
 	rjt, _ := mainjob.NextRun()
 	log.Info().Msgf("next scheduled report job %v", rjt)
 
-	if es := cf.GetString("gdna.email-schedule"); es != "" {
+	if es := cf.GetString(cf.Join("gdna", "email-schedule")); es != "" {
 		emailjob, err = sched.NewJob(
 			gocron.CronJob(es, false),
 			emailtask,
@@ -168,6 +170,7 @@ func start() (err error) {
 			listeners,
 		)
 		if err != nil {
+			log.Error().Err(err).Msg("scheduling email job")
 			return err
 		} else {
 			ejt, _ := emailjob.NextRun()
@@ -205,7 +208,6 @@ func updateJobs() {
 	}
 
 	if es := cf.GetString("gdna.email-schedule"); es != "" {
-		log.Debug().Msgf("email schedule: %s", es)
 		if emailjob != nil {
 			emailjob, err = sched.Update(emailjob.ID(),
 				gocron.CronJob(es, false),

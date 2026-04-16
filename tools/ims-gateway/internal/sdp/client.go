@@ -75,7 +75,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 
 	if auth.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: sdpCf.GetBool(sdpCf.Join("tls", "skip-verify")),
+			InsecureSkipVerify: config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify")),
 		}
 	}
 
@@ -92,7 +92,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		Code: nil,
 	}
 
-	timeout := sdpCf.GetDuration("timeout")
+	timeout := config.Get[time.Duration](sdpCf, "timeout")
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
@@ -109,7 +109,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		Timeout: timeout,
 	}
 
-	if sdpCf.GetBool("trace") {
+	if config.Get[bool](sdpCf, "trace") {
 		hc.Transport = &LogTransport{
 			Transport: hc.Transport.(*http.Transport),
 		}

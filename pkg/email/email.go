@@ -60,7 +60,7 @@ import (
 func Dial(conf *config.Config) (d *mail.Client, err error) {
 	var tlsPolicy mail.TLSPolicy
 
-	switch strings.ToLower(conf.GetString("_smtp_tls", config.Default("default"))) {
+	switch strings.ToLower(conf.GetString("_smtp_tls", config.DefaultValue("default"))) {
 	case "force":
 		tlsPolicy = mail.TLSMandatory
 	case "none":
@@ -71,12 +71,12 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithTimeout(time.Duration(conf.GetInt("_smtp_timeout", config.Default(10))) * time.Second),
+		mail.WithTimeout(time.Duration(config.Get[int](conf, "_smtp_timeout", config.DefaultValue(10))) * time.Second),
 	}
 
-	if conf.GetString("_smtp_username") != "" {
+	if config.Get[string](conf, "_smtp_username") != "" {
 		mailOpts = append(mailOpts,
-			mail.WithUsername(conf.GetString("_smtp_username")),
+			mail.WithUsername(config.Get[string](conf, "_smtp_username")),
 			mail.WithPassword(config.Get[string](conf, "_smtp_password")),
 			mail.WithSMTPAuth(mail.SMTPAuthLogin),
 		)
@@ -92,13 +92,13 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 		mailOpts = append(mailOpts, mail.WithPort(config.Get[int](conf, "_smtp_port")))
 	}
 
-	if conf.GetBool("_smtp_tls_insecure") {
+	if config.Get[bool](conf, "_smtp_tls_insecure") {
 		mailOpts = append(mailOpts, mail.WithTLSConfig(&tls.Config{
 			InsecureSkipVerify: true,
 		}))
 	}
 
-	d, err = mail.NewClient(conf.GetString("_smtp_server", config.Default("localhost")), mailOpts...)
+	d, err = mail.NewClient(config.Get[string](conf, "_smtp_server", config.DefaultValue("localhost")), mailOpts...)
 	if err != nil {
 		return
 	}
@@ -114,8 +114,8 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 func UpdateEnvelope(conf *config.Config, inlineCSS bool) (m *mail.Msg, err error) {
 	m = mail.NewMsg()
 
-	var from = conf.GetString("_from", config.Default("geneos@localhost"))
-	var fromName = conf.GetString("_from_name", config.Default("Geneos"))
+	var from = conf.GetString("_from", config.DefaultValue("geneos@localhost"))
+	var fromName = conf.GetString("_from_name", config.DefaultValue("Geneos"))
 
 	m.FromFormat(fromName, from)
 

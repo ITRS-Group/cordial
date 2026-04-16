@@ -244,7 +244,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
 	truststorePassword := config.Get[*config.Plaintext](ssoconf,
 		config.Join("server", "trust_store", "password"),
-		config.Default(config.NewPlaintextFromString("changeit")),
+		config.DefaultValue(config.NewPlaintextFromString("changeit")),
 	)
 
 	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
@@ -264,7 +264,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		keystorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
 		keystorePassword := config.Get[*config.Plaintext](ssoconf,
 			config.Join("server", "key_store", "password"),
-			config.Default(config.NewPlaintextFromString("changeit")),
+			config.DefaultValue(config.NewPlaintextFromString("changeit")),
 		)
 
 		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
@@ -291,7 +291,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			err = ks.WriteKeystore(s.Host(), keystorePath, keystorePassword)
 		}
 
-		alias := ssoconf.GetString(ssoconf.Join("server", "ssl_alias"), config.Default(geneos.ALL.Hostname()))
+		alias := ssoconf.GetString(ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
 
 		certChain, err := instance.ReadCertificates(s)
 		if err != nil {

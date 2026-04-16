@@ -300,7 +300,7 @@ func acceptRecord(c echo.Context) (err error) {
 	}
 	incident_id, state, err := snow.LookupRecord(req,
 		config.LookupTable(lookup_map),
-		config.Default(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])),
+		config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])),
 	)
 
 	if err != nil {

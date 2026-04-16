@@ -30,6 +30,7 @@ import (
 	"golang.org/x/net/html/charset"
 	"gopkg.in/yaml.v3"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
 )
 
@@ -224,8 +225,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				log.Error().Msg("unsupported FKM source tye")
 			}
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.fkm.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "fkm", "empty"))}
 		}
 
 	case *geneos.FTMPlugin:
@@ -238,8 +239,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				}
 			}
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.ftm.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "ftm", "empty"))}
 		}
 
 	case *geneos.StateTrackerPlugin:
@@ -253,8 +254,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				sampler.Column1 = append(sampler.Column1, fmt.Sprintf("%s : %s : %s", group.Name, name, tracker.Filename.String()))
 			}
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.statetracker.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "statetracker", "empty"))}
 		}
 
 	case *geneos.ProcessesPlugin:
@@ -268,14 +269,14 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				// panic("here")
 			}
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.processes.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "processes", "empty"))}
 		}
 
 	case *geneos.ToolkitPlugin:
 		sampler.Column1 = append(sampler.Column1, plugin.SamplerScript.String())
-		if plugin.SamplerScript.String() == "" && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.toolkit.empty")}
+		if plugin.SamplerScript.String() == "" && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "toolkit", "empty"))}
 		}
 
 	case *geneos.GatewaySeverityCountPlugin:
@@ -309,8 +310,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			}
 			sampler.Column1 = append(sampler.Column1, "[x] "+x)
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.disk.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "disk", "empty"))}
 		}
 
 	case *geneos.CPUPlugin:
@@ -338,16 +339,16 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 		for _, t := range plugin.TargetNodes {
 			sampler.Column1 = append(sampler.Column1, t.String())
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.x-ping.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "x-ping", "empty"))}
 		}
 
 	case *geneos.GatewaySQLPlugin:
 		for _, d := range plugin.Views {
 			sampler.Column1 = append(sampler.Column1, d.ViewName.String())
 		}
-		if len(sampler.Column1) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.gateway-sql.empty")}
+		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "gateway-sql", "empty"))}
 		}
 
 	case *geneos.SQLToolkitPlugin:
@@ -356,8 +357,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			log.Debug().Msgf("name, query: %s = %s", q.Name, q.SQL)
 			n, _ := strconv.Unquote(q.Name.String())
 			if n == "" || strings.TrimSpace(q.SQL.String()) == "" {
-				if cf.GetBool("output.show-empty-samplers") {
-					sampler.Column2 = []string{cf.GetString("output.reports.sql-toolkit.empty")}
+				if config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+					sampler.Column2 = []string{config.Get[string](cf, cf.Join("output", "reports", "sql-toolkit", "empty"))}
 				}
 				continue
 			}
@@ -372,8 +373,8 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				sampler.Column1 = append(sampler.Column1, fmt.Sprintf("%s : %s : %s", d.Name, p.Parameter, p.Criteria))
 			}
 		}
-		if len(plugin.Dataviews) == 0 && cf.GetBool("output.show-empty-samplers") {
-			sampler.Column1 = []string{cf.GetString("output.reports.control-m.empty")}
+		if len(plugin.Dataviews) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column1 = []string{config.Get[string](cf, cf.Join("output", "reports", "control-m", "empty"))}
 		}
 
 	case *geneos.TCPLinksPlugin:

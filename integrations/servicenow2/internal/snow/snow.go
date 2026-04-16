@@ -67,7 +67,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	var tcc *tls.Config
 	if sn.Scheme == "https" {
 		tcc = &tls.Config{
-			InsecureSkipVerify: cf.GetBool(cf.Join("tls", "skip-verify")),
+			InsecureSkipVerify: config.Get[bool](cf, cf.Join("tls", "skip-verify")),
 		}
 	}
 
@@ -89,7 +89,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		Timeout: timeout,
 	}
 
-	p := sn.JoinPath(cf.GetString("path", config.Default("/api/now/v2/table")))
+	p := sn.JoinPath(cf.GetString("path", config.DefaultValue("/api/now/v2/table")))
 
 	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &log.Logger}.NewZerologHandler())
 

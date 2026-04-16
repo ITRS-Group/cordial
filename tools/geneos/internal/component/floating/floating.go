@@ -305,7 +305,7 @@ func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string
 
 	args = []string{
 		i.Name(),
-		"-listenip", cf.GetString("listenip", config.Default("none")),
+		"-listenip", cf.GetString("listenip", config.DefaultValue("none")),
 		"-port", cf.GetString("port"),
 		"-setup", cf.GetString("setup"),
 		// "-setup-interval", "300",

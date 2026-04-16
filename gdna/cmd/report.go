@@ -242,36 +242,36 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		)
 	case "xlsx":
 		r, _ = reporter.NewReporter("xlsx", w,
-			reporter.SummarySheetName(cf.GetString("reports.gdna-summary.name")),
-			reporter.Scramble(scrambleNames || cf.GetBool("xlsx.scramble")),
-			reporter.XLSXPassword(config.Get[*config.Plaintext](cf, "xlsx.password")),
-			reporter.DateFormat(cf.GetString("xlsx.formats.datetime", config.Default("yyyy-mm-ddThh:MM:ss"))),
-			reporter.IntFormat(config.Get[int](cf, "xlsx.formats.int", config.Default(1))),
-			reporter.PercentFormat(config.Get[int](cf, "xlsx.formats.percent", config.Default(9))),
+			reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
+			reporter.Scramble(scrambleNames || config.Get[bool](cf, cf.Join("xlsx", "scramble"))),
+			reporter.XLSXPassword(config.Get[*config.Plaintext](cf, cf.Join("xlsx", "password"))),
+			reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
+			reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
+			reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
 			reporter.SeverityColours(
-				cf.GetString("xlsx.conditional-formats.undefined", config.Default("BFBFBF")),
-				cf.GetString("xlsx.conditional-formats.ok", config.Default("5BB25C")),
-				cf.GetString("xlsx.conditional-formats.warning", config.Default("F9B057")),
-				cf.GetString("xlsx.conditional-formats.critical", config.Default("FF5668")),
+				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "undefined"), config.DefaultValue("BFBFBF")),
+				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "ok"), config.DefaultValue("5BB25C")),
+				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "warning"), config.DefaultValue("F9B057")),
+				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "critical"), config.DefaultValue("FF5668")),
 			),
-			reporter.MinColumnWidth(config.Get[float64](cf, "xlsx.formats.min-width")),
-			reporter.MaxColumnWidth(config.Get[float64](cf, "xlsx.formats.max-width")),
-			reporter.XLSXHeadlines(config.Get[int](cf, "xlsx.headlines")),
+			reporter.MinColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "min-width"))),
+			reporter.MaxColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "max-width"))),
+			reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
 		)
 	case "dataview":
 		fallthrough
 	default:
 		if r, err = reporter.NewReporter("api", nil,
 			reporter.ResetDataviews(resetViews),
-			reporter.Scramble(scrambleNames || cf.GetBool("geneos.scramble")),
-			reporter.APIHostname(cf.GetString(config.Join("geneos", "netprobe", "hostname"))),
-			reporter.APIPort(cf.GetInt(config.Join("geneos", "netprobe", "port"))),
-			reporter.APISecure(cf.GetBool(config.Join("geneos", "netprobe", "secure"))),
-			reporter.APISkipVerify(cf.GetBool(config.Join("geneos", "netprobe", "skip-verify"))),
-			reporter.APIEntity(cf.GetString(config.Join("geneos", "entity"))),
-			reporter.APISampler(cf.GetString(config.Join("geneos", "sampler"))),
-			reporter.APIMaxRows(cf.GetInt(config.Join("geneos", "max-rows"), config.Default(500))),
-			reporter.DataviewCreateDelay(cf.GetDuration(config.Join("geneos", "dataview-create-delay"))),
+			reporter.Scramble(scrambleNames || config.Get[bool](cf, cf.Join("geneos", "scramble"))),
+			reporter.APIHostname(config.Get[string](cf, cf.Join("geneos", "netprobe", "hostname"))),
+			reporter.APIPort(config.Get[int](cf, cf.Join("geneos", "netprobe", "port"))),
+			reporter.APISecure(config.Get[bool](cf, cf.Join("geneos", "netprobe", "secure"))),
+			reporter.APISkipVerify(config.Get[bool](cf, cf.Join("geneos", "netprobe", "skip-verify"))),
+			reporter.APIEntity(config.Get[string](cf, cf.Join("geneos", "entity"))),
+			reporter.APISampler(config.Get[string](cf, cf.Join("geneos", "sampler"))),
+			reporter.APIMaxRows(config.Get[int](cf, cf.Join("geneos", "max-rows"), config.DefaultValue(500))),
+			reporter.DataviewCreateDelay(config.Get[time.Duration](cf, cf.Join("geneos", "dataview-create-delay"))),
 		); err != nil {
 			return
 		}
@@ -310,7 +310,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 	var groupedReports []Report
 
 	var i int
-	for name := range cf.GetStringMap("reports") {
+	for name := range config.Get[map[string]any](cf, "reports") {
 		var rep Report
 		var subreport string
 		if reportNames != "" {

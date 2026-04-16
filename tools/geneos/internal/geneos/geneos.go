@@ -92,7 +92,7 @@ func Initialise(h *Host, options ...PackageOptions) (err error) {
 
 	if h.IsLocal() {
 		log.Debug().Msgf("setting %q to %q", cordial.ExecutableName(), opts.geneosdir)
-		config.Set(cordial.ExecutableName(), opts.geneosdir)
+		config.Set(config.Global(), cordial.ExecutableName(), opts.geneosdir)
 		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func Init(app string) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func LocalRoot() string {
-	return config.GetString(cordial.ExecutableName(), config.Default(config.GetString("itrshome")))
+	return config.GetString(cordial.ExecutableName(), config.DefaultValue(config.GetString("itrshome")))
 }
 
 // SaveGlobalConfig saves the global configuration (in config.Global)

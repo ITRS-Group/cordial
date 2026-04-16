@@ -121,16 +121,16 @@ func router() {
 	// Put Endpoints
 	v1route.POST("/incident", snow.AcceptEvent)
 
-	i := fmt.Sprintf("%s:%d", cf.GetString("api.host"), cf.GetInt("api.port"))
+	i := fmt.Sprintf("%s:%d", cf.GetString("api.host"), config.Get[uint16](cf, cf.Join("api", "port")))
 
 	InitializeConnection()
 
 	// firing up the server
-	if !cf.GetBool("api.tls.enabled") {
+	if !config.Get[bool](cf, cf.Join("api", "tls", "enabled")) {
 		e.Logger.Fatal(e.Start(i))
-	} else if cf.GetBool("api.tls.enabled") {
+	} else if config.Get[bool](cf, cf.Join("api", "tls", "enabled")) {
 		var cert any
-		certstr := config.GetString("api.tls.certificate")
+		certstr := config.Get[string](cf, cf.Join("api", "tls", "certificate"))
 		certpem, _ := pem.Decode([]byte(certstr))
 		if certpem == nil {
 			cert = certstr
@@ -139,7 +139,7 @@ func router() {
 		}
 
 		var key any
-		keystr := config.GetString("api.tls.key")
+		keystr := config.Get[string](cf, cf.Join("api", "tls", "key"))
 		keypem, _ := pem.Decode([]byte(keystr))
 		if keypem == nil {
 			key = keystr

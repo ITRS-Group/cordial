@@ -119,7 +119,7 @@ var setCmd = &cobra.Command{
 			}
 
 			if len(setCmdPrivateKeyfiles) > 0 {
-				h.Set("privatekeys", append(h.GetStringSlice("privatekeys"), setCmdPrivateKeyfiles...))
+				h.Set("privatekeys", append(config.Get[[]string](h.Config, "privatekeys"), setCmdPrivateKeyfiles...))
 			}
 		}
 

@@ -79,7 +79,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 	}
 	outputCVSEntities(w, Entities, cf, conftable)
 
-	for _, plugin := range cf.GetStringSlice("output.plugins.single-column") {
+	for _, plugin := range config.Get[[]string](cf, "output.plugins.single-column") {
 		rows := 0
 		for _, e := range Entities {
 			for _, s := range e.Samplers {
@@ -88,7 +88,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 				}
 			}
 		}
-		if rows == 0 && cf.GetBool("output.skip-empty-reports") {
+		if rows == 0 && config.Get[bool](cf, "output.skip-empty-reports") {
 			continue
 		}
 
@@ -100,7 +100,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
 	}
 
-	for _, plugin := range cf.GetStringSlice("output.plugins.two-column") {
+	for _, plugin := range config.Get[[]string](cf, "output.plugins.two-column") {
 		rows := 0
 		for _, e := range Entities {
 			for _, s := range e.Samplers {
@@ -109,7 +109,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 				}
 			}
 		}
-		if rows == 0 && cf.GetBool("output.skip-empty-reports") {
+		if rows == 0 && config.Get[bool](cf, "output.skip-empty-reports") {
 			continue
 		}
 
@@ -182,10 +182,10 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		sheetname: cf.GetString("output.reports.entities.sheetname", config.NoExpand()),
 	})
 
-	skipEmpty := cf.GetBool("output.skip-empty-reports")
-	showEmpty := cf.GetBool("output.show-empty-samplers")
+	skipEmpty := config.Get[bool](cf, "output.skip-empty-reports")
+	showEmpty := config.Get[bool](cf, "output.show-empty-samplers")
 
-	for _, plugin := range cf.GetStringSlice("output.plugins.single-column") {
+	for _, plugin := range config.Get[[]string](cf, "output.plugins.single-column") {
 		rows := 0
 		for _, e := range Entities {
 			for _, s := range e.Samplers {
@@ -218,7 +218,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		})
 	}
 
-	for _, plugin := range cf.GetStringSlice("output.plugins.two-column") {
+	for _, plugin := range config.Get[[]string](cf, "output.plugins.two-column") {
 		rows := 0
 		for _, e := range Entities {
 			for _, s := range e.Samplers {
@@ -264,7 +264,7 @@ func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities [
 	scsv.WriteAll([][]string{
 		{"Name", "Value"},
 		{"ITRS Gateway Reporter", "Version: " + cordial.VERSION},
-		{"Site", cf.GetString("site", config.Default("ITRS"))},
+		{"Site", cf.GetString("site", config.DefaultValue("ITRS"))},
 		{"Report Date/Time", startTime.Format(time.RFC3339)},
 		{"Hostname", hostname},
 		{"Gateway Name", gateway},
@@ -275,18 +275,18 @@ func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities [
 }
 
 func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (cols, attrs, plugins []string, err error) {
-	cols = cf.GetStringSlice("output.reports.entities.columns",
-		config.Default([]string{"managedEntity", "probe", "hostname", "port"}),
+	cols = config.Get[[]string](cf, "output.reports.entities.columns",
+		config.DefaultValue([]string{"managedEntity", "probe", "hostname", "port"}),
 	)
 
-	attrs = cf.GetStringSlice("output.reports.entities.attributes")
+	attrs = config.Get[[]string](cf, "output.reports.entities.attributes")
 	if len(attrs) == 0 {
 		attrs = getAttributes(Entities)
 	}
 
 	cols = append(cols, attrs...)
 
-	plugins = cf.GetStringSlice("output.reports.entities.plugins")
+	plugins = config.Get[[]string](cf, "output.reports.entities.plugins")
 	if len(plugins) == 0 {
 		plugins = getPlugins(Entities)
 	}
@@ -353,9 +353,8 @@ func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, confta
 func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	fcsv.Write(cf.GetStringSlice(
-		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
+		config.DefaultValue([]string{
 			"managedEntity",
 			"samplerType",
 			"samplerName",
@@ -384,9 +383,8 @@ func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, co
 func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	fcsv.Write(cf.GetStringSlice(
-		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
+		config.DefaultValue([]string{
 			"managedEntity",
 			"samplerType",
 			"samplerName",
@@ -429,9 +427,9 @@ func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config
 	fcsv := csv.NewWriter(w)
 
 	heading := []string{"rowname"}
-	heading = append(heading, cf.GetStringSlice(
+	heading = append(heading, config.Get[[]string](cf,
 		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+		config.DefaultValue([]string{
 			"rowname",
 			"managedEntity",
 			"samplerType",
@@ -469,9 +467,9 @@ func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *con
 	fcsv := csv.NewWriter(w)
 
 	heading := []string{"rowname"}
-	heading = append(heading, cf.GetStringSlice(
+	heading = append(heading, config.Get[[]string](cf,
 		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+		config.DefaultValue([]string{
 			"rowname",
 			"managedEntity",
 			"samplerType",

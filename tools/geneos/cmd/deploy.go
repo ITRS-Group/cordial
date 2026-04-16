@@ -182,7 +182,7 @@ var deployCmd = &cobra.Command{
 
 				// create base install
 				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
-				config.Set(cordial.ExecutableName(), deployCmdGeneosHome)
+				config.Set(config.Global(), cordial.ExecutableName(), deployCmdGeneosHome)
 				if err = geneos.SaveGlobalConfig(cordial.ExecutableName()); err != nil {
 					return err
 				}
@@ -413,7 +413,7 @@ var deployCmd = &cobra.Command{
 
 		_ = instance.ImportFiles(i, deployCmdImportFiles...)
 
-		fmt.Printf("%s added, port %d\n", i, cf.GetInt("port"))
+		fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
 		if deployCmdStart || deployCmdLogs {
 			if err = instance.Start(i, instance.StartingExtras(deployCmdExtraOpts)); err != nil {

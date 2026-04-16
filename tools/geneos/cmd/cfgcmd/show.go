@@ -54,7 +54,7 @@ var showCmd = &cobra.Command{
 		var cf *config.Config
 
 		if showCmdAll {
-			cf = config.GetConfig()
+			cf = config.Global()
 		} else {
 			cf, err = config.Load(cordial.ExecutableName(),
 				config.IgnoreSystemDir(),

@@ -17,12 +17,13 @@ import (
 	"github.com/awnumar/memguard"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-viper/mapstructure/v2"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/maja42/goval"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // internal routines that don't lock the config structure and also, for
@@ -97,90 +98,55 @@ func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
 	return c.viper.BindPFlag(key, flag)
 }
 
-// expand behaves like the expandString method but returns a byte
-// slice.
-func (c *Config) expand(input string, options ...ExpandOptions) (value []byte) {
+func expand[T string | []byte](c *Config, input string, options ...ExpandOptions) (value T) {
 	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
+
+	if opts.noexpand {
 		if input != "" {
-			return bytes.Clone([]byte(input))
+			return T(input)
 		}
-		if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return bytes.Clone(b)
-			}
-			return fmt.Append(value, opts.initialValue)
+
+		if !isZero(opts.initialValue) {
+			return T(fmt.Sprint(opts.initialValue))
 		}
-		return fmt.Append(value, opts.defaultValue)
+
+		if !isZero(opts.defaultValue) {
+			return T(fmt.Sprint(opts.defaultValue))
+		}
+
+		return
 	}
 
-	if input == "" && opts.initialValue != nil {
+	if input == "" && !isZero(opts.initialValue) {
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = _expandBytes([]byte(input), func(s []byte) (r []byte) {
-		if bytes.HasPrefix(s, []byte("enc:")) {
+	value = _expand(input, func(s T) (r T) {
+		if bytes.HasPrefix([]byte(s), []byte("enc:")) {
 			if opts.nodecode {
-				// return string and restore containing ${...}
-				return fmt.Append([]byte{}, `${`, s, `}`)
+				// return original string after restoring surrounding
+				// ${...}
+				return T(fmt.Sprint(`${`, s, `}`))
 			}
-			return c.expandEncodedBytes(s[4:], options...)
+			return expandEncoded[T](c, s[4:], options...)
 		}
 		str, _ := c.expandRawString(string(s), options...)
-		return []byte(str)
+		return T(str)
 	})
 
 	if opts.trimSpace {
-		value = bytes.TrimSpace(value)
+		value = T(strings.TrimSpace(string(value)))
 	}
 
-	if len(value) == 0 {
-		value = fmt.Append(nil, opts.defaultValue)
+	if len(value) == 0 && !isZero(opts.defaultValue) {
+		value = T(fmt.Sprint(opts.defaultValue))
 	}
 
-	return
-}
-
-// as above but for byte slices directly
-func _expandBytes(s []byte, mapping func([]byte) []byte) []byte {
-	var buf []byte
-	// ${} is all UTF-8, so bytes are fine for this operation.
-	i := 0
-	for j := 0; j < len(s); j++ {
-		if s[j] == '$' && j+1 < len(s) {
-			if buf == nil {
-				buf = make([]byte, 0, 2*len(s))
-			}
-			buf = append(buf, s[i:j]...)
-			name, w := getContents(string(s[j+1:]))
-			if name == "" {
-				if w == 1 {
-					// if invalid after opening `${` then return them
-					// unchanged
-					buf = append(buf, s[j:j+2]...)
-				} else if w > 0 {
-					// Encountered invalid syntax; eat the
-					// characters.
-				} else {
-					// Valid syntax, but $ was not followed by a
-					// name. Leave the dollar character untouched.
-					buf = append(buf, s[j])
-				}
-			} else {
-				buf = append(buf, mapping([]byte(name))...)
-			}
-			j += w
-			i = j + 1
-		}
-	}
-	if buf == nil {
-		return s
-	}
-	return append(buf, s[i:]...)
+	return T(value)
 }
 
 // ExpandAllSettings returns all the settings from config structure c
-// applying ExpandString to all string values and all string slice
+// applying Expand to all string values and all string slice
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
 func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any) {
@@ -190,18 +156,18 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 	for k, v := range as {
 		switch ev := v.(type) {
 		case string:
-			all[k] = c.expandString(ev, options...)
+			all[k] = expand[string](c, ev, options...)
 		case []string:
 			ns := []string{}
 			for _, s := range ev {
-				ns = append(ns, c.expandString(s, options...))
+				ns = append(ns, expand[string](c, s, options...))
 			}
 			all[k] = ns
 		case map[string]any:
 			nm := make(map[string]any, len(ev))
 			for kk, vv := range ev {
 				if vvs, ok := vv.(string); ok {
-					nm[kk] = c.expandString(vvs, options...)
+					nm[kk] = expand[string](c, vvs, options...)
 				} else {
 					nm[kk] = vv
 				}
@@ -224,38 +190,9 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 // prefixed with `+encs+` (standard Geneos usage) then it is used
 // directly, otherwise the value is looked-up using the normal
 // conventions for external access, e.g. file or URL.
-func (c *Config) expandEncodedString(s string, options ...ExpandOptions) (value string) {
+func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) (value T) {
 	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFields(s)
-	if opts.usekeyfile != "" {
-		keyfiles = opts.usekeyfile
-	}
-
-	if !strings.HasPrefix(encodedValue, "+encs+") {
-		encodedValue, _ = c.expandRawString(encodedValue, options...)
-	}
-	if encodedValue == "" {
-		return
-	}
-
-	for k := range strings.SplitSeq(keyfiles, "|") {
-		keyfile := KeyFile(ExpandHome(k))
-		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		return p
-	}
-	return ""
-}
-
-// expandEncodedBytes is the byte slice version of expandEncodedString.
-// It accepts the same input but returns a byte slice instead of a
-// string. The input is expected to be UTF-8 encoded and the output is
-// also UTF-8 encoded.
-func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value []byte) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	keyfiles, encodedValue := splitEncFieldsBytes([]byte(s))
 	if opts.usekeyfile != "" {
 		keyfiles = []byte(opts.usekeyfile)
 	}
@@ -274,7 +211,7 @@ func (c *Config) expandEncodedBytes(s []byte, options ...ExpandOptions) (value [
 		if err != nil {
 			continue
 		}
-		return p
+		return T(p)
 	}
 	return
 }
@@ -341,7 +278,7 @@ func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptio
 }
 
 // expandRawString is the internal function that expands the string s
-// using the same rules and options as [ExpandString] but treats the
+// using the same rules and options as [Expand] but treats the
 // whole of s as if it were wrapped in '${...}'. The function does most
 // of the core work for configuration expansion but is also exported for
 // use without the decoration required for configuration values,
@@ -476,64 +413,11 @@ func (c *Config) expandRawString(s string, options ...ExpandOptions) (value stri
 	return
 }
 
-// expandString is the internal version of ExpandString that doesn't
-// acquire the lock when calling other functions. It returns the
-// configuration c value for input as an expanded string. The returned
-// string is always a freshly allocated value.
-func (c *Config) expandString(input string, options ...ExpandOptions) (value string) {
-	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
-		if input != "" {
-			return strings.Clone(input)
-		}
-		// return a *copy* of the initialValue or defaultValue
-		if opts.initialValue != nil {
-			return fmt.Sprint(opts.initialValue)
-		}
-		return fmt.Sprint(opts.defaultValue)
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = _expandString(input, func(s string) (r string) {
-		if strings.HasPrefix(s, "enc:") {
-			if opts.nodecode {
-				// return string and restore containing ${...}
-				return `${` + s + `}`
-			}
-			return c.expandEncodedString(s[4:], options...)
-		}
-		r, _ = c.expandRawString(s, options...)
-		return
-	})
-
-	if opts.trimSpace {
-		value = strings.TrimSpace(value)
-	}
-
-	if value == "" && !isZero(opts.defaultValue) {
-		value = fmt.Sprint(opts.defaultValue)
-	}
-
-	// return a clone
-	return strings.Clone(value)
-}
-
-// the function below (and similar) are based on code copied from the Go
-// sources but modified to NOT support $val, only ${val}
-//
-// Copyright 2010 The Go Authors. All rights reserved. Use of this
-// source code is governed by a BSD-style license that can be found in
-// the LICENSE file.
-//
-// _expandString replaces ${var} in the string based on the mapping
-// function.
-func _expandString(s string, mapping func(string) string) string {
+func _expand[T string | []byte](s string, mapping func(T) T) T {
 	var buf []byte
-	// ${} is all ASCII, so bytes are fine for this operation.
+	// // ${} is all ASCII, so bytes are fine for this operation.
 	i := 0
+
 	for j := 0; j < len(s); j++ {
 		if s[j] == '$' && j+1 < len(s) {
 			if buf == nil {
@@ -555,23 +439,27 @@ func _expandString(s string, mapping func(string) string) string {
 					buf = append(buf, s[j])
 				}
 			} else {
-				buf = append(buf, mapping(name)...)
+				buf = append(buf, mapping(T(name))...)
 			}
 			j += w
 			i = j + 1
 		}
 	}
+
 	if buf == nil {
-		return s
+		return T(s)
 	}
-	return string(buf) + s[i:]
+
+	//
+	// return string(buf) + s[i:]
+	return T(append(buf, s[i:]...))
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
 func (c *Config) expandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
 	for _, v := range input {
-		vals = append(vals, c.expandString(v, options...))
+		vals = append(vals, expand[string](c, v, options...))
 	}
 	return
 }
@@ -580,7 +468,7 @@ func (c *Config) expandStringSlice(input []string, options ...ExpandOptions) (va
 // enclave. The option TrimSpace is ignored.
 func (c *Config) expandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
 	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
+	if opts.noexpand {
 		if input != "" {
 			return memguard.NewEnclave([]byte(input))
 		}
@@ -670,7 +558,7 @@ func _expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguar
 // enclave. The option TrimSpace is ignored.
 func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
 	opts := evalExpandOptions(c, options...)
-	if opts.rawstring {
+	if opts.noexpand {
 		if input != "" {
 			return memguard.NewBufferFromBytes([]byte(input))
 		}
@@ -808,35 +696,95 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 
 	switch any(*new(T)).(type) {
 	case bool:
-		return any(c.getBool(key, options...)).(T)
+		v, _ := strconv.ParseBool(expand[string](c, c.viper.GetString(key), options...))
+		return any(v).(T)
 	case int:
-		return any(c.getInt(key, options...)).(T)
+		v, _ := strconv.ParseInt(expand[string](c, c.viper.GetString(key), options...), 10, 0)
+		return any(int(v)).(T)
 	case int64:
-		return any(c.getInt64(key, options...)).(T)
+		v, _ := strconv.ParseInt(expand[string](c, c.viper.GetString(key), options...), 10, 64)
+		return any(v).(T)
 	case uint:
-		return any(c.getUint(key)).(T)
+		v, _ := strconv.ParseUint(expand[string](c, c.viper.GetString(key), options...), 10, 0)
+		return any(uint(v)).(T)
 	case uint16:
-		return any(c.getUint16(key)).(T)
+		v, _ := strconv.ParseUint(expand[string](c, c.viper.GetString(key), options...), 10, 16)
+		return any(uint16(v)).(T)
 	case float64:
-		return any(c.getFloat64(key)).(T)
+		v, _ := strconv.ParseFloat(expand[string](c, c.viper.GetString(key), options...), 64)
+		return any(v).(T)
 	case string:
-		return any(c.getString(key, options...)).(T)
+		return any(expand[string](c, c.viper.GetString(key), options...)).(T)
 	case []byte:
-		return any(c.getBytes(key, options...)).(T)
+		return any(expand[[]byte](c, c.viper.GetString(key), options...)).(T)
 	case []string:
-		return any(c.getStringSlice(key, options...)).(T)
+		var result []string
+		opts := evalExpandOptions(c, options...)
+
+		// if the key is set then use the value from the config,
+		// otherwise use the initial value or default value if they are
+		// set and of the correct type - leaving the decision to
+		// expand() is too late as it needs to test and use the
+		// correct type
+		if c.isSet(key) {
+			result = c.viper.GetStringSlice(key)
+		} else if init, ok := opts.initialValue.([]string); ok {
+			result = init
+		} else if def, ok := opts.defaultValue.([]string); ok {
+			result = def
+		}
+
+		var slice []string
+		for _, n := range result {
+			slice = append(slice, expand[string](c, n, options...))
+		}
+		return any(slice).(T)
 	case map[string]any:
-		return any(c.getStringMap(key)).(T)
+		v := c.viper.GetStringMap(key)
+		if v == nil {
+			v = make(map[string]any)
+		}
+		for k, v2 := range v {
+			if s, ok := v2.(string); ok {
+				v[k] = expand[string](c, s, options...)
+			}
+		}
+		return any(v).(T)
 	case map[string]string:
 		return any(c.getStringMapString(key, options...)).(T)
 	case []map[string]string:
 		return any(c.getSliceStringMapString(key, options...)).(T)
 	case time.Duration:
-		return any(c.getDuration(key, options...)).(T)
+		v, _ := time.ParseDuration(c.getString(key, options...))
+		return any(v).(T)
 	case *Plaintext:
 		return any(&Plaintext{memguard.NewEnclave(c.getBytes(key, options...))}).(T)
 	default:
 		return any(c.get(key)).(T)
+	}
+}
+
+func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
+	opts := evalExpandOptions(c, options...)
+	if opts.noexpand {
+		c.viper.Set(key, fmt.Sprint(value))
+		return
+	}
+
+	switch v := any(value).(type) {
+	case string:
+		c.viper.Set(key, c.replaceString(v, options...))
+	case []string:
+		for i, v2 := range v {
+			v[i] = c.replaceString(v2, options...)
+		}
+		c.viper.Set(key, v)
+	case map[string]string:
+		for k, v2 := range v {
+			c.viper.Set(key+c.delimiter+k, c.replaceString(v2, options...))
+		}
+	default:
+		c.viper.Set(key, value)
 	}
 }
 
@@ -891,12 +839,12 @@ func (c *Config) getBytes(key string, options ...ExpandOptions) (value []byte) {
 func (c *Config) getString(s string, options ...ExpandOptions) string {
 	str := c.viper.GetString(s)
 
-	return c.expandString(str, options...)
+	return expand[string](c, str, options...)
 }
 
 // getStringSlice is the internal function that does not lock the
 // configuration structure and functions like [viper.GetStringSlice] on
-// a Config instance but additionally calls [expandString] on each
+// a Config instance but additionally calls [expand] on each
 // element of the slice, passing any "values" maps
 func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []string) {
 	var result []string
@@ -915,13 +863,13 @@ func (c *Config) getStringSlice(key string, options ...ExpandOptions) (slice []s
 	}
 
 	for _, n := range result {
-		slice = append(slice, c.expandString(n, options...))
+		slice = append(slice, expand[string](c, n, options...))
 	}
 	return
 }
 
 // getStringMap functions like [viper.GetStringMap] on a Config
-// instance, expand values with [expandString] and returns a
+// instance, expand values with [expand] and returns a
 // map[string]any. If the value is not set then an empty map is
 // returned.
 func (c *Config) getStringMap(key string, options ...ExpandOptions) (value map[string]any) {
@@ -931,14 +879,14 @@ func (c *Config) getStringMap(key string, options ...ExpandOptions) (value map[s
 	}
 	for k, v := range value {
 		if s, ok := v.(string); ok {
-			value[k] = c.expandString(s, options...)
+			value[k] = expand[string](c, s, options...)
 		}
 	}
 	return
 }
 
 // getStringMapString functions like [viper.GetStringMapString] on a
-// Config instance but additionally calls [expandString] on each value
+// Config instance but additionally calls [expand] on each value
 // element of the map, passing any "values" maps
 //
 // Use a version of https://github.com/spf13/viper/pull/1504 to fix viper bug #1106
@@ -972,29 +920,25 @@ func (c *Config) getStringMapString(key string, options ...ExpandOptions) (m map
 	}
 
 	for k, v := range val {
-		m[k] = c.expandString(fmt.Sprint(v), options...)
+		m[k] = expand[string](c, fmt.Sprint(v), options...)
 	}
 
 	return
 }
 
 // GetSliceStringMapString returns a slice of string maps for the key s,
-// it iterates over all values in all maps and applies the ExpandString
+// it iterates over all values in all maps and applies the Expand
 // with the options given
 func (c *Config) getSliceStringMapString(s string, options ...ExpandOptions) (result []map[string]string) {
-	if err := c.unmarshalKey(s, &result); err != nil {
+	if err := c.unmarshalKey2(s, &result); err != nil {
 		return
 	}
 	for _, m := range result {
 		for k, v := range m {
-			m[k] = c.expandString(v, options...)
+			m[k] = expand[string](c, v, options...)
 		}
 	}
 	return
-}
-
-func (c *Config) getStringMapStringSlice(key string, options ...ExpandOptions) (m map[string][]string) {
-	return c.viper.GetStringMapStringSlice(key)
 }
 
 func (c *Config) isSet(key string) (value bool) {
@@ -1005,59 +949,12 @@ func (c *Config) mergeConfigMap(vals map[string]any) (err error) {
 	return c.viper.MergeConfigMap(vals)
 }
 
-// set a value without locking. This is used by the public Set() method
-// and also by Save() to set values in sub-configs without needing to
-// acquire the lock multiple times. It assumes that the caller has
-// already acquired the lock if needed.
-func (c *Config) set(key string, value any) {
-	c.viper.Set(key, value)
-}
-
 func (c *Config) setDefault(key string, value any) {
 	c.viper.SetDefault(key, value)
 }
 
 func (c *Config) setEnvPrefix(prefix string) {
 	c.viper.SetEnvPrefix(prefix)
-}
-
-// setString is the internal version of SetString that doesn't acquire
-// the lock. It sets the given key in the configuration structure c to
-// the string given after processing options. Options include replacing
-// substrings with configuration items that match *at the time of the
-// setString call*. This allows the abstraction of a static string based
-// on the other config values given. E.g.
-//
-//	cf.setString("setup", "/path/to/myname/setup.json", config.Replace("name"))
-//
-// This would check the value of the "name" key in cf and do a global
-// replace. Multiple Replace options are processed in order. If "name"
-// was "myname" at the time of the call then the resulting value is
-// `/path/to/${config:name}/setup.json`
-//
-// Existing expand options are left unchanged. All replacements are case
-// sensitive.
-func (c *Config) setString(key, value string, options ...ExpandOptions) {
-	value = c.replaceString(value, options...)
-	c.set(key, value)
-}
-
-// setStringSlice sets the key to a slice of strings applying the
-// replacement options as for setString to each member of the slice
-func (c *Config) setStringSlice(key string, values []string, options ...ExpandOptions) {
-	for i, v := range values {
-		values[i] = c.replaceString(v, options...)
-	}
-	c.set(key, values)
-}
-
-// SetStringMapString iterates over a map[string]string and sets each
-// key to the value given. Viper's Set() doesn't support maps until the
-// configuration is written to and read back from a file.
-func (c *Config) setStringMapString(key string, vals map[string]string, options ...ExpandOptions) {
-	for k, v := range vals {
-		c.setString(key+c.delimiter+k, v, options...)
-	}
 }
 
 // SetKeyValues takes a list of `key=value` pairs as strings and applies
@@ -1076,17 +973,17 @@ func (c *Config) setKeyValues(items ...string) (err error) {
 
 		switch fields[2] {
 		case "=":
-			c.set(fields[1], fields[3])
+			set(c, fields[1], fields[3])
 		case "+=", "+":
 			if !c.isSet(fields[1]) {
-				c.set(fields[1], fields[3])
+				set(c, fields[1], fields[3])
 				continue
 			}
 
 			if strings.HasPrefix(fields[3], "-") {
-				c.set(fields[1], c.getString(fields[1], NoExpand())+" "+fields[3])
+				set(c, fields[1], get[string](c, fields[1], NoExpand())+" "+fields[3])
 			} else {
-				c.set(fields[1], c.getString(fields[1], NoExpand())+fields[3])
+				set(c, fields[1], get[string](c, fields[1], NoExpand())+fields[3])
 			}
 		default:
 			continue
@@ -1116,16 +1013,11 @@ func (c *Config) sub(key string) *Config {
 	}
 }
 
-func (c *Config) unmarshal(rawVal any, opts ...viper.DecoderConfigOption) error {
-	return viper.Unmarshal(rawVal, opts...)
-}
-
 func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
 	key = strings.ToLower(key)
 	prefix := key + c.delimiter
 
 	i := c.viper.Get(key)
-
 	if isStringMapInterface(i) {
 		val := i.(map[string]any)
 		keys := c.allKeys()
@@ -1150,15 +1042,15 @@ func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfi
 	return decode(i, defaultDecoderConfig(rawVal, opts...))
 }
 
+func (c *Config) unmarshalKey2(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
+	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
+}
+
 // internal routines
 
 // replaceString does the string replacement for the Set* functions
 func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 	opts := evalExpandOptions(c, options...)
-
-	if len(opts.replacements) == 0 {
-		return value
-	}
 
 	for _, r := range opts.replacements {
 		sub := c.getString(r)

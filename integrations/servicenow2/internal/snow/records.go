@@ -189,7 +189,7 @@ func PostRecord(ctx *Context, table string, record Record, options ...Options) (
 	cf := ctx.Conf.Sub("servicenow")
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
 
-	if cf.GetBool("trace") {
+	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
 			log.Debug().Err(err).Msg("failed to marshal trace record for POST request")
@@ -214,7 +214,7 @@ func PutRecord(ctx *Context, table string, record Record, options ...Options) (r
 	cf := ctx.Conf.Sub("servicenow")
 	rc := ServiceNow(cf)
 
-	if cf.GetBool("trace") {
+	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
 			log.Debug().Err(err).Msg("failed to marshal trace record for PUT request")

@@ -94,7 +94,7 @@ var snapshotCmd = &cobra.Command{
 			return
 		}
 
-		cf := config.GetConfig()
+		cf := config.Global()
 		if snapshotCmdUsername == "" {
 			snapshotCmdUsername = cf.GetString(cf.Join("snapshot", "username"))
 		}
@@ -218,7 +218,7 @@ func gatewayURL(i geneos.Instance) (u *url.URL) {
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	port := i.Config().GetInt("port")
+	port := config.Get[uint16](i.Config(), "port")
 	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
 	if instance.FileOf(i, "certificate") != "" {

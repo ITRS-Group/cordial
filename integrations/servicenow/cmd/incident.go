@@ -140,10 +140,10 @@ func incident(args []string) {
 
 	var server string
 
-	if cf.GetBool("api.tls.enabled") {
-		server = fmt.Sprintf("https://%s:%d", cf.GetString("api.host"), cf.GetInt("api.port"))
+	if config.Get[bool](cf, cf.Join("api", "tls", "enabled")) {
+		server = fmt.Sprintf("https://%s:%d", config.Get[string](cf, cf.Join("api", "host")), config.Get[uint16](cf, cf.Join("api", "port")))
 	} else {
-		server = fmt.Sprintf("http://%s:%d", cf.GetString("api.host"), cf.GetInt("api.port"))
+		server = fmt.Sprintf("http://%s:%d", config.Get[string](cf, cf.Join("api", "host")), config.Get[uint16](cf, cf.Join("api", "port")))
 	}
 
 	u, err := url.Parse(server)

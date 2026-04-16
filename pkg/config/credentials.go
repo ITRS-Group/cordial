@@ -46,7 +46,7 @@ func (c *Config) FindCreds(p string) (creds *Config) {
 		return nil
 	}
 
-	cr := c.GetStringMap("credentials")
+	cr := Get[map[string]any](c, "credentials")
 	if cr == nil {
 		return
 	}
@@ -58,7 +58,7 @@ func (c *Config) FindCreds(p string) (creds *Config) {
 	creds = New()
 	for _, domain := range domains {
 		if strings.Contains(strings.ToLower(p), strings.ToLower(domain)) {
-			creds.MergeConfigMap(c.GetStringMap(c.Join("credentials", domain)))
+			creds.MergeConfigMap(Get[map[string]any](c, c.Join("credentials", domain)))
 			return
 		}
 	}
@@ -100,7 +100,7 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	if err != nil {
 		return
 	}
-	credmap := cf.GetStringMap("credentials")
+	credmap := Get[map[string]any](cf, "credentials")
 	delete(credmap, domain)
 	cf.Set("credentials", credmap)
 	return cf.Save("credentials", options...)

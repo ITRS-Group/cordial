@@ -103,8 +103,8 @@ func send(w http.ResponseWriter, r *http.Request) {
 		request["correlation_id"] = ims.CorrelationID(request[ims.INCIDENT_CORRELATION])
 	}
 
-	log.Debug().Msgf("search: %s", sdpCf.Get(sdpCf.Join("requests", "search")))
-	resp, err := c.getRequests(r.Context(), sdpCf, sdpCf.Get(sdpCf.Join("requests", "search")), config.LookupTable(request))
+	log.Debug().Msgf("search: %s", config.Get[any](sdpCf, sdpCf.Join("requests", "search")))
+	resp, err := c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "search")), config.LookupTable(request))
 	if err != nil {
 		response.Error = fmt.Sprintf("%v", err)
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)

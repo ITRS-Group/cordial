@@ -58,7 +58,7 @@ var queryCmd = &cobra.Command{
 		var err error
 		var result proxy.ResultsResponse
 
-		for _, r := range cf.GetStringSlice(cf.Join("proxy", "url")) {
+		for _, r := range config.Get[[]string](cf, cf.Join("proxy", "url")) {
 			rc := newRestClient(cf, r)
 
 			if queryCmdTable == "" {

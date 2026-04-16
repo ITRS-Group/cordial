@@ -99,7 +99,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 	xlsx.SetSheetName("Sheet1", summary)
 	xlsx.SetColStyle(summary, "A", leftHeading)
 	xlsx.SetColStyle(summary, "B", rightAlign)
-	site := cf.GetString("site", config.Default("ITRS"))
+	site := cf.GetString("site", config.DefaultValue("ITRS"))
 	xlsx.SetColWidth(summary, "A", "B", colWidth(len(site), 40))
 	xlsx.SetSheetCol(summary, "A1", &[]any{
 		"ITRS Gateway Reporter",
@@ -134,13 +134,13 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 	}
 
 	// files
-	for _, f := range cf.GetStringSlice("output.plugins.single-column") {
+	for _, f := range config.Get[[]string](cf, "output.plugins.single-column") {
 		if err = outputXLSXSingleColumn(xlsx, entities, cf, conftable, f); err != nil {
 			return
 		}
 	}
 
-	for _, f := range cf.GetStringSlice("output.plugins.two-column") {
+	for _, f := range config.Get[[]string](cf, "output.plugins.two-column") {
 		if err = outputXLSXTwoColumn(xlsx, entities, cf, conftable, f); err != nil {
 			return
 		}
@@ -283,22 +283,22 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 			}
 		}
 	}
-	if rows == 0 && cf.GetBool("output.skip-empty-reports") {
+	if rows == 0 && config.Get[bool](cf, "output.skip-empty-reports") {
 		return
 	}
 
-	sheet := cf.GetString(
+	sheet := config.Get[string](cf,
 		config.Join("output", "reports", plugin, "sheetname"),
-		config.Default(strings.ToTitle(plugin)),
+		config.DefaultValue(strings.ToTitle(plugin)),
 	)
 
 	if _, err = x.NewSheet(sheet); err != nil {
 		return
 	}
 
-	columns := cf.GetStringSlice(
+	columns := config.Get[[]string](cf,
 		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+		config.DefaultValue([]string{
 			"managedEntity",
 			"samplerType",
 			"samplerName",
@@ -369,15 +369,15 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 
 // output two columns of data, sort both lists, output blanks for shorter list
 func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
-	sheet := cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.Default(strings.ToTitle(plugin)))
+	sheet := cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.DefaultValue(strings.ToTitle(plugin)))
 
 	if _, err = x.NewSheet(sheet); err != nil {
 		return
 	}
 
-	columns := cf.GetStringSlice(
+	columns := config.Get[[]string](cf,
 		config.Join("output", "reports", plugin, "columns"),
-		config.Default([]string{
+		config.DefaultValue([]string{
 			"managedEntity",
 			"samplerType",
 			"samplerName",
@@ -431,7 +431,7 @@ func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config,
 
 	// mark up no data
 	if rownum == 1 {
-		if cf.GetBool("output.skip-empty-reports") {
+		if config.Get[bool](cf, "output.skip-empty-reports") {
 			x.DeleteSheet(sheet)
 			return
 		}

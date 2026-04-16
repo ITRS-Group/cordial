@@ -92,7 +92,7 @@ func AcceptEvent(c echo.Context) (err error) {
 	}
 
 	// look up state mappings for defaults for 'state' - this is a list of strings
-	for sk, sv := range vc.GetStringMapStringSlice("servicenow.incidentstates") {
+	for sk, sv := range config.Get[map[string][]string](vc, "servicenow.incidentstates") {
 		if fmt.Sprint(state) == sk {
 			for _, si := range sv {
 				// trim spaces as YAML comma lists leave spaces in
@@ -102,9 +102,9 @@ func AcceptEvent(c echo.Context) (err error) {
 		}
 	}
 
-	if vc.GetBool(config.Join("servicenow", "incident-user", "lookup")) {
-		user := vc.GetString(config.Join("servicenow", "username"))
-		userfield := vc.GetString(config.Join("servicenow", "incident-user", "field"), config.Default("caller_id"))
+	if config.Get[bool](vc, vc.Join("servicenow", "incident-user", "lookup")) {
+		user := config.Get[string](vc, vc.Join("servicenow", "username"))
+		userfield := config.Get[string](vc, vc.Join("servicenow", "incident-user", "field"), config.DefaultValue("caller_id"))
 		if _, ok := incident[userfield]; ok {
 			user = incident[userfield]
 		}

@@ -76,7 +76,7 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error) {
 	hosts = make(map[string]HostMappings)
 
-	timeout := cf.GetDuration("inventory.timeout")
+	timeout := config.Get[time.Duration](cf, "inventory.timeout")
 	if timeout == 0 {
 		timeout = 10 * time.Second
 	}
@@ -88,7 +88,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: cf.GetBool("inventory.insecure"),
+				InsecureSkipVerify: config.Get[bool](cf, "inventory.insecure"),
 			},
 		},
 		Timeout: timeout,
@@ -98,31 +98,31 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 
 	defFetchopts := []FetchOptions{InventoryType("yaml")}
 
-	switch cf.GetString("inventory.authentication.type") {
+	switch config.Get[string](cf, "inventory.authentication.type") {
 	case "header":
 		defFetchopts = append(defFetchopts,
-			AddHeader(cf.GetString("inventory.authentication.header"),
-				cf.GetStringSlice("inventory.authentication.value"),
+			AddHeader(config.Get[string](cf, "inventory.authentication.header"),
+				config.Get[[]string](cf, "inventory.authentication.value"),
 			))
 	case "basic":
 		defFetchopts = append(defFetchopts,
-			BasicAuth(cf.GetString("inventory.authentication.username"),
+			BasicAuth(config.Get[string](cf, "inventory.authentication.username"),
 				config.Get[*config.Plaintext](cf, "inventory.authentication.password"),
 			))
 	}
 
-	for _, index := range cf.GetStringSlice("inventory.indices") {
+	for _, index := range config.Get[[]string](cf, "inventory.indices") {
 		var inv *Inventory
 		var err error
 
-		source := cf.GetString("inventory.source",
+		source := config.Get[string](cf, "inventory.source",
 			config.LookupTable(lookup),
 			config.LookupTable(map[string]string{"index": index}),
 		)
 
 		fetchopts := slices.Clone(defFetchopts)
 
-		if cf.GetBool("inventory.check-modified") {
+		if config.Get[bool](cf, "inventory.check-modified") {
 			if pi, ok := Inventories.Load(source); ok {
 				if pinv, ok := pi.(*Inventory); ok {
 					log.Debug().Msgf("checking inventory %s - size %d, last mod %s", source, pinv.size, pinv.lastModified.Format(time.RFC3339))
@@ -152,7 +152,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 			continue
 		}
 
-		if cf.GetBool("inventory.check-modified") {
+		if config.Get[bool](cf, "inventory.check-modified") {
 			log.Debug().Msgf("storing inventory for %s - size %d, last mod %s", source, inv.size, inv.lastModified.Format(time.RFC3339))
 			Inventories.Store(source, inv)
 		}

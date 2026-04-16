@@ -270,7 +270,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
-	if cf.IsSet("use-chain") && !cf.GetBool("use-chain") {
+	if cf.IsSet("use-chain") && !config.Get[bool](cf, "use-chain") {
 		cf.Set(cf.Join("tls", "verify"), false)
 	}
 

@@ -24,6 +24,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -88,26 +89,26 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 	// a SAN can have multiple Entities, so first build some default
 	// sets of attributes, types and variables to use later on
 	globalAttrs := map[string]string{}
-	for _, a := range conf.GetSliceStringMapString("components.defaults.attributes", config.LookupTable(mappings)) {
+	for _, a := range config.Get[[]map[string]string](conf, "components.defaults.attributes", config.LookupTable(mappings)) {
 		globalAttrs[a["name"]] = a["value"]
 	}
-	globalTypes := conf.GetStringSlice("components.defaults.types", config.LookupTable(mappings))
+	globalTypes := config.Get[[]string](conf, "components.defaults.types", config.LookupTable(mappings))
 	globalVars := getVars(conf, "components.defaults.variables", config.LookupTable(mappings))
 
 	np = &netprobe.Netprobe{
 		Compatibility: 1,
-		XMLNs:         conf.GetString("geneos.sans.xmlns"),
-		XSI:           conf.GetString("geneos.sans.xsi"),
+		XMLNs:         config.Get[string](conf, "geneos.sans.xmlns"),
+		XSI:           config.Get[string](conf, "geneos.sans.xsi"),
 		SelfAnnounce: &netprobe.SelfAnnounce{
 			Enabled:                  true,
-			RetryInterval:            int(conf.GetDuration("geneos.sans.retry-interval").Seconds()),
-			RequireReverseConnection: conf.GetBool("geneos.sans.reverse-connection"),
-			ProbeName:                component.GetString("probe-name", config.LookupTable(mappings)),
+			RetryInterval:            int(config.Get[time.Duration](conf, "geneos.sans.retry-interval").Seconds()),
+			RequireReverseConnection: config.Get[bool](conf, "geneos.sans.reverse-connection"),
+			ProbeName:                config.Get[string](component, "probe-name", config.LookupTable(mappings)),
 			Gateways:                 cs.Gateways(hostname),
 		},
 	}
 
-	entities := component.Get("entities")
+	entities := config.Get[any](component, "entities")
 	if entities == nil {
 		log.Error().Msgf("skipping %s: no entities defined for component type %s", hostname, mappings["hosttype"])
 		return
@@ -119,10 +120,10 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 
 	// extract defaults for this component, if they exist
 	defAttrs := maps.Clone(globalAttrs)
-	for _, a := range component.GetSliceStringMapString("attributes", config.LookupTable(mappings)) {
+	for _, a := range config.Get[[]map[string]string](component, "attributes", config.LookupTable(mappings)) {
 		defAttrs[a["name"]] = a["value"]
 	}
-	defTypes := append(globalTypes, component.GetStringSlice("types", config.LookupTable(mappings))...)
+	defTypes := append(globalTypes, config.Get[[]string](component, "types", config.LookupTable(mappings))...)
 	defVars := append(globalVars, getVars(component, "variables", config.LookupTable(mappings))...)
 
 	// iterate over Entities, filling in defaults as defined
@@ -137,7 +138,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 			Name: entity.GetString("name", config.LookupTable(mappings)),
 		}
 
-		attrs := entity.GetSliceStringMapString("attributes",
+		attrs := config.Get[[]map[string]string](entity, "attributes",
 			config.LookupTable(mappings),
 			config.Prefix("uuid", func(ci map[string]any, s string, b bool) (string, error) {
 				s = strings.TrimPrefix(s, "uuid:")
@@ -166,7 +167,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 			}
 		}
 
-		types := append(defTypes, entity.GetStringSlice("types", config.LookupTable(mappings))...)
+		types := append(defTypes, config.Get[[]string](entity, "types", config.LookupTable(mappings))...)
 
 		if len(types) > 0 {
 			ent.Types = &netprobe.Types{}
@@ -203,7 +204,7 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 	allGateways := cs.gateways
 	cs.RUnlock()
 
-	allGatewayDetails := conf.GetSliceStringMapString("geneos.gateways")
+	allGatewayDetails := config.Get[[]map[string]string](conf, "geneos.gateways")
 
 	netprobeID := netprobeID(conf, hostname)
 	gatewayNames := OrderGateways(netprobeID, allGateways)
@@ -212,7 +213,7 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 			gateways = append(gateways, GatewayDetails(g, allGatewayDetails))
 		}
 	} else {
-		gatewayNames = []string{conf.GetString("geneos.fallback-gateway.name", config.Default(conf.GetString("geneos.fallback-gateway.primary")))}
+		gatewayNames = []string{config.Get[string](conf, "geneos.fallback-gateway.name", config.DefaultValue(config.Get[string](conf, "geneos.fallback-gateway.primary")))}
 		if len(gatewayNames) == 0 {
 			log.Error().Msg("fallback gateway not configured correctly")
 			return
@@ -221,7 +222,7 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 		gateways = append(gateways, GatewayDetails(gatewayNames[0], []map[string]string{config.Get[map[string]string](conf, "geneos.fallback-gateway")}))
 	}
 
-	maxGateways := config.Get[int](cf, "geneos.sans.gateways", config.Default(1))
+	maxGateways := config.Get[int](cf, "geneos.sans.gateways", config.DefaultValue(1))
 	log.Debug().Msgf("selecting up to %d gateways for host %s with prefix %s", maxGateways, hostname, netprobeID)
 
 	i := 0

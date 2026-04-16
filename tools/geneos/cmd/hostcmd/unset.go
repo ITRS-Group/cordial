@@ -102,7 +102,7 @@ geneos host unset rem2 -i /path/to/id_rsa
 			}
 
 			if len(unsetCmdPrivateKeyfiles) > 0 {
-				keys := h.GetStringSlice("privatekeys")
+				keys := config.Get[[]string](h.Config, "privatekeys")
 				if len(keys) == 0 {
 					continue
 				}

@@ -171,7 +171,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		cf,
 		table.Name,
 		config.LookupTable(lookupMap),
-		config.Default(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[ims.SNOW_CMDB_CI_FIELD], incident[ims.SNOW_CORRELATION_FIELD])),
+		config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[ims.SNOW_CMDB_CI_FIELD], incident[ims.SNOW_CORRELATION_FIELD])),
 	)
 	if err != nil {
 		response.Error = "error looking up incident: " + err.Error()

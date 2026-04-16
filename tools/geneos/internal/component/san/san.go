@@ -322,7 +322,7 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 
 	args = []string{
 		i.Name(),
-		"-listenip", cf.GetString("listenip", config.Default("none")),
+		"-listenip", cf.GetString("listenip", config.DefaultValue("none")),
 		"-port", cf.GetString("port"),
 		"-setup", cf.GetString("setup"),
 	}
@@ -353,7 +353,7 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+i.Config().GetString(("hostname"), config.Default(hostname)))
+	env = append(env, "HOSTNAME="+i.Config().GetString(("hostname"), config.DefaultValue(hostname)))
 
 	if skipFileCheck {
 		return

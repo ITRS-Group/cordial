@@ -246,7 +246,7 @@ func (ct *Component) Register(factory func(string) Instance) {
 	registeredComponents[ct.Name] = ct
 	initDirs[ct.Name] = ct.Directories
 	for k, v := range ct.GlobalSettings {
-		config.GetConfig().SetDefault(k, v)
+		config.Global().SetDefault(k, v)
 	}
 }
 
