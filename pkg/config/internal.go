@@ -8,7 +8,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -192,7 +191,7 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 // conventions for external access, e.g. file or URL.
 func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) (value T) {
 	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes([]byte(s))
+	keyfiles, encodedValue := splitEncFields([]byte(s))
 	if opts.usekeyfile != "" {
 		keyfiles = []byte(opts.usekeyfile)
 	}
@@ -222,7 +221,7 @@ func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) 
 // UTF-8 encoded and the output is also UTF-8 encoded.
 func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
 	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	keyfiles, encodedValue := splitEncFields(s)
 	if opts.usekeyfile != "" {
 		keyfiles = []byte(opts.usekeyfile)
 	}
@@ -252,7 +251,7 @@ func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (
 // expected to be UTF-8 encoded and the output is also UTF-8 encoded.
 func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptions) (value *memguard.LockedBuffer) {
 	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFieldsBytes(s)
+	keyfiles, encodedValue := splitEncFields(s)
 	if opts.usekeyfile != "" {
 		keyfiles = []byte(opts.usekeyfile)
 	}
@@ -922,23 +921,7 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 // keyfile(s) and the second the ciphertext. The split is done on the
 // *last* colon and not the first, otherwise Windows drive letter paths
 // would be considered the split point.
-func splitEncFields(enc string) (keyfiles, ciphertext string) {
-	c := strings.LastIndexByte(enc, ':')
-	if c == -1 {
-		return
-	}
-	keyfiles = enc[:c]
-	if len(enc) > c+1 {
-		ciphertext = enc[c+1:]
-	}
-	return
-}
-
-// splitEncFieldsBytes breaks the string enc into two strings, the first the
-// keyfile(s) and the second the ciphertext. The split is done on the
-// *last* colon and not the first, otherwise Windows drive letter paths
-// would be considered the split point.
-func splitEncFieldsBytes(enc []byte) (keyfiles, ciphertext []byte) {
+func splitEncFields(enc []byte) (keyfiles, ciphertext []byte) {
 	c := bytes.LastIndexByte(enc, ':')
 	if c == -1 {
 		return
@@ -1018,16 +1001,6 @@ func mapEnv(e string) (s string) {
 		}
 	}
 	return
-}
-
-func isStringMapInterface(val any) bool {
-	if val == nil {
-		return false
-	}
-	vt := reflect.TypeOf(val)
-	return vt.Kind() == reflect.Map &&
-		vt.Key().Kind() == reflect.String &&
-		vt.Elem().Kind() == reflect.Interface
 }
 
 // defaultDecoderConfig returns default mapstructure.DecoderConfig with support
