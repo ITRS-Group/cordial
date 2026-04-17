@@ -147,7 +147,7 @@ func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error
 func (c *Connection) Redial() (err error) {
 	// test existing connection, use default func if not overridden
 	ping := func(*Connection) error {
-		cr, err := c.Do("/liveness", &Command{})
+		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
 		if err != nil {
 			return err
 		}
