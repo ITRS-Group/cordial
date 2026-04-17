@@ -199,13 +199,13 @@ func (k *KeyFile) EncodeString(h host.Host, plaintext string, expandable bool) (
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) Encode(h host.Host, plaintext *Secret, expandable bool) (out string, err error) {
+func (k *KeyFile) Encode(h host.Host, secret *Secret, expandable bool) (out string, err error) {
 	kv, err := k.Read(h)
 	if err != nil {
 		return
 	}
 
-	e, err := kv.Encode(plaintext)
+	e, err := kv.Encode(secret)
 	if err != nil {
 		return
 	}

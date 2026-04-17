@@ -331,7 +331,7 @@ var deployCmd = &cobra.Command{
 					return err
 				}
 			} else {
-				certChain, err := config.ReadPEMBytes(deployCmdInstanceBundle, "instance certificate(s)")
+				certChain, err := config.ReadPEM(deployCmdInstanceBundle, "instance certificate(s)")
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
 				}

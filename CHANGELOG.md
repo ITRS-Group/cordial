@@ -17,7 +17,7 @@
 > In this beta release GDNA does not support docker as an installation method when used with licd version 7.8.0 and above. We hope to address this in a future beta or the final release.
 
 > [!NOTE]
-> **Released 2026-04-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-04-17** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.26.0 Highlights
 
@@ -71,7 +71,7 @@
 
 * `pkg/config`
 
-  * After a number of years, this package is getting some attention to modernise the API. As this package is used extensively throughout the rest of the cordial project and also for other unpublished solutions, there may be fallout from the changes. Most of the direct dependencies on Viper have been moved to a single file (`internal.go`) and a number of the public functions and methods have been removed or changed. The new generic function `Get[T](cf *config.Config, key string, options ...ExpandOptions)` is now the recommended way to get configuration values, and this supports default values and also environment variable overrides. See the documentation for more details. Over time most of the other accessor functions will be removed, with probably just the most common, `GetString` and `GetBool` remaining as convenience functions.
+  * After a number of years, this package is getting some attention to modernise the API. As this package is used extensively throughout the rest of the cordial project and also for other unpublished solutions, there may be fallout from the changes. Most of the direct dependencies on Viper have been moved to a single file (`internal.go`) and a number of the public functions and methods have been removed or changed. New generic functions are now the recommended way to get, set and process configuration values, and this supports default values and also environment variable overrides. See the documentation for more details. External users of this package should anticipate making changes as required before updating their `go.mod` files.
 
 ---
 

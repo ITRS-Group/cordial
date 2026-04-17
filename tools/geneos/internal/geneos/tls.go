@@ -217,7 +217,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		// ignored.
 	}
 
-	signingBundle, err := config.ReadPEMBytes(signingBundleSource, "signing certificate(s)")
+	signingBundle, err := config.ReadPEM(signingBundleSource, "signing certificate(s)")
 	if err != nil {
 		return err
 	}
@@ -236,7 +236,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 		return nil
 	}
 
-	privateKey, err := config.ReadPEMBytes(privateKeySource, "signing key")
+	privateKey, err := config.ReadPEM(privateKeySource, "signing key")
 	if err != nil {
 		return err
 	}

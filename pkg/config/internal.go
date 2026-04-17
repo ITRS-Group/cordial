@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -753,7 +754,7 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 // determines whether to trim whitespace from the retrieved content
 // before returning it as a string.
 func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) // url includes the prefix
 	if err != nil {
 		return
 	}
@@ -831,4 +832,15 @@ func mapEnv(e string) (s string) {
 		}
 	}
 	return
+}
+
+// isZero checks if the given value is the zero value for its type. If
+// the value is not valid return true as this implies and unset zero
+// value, else return the result if reflect.Value.IsZero()
+func isZero(n any) bool {
+	v := reflect.ValueOf(n)
+	if !v.IsValid() || v.IsZero() {
+		return true
+	}
+	return false
 }

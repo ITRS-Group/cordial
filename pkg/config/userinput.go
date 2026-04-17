@@ -51,7 +51,7 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 	return t.ReadLine()
 }
 
-// ReadPEMString reads and returns a PEM formatted input (without
+// ReadPEM reads and returns a PEM formatted input (without
 // validation) from one of these sources:
 //
 //   - If `from` is empty then an empty string is returned
@@ -68,33 +68,7 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 //     returned
 //
 // Any error when reading the input is returned.
-func ReadPEMString(from, prompt string) (data string, err error) {
-	b, err := ReadPEMBytes(from, prompt)
-	if err != nil {
-		return data, err
-	}
-	data = string(b)
-	return
-}
-
-// ReadPEMBytes reads and returns a PEM formatted input (without
-// validation) from one of these sources:
-//
-//   - If `from` is empty then an empty string is returned
-//   - If `from` is a dash (`-`) then data is read from STDIN the after
-//     the user is prompted with `Paste PEM formatted [PROMPT], end
-//     with newline + CTRL-D:` where `[PROMPT]` is taken from
-//     the prompt argument.
-//   - If `from` has the prefix `pem:` then the data is taken from the
-//     remainder of the argument.
-//   - If `from` has the prefix `http://` or `https://` then the data
-//     is fetched from the URL pointed to by `from` using an HTTP GET
-//     request.
-//   - Otherwise the file at the path pointed to by `from` is read and
-//     returned
-//
-// Any error when reading the input is returned.
-func ReadPEMBytes(from, prompt string) (data []byte, err error) {
+func ReadPEM(from, prompt string) (data []byte, err error) {
 	if from == "" {
 		return
 	}

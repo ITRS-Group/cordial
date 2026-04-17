@@ -242,8 +242,8 @@ func (kv *KeyValues) encode(secret *Secret) (out []byte, err error) {
 }
 
 // Encode the plaintext using kv, return a byte slice
-func (kv *KeyValues) Encode(plaintext *Secret) (out []byte, err error) {
-	cipher, err := kv.encode(plaintext)
+func (kv *KeyValues) Encode(secret *Secret) (out []byte, err error) {
+	cipher, err := kv.encode(secret)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
 		hex.Encode(out, cipher)

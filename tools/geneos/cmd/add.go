@@ -174,7 +174,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 				return err
 			}
 		} else {
-			certChain, err := config.ReadPEMBytes(addCmdInstanceBundle, "instance certificate(s)")
+			certChain, err := config.ReadPEM(addCmdInstanceBundle, "instance certificate(s)")
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
 			}

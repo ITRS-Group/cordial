@@ -23,7 +23,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 	"slices"
 	"sync/atomic"
 
@@ -189,15 +188,4 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 	}
 
 	return nv.writeConfigTo(w)
-}
-
-// isZero checks if the given value is the zero value for its type. If
-// the value is not valid return true as this implies and unset zero
-// value, else return the result if reflect.Value.IsZero()
-func isZero(n any) bool {
-	v := reflect.ValueOf(n)
-	if !v.IsValid() || v.IsZero() {
-		return true
-	}
-	return false
 }

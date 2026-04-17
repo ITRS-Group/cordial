@@ -122,11 +122,11 @@ geneos tls import /path/to/file.pem
 			}
 
 		} else {
-			certChain, err := config.ReadPEMBytes(file, "instance certificate(s)")
+			certChain, err := config.ReadPEM(file, "instance certificate(s)")
 			if err != nil {
 				return err
 			}
-			key, err := config.ReadPEMBytes(importCmdPrivateKey, "instance key")
+			key, err := config.ReadPEM(importCmdPrivateKey, "instance key")
 			if err != nil {
 				return err
 			}
