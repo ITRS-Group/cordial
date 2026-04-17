@@ -458,7 +458,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	return
 }
 
-func P12ToCertBundle(pfxPath string, password *config.Plaintext) (certBundle *CertificateBundle, err error) {
+func P12ToCertBundle(pfxPath string, password *config.Secret) (certBundle *CertificateBundle, err error) {
 	pfxData, err := os.ReadFile(pfxPath)
 	if err != nil {
 		err = fmt.Errorf("failed to read PFX file: %w", err)

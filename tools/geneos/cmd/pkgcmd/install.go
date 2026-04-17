@@ -39,13 +39,13 @@ import (
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, installCmdNexus, installCmdSnapshot bool
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername string
 var installCmdDownloadOnly, installCmdAllTypes bool
-var installCmdPassword *config.Plaintext
+var installCmdPassword *config.Secret
 var installCmdHeaders instance.NameValues
 
 func init() {
 	packageCmd.AddCommand(installCmd)
 
-	installCmdPassword = &config.Plaintext{}
+	installCmdPassword = &config.Secret{}
 
 	installCmd.Flags().StringVarP(&installCmdUsername, "username", "u", "", "Username for downloads, defaults to configuration value in download.username")
 
@@ -242,7 +242,7 @@ geneos install netprobe -b active_dev -U
 				installCmdUsername = cf.GetString(cf.Join("download", "username"))
 			}
 
-			installCmdPassword = config.Get[*config.Plaintext](cf, cf.Join("download", "password"))
+			installCmdPassword = config.Get[*config.Secret](cf, cf.Join("download", "password"))
 
 			if installCmdUsername != "" && (installCmdPassword.IsNil() || installCmdPassword.Size() == 0) {
 				installCmdPassword, err = config.ReadPasswordInput(false, 0)

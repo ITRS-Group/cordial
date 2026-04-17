@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -100,7 +101,7 @@ func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
 func expand[T string | []byte](c *Config, input string, options ...ExpandOptions) (value T) {
 	opts := evalExpandOptions(c, options...)
 
-	if opts.noexpand {
+	if opts.noExpand {
 		if input != "" {
 			return T(input)
 		}
@@ -122,12 +123,12 @@ func expand[T string | []byte](c *Config, input string, options ...ExpandOptions
 
 	value = _expand(input, func(s T) (r T) {
 		if bytes.HasPrefix([]byte(s), []byte("enc:")) {
-			if opts.nodecode {
+			if opts.noDecode {
 				// return original string after restoring surrounding
 				// ${...}
 				return T(fmt.Sprint(`${`, s, `}`))
 			}
-			return expandEncoded[T](c, s[4:], options...)
+			return expandEncoded(c, s[4:], options...)
 		}
 		str, _ := c.expandRawString(string(s), options...)
 		return T(str)
@@ -191,22 +192,25 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 // conventions for external access, e.g. file or URL.
 func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) (value T) {
 	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFields([]byte(s))
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
+
+	keyfiles, encodedValue := splitEncFields(string(s))
+
+	if opts.useKeyFile != "" {
+		keyfiles = opts.useKeyFile
 	}
 
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.expandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
+	if !strings.HasPrefix(encodedValue, "+encs+") {
+		str, _ := c.expandRawString(encodedValue, options...)
+		encodedValue = str
 	}
+
 	if len(encodedValue) == 0 {
 		return
 	}
 
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.Decode(host.Localhost, encodedValue)
+	for _, k := range strings.Split(keyfiles, "|") {
+		keyfile := KeyFile(ResolveHome(k))
+		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
 		if err != nil {
 			continue
 		}
@@ -215,63 +219,18 @@ func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) 
 	return
 }
 
-// expandEncodedBytesEnclave is the enclave version of
-// expandEncodedBytes. It accepts the same input but returns a
-// memguard.Enclave instead of a byte slice. The input is expected to be
-// UTF-8 encoded and the output is also UTF-8 encoded.
-func (c *Config) expandEncodedBytesEnclave(s []byte, options ...ExpandOptions) (value *memguard.Enclave) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFields(s)
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
-	}
-
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.expandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
-	}
-	if len(encodedValue) == 0 {
+// splitEncFields breaks the string enc into two strings, the first the
+// keyfile(s) and the second the ciphertext. The split is done on the
+// *last* colon and not the first, otherwise Windows drive letter paths
+// would be considered the split point.
+func splitEncFields(enc string) (keyfiles, ciphertext string) {
+	c := strings.LastIndex(enc, ":")
+	if c == -1 {
 		return
 	}
-
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		return p
-	}
-	return
-}
-
-// expandEncodedBytesLockedBuffer is the locked buffer version of
-// expandEncodedBytesEnclave. It accepts the same input but returns a
-// memguard.LockedBuffer instead of a memguard.Enclave. The input is
-// expected to be UTF-8 encoded and the output is also UTF-8 encoded.
-func (c *Config) expandEncodedBytesLockedBuffer(s []byte, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	opts := evalExpandOptions(c, options...)
-	keyfiles, encodedValue := splitEncFields(s)
-	if opts.usekeyfile != "" {
-		keyfiles = []byte(opts.usekeyfile)
-	}
-
-	if !bytes.HasPrefix(encodedValue, []byte("+encs+")) {
-		str, _ := c.expandRawString(string(encodedValue), options...)
-		encodedValue = []byte(str)
-	}
-	if len(encodedValue) == 0 {
-		return
-	}
-
-	for k := range bytes.SplitSeq(keyfiles, []byte("|")) {
-		keyfile := KeyFile(ExpandHomeBytes(k))
-		p, err := keyfile.DecodeEnclave(host.Localhost, encodedValue)
-		if err != nil {
-			continue
-		}
-		value, _ = p.Open()
-		return
+	keyfiles = enc[:c]
+	if len(enc) > c+1 {
+		ciphertext = enc[c+1:]
 	}
 	return
 }
@@ -463,180 +422,6 @@ func (c *Config) expandStringSlice(input []string, options ...ExpandOptions) (va
 	return
 }
 
-// expandToEnclave expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func (c *Config) expandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
-	opts := evalExpandOptions(c, options...)
-	if opts.noexpand {
-		if input != "" {
-			return memguard.NewEnclave([]byte(input))
-		}
-
-		// fallback to any default value or, failing that, an initial value
-		if opts.defaultValue != nil {
-			return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
-		} else if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return memguard.NewEnclave(b)
-			} else {
-				return memguard.NewEnclave(fmt.Append(nil, opts.initialValue))
-			}
-		}
-		return &memguard.Enclave{}
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = _expandToEnclave([]byte(input), func(s []byte) (r *memguard.Enclave) {
-		if bytes.HasPrefix(s, []byte("enc:")) {
-			if opts.nodecode {
-				return memguard.NewEnclave(fmt.Append(nil, `${`, s, `}`))
-			}
-			return c.expandEncodedBytesEnclave(s[4:], options...)
-		}
-		str, _ := c.expandRawString(string(s), options...)
-		return memguard.NewEnclave([]byte(str))
-	})
-
-	if value == nil || value.Size() == 0 {
-		// return a *copy* of the defaultValue, don't let memguard wipe it!
-		return memguard.NewEnclave(fmt.Append(nil, opts.defaultValue))
-	}
-
-	return
-}
-
-func _expandToEnclave(s []byte, mapping func([]byte) *memguard.Enclave) *memguard.Enclave {
-	var buf []byte
-	// ${} is all UTF-8, so bytes are fine for this operation.
-	i := 0
-	for j := 0; j < len(s); j++ {
-		if s[j] == '$' && j+1 < len(s) {
-			if buf == nil {
-				buf = make([]byte, 0, 2*len(s))
-			}
-			buf = append(buf, s[i:j]...)
-			name, w := getContents(string(s[j+1:]))
-			if name == "" {
-				if w == 1 {
-					// if invalid after opening `${` then return them
-					// unchanged
-					buf = append(buf, s[j:j+2]...)
-				} else if w > 0 {
-					// Encountered invalid syntax; eat the
-					// characters.
-				} else {
-					// Valid syntax, but $ was not followed by a
-					// name. Leave the dollar character untouched.
-					buf = append(buf, s[j])
-				}
-			} else {
-				e := mapping([]byte(name))
-				if e != nil {
-					l, _ := e.Open()
-					buf = append(buf, l.Bytes()...)
-					l.Destroy()
-				}
-			}
-			j += w
-			i = j + 1
-		}
-	}
-	if buf == nil {
-		// if no expansion, return as is in enclave
-		return memguard.NewEnclave(s)
-	}
-
-	buf = append(buf, s[i:]...)
-	return memguard.NewEnclave(buf)
-}
-
-// ExpandToLockedBuffer expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func (c *Config) expandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	opts := evalExpandOptions(c, options...)
-	if opts.noexpand {
-		if input != "" {
-			return memguard.NewBufferFromBytes([]byte(input))
-		}
-		if opts.initialValue != nil {
-			if b, ok := opts.initialValue.([]byte); ok {
-				return memguard.NewBufferFromBytes(b)
-			}
-			return memguard.NewBufferFromBytes(fmt.Append(nil, opts.initialValue))
-		}
-		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
-	}
-
-	if input == "" && opts.initialValue != nil {
-		input = fmt.Sprint(opts.initialValue)
-	}
-
-	value = _expandToLockedBuffer([]byte(input), func(s []byte) *memguard.LockedBuffer {
-		if bytes.HasPrefix(s, []byte("enc:")) {
-			if opts.nodecode {
-				return memguard.NewBufferFromBytes(fmt.Append([]byte{}, `${`, s, `}`))
-			}
-			return c.expandEncodedBytesLockedBuffer(s[4:], options...)
-		}
-		str, _ := c.expandRawString(string(s), options...)
-		return memguard.NewBufferFromBytes([]byte(str))
-	})
-
-	if value == nil || value.Size() == 0 {
-		// return a *copy* of the defaultvalue, don't let memguard wipe it!
-		return memguard.NewBufferFromBytes(fmt.Append(nil, opts.defaultValue))
-	}
-
-	return
-}
-
-func _expandToLockedBuffer(s []byte, mapping func([]byte) *memguard.LockedBuffer) *memguard.LockedBuffer {
-	var buf []byte
-	// ${} is all UTF-8, so bytes are fine for this operation.
-	i := 0
-	for j := 0; j < len(s); j++ {
-		if s[j] == '$' && j+1 < len(s) {
-			if buf == nil {
-				buf = make([]byte, 0, 2*len(s))
-			}
-			buf = append(buf, s[i:j]...)
-			name, w := getContents(string(s[j+1:]))
-			if name == "" {
-				if w == 1 {
-					// if invalid after opening `${` then return them
-					// unchanged
-					buf = append(buf, s[j:j+2]...)
-				} else if w > 0 {
-					// Encountered invalid syntax; eat the
-					// characters.
-				} else {
-					// Valid syntax, but $ was not followed by a
-					// name. Leave the dollar character untouched.
-					buf = append(buf, s[j])
-				}
-			} else {
-				e := mapping([]byte(name))
-				if e != nil {
-					buf = append(buf, e.Bytes()...)
-					e.Destroy()
-				}
-			}
-			j += w
-			i = j + 1
-		}
-	}
-	if buf == nil {
-		// if no expansion, return as is in enclave
-		return memguard.NewBufferFromBytes(s)
-	}
-
-	buf = append(buf, s[i:]...)
-	return memguard.NewBufferFromBytes(buf)
-}
-
 // getContents returns the string inside braces, checking for embedded
 // braces and the number of bytes consumed to extract it. The contents
 // must be enclosed in {} and two more bytes are needed than the length
@@ -772,8 +557,8 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	case time.Duration:
 		v, _ := time.ParseDuration(expand[string](c, c.viper.GetString(key), options...))
 		return any(v).(T)
-	case *Plaintext:
-		return any(&Plaintext{memguard.NewEnclave(expand[[]byte](c, c.viper.GetString(key), options...))}).(T)
+	case *Secret:
+		return any(&Secret{memguard.NewEnclave(expand[[]byte](c, c.viper.GetString(key), options...))}).(T)
 	default:
 		return any(c.viper.Get(key)).(T)
 	}
@@ -781,25 +566,27 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 
 func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	opts := evalExpandOptions(c, options...)
-	if opts.noexpand {
+	if opts.noExpand {
 		c.viper.Set(key, fmt.Sprint(value))
 		return
 	}
 
-	switch v := any(value).(type) {
+	switch vt := any(value).(type) {
 	case string:
-		c.viper.Set(key, c.replaceString(v, options...))
+		c.viper.Set(key, c.replaceString(vt, options...))
 	case []string:
-		for i, v2 := range v {
-			v[i] = c.replaceString(v2, options...)
+		for i, v2 := range vt {
+			vt[i] = c.replaceString(v2, options...)
 		}
-		c.viper.Set(key, v)
+		c.viper.Set(key, vt)
 	case map[string]string:
-		for k, v2 := range v {
-			c.viper.Set(key+c.delimiter+k, c.replaceString(v2, options...))
+		for k, v := range vt {
+			c.viper.Set(key+c.delimiter+k, c.replaceString(v, options...))
 		}
 	default:
-		c.viper.Set(key, value)
+		// no replacement needed for non-string types, but still need to
+		// set the vt in the config
+		c.viper.Set(key, vt)
 	}
 }
 
@@ -819,14 +606,23 @@ func (c *Config) setEnvPrefix(prefix string) {
 	c.viper.SetEnvPrefix(prefix)
 }
 
-// SetKeyValues takes a list of `key=value` pairs as strings and applies
+// itemRE is used to parse key-value pairs passed as strings, e.g. from
+// command line arguments, in the form `key=value` or `key+=value` for
+// appending to existing values. The key can contain word characters,
+// dots, colons and hyphens, and the separator can be either `=` or `+=`
+// (or `+` for backward compatibility). The value is everything after
+// the separator. The regex captures the key, separator and value in
+// three groups.
+var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
+
+// setKeyValuePairs takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
 //
 // If the separator is either `+=` or `+` then the given value is
 // appended to any existing setting. If the value is starts with a dash
 // then it is considered a command line option and is appended with a
 // space separator, otherwise it is simply concatenated.
-func (c *Config) setKeyValues(items ...string) (err error) {
+func (c *Config) setKeyValuePairs(items ...string) (err error) {
 	for _, item := range items {
 		fields := itemRE.FindStringSubmatch(item)
 		if len(fields) == 0 {
@@ -879,9 +675,40 @@ func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfi
 	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
 }
 
-// internal routines
+// A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
+func decode(input any, config *mapstructure.DecoderConfig) error {
+	decoder, err := mapstructure.NewDecoder(config)
+	if err != nil {
+		return err
+	}
+	return decoder.Decode(input)
+}
 
-// replaceString does the string replacement for the Set* functions
+// defaultDecoderConfig returns default mapstructure.DecoderConfig with support
+// of time.Duration values & string slices
+func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
+	c := &mapstructure.DecoderConfig{
+		Metadata:         nil,
+		Result:           output,
+		WeaklyTypedInput: true,
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+		),
+	}
+	for _, opt := range opts {
+		opt(c)
+	}
+	return c
+}
+
+// replaceString does the string replacement for the set function,
+// replacing any config items in the value with their expanded values.
+// It is careful to skip any config items that are part of an expand
+// substring, e.g. `${config:foo}`. If the value to be replaced is
+// prefixed with `config:` then it is replaced with `${config:...}` to
+// ensure that it is not re-expanded when the value is later expanded as
+// a whole.
 func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 	opts := evalExpandOptions(c, options...)
 
@@ -895,44 +722,36 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 		}
 
 		// iterate over value, skipping expand substrings
-		var newval string
-		for remval := value; ; {
-			start := strings.Index(remval, "${")
-			end := strings.Index(remval, "}")
+		var newValue string
+		remainingValue := value
+
+		for {
+			start := strings.Index(remainingValue, "${")
+			end := strings.Index(remainingValue, "}")
 			if start == -1 || end == -1 {
 				// finished with expand options. any unterminated
 				// substring is treated as ending the string, so just
 				// return the concatenated string
-				value = newval + remval
+				value = newValue + remainingValue
 				break
 			}
 			// append substituted nonexpand substring
-			newval += strings.ReplaceAll(remval[:start], sub, "${config:"+r+"}")
+			newValue += strings.ReplaceAll(remainingValue[:start], sub, "${config:"+r+"}")
 			// append expand substring
-			newval += remval[start : end+1]
+			newValue += remainingValue[start : end+1]
 			// remove above from remaining
-			remval = remval[end+1:]
+			remainingValue = remainingValue[end+1:]
 		}
 	}
+
 	return value
 }
 
-// splitEncFields breaks the string enc into two strings, the first the
-// keyfile(s) and the second the ciphertext. The split is done on the
-// *last* colon and not the first, otherwise Windows drive letter paths
-// would be considered the split point.
-func splitEncFields(enc []byte) (keyfiles, ciphertext []byte) {
-	c := bytes.LastIndexByte(enc, ':')
-	if c == -1 {
-		return
-	}
-	keyfiles = enc[:c]
-	if len(enc) > c+1 {
-		ciphertext = enc[c+1:]
-	}
-	return
-}
-
+// fetchURL retrieves the contents of the specified URL. The first
+// argument is a map of config items that may be used for variable
+// substitution in the URL, but is currently unused. The trim parameter
+// determines whether to trim whitespace from the retrieved content
+// before returning it as a string.
 func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -951,8 +770,13 @@ func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
 	return
 }
 
+// fetchFile reads the contents of a file specified by the given path.
+// If the path is prefixed with "file:", it is stripped before reading.
+// The function also supports expanding the home directory if the path
+// starts with "~/". The trim parameter determines whether to trim
+// whitespace from the file contents before returning it as a string.
 func fetchFile(_ map[string]any, p string, trim bool) (s string, err error) {
-	b, err := os.ReadFile(ExpandHome(strings.TrimPrefix(p, "file:")))
+	b, err := os.ReadFile(ResolveHome(strings.TrimPrefix(p, "file:")))
 	if err != nil {
 		return
 	}
@@ -964,6 +788,12 @@ func fetchFile(_ map[string]any, p string, trim bool) (s string, err error) {
 	return
 }
 
+// expr evaluates the expression using the `goval` library, with the given
+// config items as variables. The expression can reference config items
+// by name, and also environment variables via the `env` variable, which
+// is a map of environment variable names to values. If the expression
+// evaluates successfully then the result is returned as a string, with
+// optional trimming of whitespace.
 func expr(configItems map[string]any, expression string, trim bool) (s string, err error) {
 	vars := maps.Clone(configItems)
 	eval := goval.NewEvaluator()
@@ -1001,31 +831,4 @@ func mapEnv(e string) (s string) {
 		}
 	}
 	return
-}
-
-// defaultDecoderConfig returns default mapstructure.DecoderConfig with support
-// of time.Duration values & string slices
-func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
-	c := &mapstructure.DecoderConfig{
-		Metadata:         nil,
-		Result:           output,
-		WeaklyTypedInput: true,
-		DecodeHook: mapstructure.ComposeDecodeHookFunc(
-			mapstructure.StringToTimeDurationHookFunc(),
-			mapstructure.StringToSliceHookFunc(","),
-		),
-	}
-	for _, opt := range opts {
-		opt(c)
-	}
-	return c
-}
-
-// A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
-func decode(input any, config *mapstructure.DecoderConfig) error {
-	decoder, err := mapstructure.NewDecoder(config)
-	if err != nil {
-		return err
-	}
-	return decoder.Decode(input)
 }

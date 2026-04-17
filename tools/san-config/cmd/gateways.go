@@ -283,7 +283,7 @@ type gatewayEntry struct {
 // YAML files must have a top-level "gateways" parameter and an array of
 // object as per the main configuration file.
 func ReadGateways(source string) (gateways []map[string]string) {
-	source = config.ExpandHome(source)
+	source = config.ResolveHome(source)
 	// try to open file
 	r, err := os.Open(source)
 	if err != nil {

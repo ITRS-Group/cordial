@@ -26,7 +26,7 @@ import (
 	"github.com/itrs-group/cordial/tools/ims-gateway/internal/sdp"
 )
 
-var sdpAuthCmdCode = &config.Plaintext{}
+var sdpAuthCmdCode = &config.Secret{}
 
 func init() {
 	rootCmd.AddCommand(sdpAuthCmd)

@@ -463,10 +463,10 @@ func LoadHostConfig() {
 		v := config.New()
 
 		// set defaults ?
-		v.SetDefault("name", name)
-		v.SetDefault("hostname", name)
-		v.SetDefault("port", 22)
-		v.SetDefault("username", LOCAL.Username())
+		v.Default("name", name)
+		v.Default("hostname", name)
+		v.Default("port", 22)
+		v.Default("username", LOCAL.Username())
 
 		switch m := hostval.(type) {
 		case map[string]any:
@@ -481,7 +481,7 @@ func LoadHostConfig() {
 			host.Username(config.Get[string](v, "username")), // username is the login name for the remote host
 			host.Hostname(config.Get[string](v, "hostname")),
 			host.Port(config.Get[uint16](v, "port")),
-			host.Password(config.Get[*config.Plaintext](v, "password").Enclave),
+			host.Password(config.Get[*config.Secret](v, "password").Enclave),
 			host.PrivateKeyFiles(config.Get[[]string](v, "privatekeys")...),
 		)
 		hosts.Store(v.GetString("name"), &Host{r, v, config.Get[bool](v, "hidden"), true})

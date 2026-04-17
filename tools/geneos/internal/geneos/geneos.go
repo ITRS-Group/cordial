@@ -146,7 +146,7 @@ func SaveGlobalConfig(name string) error {
 		}
 	}
 
-	for _, k := range config.AllKeys() {
+	for _, k := range config.Global().AllKeys() {
 		if k == "" {
 			continue
 		}

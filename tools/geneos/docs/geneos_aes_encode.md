@@ -43,16 +43,16 @@ geneos aes encode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -e, --expandable                Output in 'expandable' format
-  -k, --keyfile KEYFILE           Path to keyfile
-  -c, --crc string                CRC of existing component shared keyfile to use (extension optional)
-  -p, --password PLAINTEXT        Plaintext password
-  -s, --source string             Alternative source for plaintext password
-  -o, --once                      Only prompt for password once, do not verify. Normally use '-s -' for stdin
-  -A, --app-key PROVIDER          SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
-  -C, --client-id PLAINTEXT       Client ID for --app-key, prompted if not set
-  -S, --client-secret PLAINTEXT   Client Secret for --app-key, prompted if not set
-  -a, --app-key-file string       App-key filename, if saving per instance, otherwise defaults to STDOUT
+  -e, --expandable             Output in 'expandable' format
+  -k, --keyfile KEYFILE        Path to keyfile
+  -c, --crc string             CRC of existing component shared keyfile to use (extension optional)
+  -p, --password SECRET        Password
+  -s, --source string          Alternative source for plaintext password
+  -o, --once                   Only prompt for password once, do not verify. Normally use '-s -' for stdin
+  -A, --app-key PROVIDER       SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
+  -C, --client-id SECRET       Client ID for --app-key, prompted if not set
+  -S, --client-secret SECRET   Client Secret for --app-key, prompted if not set
+  -a, --app-key-file string    App-key filename, if saving per instance, otherwise defaults to STDOUT
 ```
 
 ## Examples

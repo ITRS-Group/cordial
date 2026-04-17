@@ -19,11 +19,11 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ### Options
 
 ```text
-  -p, --password PLAINTEXT   Plaintext password for PFX/PKCS#12 file decryption.
-                             You will be prompted if not supplied as an argument.
-                             PFX/PKCS#12 files are identified by the .pfx or .p12
-                             file extension and only supported for instance bundles
-  -k, --key file             Private key file for certificate, PEM format only
+  -p, --password SECRET   Plaintext password for PFX/PKCS#12 file decryption.
+                          You will be prompted if not supplied as an argument.
+                          PFX/PKCS#12 files are identified by the .pfx or .p12
+                          file extension and only supported for instance bundles
+  -k, --key file          Private key file for certificate, PEM format only
 ```
 
 ## Examples

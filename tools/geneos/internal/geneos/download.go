@@ -147,7 +147,7 @@ func openSource(source string, options ...PackageOptions) (from io.ReadCloser, f
 		filename = "STDIN"
 	default:
 		var s os.FileInfo
-		source = config.ExpandHome(source)
+		source = config.ResolveHome(source)
 		log.Debug().Msgf("looking at %q", source)
 		s, err = os.Stat(source)
 		if err != nil {

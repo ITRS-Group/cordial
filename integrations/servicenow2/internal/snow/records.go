@@ -89,7 +89,7 @@ func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string,
 		return
 	}
 
-	results, err := GetRecord(ctx, ctx.Param("table"), Fields("sys_id,state"), Query(cf.ExpandString(table.Search, options...)))
+	results, err := GetRecord(ctx, ctx.Param("table"), Fields("sys_id,state"), Query(config.Expand[string](cf, table.Search, options...)))
 	if err != nil {
 		return
 	}

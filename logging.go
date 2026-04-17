@@ -141,7 +141,7 @@ func evalLoggerOptions(options ...LogOptions) *logOpts {
 
 func SetLogfile(logfile string) LogOptions {
 	return func(lo *logOpts) {
-		lo.logfile = config.ExpandHome(logfile)
+		lo.logfile = config.ResolveHome(logfile)
 	}
 }
 
@@ -151,7 +151,7 @@ func SetLogfile(logfile string) LogOptions {
 func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
 	return func(lo *logOpts) {
 		if lj.Filename != "" {
-			lj.Filename = config.ExpandHome(lj.Filename)
+			lj.Filename = config.ResolveHome(lj.Filename)
 			lo.lj = lj
 		}
 	}

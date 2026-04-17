@@ -36,7 +36,7 @@ import (
 )
 
 var importCmdPrivateKey string
-var importCmdPassword = &config.Plaintext{}
+var importCmdPassword = &config.Secret{}
 
 func init() {
 	tlsCmd.AddCommand(importCmd)

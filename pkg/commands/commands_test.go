@@ -196,7 +196,7 @@ func TestCommandResponse(t *testing.T) {
 func TestConnection(t *testing.T) {
 	// Test Connection struct
 	baseURL, _ := url.Parse("http://localhost:8080")
-	password := config.NewPlaintext([]byte("testpass"))
+	password := config.NewSecret([]byte("testpass"))
 
 	conn := &Connection{
 		BaseURL:            baseURL,

@@ -104,7 +104,7 @@ func explainAsTree(ctx context.Context, cf *config.Config, tx *sql.Tx, r string,
 		fmt.Printf("can only explain basic reports, while %s is a %s\n", r, report.Type)
 		return
 	}
-	query := cf.ExpandString(report.Query)
+	query := config.Expand[string](cf, report.Query)
 	fmt.Printf("Explain for query %s:\n\n", r)
 	fmt.Println(query)
 	fmt.Println()

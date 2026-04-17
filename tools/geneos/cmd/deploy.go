@@ -43,8 +43,8 @@ var deployCmdTLS, deployCmdInsecure bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
-var deployCmdPassword = &config.Plaintext{}
-var deployCmdBundlePassword = &config.Plaintext{}
+var deployCmdPassword = &config.Secret{}
+var deployCmdBundlePassword = &config.Secret{}
 var deployCmdImportFiles instance.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
@@ -398,7 +398,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		instance.SetInstanceValues(i, deployCmdExtras, "")
-		cf.SetKeyValues(params...)
+		cf.SetKeyValuePairs(params...)
 		// update home so save is correct
 		cf.Set("home", instance.Home(i))
 

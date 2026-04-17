@@ -56,7 +56,7 @@ type SSHRemote struct {
 	username    string
 	hostname    string
 	port        uint16
-	password    *memguard.Enclave // cannot use config.Plaintext because of import loop
+	password    *memguard.Enclave // cannot use *config.Secret because of import loop
 	keys        []string
 	failed      error
 	lastAttempt time.Time

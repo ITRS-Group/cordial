@@ -127,7 +127,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 
 			for i, c := range columns {
 				if c.Match == nil {
-					cols[i] = dv.ExpandString(c.Value, config.LookupTable(lookup))
+					cols[i] = config.Expand[string](dv, c.Value, config.LookupTable(lookup))
 				}
 			}
 
@@ -147,7 +147,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			if skip {
 				cols := []string{}
 				for _, c := range columns {
-					cols = append(cols, dv.ExpandString(c.Value, config.LookupTable(lookup)))
+					cols = append(cols, config.Expand[string](dv, c.Value, config.LookupTable(lookup)))
 				}
 
 				dataview.Table = append(dataview.Table, cols)
@@ -157,7 +157,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			if matches == 0 {
 				cols := []string{}
 				for _, c := range columns {
-					cols = append(cols, dv.ExpandString(c.Value, config.LookupTable(lookup)))
+					cols = append(cols, config.Expand[string](dv, c.Value, config.LookupTable(lookup)))
 				}
 
 				dataview.Table = append(dataview.Table, cols)
@@ -169,7 +169,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			values := make([]string, len(colNames))
 			for i, c := range columns {
 				if c.Match == nil {
-					values[i] = cf.ExpandString(c.Value, config.LookupTable(lookup))
+					values[i] = config.Expand[string](dv, c.Value, config.LookupTable(lookup))
 				}
 			}
 
@@ -219,7 +219,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 								submatchLookup[n] = line[numMatches[i*2]:numMatches[i*2+1]]
 							}
 
-							values[i] = dv.ExpandString(c.Value, config.LookupTable(submatchLookup, lookup))
+							values[i] = config.Expand[string](dv, c.Value, config.LookupTable(submatchLookup, lookup))
 							matches--
 						}
 					}
@@ -234,16 +234,16 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				if col == "" && columns[i].Fail != "" {
 					// set status to "on-fail.status"
 					if onFail != "" && finalStatus == "" {
-						finalStatus = dv.ExpandString(onFail, config.LookupTable(map[string]string{"status": onFail}, lookup))
+						finalStatus = config.Expand[string](dv, onFail, config.LookupTable(map[string]string{"status": onFail}, lookup))
 					}
-					values[i] = dv.ExpandString(columns[i].Fail, config.LookupTable(lookup))
+					values[i] = config.Expand[string](dv, columns[i].Fail, config.LookupTable(lookup))
 				}
 			}
 
 			if finalStatus != "" {
 				for i, col := range columns {
 					if strings.Contains(col.Value, "${status}") {
-						values[i] = dv.ExpandString(col.Value, config.LookupTable(map[string]string{"status": finalStatus}, lookup))
+						values[i] = config.Expand[string](dv, col.Value, config.LookupTable(map[string]string{"status": finalStatus}, lookup))
 					}
 				}
 			}
@@ -257,7 +257,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	for _, h := range config.Get[[]map[string]string](dv, "headlines", config.NoExpand()) {
 		dataview.Headlines = append(dataview.Headlines, Headline{
 			Name:  h["name"],
-			Value: dv.ExpandString(h["value"], config.LookupTable(headlinesLookup)),
+			Value: config.Expand[string](dv, h["value"], config.LookupTable(headlinesLookup)),
 		})
 	}
 

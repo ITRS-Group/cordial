@@ -42,7 +42,7 @@ const archiveOptionsText = "Directory of releases for installation"
 var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bool
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
-var initCmdDLPassword *config.Plaintext
+var initCmdDLPassword *config.Secret
 
 var initCmdTLS bool
 
@@ -53,7 +53,7 @@ var initCmdExtras = instance.SetConfigValues{}
 func init() {
 	cmd.GeneosCmd.AddCommand(initCmd)
 
-	initCmdDLPassword = &config.Plaintext{}
+	initCmdDLPassword = &config.Secret{}
 
 	// alias placeholder for `init tls` to `tls init`
 	initCmd.AddCommand(initTLSCmd)
@@ -231,7 +231,7 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 	}
 
 	if initCmdDLUsername != "" {
-		initCmdDLPassword = config.Get[*config.Plaintext](cf, cf.Join("download", "password"))
+		initCmdDLPassword = config.Get[*config.Secret](cf, cf.Join("download", "password"))
 
 		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
 			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)

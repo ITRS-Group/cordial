@@ -755,7 +755,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			creds := config.FindCreds(source, config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				opts.username = creds.GetString("username")
-				opts.password = config.Get[*config.Plaintext](creds, "password")
+				opts.password = config.Get[*config.Secret](creds, "password")
 			}
 		}
 
@@ -882,7 +882,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		creds := config.FindCreds(baseurl, config.SetAppName(cordial.ExecutableName()))
 		if creds != nil {
 			opts.username = creds.GetString("username")
-			opts.password = config.Get[*config.Plaintext](creds, "password")
+			opts.password = config.Get[*config.Secret](creds, "password")
 		}
 	}
 

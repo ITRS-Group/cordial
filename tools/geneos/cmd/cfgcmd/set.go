@@ -68,7 +68,7 @@ geneos config set geneos="/opt/geneos"
 			return
 		}
 		log.Debug().Msgf("setting params: %v", params)
-		cf.SetKeyValues(params...)
+		cf.SetKeyValuePairs(params...)
 
 		// fix breaking change
 		if cf.IsSet("itrshome") {

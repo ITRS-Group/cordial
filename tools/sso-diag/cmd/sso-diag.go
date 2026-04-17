@@ -53,7 +53,7 @@ var vc *config.Config
 func start() {
 	// workaround issues in hocon package until fixed
 	vc = config.New()
-	vc.SetDefault("kerberos.krb5_conf", "krb5.conf")
+	vc.Default("kerberos.krb5_conf", "krb5.conf")
 	// ... set default from a defaults map
 
 	ssoCfgFile := path.Join(confDir, "conf/sso-agent.conf")

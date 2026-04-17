@@ -259,7 +259,8 @@ CMD [ "bash" ]
 # hand testing images
 
 # create a runnable test image using basic debian
-FROM ubuntu:jammy AS cordial-run-ubuntu
+# FROM ubuntu:jammy AS cordial-run-ubuntu
+FROM debian:stable AS cordial-run-debian
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/

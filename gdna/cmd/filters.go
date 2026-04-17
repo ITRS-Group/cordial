@@ -504,7 +504,7 @@ func buildFilterSQL(cf *config.Config) config.ExpandOptions {
 		fs := strings.FieldsFunc(a[1], func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
 
 		for _, f := range fs {
-			clauses = append(clauses, cf.ExpandString(fmt.Sprintf(
+			clauses = append(clauses, config.Expand[string](cf, fmt.Sprintf(
 				"EXISTS (SELECT %[1]s FROM ${filters.include.%[1]s.table} WHERE %[2]s.%[1]s GLOB %[1]s) "+
 					"AND NOT EXISTS (SELECT %[1]s FROM ${filters.exclude.%[1]s.table} WHERE %[2]s.%[1]s GLOB %[1]s)",
 				f, table)),

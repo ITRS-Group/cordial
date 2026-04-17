@@ -80,7 +80,7 @@ func (c *Client) SetAuth(header, value string) {
 // Auth sets up a 2-legged OAUTH2 with client ID and Secret. If clientID
 // is empty just return, allowing callers to call when the value are not
 // set (or empty) not set.
-func (c *Client) Auth(ctx context.Context, clientID string, clientSecret *config.Plaintext) {
+func (c *Client) Auth(ctx context.Context, clientID string, clientSecret *config.Secret) {
 	if clientID == "" {
 		return
 	}

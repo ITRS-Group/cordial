@@ -41,7 +41,7 @@ var addCmdPort uint16
 var addCmdImportFiles instance.Filename
 var addCmdKeyfile, addCmdInstanceBundle string
 var addCmdInsecure bool
-var addCmdBundlePassword = &config.Plaintext{}
+var addCmdBundlePassword = &config.Secret{}
 var addCmdExtras = instance.SetConfigValues{}
 
 func init() {
@@ -258,7 +258,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	instance.SetInstanceValues(i, addCmdExtras, "")
 
 	log.Debug().Msgf("set instance config items: %+v", items)
-	cf.SetKeyValues(items...)
+	cf.SetKeyValuePairs(items...)
 	log.Debug().Msgf("instance config after setting items: %+v", cf.AllSettings())
 	if err = instance.SaveConfig(i); err != nil {
 		return

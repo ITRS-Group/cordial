@@ -171,7 +171,7 @@ type fetchOptions struct {
 	header        http.Header
 	ifmodified    *Inventory
 	username      string
-	password      *config.Plaintext
+	password      *config.Secret
 }
 
 func evalFetchOptions(options ...FetchOptions) (f *fetchOptions) {
@@ -236,7 +236,7 @@ func IfModified(inv *Inventory) FetchOptions {
 }
 
 // BasicAuth sets up the request to use Basic Authentication
-func BasicAuth(username string, password *config.Plaintext) FetchOptions {
+func BasicAuth(username string, password *config.Secret) FetchOptions {
 	return func(fo *fetchOptions) {
 		fo.username = username
 		fo.password = password

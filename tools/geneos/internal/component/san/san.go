@@ -160,9 +160,9 @@ func factory(name string) (san geneos.Instance) {
 		InstanceHost: h,
 	}
 
-	san.Config().SetDefault("pkgtype", "netprobe")
+	san.Config().Default("pkgtype", "netprobe")
 	if ct != nil {
-		san.Config().SetDefault("pkgtype", ct.Name)
+		san.Config().Default("pkgtype", ct.Name)
 	}
 	if err := instance.SetDefaults(san, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", san)

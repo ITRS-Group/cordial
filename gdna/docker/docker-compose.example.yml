@@ -43,15 +43,25 @@ services:
         gid: "1000"
         mode: 0644
 
-    # if you want to send email reports via an SMTP server that requires
-    # authentication then you will need to create secrets using `geneos login`
-    # before running the container and then uncomment the next three lines, being
-    # careful to maintain the correct indentation. They are then referenced as
-    # /run/secrets/NAME and used in the `gdna.yaml` configuration below.
+    secrets:
+      # to connect to a licd instance 7.8.0 and later you will need to
+      # create a public/private key pair. You can do this using `geneos
+      # tls create -K -k rsa -D -` and then save the private key as a
+      # secret and configure the public key in the licd instance. The
+      # private key is only used to authenticate to the licd license
+      # report endpoints and is not used for any other purpose, so it is
+      # safe to use a single key pair for multiple GDNA instances if
+      # required. See the path to the real file near the end of this file.
+      - private-key.pem
 
-    # secrets:
-    #   - keyfile.aes
-    #   - credentials.json
+      # if you want to send email reports via an SMTP server that requires
+      # authentication then you will need to create secrets using `geneos login`
+      # before running the container and then uncomment the next two lines, being
+      # careful to maintain the correct indentation. They are then referenced as
+      # /run/secrets/NAME and used in the `gdna.yaml` configuration below.
+      #
+      # - keyfile.aes
+      # - credentials.json
 
     volumes:
       # `gdna-data` is the persistent volume for collected data. This should
@@ -105,7 +115,7 @@ configs:
         #
         # If provided and you are connecting to an older licd instance then it
         # will have no effect.
-        licd-private-key: /home/geneos/gdna/gdna.key
+        licd-private-key: /run/secrets/private-key.pem
 
         licd-skip-verify: true
 
@@ -154,6 +164,10 @@ secrets:
     file: ${HOME}/.config/geneos/keyfile.aes
   credentials.json:
     file: ${HOME}/.config/geneos/credentials.json
+  private-key.pem:
+    # set the path to the private key file you want to use to authenticate
+    # to the licd instance
+    file: ${HOME}/.config/geneos/gdna-private-key.pem
 
 # a persistent volume to save collected data between restarts
 volumes:

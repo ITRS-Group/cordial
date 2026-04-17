@@ -160,26 +160,12 @@ limitations under the License.
 // string ${unchanged} as there is no recursive lookups.
 package config
 
-import (
-	"github.com/awnumar/memguard"
-)
+import "github.com/awnumar/memguard"
 
-// ExpandString returns the global configuration value for input as an
-// expanded string. The returned string is always a freshly allocated
-// value.
-func ExpandString(input string, options ...ExpandOptions) (value string) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return expand[string](global, input, options...)
-}
-
-// ExpandString returns the configuration c value for input as an
-// expanded string. The returned string is always a freshly allocated
-// value.
-func (c *Config) ExpandString(input string, options ...ExpandOptions) (value string) {
+func Expand[T string | []byte](c *Config, input string, options ...ExpandOptions) (value T) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return expand[string](c, input, options...)
+	return expand[T](c, input, options...)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
@@ -190,78 +176,12 @@ func ExpandStringSlice(input []string, options ...ExpandOptions) []string {
 	return global.expandStringSlice(input, options...)
 }
 
-// ExpandStringSlice applies ExpandString to each member of the input
-// slice
-func (c *Config) ExpandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.expandStringSlice(input, options...)
-}
-
-// Expand behaves like ExpandString but returns a byte slice.
-//
-// This should be used where the return value may contain sensitive data
-// and an immutable string cannot be destroyed after use.
-func Expand(input string, options ...ExpandOptions) (value []byte) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return expand[[]byte](global, input, options...)
-}
-
-// Expand behaves like the ExpandString method but returns a byte
-// slice.
-func (c *Config) Expand(input string, options ...ExpandOptions) (value []byte) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return expand[[]byte](c, input, options...)
-}
-
-// ExpandPassword expands the input string and returns a *Plaintext. The
+// ExpandPassword expands the input string and returns a *Secret. The
 // TrimSPace option is ignored.
-func ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return &Plaintext{global.expandToEnclave(input, options...)}
-}
-
-// ExpandPassword expands the input string and returns a *Plaintext. The
-// TrimSPace option is ignored.
-func (c *Config) ExpandToPassword(input string, options ...ExpandOptions) *Plaintext {
+func (c *Config) ExpandToPassword(input string, options ...ExpandOptions) *Secret {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	return &Plaintext{c.expandToEnclave(input, options...)}
-}
-
-// ExpandToEnclave expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func ExpandToEnclave(input string, options ...ExpandOptions) *memguard.Enclave {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.expandToEnclave(input, options...)
-}
-
-// ExpandToEnclave expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func (c *Config) ExpandToEnclave(input string, options ...ExpandOptions) (value *memguard.Enclave) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.expandToEnclave(input, options...)
-}
-
-// ExpandToLockedBuffer expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.expandToLockedBuffer(input, options...)
-}
-
-// ExpandToLockedBuffer expands the input string and returns a sealed
-// enclave. The option TrimSpace is ignored.
-func (c *Config) ExpandToLockedBuffer(input string, options ...ExpandOptions) (value *memguard.LockedBuffer) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return c.expandToLockedBuffer(input, options...)
+	return &Secret{memguard.NewEnclave(expand[[]byte](c, input, options...))}
 }
 
 // ExpandAllSettings returns all the settings from config structure c

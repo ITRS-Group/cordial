@@ -13,8 +13,8 @@ geneos aes password [flags]
 ### Options
 
 ```text
-  -p, --password PLAINTEXT   A plaintext password
-  -s, --source PATH|URL|-    External source for plaintext PATH|URL|-
+  -p, --password SECRET     Password
+  -s, --source PATH|URL|-   External source for password PATH|URL|-
 ```
 
 ## SEE ALSO

@@ -198,7 +198,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
 				reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
 				reporter.XLSXScramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
-				reporter.XLSXPassword(config.Get[*config.Plaintext](cf, cf.Join("xlsx", "password"))),
+				reporter.XLSXPassword(config.Get[*config.Secret](cf, cf.Join("xlsx", "password"))),
 				reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
 				reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
 				reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
@@ -319,13 +319,13 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 		tlsPolicy = mail.TLSOpportunistic
 	}
 
-	password := &config.Plaintext{}
+	password := &config.Secret{}
 
 	username := cf.GetString("email.username")
 	server := cf.GetString("email.smtp-server", config.DefaultValue("localhost"))
 
 	if username != "" {
-		password = config.Get[*config.Plaintext](cf, "email.password")
+		password = config.Get[*config.Secret](cf, "email.password")
 	}
 
 	if username == "" {
@@ -335,7 +335,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 		)
 		if creds != nil {
 			username = creds.GetString("username")
-			password = config.Get[*config.Plaintext](creds, "password", config.UseKeyfile(cf.GetString("email.key-file")))
+			password = config.Get[*config.Secret](creds, "password", config.UseKeyfile(cf.GetString("email.key-file")))
 		}
 	}
 

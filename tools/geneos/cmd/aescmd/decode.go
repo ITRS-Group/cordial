@@ -94,7 +94,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 
 		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
 		if strings.HasPrefix(decodeCmdExpandString, "${enc:") {
-			fmt.Println(config.ExpandString(decodeCmdExpandString))
+			fmt.Println(config.Expand[string](config.Global(), decodeCmdExpandString))
 			return nil
 		}
 

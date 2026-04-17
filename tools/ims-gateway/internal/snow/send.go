@@ -84,7 +84,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewDecoder(r.Body).Decode(&incident); err != nil {
 		response.Error = fmt.Sprintf("error decoding request body: %v", err)
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"__error":     response.Error,
@@ -99,7 +99,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
 		response.Error = "field names are invalid or not unique"
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"__error":     response.Error,
@@ -116,7 +116,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		if query, ok := incident[ims.SNOW_CMDB_SEARCH]; !ok {
 			if incident[ims.SNOW_CMDB_CI_FIELD], ok = incident[ims.SNOW_CMDB_CI_DEFAULT]; !ok {
 				response.Error = "must supply either a " + ims.SNOW_CMDB_CI_DEFAULT + " or a " + ims.SNOW_CMDB_SEARCH + " parameter"
-				response.ResultDetail = cf.ExpandString(
+				response.ResultDetail = config.Expand[string](cf,
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"__error":     response.Error,
@@ -133,7 +133,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 			}
 			if incident[ims.SNOW_CMDB_CI_FIELD], err = c.lookupCmdbCI(r.Context(), cf, incident[ims.SNOW_CMDB_TABLE], query, incident[ims.SNOW_CMDB_CI_DEFAULT]); err != nil {
 				response.Error = "failed to look up cmdb_ci: " + err.Error()
-				response.ResultDetail = cf.ExpandString(
+				response.ResultDetail = config.Expand[string](cf,
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"__error":     response.Error,
@@ -149,7 +149,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	if incident[ims.SNOW_CMDB_CI_FIELD] == "" {
 		response.Error = "cmdb_ci is empty or search resulted in no matches"
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"__error":     response.Error,
@@ -175,7 +175,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		response.Error = "error looking up incident: " + err.Error()
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"__error":     response.Error,
@@ -198,7 +198,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		incident, err := s.Apply(cf, incidentUnchanged)
 		if err != nil {
 			response.Error = fmt.Sprintf("error applying transform for state %d: %v", state, err)
-			response.ResultDetail = cf.ExpandString(
+			response.ResultDetail = config.Expand[string](cf,
 				table.Response.Failed,
 				config.LookupTable(incident, map[string]string{
 					"__error":     response.Error,
@@ -217,7 +217,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		number, err := c.updateRecord(r.Context(), cf, incident, table.Name, incidentID)
 		if err != nil {
 			response.Error = fmt.Sprintf("error updating incident: %v", err)
-			response.ResultDetail = cf.ExpandString(
+			response.ResultDetail = config.Expand[string](cf,
 				table.Response.Failed,
 				config.LookupTable(incident, map[string]string{
 					"__error":     response.Error,
@@ -230,7 +230,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		}
 		response.Action = "Updated"
 		response.ID = number
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Updated,
 			config.LookupTable(incidentUnchanged, map[string]string{
 				"__number":    number,
@@ -252,7 +252,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	number, err := c.createRecord(r.Context(), cf, incident, table.Name)
 	if err != nil {
 		response.Error = fmt.Sprintf("error creating incident: %v", err)
-		response.ResultDetail = cf.ExpandString(
+		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incidentUnchanged, map[string]string{
 				"__error":     response.Error,
@@ -266,7 +266,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	}
 	response.Action = "Created"
 	response.ID = number
-	response.ResultDetail = cf.ExpandString(
+	response.ResultDetail = config.Expand[string](cf,
 		table.Response.Created,
 		config.LookupTable(incidentUnchanged, map[string]string{
 			"__number":    number,

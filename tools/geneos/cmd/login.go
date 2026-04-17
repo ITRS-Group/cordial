@@ -30,14 +30,14 @@ import (
 )
 
 var loginCmdUsername string
-var loginCmdPassword *config.Plaintext
+var loginCmdPassword *config.Secret
 var loginKeyfile config.KeyFile
 var loginCmdList bool
 
 func init() {
 	GeneosCmd.AddCommand(loginCmd)
 
-	loginCmdPassword = &config.Plaintext{}
+	loginCmdPassword = &config.Secret{}
 
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().VarP(loginCmdPassword, "password", "p", "Password")

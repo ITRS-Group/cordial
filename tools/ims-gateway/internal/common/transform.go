@@ -57,7 +57,7 @@ func (s Transform) Apply(cf *config.Config, incident map[string]string) (inciden
 
 	for k, v := range s.Defaults {
 		if i, ok := incident[k]; !ok || i == "" {
-			incident[k] = cf.ExpandString(v)
+			incident[k] = config.Expand[string](cf, v)
 		}
 	}
 

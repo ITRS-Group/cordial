@@ -36,20 +36,20 @@ import (
 
 // KeyValues contains the values required to create a Geneos Gateway AES key
 // file and then to encode and decode AES passwords in configurations. It is
-// handled as a memguard Enclave to protect the plaintext as much as possible.
+// handled as a memguard Enclave to protect the secret as much as possible.
 type KeyValues struct {
 	*memguard.Enclave
 }
 
-// keyvalues holds an AES key and IV
-type keyvalues struct {
+// keyValues holds an AES key and initial value
+type keyValues struct {
 	key [aes.BlockSize * 2]byte
 	iv  [aes.BlockSize]byte
 }
 
-// Plaintext is a type that represents a plaintext string that should be
+// Secret is a type that represents a plaintext string that should be
 // protected
-type Plaintext struct {
+type Secret struct {
 	*memguard.Enclave
 }
 
@@ -57,7 +57,7 @@ type Plaintext struct {
 // memguard.WipeBytes() after use. This method retruns a cloned string
 // for those cases there a downstream API requires a credential as a
 // string value. In Go you can't securely zero strings after use.
-func (secret *Plaintext) String() string {
+func (secret *Secret) String() string {
 	if secret == nil || secret.Enclave == nil {
 		return ""
 	}
@@ -68,7 +68,7 @@ func (secret *Plaintext) String() string {
 
 // Bytes returns the secret as a byte slice. After use, call
 // memguard.WipeBytes() on the buffer
-func (secret *Plaintext) Bytes() []byte {
+func (secret *Secret) Bytes() []byte {
 	if secret == nil || secret.Enclave == nil {
 		return nil
 	}
@@ -78,34 +78,27 @@ func (secret *Plaintext) Bytes() []byte {
 }
 
 // Set is required to satisfy the pflag Values interface
-func (secret *Plaintext) Set(value string) error {
+func (secret *Secret) Set(value string) error {
 	if secret != nil {
-		*secret = Plaintext{memguard.NewEnclave([]byte(value))}
+		*secret = Secret{memguard.NewEnclave([]byte(value))}
 	}
 	return nil
 }
 
 // Type is required to satisfy the pflag Values interface
-func (secret *Plaintext) Type() string {
-	return "PLAINTEXT"
+func (secret *Secret) Type() string {
+	return "SECRET"
 }
 
-// NewPlaintext returns a memguard Enclave initialised with buf. The
+// NewSecret returns a memguard Enclave initialised with buf. The
 // contents of buf are destroyed.
-func NewPlaintext(buf []byte) *Plaintext {
-	return &Plaintext{memguard.NewEnclave(buf)}
-}
-
-// NewPlaintextFromString returns a memguard Enclave initialised with the
-// string in buf. The caller must ensure that the string is not retained
-// elsewhere in the program.
-func NewPlaintextFromString(str string) *Plaintext {
-	return &Plaintext{memguard.NewEnclave([]byte(str))}
+func NewSecret[T string | []byte](buf T) *Secret {
+	return &Secret{memguard.NewEnclave([]byte(buf))}
 }
 
 // IsNil returns true if the secret or the underlying memguard Enclave
 // is nil
-func (secret *Plaintext) IsNil() bool {
+func (secret *Secret) IsNil() bool {
 	if secret == nil {
 		return true
 	}
@@ -115,7 +108,7 @@ func (secret *Plaintext) IsNil() bool {
 // NewRandomKeyValues returns a new KeyValues structure with a key and iv
 // generated using the memguard.
 func NewRandomKeyValues() (kv *KeyValues) {
-	var k *keyvalues
+	var k *keyValues
 	kv = &KeyValues{
 		memguard.NewEnclaveRandom(int(unsafe.Sizeof(*k))),
 	}
@@ -134,7 +127,7 @@ func lockedBufferTo[T any](m *memguard.LockedBuffer) (v *T) {
 func (kv *KeyValues) String() string {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := lockedBufferTo[keyvalues](kl)
+	k := lockedBufferTo[keyValues](kl)
 
 	// leading space intentional to match native OpenSSL output
 	return fmt.Sprintf("key=%X\niv =%X\n", k.key, k.iv)
@@ -152,10 +145,10 @@ func (kv *KeyValues) Write(w io.Writer) error {
 // ReadKeyValues from the io.Reader r and return a locked buffer
 // key values kv.
 func ReadKeyValues(r io.Reader) (kv *KeyValues, err error) {
-	var k *keyvalues
+	var k *keyValues
 	var gotkey, gotiv bool
 	m := memguard.NewBuffer(int(unsafe.Sizeof(*k)))
-	k = lockedBufferTo[keyvalues](m)
+	k = lockedBufferTo[keyValues](m)
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
@@ -221,10 +214,10 @@ func (kv *KeyValues) ChecksumString() (c string, err error) {
 	return
 }
 
-func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
+func (kv *KeyValues) encode(secret *Secret) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := lockedBufferTo[keyvalues](kl)
+	k := lockedBufferTo[keyValues](kl)
 
 	block, err := aes.NewCipher(k.key[:])
 	if err != nil {
@@ -232,7 +225,7 @@ func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
 		return
 	}
 
-	in, _ := plaintext.Open()
+	in, _ := secret.Open()
 
 	// always pad at least one byte (the length)
 	var pad []byte
@@ -249,7 +242,7 @@ func (kv *KeyValues) encode(plaintext *Plaintext) (out []byte, err error) {
 }
 
 // Encode the plaintext using kv, return a byte slice
-func (kv *KeyValues) Encode(plaintext *Plaintext) (out []byte, err error) {
+func (kv *KeyValues) Encode(plaintext *Secret) (out []byte, err error) {
 	cipher, err := kv.encode(plaintext)
 	if err == nil {
 		out = make([]byte, len(cipher)*2)
@@ -261,7 +254,7 @@ func (kv *KeyValues) Encode(plaintext *Plaintext) (out []byte, err error) {
 
 // EncodeString encodes the plaintext string using kv, return as a string
 func (kv *KeyValues) EncodeString(plaintext string) (out string, err error) {
-	text := NewPlaintext([]byte(plaintext))
+	text := NewSecret(plaintext)
 	cipher, err := kv.encode(text)
 	if err == nil {
 		out = strings.ToUpper(hex.EncodeToString(cipher))
@@ -276,7 +269,7 @@ func (kv *KeyValues) EncodeString(plaintext string) (out string, err error) {
 func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	kl, _ := kv.Open()
 	defer kl.Destroy()
-	k := lockedBufferTo[keyvalues](kl)
+	k := lockedBufferTo[keyValues](kl)
 
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
@@ -311,51 +304,6 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 		return
 	}
 	out = text
-	return
-}
-
-// DecodeEnclave decodes the input using kv and returns a *memguard.Enclave
-func (kv *KeyValues) DecodeEnclave(in []byte) (out *memguard.Enclave, err error) {
-	kl, _ := kv.Open()
-	defer kl.Destroy()
-	k := lockedBufferTo[keyvalues](kl)
-
-	in = bytes.TrimPrefix(in, []byte("+encs+"))
-
-	ciphertext := make([]byte, hex.DecodedLen(len(in)))
-
-	hex.Decode(ciphertext, in)
-	block, err := aes.NewCipher(k.key[:])
-	if err != nil {
-		err = fmt.Errorf("invalid key: %w", err)
-		return
-	}
-	if len(ciphertext)%aes.BlockSize != 0 {
-		err = fmt.Errorf("input is not a multiple of the block size")
-		return
-	}
-	mode := cipher.NewCBCDecrypter(block, k.iv[:])
-	l := memguard.NewBuffer(len(ciphertext))
-	plaintext := l.Bytes()
-	mode.CryptBlocks(plaintext, ciphertext)
-
-	if len(plaintext) == 0 {
-		err = fmt.Errorf("decode failed")
-		return
-	}
-
-	// remove padding as per RFC5246
-	paddingLength := int((plaintext)[len(plaintext)-1])
-	if paddingLength == 0 || paddingLength > aes.BlockSize {
-		err = fmt.Errorf("invalid padding size")
-		return
-	}
-	plaintext = (plaintext)[0 : len(plaintext)-paddingLength]
-	if !utf8.Valid(plaintext) {
-		err = fmt.Errorf("decoded test not valid UTF-8")
-		return
-	}
-	out = memguard.NewEnclave(plaintext)
 	return
 }
 

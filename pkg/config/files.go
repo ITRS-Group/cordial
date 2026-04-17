@@ -18,7 +18,8 @@ limitations under the License.
 package config
 
 import (
-	"bytes"
+	"os"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -109,41 +110,44 @@ func AbbreviateHome(p string) string {
 	return path.Clean(p)
 }
 
-// ExpandHome replaces a leading `~/` on p with the user's home
-// directory. If p does not have a prefix of `~/` then a cleaned copy is
-// returned. If there is an error resolving the user's home directory
-// then the path is returned relative to the root directory, i.e. with
-// just the `~` removed (and cleaned).
-func ExpandHome(p string) string {
-	if !strings.HasPrefix(p, "~/") {
-		return p
-	}
-	home, err := UserHomeDir()
-	if err != nil {
-		return strings.TrimPrefix(p, "~")
-	}
-	return path.Join(home, strings.TrimPrefix(p, "~"))
-}
-
-var (
-	homePrefix         = "~"
-	homePrefixDir      = "~/"
-	homePrefixBytes    = []byte(homePrefix)
-	homePrefixDirBytes = []byte(homePrefixDir)
+const (
+	homePrefixDir = "~/"
 )
 
-// ExpandHomeBytes replaces a leading `~/` on p with the user's home
+// ResolveHome replaces any leading `~/` on p with the user's home
 // directory. If p does not have a prefix of `~/` then a cleaned copy is
 // returned. If there is an error resolving the user's home directory
-// then the path is returned relative to the root directory, i.e. with
-// just the `~` removed (and cleaned).
-func ExpandHomeBytes(p []byte) []byte {
-	if !bytes.HasPrefix(p, homePrefixDirBytes) {
+// then the path is returned relative to the working directory, i.e. with
+// just the `~/` removed (and cleaned).
+func ResolveHome(p string) string {
+	p2 := string(p)
+	if !strings.HasPrefix(p2, homePrefixDir) {
 		return p
 	}
 	home, err := UserHomeDir()
 	if err != nil {
-		return bytes.TrimPrefix(p, homePrefixBytes)
+		return strings.TrimPrefix(p2, homePrefixDir)
 	}
-	return []byte(path.Join(home, strings.TrimPrefix(string(p), homePrefix)))
+	return path.Join(home, strings.TrimPrefix(p2, homePrefixDir))
+}
+
+// UserHomeDir returns the home directory for username, or if none given
+// then the current user. This works around empty environments by
+// falling back to looking up the user.
+func UserHomeDir(username ...string) (home string, err error) {
+	if len(username) == 0 {
+		if home, err = os.UserHomeDir(); err == nil { // all ok
+			return
+		}
+		u, err := user.Current()
+		if err != nil {
+			return home, err
+		}
+		return u.HomeDir, nil
+	}
+	u, err := user.Lookup(username[0])
+	if err != nil {
+		return
+	}
+	return u.HomeDir, nil
 }

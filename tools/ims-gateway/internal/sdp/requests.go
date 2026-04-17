@@ -51,7 +51,7 @@ func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 
 	switch s := listInfo.(type) {
 	case string:
-		v.Add("input_data", string(cf.Expand(s, opts...)))
+		v.Add("input_data", config.Expand[string](cf, s, opts...))
 	case url.Values:
 		v = s
 	default:
@@ -59,7 +59,7 @@ func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 		if err2 != nil {
 			return nil, err2
 		}
-		v.Add("input_data", string(cf.Expand(string(b), opts...)))
+		v.Add("input_data", config.Expand[string](cf, string(b), opts...))
 	}
 
 	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), "/api/v3/requests")

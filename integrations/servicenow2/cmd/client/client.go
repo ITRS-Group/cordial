@@ -410,13 +410,13 @@ var clientCmd = &cobra.Command{
 //     processing is required.
 func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record) bool {
 	for _, i := range ag.If {
-		if b, err := strconv.ParseBool(cf.ExpandString(i)); err != nil || !b {
+		if b, err := strconv.ParseBool(config.Expand[string](cf, i)); err != nil || !b {
 			return false
 		}
 	}
 
 	for field, value := range ag.Set {
-		incident[field] = cf.ExpandString(value)
+		incident[field] = config.Expand[string](cf, value)
 	}
 
 	for _, field := range ag.Unset {
@@ -430,13 +430,13 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 	}
 
 	for _, i := range ag.Break {
-		if b, _ := strconv.ParseBool(cf.ExpandString(i)); b {
+		if b, _ := strconv.ParseBool(config.Expand[string](cf, i)); b {
 			return true
 		}
 	}
 
 	for _, i := range ag.Exit {
-		if code, err := strconv.ParseInt(cf.ExpandString(i), 10, 0); err == nil {
+		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
 			os.Exit(int(code))
 		} else {
 			log.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)

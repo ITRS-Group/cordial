@@ -31,12 +31,12 @@ type expandOptions struct {
 	funcMaps           map[string]func(configItems map[string]any, name string, trim bool) (string, error)
 	initialValue       any
 	lookupTables       []map[string]string
-	nodecode           bool
-	noexpand           bool
+	noDecode           bool
+	noExpand           bool
 	replacements       []string
 	trimPrefix         bool
 	trimSpace          bool
-	usekeyfile         string
+	useKeyFile         string
 }
 
 // ExpandOptions control the way configuration options undergo string
@@ -106,7 +106,7 @@ func (c *Config) SetDefaultExpandOptions(options ...ExpandOptions) {
 // password.
 func NoExpand() ExpandOptions {
 	return func(e *expandOptions) {
-		e.noexpand = true
+		e.noExpand = true
 	}
 }
 
@@ -115,7 +115,7 @@ func NoExpand() ExpandOptions {
 // without decoding sensitive data such as secrets and passwords.
 func NoDecode(n bool) ExpandOptions {
 	return func(e *expandOptions) {
-		e.nodecode = n
+		e.noDecode = n
 	}
 }
 
@@ -258,7 +258,7 @@ func Replace(name string) ExpandOptions {
 // placed in an alternative location.
 func UseKeyfile(file string) ExpandOptions {
 	return func(eo *expandOptions) {
-		eo.usekeyfile = file
+		eo.useKeyFile = file
 	}
 }
 

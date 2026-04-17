@@ -144,9 +144,9 @@ func factory(name string) (floating geneos.Instance) {
 		InstanceHost: h,
 	}
 
-	floating.Config().SetDefault("pkgtype", "netprobe")
+	floating.Config().Default("pkgtype", "netprobe")
 	if ct != nil {
-		floating.Config().SetDefault("pkgtype", ct.Name)
+		floating.Config().Default("pkgtype", ct.Name)
 	}
 	if err := instance.SetDefaults(floating, local); err != nil {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", floating)
@@ -209,7 +209,7 @@ func (s *Floatings) Config() *config.Config {
 func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := s.Config()
 
-	cf.SetDefault(cf.Join("config", "template"), templateName)
+	cf.Default(cf.Join("config", "template"), templateName)
 
 	if port == 0 {
 		port = instance.NextFreePort(s.InstanceHost, &Floating)

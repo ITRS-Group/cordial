@@ -37,7 +37,7 @@ import (
 )
 
 var addCmdInit, addCmdPrompt bool
-var addCmdPassword *config.Plaintext
+var addCmdPassword *config.Secret
 var addCmdKeyfile config.KeyFile
 var addCmdPrivateKeyfiles PrivateKeyFiles
 
@@ -59,7 +59,7 @@ func (i *PrivateKeyFiles) Type() string {
 func init() {
 	hostCmd.AddCommand(addCmd)
 
-	addCmdPassword = &config.Plaintext{}
+	addCmdPassword = &config.Secret{}
 	addCmdKeyfile = cmd.DefaultUserKeyfile
 	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
@@ -93,7 +93,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var sshurl *url.URL
 		var name string
 		var password string
-		var pw = &config.Plaintext{}
+		var pw = &config.Secret{}
 
 		cf := config.New()
 
@@ -130,11 +130,11 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			return geneos.ErrInvalidArgs
 		}
 
-		cf.SetDefault("hostname", sshurl.Hostname())
-		cf.SetDefault("port", 22)
+		cf.Default("hostname", sshurl.Hostname())
+		cf.Default("port", 22)
 		// default to remote user's home dir, not local, but that can't
 		// be done until after a successful connection
-		cf.SetDefault(cordial.ExecutableName(), geneos.LocalRoot())
+		cf.Default(cordial.ExecutableName(), geneos.LocalRoot())
 
 		if addCmdPrompt {
 			pw, err = config.ReadPasswordInput(true, 3)

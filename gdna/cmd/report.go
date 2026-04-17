@@ -244,7 +244,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		r, _ = reporter.NewReporter("xlsx", w,
 			reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
 			reporter.Scramble(scrambleNames || config.Get[bool](cf, cf.Join("xlsx", "scramble"))),
-			reporter.XLSXPassword(config.Get[*config.Plaintext](cf, cf.Join("xlsx", "password"))),
+			reporter.XLSXPassword(config.Get[*config.Secret](cf, cf.Join("xlsx", "password"))),
 			reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
 			reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
 			reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
@@ -464,7 +464,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 	var err error
 
 	if report.FilePath != "" {
-		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
 	} else {
 		// generate filepath from report name
 		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
@@ -481,7 +481,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
-	query := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
+	query := config.Expand[string](cf, report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Trace().Msgf("query:\n%s", query)
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
@@ -492,7 +492,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 		r.UpdateTable(table[0], table[1:])
 	}
 
-	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
+	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -510,7 +510,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	var err error
 
 	if report.FilePath != "" {
-		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
 	} else {
 		// generate filepath from report name
 		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r2.Extension()
@@ -527,7 +527,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	}
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
-	prequery := cf.ExpandString(report.Query, lookup, config.ExpandNonStringToCSV())
+	prequery := config.Expand[string](cf, report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
 	var query string
 	if err := r.Scan(&query); err != nil {
@@ -551,7 +551,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if len(table) > 0 {
 		r2.UpdateTable(table[0], table[1:])
 	}
-	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
+	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -568,7 +568,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	table := [][]string{report.Columns}
 
 	if report.FilePath != "" {
-		report.FilePath = cf.ExpandString(report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
 	} else {
 		// generate filepath from report name
 		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
@@ -596,7 +596,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	}
 	sort.Strings(groupnames)
 	for _, group := range groupnames {
-		query := cf.ExpandString(report.Query, lookup, config.LookupTable(map[string]string{
+		query := config.Expand[string](cf, report.Query, lookup, config.LookupTable(map[string]string{
 			"group":  group,
 			"filter": groups[group],
 		}), config.ExpandNonStringToCSV())
@@ -616,7 +616,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		r.UpdateTable(table[0], table[1:])
 	}
 
-	if query := cf.ExpandString(report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
+	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
 			log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)

@@ -1,8 +1,5 @@
 # GDNA Installation
 
->[!WARNING]
-> The docker installation will not work at this time, for the cordial v1.26.0-beta releases. This will be addressed before the final release.
-
 The most straight-forward way to get GDNA up and running is using docker. We recommend using docker to get up and running in minutes, as well as making future updates easier. If docker is not available in your environment you can also run GDNA as a stand-alone process. Both of these methods are described below.
 
 > [!NOTE]
@@ -105,9 +102,17 @@ gateway --> webdashboard
 ### Docker Compose
 
 > [!NOTE]
-> This version of GDNA has been built and tested using `docker-ce` version 27.2.0 on amd64 architecture Linux using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, which will be detailed in future releases.
+> This version of GDNA has been built and tested using `docker-ce` version 29.2.1 on amd64 architecture Linux using Debian and Ubuntu distributions. We intend to also test using other version of docker as well as `podman`, which will be detailed in future releases.
 
 First, create a `docker-compose.yml` file using the template below and edit, changing at minimum the `LICDHOST` to the name of the server running the first `licd` process. If the docker container will be running on the same server as GDNA then you can use the `host.docker.internal` as the hostname, like in the commented out example below. Add other license daemons here too.
+
+For licd version 7.8.0 and later you will need to create a public/private key pair and put the path to the private key in the YAML configuration embedded in the docker compose file below. You can create a private key using the `geneos tls create` command as follows:
+
+```bash
+geneos tls create -K -k rsa -D - > ${HOME}/.config/geneos/gdna-private-key.pem
+```
+
+Then save the private key file somewhere on your local machine and reference it in the `docker-compose.yml` file as shown below. You will also need to extract the public key from the private key and add it to the `licd` configuration, as described in the section below on [Configuring GDNA](#configure-gdna).
 
 ```yaml
 name: gdna
@@ -155,15 +160,25 @@ services:
         gid: "1000"
         mode: 0644
 
-    # if you want to send email reports via an SMTP server that requires
-    # authentication then you will need to create secrets using `geneos login`
-    # before running the container and then uncomment the next three lines, being
-    # careful to maintain the correct indentation. They are then referenced as
-    # /run/secrets/NAME and used in the `gdna.yaml` configuration below.
+    secrets:
+      # to connect to a licd instance 7.8.0 and later you will need to
+      # create a public/private key pair. You can do this using `geneos
+      # tls create -K -k rsa -D -` and then save the private key as a
+      # secret and configure the public key in the licd instance. The
+      # private key is only used to authenticate to the licd license
+      # report endpoints and is not used for any other purpose, so it is
+      # safe to use a single key pair for multiple GDNA instances if
+      # required. See the path to the real file near the end of this file.
+      - private-key.pem
 
-    # secrets:
-    #   - keyfile.aes
-    #   - credentials.json
+      # if you want to send email reports via an SMTP server that requires
+      # authentication then you will need to create secrets using `geneos login`
+      # before running the container and then uncomment the next two lines, being
+      # careful to maintain the correct indentation. They are then referenced as
+      # /run/secrets/NAME and used in the `gdna.yaml` configuration below.
+      #
+      # - keyfile.aes
+      # - credentials.json
 
     volumes:
       # `gdna-data` is the persistent volume for collected data. This should
@@ -206,19 +221,18 @@ configs:
     content: | #yaml
       gdna:
         licd-sources:
-          - "https://LICDHOST:7041"
+          - "https://LICDHOST:7041"  
           # To access the host that the container is running on, use this URL:
           # - "https://host.docker.internal: host-gateway:7041"
 
-        # For licd 7.8.0 and above, you must use a private key to connect to the
-        # licd license report endpoints. The `licd-private-key` is either a PEM
-        # encoded RSA private key in-line or a path to a file containing the key.
-        # If provided and you are connecting to an older licd instance then it will
-        # have no effect.
-
-        # licd-private-key: |
-        #   -----PRIVATE KEY-----
-        # licd-private-key: /path/xxx
+        # For licd release 7.8.0 and above, you must use a private key to
+        # connect to the licd license report endpoints. The `licd-private-key`
+        # setting is either a PEM encoded RSA private key in-line or a path to
+        # the PEM encoded private key file to use for authentication.
+        #
+        # If provided and you are connecting to an older licd instance then it
+        # will have no effect.
+        licd-private-key: /run/secrets/private-key.pem
 
         licd-skip-verify: true
 
@@ -250,8 +264,8 @@ configs:
         # supply a preamble and a postscript either from a file or
         # in-line using these settings:
 
-        # html-preamble: ${file:/path/to/preamble.html}
-        # html-postscript: ${file:/path/to/postscript.html}
+        # html-preamble: $${file:/path/to/preamble.html}
+        # html-postscript: $${file:/path/to/postscript.html}
 
         # or, in-line: 
 
@@ -267,6 +281,10 @@ secrets:
     file: ${HOME}/.config/geneos/keyfile.aes
   credentials.json:
     file: ${HOME}/.config/geneos/credentials.json
+  private-key.pem:
+    # set the path to the private key file you want to use to authenticate
+    # to the licd instance
+    file: ${HOME}/.config/geneos/gdna-private-key.pem
 
 # a persistent volume to save collected data between restarts
 volumes:

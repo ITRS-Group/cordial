@@ -155,7 +155,7 @@ func ReadPEMBytes(from, prompt string) (data []byte, err error) {
 // On error the pw is empty and does not need to be Destroy()ed.
 //
 // If STDIN is not a terminal then config.ErrNotInteractive is returned.
-func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *Plaintext, err error) {
+func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret *Secret, err error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		err = ErrNotInteractive
 		return
@@ -178,7 +178,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 				fmt.Printf("%s: ", prompt[0])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw1 := NewPlaintext(pwt)
+			pw1 := NewSecret(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
@@ -189,7 +189,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 				fmt.Printf("%s: ", prompt[1])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw2 := NewPlaintext(pwt)
+			pw2 := NewSecret(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
@@ -208,7 +208,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 			pw2b.Destroy()
 
 			if matched {
-				plaintext = pw1
+				secret = pw1
 				break
 			}
 			fmt.Println("Entries do not match")
@@ -225,7 +225,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (plaintext *P
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
 		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-		plaintext = NewPlaintext(pwt)
+		secret = NewSecret(pwt)
 		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return

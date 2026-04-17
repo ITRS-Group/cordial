@@ -72,7 +72,7 @@ var pubkeyCmd = &cobra.Command{
 
 func printPublicKey() error {
 	if cf.IsSet("gdna.licd-private-key") {
-		if privateKey := config.Get[*config.Plaintext](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
+		if privateKey := config.Get[*config.Secret](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
 			pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 			if err != nil {
 				privateKeyPath := privateKey.String()

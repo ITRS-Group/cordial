@@ -34,29 +34,29 @@ import (
 )
 
 var encodeCmdKeyfile config.KeyFile
-var encodeCmdString, encodeCmdClientID, encodeCmdClientSecret *config.Plaintext
+var encodeCmdString, encodeCmdClientID, encodeCmdClientSecret *config.Secret
 var encodeCmdSource, encodeCmdProvider, encodeCmdAppKeyFile, encodeCmdCRC string
 var encodeCmdExpandable, encodeCmdAskOnce bool
 
 func init() {
 	aesCmd.AddCommand(encodeCmd)
 
-	encodeCmdString = &config.Plaintext{}
+	encodeCmdString = &config.Secret{}
 
 	encodeCmd.Flags().BoolVarP(&encodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
 	encodeCmd.Flags().StringVarP(&encodeCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
 
-	encodeCmd.Flags().VarP(encodeCmdString, "password", "p", "Plaintext password")
+	encodeCmd.Flags().VarP(encodeCmdString, "password", "p", "Password")
 	encodeCmd.Flags().StringVarP(&encodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
 	encodeCmd.Flags().BoolVarP(&encodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
 	encodeCmd.Flags().StringVarP(&encodeCmdProvider, "app-key", "A", "", "SSO `PROVIDER`, one of ssoAgent, obcerv, gatewayHub")
 
-	encodeCmdClientID = &config.Plaintext{}
+	encodeCmdClientID = &config.Secret{}
 	encodeCmd.Flags().VarP(encodeCmdClientID, "client-id", "C", "Client ID for --app-key, prompted if not set")
 
-	encodeCmdClientSecret = &config.Plaintext{}
+	encodeCmdClientSecret = &config.Secret{}
 	encodeCmd.Flags().VarP(encodeCmdClientSecret, "client-secret", "S", "Client Secret for --app-key, prompted if not set")
 	encodeCmd.Flags().StringVarP(&encodeCmdAppKeyFile, "app-key-file", "a", "", "App-key filename, if saving per instance, otherwise defaults to STDOUT")
 
@@ -68,7 +68,7 @@ var encodeCmdDescription string
 
 var encodeCmd = &cobra.Command{
 	Use:   "encode [flags] [TYPE] [NAME...]",
-	Short: "Encode plaintext to a Geneos AES256 password using a key file",
+	Short: "Encode password to a Geneos AES256 secret using a key file",
 	Long:  encodeCmdDescription,
 	Example: `
 `,
@@ -205,17 +205,17 @@ var encodeCmd = &cobra.Command{
 			return
 		}
 
-		var plaintext *config.Plaintext
+		var secret *config.Secret
 		if !encodeCmdString.IsNil() {
-			plaintext = encodeCmdString
+			secret = encodeCmdString
 		} else if encodeCmdSource != "" {
 			pt, err := geneos.ReadAll(encodeCmdSource)
 			if err != nil {
 				return err
 			}
-			plaintext = config.NewPlaintext(pt)
+			secret = config.NewSecret(pt)
 		} else {
-			plaintext, err = config.ReadPasswordInput(!encodeCmdAskOnce, 0)
+			secret, err = config.ReadPasswordInput(!encodeCmdAskOnce, 0)
 			if err != nil {
 				return
 			}
@@ -233,7 +233,7 @@ var encodeCmd = &cobra.Command{
 					if keyfilepath != "" {
 						keyfile := config.KeyFile(keyfilepath)
 						// encode using specific file
-						e, err := keyfile.Encode(host.Localhost, plaintext, encodeCmdExpandable)
+						e, err := keyfile.Encode(host.Localhost, secret, encodeCmdExpandable)
 						if err != nil {
 							continue
 						}
@@ -261,18 +261,18 @@ var encodeCmd = &cobra.Command{
 				return
 			}
 
-			plaintext, ok := params[0].(*config.Plaintext)
+			secret, ok := params[0].(*config.Secret)
 			if !ok {
 				panic("wrong type")
 			}
-			e, err := keyfile.Encode(host.Localhost, plaintext, encodeCmdExpandable)
+			e, err := keyfile.Encode(host.Localhost, secret, encodeCmdExpandable)
 			if err != nil {
 				resp.Err = err
 				return
 			}
 			resp.Completed = append(resp.Completed, e)
 			return
-		}, plaintext).Report(os.Stdout)
+		}, secret).Report(os.Stdout)
 		return
 	},
 }

@@ -77,7 +77,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Use a dash (`-`) to be prompted for PEM from console
   -c, --certs-bundle file             Instance certificate bundle file in PEM or PFX/PKCS#12 format.
                                       Use a dash (`-`) to be prompted for PEM from console
-      --certs-password PLAINTEXT      Password for PFX/PKCS#12 file decryption.
+      --certs-password SECRET         Password for PFX/PKCS#12 file decryption.
                                       You will be prompted if not supplied as an argument.
                                       PFX/PKCS#12 files are identified by the .pfx or .p12
                                       file extension and only supported for instance bundles
@@ -89,7 +89,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       directory to use (extension optional)
   -u, --username string               Username for downloads
                                       Credentials used if not given.
-  -P, --password PLAINTEXT            Password for downloads
+  -P, --password SECRET               Password for downloads
                                       Prompted if required and not given
   -b, --base string                   Select the base version name for the instance.
                                       Defaults to 'active_prod' which is the default

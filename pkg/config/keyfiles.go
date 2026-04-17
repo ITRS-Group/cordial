@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -200,7 +199,7 @@ func (k *KeyFile) EncodeString(h host.Host, plaintext string, expandable bool) (
 // If the keyfile is located under the user's configuration directory,
 // as defined by UserConfigDir, then the function will replace any home
 // directory prefix with `~/' to shorten the keyfile path.
-func (k *KeyFile) Encode(h host.Host, plaintext *Plaintext, expandable bool) (out string, err error) {
+func (k *KeyFile) Encode(h host.Host, plaintext *Secret, expandable bool) (out string, err error) {
 	kv, err := k.Read(h)
 	if err != nil {
 		return
@@ -239,27 +238,17 @@ func (k *KeyFile) Decode(h host.Host, input []byte) (plaintext []byte, err error
 	return a.Decode(input)
 }
 
-// DecodeEnclave decodes the input using the keyfile k and returns a
-// memguard.Enclave
-func (k *KeyFile) DecodeEnclave(h host.Host, input []byte) (plaintext *memguard.Enclave, err error) {
-	a, err := k.Read(h)
-	if err != nil {
-		return
-	}
-	return a.DecodeEnclave(input)
-}
-
 // EncodePasswordInput prompts the user for a password and again to
 // verify, offering up to three attempts until the password match. When
-// the two match the plaintext is encoded using the keyfile. If
+// the two match the secret is encoded using the keyfile. If
 // expandable is true then the encoded password is returned in a format
 // useable by the Expand function which includes a path to the keyfile
 // used at the time.
 func (k *KeyFile) EncodePasswordInput(h host.Host, expandable bool) (out string, err error) {
-	plaintext, err := ReadPasswordInput(true, 3)
+	secret, err := ReadPasswordInput(true, 3)
 	if err != nil {
 		return
 	}
-	out, err = k.Encode(h, plaintext, expandable)
+	out, err = k.Encode(h, secret, expandable)
 	return
 }

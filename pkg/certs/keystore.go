@@ -35,9 +35,9 @@ type KeyStore struct {
 //
 // The certChain is not validated; the caller is responsible for ensuring
 // that it is correct.
-func AddCertChainToKeyStore(h host.Host, path string, password *config.Plaintext, alias string, key *memguard.Enclave, certChain ...*x509.Certificate) error {
+func AddCertChainToKeyStore(h host.Host, path string, password *config.Secret, alias string, key *memguard.Enclave, certChain ...*x509.Certificate) error {
 	if password == nil {
-		password = config.NewPlaintext([]byte("changeit"))
+		password = config.NewSecret([]byte("changeit"))
 	}
 	k, err := ReadKeystore(h, path, password)
 	if err != nil {
@@ -60,7 +60,7 @@ func AddCertChainToKeyStore(h host.Host, path string, password *config.Plaintext
 // from the Subject Common Name of each certificate.
 //
 // Any certificates that are not root CAs are ignored.
-func AddRootsToTrustStore(h host.Host, path string, password *config.Plaintext, roots ...*x509.Certificate) error {
+func AddRootsToTrustStore(h host.Host, path string, password *config.Secret, roots ...*x509.Certificate) error {
 	k, err := ReadKeystore(h,
 		path,
 		password,
@@ -94,7 +94,7 @@ func AddRootsToTrustStore(h host.Host, path string, password *config.Plaintext, 
 // the specified path on the given host. If password is nil, "changeit"
 // is used. Any certificates that are not valid root CAs are ignored.
 // Any existing file is overwritten.
-func WriteTrustStore(h host.Host, path string, password *config.Plaintext, roots ...*x509.Certificate) error {
+func WriteTrustStore(h host.Host, path string, password *config.Secret, roots ...*x509.Certificate) error {
 	k := &KeyStore{
 		keystore.New(),
 	}
@@ -111,7 +111,7 @@ func WriteTrustStore(h host.Host, path string, password *config.Plaintext, roots
 	}
 
 	if password == nil {
-		password = config.NewPlaintext([]byte("changeit"))
+		password = config.NewSecret([]byte("changeit"))
 	}
 
 	// a truststore is just a keystore with trusted certs
@@ -124,7 +124,7 @@ func WriteTrustStore(h host.Host, path string, password *config.Plaintext, roots
 //
 // The file is first attempted to be read as a modern keystore, if that
 // fails it is tried as a JCEKS formatted keystore.
-func ReadKeystore(h host.Host, path string, password *config.Plaintext) (k *KeyStore, err error) {
+func ReadKeystore(h host.Host, path string, password *config.Secret) (k *KeyStore, err error) {
 	var pw []byte
 	r, err := h.Open(path)
 	if err != nil {
@@ -155,7 +155,7 @@ func ReadKeystore(h host.Host, path string, password *config.Plaintext) (k *KeyS
 // caBundlePath with any root CA certificates found in the truststore at
 // truststorePath. If password is nil, "changeit" is used. It returns
 // updated true if the CA bundle file was updated.
-func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, truststorePassword *config.Plaintext, caBundlePath string) (updated bool, err error) {
+func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, truststorePassword *config.Secret, caBundlePath string) (updated bool, err error) {
 	var roots []*x509.Certificate
 
 	if truststorePath == "" {
@@ -181,7 +181,7 @@ func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, trustst
 
 // WriteKeystore writes the keystore to the given path. If password is
 // nil, "changeit" is used.
-func (k *KeyStore) WriteKeystore(h host.Host, path string, password *config.Plaintext) (err error) {
+func (k *KeyStore) WriteKeystore(h host.Host, path string, password *config.Secret) (err error) {
 	if k == nil {
 		return os.ErrInvalid
 	}
@@ -219,7 +219,7 @@ func (k *KeyStore) AddTrustedCertificate(alias string, cert *x509.Certificate) (
 // AddKeystoreKey adds a private key and certificates to the keystore.
 //
 // If password is nil it uses "changeit" as the keystore password.
-func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password *config.Plaintext, certs ...*x509.Certificate) (err error) {
+func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password *config.Secret, certs ...*x509.Certificate) (err error) {
 	var pw []byte
 	var ch []keystore.Certificate
 
@@ -259,7 +259,7 @@ func (k *KeyStore) AddKeystoreKey(alias string, key *memguard.Enclave, password 
 
 // readJCEKS attempts to read a JCEKS formatted keystore and convert it
 // to a standard keystore.KeyStore. If password is nil, "changeit" is used.
-func readJCEKS(h host.Host, path string, password *config.Plaintext) (k *KeyStore, err error) {
+func readJCEKS(h host.Host, path string, password *config.Secret) (k *KeyStore, err error) {
 	var pw []byte
 	r, err := h.Open(path)
 	if err != nil {

@@ -39,7 +39,7 @@ import (
 )
 
 func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
-	source = config.ExpandHome(source)
+	source = config.ResolveHome(source)
 	u, err := url.Parse(source)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 
 		log.Trace().Msgf("reading data from file '%s'", source)
 
-		source = config.ExpandHome(source)
+		source = config.ResolveHome(source)
 		s, err = os.Stat(source)
 		if err != nil {
 			return nil, err
@@ -121,7 +121,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 // readers, one per section, the basename of the source file and the
 // modtime as well as any error
 func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
-	source = config.ExpandHome(source)
+	source = config.ResolveHome(source)
 	matches, err := filepath.Glob(source)
 	if err != nil {
 		return

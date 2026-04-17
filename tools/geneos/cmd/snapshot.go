@@ -37,7 +37,7 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername string
-var snapshotCmdPassword *config.Plaintext
+var snapshotCmdPassword *config.Secret
 
 func init() {
 	GeneosCmd.AddCommand(snapshotCmd)
@@ -99,7 +99,7 @@ var snapshotCmd = &cobra.Command{
 			snapshotCmdUsername = cf.GetString(cf.Join("snapshot", "username"))
 		}
 
-		snapshotCmdPassword = config.Get[*config.Plaintext](cf, cf.Join("snapshot", "password"))
+		snapshotCmdPassword = config.Get[*config.Secret](cf, cf.Join("snapshot", "password"))
 
 		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
 			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
@@ -144,7 +144,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		// from the command line or user/global config or credentials
 		// file
 		username := i.Config().GetString(config.Join("snapshot", "username"))
-		password := config.Get[*config.Plaintext](i.Config(), config.Join("snapshot", "password"))
+		password := config.Get[*config.Secret](i.Config(), config.Join("snapshot", "password"))
 
 		if username == "" {
 			username = snapshotCmdUsername
@@ -161,11 +161,11 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
 				username = creds.GetString("username")
-				password = config.Get[*config.Plaintext](creds, "password")
+				password = config.Get[*config.Secret](creds, "password")
 			} else {
 				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(cordial.ExecutableName())); creds != nil {
 					username = creds.GetString("username")
-					password = config.Get[*config.Plaintext](creds, "password")
+					password = config.Get[*config.Secret](creds, "password")
 				}
 			}
 		}

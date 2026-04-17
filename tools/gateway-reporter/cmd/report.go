@@ -106,7 +106,7 @@ var reportCmd = &cobra.Command{
 				}
 				input = resp.Body
 			default:
-				setup = config.ExpandHome(setup)
+				setup = config.ResolveHome(setup)
 				if reportCmdMerge {
 					setup, _ = filepath.Abs(setup)
 					merged, err := mergeConfig(reportCmdInstallation, setup)

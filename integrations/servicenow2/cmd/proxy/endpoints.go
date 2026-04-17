@@ -205,7 +205,7 @@ func acceptRecord(c echo.Context) (err error) {
 
 	table, err := snow.TableConfig(cf, req.Param("table"))
 	if err != nil {
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			fmt.Sprintf("${_timestamp} Error retrieving table configuration for %q", req.Param("table")),
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
@@ -221,7 +221,7 @@ func acceptRecord(c echo.Context) (err error) {
 
 	if err = json.NewDecoder(c.Request().Body).Decode(&incident); err != nil {
 		response.Error = fmt.Sprintf("error decoding request body: %v", err)
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
@@ -235,7 +235,7 @@ func acceptRecord(c echo.Context) (err error) {
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
 		response.Error = "field names are invalid or not unique"
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
@@ -251,7 +251,7 @@ func acceptRecord(c echo.Context) (err error) {
 		if query, ok := incident[CMDB_SEARCH]; !ok {
 			if incident[SNOW_CMDB_CI], ok = incident[CMDB_CI_DEFAULT]; !ok {
 				response.Error = "must supply either a _cmdb_ci_default or a _cmdb_search parameter"
-				response.Result = cf.ExpandString(
+				response.Result = config.Expand[string](cf,
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
@@ -267,7 +267,7 @@ func acceptRecord(c echo.Context) (err error) {
 			}
 			if incident[SNOW_CMDB_CI], err = snow.LookupCmdbCI(req, incident[CMDB_TABLE], query, incident[CMDB_CI_DEFAULT]); err != nil {
 				response.Error = "failed to look up cmdb_ci: " + err.Error()
-				response.Result = cf.ExpandString(
+				response.Result = config.Expand[string](cf,
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
@@ -282,7 +282,7 @@ func acceptRecord(c echo.Context) (err error) {
 
 	if incident[SNOW_CMDB_CI] == "" {
 		response.Error = "cmdb_ci is empty or search resulted in no matches"
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
@@ -305,7 +305,7 @@ func acceptRecord(c echo.Context) (err error) {
 
 	if err != nil {
 		response.Error = "error looking up incident: " + err.Error()
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incident, map[string]string{
 				"_error":     response.Error,
@@ -333,7 +333,7 @@ func acceptRecord(c echo.Context) (err error) {
 		for k, v := range s.Defaults {
 			// log.Debug().Msgf("checking field %q: value %q - would set to %q", k, incident[k], v)
 			if i, ok := incident[k]; !ok || i == "" {
-				incident[k] = cf.ExpandString(v)
+				incident[k] = config.Expand[string](cf, v)
 			}
 		}
 
@@ -358,7 +358,7 @@ func acceptRecord(c echo.Context) (err error) {
 		for _, i := range s.MustInclude {
 			if _, ok := incident[i]; !ok {
 				response.Error = fmt.Sprintf("missing required field %q", i)
-				response.Result = cf.ExpandString(
+				response.Result = config.Expand[string](cf,
 					table.Response.Failed,
 					config.LookupTable(incident, map[string]string{
 						"_error":     response.Error,
@@ -394,7 +394,7 @@ func acceptRecord(c echo.Context) (err error) {
 		number, err := incident.UpdateRecord(req, incident_id)
 		if err != nil {
 			response.Error = fmt.Sprintf("error updating incident: %v", err)
-			response.Result = cf.ExpandString(
+			response.Result = config.Expand[string](cf,
 				table.Response.Failed,
 				config.LookupTable(incident, map[string]string{
 					"_error":     response.Error,
@@ -406,7 +406,7 @@ func acceptRecord(c echo.Context) (err error) {
 		}
 		response.Action = "Updated"
 		response.Number = number
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Updated,
 			config.LookupTable(incidentFields, map[string]string{
 				"_number":    number,
@@ -426,7 +426,7 @@ func acceptRecord(c echo.Context) (err error) {
 	number, err := incident.CreateRecord(req)
 	if err != nil {
 		response.Error = fmt.Sprintf("error creating incident: %v", err)
-		response.Result = cf.ExpandString(
+		response.Result = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(incidentFields, map[string]string{
 				"_error":     response.Error,
@@ -439,7 +439,7 @@ func acceptRecord(c echo.Context) (err error) {
 	}
 	response.Action = "Created"
 	response.Number = number
-	response.Result = cf.ExpandString(
+	response.Result = config.Expand[string](cf,
 		table.Response.Created,
 		config.LookupTable(incidentFields, map[string]string{
 			"_number":    number,

@@ -22,11 +22,8 @@ package config
 import (
 	"bytes"
 	"errors"
-	"os"
-	"os/user"
 	"path"
 	"reflect"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -109,7 +106,7 @@ func New(options ...FileOptions) *Config {
 
 	if opts.defaultConfig != nil {
 		for k, v := range opts.defaultConfig.AllSettings() {
-			cf.SetDefault(k, v)
+			cf.Default(k, v)
 		}
 	}
 	return cf
@@ -218,7 +215,7 @@ func (c *Config) Set(key string, value any) {
 //   - map[string]string
 //   - []map[string]string
 //   - time.Duration
-//   - *config.Plaintext
+//   - *config.Secret
 //
 // Other types are returned as-is and the caller is expected to do any
 // necessary type assertion. Other specific types may be added in the
@@ -263,7 +260,7 @@ var ExpandFieldsHook = func(opts ...ExpandOptions) mapstructure.DecodeHookFunc {
 
 		str := data.(string)
 
-		return ExpandString(str, opts...), nil
+		return expand[string](global, str, opts...), nil
 	}
 }
 
@@ -273,19 +270,17 @@ func (c *Config) UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfi
 	return c.unmarshalKey(key, rawVal, opts...)
 }
 
-var itemRE = regexp.MustCompile(`^([\w\.\:-]+)([+=]=?)(.*)`)
-
-// SetKeyValues takes a list of `key=value` pairs as strings and applies
+// SetKeyValuePairs takes a list of `key=value` pairs as strings and applies
 // them to the config object. Any item without an `=` is skipped.
 //
 // If the separator is either `+=` or `+` then the given value is
 // appended to any existing setting. If the value is starts with a dash
 // then it is considered a command line option and is appended with a
 // space separator, otherwise it is simply concatenated.
-func (c *Config) SetKeyValues(items ...string) (err error) {
+func (c *Config) SetKeyValuePairs(items ...string) (err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c.setKeyValues(items...)
+	return c.setKeyValuePairs(items...)
 }
 
 func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
@@ -294,34 +289,16 @@ func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 	return c.mergeConfigMap(vals)
 }
 
-func MergeConfigMap(vals map[string]any) error {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	return global.mergeConfigMap(vals)
-}
-
 func (c *Config) AllKeys() (keys []string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.allKeys()
 }
 
-func AllKeys() []string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.allKeys()
-}
-
 func (c *Config) AllSettings() (value map[string]any) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.allSettings()
-}
-
-func AllSettings() map[string]any {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.allSettings()
 }
 
 func (c *Config) SetEnvPrefix(prefix string) {
@@ -336,7 +313,7 @@ func (c *Config) AutomaticEnv() {
 	c.automaticEnv()
 }
 
-func (c *Config) SetDefault(key string, value any) {
+func (c *Config) Default(key string, value any) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.setDefault(key, value)
@@ -348,22 +325,10 @@ func (c *Config) IsSet(key string) (value bool) {
 	return c.isSet(key)
 }
 
-func IsSet(key string) bool {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.isSet(key)
-}
-
 func (c *Config) ConfigFileUsed() (f string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.configFileUsed()
-}
-
-func ConfigFileUsed() string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.configFileUsed()
 }
 
 func (c *Config) RegisterAlias(alias, key string) {
@@ -372,41 +337,8 @@ func (c *Config) RegisterAlias(alias, key string) {
 	c.registerAlias(alias, key)
 }
 
-func RegisterAlias(alias, key string) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	global.registerAlias(alias, key)
-}
-
 func (c *Config) BindEnv(input ...string) (err error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	return c.bindEnv(input...)
-}
-
-func BindEnv(input ...string) error {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-	return global.bindEnv(input...)
-}
-
-// UserHomeDir returns the home directory for username, or if none given
-// then the current user. This works around empty environments by
-// falling back to looking up the user.
-func UserHomeDir(username ...string) (home string, err error) {
-	if len(username) == 0 {
-		if home, err = os.UserHomeDir(); err == nil { // all ok
-			return
-		}
-		u, err := user.Current()
-		if err != nil {
-			return home, err
-		}
-		return u.HomeDir, nil
-	}
-	u, err := user.Lookup(username[0])
-	if err != nil {
-		return
-	}
-	return u.HomeDir, nil
 }

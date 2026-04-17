@@ -31,14 +31,14 @@ import (
 )
 
 var setCmdPrompt bool
-var setCmdPassword *config.Plaintext
+var setCmdPassword *config.Secret
 var setCmdKeyfile config.KeyFile
 var setCmdPrivateKeyfiles PrivateKeyFiles
 
 func init() {
 	hostCmd.AddCommand(setCmd)
 
-	setCmdPassword = &config.Plaintext{}
+	setCmdPassword = &config.Secret{}
 
 	setCmd.Flags().BoolVarP(&setCmdPrompt, "prompt", "p", false, "Prompt for password")
 	setCmd.Flags().VarP(setCmdPassword, "password", "P", "password")

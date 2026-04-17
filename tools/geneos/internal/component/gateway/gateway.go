@@ -254,7 +254,7 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	cf.Set("port", port)
 	cf.Set(cf.Join("config", "rebuild"), "initial")
 
-	cf.SetDefault(cf.Join("config", "template"), templateName)
+	cf.Default(cf.Join("config", "template"), templateName)
 	if template != "" {
 		filenames, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
 		cf.Set(cf.Join("config", "template"), filenames[0])

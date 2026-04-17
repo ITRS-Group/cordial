@@ -25,10 +25,10 @@ geneos login [flags] [DOMAIN]
 ### Options
 
 ```text
-  -u, --username string      Username
-  -p, --password PLAINTEXT   Password
-  -k, --keyfile KEYFILE      Key file to use
-  -l, --list                 List the names of the currently stored credentials
+  -u, --username string   Username
+  -p, --password SECRET   Password
+  -k, --keyfile KEYFILE   Key file to use
+  -l, --list              List the names of the currently stored credentials
 ```
 
 ## SEE ALSO

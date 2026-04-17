@@ -49,12 +49,12 @@ import (
 // var infoCmdJSON, infoCmdIndent, infoCmdCSV, infoCmdToolkit bool
 var infoCmdFormat string
 var infoCmdLong bool
-var infoCmdPassword *config.Plaintext
+var infoCmdPassword *config.Secret
 
 func init() {
 	tlsCmd.AddCommand(infoCmd)
 
-	infoCmdPassword = &config.Plaintext{}
+	infoCmdPassword = &config.Secret{}
 
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
@@ -221,7 +221,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 		}
 
 		if path.Base(p) == "cacerts" {
-			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewPlaintext([]byte("changeit")))
+			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewSecret([]byte("changeit")))
 			if err != nil {
 				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
 				continue

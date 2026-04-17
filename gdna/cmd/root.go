@@ -171,5 +171,5 @@ func initConfig(cmd *cobra.Command) {
 
 	info, _ := dbg.ReadBuildInfo()
 	log.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
-	log.Debug().Msg(deferredlog)
+	log.Info().Msg(deferredlog)
 }

@@ -54,10 +54,10 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	snowMutex.RUnlock()
 
 	username := cf.GetString("username")
-	password := config.Get[*config.Plaintext](cf, "password")
+	password := config.Get[*config.Secret](cf, "password")
 
 	clientID := cf.GetString("client-id")
-	clientSecret := config.Get[*config.Plaintext](cf, "client-secret")
+	clientSecret := config.Get[*config.Secret](cf, "client-secret")
 
 	sn, err := url.Parse(cf.GetString("url"))
 	if err != nil {

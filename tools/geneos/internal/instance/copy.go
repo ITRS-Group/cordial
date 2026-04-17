@@ -152,7 +152,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	ncf.Set("port", 0)
 
 	// set override parameters here
-	ncf.SetKeyValues(opts.params...)
+	ncf.SetKeyValuePairs(opts.params...)
 
 	// copy directory
 	if err = host.CopyAll(src.Host(), src.Home(), dHost, dst.Home()); err != nil {

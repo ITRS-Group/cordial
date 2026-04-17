@@ -107,7 +107,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 	case "basic":
 		defFetchopts = append(defFetchopts,
 			BasicAuth(config.Get[string](cf, "inventory.authentication.username"),
-				config.Get[*config.Plaintext](cf, "inventory.authentication.password"),
+				config.Get[*config.Secret](cf, "inventory.authentication.password"),
 			))
 	}
 
@@ -143,7 +143,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 			source = strings.TrimPrefix(source, "file:")
 			fallthrough
 		default:
-			source = config.ExpandHome(source)
+			source = config.ResolveHome(source)
 			inv, err = ReadInventory(cf, source)
 		}
 

@@ -64,7 +64,7 @@ var serverCmd = &cobra.Command{
 			logfile = cf.GetString("server.logs.path")
 		}
 
-		logfile = config.ExpandHome(logfile)
+		logfile = config.ResolveHome(logfile)
 
 		done := make(chan bool)
 
@@ -199,14 +199,14 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		cert = []byte(certstr)
 
 		if certpem, _ := pem.Decode([]byte(certstr)); certpem == nil {
-			cert = config.ExpandHome(certstr)
+			cert = config.ResolveHome(certstr)
 		}
 
 		keystr := cf.GetString("server.tls.privatekey")
 		key = []byte(keystr)
 
 		if keypem, _ := pem.Decode([]byte(keystr)); keypem == nil {
-			key = config.ExpandHome(keystr)
+			key = config.ResolveHome(keystr)
 		}
 
 		listen := fmt.Sprintf("%s:%d", config.Get[string](cf, cf.Join("server", "host"), config.DefaultValue("0.0.0.0")), config.Get[uint16](cf, cf.Join("server", "port"), config.DefaultValue(6543)))

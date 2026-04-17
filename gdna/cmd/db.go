@@ -58,7 +58,7 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 	dsn := cf.GetString(dsnBase)
 	if after, ok := strings.CutPrefix(dsn, "file:"); ok {
 		// check and replace short form home in a file DSN
-		dsn = "file:" + config.ExpandHome(after)
+		dsn = "file:" + config.ResolveHome(after)
 	}
 	log.Info().Msgf("opening database using DSN `%s`", dsn)
 	db, err = sql.Open(dbtype, dsn)
@@ -816,6 +816,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 		query := cf.GetString(table, filters)
 		log.Trace().Msg(query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
+			log.Error().Err(err).Msgf("creating table %q with query %q", table, query)
 			return
 		}
 	}
@@ -949,7 +950,7 @@ func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName
 // Support for http/https/file and plain paths as well as "~/" prefix to
 // mean home directory.
 func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
-	source = config.ExpandHome(source)
+	source = config.ResolveHome(source)
 	u, err := url.Parse(source)
 	if err != nil {
 		return
@@ -963,7 +964,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	//
 	// first try to parse the value, as it may be embedded PEM,
 	// otherwise try to read it as a file path.
-	if privateKey := config.Get[*config.Plaintext](cf, cf.Join("gdna", "licd-private-key")); !privateKey.IsNil() {
+	if privateKey := config.Get[*config.Secret](cf, cf.Join("gdna", "licd-private-key")); !privateKey.IsNil() {
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
 		if err != nil {
 			privateKeyPath := privateKey.String()
@@ -1166,7 +1167,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 			}
 
 			var tm sql.NullString
-			query := cf.ExpandString(`SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
+			query := config.Expand[string](cf, `SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
 			r1 := tx.QueryRowContext(ctx, query, sourceName)
 			if err := r1.Scan(&tm); err != nil {
 				log.Debug().Err(err).Msgf("no data for query %s (source '%s')", query, sourceName)

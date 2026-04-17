@@ -94,7 +94,7 @@ var migrateCmd = &cobra.Command{
 // parameters and old parameters are cleared.
 func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	var truststorePath, keystorePath string
-	var truststorePassword, keystorePassword *config.Plaintext
+	var truststorePassword, keystorePassword *config.Secret
 
 	resp = responses.NewResponse(i)
 
@@ -123,9 +123,9 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 		}
 
 		truststorePath = ssoConf.GetString(ssoConf.Join("server", "trust_store", "location"))
-		truststorePassword = config.Get[*config.Plaintext](ssoConf, ssoConf.Join("server", "trust_store", "password"))
+		truststorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
 		keystorePath = ssoConf.GetString(ssoConf.Join("server", "key_store", "location"))
-		keystorePassword = config.Get[*config.Plaintext](ssoConf, ssoConf.Join("server", "key_store", "password"))
+		keystorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
 	case i.Type().IsA("webserver"):
 		spPath := instance.Abs(i, "config/security.properties")
 

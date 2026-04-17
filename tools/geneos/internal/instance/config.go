@@ -498,7 +498,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 
 	aliases := i.Type().LegacyParameters
 	root := i.Host().GetString("geneos")
-	cf.SetDefault("name", name)
+	cf.Default("name", name)
 
 	// add a bootstrap for 'root'
 	// data to a template must be renewed each time
@@ -528,7 +528,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 			}
 		}
 		settings[k] = b.String()
-		cf.SetDefault(k, b.String())
+		cf.Default(k, b.String())
 	}
 
 	return

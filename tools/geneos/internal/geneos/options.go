@@ -39,7 +39,7 @@ type packageOptions struct {
 	localOnly    bool
 	nosave       bool
 	override     string
-	password     *config.Plaintext
+	password     *config.Secret
 	platformId   string
 	restart      []Instance
 	start        func(Instance, ...any) error
@@ -69,7 +69,7 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 		cr := config.FindCreds(d.source)
 		if cr != nil {
 			d.username = cr.GetString("username")
-			d.password = config.Get[*config.Plaintext](cr, "password")
+			d.password = config.Get[*config.Secret](cr, "password")
 		}
 	}
 	return
@@ -205,7 +205,7 @@ func Username(username string) PackageOptions {
 }
 
 // Password is the remote access password for downloads
-func Password(password *config.Plaintext) PackageOptions {
+func Password(password *config.Secret) PackageOptions {
 	return func(d *packageOptions) {
 		d.password = password
 	}

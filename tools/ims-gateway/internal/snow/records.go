@@ -94,7 +94,7 @@ func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName 
 		tableName,
 		nil,
 		Fields("sys_id,state"),
-		Query(cf.ExpandString(table.Search, options...)),
+		Query(config.Expand[string](cf, table.Search, options...)),
 	)
 	if err != nil {
 		return

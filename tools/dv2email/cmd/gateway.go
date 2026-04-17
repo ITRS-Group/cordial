@@ -38,10 +38,10 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 	username := config.Get[string](cf, cf.Join("gateway", "username"))
 	gateway := config.Get[string](cf, cf.Join("gateway", "name"))
 
-	password := &config.Plaintext{}
+	password := &config.Secret{}
 
 	if username != "" {
-		password = config.Get[*config.Plaintext](cf, cf.Join("gateway", "password"))
+		password = config.Get[*config.Secret](cf, cf.Join("gateway", "password"))
 	}
 
 	if username == "" {
@@ -53,7 +53,7 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 		}
 		if creds != nil {
 			username = creds.GetString("username")
-			password = config.Get[*config.Plaintext](creds, "password")
+			password = config.Get[*config.Secret](creds, "password")
 		}
 	}
 

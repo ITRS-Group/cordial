@@ -41,7 +41,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 
 	if report.Subreport == "" {
 		// get list of split values (typically gateways)
-		splitquery := cf.ExpandString(report.SplitValues, lookup, config.ExpandNonStringToCSV())
+		splitquery := config.Expand[string](cf, report.SplitValues, lookup, config.ExpandNonStringToCSV())
 		log.Trace().Msgf("query:\n%s", splitquery)
 		rows, err := tx.QueryContext(ctx, splitquery)
 		if err != nil {
@@ -67,7 +67,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			log.Debug().Msgf("report %s disabled for XLSX output, removing any old dataviews", report.Name)
 			for _, p := range split {
 				group := report.Dataview.Group
-				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+				title := config.Expand[string](cf, report.Title, config.LookupTable(map[string]string{
 					"split-column": report.SplitColumn,
 					"value":        p,
 				}), lookup, config.ExpandNonStringToCSV())
@@ -83,7 +83,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			log.Debug().Msgf("report %s disabled for dataview output, removing any old dataviews", report.Name)
 			for _, p := range split {
 				group := report.Dataview.Group
-				title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+				title := config.Expand[string](cf, report.Title, config.LookupTable(map[string]string{
 					"split-column": report.SplitColumn,
 					"value":        p,
 				}), lookup, config.ExpandNonStringToCSV())
@@ -97,7 +97,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 
 		// get possible list of all previous views and remove any not in the
 		// new list
-		previouslist := cf.ExpandString(report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
+		previouslist := config.Expand[string](cf, report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
 		if previouslist != "" {
 			log.Trace().Msgf("query:\n%s", previouslist)
 			rows, err := tx.QueryContext(ctx, previouslist)
@@ -122,7 +122,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 				})
 				for _, p := range previous {
 					group := report.Dataview.Group
-					title := cf.ExpandString(report.Title, config.LookupTable(map[string]string{
+					title := config.Expand[string](cf, report.Title, config.LookupTable(map[string]string{
 						"split-column": report.SplitColumn,
 						"value":        p,
 					}), lookup, config.ExpandNonStringToCSV())
@@ -149,9 +149,9 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			"extension":    r.Extension(),
 		}
 		origname := rep.Title
-		rep.Title = cf.ExpandString(rep.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		rep.Title = config.Expand[string](cf, rep.Title, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		if rep.FilePath != "" {
-			rep.FilePath = cf.ExpandString(rep.FilePath, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+			rep.FilePath = config.Expand[string](cf, rep.FilePath, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		} else {
 			// generate filepath from rep name
 			rep.FilePath = strings.ReplaceAll(rep.Title, " ", "_") + "." + r.Extension()
@@ -168,7 +168,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 		rep.Title = origname
 
-		if query := cf.ExpandString(rep.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
+		if query := config.Expand[string](cf, rep.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
 			names, headlines, err := queryHeadlines(ctx, tx, query)
 			if err != nil {
 				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
@@ -179,7 +179,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 			}
 		}
 
-		query := cf.ExpandString(rep.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
+		query := config.Expand[string](cf, rep.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
 		log.Trace().Msgf("query:\n%s ->\n%s", rep.Query, query)
 		t, err := queryToTable(ctx, tx, rep.Columns, query)
 		if err != nil {

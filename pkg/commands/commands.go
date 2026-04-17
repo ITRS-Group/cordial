@@ -92,7 +92,7 @@ type Connection struct {
 	BaseURL            *url.URL
 	AuthType           int
 	Username           string
-	Password           *config.Plaintext
+	Password           *config.Secret
 	SSO                SSOAuth
 	InsecureSkipVerify bool
 	Timeout            time.Duration
@@ -147,7 +147,7 @@ func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error
 func (c *Connection) Redial() (err error) {
 	// test existing connection, use default func if not overridden
 	ping := func(*Connection) error {
-		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
+		cr, err := c.Do("/liveness", &Command{})
 		if err != nil {
 			return err
 		}

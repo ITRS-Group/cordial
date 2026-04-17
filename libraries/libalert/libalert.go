@@ -237,7 +237,8 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		var contents string
 
 		if conf.IsSet("_TEMPLATE_HTML_FILE") {
-			contents = config.ExpandString("${file:" + config.Get[string](conf, "_TEMPLATE_HTML_FILE") + "}")
+			// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
+			contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_HTML_FILE")+"}")
 			if contents == "" {
 				log.Println("error reading", config.Get[string](conf, "_TEMPLATE_HTML_FILE"))
 				return 1
@@ -254,7 +255,8 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		}
 
 		if conf.IsSet("_TEMPLATE_CSS_FILE") {
-			contents = config.ExpandString("${file:" + config.Get[string](conf, "_TEMPLATE_CSS_FILE") + "}")
+			// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
+			contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_CSS_FILE")+"}")
 			if contents == "" {
 				log.Println("error reading", config.Get[string](conf, "_TEMPLATE_CSS_FILE"))
 				return 1
@@ -408,7 +410,8 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	if conf.IsSet("_TEMPLATE_HTML_FILE") {
 		// Use of HTML template file defined in _TEMPLATE_HTML_FILE
 		useHtmlTmpl = true
-		contents = config.ExpandString("${file:" + conf.GetString("_TEMPLATE_HTML_FILE") + "}")
+		// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
+		contents = config.Expand[string](conf, "${file:"+conf.GetString("_TEMPLATE_HTML_FILE")+"}")
 		if contents == "" {
 			log.Println("ERR: Error reading HTML Template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
 			return 1

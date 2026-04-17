@@ -45,7 +45,7 @@ func TestLoginRequest(t *testing.T) {
 
 func TestLogin(t *testing.T) {
 	// Test Login function with valid credentials
-	password := &config.Plaintext{}
+	password := &config.Secret{}
 	password.Set("testpass")
 
 	icp, err := Login("testuser", password)
@@ -114,7 +114,7 @@ func TestICPStruct(t *testing.T) {
 
 func TestLoginWithOptions(t *testing.T) {
 	// Test Login with custom options
-	password := &config.Plaintext{}
+	password := &config.Secret{}
 	password.Set("testpass")
 
 	icp, err := Login("testuser", password, rest.BaseURLString("https://custom.example.com"))

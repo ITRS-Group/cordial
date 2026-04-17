@@ -301,7 +301,7 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOptions) (
 		case "string":
 			// String        string         `xml:"string,omitempty" json:",omitempty" yaml:",omitempty"`
 			if val, ok := v.Value.(string); ok {
-				vr.String = config.ExpandString(val, options...)
+				vr.String = config.Expand[string](conf, val, options...)
 			}
 		case "stringlist":
 			// StringList    *StringList    `xml:"stringList,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -311,7 +311,7 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOptions) (
 			case []any:
 				for _, j := range val {
 					if s, ok := j.(string); ok {
-						vr.StringList.Strings = append(vr.StringList.Strings, config.ExpandString(s, options...))
+						vr.StringList.Strings = append(vr.StringList.Strings, config.Expand[string](conf, s, options...))
 					}
 				}
 			}

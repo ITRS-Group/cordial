@@ -92,7 +92,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	convertVars(vars)
 	cf.Set("variables", vars)
 
-	if err = cf.SetKeyValues(set.Params...); err != nil {
+	if err = cf.SetKeyValuePairs(set.Params...); err != nil {
 		return
 	}
 
@@ -100,7 +100,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	if err != nil {
 		return
 	}
-	cf.SetKeyValues(secrets...)
+	cf.SetKeyValuePairs(secrets...)
 
 	setSlice(i, set.Attributes, "attributes", func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
@@ -153,10 +153,10 @@ func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (param
 		if s.Ciphertext != "" {
 			continue
 		}
-		if s.Plaintext.IsNil() {
-			log.Fatal().Msg("plaintext is not set")
+		if s.Secret.IsNil() {
+			log.Fatal().Msg("secret is not set")
 		}
-		s.Ciphertext, err = k.Encode(i.Host(), s.Plaintext, true)
+		s.Ciphertext, err = k.Encode(i.Host(), s.Secret, true)
 		if err != nil {
 			return
 		}
@@ -218,7 +218,7 @@ type SecureValues []*SecureValue
 
 type SecureValue struct {
 	Value      string
-	Plaintext  *config.Plaintext
+	Secret     *config.Secret
 	Ciphertext string
 }
 
@@ -227,9 +227,9 @@ func (p *SecureValues) String() string {
 }
 
 // Set a SecureValue. If there is a "=VALUE" part then this is saved in
-// Plaintext, otherwise only the NAME is set. This allows later
-// processing to either encode the Plaintext into Ciphertext or to
-// prompt the user for a plaintext
+// Secret, otherwise only the NAME is set. This allows later
+// processing to either encode the Secret into Ciphertext or to
+// prompt the user for a secret
 func (p *SecureValues) Set(v string) error {
 	if p == nil {
 		return geneos.ErrInvalidArgs
@@ -241,8 +241,8 @@ func (p *SecureValues) Set(v string) error {
 		})
 	} else {
 		*p = append(*p, &SecureValue{
-			Value:     s[0],
-			Plaintext: config.NewPlaintext([]byte(s[1])),
+			Value:  s[0],
+			Secret: config.NewSecret([]byte(s[1])),
 		})
 	}
 	return nil
