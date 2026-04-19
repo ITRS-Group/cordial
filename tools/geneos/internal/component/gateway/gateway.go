@@ -318,11 +318,11 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	var changed bool
 
 	certPath := instance.PathTo(g, cf.Join("tls", "certificate"))
-	if certPath != "" {
+	if certPath == "" {
 		certPath = instance.PathTo(g, "certificate")
 	}
 	keyPath := instance.PathTo(g, cf.Join("tls", "privatekey"))
-	if keyPath != "" {
+	if keyPath == "" {
 		keyPath = instance.PathTo(g, "privatekey")
 	}
 
