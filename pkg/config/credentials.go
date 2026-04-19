@@ -88,7 +88,7 @@ func AddCreds(creds Credentials, options ...FileOptions) (err error) {
 	if err != nil {
 		return
 	}
-	cf.Set(cf.Join("credentials", creds.Domain), creds)
+	Set(cf, cf.Join("credentials", creds.Domain), creds)
 	return cf.Save("credentials", options...)
 }
 
@@ -102,7 +102,7 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	}
 	credmap := Get[map[string]any](cf, "credentials")
 	delete(credmap, domain)
-	cf.Set("credentials", credmap)
+	Set(cf, "credentials", credmap)
 	return cf.Save("credentials", options...)
 }
 
@@ -111,6 +111,6 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 func DeleteAllCreds(options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf := New(options...)
-	cf.Set("credentials", &Credentials{})
+	Set(cf, "credentials", &Credentials{})
 	return cf.Save("credentials", options...)
 }

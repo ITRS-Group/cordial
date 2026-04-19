@@ -90,7 +90,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	// update vars, regardless
 	vars := config.Get[map[string]any](cf, "variables")
 	convertVars(vars)
-	cf.Set("variables", vars)
+	config.Set(cf, "variables", vars)
 
 	if err = cf.SetKeyValuePairs(set.Params...); err != nil {
 		return
@@ -136,7 +136,7 @@ func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
 	for k, v := range items {
 		s[k] = v
 	}
-	i.Config().Set(setting, s)
+	config.Set(i.Config(), setting, s)
 }
 
 // setEncoded takes a slice of SecureValue.
@@ -180,7 +180,7 @@ func setSlice(i geneos.Instance, items []string, setting string, key func(string
 
 	// if there are no existing values just set directly and finish
 	if len(vals) == 0 {
-		cf.Set(setting, items)
+		config.Set(cf, setting, items)
 		changed = true
 		return
 	}
@@ -208,7 +208,7 @@ func setSlice(i geneos.Instance, items []string, setting string, key func(string
 
 	// check old values against map, copy those that do not exist
 
-	cf.Set(setting, newvals)
+	config.Set(cf, setting, newvals)
 	return
 }
 
@@ -510,7 +510,7 @@ func unsetMap(i geneos.Instance, key string, items UnsetValues) {
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
 	}
-	cf.Set(key, x)
+	config.Set(cf, key, x)
 }
 
 func unsetMapHex(i geneos.Instance, key string, items UnsetVars) {
@@ -523,7 +523,7 @@ func unsetMapHex(i geneos.Instance, key string, items UnsetVars) {
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
 	}
-	cf.Set(key, x)
+	config.Set(cf, key, x)
 }
 
 func unsetSlice(i geneos.Instance, key string, items []string, cmp func(string, string) bool) {
@@ -540,7 +540,7 @@ OUTER:
 		}
 		newvals = append(newvals, t)
 	}
-	cf.Set(key, newvals)
+	config.Set(cf, key, newvals)
 }
 
 // unset Var flags take just the key, either a name or a priority for include files

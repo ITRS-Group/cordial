@@ -138,7 +138,7 @@ var reportCmd = &cobra.Command{
 
 		if reportFetch {
 			// use an in-memory database
-			cf.Set("db.dsn", ":memory:")
+			config.Set(cf, cf.Join("db", "dsn"), ":memory:")
 			if outputFormat == "dataview" {
 				// should not use dataview output with ad-hoc reports
 				outputFormat = "csv"

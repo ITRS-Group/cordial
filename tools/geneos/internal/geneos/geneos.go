@@ -126,7 +126,7 @@ func Init(app string) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func LocalRoot() string {
-	return config.GetString(cordial.ExecutableName(), config.DefaultValue(config.GetString("itrshome")))
+	return config.Get[string](config.Global(), cordial.ExecutableName(), config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
 }
 
 // SaveGlobalConfig saves the global configuration (in config.Global)
@@ -152,11 +152,11 @@ func SaveGlobalConfig(name string) error {
 		}
 
 		if v, ok := globalsettings[k]; ok {
-			if config.GetString(k) != v {
-				cf.Set(k, v)
+			if config.Get[string](config.Global(), k) != v {
+				config.Set(cf, k, v)
 			}
 		} else {
-			cf.Set(k, config.GetString(k))
+			config.Set(cf, k, config.Get[string](config.Global(), k))
 		}
 	}
 	return cf.Save(name) // config.SetAppName(cordial.ExecutableName()),

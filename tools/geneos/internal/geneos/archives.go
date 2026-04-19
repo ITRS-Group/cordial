@@ -845,7 +845,8 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 	}
 
-	baseurl := config.GetString(
+	baseurl := config.Get[string](
+		config.Global(),
 		config.Join("download", "nexus", "url"),
 		config.DefaultValue("https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"),
 	)

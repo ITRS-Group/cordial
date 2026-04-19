@@ -82,7 +82,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 
 	// update the instance reference to the ca-bundle, in all cases
 	cf := i.Config()
-	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if err = SaveConfig(i); err != nil {
 		return

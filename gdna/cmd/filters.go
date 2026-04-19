@@ -209,7 +209,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 			filters = append(filters, f)
 		}
 	}
-	ig.Set(config.Join("filters", filterType, category), filters)
+	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
 	ig.Save(filterBase,
@@ -310,7 +310,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 		}
 		return false
 	})
-	ig.Set(config.Join("filters", filterType, category), filters)
+	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
 	ig.Save(filterBase,

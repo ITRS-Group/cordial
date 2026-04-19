@@ -168,7 +168,7 @@ func factory(name string) (san geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", san)
 	}
 	// set the home dir based on where it might be, default to one above
-	san.Config().Set("home", instance.Home(san))
+	config.Set(san.Config(), "home", instance.Home(san))
 	instances.Store(h.FullName(local), san)
 
 	return
@@ -232,19 +232,19 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	cf.Set("port", port)
-	cf.Set(cf.Join("config", "rebuild"), "always")
-	cf.Set(cf.Join("config", "template"), s.Host().PathTo(s.Type(), "templates", templateName))
+	config.Set(cf, "port", port)
+	config.Set(cf, cf.Join("config", "rebuild"), "always")
+	config.Set(cf, cf.Join("config", "template"), s.Host().PathTo(s.Type(), "templates", templateName))
 
 	if template != "" {
 		filenames, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
-		cf.Set(cf.Join("config", "template"), filenames[0])
+		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
-	cf.Set("types", []string{})
-	cf.Set("attributes", make(map[string]string))
-	cf.Set("variables", make(map[string]string))
-	cf.Set("gateways", make(map[string]string))
+	config.Set(cf, "types", []string{})
+	config.Set(cf, "attributes", make(map[string]string))
+	config.Set(cf, "variables", make(map[string]string))
+	config.Set(cf, "gateways", make(map[string]string))
 
 	if err = instance.SaveConfig(s); err != nil {
 		return
@@ -297,7 +297,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		gws[gw] = port
 	}
 	if changed {
-		cf.Set("gateways", gws)
+		config.Set(cf, "gateways", gws)
 		if err = instance.SaveConfig(s); err != nil {
 			return err
 		}

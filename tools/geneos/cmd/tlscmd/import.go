@@ -179,7 +179,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	if resp.Err != nil {
 		return
 	}
-	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if updated {
 		resp.Details = append(resp.Details, fmt.Sprintf("%s ca-bundle updated", i))

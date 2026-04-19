@@ -23,6 +23,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -88,7 +89,7 @@ geneos unset san -g Gateway1
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
 					if cf.IsSet(k) {
-						cf.Set(k, "")
+						config.Set(cf, k, "")
 						changed = true
 					}
 				}

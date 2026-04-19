@@ -111,15 +111,15 @@ var setCmd = &cobra.Command{
 				}
 				s := strings.SplitN(set, "=", 2)
 				k, v := s[0], s[1]
-				h.Set(k, v)
+				config.Set(h.Config, k, v)
 			}
 
 			if password != "" {
-				h.Set("password", password)
+				config.Set(h.Config, "password", password)
 			}
 
 			if len(setCmdPrivateKeyfiles) > 0 {
-				h.Set("privatekeys", append(config.Get[[]string](h.Config, "privatekeys"), setCmdPrivateKeyfiles...))
+				config.Set(h.Config, "privatekeys", append(config.Get[[]string](h.Config, "privatekeys"), setCmdPrivateKeyfiles...))
 			}
 		}
 

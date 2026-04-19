@@ -160,7 +160,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 				return
 			}
 			// flag an update has happened, force reload of file sources later on, which then clears it
-			cf.Set("db.updated", true)
+			config.Set(cf, "db.updated", true)
 			log.Debug().Msgf("completed update to version %d", i)
 		} else {
 			log.Debug().Msgf("update %d not required", i)

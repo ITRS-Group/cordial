@@ -65,7 +65,7 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 	// make the underlying keyfile path independent of the instance home
 	// path
 	k := strings.Replace(string(keyfile), Home(i), "${config:home}", 1)
-	i.Config().Set("keyfile", k)
+	config.Set(i.Config(), "keyfile", k)
 
 	err = SaveConfig(i)
 	return
@@ -86,7 +86,7 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 	// if existing keyfile is in a shared keyfile folder do not backup
 	// and write new keyfile in instance folder
 	if path.Dir(kp) == i.Type().Shared(i.Host(), "keyfiles") {
-		i.Config().Set("prevkeyfile", kp)
+		config.Set(i.Config(), "prevkeyfile", kp)
 		return WriteAESKeyFile(i, nkv)
 	}
 
@@ -100,7 +100,7 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 		if err = i.Host().Rename(kp, bkp); err != nil {
 			return "", 0, err
 		}
-		i.Config().Set("prevkeyfile", bkp)
+		config.Set(i.Config(), "prevkeyfile", bkp)
 		// fallthrough
 	}
 

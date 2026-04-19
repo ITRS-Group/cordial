@@ -132,7 +132,7 @@ func factory(name string) (webserver geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", webserver)
 	}
 	// set the home dir based on where it might be, default to one above
-	webserver.Config().Set("home", instance.Home(webserver))
+	config.Set(webserver.Config(), "home", instance.Home(webserver))
 	instances.Store(h.FullName(local), webserver)
 
 	return
@@ -206,7 +206,7 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	w.Config().Set("port", port)
+	config.Set(w.Config(), "port", port)
 	if err = instance.SaveConfig(w); err != nil {
 		return
 	}

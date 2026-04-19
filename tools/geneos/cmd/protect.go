@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"os"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -70,7 +71,7 @@ var protectCmd = &cobra.Command{
 				panic("wrong param")
 			}
 
-			cf.Set("protected", protect)
+			config.Set(cf, "protected", protect)
 
 			if cf.ConfigType() == "rc" {
 				respM := instance.Migrate(i)

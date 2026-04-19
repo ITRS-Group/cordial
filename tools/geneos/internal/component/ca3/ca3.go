@@ -140,7 +140,7 @@ func factory(name string) (ca3 geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ca3)
 	}
 	// set the home dir based on where it might be, default to one above
-	ca3.Config().Set("home", instance.Home(ca3))
+	config.Set(ca3.Config(), "home", instance.Home(ca3))
 	instances.Store(h.FullName(local), ca3)
 
 	return
@@ -203,7 +203,7 @@ func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	}
 
 	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
-	n.Config().Set("port", port)
+	config.Set(n.Config(), "port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
 		return

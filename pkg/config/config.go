@@ -187,13 +187,6 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	set(c, key, value, options...)
 }
 
-// Set sets the key to value in the config structure c
-func (c *Config) Set(key string, value any) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	set(c, key, value)
-}
-
 //
 // Get functions
 //
@@ -228,14 +221,6 @@ func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[T](c, key, options...)
-}
-
-// GetString functions like [viper.GetString] but additionally calls
-// [ExpandString] with the configuration value, passing any "values" maps
-func GetString(s string, options ...ExpandOptions) string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return get[string](global, s, options...)
 }
 
 // GetString functions like [viper.GetString] on a Config instance, but

@@ -275,7 +275,7 @@ func showInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	for _, k := range i.Config().AllKeys() {
 		// skip any names in the alias table
 		if _, ok := aliases[k]; !ok {
-			nv.Set(k, config.Get[any](i.Config(), k))
+			config.Set(nv, k, config.Get[any](i.Config(), k))
 		}
 	}
 

@@ -265,19 +265,19 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	// update instance parameters to new layout
 	if pk := cf.GetString("privatekey"); pk != "" {
 		// this may have already been done above in webserver/sso-agent
-		cf.Set("privatekey", "")
-		cf.Set(cf.Join("tls", "privatekey"), pk)
+		config.Set(cf, "privatekey", "")
+		config.Set(cf, cf.Join("tls", "privatekey"), pk)
 	}
-	cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if cf.IsSet("use-chain") && !config.Get[bool](cf, "use-chain") {
-		cf.Set(cf.Join("tls", "verify"), false)
+		config.Set(cf, cf.Join("tls", "verify"), false)
 	}
 
-	cf.Set("certchain", "")
-	cf.Set("use-chain", "")
-	cf.Set("truststore", "")
-	cf.Set("truststore-password", "")
+	config.Set(cf, "certchain", "")
+	config.Set(cf, "use-chain", "")
+	config.Set(cf, "truststore", "")
+	config.Set(cf, "truststore-password", "")
 
 	if err = instance.SaveConfig(i); err != nil {
 		resp.Err = err

@@ -112,7 +112,7 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 		if opts.ignoreEmptyValues && isZero(v) {
 			continue
 		}
-		nv.Set(k, v)
+		Set(nv, k, v)
 	}
 	c.mutex.RUnlock()
 
@@ -134,12 +134,6 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	}
 
 	return
-}
-
-// Save writes the global configuration to a configuration file defined
-// by the component name and options
-func Save(name string, options ...FileOptions) (err error) {
-	return global.Save(name, options...)
 }
 
 // SaveTo writes the configuration to the provided writer. The name and
@@ -174,9 +168,9 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 			log.Debug().Msgf("expanding key: %s", k)
 			// test setting numbers
 			s := expand[string](c, c.GetString(k, opts.expandOptions...))
-			nv.Set(k, s)
+			Set(nv, k, s)
 		} else {
-			nv.Set(k, v)
+			Set(nv, k, v)
 		}
 	}
 	c.mutex.RUnlock()

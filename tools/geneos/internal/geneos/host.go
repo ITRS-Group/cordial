@@ -107,14 +107,14 @@ func NewHost(name string, options ...any) (h *Host) {
 		if LOCAL != nil {
 			return LOCAL
 		}
-		h.Set("name", LOCALHOST)
-		h.Set("hostname", LOCALHOST)
+		config.Set(h.Config, "name", LOCALHOST)
+		config.Set(h.Config, "hostname", LOCALHOST)
 		h.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
 		}
-		h.Set("name", ALLHOSTS)
+		config.Set(h.Config, "name", ALLHOSTS)
 	default:
 		r, ok := hosts.Load(name)
 		if ok {
@@ -130,15 +130,15 @@ func NewHost(name string, options ...any) (h *Host) {
 			hidden: false,
 			loaded: false,
 		}
-		h.Set("name", name)
+		config.Set(h.Config, "name", name)
 		hosts.Store(name, h)
 	}
 
 	if os, arch, err := h.Uname(); err == nil {
-		h.Set("os", os)
-		h.Set("arch", arch)
+		config.Set(h.Config, "os", os)
+		config.Set(h.Config, "arch", arch)
 	}
-	h.Set(cordial.ExecutableName(), config.GetString(cordial.ExecutableName(), config.DefaultValue(config.GetString("itrshome"))))
+	config.Set(h.Config, cordial.ExecutableName(), config.Get[string](config.Global(), cordial.ExecutableName(), config.DefaultValue(config.Get[string](config.Global(), "itrshome"))))
 	return
 }
 
@@ -206,7 +206,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 	serverVersion := h.ServerVersion()
 	if h.IsLocal() {
 		home, _ := config.UserHomeDir()
-		h.Set("homedir", home)
+		config.Set(h.Config, "homedir", home)
 	}
 
 	if strings.Contains(strings.ToLower(serverVersion), "windows") {
@@ -252,7 +252,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				dir := strings.TrimSpace(string(output))
 				// tmp fix for ssh to windows
 				dir = strings.Trim(dir, `"`)
-				h.Set("homedir", dir)
+				config.Set(h.Config, "homedir", dir)
 			}
 		}
 	} else {
@@ -284,7 +284,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				return err
 			}
 			dir = strings.TrimSpace(string(dir))
-			h.Set("homedir", dir)
+			config.Set(h.Config, "homedir", dir)
 		}
 	}
 	config.Set(h.Config, "osinfo", osinfo)
@@ -496,7 +496,7 @@ func SaveHostConfig() error {
 		name := k.(string)
 		switch v := v.(type) {
 		case *Host:
-			n.Set(n.Join("hosts", name), v.AllSettings())
+			config.Set(n, n.Join("hosts", name), v.AllSettings())
 		}
 		return true
 	})

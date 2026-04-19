@@ -73,9 +73,10 @@ geneos config set geneos="/opt/geneos"
 		// fix breaking change
 		if cf.IsSet("itrshome") {
 			if !cf.IsSet("geneos") {
-				cf.Set("geneos", cf.GetString("itrshome"))
+				config.Set(cf, "geneos", cf.GetString("itrshome"))
 			}
-			cf.Set("itrshome", nil)
+			// TODO: not sure if this will work
+			config.Set[any](cf, "itrshome", nil)
 		}
 
 		log.Debug().Msgf("save config %q", cordial.ExecutableName())

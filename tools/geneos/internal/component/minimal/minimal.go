@@ -135,7 +135,7 @@ func factory(name string) (minimal geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", minimal)
 	}
 	// set the home dir based on where it might be, default to one above
-	minimal.Config().Set("home", instance.Home(minimal))
+	config.Set(minimal.Config(), "home", instance.Home(minimal))
 	instances.Store(instance.ShortName(minimal), minimal)
 
 	return
@@ -196,7 +196,7 @@ func (n *Minimals) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	n.Config().Set("port", port)
+	config.Set(n.Config(), "port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
 		return

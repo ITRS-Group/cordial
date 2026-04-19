@@ -41,12 +41,12 @@ func Clean(i geneos.Instance, full bool) (err error) {
 
 	ct := i.Type()
 
-	cleanlist := filepath.SplitList(config.GetString(ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])))
+	cleanlist := filepath.SplitList(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])))
 	if geneos.RootComponent.CleanList != "" {
 		cleanlist = append(cleanlist, filepath.SplitList(geneos.RootComponent.CleanList)...)
 	}
 
-	purgelist := filepath.SplitList(config.GetString(ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])))
+	purgelist := filepath.SplitList(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])))
 	if geneos.RootComponent.PurgeList != "" {
 		purgelist = append(purgelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 	}

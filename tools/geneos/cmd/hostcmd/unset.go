@@ -112,7 +112,7 @@ geneos host unset rem2 -i /path/to/id_rsa
 					}
 					return false
 				})
-				h.Set("privatekeys", keys)
+				config.Set(h.Config, "privatekeys", keys)
 			}
 		}
 

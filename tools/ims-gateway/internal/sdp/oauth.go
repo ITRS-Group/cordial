@@ -110,21 +110,21 @@ func saveToken(token *oauth2.Token) (err error) {
 	pf := config.New()
 
 	// encrypt this token when stored
-	pf.Set(pf.Join("token", "token_type"), "Zoho-oauthtoken")
-	pf.Set(pf.Join("token", "expiry"), token.Expiry.Format(time.RFC3339))
-	pf.Set(pf.Join("token", "expires_in"), token.ExpiresIn)
+	config.Set(pf, pf.Join("token", "token_type"), "Zoho-oauthtoken")
+	config.Set(pf, pf.Join("token", "expiry"), token.Expiry.Format(time.RFC3339))
+	config.Set(pf, pf.Join("token", "expires_in"), token.ExpiresIn)
 
 	at, err := DefaultUserKeyfile.EncodeString(host.Localhost, token.AccessToken, true)
 	if err != nil {
 		return err
 	}
-	pf.Set(pf.Join("token", "access_token"), at)
+	config.Set(pf, pf.Join("token", "access_token"), at)
 
 	rt, err := DefaultUserKeyfile.EncodeString(host.Localhost, token.RefreshToken, true)
 	if err != nil {
 		return err
 	}
-	pf.Set(pf.Join("token", "refresh_token"), rt)
+	config.Set(pf, pf.Join("token", "refresh_token"), rt)
 
 	return pf.Save("sdp.token",
 		config.SetAppName("geneos"),

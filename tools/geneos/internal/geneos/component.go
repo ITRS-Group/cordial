@@ -25,10 +25,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-
-	"github.com/rs/zerolog/log"
 )
 
 // initDirs is a map of component type name to a slice of directories to create

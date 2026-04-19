@@ -18,6 +18,7 @@ limitations under the License.
 package main
 
 import "C"
+
 import (
 	"bytes"
 	_ "embed"
@@ -551,9 +552,9 @@ func parseArgs(n C.int, args **C.char) (conf *config.Config) {
 	for _, s := range unsafe.Slice(args, n) {
 		t := strings.SplitN(C.GoString(s), "=", 2)
 		if len(t) > 1 {
-			conf.Set(t[0], t[1])
+			config.Set(conf, t[0], t[1])
 		} else {
-			conf.Set(t[0], "")
+			config.Set(conf, t[0], "")
 		}
 	}
 	return conf

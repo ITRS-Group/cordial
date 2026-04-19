@@ -71,7 +71,7 @@ var unsetCmd = &cobra.Command{
 					continue OUTER
 				}
 			}
-			new.Set(k, config.Get[any](orig, k))
+			config.Set(new, k, config.Get[any](orig, k))
 		}
 
 		if changed {

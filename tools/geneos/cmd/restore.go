@@ -545,7 +545,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	}
 
 	// update name in case this is a rename
-	cf.Set("name", i)
+	config.Set(cf, "name", i)
 
 	oldHome := cf.GetString("home")
 	newHome := instanceDir
@@ -567,7 +567,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 			ports := instance.GetAllPorts(h)
 			if ports[config.Get[uint16](cf, k)] {
 				// port already in use, get the next one
-				cf.Set(k, instance.NextFreePort(h, ct))
+				config.Set(cf, k, instance.NextFreePort(h, ct))
 			}
 		default:
 			if vs, ok := v.(string); ok {
@@ -586,7 +586,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 					vs = strings.Replace(vs, oldShared, newShared, 1)
 				}
 
-				cf.Set(k, vs)
+				config.Set(cf, k, vs)
 			}
 		}
 	}
@@ -607,7 +607,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 			libpaths = append(libpaths, p)
 		}
 	}
-	cf.Set("libpaths", strings.Join(libpaths, ":"))
+	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
 
 	if err = cf.Save(ct.String(),
 		config.Host(h),

@@ -149,7 +149,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	ncf.MergeConfigMap(src.Config().AllSettings())
 	// set the port to zero so that subsequent test for valid ports
 	// doesn't match this one
-	ncf.Set("port", 0)
+	config.Set(ncf, "port", 0)
 
 	// set override parameters here
 	ncf.SetKeyValuePairs(opts.params...)
@@ -179,16 +179,16 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// XXX update *Home manually, as it's not just the prefix
-	ncf.Set("home", path.Join(dst.Type().InstancesDir(dHost), dName))
+	config.Set(ncf, "home", path.Join(dst.Type().InstancesDir(dHost), dName))
 
 	// only set a new port if not set through command line parameters
 	if config.Get[int](ncf, "port") == 0 {
 		if src.Host() == dHost {
 			if !opts.move {
 				dPort := NextFreePort(dHost, dst.Type())
-				ncf.Set("port", dPort)
+				config.Set(ncf, "port", dPort)
 			} else {
-				ncf.Set("port", config.Get[uint16](src.Config(), "port"))
+				config.Set(ncf, "port", config.Get[uint16](src.Config(), "port"))
 			}
 		} else {
 			sPort := config.Get[uint16](src.Config(), "port")
@@ -196,9 +196,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			if _, ok := dPortsInUse[sPort]; ok {
 				log.Debug().Msgf("found port in use: %d", sPort)
 				dPort := NextFreePort(dHost, dst.Type())
-				ncf.Set("port", dPort)
+				config.Set(ncf, "port", dPort)
 			} else {
-				ncf.Set("port", config.Get[uint16](src.Config(), "port"))
+				config.Set(ncf, "port", config.Get[uint16](src.Config(), "port"))
 			}
 		}
 	}
@@ -206,7 +206,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	// update any component name only if the same as the instance name
 	log.Debug().Msgf("src name: %s, setting dst to %s", config.Get[string](src.Config(), "name"), destination)
 	// _, _, newname := Decompose(destination, geneos.LOCAL)
-	ncf.Set("name", dName)
+	config.Set(ncf, "name", dName)
 
 	// fix-up any other config changes here
 	//

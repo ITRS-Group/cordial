@@ -41,7 +41,7 @@ import (
 // ConfigFileType returns the configuration file extension, defaulting
 // to "json" if not set.
 func ConfigFileType() (conftype string) {
-	conftype = config.GetString("configtype")
+	conftype = config.Get[string](config.Global(), "configtype")
 	if conftype == "" {
 		conftype = "json"
 	}
@@ -96,7 +96,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 
 	// override the home from the config file and use the directory the
 	// config was found in
-	i.Config().Set("home", home)
+	config.Set(i.Config(), "home", home)
 
 	used := config.Path(i.Type().Name,
 		config.Host(h),
@@ -177,9 +177,9 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 		v := rcf.GetString(k)
 		if k == "binsuffix" || strings.HasPrefix(k, prefix) {
 			if nk, ok := aliases[k]; ok {
-				cf.Set(nk, v)
+				config.Set(cf, nk, v)
 			} else {
-				cf.Set(k, v)
+				config.Set(cf, k, v)
 			}
 		} else {
 			// set env var
@@ -188,7 +188,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 	}
 
 	if len(env) > 0 {
-		cf.Set("env", env)
+		config.Set(cf, "env", env)
 	}
 
 	// label the type as an "rc" to make it easy to check later
@@ -374,7 +374,8 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	minTLS := cf.GetString(
 		cf.Join("tls", "minimumversion"),
 		config.DefaultValue(
-			config.GetString(
+			config.Get[string](
+				config.Global(),
 				config.Join("tls", "minimumversion"),
 				config.DefaultValue("1.2"),
 			),

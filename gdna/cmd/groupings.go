@@ -179,7 +179,7 @@ var addGroupCmd = &cobra.Command{
 			groups[i] = g
 		}
 
-		ig.Set(config.Join("filters", "group", category), groups)
+		config.Set(ig, ig.Join("filters", "group", category), groups)
 
 		// update allocation if given
 		if addGroupAllocation > -1 {
@@ -223,7 +223,7 @@ var addGroupCmd = &cobra.Command{
 				allocations[i] = a
 			}
 
-			ig.Set(config.Join("filters", "allocations", category), allocations)
+			config.Set(ig, ig.Join("filters", "allocations", category), allocations)
 		}
 
 		// always save the result back
@@ -337,7 +337,7 @@ var removeGroupCmd = &cobra.Command{
 		})
 		log.Debug().Msgf("groups: %#v", groups)
 
-		ig.Set(config.Join("filters", "group", category), groups)
+		config.Set(ig, ig.Join("filters", "group", category), groups)
 
 		// always save the result back
 		ig.Save(filterBase,

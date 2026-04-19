@@ -153,7 +153,7 @@ func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 // not concurrency safe at this time
 func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 	log.Debug().Msgf("looking for %s, default %s", ct.PortRange, ct.ConfigAliases[ct.PortRange])
-	from := config.GetString(ct.PortRange, config.DefaultValue(ct.ConfigAliases[ct.PortRange]))
+	from := config.Get[string](config.Global(), ct.PortRange, config.DefaultValue(ct.ConfigAliases[ct.PortRange]))
 	used := GetAllPorts(h)
 	for p := range strings.SplitSeq(from, ",") {
 		// split on dash or ".."

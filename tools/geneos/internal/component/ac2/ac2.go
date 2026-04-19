@@ -123,7 +123,7 @@ func factory(name string) (ac2 geneos.Instance) {
 	}
 
 	// set the home dir based on where it might be, default to one above
-	ac2.Config().Set("home", instance.Home(ac2))
+	config.Set(ac2.Config(), "home", instance.Home(ac2))
 	instances.Store(h.FullName(local), ac2)
 
 	return
@@ -186,7 +186,7 @@ func (n *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	n.Config().Set("port", port)
+	config.Set(n.Config(), "port", port)
 
 	if err = instance.SaveConfig(n); err != nil {
 		return

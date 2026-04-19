@@ -135,7 +135,7 @@ func factory(name string) (ssoagent geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", ssoagent)
 	}
 	// set the home dir based on where it might be, default to one above
-	ssoagent.Config().Set("home", instance.Home(ssoagent))
+	config.Set(ssoagent.Config(), "home", instance.Home(ssoagent))
 	instances.Store(h.FullName(local), ssoagent)
 
 	return
@@ -208,7 +208,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	s.Config().Set("port", port)
+	config.Set(s.Config(), "port", port)
 	if err = instance.SaveConfig(s); err != nil {
 		return
 	}

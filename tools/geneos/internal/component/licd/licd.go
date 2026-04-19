@@ -125,7 +125,7 @@ func factory(name string) (licd geneos.Instance) {
 		log.Fatal().Err(err).Msgf("%s setDefaults()", licd)
 	}
 	// set the home dir based on where it might be, default to one above
-	licd.Config().Set("home", instance.Home(licd))
+	config.Set(licd.Config(), "home", instance.Home(licd))
 	instances.Store(h.FullName(local), licd)
 
 	return
@@ -186,7 +186,7 @@ func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	l.Config().Set("port", port)
+	config.Set(l.Config(), "port", port)
 
 	if err = instance.SaveConfig(l); err != nil {
 		log.Fatal().Err(err).Msg("")

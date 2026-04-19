@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/commands"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xpath"
 )
 
@@ -53,7 +54,7 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	for _, e := range os.Environ() {
 		n := strings.SplitN(e, "=", 2)
 		data.Env[n[0]] = n[1]
-		cf.Set(n[0], n[1])
+		config.Set(cf, n[0], n[1])
 	}
 
 	varpath := cf.GetString("_variablepath")

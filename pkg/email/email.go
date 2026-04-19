@@ -239,21 +239,21 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 
 	for _, e := range os.Environ() {
 		n := strings.SplitN(e, "=", 2)
-		em.Set(n[0], n[1])
+		config.Set(em, n[0], n[1])
 	}
 
 	// override with args
 	if toArg != "" {
-		em.Set("_to", toArg)
+		config.Set(em, "_to", toArg)
 	}
 	if ccArg != "" {
-		em.Set("_cc", ccArg)
+		config.Set(em, "_cc", ccArg)
 	}
 	if bccArg != "" {
-		em.Set("_bcc", bccArg)
+		config.Set(em, "_bcc", bccArg)
 	}
 	if subjectArg != "" {
-		em.Set("_subject", subjectArg)
+		config.Set(em, "_subject", subjectArg)
 	}
 
 	return

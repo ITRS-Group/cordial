@@ -188,7 +188,7 @@ func factory(name string) (gateway geneos.Instance) {
 	}
 
 	// set the home dir based on where it might be, default to one above
-	gateway.Config().Set("home", instance.Home(gateway))
+	config.Set(gateway.Config(), "home", instance.Home(gateway))
 	instances.Store(h.FullName(local), gateway)
 
 	return
@@ -251,16 +251,16 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	cf.Set("port", port)
-	cf.Set(cf.Join("config", "rebuild"), "initial")
+	config.Set(cf, "port", port)
+	config.Set(cf, cf.Join("config", "rebuild"), "initial")
 
 	cf.Default(cf.Join("config", "template"), templateName)
 	if template != "" {
 		filenames, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
-		cf.Set(cf.Join("config", "template"), filenames[0])
+		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
-	cf.Set("includes", make(map[int]string))
+	config.Set(cf, "includes", make(map[int]string))
 
 	// try to save config early
 	if err = instance.SaveConfig(g); err != nil {
@@ -281,7 +281,7 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	if instance.CompareVersion(g, "5.14.0") >= 0 {
 		// use keyfiles
 		log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-		cf.Set("usekeyfile", "true")
+		config.Set(cf, "usekeyfile", "true")
 	}
 
 	return nil
@@ -331,10 +331,10 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 	// if we have certs then connect to Licd securely
 	if secure && cf.GetString("licdsecure") != "true" {
-		cf.Set("licdsecure", "true")
+		config.Set(cf, "licdsecure", "true")
 		changed = true
 	} else if !secure && cf.GetString("licdsecure") == "true" {
-		cf.Set("licdsecure", "false")
+		config.Set(cf, "licdsecure", "false")
 		changed = true
 	}
 
@@ -346,16 +346,16 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 	if secure && config.Get[uint16](cf, "port") == 7039 {
 		if _, ok := ports[7038]; !ok {
-			cf.Set("port", 7038)
+			config.Set[uint16](cf, "port", 7038)
 		} else {
-			cf.Set("port", nextport)
+			config.Set(cf, "port", nextport)
 		}
 		changed = true
 	} else if !secure && config.Get[uint16](cf, "port") == 7038 {
 		if _, ok := ports[7039]; !ok {
-			cf.Set("port", 7039)
+			config.Set[uint16](cf, "port", 7039)
 		} else {
-			cf.Set("port", nextport)
+			config.Set(cf, "port", nextport)
 		}
 		changed = true
 	}

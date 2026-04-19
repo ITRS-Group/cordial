@@ -361,7 +361,7 @@ var deployCmd = &cobra.Command{
 			if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
 				return err
 			}
-			cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+			config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
 
 			if updated {
 				fmt.Printf("%s ca-bundle updated\n", i)
@@ -378,7 +378,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		if deployCmdBase != "active_prod" {
-			cf.Set("version", deployCmdBase)
+			config.Set(cf, "version", deployCmdBase)
 		}
 
 		if ct.IsA("gateway") && (deployCmdKeyfile != "" || deployCmdKeyfileCRC != "") {
@@ -387,12 +387,12 @@ var deployCmd = &cobra.Command{
 			if err != nil {
 				log.Error().Err(err).Msg("cannot import keyfile, ignoring")
 			} else {
-				cf.Set("keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
+				config.Set(cf, "keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
 				// set usekeyfile for all new instances 5.14 and above
 				if instance.CompareVersion(i, "5.14.0") >= 0 {
 					// use keyfiles
 					log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-					cf.Set("usekeyfile", "true")
+					config.Set(cf, "usekeyfile", "true")
 				}
 			}
 		}
@@ -400,7 +400,7 @@ var deployCmd = &cobra.Command{
 		instance.SetInstanceValues(i, deployCmdExtras, "")
 		cf.SetKeyValuePairs(params...)
 		// update home so save is correct
-		cf.Set("home", instance.Home(i))
+		config.Set(cf, "home", instance.Home(i))
 
 		if err = instance.SaveConfig(i); err != nil {
 			return

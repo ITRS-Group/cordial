@@ -211,7 +211,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 		// always set the ca-bundle path, updated or not
 		log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
-		cf.Set(cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+		config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
 
 		if err = instance.SaveConfig(i); err != nil {
 			return
@@ -224,7 +224,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	}
 
 	if addCmdBase != "active_prod" {
-		cf.Set("version", addCmdBase)
+		config.Set(cf, "version", addCmdBase)
 	}
 
 	if ct.IsA("gateway") {
@@ -242,14 +242,14 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		}
 
 		if sharedPath != "" {
-			cf.Set("keyfile", sharedPath)
+			config.Set(cf, "keyfile", sharedPath)
 			fmt.Printf("%s: keyfile written to %s", i, sharedPath)
 
 			// set usekeyfile for all new instances 5.14 and above
 			if instance.CompareVersion(i, "5.14.0") >= 0 {
 				// use keyfiles
 				log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
-				cf.Set("usekeyfile", "true")
+				config.Set(cf, "usekeyfile", "true")
 			}
 		}
 	}

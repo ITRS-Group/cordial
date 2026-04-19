@@ -144,7 +144,7 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Respon
 			resp.Err = err
 			return
 		}
-		i.Config().Set("keyfile", keyfile)
+		config.Set(i.Config(), "keyfile", keyfile)
 		resp.Summary = fmt.Sprintf("keyfile %s written", keyfile)
 	}
 	return
@@ -175,16 +175,16 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.
 			if p == kp {
 				resp.Summary = fmt.Sprintf("new and existing keyfile have same CRC. Not updating")
 			} else {
-				cf.Set("keyfile", kp)
-				cf.Set("prevkeyfile", p)
+				config.Set(cf, "keyfile", kp)
+				config.Set(cf, "prevkeyfile", p)
 				resp.Summary = fmt.Sprintf("keyfile %s set, existing keyfile moved to prevkeyfile", crc)
 			}
 		} else {
-			cf.Set("keyfile", kp)
+			config.Set(cf, "keyfile", kp)
 			resp.Summary = fmt.Sprintf("keyfile %s set", crc)
 		}
 	} else {
-		cf.Set("keyfile", kp)
+		config.Set(cf, "keyfile", kp)
 		resp.Summary = fmt.Sprintf("keyfile %s set", crc)
 	}
 

@@ -161,7 +161,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 			if len(password) > 0 {
 				// this is the encoded password for the config file, not an enclave
-				cf.Set("password", password)
+				config.Set(cf, "password", password)
 			}
 		}
 
@@ -175,19 +175,19 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		// now disassemble URL
 		if sshurl.Hostname() == "" {
-			cf.Set("hostname", cf.GetString("name"))
+			config.Set(cf, "hostname", cf.GetString("name"))
 		}
 
 		if sshurl.Port() != "" {
-			cf.Set("port", sshurl.Port())
+			config.Set(cf, "port", sshurl.Port())
 		}
 
 		if sshurl.User.Username() != "" {
-			cf.Set("username", sshurl.User.Username())
+			config.Set(cf, "username", sshurl.User.Username())
 		}
 
 		if len(addCmdPrivateKeyfiles) > 0 {
-			cf.Set("privatekeys", []string(addCmdPrivateKeyfiles))
+			config.Set(cf, "privatekeys", []string(addCmdPrivateKeyfiles))
 		}
 
 		h := geneos.NewHost(name,
@@ -220,7 +220,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		//   * if the OS on the remote is different convert the path separators
 		//   * use the user home dir with optional subdir if the last component is not the same
 		if sshurl.Path != "" {
-			h.Set(cordial.ExecutableName(), sshurl.Path)
+			config.Set(h.Config, cordial.ExecutableName(), sshurl.Path)
 		} else {
 			geneosdir := h.GetString("homedir")
 			if path.Base(geneosdir) != cordial.ExecutableName() {
@@ -229,7 +229,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			if runtime.GOOS == "windows" {
 				geneosdir = filepath.ToSlash(geneosdir)
 			}
-			h.Set(cordial.ExecutableName(), geneosdir)
+			config.Set(h.Config, cordial.ExecutableName(), geneosdir)
 		}
 
 		// mark the host as valid at this point
