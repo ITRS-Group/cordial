@@ -168,14 +168,14 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 
 	cf := cs.conf
 
-	if !cf.IsSet("server.config-path") {
+	if !cf.IsSet(cf.Join("server", "config-path")) {
 		log.Fatal().Msg("no configuration path (`server.config-path`) set, exiting")
 	}
 
 	e.GET(config.Get[string](cf, "server.config-path")+"/:hostname", cs.ServeConfig)
 	e.GET(config.Get[string](cf, "server.config-path")+"/:hostname/:type", cs.ServeConfig)
 
-	if cf.IsSet("server.connections-path") {
+	if cf.IsSet(cf.Join("server", "connections-path")) {
 		e.GET(config.Get[string](cf, "server.connections-path"), cs.ServeConnection)
 	}
 

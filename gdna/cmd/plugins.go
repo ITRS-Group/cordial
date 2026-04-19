@@ -28,8 +28,7 @@ import (
 
 func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
 	for pluginTable := range config.Get[map[string]any](cf, "plugins") {
-		if cf.IsSet(cf.Join("plugins", pluginTable, "plugins")) {
-			table := config.Get[string](cf, cf.Join("plugins", pluginTable, "table"))
+		if table, ok := config.Lookup[string](cf, cf.Join("plugins", pluginTable, "table")); ok {
 			var stmt *sql.Stmt
 			if stmt, err = tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q VALUES (?);", table)); err != nil {
 				return
@@ -37,8 +36,7 @@ func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err e
 			if _, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %q", table)); err != nil {
 				return
 			}
-			plugins := config.Get[[]string](cf, config.Join("plugins", pluginTable, "plugins"))
-			for _, p := range plugins {
+			for _, p := range config.Get[[]string](cf, config.Join("plugins", pluginTable, "plugins")) {
 				if _, err = stmt.ExecContext(ctx, p); err != nil {
 					log.Error().Err(err).Msg("insert failed")
 					return

@@ -157,10 +157,11 @@ func Home(i geneos.Instance) (home string) {
 	ct := i.Type()
 	h := i.Host()
 
+	var ok bool
+
 	// can't use c.Home() as this function is called from there!
-	if i.Config().IsSet("home") {
-		home = config.Get[string](i.Config(), "home")
-		if d, err := h.Stat(home); err == nil && d.IsDir() {
+	if home, ok = config.Lookup[string](i.Config(), "home"); ok {
+		if d, err := i.Host().Stat(home); err == nil && d.IsDir() {
 			return
 		}
 	}

@@ -361,11 +361,11 @@ func initConfig() {
 	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")
 
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
-	if cf.IsSet("itrshome") {
-		if !cf.IsSet(cordial.ExecutableName()) {
-			config.Set(cf, cordial.ExecutableName(), config.Get[string](cf, "itrshome"))
+	if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
+		if _, ok := config.Lookup[string](cf, cordial.ExecutableName()); !ok {
+			config.Set(cf, cordial.ExecutableName(), ih)
 		}
-		config.Set[any](cf, "itrshome", nil)
+		config.Delete(cf, "itrshome")
 	}
 
 	// initialise after config loaded

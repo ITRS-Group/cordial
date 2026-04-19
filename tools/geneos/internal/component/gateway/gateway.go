@@ -416,8 +416,8 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	}
 
 	for _, k := range []string{"obcerv", "gateway-hub", "app-key", "kerberos-principal", "kerberos-keytab"} {
-		if cf.IsSet(k) {
-			args = append(args, "-"+k, config.Get[string](cf, k))
+		if v, ok := config.Lookup[string](cf, k); ok {
+			args = append(args, "-"+k, v)
 		}
 		if k == "kerberos-keytab" {
 			checks = append(checks, config.Get[string](cf, k))

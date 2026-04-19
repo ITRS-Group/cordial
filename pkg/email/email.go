@@ -88,8 +88,8 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 
 	// override port policy if we are told to, but zero skips through
 	// sometimes, so check that too
-	if conf.IsSet("_smtp_port") && config.Get[int](conf, "_smtp_port") != 0 {
-		mailOpts = append(mailOpts, mail.WithPort(config.Get[int](conf, "_smtp_port")))
+	if p, ok := config.Lookup[int](conf, "_smtp_port"); ok && p != 0 {
+		mailOpts = append(mailOpts, mail.WithPort(p))
 	}
 
 	if config.Get[bool](conf, "_smtp_tls_insecure") {

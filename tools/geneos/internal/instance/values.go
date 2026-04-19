@@ -90,7 +90,11 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	// update vars, regardless
 	vars := config.Get[map[string]any](cf, "variables")
 	convertVars(vars)
-	config.Set(cf, "variables", vars)
+	if len(vars) == 0 {
+		config.Delete(cf, "variables")
+	} else {
+		config.Set(cf, "variables", vars)
+	}
 
 	if err = cf.SetKeyValuePairs(set.Params...); err != nil {
 		return
@@ -102,11 +106,11 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	}
 	cf.SetKeyValuePairs(secrets...)
 
-	setSlice(i, set.Attributes, "attributes", func(a string) string {
+	setSlice(i, "attributes", set.Attributes, func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(i, set.Envs, "env", func(a string) string {
+	setSlice(i, "env", set.Envs, func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
@@ -114,29 +118,33 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	if err != nil {
 		return
 	}
-	setSlice(i, secrets, "env", func(a string) string {
+	setSlice(i, "env", secrets, func(a string) string {
 		return strings.SplitN(a, "=", 2)[0]
 	})
 
-	setSlice(i, set.Types, "types", func(a string) string {
+	setSlice(i, "types", set.Types, func(a string) string {
 		return a
 	})
 
-	setMap(i, set.Gateways, "gateways")
-	setMap(i, set.Includes, "includes")
-	setMap(i, set.Variables, "variables")
+	setMap(i, "gateways", set.Gateways)
+	setMap(i, "includes", set.Includes)
+	setMap(i, "variables", set.Variables)
 
 	return
 }
 
 // setMap sets the values in items, which is a map of string to
 // anything, in instance i's setting value setting
-func setMap[V any](i geneos.Instance, items map[string]V, setting string) {
-	s := config.Get[map[string]any](i.Config(), setting)
+func setMap[V any](i geneos.Instance, key string, items map[string]V) {
+	s := config.Get[map[string]any](i.Config(), key)
 	for k, v := range items {
 		s[k] = v
 	}
-	config.Set(i.Config(), setting, s)
+	if len(s) == 0 {
+		config.Delete(i.Config(), key)
+		return
+	}
+	config.Set(i.Config(), key, s)
 }
 
 // setEncoded takes a slice of SecureValue.
@@ -168,7 +176,7 @@ func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (param
 
 // setSlice sets items view merging in the instance configuration key
 // setting. Anything with the key returned by the key function is overwritten.
-func setSlice(i geneos.Instance, items []string, setting string, key func(string) string) (changed bool) {
+func setSlice(i geneos.Instance, key string, items []string, kv func(string) string) (changed bool) {
 	cf := i.Config()
 
 	if len(items) == 0 {
@@ -176,11 +184,11 @@ func setSlice(i geneos.Instance, items []string, setting string, key func(string
 	}
 
 	newvals := []string{}
-	vals := config.Get[[]string](cf, setting)
+	vals := config.Get[[]string](cf, key)
 
 	// if there are no existing values just set directly and finish
 	if len(vals) == 0 {
-		config.Set(cf, setting, items)
+		config.Set(cf, key, items)
 		changed = true
 		return
 	}
@@ -188,12 +196,12 @@ func setSlice(i geneos.Instance, items []string, setting string, key func(string
 	// map to store the identifier and the full value for later checks
 	keys := map[string]string{}
 	for _, v := range items {
-		keys[key(v)] = v
+		keys[kv(v)] = v
 		newvals = append(newvals, v)
 	}
 
 	for _, v := range vals {
-		if w, ok := keys[key(v)]; ok {
+		if w, ok := keys[kv(v)]; ok {
 			// exists
 			if v != w {
 				// only changed if different value
@@ -208,7 +216,11 @@ func setSlice(i geneos.Instance, items []string, setting string, key func(string
 
 	// check old values against map, copy those that do not exist
 
-	config.Set(cf, setting, newvals)
+	if len(newvals) == 0 {
+		config.Delete(cf, key)
+	} else {
+		config.Set(cf, key, newvals)
+	}
 	return
 }
 
@@ -510,6 +522,10 @@ func unsetMap(i geneos.Instance, key string, items UnsetValues) {
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
 	}
+	if len(x) == 0 {
+		config.Delete(cf, key)
+		return
+	}
 	config.Set(cf, key, x)
 }
 
@@ -522,6 +538,10 @@ func unsetMapHex(i geneos.Instance, key string, items UnsetVars) {
 	}
 	for _, k := range items {
 		DeleteSettingFromMap(i, x, k)
+	}
+	if len(x) == 0 {
+		config.Delete(cf, key)
+		return
 	}
 	config.Set(cf, key, x)
 }
@@ -539,6 +559,10 @@ OUTER:
 			}
 		}
 		newvals = append(newvals, t)
+	}
+	if len(newvals) == 0 {
+		config.Delete(cf, key)
+		return
 	}
 	config.Set(cf, key, newvals)
 }

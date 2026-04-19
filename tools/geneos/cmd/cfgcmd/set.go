@@ -70,13 +70,11 @@ geneos config set geneos="/opt/geneos"
 		log.Debug().Msgf("setting params: %v", params)
 		cf.SetKeyValuePairs(params...)
 
-		// fix breaking change
-		if cf.IsSet("itrshome") {
-			if !cf.IsSet("geneos") {
-				config.Set(cf, "geneos", config.Get[string](cf, "itrshome"))
+		if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
+			if _, ok := config.Lookup[string](cf, cordial.ExecutableName()); !ok {
+				config.Set(cf, cordial.ExecutableName(), ih)
 			}
-			// TODO: not sure if this will work
-			config.Set[any](cf, "itrshome", nil)
+			config.Delete(cf, "itrshome")
 		}
 
 		log.Debug().Msgf("save config %q", cordial.ExecutableName())

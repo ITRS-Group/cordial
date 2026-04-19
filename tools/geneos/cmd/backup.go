@@ -362,11 +362,20 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 		ignoreSecure = append(ignoreSecure, "keyfile", "prevkeyfile")
 	}
 	if !backupCmdIncludeTLS {
-		ignoreSecure = append(ignoreSecure, "certificate", "privatekey", "certchain")
+		ignoreSecure = append(ignoreSecure,
+			// legacy path parameters
+			"certificate",
+			"privatekey",
+			"certchain",
+			// new path parameters
+			cf.Join("tls", "certificate"),
+			cf.Join("tls", "privatekey"),
+			cf.Join("tls", "ca-bundle"),
+		)
 	}
 	for _, ig := range ignoreSecure {
-		if cf.IsSet(ig) {
-			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(config.Get[string](cf, ig), i.Home()+"/"))
+		if p, ok := config.Lookup[string](cf, ig); ok {
+			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(p, i.Home()+"/"))
 		}
 	}
 

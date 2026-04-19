@@ -358,8 +358,8 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	// override port policy if we are told to, but zero skips through
 	// sometimes, so check that too
-	if cf.IsSet("email.port") && config.Get[uint16](cf, cf.Join("email", "port")) != 0 {
-		mailOpts = append(mailOpts, mail.WithPort(int(config.Get[uint16](cf, cf.Join("email", "port")))))
+	if p, ok := config.Lookup[int](cf, cf.Join("email", "port")); ok && p != 0 {
+		mailOpts = append(mailOpts, mail.WithPort(p))
 	}
 
 	if config.Get[bool](cf, cf.Join("email", "tls-insecure")) {

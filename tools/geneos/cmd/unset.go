@@ -89,7 +89,7 @@ geneos unset san -g Gateway1
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {
 					if cf.IsSet(k) {
-						config.Set(cf, k, "")
+						config.Delete(cf, k)
 						changed = true
 					}
 				}

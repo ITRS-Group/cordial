@@ -170,17 +170,6 @@ func (c *Config) Sub(key string) *Config {
 	return c.sub(key)
 }
 
-// Sub returns a Config instance rooted at the key passed. If key does
-// not exist then an empty config structure is returned, unlike viper
-// which returns nil.
-//
-// Note that viper.Sub() does NOT merge defaults
-func Sub(key string) *Config {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
-	return global.sub(key)
-}
-
 func Set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -221,6 +210,18 @@ func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[T](c, key, options...)
+}
+
+func Lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, found bool) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	return lookup[T](c, key, options...)
+}
+
+func Delete(c *Config, key string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	deleteKey(c, key)
 }
 
 // ExpandFieldsHook returns a mapstructure.DecodeHookFunc that expands

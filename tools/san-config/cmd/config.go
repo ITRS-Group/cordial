@@ -58,7 +58,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 	_, hostmapOK := hostmap[hostname]
 
 	if componentOverride != "" {
-		if conf.IsSet("components." + componentOverride) {
+		if conf.IsSet(conf.Join("components", componentOverride)) {
 			if hostmapOK {
 				mappings = maps.Clone(hostmap[hostname])
 			}

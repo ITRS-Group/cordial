@@ -258,10 +258,10 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 
 	// (re)build the keystore (config/keystore.db) ensuring there is
 	// always an "ssokey".
-	if ssoconf.IsSet(config.Join("server", "key_store", "location")) {
+	if ksl, ok := config.Lookup[string](ssoconf, config.Join("server", "key_store", "location")); ok {
 		var changed bool
 
-		keystorePath := instance.Abs(s, config.Get[string](ssoconf, config.Join("server", "key_store", "location")))
+		keystorePath := instance.Abs(s, ksl)
 		keystorePassword := config.Get[*config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
 			config.DefaultValue(config.NewSecret("changeit")),

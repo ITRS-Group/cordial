@@ -71,26 +71,27 @@ var pubkeyCmd = &cobra.Command{
 }
 
 func printPublicKey() error {
-	if cf.IsSet("gdna.licd-private-key") {
-		if privateKey := config.Get[*config.Secret](cf, "gdna.licd-private-key"); !privateKey.IsNil() {
-			pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
+	if privateKey, ok := config.Lookup[*config.Secret](cf, cf.Join("gdna", "licd-private-key")); ok && !privateKey.IsNil() {
+		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
+		if err != nil {
+			// try reading from file path if the value is not a valid
+			// PEM-encoded private key
+			privateKeyPath := privateKey.String()
+			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
-				privateKeyPath := privateKey.String()
-				pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
-				if err != nil {
-					log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
-				}
-			}
-			pubKey, err := certs.PublicKey(pk)
-			if err != nil {
-				log.Error().Err(err).Msg("getting public key from private key")
+				log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
 				return err
 			}
-			_, err = certs.WritePublicKeyTo(os.Stdout, pubKey)
-			if err != nil {
-				log.Error().Err(err).Msg("encoding public key to PEM")
-				return err
-			}
+		}
+		pubKey, err := certs.PublicKey(pk)
+		if err != nil {
+			log.Error().Err(err).Msg("getting public key from private key")
+			return err
+		}
+		_, err = certs.WritePublicKeyTo(os.Stdout, pubKey)
+		if err != nil {
+			log.Error().Err(err).Msg("encoding public key to PEM")
+			return err
 		}
 	}
 	return nil

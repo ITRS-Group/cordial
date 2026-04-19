@@ -82,7 +82,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 
 	// update the instance reference to the ca-bundle, in all cases
 	cf := i.Config()
-	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+	config.Set(cf, cf.Join(TLSBASE, CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
 	if err = SaveConfig(i); err != nil {
 		return
@@ -139,7 +139,7 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 	if config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE)) == certFile {
 		return
 	}
-	config.Set(cf, CERTIFICATE, "")
+	config.Delete(cf, CERTIFICATE)
 	config.Set(cf, cf.Join(TLSBASE, CERTIFICATE), certFile, config.Replace("home"))
 	return
 }
@@ -165,11 +165,11 @@ func writePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (e
 	}
 	// do not update config if ext is given (used for temp files) or
 	// if it's already set
-	if len(ext) > 0 || config.Get[string](cf, cf.Join("tls", "privatekey")) == keyfile {
+	if len(ext) > 0 || config.Get[string](cf, cf.Join(TLSBASE, PRIVATEKEY)) == keyfile {
 		return
 	}
-	config.Set(cf, "privatekey", "")
-	config.Set(cf, cf.Join("tls", "privatekey"), keyfile, config.Replace("home"))
+	config.Delete(cf, PRIVATEKEY)
+	config.Set(cf, cf.Join(TLSBASE, PRIVATEKEY), keyfile, config.Replace("home"))
 	return
 }
 
@@ -184,10 +184,10 @@ func ReadLeafCertificate(i geneos.Instance, ext ...string) (cert *x509.Certifica
 
 	cf := i.Config()
 
-	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
-		certPath = config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE))
-	} else if cf.IsSet(CERTIFICATE) {
-		certPath = config.Get[string](cf, CERTIFICATE)
+	if v, ok := config.Lookup[string](cf, cf.Join(TLSBASE, CERTIFICATE)); ok {
+		certPath = v
+	} else if v, ok := config.Lookup[string](cf, CERTIFICATE); ok {
+		certPath = v
 	} else {
 		return nil, geneos.ErrNotExist
 	}
@@ -236,10 +236,10 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 
 	cf := i.Config()
 
-	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
-		certPath = config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE))
-	} else if cf.IsSet(CERTIFICATE) {
-		certPath = config.Get[string](cf, CERTIFICATE)
+	if v, ok := config.Lookup[string](cf, cf.Join(TLSBASE, CERTIFICATE)); ok {
+		certPath = v
+	} else if v, ok := config.Lookup[string](cf, CERTIFICATE); ok {
+		certPath = v
 		chainPath = config.Get[string](cf, CERTCHAIN)
 	} else {
 		return nil, geneos.ErrNotExist
@@ -270,10 +270,10 @@ func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, er
 
 	cf := i.Config()
 
-	if cf.IsSet(cf.Join("tls", "privatekey")) {
-		keyPath = config.Get[string](cf, cf.Join("tls", "privatekey"))
-	} else if cf.IsSet("privatekey") {
-		keyPath = config.Get[string](cf, "privatekey")
+	if v, ok := config.Lookup[string](cf, cf.Join(TLSBASE, PRIVATEKEY)); ok {
+		keyPath = v
+	} else if v, ok := config.Lookup[string](cf, PRIVATEKEY); ok {
+		keyPath = v
 	} else {
 		return nil, geneos.ErrNotExist
 	}

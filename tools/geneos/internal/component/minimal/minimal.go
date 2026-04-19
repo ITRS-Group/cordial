@@ -230,8 +230,8 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 		args = append(args, "-cmd")
 	}
 
-	if cf.IsSet("listenip") {
-		args = append(args, "-listenip", config.Get[string](cf, "listenip"))
+	if listenip, ok := config.Lookup[string](cf, "listenip"); ok {
+		args = append(args, "-listenip", listenip)
 	}
 
 	// secureArgs := instance.SetSecureArgs(n)

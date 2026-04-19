@@ -156,6 +156,8 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 
 	for k, v := range as {
 		switch ev := v.(type) {
+		case deletedKey:
+			continue
 		case string:
 			all[k] = expand[string](c, ev, options...)
 		case []string:
@@ -285,6 +287,8 @@ func (c *Config) expandRawString(s string, options ...ExpandOptions) (value stri
 			v := c.viper.Get(s)
 
 			switch w := v.(type) {
+			case deletedKey:
+				value = ""
 			case string:
 				// strings still get returned "as-is"
 				value = w
@@ -465,8 +469,24 @@ func getContents(s string) (string, int) {
 	return "", 1 // Bad syntax; eat "${"
 }
 
+// lookup is the internal function that returns a second boolean value
+// indicating whether the key was found in the config and is of the
+// correct type. `found` is true only if the configuration item is set,
+// not if the options provide a default value.
+func lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, found bool) {
+	if !c.isSet(key) {
+		return
+	}
+
+	v := c.viper.Get(key)
+	if _, ok := v.(T); !ok {
+		return
+	}
+
+	return get[T](c, key, options...), true
+}
+
 func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
-	// return the zero value for the type if the key doesn't exist
 	if !c.isSet(key) {
 		opts := evalExpandOptions(c, options...)
 		if !isZero(opts.defaultValue) {
@@ -475,8 +495,7 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 			}
 			log.Debug().Msgf("default value for key %q is not of type %T, returning zero value", key, value)
 		}
-		var zero T
-		return zero
+		return
 	}
 
 	switch any(*new(T)).(type) {
@@ -565,6 +584,18 @@ func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	}
 }
 
+type deletedKey struct{}
+
+// delete sets a key to a special value that indicates it has been
+// deleted. Our get and lookup functions will treat this as not set,
+// even though it is technically.
+//
+// TODO: save routines should check for this value and not save it, to
+// avoid confusion if the config file is edited by hand.
+func deleteKey(c *Config, key string) {
+	c.viper.Set(key, deletedKey{})
+}
+
 func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	opts := evalExpandOptions(c, options...)
 	if opts.noExpand {
@@ -586,13 +617,21 @@ func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 		}
 	default:
 		// no replacement needed for non-string types, but still need to
-		// set the vt in the config
+		// set the value in the config
 		c.viper.Set(key, vt)
 	}
 }
 
 func (c *Config) isSet(key string) (value bool) {
-	return c.viper.IsSet(key)
+	set := c.viper.IsSet(key)
+	deleted := false
+	if set {
+		// check if the value is the deleted marker
+		if _, ok := c.viper.Get(key).(deletedKey); ok {
+			deleted = true
+		}
+	}
+	return set && !deleted
 }
 
 func (c *Config) mergeConfigMap(vals map[string]any) (err error) {
@@ -673,6 +712,9 @@ func (c *Config) sub(key string) *Config {
 }
 
 func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
+	if !c.isSet(key) {
+		return fmt.Errorf("key %q is not set", key)
+	}
 	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
 }
 

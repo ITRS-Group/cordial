@@ -112,7 +112,13 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 		if opts.ignoreEmptyValues && isZero(v) {
 			continue
 		}
-		Set(nv, k, v)
+		if opts.expandOnSave {
+			log.Debug().Msgf("expanding key: %s", k)
+			// test setting numbers
+			Set(nv, k, expand[string](c, Get[string](c, k, opts.expandOptions...)))
+		} else {
+			Set(nv, k, v)
+		}
 	}
 	c.mutex.RUnlock()
 
@@ -167,8 +173,7 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 		if opts.expandOnSave {
 			log.Debug().Msgf("expanding key: %s", k)
 			// test setting numbers
-			s := expand[string](c, Get[string](c, k, opts.expandOptions...))
-			Set(nv, k, s)
+			Set(nv, k, expand[string](c, Get[string](c, k, opts.expandOptions...)))
 		} else {
 			Set(nv, k, v)
 		}

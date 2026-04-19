@@ -315,7 +315,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	cf := i.Config()
 
 	// has this instance been migrated to the new TLS parameters?
-	if !cf.IsSet("tls") {
+	if !cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
 		args = setSecureArgs(i)
 		for _, arg := range args {
 			if !strings.HasPrefix(arg, "-") {
@@ -347,8 +347,8 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	tlsVerify := true
-	if cf.IsSet(cf.Join(TLSBASE, TLSVERIFY)) {
-		tlsVerify = config.Get[bool](cf, cf.Join(TLSBASE, TLSVERIFY))
+	if t, ok := config.Lookup[bool](cf, cf.Join(TLSBASE, TLSVERIFY)); ok {
+		tlsVerify = t
 	}
 
 	if tlsVerify {

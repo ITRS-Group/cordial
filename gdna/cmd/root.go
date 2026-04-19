@@ -92,7 +92,7 @@ var GDNACmd = &cobra.Command{
 
 		initConfig(cmd)
 
-		if !cf.IsSet(cf.Join("gdna", "version")) {
+		if v, ok := config.Lookup[string](cf, cf.Join("gdna", "version")); !ok || v == "" {
 			config.Set(cf, cf.Join("gdna", "version"), cordial.VERSION)
 		}
 
