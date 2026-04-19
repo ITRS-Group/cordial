@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -31,6 +32,7 @@ import (
 var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool
 var restartCmdExtras string
 var restartCmdEnvs instance.NameValues
+var restartCmdPort uint16
 
 func init() {
 	GeneosCmd.AddCommand(restartCmd)
@@ -39,6 +41,7 @@ func init() {
 	restartCmd.Flags().BoolVarP(&restartCmdForce, "force", "F", false, "Force restart of protected instances")
 	restartCmd.Flags().BoolVarP(&restartCmdKill, "kill", "K", false, "Force stop by sending an immediate SIGKILL")
 
+	restartCmd.Flags().Uint16VarP(&restartCmdPort, "port", "p", 0, "Restart instance matching port (overrides TYPE and NAME)")
 	restartCmd.Flags().StringVarP(&restartCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")
 	restartCmd.Flags().VarP(&restartCmdEnvs, "env", "e", "Extra environment variable (Repeat as required)")
 
@@ -64,6 +67,30 @@ var restartCmd = &cobra.Command{
 		CmdNonInstanceArgsError:  "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		if restartCmdPort != 0 {
+			instances := []geneos.Instance{}
+			for h := range geneos.GetHost(Hostname).OrList(geneos.LOCAL) {
+				i, err := instance.ByPort(h, restartCmdPort)
+				if err != nil {
+					continue
+				}
+				instances = append(instances, i)
+			}
+			if len(instances) == 0 {
+				fmt.Printf("no instances using port %d found\n", restartCmdPort)
+				return
+			}
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+				resp = responses.NewResponse(i)
+				resp.Err = instance.Stop(i, restartCmdForce, false)
+				if resp.Err == nil || restartCmdAll {
+					resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))
+				}
+				return
+			}).Report(os.Stdout)
+			return
+		}
+
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return

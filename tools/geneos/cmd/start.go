@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -31,10 +32,12 @@ import (
 var startCmdLogs bool
 var startCmdExtras string
 var startCmdEnvs instance.NameValues
+var startCmdPort uint16
 
 func init() {
 	GeneosCmd.AddCommand(startCmd)
 
+	startCmd.Flags().Uint16VarP(&startCmdPort, "port", "p", 0, "Start instance matching port (overrides TYPE and NAME)")
 	startCmd.Flags().StringVarP(&startCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")
 	startCmd.Flags().VarP(&startCmdEnvs, "env", "e", "Extra environment variable (Repeat as required)")
 	startCmd.Flags().BoolVarP(&startCmdLogs, "log", "l", false, "Follow logs after starting instance")
@@ -56,8 +59,32 @@ var startCmd = &cobra.Command{
 		CmdWildcardNames:        "true",
 		CmdNonInstanceArgsError: "true",
 	},
-	RunE: func(cmd *cobra.Command, origargs []string) error {
+	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
 		var autostart bool
+
+		if startCmdPort != 0 {
+			instances := []geneos.Instance{}
+			for h := range geneos.GetHost(Hostname).OrList(geneos.LOCAL) {
+				i, err := instance.ByPort(h, startCmdPort)
+				if err != nil {
+					continue
+				}
+				instances = append(instances, i)
+			}
+			if len(instances) == 0 {
+				fmt.Printf("no instances using port %d found\n", startCmdPort)
+				return
+			}
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+				resp = responses.NewResponse(i)
+				resp.Err = instance.Start(i,
+					instance.StartingExtras(startCmdExtras),
+					instance.StartingEnvs(startCmdEnvs),
+				)
+				return
+			}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+			return
+		}
 
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {

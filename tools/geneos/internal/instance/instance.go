@@ -201,6 +201,36 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	return
 }
 
+// DoInstances is a variant of Do that takes a slice of instances
+// instead of looking them up by host, type and name. This is for use by
+// functions that have already looked up instances and want to call a
+// function on them concurrently.
+func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
+	var wg sync.WaitGroup
+
+	rs = make(responses.Responses, len(instances))
+	ch := make(chan *responses.Response, len(instances))
+
+	for _, c := range instances {
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			defer wg.Done()
+
+			resp := f(c, values...)
+			resp.Finish = time.Now()
+			ch <- resp
+		}(c)
+	}
+	wg.Wait()
+	close(ch)
+
+	for resp := range ch {
+		rs[resp.Instance.String()] = resp
+	}
+
+	return
+}
+
 // Disable the instance i. Does not try to stop a running instance and
 // returns an error if it is running.
 func Disable(i geneos.Instance) (err error) {

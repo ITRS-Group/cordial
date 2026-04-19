@@ -107,6 +107,32 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 	return
 }
 
+// ByPort returns an instance on host h that is configured to use port.
+// Returns an error if no instance is found or if the configuration
+// cannot be loaded for any instance on the host. Will not check if the
+// port is actually in use by any process.
+func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
+	if h == geneos.ALL {
+		err = errors.New("getports() called with all hosts")
+		return
+	}
+
+	for _, c := range Instances(h, nil) {
+		if c.Loaded().IsZero() {
+			log.Error().Msgf("cannot load configuration for %s", c)
+			continue
+		}
+		if p := config.Get[uint16](c.Config(), c.Config().Join("port")); p != 0 {
+			if p == port {
+				i = c
+				return
+			}
+		}
+	}
+	err = geneos.ErrNotExist
+	return
+}
+
 // NextFreePort returns the next available (unallocated and unused) TCP
 // listening port for component ct on host h.
 //

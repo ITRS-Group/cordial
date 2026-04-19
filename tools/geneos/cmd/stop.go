@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -28,10 +29,12 @@ import (
 )
 
 var stopCmdForce, stopCmdKill bool
+var stopCmdPort uint16
 
 func init() {
 	GeneosCmd.AddCommand(stopCmd)
 
+	stopCmd.Flags().Uint16VarP(&stopCmdPort, "port", "p", 0, "Stop instance matching port (overrides TYPE and NAME)")
 	stopCmd.Flags().BoolVarP(&stopCmdForce, "force", "F", false, "Stop protected instances")
 	stopCmd.Flags().BoolVarP(&stopCmdKill, "kill", "K", false, "Force immediate stop by sending an immediate SIGKILL")
 
@@ -55,6 +58,30 @@ var stopCmd = &cobra.Command{
 		CmdNonInstanceArgsError:  "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		if stopCmdPort != 0 {
+			instances := []geneos.Instance{}
+			for h := range geneos.GetHost(Hostname).OrList(geneos.LOCAL) {
+				i, err := instance.ByPort(h, stopCmdPort)
+				if err != nil {
+					continue
+				}
+				instances = append(instances, i)
+			}
+			if len(instances) == 0 {
+				fmt.Printf("no instances using port %d found\n", stopCmdPort)
+				return
+			}
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+				resp = responses.NewResponse(i)
+				resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
+				return
+			}).Report(os.Stdout,
+				responses.ShowTimes(),
+				responses.TimingFormat("%s stopped in %.2fs\n"),
+			)
+			return
+		}
+
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
