@@ -547,16 +547,16 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	// update name in case this is a rename
 	config.Set(cf, "name", i)
 
-	oldHome := cf.GetString("home")
+	oldHome := config.Get[string](cf, "home")
 	newHome := instanceDir
 
-	oldInstall := cf.GetString("install")
+	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", ct.String())
 
 	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
 	newShared := ct.Shared(h)
 
-	version := cf.GetString("version", config.NoExpand())
+	version := config.Get[string](cf, "version", config.NoExpand())
 
 	for k, v := range cf.AllSettings() {
 		switch k {
@@ -595,7 +595,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	np := "${config:install}"
 	nv := "${config:version}"
 
-	for _, p := range filepath.SplitList(cf.GetString("libpaths", config.NoExpand())) {
+	for _, p := range filepath.SplitList(config.Get[string](cf, "libpaths", config.NoExpand())) {
 		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
 			subpath := after
 			if after, ok := strings.CutPrefix(subpath, version); ok {

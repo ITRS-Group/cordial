@@ -151,7 +151,7 @@ func (n *FA2s) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *FA2s) Home() string {
@@ -218,7 +218,7 @@ func (n *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		n.Name(),
-		"-port", n.Config().GetString("port"),
+		"-port", config.Get[string](n.Config(), "port"),
 	}
 	// secureArgs := instance.SetSecureArgs(n)
 	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)

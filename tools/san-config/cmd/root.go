@@ -88,7 +88,7 @@ var rootCmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initConfig(cmd)
 
-		uuidNS = uuid.MustParse(cf.GetString("server.namespace-uuid"))
+		uuidNS = uuid.MustParse(config.Get[string](cf, "server.namespace-uuid"))
 	},
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
@@ -178,7 +178,7 @@ func initConfig(cmd *cobra.Command) {
 	if cmd != nil {
 		f := cmd.Flag("logfile")
 		if f != nil && !f.Changed {
-			logFile = cf.GetString("server.logs.path")
+			logFile = config.Get[string](cf, "server.logs.path")
 		}
 	}
 

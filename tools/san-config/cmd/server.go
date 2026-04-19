@@ -61,7 +61,7 @@ var serverCmd = &cobra.Command{
 		}
 
 		if logfile == "" {
-			logfile = cf.GetString("server.logs.path")
+			logfile = config.Get[string](cf, "server.logs.path")
 		}
 
 		logfile = config.ResolveHome(logfile)
@@ -172,11 +172,11 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		log.Fatal().Msg("no configuration path (`server.config-path`) set, exiting")
 	}
 
-	e.GET(cf.GetString("server.config-path")+"/:hostname", cs.ServeConfig)
-	e.GET(cf.GetString("server.config-path")+"/:hostname/:type", cs.ServeConfig)
+	e.GET(config.Get[string](cf, "server.config-path")+"/:hostname", cs.ServeConfig)
+	e.GET(config.Get[string](cf, "server.config-path")+"/:hostname/:type", cs.ServeConfig)
 
 	if cf.IsSet("server.connections-path") {
-		e.GET(cf.GetString("server.connections-path"), cs.ServeConnection)
+		e.GET(config.Get[string](cf, "server.connections-path"), cs.ServeConnection)
 	}
 
 	// loop forever trying to listen on configured port
@@ -195,14 +195,14 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		// string in as a file path
 		var cert, key any
 
-		certstr := cf.GetString("server.tls.certificate")
+		certstr := config.Get[string](cf, "server.tls.certificate")
 		cert = []byte(certstr)
 
 		if certpem, _ := pem.Decode([]byte(certstr)); certpem == nil {
 			cert = config.ResolveHome(certstr)
 		}
 
-		keystr := cf.GetString("server.tls.privatekey")
+		keystr := config.Get[string](cf, "server.tls.privatekey")
 		key = []byte(keystr)
 
 		if keypem, _ := pem.Decode([]byte(keystr)); keypem == nil {

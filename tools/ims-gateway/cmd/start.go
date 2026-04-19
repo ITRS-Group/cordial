@@ -102,8 +102,8 @@ type ctxKey string
 const startTimeKey ctxKey = "starttime"
 
 func startGateway(cf *config.Config) {
-	listen := cf.GetString(cf.Join("server", "listen"))
-	basePath := cf.GetString(cf.Join("server", "path"))
+	listen := config.Get[string](cf, cf.Join("server", "listen"))
+	basePath := config.Get[string](cf, cf.Join("server", "path"))
 
 	log.Debug().Msgf("starting proxy with configuration: listen=%s, path=%s", listen, basePath)
 
@@ -166,7 +166,7 @@ func withStartTimestamp(next http.Handler) http.Handler {
 }
 
 func withKeyAuth(cf *config.Config, next http.Handler) http.Handler {
-	expected := cf.GetString(cf.Join("server", "authentication", "token"))
+	expected := config.Get[string](cf, cf.Join("server", "authentication", "token"))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		key := extractAPIKey(r)
@@ -216,7 +216,7 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 	}
 
 	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
-		"URL", // cf.GetString(cf.Join("snow", "url")),
+		"URL", // config.Get[string](cf, cf.Join("snow", "url")),
 		r.Proto,
 		resStatus,
 		bytesIn,

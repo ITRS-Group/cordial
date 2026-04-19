@@ -136,7 +136,7 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 
 	// do not update config if ext is given (used for temp files) or
 	// if it's already set
-	if cf.GetString(cf.Join(TLSBASE, CERTIFICATE)) == certFile {
+	if config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE)) == certFile {
 		return
 	}
 	config.Set(cf, CERTIFICATE, "")
@@ -165,7 +165,7 @@ func writePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (e
 	}
 	// do not update config if ext is given (used for temp files) or
 	// if it's already set
-	if len(ext) > 0 || cf.GetString(cf.Join("tls", "privatekey")) == keyfile {
+	if len(ext) > 0 || config.Get[string](cf, cf.Join("tls", "privatekey")) == keyfile {
 		return
 	}
 	config.Set(cf, "privatekey", "")
@@ -185,9 +185,9 @@ func ReadLeafCertificate(i geneos.Instance, ext ...string) (cert *x509.Certifica
 	cf := i.Config()
 
 	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
-		certPath = cf.GetString(cf.Join(TLSBASE, CERTIFICATE))
+		certPath = config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE))
 	} else if cf.IsSet(CERTIFICATE) {
-		certPath = cf.GetString(CERTIFICATE)
+		certPath = config.Get[string](cf, CERTIFICATE)
 	} else {
 		return nil, geneos.ErrNotExist
 	}
@@ -237,10 +237,10 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 	cf := i.Config()
 
 	if cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
-		certPath = cf.GetString(cf.Join(TLSBASE, CERTIFICATE))
+		certPath = config.Get[string](cf, cf.Join(TLSBASE, CERTIFICATE))
 	} else if cf.IsSet(CERTIFICATE) {
-		certPath = cf.GetString(CERTIFICATE)
-		chainPath = cf.GetString(CERTCHAIN)
+		certPath = config.Get[string](cf, CERTIFICATE)
+		chainPath = config.Get[string](cf, CERTCHAIN)
 	} else {
 		return nil, geneos.ErrNotExist
 	}
@@ -271,9 +271,9 @@ func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, er
 	cf := i.Config()
 
 	if cf.IsSet(cf.Join("tls", "privatekey")) {
-		keyPath = cf.GetString(cf.Join("tls", "privatekey"))
+		keyPath = config.Get[string](cf, cf.Join("tls", "privatekey"))
 	} else if cf.IsSet("privatekey") {
-		keyPath = cf.GetString("privatekey")
+		keyPath = config.Get[string](cf, "privatekey")
 	} else {
 		return nil, geneos.ErrNotExist
 	}

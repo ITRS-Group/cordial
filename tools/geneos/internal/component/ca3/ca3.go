@@ -157,7 +157,7 @@ func (n *CA3s) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *CA3s) Home() string {
@@ -240,16 +240,16 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 
 	checks = append(checks, classPath)
 	checks = append(checks, logback)
-	checks = append(checks, cf.GetString("config"))
+	checks = append(checks, config.Get[string](cf, "config"))
 
 	args = []string{
-		"-Xms" + cf.GetString("minheap", config.DefaultValue("512M")),
-		"-Xmx" + cf.GetString("maxheap", config.DefaultValue("512M")),
+		"-Xms" + config.Get[string](cf, "minheap", config.DefaultValue("512M")),
+		"-Xmx" + config.Get[string](cf, "maxheap", config.DefaultValue("512M")),
 		"-Dlogback.configurationFile=" + logback,
 		"-cp", path.Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + n.Home(),
 		"com.itrsgroup.collection.ca.Main",
-		cf.GetString("config"),
+		config.Get[string](cf, "config"),
 	}
 
 	hostname, err := os.Hostname()
@@ -297,7 +297,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 		if strings.Contains(arg, "collection-agent") {
 			jarOK = true
 		}
-		if strings.Contains(arg, c.Config().GetString("config")) {
+		if strings.Contains(arg, config.Get[string](c.Config(), "config")) {
 			configOK = true
 		}
 		if jarOK && configOK {

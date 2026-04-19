@@ -64,7 +64,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	if err = json.NewDecoder(r.Body).Decode(&request); err != nil {
 		response.Error = fmt.Sprintf("error decoding request body: %v", err)
-		response.ResultDetail = cf.GetString(
+		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "failed"),
 			config.LookupTable(request,
 				map[string]string{
@@ -80,7 +80,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(request))) {
 		response.Error = "field names are invalid or not unique"
-		response.ResultDetail = cf.GetString(
+		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "failed"),
 			config.LookupTable(request,
 				map[string]string{
@@ -144,11 +144,11 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 		response.StatusCode = http.StatusOK
 		response.Status = http.StatusText(http.StatusOK)
-		response.ResultDetail = cf.GetString(
+		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "created"),
 			config.LookupTable(request,
 				map[string]string{
-					"__request_id": createResponse.GetString("request_id"),
+					"__request_id": config.Get[string](createResponse, "request_id"),
 					"__timestamp":  response.StartTime.Format(time.RFC3339),
 				}),
 			config.TrimSpace(false),
@@ -197,11 +197,11 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	response.StatusCode = http.StatusOK
 	response.Status = http.StatusText(http.StatusOK)
-	response.ResultDetail = cf.GetString(
+	response.ResultDetail = config.Get[string](cf,
 		cf.Join("sdp", "response", "updated"),
 		config.LookupTable(request,
 			map[string]string{
-				"__request_id": updateResponse.GetString("request_id"),
+				"__request_id": config.Get[string](updateResponse, "request_id"),
 				"__timestamp":  response.StartTime.Format(time.RFC3339),
 			}),
 		config.TrimSpace(false),

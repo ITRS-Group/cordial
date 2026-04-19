@@ -96,7 +96,7 @@ var snapshotCmd = &cobra.Command{
 
 		cf := config.Global()
 		if snapshotCmdUsername == "" {
-			snapshotCmdUsername = cf.GetString(cf.Join("snapshot", "username"))
+			snapshotCmdUsername = config.Get[string](cf, cf.Join("snapshot", "username"))
 		}
 
 		snapshotCmdPassword = config.Get[*config.Secret](cf, cf.Join("snapshot", "password"))
@@ -143,7 +143,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		// always use auth details in per-instance config, default to
 		// from the command line or user/global config or credentials
 		// file
-		username := i.Config().GetString(config.Join("snapshot", "username"))
+		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
 		password := config.Get[*config.Secret](i.Config(), config.Join("snapshot", "password"))
 
 		if username == "" {
@@ -160,11 +160,11 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		if username == "" {
 			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
-				username = creds.GetString("username")
+				username = config.Get[string](creds, "username")
 				password = config.Get[*config.Secret](creds, "password")
 			} else {
 				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(cordial.ExecutableName())); creds != nil {
-					username = creds.GetString("username")
+					username = config.Get[string](creds, "username")
 					password = config.Get[*config.Secret](creds, "password")
 				}
 			}
@@ -214,7 +214,7 @@ func gatewayURL(i geneos.Instance) (u *url.URL) {
 		return
 	}
 	u = &url.URL{}
-	hostname := i.Host().GetString("hostname")
+	hostname := config.Get[string](i.Host().Config, "hostname")
 	if hostname == "" {
 		hostname = "localhost"
 	}

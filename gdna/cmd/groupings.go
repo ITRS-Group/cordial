@@ -115,7 +115,7 @@ var addGroupCmd = &cobra.Command{
 		// load existing
 		ig, err := config.Load(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 			config.MustExist(),
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -126,14 +126,14 @@ var addGroupCmd = &cobra.Command{
 			log.Warn().Err(err).Msg("loading")
 			igPath = config.Path(filterBase,
 				config.SetAppName("geneos"),
-				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 				config.IgnoreSystemDir(),
 				config.IgnoreWorkingDir(),
 			)
 		} else {
 			igPath = config.Path(filterBase,
 				config.SetAppName("geneos"),
-				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
@@ -276,7 +276,7 @@ var removeGroupCmd = &cobra.Command{
 		// load existing
 		ig, err := config.Load(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+			config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 			config.MustExist(),
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -288,14 +288,14 @@ var removeGroupCmd = &cobra.Command{
 			log.Warn().Err(err).Msg("loading")
 			igPath = config.Path(filterBase,
 				config.SetAppName("geneos"),
-				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 				config.IgnoreSystemDir(),
 				config.IgnoreWorkingDir(),
 			)
 		} else {
 			igPath = config.Path(filterBase,
 				config.SetAppName("geneos"),
-				config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+				config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
@@ -373,12 +373,12 @@ var listGroupCmd = &cobra.Command{
 
 		ig, _ := config.Load(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(cf.Join("filters", "file"))),
+			config.SetConfigFile(config.Get[string](cf, cf.Join("filters", "file"))),
 		)
 
 		log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString(cf.Join("filters", "file"))),
+			config.SetConfigFile(config.Get[string](cf, cf.Join("filters", "file"))),
 		))
 
 		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
@@ -428,12 +428,12 @@ func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	// load persistence file
 	ig, _ := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:
@@ -446,7 +446,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(cf.Join("filters", "group", category, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", "group", category, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
@@ -549,17 +549,17 @@ func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) erro
 	// load persistence file
 	ig, _ := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:
 	for category := range config.Get[map[string]any](cf, cf.Join("filters", "allocations")) {
-		table := cf.GetString(config.Join("filters", "allocations", category, "table"))
+		table := config.Get[string](cf, config.Join("filters", "allocations", category, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
 			log.Info().Err(err).Msgf("delete from %q %q failed", category, table)
@@ -567,7 +567,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(config.Join("filters", "allocations", category, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, config.Join("filters", "allocations", category, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue

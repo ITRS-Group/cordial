@@ -185,7 +185,7 @@ func (s *Sans) Name() string {
 	if s.Config() == nil {
 		return ""
 	}
-	return s.Config().GetString("name")
+	return config.Get[string](s.Config(), "name")
 }
 
 func (s *Sans) Home() string {
@@ -266,7 +266,7 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 func (s *Sans) Rebuild(initial bool) (err error) {
 	cf := s.Config()
 
-	configrebuild := cf.GetString("config::rebuild")
+	configrebuild := config.Get[string](cf, "config::rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -275,7 +275,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	setup := cf.GetString("setup")
+	setup := config.Get[string](cf, "setup")
 	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
 		log.Debug().Msg("not rebuilding URL bases setup")
 		return
@@ -322,9 +322,9 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 
 	args = []string{
 		i.Name(),
-		"-listenip", cf.GetString("listenip", config.DefaultValue("none")),
-		"-port", cf.GetString("port"),
-		"-setup", cf.GetString("setup"),
+		"-listenip", config.Get[string](cf, "listenip", config.DefaultValue("none")),
+		"-port", config.Get[string](cf, "port"),
+		"-setup", config.Get[string](cf, "setup"),
 	}
 
 	if strings.Contains(h.ServerVersion(), "windows") {
@@ -353,7 +353,7 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+i.Config().GetString(("hostname"), config.DefaultValue(hostname)))
+	env = append(env, "HOSTNAME="+config.Get[string](i.Config(), ("hostname"), config.DefaultValue(hostname)))
 
 	if skipFileCheck {
 		return

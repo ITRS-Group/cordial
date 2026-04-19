@@ -84,7 +84,7 @@ var queryCmd = &cobra.Command{
 		var response ims.Response
 
 		if queryCmdIMSType == "" {
-			queryCmdIMSType = cf.GetString(config.Join("ims-gateway", "type"))
+			queryCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
 		}
 
 		log.Debug().Msgf("querying IMS type %s", queryCmdIMSType)
@@ -108,11 +108,11 @@ var queryCmd = &cobra.Command{
 			case "snow":
 				log.Debug().Msgf("using ServiceNow-specific query parameters: table=%s, raw=%t", queryCmdSource, queryCmdRaw)
 				if queryCmdSource == "" {
-					queryCmdSource = cf.GetString(config.Join("ims-gateway", "snow", "default-table"))
+					queryCmdSource = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-table"))
 				}
 
 				if queryCmdQuery == "" {
-					queryCmdQuery = cf.GetString(config.Join("ims-gateway", "snow", "default-query"))
+					queryCmdQuery = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-query"))
 				}
 
 				query = queryParameters{

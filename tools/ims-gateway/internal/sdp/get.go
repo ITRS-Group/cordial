@@ -66,7 +66,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 		c := config.New(config.WithDefaults(*r, "json"))
 		row := make([]string, len(columns))
 		for j, col := range columns {
-			row[j] = c.GetString(col)
+			row[j] = config.Get[string](c, col)
 		}
 		response.DataTable = append(response.DataTable, row)
 	}

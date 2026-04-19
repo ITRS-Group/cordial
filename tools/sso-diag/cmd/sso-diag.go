@@ -62,12 +62,12 @@ func start() {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	username, realm := SplitUsername(vc.GetString("kerberos.user"))
+	username, realm := SplitUsername(config.Get[string](vc, "kerberos.user"))
 	if username == "" {
-		username, realm = SplitUsername(vc.GetString("ldap.user"))
+		username, realm = SplitUsername(config.Get[string](vc, "ldap.user"))
 	}
 
-	krb5conf := vc.GetString("kerberos.krb5_conf")
+	krb5conf := config.Get[string](vc, "kerberos.krb5_conf")
 	if !path.IsAbs(krb5conf) {
 		krb5conf = path.Join(confDir, krb5conf)
 	}
@@ -76,9 +76,9 @@ func start() {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	password := vc.GetString("kerberos.password")
+	password := config.Get[string](vc, "kerberos.password")
 	if password == "" {
-		password = vc.GetString("ldap.password")
+		password = config.Get[string](vc, "ldap.password")
 	}
 
 	if realm == "" {
@@ -169,11 +169,11 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 }
 
 func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
-	ks := cf.GetString("server.key_store.location")
+	ks := config.Get[string](cf, "server.key_store.location")
 	if !path.IsAbs(ks) {
 		ks = path.Join(confDir, ks)
 	}
-	pw := []byte(cf.GetString("server.key_store.password"))
+	pw := []byte(config.Get[string](cf, "server.key_store.password"))
 
 	f, err := os.Open(ks)
 	if err != nil {
@@ -273,23 +273,23 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 		InsecureSkipVerify: true,
 	}
 
-	l, err := ldap.DialURL(vc.GetString("ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
+	l, err := ldap.DialURL(config.Get[string](vc, "ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	if err = l.Bind(vc.GetString("ldap.user"), vc.GetString("ldap.password")); err != nil {
+	if err = l.Bind(config.Get[string](vc, "ldap.user"), config.Get[string](vc, "ldap.password")); err != nil {
 		log.Error().Err(err).Msg("")
 		return
 	}
 
-	qf := vc.GetString("ldap.users.query_filter")
+	qf := config.Get[string](vc, "ldap.users.query_filter")
 	if qf == "" {
-		qf = fmt.Sprintf("(objectCategory=person)(objectClass=%s)", vc.GetString("ldap.users.class"))
+		qf = fmt.Sprintf("(objectCategory=person)(objectClass=%s)", config.Get[string](vc, "ldap.users.class"))
 	}
 
-	query := fmt.Sprintf("(&%s(%s=%s))", qf, vc.GetString("ldap.fields.user"), user)
+	query := fmt.Sprintf("(&%s(%s=%s))", qf, config.Get[string](vc, "ldap.fields.user"), user)
 	fmt.Fprintf(w, "LDAP Query: %s\n", query)
 	log.Printf("LDAP query: %s", query)
 	search := ldap.NewSearchRequest(config.Get[string](vc, "ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,

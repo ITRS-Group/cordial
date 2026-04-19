@@ -62,12 +62,12 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 		"time":     timestamp.Local().Format("150405"),
 		"datetime": timestamp.Local().Format(time.RFC3339),
 	}
-	ht, err := template.New("dataview").Parse(cf.GetString("html.template"))
+	ht, err := template.New("dataview").Parse(config.Get[string](cf, "html.template"))
 	if err != nil {
 		return err
 	}
 
-	switch cf.GetString("html.split") {
+	switch config.Get[string](cf, "html.split") {
 	case "entity":
 		entities := map[string][]*commands.Dataview{}
 		for _, d := range data.Dataviews {
@@ -88,7 +88,7 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 				"dataview":  "",
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
-			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
+			filename := buildName(config.Get[string](cf, "html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
 			if err = m.AttachHTMLTemplate(filename, ht, many); err != nil {
 				return err
 			}
@@ -106,7 +106,7 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 				"dataview":  d.XPath.Dataview.Name,
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
-			filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
+			filename := buildName(config.Get[string](cf, "html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
 			if err = m.AttachHTMLTemplate(filename, ht, one); err != nil {
 				return err
 			}
@@ -119,7 +119,7 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 			"dataview":  "",
 			"timestamp": timestamp.Local().Format("20060102150405"),
 		}
-		filename := buildName(cf.GetString("html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
+		filename := buildName(config.Get[string](cf, "html.filename", config.LookupTable(lookupDateTime)), lookup) + ".html"
 		if err = m.AttachHTMLTemplate(filename, ht, data); err != nil {
 			return err
 		}

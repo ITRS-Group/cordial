@@ -205,7 +205,7 @@ func (g *Gateways) Name() string {
 	if g.Config() == nil {
 		return ""
 	}
-	return g.Config().GetString("name")
+	return config.Get[string](g.Config(), "name")
 }
 
 func (g *Gateways) Home() string {
@@ -298,9 +298,9 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 	log.Debug().Msgf("%s instance template %q rebuilt", g, INSTANCEXML)
 
-	configrebuild := cf.GetString("config::rebuild")
+	configrebuild := config.Get[string](cf, "config::rebuild")
 
-	setup := cf.GetString("setup")
+	setup := config.Get[string](cf, "setup")
 	if configrebuild == "never" || setup == "" || setup == "none" {
 		return
 	}
@@ -330,10 +330,10 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	log.Debug().Msgf("gateway cert: %q key: %q secure: %v", certPath, keyPath, secure)
 
 	// if we have certs then connect to Licd securely
-	if secure && cf.GetString("licdsecure") != "true" {
+	if secure && config.Get[string](cf, "licdsecure") != "true" {
 		config.Set(cf, "licdsecure", "true")
 		changed = true
-	} else if !secure && cf.GetString("licdsecure") == "true" {
+	} else if !secure && config.Get[string](cf, "licdsecure") == "true" {
 		config.Set(cf, "licdsecure", "false")
 		changed = true
 	}
@@ -385,8 +385,8 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	// it is different to the instance name. It may not be set, hence
 	// the test.
 	name := i.Name()
-	if cf.GetString("gatewayname") != i.Name() {
-		name = cf.GetString("gatewayname")
+	if config.Get[string](cf, "gatewayname") != i.Name() {
+		name = config.Get[string](cf, "gatewayname")
 	}
 
 	// if we have a valid version test for additional features
@@ -417,20 +417,20 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 
 	for _, k := range []string{"obcerv", "gateway-hub", "app-key", "kerberos-principal", "kerberos-keytab"} {
 		if cf.IsSet(k) {
-			args = append(args, "-"+k, cf.GetString(k))
+			args = append(args, "-"+k, config.Get[string](cf, k))
 		}
 		if k == "kerberos-keytab" {
-			checks = append(checks, cf.GetString(k))
+			checks = append(checks, config.Get[string](cf, k))
 		}
 	}
 
-	if setup := cf.GetString("setup"); !(setup == "" || setup == "none") {
+	if setup := config.Get[string](cf, "setup"); !(setup == "" || setup == "none") {
 		args = append(args, "-setup", setup)
 		checks = append(checks, setup)
 	}
 
-	if cf.GetString("licdhost") != "" {
-		args = append(args, "-licd-host", cf.GetString("licdhost"))
+	if config.Get[string](cf, "licdhost") != "" {
+		args = append(args, "-licd-host", config.Get[string](cf, "licdhost"))
 	}
 
 	if licdport := config.Get[uint16](cf, "licdport"); licdport != 0 {

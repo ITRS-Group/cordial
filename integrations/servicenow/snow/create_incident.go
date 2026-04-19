@@ -44,7 +44,7 @@ func CreateIncident(vc *config.Config, sys_id string, incident IncidentFields) (
 	if err != nil {
 		return
 	}
-	result, err = s.POST(postbytes, Fields("number")).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
+	result, err = s.POST(postbytes, Fields("number")).QueryTableSingle(config.Get[string](vc, "servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

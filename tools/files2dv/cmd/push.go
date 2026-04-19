@@ -22,9 +22,10 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/xmlrpc"
-	"github.com/spf13/cobra"
 )
 
 // pushCmd represents the push command
@@ -46,7 +47,7 @@ var pushCmd = &cobra.Command{
 			return
 		}
 
-		gurl, err := url.Parse(cf.GetString("push.netprobe"))
+		gurl, err := url.Parse(config.Get[string](cf, "push.netprobe"))
 		if err != nil {
 			return err
 		}

@@ -32,7 +32,7 @@ var Inventories sync.Map
 // LoadHosts reads the inventories and extracts the hosts and their
 // types, returning them as a map of HostMappings
 func LoadHosts(cf *config.Config) (hosts map[string]HostMappings, err error) {
-	switch cf.GetString("inventory.type") {
+	switch config.Get[string](cf, "inventory.type") {
 	case "yaml":
 		hosts, err = ReadHostsYAML(cf)
 	}

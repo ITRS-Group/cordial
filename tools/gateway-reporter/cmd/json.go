@@ -47,7 +47,7 @@ type reportJSON struct {
 
 // outputJSON writes the slice of Entity structs to w
 func outputJSON(cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe) (err error) {
-	dir := cf.GetString("output.directory")
+	dir := config.Get[string](cf, "output.directory")
 	_ = os.MkdirAll(dir, 0775)
 
 	conftable := config.LookupTable(map[string]string{
@@ -55,7 +55,7 @@ func outputJSON(cf *config.Config, gateway string, entities []Entity, probes map
 		"datetime": startTimestamp,
 	})
 
-	filename := cf.GetString("output.formats.json", conftable)
+	filename := config.Get[string](cf, "output.formats.json", conftable)
 	if !filepath.IsAbs(filename) {
 		filename = path.Join(dir, filename)
 	}
@@ -74,7 +74,7 @@ func outputJSON(cf *config.Config, gateway string, entities []Entity, probes map
 		Report: reportBy{
 			CreatedBy: "ITRS Gateway Reporter",
 			Version:   cordial.VERSION,
-			Site:      cf.GetString("site", config.DefaultValue("ITRS")),
+			Site:      config.Get[string](cf, "site", config.DefaultValue("ITRS")),
 			Timestamp: startTime,
 			Hostname:  hostname,
 			Gateway:   gateway,

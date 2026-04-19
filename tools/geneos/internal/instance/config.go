@@ -174,7 +174,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 
 	var env []string
 	for _, k := range rcf.AllKeys() {
-		v := rcf.GetString(k)
+		v := config.Get[string](rcf, k)
 		if k == "binsuffix" || strings.HasPrefix(k, prefix) {
 			if nk, ok := aliases[k]; ok {
 				config.Set(cf, nk, v)
@@ -371,7 +371,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	// minimum TLS version - from instance, global or 1.2 as a default
-	minTLS := cf.GetString(
+	minTLS := config.Get[string](cf,
 		cf.Join("tls", "minimumversion"),
 		config.DefaultValue(
 			config.Get[string](
@@ -498,14 +498,14 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 	}
 
 	aliases := i.Type().LegacyParameters
-	root := i.Host().GetString("geneos")
+	root := config.Get[string](i.Host().Config, "geneos")
 	cf.Default("name", name)
 
 	// add a bootstrap for 'root'
 	// data to a template must be renewed each time
 	settings := cf.ExpandAllSettings(config.NoDecode(true))
 	settings["root"] = root
-	settings["os"] = i.Host().GetString("os")
+	settings["os"] = config.Get[string](i.Host().Config, "os")
 
 	// set bootstrap values used by templates
 	for _, s := range i.Type().Defaults {

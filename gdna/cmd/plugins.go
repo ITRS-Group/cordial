@@ -29,7 +29,7 @@ import (
 func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
 	for pluginTable := range config.Get[map[string]any](cf, "plugins") {
 		if cf.IsSet(cf.Join("plugins", pluginTable, "plugins")) {
-			table := cf.GetString(cf.Join("plugins", pluginTable, "table"))
+			table := config.Get[string](cf, cf.Join("plugins", pluginTable, "table"))
 			var stmt *sql.Stmt
 			if stmt, err = tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q VALUES (?);", table)); err != nil {
 				return

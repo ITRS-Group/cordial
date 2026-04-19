@@ -135,7 +135,7 @@ func ReservedName(name string) (ok bool) {
 
 // LogFilePath returns the full path to the log file for the instance.
 func LogFilePath(i geneos.Instance) (logfile string) {
-	logdir := path.Clean(i.Config().GetString("logdir"))
+	logdir := path.Clean(config.Get[string](i.Config(), "logdir"))
 	switch {
 	case logdir == "":
 		logfile = i.Home()
@@ -144,7 +144,7 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 	default:
 		logfile = path.Join(i.Home(), logdir)
 	}
-	logfile = path.Join(logfile, i.Config().GetString("logfile"))
+	logfile = path.Join(logfile, config.Get[string](i.Config(), "logfile"))
 	return
 }
 
@@ -361,7 +361,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions)
 
 		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
 			for p, v := range params {
-				if i.Config().GetString(p) != v {
+				if config.Get[string](i.Config(), p) != v {
 					return true
 				}
 			}

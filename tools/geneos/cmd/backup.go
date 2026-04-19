@@ -366,7 +366,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 	}
 	for _, ig := range ignoreSecure {
 		if cf.IsSet(ig) {
-			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(cf.GetString(ig), i.Home()+"/"))
+			ignoreFiles = append(ignoreFiles, strings.TrimPrefix(config.Get[string](cf, ig), i.Home()+"/"))
 		}
 	}
 

@@ -60,7 +60,7 @@ import (
 func Dial(conf *config.Config) (d *mail.Client, err error) {
 	var tlsPolicy mail.TLSPolicy
 
-	switch strings.ToLower(conf.GetString("_smtp_tls", config.DefaultValue("default"))) {
+	switch strings.ToLower(config.Get[string](conf, "_smtp_tls", config.DefaultValue("default"))) {
 	case "force":
 		tlsPolicy = mail.TLSMandatory
 	case "none":
@@ -114,8 +114,8 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 func UpdateEnvelope(conf *config.Config, inlineCSS bool) (m *mail.Msg, err error) {
 	m = mail.NewMsg()
 
-	var from = conf.GetString("_from", config.DefaultValue("geneos@localhost"))
-	var fromName = conf.GetString("_from_name", config.DefaultValue("Geneos"))
+	var from = config.Get[string](conf, "_from", config.DefaultValue("geneos@localhost"))
+	var fromName = config.Get[string](conf, "_from_name", config.DefaultValue("Geneos"))
 
 	m.FromFormat(fromName, from)
 
@@ -141,9 +141,9 @@ func UpdateEnvelope(conf *config.Config, inlineCSS bool) (m *mail.Msg, err error
 // if given, must match "email" or "e-mail" (case insensitive). If either names or info types
 // are given they MUST have the same number of members otherwise it's a fatal error
 func addAddresses(m *mail.Msg, conf *config.Config, header string) (err error) {
-	addrs := splitCommaTrimSpace(conf.GetString("_" + header))
-	names := splitCommaTrimSpace(conf.GetString("_" + header + "_name"))
-	infotypes := splitCommaTrimSpace(conf.GetString("_" + header + "_info_type"))
+	addrs := splitCommaTrimSpace(config.Get[string](conf, "_"+header))
+	names := splitCommaTrimSpace(config.Get[string](conf, "_"+header+"_name"))
+	infotypes := splitCommaTrimSpace(config.Get[string](conf, "_"+header+"_info_type"))
 
 	if len(names) > 0 && len(addrs) != len(names) {
 		return fmt.Errorf("\"%s\" header items mismatch: addrs=%d != names=%d", header, len(addrs), len(names))
@@ -207,8 +207,8 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	var eusername, smtpserver string
 
 	if cf != nil {
-		eusername = cf.GetString("email.username")
-		smtpserver = cf.GetString("email.smtp")
+		eusername = config.Get[string](cf, "email.username")
+		smtpserver = config.Get[string](cf, "email.smtp")
 
 		if eusername != "" {
 			epassword = config.Get[*config.Secret](cf, "email.password")
@@ -217,7 +217,7 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 		if eusername == "" {
 			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
 			if creds != nil {
-				eusername = creds.GetString("username")
+				eusername = config.Get[string](creds, "username")
 				epassword = config.Get[*config.Secret](creds, "password")
 			}
 		}
@@ -227,14 +227,14 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	em.Default("_smtp_password", epassword.String())
 	em.Default("_smtp_server", smtpserver)
 	if cf != nil {
-		em.Default("_smtp_tls", cf.GetString("email.use-tls"))
+		em.Default("_smtp_tls", config.Get[string](cf, "email.use-tls"))
 		em.Default("_smtp_tls_insecure", config.Get[bool](cf, "email.tls-skip-verify"))
 		em.Default("_smtp_port", config.Get[int](cf, "email.port"))
-		em.Default("_from", cf.GetString("email.from"))
-		em.Default("_to", cf.GetString("email.to"))
-		em.Default("_cc", cf.GetString("email.cc"))
-		em.Default("_bcc", cf.GetString("email.bcc"))
-		em.Default("_subject", cf.GetString("email.subject"))
+		em.Default("_from", config.Get[string](cf, "email.from"))
+		em.Default("_to", config.Get[string](cf, "email.to"))
+		em.Default("_cc", config.Get[string](cf, "email.cc"))
+		em.Default("_bcc", config.Get[string](cf, "email.bcc"))
+		em.Default("_subject", config.Get[string](cf, "email.subject"))
 	}
 
 	for _, e := range os.Environ() {

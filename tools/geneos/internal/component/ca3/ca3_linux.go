@@ -25,6 +25,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func getPID(i any) (pid int, err error) {
@@ -59,7 +61,7 @@ func getPID(i any) (pid int, err error) {
 				if strings.Contains(string(arg), "collection-agent") {
 					jarOK = true
 				}
-				if strings.Contains(string(arg), c.Config().GetString("config")) {
+				if strings.Contains(string(arg), config.Get[string](c.Config(), "config")) {
 					configOK = true
 				}
 				if jarOK && configOK {

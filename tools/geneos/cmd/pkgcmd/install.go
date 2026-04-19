@@ -239,7 +239,7 @@ geneos install netprobe -b active_dev -U
 		if !installCmdLocal {
 			cf := config.Global()
 			if installCmdUsername == "" {
-				installCmdUsername = cf.GetString(cf.Join("download", "username"))
+				installCmdUsername = config.Get[string](cf, cf.Join("download", "username"))
 			}
 
 			installCmdPassword = config.Get[*config.Secret](cf, cf.Join("download", "password"))
@@ -303,10 +303,10 @@ geneos install netprobe -b active_dev -U
 			instances := []geneos.Instance{}
 			for ct := range ct.OrList() {
 				for _, i := range instance.Instances(h, ct) {
-					if i.Config().GetString("version") != installCmdBase {
+					if config.Get[string](i.Config(), "version") != installCmdBase {
 						continue
 					}
-					pkg := i.Config().GetString("pkgtype")
+					pkg := config.Get[string](i.Config(), "pkgtype")
 					if pkg != "" && pkg == ct.String() {
 						instances = append(instances, i)
 						continue

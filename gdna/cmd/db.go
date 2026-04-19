@@ -55,7 +55,7 @@ import (
 // check if a `gdna-version` table already exists and then do version
 // specific updates as necessary. currently none, just update version
 func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly bool) (db *sql.DB, err error) {
-	dsn := cf.GetString(dsnBase)
+	dsn := config.Get[string](cf, dsnBase)
 	if after, ok := strings.CutPrefix(dsn, "file:"); ok {
 		// check and replace short form home in a file DSN
 		dsn = "file:" + config.ResolveHome(after)
@@ -76,14 +76,14 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 	}
 
 	// if `db.on-open` exists, run it
-	onOpen := cf.GetString(cf.Join("db", "on-open"))
+	onOpen := config.Get[string](cf, cf.Join("db", "on-open"))
 	if onOpen != "" {
 		if _, err = db.ExecContext(ctx, onOpen); err != nil {
 			return
 		}
 	}
 
-	versionQuery := cf.GetString(cf.Join("db", "gdna-version", "query"))
+	versionQuery := config.Get[string](cf, cf.Join("db", "gdna-version", "query"))
 	if versionQuery != "" {
 		var version string
 		if err = db.QueryRowContext(ctx, versionQuery).Scan(&version); err != nil {
@@ -91,12 +91,12 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 			// yet exist (as the ping and on-open did not error above)
 			//
 			// create a new version table and update it
-			createVersion := cf.GetString(cf.Join("db", "gdna-version", "create"))
+			createVersion := config.Get[string](cf, cf.Join("db", "gdna-version", "create"))
 			if _, err := db.ExecContext(ctx, createVersion); err != nil {
 				return db, err
 			}
 		}
-		insertVersion := cf.GetString(cf.Join("db", "gdna-version", "insert"))
+		insertVersion := config.Get[string](cf, cf.Join("db", "gdna-version", "insert"))
 		_, err = db.ExecContext(ctx, insertVersion, sql.Named("version", cordial.VERSION))
 		if err != nil {
 			log.Error().Err(err).Msg("updating gdna_version")
@@ -126,8 +126,8 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			break
 		}
 		log.Debug().Msgf("found update %d", i)
-		checkQuery := cf.GetString(config.Join(updateBase, "check"))
-		updateQuery := cf.GetString(config.Join(updateBase, "update"))
+		checkQuery := config.Get[string](cf, config.Join(updateBase, "check"))
+		updateQuery := config.Get[string](cf, config.Join(updateBase, "update"))
 
 		if updateQuery == "" {
 			err = fmt.Errorf("no update query for version %d", i)
@@ -306,49 +306,49 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 		columns[strings.ToLower(c)] = i
 	}
 
-	gatewaysInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.gateways.insert"))
+	gatewaysInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gateways.insert"))
 	if err != nil {
-		log.Error().Msgf("cannot prepare statement: %s\n%s", err, cf.GetString("db.gateways.insert"))
+		log.Error().Msgf("cannot prepare statement: %s\n%s", err, config.Get[string](cf, "db.gateways.insert"))
 		return
 	}
 	defer gatewaysInsertStmt.Close()
 
-	probesInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.probes.insert"))
+	probesInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.probes.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer probesInsertStmt.Close()
 
-	osInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.os-versions.insert"))
+	osInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.os-versions.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer osInsertStmt.Close()
 
-	samplersInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.samplers.insert"))
+	samplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.samplers.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer samplersInsertStmt.Close()
 
-	caSamplersInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.ca-samplers.insert"))
+	caSamplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.ca-samplers.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer caSamplersInsertStmt.Close()
 
-	gwSamplersInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.gw-samplers.insert"))
+	gwSamplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gw-samplers.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
 	}
 	defer gwSamplersInsertStmt.Close()
 
-	gwComponentsInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.gw-components.insert"))
+	gwComponentsInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gw-components.insert"))
 	if err != nil {
 		log.Error().Msgf("cannot prepare statement: %s", err)
 		return
@@ -694,9 +694,9 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		return
 	}
 
-	tokensInsertStmt, err := tx.PrepareContext(ctx, cf.GetString("db.tokens.insert"))
+	tokensInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.tokens.insert"))
 	if err != nil {
-		log.Error().Msgf("cannot prepare statement: %s\n%s", err, cf.GetString("db.tokens.insert"))
+		log.Error().Msgf("cannot prepare statement: %s\n%s", err, config.Get[string](cf, "db.tokens.insert"))
 		return
 	}
 	defer tokensInsertStmt.Close()
@@ -813,7 +813,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 			continue
 		}
 
-		query := cf.GetString(table, filters)
+		query := config.Get[string](cf, table, filters)
 		log.Trace().Msg(query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
 			log.Error().Err(err).Msgf("creating table %q with query %q", table, query)
@@ -831,7 +831,7 @@ func runPostInsertHooks(ctx context.Context, cf *config.Config, tx *sql.Tx) (err
 	log.Debug().Msg("running post-insert hooks")
 
 	for _, table := range config.Get[[]string](cf, cf.Join("db", "main-tables")) {
-		if postInsertQuery := cf.GetString(cf.Join("db", table, "post-insert")); postInsertQuery != "" {
+		if postInsertQuery := config.Get[string](cf, cf.Join("db", table, "post-insert")); postInsertQuery != "" {
 			log.Trace().Msgf("post-insert %s:\n%s", table, postInsertQuery)
 			if _, err = tx.ExecContext(ctx, postInsertQuery); err != nil {
 				log.Error().Err(err).Msgf("post-insert for %s failed", table)
@@ -938,7 +938,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 // and query found in cf under `root`.`queryName` passing the arguments
 // in args. Any error is returned.
 func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName string, lookupTable map[string]string, args ...any) (err error) {
-	query := cf.GetString(config.Join(root, queryName), config.LookupTable(lookupTable))
+	query := config.Get[string](cf, config.Join(root, queryName), config.LookupTable(lookupTable))
 	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
 		log.Error().Err(err).Msg(query)
 	}

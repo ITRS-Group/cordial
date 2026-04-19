@@ -64,7 +64,7 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 	}
 
 	for _, k := range conf.AllKeys() {
-		inv.hosts[k] = conf.GetString(k)
+		inv.hosts[k] = config.Get[string](conf, k)
 	}
 	return
 }

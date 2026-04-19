@@ -60,7 +60,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		return
 	}
 
-	clientID := sdpCf.GetString("client-id")
+	clientID := config.Get[string](sdpCf, "client-id")
 	clientSecret := config.Get[*config.Secret](sdpCf, "client-secret")
 
 	if clientID == "" || clientSecret.IsNil() {
@@ -68,7 +68,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		return
 	}
 
-	auth, err := url.Parse(sdpCf.GetString(sdpCf.Join("datacentres", sdpCf.GetString("datacentre"), "auth")))
+	auth, err := url.Parse(config.Get[string](sdpCf, sdpCf.Join("datacentres", config.Get[string](sdpCf, "datacentre"), "auth")))
 	if err != nil {
 		return
 	}
@@ -120,7 +120,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	c = &client{
 		Client: rest.NewClient(
 			rest.HTTPClient(hc),
-			rest.BaseURLString(sdpCf.GetString(sdpCf.Join("datacentres", sdpCf.GetString("datacentre"), "api"))),
+			rest.BaseURLString(config.Get[string](sdpCf, sdpCf.Join("datacentres", config.Get[string](sdpCf, "datacentre"), "api"))),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.Header.Set("Accept", "application/vnd.manageengine.sdp.v3+json")
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

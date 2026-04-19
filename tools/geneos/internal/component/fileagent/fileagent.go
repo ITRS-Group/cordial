@@ -148,7 +148,7 @@ func (n *FileAgents) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *FileAgents) Home() string {
@@ -215,7 +215,7 @@ func (i *FileAgents) Command(skipFileCheck bool) (args, env []string, home strin
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		i.Name(),
-		"-port", i.Config().GetString("port"),
+		"-port", config.Get[string](i.Config(), "port"),
 	}
 	if instance.CompareVersion(i, "6.6.0") >= 0 {
 		// secureArgs := instance.SetSecureArgs(i)

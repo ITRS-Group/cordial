@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -74,7 +75,7 @@ func FileOf(i geneos.Instance, name string) (filename string) {
 		return
 	}
 	// return empty and not a "."
-	filename = path.Base(cf.GetString(name))
+	filename = path.Base(config.Get[string](cf, name))
 	if filename == "." {
 		filename = ""
 	}
@@ -108,7 +109,7 @@ func PathTo(i geneos.Instance, name string) string {
 	if cf == nil {
 		return ""
 	}
-	filename := cf.GetString(name)
+	filename := config.Get[string](cf, name)
 	if filename == "" {
 		return ""
 	}
@@ -135,7 +136,7 @@ func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 
 	for _, name := range names {
 		// note: Abs(i, "") returns ""
-		filenames = append(filenames, Abs(i, cf.GetString(name)))
+		filenames = append(filenames, Abs(i, config.Get[string](cf, name)))
 	}
 	return
 }
@@ -158,7 +159,7 @@ func Home(i geneos.Instance) (home string) {
 
 	// can't use c.Home() as this function is called from there!
 	if i.Config().IsSet("home") {
-		home = i.Config().GetString("home")
+		home = config.Get[string](i.Config(), "home")
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			return
 		}

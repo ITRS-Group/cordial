@@ -73,7 +73,7 @@ geneos config set geneos="/opt/geneos"
 		// fix breaking change
 		if cf.IsSet("itrshome") {
 			if !cf.IsSet("geneos") {
-				config.Set(cf, "geneos", cf.GetString("itrshome"))
+				config.Set(cf, "geneos", config.Get[string](cf, "itrshome"))
 			}
 			// TODO: not sure if this will work
 			config.Set[any](cf, "itrshome", nil)

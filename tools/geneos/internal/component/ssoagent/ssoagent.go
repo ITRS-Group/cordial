@@ -164,7 +164,7 @@ func (w *SSOAgents) Name() string {
 	if w.Config() == nil {
 		return ""
 	}
-	return w.Config().GetString("name")
+	return config.Get[string](w.Config(), "name")
 }
 
 func (w *SSOAgents) Home() string {
@@ -241,7 +241,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		return err
 	}
 
-	truststorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "trust_store", "location")))
+	truststorePath := instance.Abs(s, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
 	truststorePassword := config.Get[*config.Secret](ssoconf,
 		config.Join("server", "trust_store", "password"),
 		config.DefaultValue(config.NewSecret("changeit")),
@@ -261,7 +261,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	if ssoconf.IsSet(config.Join("server", "key_store", "location")) {
 		var changed bool
 
-		keystorePath := instance.Abs(s, ssoconf.GetString(config.Join("server", "key_store", "location")))
+		keystorePath := instance.Abs(s, config.Get[string](ssoconf, config.Join("server", "key_store", "location")))
 		keystorePassword := config.Get[*config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
 			config.DefaultValue(config.NewSecret("changeit")),
@@ -291,7 +291,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			err = ks.WriteKeystore(s.Host(), keystorePath, keystorePassword)
 		}
 
-		alias := ssoconf.GetString(ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
+		alias := config.Get[string](ssoconf, ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
 
 		certChain, err := instance.ReadCertificates(s)
 		if err != nil {
@@ -358,10 +358,10 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 		"-Dbasedir=" + base,
 	}
 
-	javaopts := strings.Fields(cf.GetString("java-options"))
+	javaopts := strings.Fields(config.Get[string](cf, "java-options"))
 	args = append(args, javaopts...)
 
-	truststorePath := ssoconf.GetString(config.Join("server", "trust_store", "location"))
+	truststorePath := config.Get[string](ssoconf, config.Join("server", "trust_store", "location"))
 	truststorePassword := config.Get[*config.Secret](ssoconf, config.Join("server", "trust_store", "password"))
 
 	if truststorePath != "" {

@@ -363,7 +363,7 @@ func initConfig() {
 	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
 	if cf.IsSet("itrshome") {
 		if !cf.IsSet(cordial.ExecutableName()) {
-			config.Set(cf, cordial.ExecutableName(), cf.GetString("itrshome"))
+			config.Set(cf, cordial.ExecutableName(), config.Get[string](cf, "itrshome"))
 		}
 		config.Set[any](cf, "itrshome", nil)
 	}

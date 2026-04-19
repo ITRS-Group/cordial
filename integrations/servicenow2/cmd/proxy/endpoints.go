@@ -93,7 +93,7 @@ func getRecords(c echo.Context) (err error) {
 
 	err = qb.String("query", &query).BindError()
 	if err != nil || query == "" {
-		query = "name=" + cf.GetString("servicenow.username")
+		query = "name=" + config.Get[string](cf, "servicenow.username")
 	}
 
 	err = qb.String("fields", &fields).BindError()

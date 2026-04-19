@@ -76,7 +76,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 		if !component.IsSet("alias") {
 			break
 		}
-		alias := component.GetString("alias")
+		alias := config.Get[string](component, "alias")
 		mappings["hosttype"] = alias
 		component = conf.Sub("components." + mappings["hosttype"])
 	}
@@ -135,14 +135,14 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 
 		entity := component.Sub(config.Join("entities", strconv.Itoa(i)))
 		ent := netprobe.ManagedEntity{
-			Name: entity.GetString("name", config.LookupTable(mappings)),
+			Name: config.Get[string](entity, "name", config.LookupTable(mappings)),
 		}
 
 		attrs := config.Get[[]map[string]string](entity, "attributes",
 			config.LookupTable(mappings),
 			config.Prefix("uuid", func(ci map[string]any, s string, b bool) (string, error) {
 				s = strings.TrimPrefix(s, "uuid:")
-				uuidSource, ok := ci[s].(string) // c.GetString(s, config.TrimPrefix(), config.LookupTable(mappings))
+				uuidSource, ok := ci[s].(string) // config.Get[string](c, s, config.TrimPrefix(), config.LookupTable(mappings))
 				if !ok {
 					return "", nil
 				}
@@ -349,7 +349,7 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOptions) (
 func netprobeID(conf *config.Config, hostname string) (id string) {
 	// extract the part of the hostname used for netprobeID, default to hostname
 	id = hostname
-	if g := conf.GetString("geneos.sans.grouping"); g != "" {
+	if g := config.Get[string](conf, "geneos.sans.grouping"); g != "" {
 		if r, err := regexp.Compile(g); err != nil {
 			log.Error().Err(err).Msg("ignoring grouping")
 		} else {

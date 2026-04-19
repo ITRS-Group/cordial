@@ -41,7 +41,7 @@ const minColWidth = 10.0
 var topHeading, leftHeading, rightAlign, dateStyle, dataColumnStyle int
 
 func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe) (err error) {
-	dir := cf.GetString("output.directory")
+	dir := config.Get[string](cf, "output.directory")
 	_ = os.MkdirAll(dir, 0775) // ignore errors for now
 
 	conftable := config.LookupTable(map[string]string{
@@ -95,11 +95,11 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 		},
 	})
 
-	summary := cf.GetString("output.reports.summary.sheetname", conftable)
+	summary := config.Get[string](cf, "output.reports.summary.sheetname", conftable)
 	xlsx.SetSheetName("Sheet1", summary)
 	xlsx.SetColStyle(summary, "A", leftHeading)
 	xlsx.SetColStyle(summary, "B", rightAlign)
-	site := cf.GetString("site", config.DefaultValue("ITRS"))
+	site := config.Get[string](cf, "site", config.DefaultValue("ITRS"))
 	xlsx.SetColWidth(summary, "A", "B", colWidth(len(site), 40))
 	xlsx.SetSheetCol(summary, "A1", &[]any{
 		"ITRS Gateway Reporter",
@@ -146,7 +146,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 		}
 	}
 
-	filename := cf.GetString("output.formats.xlsx", conftable)
+	filename := config.Get[string](cf, "output.formats.xlsx", conftable)
 	if !filepath.IsAbs(filename) {
 		filename = path.Join(dir, filename)
 	}
@@ -165,7 +165,7 @@ func colWidth(chars int, min float64) float64 {
 }
 
 func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (err error) {
-	sheet := cf.GetString("output.reports.entities.sheetname")
+	sheet := config.Get[string](cf, "output.reports.entities.sheetname")
 	if _, err = x.NewSheet(sheet); err != nil {
 		return
 	}
@@ -369,7 +369,7 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 
 // output two columns of data, sort both lists, output blanks for shorter list
 func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
-	sheet := cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.DefaultValue(strings.ToTitle(plugin)))
+	sheet := config.Get[string](cf, config.Join("output", "reports", plugin, "sheetname"), config.DefaultValue(strings.ToTitle(plugin)))
 
 	if _, err = x.NewSheet(sheet); err != nil {
 		return

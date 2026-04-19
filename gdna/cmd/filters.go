@@ -161,7 +161,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 	// load existing
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -169,7 +169,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 
 	igPath := config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -274,7 +274,7 @@ var removeIncludeCmd = &cobra.Command{
 func removeFilter(filterType, category string, names []string) (err error) {
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -282,7 +282,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 
 	igPath := config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -323,7 +323,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 func listFilters(filterType string, category string, listFormat string) (err error) {
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	r, _ := reporter.NewReporter(listFormat,
@@ -396,7 +396,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterType string) error {
 	ig, err := config.Load(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 		// config.MustExist(),
 	)
 
@@ -406,7 +406,7 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 
 	log.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cf.GetString(config.Join("filters", "file"))),
+		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:
@@ -420,7 +420,7 @@ OUTER:
 			err = nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, cf.GetString(cf.Join("filters", filterType, f, "insert")))
+		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", filterType, f, "insert")))
 		if err != nil {
 			log.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue

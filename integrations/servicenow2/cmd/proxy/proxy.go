@@ -139,10 +139,10 @@ func proxy(cf *config.Config) {
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.GetString(cf.Join("server", "authentication", "token")), nil
+		return key == config.Get[string](cf, cf.Join("server", "authentication", "token")), nil
 	}))
 
-	v2route := e.Group(cf.GetString(cf.Join("server", "path")))
+	v2route := e.Group(config.Get[string](cf, cf.Join("server", "path")))
 
 	// GET Endpoint
 	v2route.GET("/:table", getRecords)
@@ -150,7 +150,7 @@ func proxy(cf *config.Config) {
 	// POST Endpoint
 	v2route.POST("/:table", acceptRecord)
 
-	listen := cf.GetString(cf.Join("server", "listen"))
+	listen := config.Get[string](cf, cf.Join("server", "listen"))
 
 	// init connection or fail early
 	snow.ServiceNow(cf.Sub("servicenow"))
@@ -195,9 +195,9 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	latency := time.Since(starttime)
 
 	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
-		cf.GetString("servicenow.url"), // name of server (APP) with the environment
-		req.Proto,                      // protocol
-		resStatus,                      // response status
+		config.Get[string](cf, "servicenow.url"), // name of server (APP) with the environment
+		req.Proto,                                // protocol
+		resStatus,                                // response status
 		// stats here
 		bytes_in,
 		res.Size,

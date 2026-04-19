@@ -227,7 +227,7 @@ func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options
 	cf := config.Global()
 	// download authentication
 	if initCmdDLUsername == "" {
-		initCmdDLUsername = cf.GetString(cf.Join("download", "username"))
+		initCmdDLUsername = config.Get[string](cf, cf.Join("download", "username"))
 	}
 
 	if initCmdDLUsername != "" {

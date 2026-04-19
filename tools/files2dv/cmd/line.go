@@ -24,7 +24,7 @@ import (
 )
 
 func processLines(dv *config.Config) (dataview Dataview, err error) {
-	dataview.Name = dv.GetString("name")
+	dataview.Name = config.Get[string](dv, "name")
 
 	return dataview, os.ErrInvalid
 }

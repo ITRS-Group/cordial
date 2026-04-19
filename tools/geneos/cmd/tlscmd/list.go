@@ -37,6 +37,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -621,7 +622,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := i.Config().GetString("chainfile")
+	chainfile := config.Get[string](i.Config(), "chainfile")
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -636,8 +637,8 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, i.Config().GetString("certificate"))
-		cols = append(cols, i.Config().GetString("privatekey"))
+		cols = append(cols, config.Get[string](i.Config(), "certificate"))
+		cols = append(cols, config.Get[string](i.Config(), "privatekey"))
 		cols = append(cols, chainfile)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
@@ -663,7 +664,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 		return
 	}
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := i.Config().GetString("chainfile")
+	chainfile := config.Get[string](i.Config(), "chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -677,8 +678,8 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, i.Config().GetString("certificate"))
-		cols = append(cols, i.Config().GetString("privatekey"))
+		cols = append(cols, config.Get[string](i.Config(), "certificate"))
+		cols = append(cols, config.Get[string](i.Config(), "privatekey"))
 		cols = append(cols, chainfile)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
@@ -701,7 +702,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := i.Config().GetString("chainfile")
+	chainfile := config.Get[string](i.Config(), "chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -726,8 +727,8 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 	}
 	if listCmdLong {
 		cols = append(cols,
-			i.Config().GetString("certificate"),
-			i.Config().GetString("privatekey"),
+			config.Get[string](i.Config(), "certificate"),
+			config.Get[string](i.Config(), "privatekey"),
 			chainfile,
 			cert.Issuer.CommonName,
 			strings.Join(cert.DNSNames, " "),
@@ -759,7 +760,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := i.Config().GetString("chainfile")
+	chainfile := config.Get[string](i.Config(), "chainfile")
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -778,8 +779,8 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 			cert.NotAfter,
 			cert.Subject.CommonName,
 			valid,
-			i.Config().GetString("certificate"),
-			i.Config().GetString("privatekey"),
+			config.Get[string](i.Config(), "certificate"),
+			config.Get[string](i.Config(), "privatekey"),
 			chainfile,
 			cert.Issuer.CommonName,
 			cert.DNSNames,

@@ -132,7 +132,7 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Respon
 			return
 		}
 
-		pkp := i.Config().GetString("prevkeyfile")
+		pkp := config.Get[string](i.Config(), "prevkeyfile")
 		if pkp != "" {
 			resp.Summary = fmt.Sprintf("keyfile %s written, existing keyfile renamed to %s and marked a previous keyfile\n", keyfile, pkp)
 		} else {
@@ -170,7 +170,7 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.
 
 	// roll old file
 	if !setCmdNoRoll {
-		p := cf.GetString("keyfile")
+		p := config.Get[string](cf, "keyfile")
 		if p != "" {
 			if p == kp {
 				resp.Summary = fmt.Sprintf("new and existing keyfile have same CRC. Not updating")

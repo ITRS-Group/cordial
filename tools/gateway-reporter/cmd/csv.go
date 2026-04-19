@@ -45,7 +45,7 @@ import (
 // - file plugins (fkm, ftm, stateTracker)
 // - processes.csv
 func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (err error) {
-	dir := cf.GetString("output.directory")
+	dir := config.Get[string](cf, "output.directory")
 	_ = os.MkdirAll(dir, 0775)
 
 	conftable := config.LookupTable(map[string]string{
@@ -53,7 +53,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 		"datetime": startTimestamp,
 	})
 
-	filename := cf.GetString("output.formats.csv", conftable)
+	filename := config.Get[string](cf, "output.formats.csv", conftable)
 	if !filepath.IsAbs(filename) {
 		filename = path.Join(dir, filename)
 	}
@@ -64,7 +64,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 	z := zip.NewWriter(zipfile)
 
 	// output a summary file
-	w, err := createCSVZip(cf, z, cf.GetString("output.reports.summary.filename", conftable)+".csv")
+	w, err := createCSVZip(cf, z, config.Get[string](cf, "output.reports.summary.filename", conftable)+".csv")
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -72,7 +72,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 	outputCSVSummary(w, cf, gateway, Entities, probes)
 
 	// entities.csv
-	w, err = createCSVZip(cf, z, cf.GetString("output.reports.entities.filename", conftable)+".csv")
+	w, err = createCSVZip(cf, z, config.Get[string](cf, "output.reports.entities.filename", conftable)+".csv")
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return
@@ -92,7 +92,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		w, err = createCSVZip(cf, z, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			continue
@@ -113,7 +113,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		w, err = createCSVZip(cf, z, cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
+		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			continue
@@ -143,15 +143,15 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		"datetime": startTimestamp,
 	})
 
-	dir := cf.GetString("output.directory")
-	subdir = cf.GetString("output.formats.csvdir", conftable)
+	dir := config.Get[string](cf, "output.directory")
+	subdir = config.Get[string](cf, "output.formats.csvdir", conftable)
 	if !filepath.IsAbs(subdir) {
 		subdir = path.Join(dir, subdir)
 	}
 	_ = os.MkdirAll(subdir, 0775)
 
 	// output a summary file
-	summaryFile := cf.GetString("output.reports.summary.filename", conftable) + ".csv"
+	summaryFile := config.Get[string](cf, "output.reports.summary.filename", conftable) + ".csv"
 	w, err := createCSVFile(cf, subdir, summaryFile)
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -162,12 +162,12 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 
 	csvfiles = append(csvfiles, csvFiles{
 		path:      filepath.Join(subdir, summaryFile),
-		filename:  cf.GetString("output.reports.summary.filename", config.NoExpand()),
-		sheetname: cf.GetString("output.reports.summary.sheetname", config.NoExpand()),
+		filename:  config.Get[string](cf, "output.reports.summary.filename", config.NoExpand()),
+		sheetname: config.Get[string](cf, "output.reports.summary.sheetname", config.NoExpand()),
 	})
 
 	// entities.csv
-	entitiesFile := cf.GetString("output.reports.entities.filename", conftable) + ".csv"
+	entitiesFile := config.Get[string](cf, "output.reports.entities.filename", conftable) + ".csv"
 	w, err = createCSVFile(cf, subdir, entitiesFile)
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -178,8 +178,8 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 
 	csvfiles = append(csvfiles, csvFiles{
 		path:      filepath.Join(subdir, entitiesFile),
-		filename:  cf.GetString("output.reports.entities.filename", config.NoExpand()),
-		sheetname: cf.GetString("output.reports.entities.sheetname", config.NoExpand()),
+		filename:  config.Get[string](cf, "output.reports.entities.filename", config.NoExpand()),
+		sheetname: config.Get[string](cf, "output.reports.entities.sheetname", config.NoExpand()),
 	})
 
 	skipEmpty := config.Get[bool](cf, "output.skip-empty-reports")
@@ -202,7 +202,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		pluginFile := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
+		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
 		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
 			log.Error().Err(err).Msg("")
@@ -213,8 +213,8 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		csvfiles = append(csvfiles, csvFiles{
 			path:      filepath.Join(subdir, pluginFile),
-			filename:  cf.GetString(config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
-			sheetname: cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
+			filename:  config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
+			sheetname: config.Get[string](cf, config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
 		})
 	}
 
@@ -235,7 +235,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 			continue
 		}
 
-		pluginFile := cf.GetString(config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
+		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
 		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
 			log.Error().Err(err).Msg("")
@@ -246,8 +246,8 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		csvfiles = append(csvfiles, csvFiles{
 			path:      filepath.Join(subdir, pluginFile),
-			filename:  cf.GetString(config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
-			sheetname: cf.GetString(config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
+			filename:  config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), config.NoExpand()),
+			sheetname: config.Get[string](cf, config.Join("output", "reports", plugin, "sheetname"), config.NoExpand()),
 		})
 	}
 
@@ -264,7 +264,7 @@ func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities [
 	scsv.WriteAll([][]string{
 		{"Name", "Value"},
 		{"ITRS Gateway Reporter", "Version: " + cordial.VERSION},
-		{"Site", cf.GetString("site", config.DefaultValue("ITRS"))},
+		{"Site", config.Get[string](cf, "site", config.DefaultValue("ITRS"))},
 		{"Report Date/Time", startTime.Format(time.RFC3339)},
 		{"Hostname", hostname},
 		{"Gateway Name", gateway},

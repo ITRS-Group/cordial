@@ -136,7 +136,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 
 		// if sheetname is "auto" then apply some heuristics
 
-		sheetname = cf.GetString("xlsx.sheetname", config.LookupTable(lookup))
+		sheetname = config.Get[string](cf, "xlsx.sheetname", config.LookupTable(lookup))
 		sheetname = buildName(sheetname, lookup)
 
 		if len(sheetname) > 31 {
@@ -240,7 +240,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		err = x.AddTable(sheetname, &excelize.Table{
 			Range:             dataviewTable + ":" + end,
 			Name:              tablename,
-			StyleName:         cf.GetString("xlsx.style", config.DefaultValue("TableStyleMedium2")),
+			StyleName:         config.Get[string](cf, "xlsx.style", config.DefaultValue("TableStyleMedium2")),
 			ShowFirstColumn:   true,
 			ShowLastColumn:    false,
 			ShowRowStripes:    &rowStripes,
@@ -286,7 +286,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 
 	buf := &bytes.Buffer{}
 	if err = x.Write(buf, excelize.Options{
-		Password: cf.GetString("xlsx.password"),
+		Password: config.Get[string](cf, "xlsx.password"),
 	}); err != nil {
 		return
 	}
@@ -362,7 +362,7 @@ func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []data
 		"time":     timestamp.Local().Format("150405"),
 		"datetime": timestamp.Local().Format(time.RFC3339),
 	}
-	switch cf.GetString("xlsx.split") {
+	switch config.Get[string](cf, "xlsx.split") {
 	case "entity":
 		entities := map[string][]*commands.Dataview{}
 		for _, d := range data.Dataviews {
@@ -387,7 +387,7 @@ func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []data
 			if err != nil {
 				return files, err
 			}
-			filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+			filename := buildName(config.Get[string](cf, "xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
 			files = append(files, dataFile{
 				name:    filename,
 				content: buf,
@@ -410,7 +410,7 @@ func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []data
 			if err != nil {
 				return files, err
 			}
-			filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+			filename := buildName(config.Get[string](cf, "xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
 			files = append(files, dataFile{
 				name:    filename,
 				content: buf,
@@ -429,7 +429,7 @@ func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []data
 		if err != nil {
 			return files, err
 		}
-		filename := buildName(cf.GetString("xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
+		filename := buildName(config.Get[string](cf, "xlsx.filename", config.LookupTable(lookupDateTime)), lookup) + ".xlsx"
 		files = append(files, dataFile{
 			name:    filename,
 			content: buf,

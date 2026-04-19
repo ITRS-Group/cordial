@@ -166,7 +166,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		flags = "-"
 	}
 	base, underlying, _ := instance.Version(i)
-	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
+	if pkgtype := config.Get[string](i.Config(), "pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
 

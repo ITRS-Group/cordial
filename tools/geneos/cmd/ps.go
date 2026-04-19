@@ -30,6 +30,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -278,7 +279,7 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 	groupname = geneos.GetGroupname(gid)
 
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
-	if pkgtype := i.Config().GetString("pkgtype"); pkgtype != "" {
+	if pkgtype := config.Get[string](i.Config(), "pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
 	uptodate = "="

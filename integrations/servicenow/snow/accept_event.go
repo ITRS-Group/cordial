@@ -54,7 +54,7 @@ func AcceptEvent(c echo.Context) (err error) {
 				return echo.NewHTTPError(http.StatusNotFound, "must supply either a default_cmdb_ci or a sys_id search parameter")
 			}
 		} else {
-			if vc.GetString("servicenow.searchtype") == "simple" {
+			if config.Get[string](vc, "servicenow.searchtype") == "simple" {
 				if cmdb_ci_id, sys_class_name, err = LookupSysIDSimple(vc, "cmdb_ci", search, incident["default_cmdb_ci"]); err != nil {
 					return
 				}

@@ -653,8 +653,8 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	baseurl := config.Get[string](cf, cf.Join("download", "url"))
 	downloadURL, _ := url.Parse(baseurl)
 
-	os := opts.host.GetString("os")
-	arch := osMap[opts.host.GetString("arch")]
+	os := config.Get[string](opts.host.Config, "os")
+	arch := osMap[config.Get[string](opts.host.Config, "arch")]
 
 	v := url.Values{}
 
@@ -754,7 +754,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		if opts.username == "" {
 			creds := config.FindCreds(source, config.SetAppName(cordial.ExecutableName()))
 			if creds != nil {
-				opts.username = creds.GetString("username")
+				opts.username = config.Get[string](creds, "username")
 				opts.password = config.Get[*config.Secret](creds, "password")
 			}
 		}
@@ -834,8 +834,8 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 }
 
 func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
-	os := opts.host.GetString("os")
-	arch := osMap[opts.host.GetString("arch")]
+	os := config.Get[string](opts.host.Config, "os")
+	arch := osMap[config.Get[string](opts.host.Config, "arch")]
 
 	platform := ""
 	if opts.platformId != "" {
@@ -882,7 +882,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 	if opts.username == "" {
 		creds := config.FindCreds(baseurl, config.SetAppName(cordial.ExecutableName()))
 		if creds != nil {
-			opts.username = creds.GetString("username")
+			opts.username = config.Get[string](creds, "username")
 			opts.password = config.Get[*config.Secret](creds, "password")
 		}
 	}

@@ -128,7 +128,7 @@ var reportCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
-			fmt.Printf("Report(s) for gateway %q written to directory %s\n", gateway, cf.GetString("output.directory"))
+			fmt.Printf("Report(s) for gateway %q written to directory %s\n", gateway, config.Get[string](cf, "output.directory"))
 		}
 		return
 	},
@@ -153,7 +153,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 
 	dir := reportCmdOutDir
 	if dir == "" {
-		dir = cf.GetString("output.directory")
+		dir = config.Get[string](cf, "output.directory")
 	}
 	_ = os.MkdirAll(dir, 0775)
 
@@ -200,7 +200,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 		"datetime": startTimestamp,
 	})
 
-	includeFile := cf.GetString("output.toolkit-include.include-file", conftable)
+	includeFile := config.Get[string](cf, "output.toolkit-include.include-file", conftable)
 	if !filepath.IsAbs(includeFile) {
 		includeFile = filepath.Join(destdir, includeFile)
 	}
@@ -217,11 +217,11 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 		})
 
 		samplers[i] = geneos.Sampler{
-			Name:            cf.GetString("output.toolkit-include.sampler-name", samplerConftable),
+			Name:            config.Get[string](cf, "output.toolkit-include.sampler-name", samplerConftable),
 			SampleOnStartup: true,
-			Group:           geneos.NewSingleLineString(cf.GetString("output.toolkit-include.sampler-group", samplerConftable)),
+			Group:           geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-group", samplerConftable)),
 			Plugin: &geneos.Plugin{Toolkit: &geneos.ToolkitPlugin{
-				SamplerScript: geneos.NewSingleLineString(cf.GetString("output.toolkit-include.sampler-script", samplerConftable)),
+				SamplerScript: geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-script", samplerConftable)),
 			}},
 		}
 	}
@@ -238,8 +238,8 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 		XSI:           "http://schema.itrsgroup.com/GA5.14.2-220707/gateway.xsd",
 		ManagedEntities: &geneos.ManagedEntities{
 			Entities: []geneos.ManagedEntity{{
-				Name:     cf.GetString("output.toolkit-include.entity-name", conftable),
-				Probe:    &geneos.Reference{Name: cf.GetString("output.toolkit-include.probe-name", conftable)},
+				Name:     config.Get[string](cf, "output.toolkit-include.entity-name", conftable),
+				Probe:    &geneos.Reference{Name: config.Get[string](cf, "output.toolkit-include.probe-name", conftable)},
 				Samplers: samplerRefs,
 			}},
 		},

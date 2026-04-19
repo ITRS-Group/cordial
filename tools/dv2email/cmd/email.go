@@ -38,20 +38,20 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
-	m.Subject(em.GetString("_subject"))
+	m.Subject(config.Get[string](em, "_subject"))
 
 	// attachments here
 
 	// if not a multipart/alternative then always attach a plain
 	// text part as the main body
-	tt, err := template.New("dataview").Parse(cf.GetString("text.template"))
+	tt, err := template.New("dataview").Parse(config.Get[string](cf, "text.template"))
 	if err != nil {
 		return
 	}
 	_ = m.SetBodyTextTemplate(tt, data)
 
 	if slices.Contains(config.Get[[]string](cf, "email.contents"), "text+html") {
-		ht, err := htemplate.New("dataview").Parse(cf.GetString("html.template"))
+		ht, err := htemplate.New("dataview").Parse(config.Get[string](cf, "html.template"))
 		if err != nil {
 			return err
 		}

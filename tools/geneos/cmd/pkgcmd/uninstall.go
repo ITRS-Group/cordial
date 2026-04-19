@@ -31,6 +31,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -137,8 +138,8 @@ geneos uninstall --version 5.14.1
 				// get all instances on host h and check type and pkgtype
 				restart := map[string][]geneos.Instance{}
 				for _, i := range instance.Instances(h, nil) {
-					if i.Type() != ct && i.Config().GetString("pkgtype") != ct.String() {
-						log.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, i.Config().GetString("pkgtype"))
+					if i.Type() != ct && config.Get[string](i.Config(), "pkgtype") != ct.String() {
+						log.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, config.Get[string](i.Config(), "pkgtype"))
 						continue
 					}
 					if instance.IsDisabled(i) {

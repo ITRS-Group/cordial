@@ -140,7 +140,7 @@ func (n *AC2s) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *AC2s) Home() string {
@@ -261,7 +261,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 		return false
 	}
 
-	if cmdline[0] != c.Config().GetString("program") {
+	if cmdline[0] != config.Get[string](c.Config(), "program") {
 		return false
 	}
 	for _, arg := range cmdline[1:] {

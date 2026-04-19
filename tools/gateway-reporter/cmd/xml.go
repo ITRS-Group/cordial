@@ -27,7 +27,7 @@ import (
 )
 
 func outputXML(cf *config.Config, gateway string, savedXML *bytes.Buffer) (err error) {
-	dir := cf.GetString("output.directory")
+	dir := config.Get[string](cf, "output.directory")
 	_ = os.MkdirAll(dir, 0775)
 
 	conftable := config.LookupTable(map[string]string{
@@ -35,7 +35,7 @@ func outputXML(cf *config.Config, gateway string, savedXML *bytes.Buffer) (err e
 		"datetime": startTimestamp,
 	})
 
-	filename := cf.GetString("output.formats.xml", conftable)
+	filename := config.Get[string](cf, "output.formats.xml", conftable)
 	if !filepath.IsAbs(filename) {
 		filename = path.Join(dir, filename)
 	}

@@ -46,11 +46,11 @@ func InitializeConnection(vc *config.Config) *Connection {
 	}
 	snowMutex.RUnlock()
 
-	pw := []byte(vc.GetString("servicenow.password"))
+	pw := []byte(config.Get[string](vc, "servicenow.password"))
 
 	// XXX - deprecated. Use above with expansion options
 	if len(pw) == 0 {
-		var passwordfile = vc.GetString("servicenow.passwordfile")
+		var passwordfile = config.Get[string](vc, "servicenow.passwordfile")
 		if len(passwordfile) == 0 {
 			log.Fatalln("no password or password file configured")
 		}

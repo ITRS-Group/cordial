@@ -158,7 +158,7 @@ func incident(args []string) {
 		log.Fatal().Err(err).Msg("")
 	}
 
-	bearer := fmt.Sprintf("Bearer %s", cf.GetString("api.apikey"))
+	bearer := fmt.Sprintf("Bearer %s", config.Get[string](cf, "api.apikey"))
 
 	req.Header.Add("Authorization", bearer)
 

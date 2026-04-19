@@ -139,7 +139,7 @@ func saveToken(token *oauth2.Token) (err error) {
 func InitialAuth(sdpCf *config.Config, code *config.Secret) (tok *oauth2.Token, err error) {
 	var tcc *tls.Config
 
-	clientID := sdpCf.GetString("client-id")
+	clientID := config.Get[string](sdpCf, "client-id")
 	clientSecret := config.Get[*config.Secret](sdpCf, "client-secret")
 
 	if clientID == "" || clientSecret.IsNil() {

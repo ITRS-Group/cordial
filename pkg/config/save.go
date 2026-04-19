@@ -167,7 +167,7 @@ func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err e
 		if opts.expandOnSave {
 			log.Debug().Msgf("expanding key: %s", k)
 			// test setting numbers
-			s := expand[string](c, c.GetString(k, opts.expandOptions...))
+			s := expand[string](c, Get[string](c, k, opts.expandOptions...))
 			Set(nv, k, s)
 		} else {
 			Set(nv, k, v)

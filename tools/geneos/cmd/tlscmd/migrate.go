@@ -122,9 +122,9 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 			return
 		}
 
-		truststorePath = ssoConf.GetString(ssoConf.Join("server", "trust_store", "location"))
+		truststorePath = config.Get[string](ssoConf, ssoConf.Join("server", "trust_store", "location"))
 		truststorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
-		keystorePath = ssoConf.GetString(ssoConf.Join("server", "key_store", "location"))
+		keystorePath = config.Get[string](ssoConf, ssoConf.Join("server", "key_store", "location"))
 		keystorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
 	case i.Type().IsA("webserver"):
 		spPath := instance.Abs(i, "config/security.properties")
@@ -217,7 +217,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	}
 
 	if cf.IsSet("certchain") {
-		chain, err := certs.ReadCertificates(h, cf.GetString("certchain"))
+		chain, err := certs.ReadCertificates(h, config.Get[string](cf, "certchain"))
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			resp.Err = err
 			return
@@ -263,7 +263,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) 
 	resp.Completed = append(resp.Completed, "wrote fullchain to instance certificate file")
 
 	// update instance parameters to new layout
-	if pk := cf.GetString("privatekey"); pk != "" {
+	if pk := config.Get[string](cf, "privatekey"); pk != "" {
 		// this may have already been done above in webserver/sso-agent
 		config.Set(cf, "privatekey", "")
 		config.Set(cf, cf.Join("tls", "privatekey"), pk)

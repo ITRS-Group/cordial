@@ -41,7 +41,7 @@ func UpdateIncident(vc *config.Config, incident_id string, incident IncidentFiel
 	}
 
 	s := InitializeConnection(vc)
-	result, err = s.PUT(postbytes, Fields("number"), SysID(incident_id)).QueryTableSingle(vc.GetString("servicenow.incidenttable"))
+	result, err = s.PUT(postbytes, Fields("number"), SysID(incident_id)).QueryTableSingle(config.Get[string](vc, "servicenow.incidenttable"))
 	if err != nil {
 		return
 	} else {

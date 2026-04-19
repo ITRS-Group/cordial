@@ -26,7 +26,7 @@ func ReadAESKeyFile(i geneos.Instance, setting ...string) (keyfile config.KeyFil
 	if len(setting) > 0 && setting[0] != "" {
 		k = "keyfile"
 	}
-	kp := i.Config().GetString(k)
+	kp := config.Get[string](i.Config(), k)
 	if kp == "" {
 		err = geneos.ErrNotExist
 		return
@@ -81,7 +81,7 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 // file values nkv are written to a new file and the instance settings
 // updated.
 func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (keyfile config.KeyFile, crc uint32, err error) {
-	kp := i.Config().GetString("keyfile")
+	kp := config.Get[string](i.Config(), "keyfile")
 
 	// if existing keyfile is in a shared keyfile folder do not backup
 	// and write new keyfile in instance folder

@@ -171,7 +171,7 @@ var raiseCmd = &cobra.Command{
 		}
 
 		if raiseCmdIMSType == "" {
-			raiseCmdIMSType = cf.GetString(config.Join("ims-gateway", "type"))
+			raiseCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
 		}
 
 		// check correlation ID, prefer a "raw" ID

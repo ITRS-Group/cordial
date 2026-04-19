@@ -79,7 +79,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	// only bother with keyfile if we need it later?
 	if len(set.SecureEnvs) > 0 || len(set.SecureParams) > 0 {
 		if k == "" {
-			k = config.KeyFile(cf.GetString("keyfile"))
+			k = config.KeyFile(config.Get[string](cf, "keyfile"))
 		}
 
 		if k == "" {

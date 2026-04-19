@@ -153,7 +153,7 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 		"time":     timestamp.Local().Format("150405"),
 		"datetime": timestamp.Local().Format(time.RFC3339),
 	}
-	switch cf.GetString("texttable.split") {
+	switch config.Get[string](cf, "texttable.split") {
 	case "entity":
 		entities := map[string][]*commands.Dataview{}
 		for _, d := range data.Dataviews {
@@ -178,7 +178,7 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 				"dataview":  "",
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
-			filename := buildName(cf.GetString("texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
+			filename := buildName(config.Get[string](cf, "texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
 			files = append(files, dataFile{
 				name:    filename,
 				content: text,
@@ -201,7 +201,7 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 				"dataview":  d.XPath.Dataview.Name,
 				"timestamp": timestamp.Local().Format("20060102150405"),
 			}
-			filename := buildName(cf.GetString("texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
+			filename := buildName(config.Get[string](cf, "texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
 			files = append(files, dataFile{
 				name:    filename,
 				content: text,
@@ -219,7 +219,7 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 			"dataview":  "",
 			"timestamp": timestamp.Local().Format("20060102150405"),
 		}
-		filename := buildName(cf.GetString("texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
+		filename := buildName(config.Get[string](cf, "texttable.filename", config.LookupTable(lookupDateTime)), lookup) + ".txt"
 		files = append(files, dataFile{
 			name:    filename,
 			content: text,

@@ -159,7 +159,7 @@ func (n *Netprobes) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *Netprobes) Home() string {
@@ -233,7 +233,7 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 
 	args = []string{
 		n.Name(),
-		"-port", n.Config().GetString("port"),
+		"-port", config.Get[string](n.Config(), "port"),
 	}
 
 	if strings.Contains(h.ServerVersion(), "windows") {
@@ -241,7 +241,7 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	}
 
 	if cf.IsSet("listenip") {
-		args = append(args, "-listenip", cf.GetString("listenip"))
+		args = append(args, "-listenip", config.Get[string](cf, "listenip"))
 	}
 	// secureArgs := instance.SetSecureArgs(n)
 	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
@@ -265,7 +265,7 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+n.Config().GetString(("hostname"), config.DefaultValue(hostname)))
+	env = append(env, "HOSTNAME="+config.Get[string](n.Config(), ("hostname"), config.DefaultValue(hostname)))
 
 	if skipFileCheck {
 		return

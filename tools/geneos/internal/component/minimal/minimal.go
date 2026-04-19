@@ -152,7 +152,7 @@ func (n *Minimals) Name() string {
 	if n.Config() == nil {
 		return ""
 	}
-	return n.Config().GetString("name")
+	return config.Get[string](n.Config(), "name")
 }
 
 func (n *Minimals) Home() string {
@@ -223,7 +223,7 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 
 	args = []string{
 		n.Name(),
-		"-port", n.Config().GetString("port"),
+		"-port", config.Get[string](n.Config(), "port"),
 	}
 
 	if strings.Contains(h.ServerVersion(), "windows") {
@@ -231,7 +231,7 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 	}
 
 	if cf.IsSet("listenip") {
-		args = append(args, "-listenip", cf.GetString("listenip"))
+		args = append(args, "-listenip", config.Get[string](cf, "listenip"))
 	}
 
 	// secureArgs := instance.SetSecureArgs(n)

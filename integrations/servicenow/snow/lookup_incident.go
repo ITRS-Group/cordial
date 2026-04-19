@@ -35,8 +35,8 @@ func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (i
 		"correlation_id": correlation_id,
 	}
 
-	q := vc.GetString("servicenow.incident-query", config.LookupTable(lookup_map), config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci, correlation_id)))
-	results, err := s.GET(Fields("sys_id,short_description,state"), Query(q)).QueryTableDetail(vc.GetString("servicenow.incidenttable"))
+	q := config.Get[string](vc, "servicenow.incident-query", config.LookupTable(lookup_map), config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci, correlation_id)))
+	results, err := s.GET(Fields("sys_id,short_description,state"), Query(q)).QueryTableDetail(config.Get[string](vc, "servicenow.incidenttable"))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup incident: %s", err))
 		return

@@ -146,7 +146,7 @@ func (h *Host) String() string {
 	if h == nil {
 		return ""
 	}
-	return h.GetString("name")
+	return config.Get[string](h.Config, "name")
 }
 
 // GetHost returns a pointer to a Host. If passed an empty name, returns
@@ -293,7 +293,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 
 // PlatformID returns the platform ID for the host h.
 func PlatformID(h *Host) (platformID string) {
-	p := h.GetString(h.Join("osinfo", "platform_id"))
+	p := config.Get[string](h.Config, h.Join("osinfo", "platform_id"))
 	s := strings.Split(p, ":")
 	if len(s) > 1 {
 		platformID = s[1]
@@ -372,7 +372,7 @@ func (h *Host) PathTo(parts ...any) string {
 		h = LOCAL
 	}
 
-	strParts := []string{h.GetString(cordial.ExecutableName())}
+	strParts := []string{config.Get[string](h.Config, cordial.ExecutableName())}
 
 	for _, p := range parts {
 		switch s := p.(type) {
@@ -477,14 +477,14 @@ func LoadHostConfig() {
 		}
 
 		r := host.NewSSHRemote(
-			v.GetString("name"),
+			config.Get[string](v, "name"),
 			host.Username(config.Get[string](v, "username")), // username is the login name for the remote host
 			host.Hostname(config.Get[string](v, "hostname")),
 			host.Port(config.Get[uint16](v, "port")),
 			host.Password(config.Get[*config.Secret](v, "password").Enclave),
 			host.PrivateKeyFiles(config.Get[[]string](v, "privatekeys")...),
 		)
-		hosts.Store(v.GetString("name"), &Host{r, v, config.Get[bool](v, "hidden"), true})
+		hosts.Store(config.Get[string](v, "name"), &Host{r, v, config.Get[bool](v, "hidden"), true})
 	}
 }
 

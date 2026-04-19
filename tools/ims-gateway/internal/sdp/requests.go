@@ -62,7 +62,7 @@ func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 		v.Add("input_data", config.Expand[string](cf, string(b), opts...))
 	}
 
-	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), "/api/v3/requests")
+	endpoint, err := url.JoinPath("app", config.Get[string](c.sdpCf, "portal"), "/api/v3/requests")
 	if err != nil {
 		return
 	}
@@ -84,7 +84,7 @@ func (c *client) createRequest(ctx context.Context, sdpCf *config.Config, lookup
 		return
 	}
 
-	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), "/api/v3/requests")
+	endpoint, err := url.JoinPath("app", config.Get[string](c.sdpCf, "portal"), "/api/v3/requests")
 	if err != nil {
 		return
 	}
@@ -110,7 +110,7 @@ func (c *client) editRequest(ctx context.Context, id int64, sdpCf *config.Config
 		return
 	}
 
-	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), fmt.Sprintf("/api/v3/requests/%d", id))
+	endpoint, err := url.JoinPath("app", config.Get[string](c.sdpCf, "portal"), fmt.Sprintf("/api/v3/requests/%d", id))
 	if err != nil {
 		return
 	}
@@ -144,7 +144,7 @@ func (c *client) addNote(ctx context.Context, id int64, sdpCf *config.Config, lo
 		return
 	}
 
-	endpoint, err := url.JoinPath("app", c.sdpCf.GetString("portal"), fmt.Sprintf("/api/v3/requests/%d/notes", id))
+	endpoint, err := url.JoinPath("app", config.Get[string](c.sdpCf, "portal"), fmt.Sprintf("/api/v3/requests/%d/notes", id))
 	if err != nil {
 		return
 	}

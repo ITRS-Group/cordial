@@ -66,7 +66,7 @@ var queryCmd = &cobra.Command{
 			}
 
 			if queryCmdQuery == "" {
-				queryCmdQuery = cf.GetString(config.Join("proxy", "default-query"))
+				queryCmdQuery = config.Get[string](cf, config.Join("proxy", "default-query"))
 			}
 
 			query := struct {

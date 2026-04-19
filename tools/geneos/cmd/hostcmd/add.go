@@ -175,7 +175,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		// now disassemble URL
 		if sshurl.Hostname() == "" {
-			config.Set(cf, "hostname", cf.GetString("name"))
+			config.Set(cf, "hostname", config.Get[string](cf, "name"))
 		}
 
 		if sshurl.Port() != "" {
@@ -191,8 +191,8 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		}
 
 		h := geneos.NewHost(name,
-			host.Hostname(cf.GetString("hostname")),
-			host.Username(cf.GetString("username")),
+			host.Hostname(config.Get[string](cf, "hostname")),
+			host.Username(config.Get[string](cf, "username")),
 			host.Port(uint16(config.Get[int](cf, "port"))),
 			host.Password(pw.Enclave),
 			host.PrivateKeyFiles(config.Get[[]string](cf, "privatekeys")...),
@@ -206,7 +206,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
-			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", cf.GetString("hostname"), config.Get[uint16](cf, "port"), cf.GetString("username"))
+			log.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", config.Get[string](cf, "hostname"), config.Get[uint16](cf, "port"), config.Get[string](cf, "username"))
 			return
 		}
 
@@ -222,7 +222,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		if sshurl.Path != "" {
 			config.Set(h.Config, cordial.ExecutableName(), sshurl.Path)
 		} else {
-			geneosdir := h.GetString("homedir")
+			geneosdir := config.Get[string](h.Config, "homedir")
 			if path.Base(geneosdir) != cordial.ExecutableName() {
 				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
 			}
@@ -245,7 +245,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 			if err = geneos.Initialise(h,
 				geneos.Force(true),
-				geneos.UseRoot(h.GetString(cordial.ExecutableName()))); err != nil {
+				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName()))); err != nil {
 				return
 			}
 		}

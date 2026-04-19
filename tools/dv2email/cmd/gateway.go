@@ -28,7 +28,7 @@ import (
 func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 	u := &url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", cf.GetString("gateway.host"), config.Get[uint16](cf, cf.Join("gateway", "port"))),
+		Host:   fmt.Sprintf("%s:%d", config.Get[string](cf, "gateway.host"), config.Get[uint16](cf, cf.Join("gateway", "port"))),
 	}
 
 	if config.Get[bool](cf, cf.Join("gateway", "use-tls")) {
@@ -52,7 +52,7 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 			creds = config.FindCreds("gateway", config.SetAppName("geneos"))
 		}
 		if creds != nil {
-			username = creds.GetString("username")
+			username = config.Get[string](creds, "username")
 			password = config.Get[*config.Secret](creds, "password")
 		}
 	}

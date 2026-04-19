@@ -169,7 +169,7 @@ func (s *Floatings) Name() string {
 	if s.Config() == nil {
 		return ""
 	}
-	return s.Config().GetString("name")
+	return config.Get[string](s.Config(), "name")
 }
 
 func (s *Floatings) Home() string {
@@ -250,7 +250,7 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 // we do a dance if there is a change in TLS setup and we use default ports
 func (s *Floatings) Rebuild(initial bool) (err error) {
 	cf := s.Config()
-	configrebuild := cf.GetString("config::rebuild")
+	configrebuild := config.Get[string](cf, "config::rebuild")
 	if configrebuild == "never" {
 		return
 	}
@@ -259,7 +259,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	setup := cf.GetString("setup")
+	setup := config.Get[string](cf, "setup")
 	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
 		log.Debug().Msg("not rebuilding URL bases setup")
 		return
@@ -305,12 +305,12 @@ func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string
 
 	args = []string{
 		i.Name(),
-		"-listenip", cf.GetString("listenip", config.DefaultValue("none")),
-		"-port", cf.GetString("port"),
-		"-setup", cf.GetString("setup"),
+		"-listenip", config.Get[string](cf, "listenip", config.DefaultValue("none")),
+		"-port", config.Get[string](cf, "port"),
+		"-setup", config.Get[string](cf, "setup"),
 		// "-setup-interval", "300",
 	}
-	checks = append(checks, cf.GetString("setup"))
+	checks = append(checks, config.Get[string](cf, "setup"))
 
 	// secureArgs := instance.SetSecureArgs(i)
 	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)

@@ -27,6 +27,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -89,7 +90,7 @@ geneos package update netprobe --version 5.13.2
 		if updateCmdInstall {
 			types := make(map[string]bool)
 			for _, c := range instance.Instances(h, ct) {
-				if pt := c.Config().GetString("pkgtype"); pt != "" {
+				if pt := config.Get[string](c.Config(), "pkgtype"); pt != "" {
 					types[pt] = true
 				} else {
 					types[c.Type().String()] = true
@@ -121,11 +122,11 @@ geneos package update netprobe --version 5.13.2
 		if updateCmdRestart {
 			for ct := range ct.OrList() {
 				for _, i := range instance.Instances(h, ct) {
-					if i.Config().GetString("version") != updateCmdBase {
+					if config.Get[string](i.Config(), "version") != updateCmdBase {
 						log.Debug().Msgf("%s base different", i)
 						continue
 					}
-					pkg := i.Config().GetString("pkgtype")
+					pkg := config.Get[string](i.Config(), "pkgtype")
 					if pkg != "" && pkg == ct.String() {
 						instances = append(instances, i)
 						continue

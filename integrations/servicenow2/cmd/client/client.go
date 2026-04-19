@@ -495,7 +495,7 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
 			req.Header.Add(
 				"Authorization",
-				fmt.Sprintf("Bearer %s", cf.GetString(config.Join("proxy", "authentication", "token"))),
+				fmt.Sprintf("Bearer %s", config.Get[string](cf, config.Join("proxy", "authentication", "token"))),
 			)
 		}),
 	)

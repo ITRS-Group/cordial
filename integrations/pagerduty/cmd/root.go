@@ -121,12 +121,12 @@ func initConfig() {
 func sendEvent(eventType eventType) (err error) {
 	var action string
 
-	client := pagerduty.NewClient(cf.GetString("pagerduty.authtoken"))
-	routing_key := cf.GetString("pagerduty.routingkey")
+	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"))
+	routing_key := config.Get[string](cf, "pagerduty.routingkey")
 	payload := cf.Sub("pagerduty.event.payload")
 
 	// timestamp handling
-	timestamp := payload.GetString("timestamp")
+	timestamp := config.Get[string](payload, "timestamp")
 	if timestamp == "" {
 		timestamp = time.Now().Format(time.RFC3339)
 	} else {
@@ -174,17 +174,17 @@ func sendEvent(eventType eventType) (err error) {
 	v2event := pagerduty.V2Event{
 		RoutingKey: routing_key,
 		Payload: &pagerduty.V2Payload{
-			Summary:   payload.GetString("summary"),
-			Source:    payload.GetString("source"),
+			Summary:   config.Get[string](payload, "summary"),
+			Source:    config.Get[string](payload, "source"),
 			Severity:  severity,
 			Timestamp: timestamp,
-			Group:     payload.GetString("group"),
-			Class:     payload.GetString("class"),
+			Group:     config.Get[string](payload, "group"),
+			Class:     config.Get[string](payload, "class"),
 			Details:   details,
 		},
-		DedupKey:  cf.GetString("pagerduty.event.dedup-key"),
-		Client:    cf.GetString("pagerduty.event.client"),
-		ClientURL: cf.GetString("pagerduty.event.client_url"),
+		DedupKey:  config.Get[string](cf, "pagerduty.event.dedup-key"),
+		Client:    config.Get[string](cf, "pagerduty.event.client"),
+		ClientURL: config.Get[string](cf, "pagerduty.event.client_url"),
 		Action:    action,
 		Links:     links,
 		Images:    images,
@@ -200,7 +200,7 @@ func sendEvent(eventType eventType) (err error) {
 }
 
 func listServices() {
-	client := pagerduty.NewClient(cf.GetString("pagerduty.authtoken"))
+	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"))
 
 	opts := pagerduty.ListServiceOptions{
 		Total: true,

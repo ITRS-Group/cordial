@@ -193,7 +193,7 @@ var deployCmd = &cobra.Command{
 				h = geneos.LOCAL
 			}
 		} else {
-			basedir := h.GetString(cordial.ExecutableName())
+			basedir := config.Get[string](h.Config, cordial.ExecutableName())
 			if deployCmdGeneosHome != "" && deployCmdGeneosHome != basedir {
 				fmt.Printf("Geneos location given with --geneos/-D must be the same as configured for remote host %s\n", h)
 				return nil
@@ -252,7 +252,7 @@ var deployCmd = &cobra.Command{
 			options := []geneos.PackageOptions{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
-				geneos.UseRoot(h.GetString(cordial.ExecutableName())),
+				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName())),
 				geneos.LocalOnly(deployCmdLocal),
 				geneos.NoSave(deployCmdNoSave || deployCmdLocal),
 				geneos.OverrideVersion(deployCmdOverride),

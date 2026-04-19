@@ -156,7 +156,7 @@ var RootCmd = &cobra.Command{
 			return err
 		}
 
-		dir := cf.GetString("output.directory")
+		dir := config.Get[string](cf, "output.directory")
 		_ = os.MkdirAll(dir, 0775)
 
 		for format, filename := range config.Get[map[string]any](cf, "output.formats") {
@@ -214,7 +214,7 @@ var RootCmd = &cobra.Command{
 </issue>
 </issues>
 </validation>
-`, cf.GetString("output.directory"))
+`, config.Get[string](cf, "output.directory"))
 		return nil
 	},
 }

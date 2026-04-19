@@ -211,7 +211,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	// fix-up any other config changes here
 	//
 	// 1. keyfile/prevkeyfile from absolute path to using `${config:home}` if there
-	keyfile := ncf.GetString("keyfile")
+	keyfile := config.Get[string](ncf, "keyfile")
 	log.Debug().Msgf("keyfile: %q", keyfile)
 	if keyfile != "" {
 		// cannot use SetString(..., config.Replace("home") here as we
@@ -220,7 +220,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		log.Debug().Msgf("setting keyfile: %q", k)
 		config.Set(ncf, "keyfile", k)
 	}
-	prevkeyfile := ncf.GetString("prevkeyfile")
+	prevkeyfile := config.Get[string](ncf, "prevkeyfile")
 	if keyfile != "" {
 		// cannot use SetString(..., config.Replace("home") here as we
 		// need the *source* home directory

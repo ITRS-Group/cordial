@@ -53,13 +53,13 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	}
 	snowMutex.RUnlock()
 
-	username := cf.GetString("username")
+	username := config.Get[string](cf, "username")
 	password := config.Get[*config.Secret](cf, "password")
 
-	clientID := cf.GetString("client-id")
+	clientID := config.Get[string](cf, "client-id")
 	clientSecret := config.Get[*config.Secret](cf, "client-secret")
 
-	sn, err := url.Parse(cf.GetString("url"))
+	sn, err := url.Parse(config.Get[string](cf, "url"))
 	if err != nil {
 		return
 	}
@@ -89,7 +89,7 @@ func ServiceNow(cf *config.Config) (rc *rest.Client) {
 		Timeout: timeout,
 	}
 
-	p := sn.JoinPath(cf.GetString("path", config.DefaultValue("/api/now/v2/table")))
+	p := sn.JoinPath(config.Get[string](cf, "path", config.DefaultValue("/api/now/v2/table")))
 
 	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &log.Logger}.NewZerologHandler())
 

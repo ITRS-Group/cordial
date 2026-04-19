@@ -108,7 +108,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	m["port"] = config.Get[uint16](cf, "port")
 
 	// set high level defaults
-	m["root"] = h.GetString("geneos")
+	m["root"] = config.Get[string](h.Config, "geneos")
 	m["name"] = i.Name()
 	m["home"] = i.Home()
 

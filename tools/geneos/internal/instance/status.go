@@ -64,8 +64,8 @@ func BaseVersion(i geneos.Instance) (dir string) {
 		t = i.Type().ParentType.String()
 	}
 
-	pkgtype := i.Config().GetString("pkgtype", config.DefaultValue(t))
-	return i.Host().PathTo("packages", pkgtype, i.Config().GetString("version"))
+	pkgtype := config.Get[string](i.Config(), "pkgtype", config.DefaultValue(t))
+	return i.Host().PathTo("packages", pkgtype, config.Get[string](i.Config(), "version"))
 }
 
 // Version returns the base package name, the underlying package version
@@ -77,12 +77,12 @@ func BaseVersion(i geneos.Instance) (dir string) {
 // then actual will be returned as "unknown".
 func Version(i geneos.Instance) (base string, version string, err error) {
 	cf := i.Config()
-	base = cf.GetString("version")
+	base = config.Get[string](cf, "version")
 	t := i.Type().String()
 	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
-	pkgtype := cf.GetString("pkgtype", config.DefaultValue(t))
+	pkgtype := config.Get[string](cf, "pkgtype", config.DefaultValue(t))
 	ct := geneos.ParseComponent(pkgtype)
 
 	version, err = geneos.CurrentVersion(i.Host(), ct, base)
@@ -110,13 +110,13 @@ func CompareVersion(i geneos.Instance, version string) int {
 func LiveVersion(i geneos.Instance, pid int) (base string, version string, actual string, err error) {
 	actual = "unknown"
 	cf := i.Config()
-	base = cf.GetString("version")
+	base = config.Get[string](cf, "version")
 
 	t := i.Type().String()
 	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
 		t = i.Type().ParentType.String()
 	}
-	pkgtype := cf.GetString("pkgtype", config.DefaultValue(t))
+	pkgtype := config.Get[string](cf, "pkgtype", config.DefaultValue(t))
 	ct := geneos.ParseComponent(pkgtype)
 
 	version, err = geneos.CurrentVersion(i.Host(), ct, base)
@@ -157,7 +157,7 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 // Geneos processes. If a component type defines it's own GetPID()
 // custom check then that is used instead.
 func GetPID(i geneos.Instance) (pid int, err error) {
-	return process.GetPID(i.Host(), i.Config().GetString("binary"), false, i.Type().GetPID, i, i.Name())
+	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), false, i.Type().GetPID, i, i.Name())
 }
 
 // GetLivePID returns the PID of the process running for the instance.
@@ -168,7 +168,7 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 // Geneos processes. If a component type defines it's own GetPID()
 // custom check then that is used instead.
 func GetLivePID(i geneos.Instance) (pid int, err error) {
-	return process.GetPID(i.Host(), i.Config().GetString("binary"), true, i.Type().GetPID, i, i.Name())
+	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), true, i.Type().GetPID, i, i.Name())
 }
 
 // GetPIDInfo returns the PID of the process for the instance i along

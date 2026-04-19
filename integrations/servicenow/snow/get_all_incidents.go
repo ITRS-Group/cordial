@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
 )
 
@@ -34,7 +35,7 @@ func GetAllIncidents(c echo.Context) (err error) {
 	var user string
 	err = echo.QueryParamsBinder(c).String("user", &user).BindError()
 	if err != nil || user == "" {
-		user = vc.GetString("servicenow.username")
+		user = config.Get[string](vc, "servicenow.username")
 	}
 	// real basic validation of user
 	if !userRE.MatchString(user) {
@@ -49,7 +50,7 @@ func GetAllIncidents(c echo.Context) (err error) {
 
 	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
 
-	l, _ := s.GET(Fields(vc.GetString("servicenow.queryresponsefields")), Query(q)).QueryTable(vc.GetString("servicenow.incidenttable"))
+	l, _ := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
 
 	return c.JSON(200, l)
 }

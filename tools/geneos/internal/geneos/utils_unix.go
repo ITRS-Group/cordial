@@ -26,6 +26,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/pkg/sftp"
 )
 
@@ -36,7 +37,7 @@ var usernames sync.Map
 var groupnames sync.Map
 
 func (h *Host) GetFileOwner(info fs.FileInfo) (uid, gid int) {
-	switch h.GetString("name") {
+	switch config.Get[string](h.Config, "name") {
 	case LOCALHOST:
 		uid = int(info.Sys().(*syscall.Stat_t).Uid)
 		gid = int(info.Sys().(*syscall.Stat_t).Gid)

@@ -111,27 +111,27 @@ func SendMail(n C.int, args **C.char) C.int {
 	// Note: "ThrottleSummary" is also mentioned later, but is the same as above
 	var format, subject string
 
-	subject = conf.GetString("_SUBJECT", config.DefaultValue(defaultSubject[_SUBJECT]))
+	subject = config.Get[string](conf, "_SUBJECT", config.DefaultValue(defaultSubject[_SUBJECT]))
 
 	if conf.IsSet("_FORMAT") {
-		format = conf.GetString("_FORMAT")
+		format = config.Get[string](conf, "_FORMAT")
 	} else if conf.IsSet("_ALERT") {
-		switch conf.GetString("_ALERT_TYPE") {
+		switch config.Get[string](conf, "_ALERT_TYPE") {
 		case "Alert":
-			format = conf.GetString("_ALERT_FORMAT", config.DefaultValue(defaultFormat[_ALERT_FORMAT]))
-			subject = conf.GetString("_ALERT_SUBJECT", config.DefaultValue(defaultSubject[_ALERT_SUBJECT]))
+			format = config.Get[string](conf, "_ALERT_FORMAT", config.DefaultValue(defaultFormat[_ALERT_FORMAT]))
+			subject = config.Get[string](conf, "_ALERT_SUBJECT", config.DefaultValue(defaultSubject[_ALERT_SUBJECT]))
 		case "Clear":
-			format = conf.GetString("_CLEAR_FORMAT", config.DefaultValue(defaultFormat[_CLEAR_FORMAT]))
-			subject = conf.GetString("_CLEAR_SUBJECT", config.DefaultValue(defaultSubject[_CLEAR_SUBJECT]))
+			format = config.Get[string](conf, "_CLEAR_FORMAT", config.DefaultValue(defaultFormat[_CLEAR_FORMAT]))
+			subject = config.Get[string](conf, "_CLEAR_SUBJECT", config.DefaultValue(defaultSubject[_CLEAR_SUBJECT]))
 		case "Suspend":
-			format = conf.GetString("_SUSPEND_FORMAT", config.DefaultValue(defaultFormat[_SUSPEND_FORMAT]))
-			subject = conf.GetString("_SUSPEND_SUBJECT", config.DefaultValue(defaultSubject[_SUSPEND_SUBJECT]))
+			format = config.Get[string](conf, "_SUSPEND_FORMAT", config.DefaultValue(defaultFormat[_SUSPEND_FORMAT]))
+			subject = config.Get[string](conf, "_SUSPEND_SUBJECT", config.DefaultValue(defaultSubject[_SUSPEND_SUBJECT]))
 		case "Resume":
-			format = conf.GetString("_RESUME_FORMAT", config.DefaultValue(defaultFormat[_RESUME_FORMAT]))
-			subject = conf.GetString("_RESUME_SUBJECT", config.DefaultValue(defaultSubject[_RESUME_SUBJECT]))
+			format = config.Get[string](conf, "_RESUME_FORMAT", config.DefaultValue(defaultFormat[_RESUME_FORMAT]))
+			subject = config.Get[string](conf, "_RESUME_SUBJECT", config.DefaultValue(defaultSubject[_RESUME_SUBJECT]))
 		case "ThrottleSummary":
-			format = conf.GetString("_SUMMARY_FORMAT", config.DefaultValue(defaultFormat[_SUMMARY_FORMAT]))
-			subject = conf.GetString("_SUMMARY_SUBJECT", config.DefaultValue(defaultSubject[_SUMMARY_SUBJECT]))
+			format = config.Get[string](conf, "_SUMMARY_FORMAT", config.DefaultValue(defaultFormat[_SUMMARY_FORMAT]))
+			subject = config.Get[string](conf, "_SUMMARY_SUBJECT", config.DefaultValue(defaultSubject[_SUMMARY_SUBJECT]))
 		default:
 			format = defaultFormat[_FORMAT]
 		}
@@ -158,7 +158,7 @@ func replArgs(format string, conf *config.Config) string {
 	result := replArgsRE.ReplaceAllStringFunc(format, func(key string) string {
 		// strip containing "%(...)" - as we are here, the regexp must have matched OK
 		// so no further check required. No match returns empty string.
-		return conf.GetString(key[2 : len(key)-1])
+		return config.Get[string](conf, key[2:len(key)-1])
 	})
 
 	return result
@@ -181,7 +181,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	}
 
 	// The subject follows the same rules as the original SendMail function
-	subject := conf.GetString("_SUBJECT", config.DefaultValue(defaultSubject[_SUBJECT]))
+	subject := config.Get[string](conf, "_SUBJECT", config.DefaultValue(defaultSubject[_SUBJECT]))
 
 	// there is a default template that contains embedded tests for which type of
 	// alert, if any. This can be overridden with a template file or a template string
@@ -189,17 +189,17 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	// first grab a suitable Subject if this is an Alert, overridden below if
 	// a template file or string is specified
 	if conf.IsSet("_ALERT") {
-		switch conf.GetString("_ALERT_TYPE") {
+		switch config.Get[string](conf, "_ALERT_TYPE") {
 		case "Alert":
-			subject = conf.GetString("_ALERT_SUBJECT", config.DefaultValue(defaultSubject[_ALERT_SUBJECT]))
+			subject = config.Get[string](conf, "_ALERT_SUBJECT", config.DefaultValue(defaultSubject[_ALERT_SUBJECT]))
 		case "Clear":
-			subject = conf.GetString("_CLEAR_SUBJECT", config.DefaultValue(defaultSubject[_CLEAR_SUBJECT]))
+			subject = config.Get[string](conf, "_CLEAR_SUBJECT", config.DefaultValue(defaultSubject[_CLEAR_SUBJECT]))
 		case "Suspend":
-			subject = conf.GetString("_SUSPEND_SUBJECT", config.DefaultValue(defaultSubject[_SUSPEND_SUBJECT]))
+			subject = config.Get[string](conf, "_SUSPEND_SUBJECT", config.DefaultValue(defaultSubject[_SUSPEND_SUBJECT]))
 		case "Resume":
-			subject = conf.GetString("_RESUME_SUBJECT", config.DefaultValue(defaultSubject[_RESUME_SUBJECT]))
+			subject = config.Get[string](conf, "_RESUME_SUBJECT", config.DefaultValue(defaultSubject[_RESUME_SUBJECT]))
 		case "ThrottleSummary":
-			subject = conf.GetString("_SUMMARY_SUBJECT", config.DefaultValue(defaultSubject[_SUMMARY_SUBJECT]))
+			subject = config.Get[string](conf, "_SUMMARY_SUBJECT", config.DefaultValue(defaultSubject[_SUMMARY_SUBJECT]))
 		}
 	}
 
@@ -218,9 +218,9 @@ func GoSendMail(n C.int, args **C.char) C.int {
 
 	tmpl := template.New("text")
 	if conf.IsSet("_TEMPLATE_TEXT_FILE") {
-		tmpl, err = tmpl.ParseFiles(conf.GetString("_TEMPLATE_TEXT_FILE"))
+		tmpl, err = tmpl.ParseFiles(config.Get[string](conf, "_TEMPLATE_TEXT_FILE"))
 	} else if conf.IsSet("_TEMPLATE_TEXT") {
-		tmpl, err = tmpl.Parse(conf.GetString("_TEMPLATE_TEXT"))
+		tmpl, err = tmpl.Parse(config.Get[string](conf, "_TEMPLATE_TEXT"))
 	} else {
 		tmpl, err = tmpl.Parse(defTextTemplate)
 	}
@@ -274,7 +274,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		}
 
 		// if _TEMPLATE_LOGO_FILE is defined, load that, else use embedded
-		if logopath := conf.GetString("_TEMPLATE_LOGO_FILE"); logopath != "" {
+		if logopath := config.Get[string](conf, "_TEMPLATE_LOGO_FILE"); logopath != "" {
 			logofile, err := os.Open(logopath)
 			if err != nil {
 				return 1
@@ -331,12 +331,12 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	// Check validity of msTeams incoming webhooks
 	// -------------------------------------------
 	// Error if no webhooks defined
-	if conf.IsSet("_TO") || len(conf.GetString("_TO")) == 0 {
+	if conf.IsSet("_TO") || len(config.Get[string](conf, "_TO")) == 0 {
 		log.Println("ERR: No MsTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel().")
 		return 1
 	}
 	// Split webhooks, provided in _TO as a pipe ("|") separate list
-	msTeamsWebhooks := strings.Split(conf.GetString("_TO"), "|")
+	msTeamsWebhooks := strings.Split(config.Get[string](conf, "_TO"), "|")
 	validityWebhooksCount := 0
 	// Browse through webhooks & check validity usng a regex match.
 	// Invalid webhooks are ignored.
@@ -367,22 +367,22 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	// Define the notification subject / title
 	// ---------------------------------------
 	subject = defaultMsTeamsSubject[_SUBJECT]
-	if conf.IsSet("_SUBJECT") && len(conf.GetString("_SUBJECT")) != 0 {
-		subject = conf.GetString("_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUBJECT]))
+	if conf.IsSet("_SUBJECT") && len(config.Get[string](conf, "_SUBJECT")) != 0 {
+		subject = config.Get[string](conf, "_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUBJECT]))
 	} else if conf.IsSet("_ALERT") {
-		switch conf.GetString("_ALERT_TYPE") {
+		switch config.Get[string](conf, "_ALERT_TYPE") {
 		case "Alert":
-			subject = conf.GetString("_ALERT_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_ALERT_SUBJECT]))
+			subject = config.Get[string](conf, "_ALERT_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_ALERT_SUBJECT]))
 		case "Clear":
-			subject = conf.GetString("_CLEAR_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_CLEAR_SUBJECT]))
+			subject = config.Get[string](conf, "_CLEAR_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_CLEAR_SUBJECT]))
 		case "Suspend":
-			subject = conf.GetString("_SUSPEND_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUSPEND_SUBJECT]))
+			subject = config.Get[string](conf, "_SUSPEND_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUSPEND_SUBJECT]))
 		case "Resume":
-			subject = conf.GetString("_RESUME_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_RESUME_SUBJECT]))
+			subject = config.Get[string](conf, "_RESUME_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_RESUME_SUBJECT]))
 		case "ThrottleSummary":
-			subject = conf.GetString("_SUMMARY_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUMMARY_SUBJECT]))
+			subject = config.Get[string](conf, "_SUMMARY_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUMMARY_SUBJECT]))
 		default:
-			subject = conf.GetString("_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUBJECT]))
+			subject = config.Get[string](conf, "_SUBJECT", config.DefaultValue(defaultMsTeamsSubject[_SUBJECT]))
 		}
 	}
 
@@ -412,7 +412,7 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 		// Use of HTML template file defined in _TEMPLATE_HTML_FILE
 		useHtmlTmpl = true
 		// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
-		contents = config.Expand[string](conf, "${file:"+conf.GetString("_TEMPLATE_HTML_FILE")+"}")
+		contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_HTML_FILE")+"}")
 		if contents == "" {
 			log.Println("ERR: Error reading HTML Template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
 			return 1
@@ -425,7 +425,7 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	} else if conf.IsSet("_TEMPLATE_HTML") {
 		// Use manually defined HTML template found in _TEMPLATE_HTML
 		useHtmlTmpl = true
-		htmltmpl, err = htmltemplate.New("html").Parse(conf.GetString("_TEMPLATE_HTML"))
+		htmltmpl, err = htmltemplate.New("html").Parse(config.Get[string](conf, "_TEMPLATE_HTML"))
 		if err != nil {
 			log.Println("ERR: Error executing html template in _TO. Abort GoSendToMsTeamsChannel().", err)
 			return 1
@@ -433,7 +433,7 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	} else if conf.IsSet("_TEMPLATE_TEXT_FILE") {
 		// Use of text template file defined in _TEMPLATE_TEXT_FILE
 		useHtmlTmpl = false
-		texttmpl, err = template.ParseFiles(conf.GetString("_TEMPLATE_TEXT_FILE"))
+		texttmpl, err = template.ParseFiles(config.Get[string](conf, "_TEMPLATE_TEXT_FILE"))
 		if err != nil {
 			log.Println("ERR: Error parsing text template file defined in _TEMPLATE_TEXT_FILE. Abort GoSendToMsTeamsChannel().", err)
 			return 1
@@ -441,7 +441,7 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	} else if conf.IsSet("_TEMPLATE_TEXT") {
 		// Use manually defined text template found in _TEMPLATE_TEXT
 		useHtmlTmpl = false
-		texttmpl, err = template.New("text").Parse(conf.GetString("_TEMPLATE_TEXT"))
+		texttmpl, err = template.New("text").Parse(config.Get[string](conf, "_TEMPLATE_TEXT"))
 		if err != nil {
 			log.Println("ERR: Error parsing text template defined in _TEMPLATE_TEXT. Abort GoSendToMsTeamsChannel().", err)
 			return 1
@@ -450,14 +450,14 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 		// _FORMAT defined and interpreted as a html template
 		if textOnly {
 			useHtmlTmpl = false
-			texttmpl, err = template.New("text").Parse(conf.GetString("_FORMAT"))
+			texttmpl, err = template.New("text").Parse(config.Get[string](conf, "_FORMAT"))
 			if err != nil {
 				log.Println("ERR: Error parsing text template in _TO. Abort GoSendToMsTeamsChannel().", err)
 				return 1
 			}
 		} else {
 			useHtmlTmpl = true
-			htmltmpl, err = htmltemplate.New("html").Parse(conf.GetString("_FORMAT"))
+			htmltmpl, err = htmltemplate.New("html").Parse(config.Get[string](conf, "_FORMAT"))
 			if err != nil {
 				log.Println("ERR: Error parsing html template in _TO. Abort GoSendToMsTeamsChannel().", err)
 				return 1

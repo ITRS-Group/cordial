@@ -142,7 +142,7 @@ func (l *Licds) Name() string {
 	if l.Config() == nil {
 		return ""
 	}
-	return l.Config().GetString("name")
+	return config.Get[string](l.Config(), "name")
 }
 
 func (l *Licds) Home() string {
@@ -210,7 +210,7 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
 		i.Name(),
-		"-port", i.Config().GetString("port"),
+		"-port", config.Get[string](i.Config(), "port"),
 		"-log", logFile,
 	}
 

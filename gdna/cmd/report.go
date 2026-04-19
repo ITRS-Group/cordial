@@ -315,7 +315,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		var subreport string
 		if reportNames != "" {
 			// always add the summary-report to XLSX files
-			if _, ok := r.(*reporter.XLSXReporter); ok && name == cf.GetString("xlsx.summary-report") {
+			if _, ok := r.(*reporter.XLSXReporter); ok && name == config.Get[string](cf, "xlsx.summary-report") {
 				// do nothing
 			} else {
 				var match bool

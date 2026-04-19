@@ -72,7 +72,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 	// the client can send the query in ServiceNow encoded format
 	query := r.URL.Query().Get("query")
 	if query == "" {
-		query = "name=" + cf.GetString(cf.Join("snow", "username"))
+		query = "name=" + config.Get[string](cf, cf.Join("snow", "username"))
 	}
 
 	fields := r.URL.Query().Get("fields")

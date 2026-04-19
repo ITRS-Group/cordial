@@ -223,15 +223,6 @@ func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
 	return get[T](c, key, options...)
 }
 
-// GetString functions like [viper.GetString] on a Config instance, but
-// additionally calls [ExpandString] with the configuration value, passing
-// any "values" maps
-func (c *Config) GetString(s string, options ...ExpandOptions) string {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	return get[string](c, s, options...)
-}
-
 // ExpandFieldsHook returns a mapstructure.DecodeHookFunc that expands
 // string fields using the config.ExpandString function with the options
 // given. This is intended to be used in Unmarshal calls to allow for

@@ -36,7 +36,7 @@ import (
 )
 
 func processFiles(dv *config.Config) (dataview Dataview, err error) {
-	dataview.Name = dv.GetString("name")
+	dataview.Name = config.Get[string](dv, "name")
 	columns := []Column{}
 
 	max := config.Get[int](dv, "row-limit")
@@ -228,7 +228,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			inp.Close()
 
 			finalStatus := ""
-			onFail := dv.GetString("on-fail.status", config.NoExpand())
+			onFail := config.Get[string](dv, "on-fail.status", config.NoExpand())
 
 			for i, col := range values {
 				if col == "" && columns[i].Fail != "" {

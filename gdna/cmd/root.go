@@ -140,7 +140,7 @@ func initConfig(cmd *cobra.Command) {
 	// check if logfile is set on the command line, which overrides config
 	if cmd != nil {
 		if f := cmd.Flag("logfile"); f != nil && !f.Changed {
-			logFile = cf.GetString("gdna.log.filename")
+			logFile = config.Get[string](cf, "gdna.log.filename")
 			if cmd.Annotations["defaultlog"] != "" {
 				logFile = cmd.Annotations["defaultlog"]
 			}

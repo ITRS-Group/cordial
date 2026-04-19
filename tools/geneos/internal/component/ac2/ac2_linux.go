@@ -24,6 +24,8 @@ import (
 	"path"
 	"sort"
 	"strconv"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 // getPID only find the first process called ActiveConsole
@@ -50,7 +52,7 @@ func getPID(i any) (pid int, err error) {
 				continue
 			}
 			execfile := string(bytes.TrimRight(data, "\000"))
-			if execfile == c.Config().GetString("program") {
+			if execfile == config.Get[string](c.Config(), "program") {
 				return
 			}
 

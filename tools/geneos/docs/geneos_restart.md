@@ -24,6 +24,7 @@ geneos restart [flags] [TYPE] [NAME...]
   -a, --all              Start all matching instances, not just those already running
   -F, --force            Force restart of protected instances
   -K, --kill             Force stop by sending an immediate SIGKILL
+  -p, --port uint16      Restart instance matching port (overrides TYPE and NAME)
   -x, --extras string    Extra args passed to process, split on spaces and quoting ignored
   -e, --env NAME=VALUE   Extra environment variable (Repeat as required)
   -l, --log              Run 'logs -f' after starting instance(s)

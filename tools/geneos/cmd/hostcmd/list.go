@@ -120,11 +120,11 @@ func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {
 	if h.Hidden() {
 		flags = "H"
 	}
-	username := h.GetString("username")
+	username := config.Get[string](h.Config, "username")
 	if username == "" {
 		username = "-"
 	}
-	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", h.GetString("name"), username, h.GetString("hostname"), flags, config.Get[uint16](h.Config, "port", config.DefaultValue(22)), h.GetString(cordial.ExecutableName()))
+	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", config.Get[string](h.Config, "name"), username, config.Get[string](h.Config, "hostname"), flags, config.Get[uint16](h.Config, "port", config.DefaultValue(22)), config.Get[string](h.Config, cordial.ExecutableName()))
 	return
 }
 
@@ -133,16 +133,16 @@ func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
 	if h.Hidden() {
 		flags = "H"
 	}
-	username := h.GetString("username")
+	username := config.Get[string](h.Config, "username")
 
 	c := w.(*csv.Writer)
 	c.Write([]string{
 		h.String(),
 		username,
-		h.GetString("hostname"),
+		config.Get[string](h.Config, "hostname"),
 		flags,
 		config.Get[string](h.Config, "port", config.DefaultValue(22)),
-		h.GetString(cordial.ExecutableName()),
+		config.Get[string](h.Config, cordial.ExecutableName()),
 	})
 	return
 }
@@ -152,15 +152,15 @@ func hostListInstanceJSONHosts(h *geneos.Host, w any) (err error) {
 	if h.Hidden() {
 		flags = "H"
 	}
-	username := h.GetString("username")
+	username := config.Get[string](h.Config, "username")
 
 	listCmdEntries = append(listCmdEntries, listCmdType{
 		h.String(),
 		username,
-		h.GetString("hostname"),
+		config.Get[string](h.Config, "hostname"),
 		flags,
 		config.Get[uint16](h.Config, "port", config.DefaultValue(22)),
-		h.GetString(cordial.ExecutableName()),
+		config.Get[string](h.Config, cordial.ExecutableName()),
 	})
 	return
 }

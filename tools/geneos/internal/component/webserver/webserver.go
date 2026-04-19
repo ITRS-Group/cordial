@@ -162,7 +162,7 @@ func (w *Webservers) Name() string {
 	if w.Config() == nil {
 		return ""
 	}
-	return w.Config().GetString("name")
+	return config.Get[string](w.Config(), "name")
 }
 
 func (w *Webservers) Home() string {
@@ -248,10 +248,10 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 		return nil
 	}
 
-	sp["port"] = cf.GetString("port")
+	sp["port"] = config.Get[string](cf, "port")
 
-	sp["trustStore"] = cf.GetString(cf.Join("tls", "truststore"), config.DefaultValue(geneos.PathToCABundle(h, certs.KeystoreExtension)))
-	sp["trustStorePassword"] = cf.GetString(cf.Join("tls", "truststore-password"), config.DefaultValue("changeit"))
+	sp["trustStore"] = config.Get[string](cf, cf.Join("tls", "truststore"), config.DefaultValue(geneos.PathToCABundle(h, certs.KeystoreExtension)))
+	sp["trustStorePassword"] = config.Get[string](cf, cf.Join("tls", "truststore-password"), config.DefaultValue("changeit"))
 	sp["trustStoreType"] = "JKS"
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
@@ -313,7 +313,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	}
 
 	args = append(args,
-		"-Xmx"+cf.GetString("maxmem"),
+		"-Xmx"+config.Get[string](cf, "maxmem"),
 		"-server",
 		"-Djava.io.tmpdir="+tmpdir,
 		"-Djava.awt.headless=true",
@@ -321,10 +321,10 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 		"-Dcom.itrsgroup.configuration.file="+path.Join(home, "config/config.xml"),
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
 		"-Dcom.itrsgroup.dashboard.resources.dir="+path.Join(base, "resources"),
-		"-Djava.library.path="+cf.GetString("libpaths"),
+		"-Djava.library.path="+config.Get[string](cf, "libpaths"),
 		"-Dlog4j2.configurationFile=file:"+path.Join(home, "config/log4j2.properties"),
 		"-Dworking.directory="+home,
-		"-Dvalid.host.header="+cf.GetString("valid-host-header", config.DefaultValue(".*")),
+		"-Dvalid.host.header="+config.Get[string](cf, "valid-host-header", config.DefaultValue(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
 		"-Dcom.itrsgroup.sso.config.file="+path.Join(home, "config/sso.properties"),
@@ -342,7 +342,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 		path.Join(home, "config/sso.properties"),
 	)
 
-	javaopts := strings.Fields(cf.GetString("java-options"))
+	javaopts := strings.Fields(config.Get[string](cf, "java-options"))
 	args = append(args, javaopts...)
 
 	// add ca-bundle if set
@@ -370,7 +370,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	args = append(args,
 		"-jar", base+"/geneos-web-server.jar",
 		"-dir", base+"/webapps",
-		"-port", cf.GetString("port"),
+		"-port", config.Get[string](cf, "port"),
 		"-maxThreads", "254",
 	)
 

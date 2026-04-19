@@ -147,18 +147,18 @@ var DV2EMAILCmd = &cobra.Command{
 		em := email.NewEmailConfig(cf, toArg, ccArg, bccArg, subjectArg)
 
 		data, err := fetchDataviews(cmd, gw,
-			em.GetString("_firstcolumn"),
-			em.GetString("__headlines"),
-			em.GetString("__rows"),
-			em.GetString("__columns"),
-			em.GetString("__roworder"),
+			config.Get[string](em, "_firstcolumn"),
+			config.Get[string](em, "__headlines"),
+			config.Get[string](em, "__rows"),
+			config.Get[string](em, "__columns"),
+			config.Get[string](em, "__roworder"),
 		)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			return
 		}
 
-		switch cf.GetString("email.split") {
+		switch config.Get[string](cf, "email.split") {
 		case "entity":
 			entities := map[string][]*commands.Dataview{}
 			for _, d := range data.Dataviews {

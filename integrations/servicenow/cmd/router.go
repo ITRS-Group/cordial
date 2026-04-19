@@ -107,7 +107,7 @@ func router() {
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == cf.GetString("api.apikey"), nil
+		return key == config.Get[string](cf, "api.apikey"), nil
 	}))
 
 	// list of endpoint routes
@@ -121,7 +121,7 @@ func router() {
 	// Put Endpoints
 	v1route.POST("/incident", snow.AcceptEvent)
 
-	i := fmt.Sprintf("%s:%d", cf.GetString("api.host"), config.Get[uint16](cf, cf.Join("api", "port")))
+	i := fmt.Sprintf("%s:%d", config.Get[string](cf, "api.host"), config.Get[uint16](cf, cf.Join("api", "port")))
 
 	InitializeConnection()
 
@@ -184,10 +184,10 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	latency = latency.Round(time.Millisecond)
 
 	fmt.Printf("%v %s %s %3d %s/%d %v %s %s %s %q\n",
-		time.Now().Format(time.RFC3339),     // TIMESTAMP for route access
-		cf.GetString("servicenow.instance"), // name of server (APP) with the environment
-		req.Proto,                           // protocol
-		resStatus,                           // response status
+		time.Now().Format(time.RFC3339),               // TIMESTAMP for route access
+		config.Get[string](cf, "servicenow.instance"), // name of server (APP) with the environment
+		req.Proto, // protocol
+		resStatus, // response status
 		// stats here
 		bytes_in,
 		res.Size,

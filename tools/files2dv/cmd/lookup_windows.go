@@ -49,25 +49,25 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	if err != nil {
 		switch {
 		case errors.Is(err, fs.ErrNotExist):
-			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "match") {
+			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "match") {
 				skip = true
 				return
 			}
 			lookup["status"] = "NOT_FOUND"
 		case errors.Is(err, fs.ErrPermission):
-			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "access") {
+			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "access") {
 				skip = true
 				return
 			}
 			lookup["status"] = "ACCESS_DENIED"
 		case errors.Is(err, fs.ErrInvalid):
-			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "other") {
+			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "other") {
 				skip = true
 				return
 			}
 			lookup["status"] = "INVALID"
 		default:
-			if slices.Contains(dv.GetStringSlice("ignore-file-errors"), "other") {
+			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "other") {
 				skip = true
 				return
 			}
@@ -81,7 +81,7 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	mode := st.Mode()
 
 	lookup["mode"] = mode.String()
-	types := dv.GetStringSlice("types", config.Default([]string{"file", "directory", "symlink", "other"}))
+	types := config.Get[[]string](dv, "types", config.DefaultValue([]string{"file", "directory", "symlink", "other"}))
 	switch {
 	case mode.IsDir():
 		if !slices.Contains(types, "directory") {

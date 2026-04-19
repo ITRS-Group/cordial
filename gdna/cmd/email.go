@@ -257,7 +257,7 @@ func emailConfToString(a any) string {
 
 func sendMail(cf *config.Config, data emailData) (err error) {
 	m := mail.NewMsg()
-	if err = m.From(cf.GetString("email.from")); err != nil {
+	if err = m.From(config.Get[string](cf, "email.from")); err != nil {
 		err = fmt.Errorf("%w: setting From", err)
 		return
 	}
@@ -277,7 +277,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 			return
 		}
 	}
-	m.Subject(cf.GetString("email.subject", config.DefaultValue("ITRS GDNA EMail Report")))
+	m.Subject(config.Get[string](cf, "email.subject", config.DefaultValue("ITRS GDNA EMail Report")))
 
 	// we either have a multipart body or text or html - but we have to
 	// have something
@@ -300,17 +300,17 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	}
 
 	if data.XLSXAttachment != nil {
-		m.AttachReader(cf.GetString("email.xlsx-name", config.LookupTable(lookupDateTime)), data.XLSXAttachment)
+		m.AttachReader(config.Get[string](cf, "email.xlsx-name", config.LookupTable(lookupDateTime)), data.XLSXAttachment)
 	}
 
 	if data.HTMLAttachment != nil {
-		m.AttachReader(cf.GetString("email.html-name", config.LookupTable(lookupDateTime)), data.HTMLAttachment)
+		m.AttachReader(config.Get[string](cf, "email.html-name", config.LookupTable(lookupDateTime)), data.HTMLAttachment)
 	}
 
 	// build smtp connection details
 	var tlsPolicy mail.TLSPolicy
 
-	switch strings.ToLower(cf.GetString("email.tls", config.DefaultValue("default"))) {
+	switch strings.ToLower(config.Get[string](cf, "email.tls", config.DefaultValue("default"))) {
 	case "force":
 		tlsPolicy = mail.TLSMandatory
 	case "none":
@@ -321,8 +321,8 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	password := &config.Secret{}
 
-	username := cf.GetString("email.username")
-	server := cf.GetString("email.smtp-server", config.DefaultValue("localhost"))
+	username := config.Get[string](cf, "email.username")
+	server := config.Get[string](cf, "email.smtp-server", config.DefaultValue("localhost"))
 
 	if username != "" {
 		password = config.Get[*config.Secret](cf, "email.password")
@@ -331,11 +331,11 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	if username == "" {
 		creds := config.FindCreds(server,
 			config.SetAppName("geneos"),
-			config.SetConfigFile(cf.GetString("email.credentials-file")),
+			config.SetConfigFile(config.Get[string](cf, "email.credentials-file")),
 		)
 		if creds != nil {
-			username = creds.GetString("username")
-			password = config.Get[*config.Secret](creds, "password", config.UseKeyfile(cf.GetString("email.key-file")))
+			username = config.Get[string](creds, "username")
+			password = config.Get[*config.Secret](creds, "password", config.UseKeyfile(config.Get[string](cf, "email.key-file")))
 		}
 	}
 

@@ -178,7 +178,7 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.
 	}
 
 	instance.RollAESKeyFile(i, kv, "-prev")
-	pkp := i.Config().GetString("prevkeyfile")
+	pkp := config.Get[string](i.Config(), "prevkeyfile")
 	if pkp != "" {
 		resp.Summary = fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp)
 	} else {

@@ -14,8 +14,9 @@ geneos stop [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -F, --force   Stop protected instances
-  -K, --kill    Force immediate stop by sending an immediate SIGKILL
+  -p, --port uint16   Stop instance matching port (overrides TYPE and NAME)
+  -F, --force         Stop protected instances
+  -K, --kill          Force immediate stop by sending an immediate SIGKILL
 ```
 
 ## SEE ALSO

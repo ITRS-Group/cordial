@@ -131,7 +131,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Res
 	resp = responses.NewResponse(i)
 	cf := i.Config()
 
-	setup := cf.GetString("setup")
+	setup := config.Get[string](cf, "setup")
 	if setup == "" {
 		return
 	}
@@ -153,7 +153,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Res
 			"-resources-dir",
 			path.Join(instance.BaseVersion(i), "resources"),
 			"-setup",
-			cf.GetString("setup"),
+			config.Get[string](cf, "setup"),
 			"-nolog",
 			"-skip-cache",
 			"-validate-json-output",
@@ -211,7 +211,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Respo
 		panic("wrong type")
 	}
 
-	setup := i.Config().GetString("setup")
+	setup := config.Get[string](i.Config(), "setup")
 	if setup == "" {
 		return
 	}
@@ -230,7 +230,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Respo
 			"-nolog",
 			"-skip-cache",
 			"-setup",
-			i.Config().GetString("setup"),
+			config.Get[string](i.Config(), "setup"),
 			"-dump-xml",
 		}
 		// cmd.Args = append(cmd.Args, instance.SetSecureArgs(i)...)

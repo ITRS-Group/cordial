@@ -20,13 +20,14 @@ package geneos
 import (
 	"io/fs"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/pkg/sftp"
 )
 
 func (h *Host) GetFileOwner(info fs.FileInfo) (uid, gid int) {
 	uid = -1
 	gid = -1
-	if h.GetString("name") != LOCALHOST {
+	if config.Get[string](h.Config, "name") != LOCALHOST {
 		if sys := info.Sys(); sys != nil {
 			uid = int(info.Sys().(*sftp.FileStat).UID)
 			gid = int(info.Sys().(*sftp.FileStat).GID)

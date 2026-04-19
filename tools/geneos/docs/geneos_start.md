@@ -17,6 +17,7 @@ geneos start [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
+  -p, --port uint16      Start instance matching port (overrides TYPE and NAME)
   -x, --extras string    Extra args passed to process, split on spaces and quoting ignored
   -e, --env NAME=VALUE   Extra environment variable (Repeat as required)
   -l, --log              Follow logs after starting instance

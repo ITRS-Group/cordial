@@ -30,6 +30,7 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -147,7 +148,7 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 		return nil
 	}
 
-	options = append(options, Destination(h), SetPlatformID(h.GetString(h.Join("osinfo", "platform_id"))))
+	options = append(options, Destination(h), SetPlatformID(config.Get[string](h.Config, h.Join("osinfo", "platform_id"))))
 
 	opts := evalOptions(options...)
 
@@ -290,7 +291,7 @@ func update(h *Host, ct *Component, options ...PackageOptions) (err error) {
 				continue
 			}
 			// check for plain type or package type
-			if c.Type() != ct && c.Config().GetString("pkgtype") != ct.String() {
+			if c.Type() != ct && config.Get[string](c.Config(), "pkgtype") != ct.String() {
 				continue
 			}
 			if err = opts.stop(c, opts.force, false); err == nil {

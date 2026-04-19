@@ -147,7 +147,7 @@ func start() (err error) {
 	}
 
 	mainjob, err = sched.NewJob(
-		gocron.CronJob(cf.GetString(cf.Join("gdna", "schedule")), false),
+		gocron.CronJob(config.Get[string](cf, cf.Join("gdna", "schedule")), false),
 		maintask,
 		gocron.WithName("main"),
 		gocron.WithSingletonMode(gocron.LimitModeReschedule),
@@ -161,7 +161,7 @@ func start() (err error) {
 	rjt, _ := mainjob.NextRun()
 	log.Info().Msgf("next scheduled report job %v", rjt)
 
-	if es := cf.GetString(cf.Join("gdna", "email-schedule")); es != "" {
+	if es := config.Get[string](cf, cf.Join("gdna", "email-schedule")); es != "" {
 		emailjob, err = sched.NewJob(
 			gocron.CronJob(es, false),
 			emailtask,
@@ -192,7 +192,7 @@ func updateJobs() {
 	}
 	if mainjob != nil {
 		mainjob, err = sched.Update(mainjob.ID(),
-			gocron.CronJob(cf.GetString("gdna.schedule"), false),
+			gocron.CronJob(config.Get[string](cf, "gdna.schedule"), false),
 			maintask,
 			gocron.WithName("main"),
 			gocron.WithSingletonMode(gocron.LimitModeReschedule),
@@ -207,7 +207,7 @@ func updateJobs() {
 		log.Info().Msgf("next report job %v", rjt)
 	}
 
-	if es := cf.GetString("gdna.email-schedule"); es != "" {
+	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
 		if emailjob != nil {
 			emailjob, err = sched.Update(emailjob.ID(),
 				gocron.CronJob(es, false),

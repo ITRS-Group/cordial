@@ -43,13 +43,13 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 
 	// changing users is not supported
 	username := i.Host().Username()
-	instanceUsername := i.Config().GetString("user")
+	instanceUsername := config.Get[string](i.Config(), "user")
 
 	if instanceUsername != "" && username != instanceUsername {
 		return fmt.Errorf("%s is configured with a different user to the one trying to start it (instance user %q != %q (you))", i, instanceUsername, username)
 	}
 
-	binary := i.Config().GetString("program")
+	binary := config.Get[string](i.Config(), "program")
 	if _, err = i.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}

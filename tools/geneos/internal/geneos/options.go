@@ -68,7 +68,7 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 	if d.source != "" && d.username == "" {
 		cr := config.FindCreds(d.source)
 		if cr != nil {
-			d.username = cr.GetString("username")
+			d.username = config.Get[string](cr, "username")
 			d.password = config.Get[*config.Secret](cr, "password")
 		}
 	}

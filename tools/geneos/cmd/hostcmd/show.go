@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/cobra"
@@ -78,7 +79,7 @@ var showCmd = &cobra.Command{
 
 		for _, h := range hosts {
 			confs = append(confs, showCmdConfig{
-				Name:   h.GetString("name"),
+				Name:   config.Get[string](h.Config, "name"),
 				Hidden: h.Hidden(),
 				Config: h.AllSettings(),
 			})
