@@ -56,7 +56,7 @@ var debug, quiet bool
 // config.Keyfile type
 var DefaultUserKeyfile = config.KeyFile(
 	config.Path("keyfile",
-		config.SetAppName(cordial.ExecutableName()),
+		config.AppName(cordial.ExecutableName()),
 		config.Format("aes"),
 		config.SkipWorkingDir(),
 	),
@@ -328,7 +328,7 @@ func initConfig() {
 	oldConfDir, _ := config.UserConfigDir()
 
 	cf, err := config.Read(cordial.ExecutableName(),
-		config.SetConfigPath(cfgFile),
+		config.FilePath(cfgFile),
 		config.UseGlobal(),
 		config.SearchDirs(oldConfDir),
 		config.MergeSources(),
@@ -341,7 +341,7 @@ func initConfig() {
 	}
 
 	configPath = config.Path(cordial.ExecutableName(),
-		config.SetConfigPath(cfgFile),
+		config.FilePath(cfgFile),
 		config.UseGlobal(),
 		config.SearchDirs(oldConfDir),
 		config.MergeSources(),

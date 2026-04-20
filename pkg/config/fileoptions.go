@@ -213,40 +213,41 @@ func DefaultsFrom(cf *Config) FileOptions {
 	}
 }
 
-// MustExist makes Load() return an error if a configuration file is
-// not found. This does not apply to default configuration files.
+// MustExist sets config.Read() or config.Path() to return an error if
+// the main configuration file is not found.
 func MustExist() FileOptions {
 	return func(lo *fileOptions) {
 		lo.mustExist = true
 	}
 }
 
-// SetAppName overrides to use of the Load `name` argument as the
+// AppName overrides to use of the Load `name` argument as the
 // application name, `AppName`, which is used for sub-directories while
 // `name` is used as the prefix for files in those directories.
 //
 // For example, if Load is called like this:
 //
-//	Load("myprogram", config.SetAppName("basename"))
+//	Load("myprogram", config.AppName("basename"))
 //
 // Then one valid location of a configuration file would be:
 //
 //	${HOME}/.config/basename/myprogram.yaml
-func SetAppName(name string) FileOptions {
+func AppName(name string) FileOptions {
 	return func(c *fileOptions) {
 		c.appName = name
 	}
 }
 
-// SetConfigPath forces Load to load only the configuration at the given
-// path. This path must include the file extension. Defaults are still
-// loaded from all the normal directories unless [config.IgnoreDefaults]
-// is also passed as an option.
+// FilePath forces config.Read() to load only the configuration at the
+// given path or config.Write() to only write to this path (unless
+// config.Writer() is also given). This path must include the file
+// extension. Defaults are still loaded from all the normal directories
+// unless [config.IgnoreDefaults] is also passed as an option.
 //
 // If the argument is an empty string then the option is not used. This
 // also means it can be called with a command line flag value which can
 // default to an empty string
-func SetConfigPath(p string) FileOptions {
+func FilePath(p string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.configFile = ResolveHome(p)
 	}

@@ -21,15 +21,17 @@ import (
 	"context"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -44,11 +46,8 @@ func init() {
 	incidentCmd.AddCommand(raiseCmd)
 
 	raiseCmd.Flags().StringVarP(&raiseCmdConfigFile, "config", "c", "", "config file to use")
-
 	raiseCmd.Flags().StringVarP(&raiseCmdIMSType, "ims", "i", "", "IMS type, e.g. snow or sdp. default taken from config file")
-
 	raiseCmd.Flags().StringVarP(&raiseCmdProfile, "profile", "p", "", "profile to use for field creation")
-
 	raiseCmd.Flags().StringVarP(&raiseCmdTable, "snow-table", "t", "", "ServiceNow table, typically `incident`")
 
 	raiseCmd.Flags().SortFlags = false
@@ -96,14 +95,14 @@ var raiseCmd = &cobra.Command{
 		var result map[string]any
 		var incident = make(ims.Values)
 
-		// override environment variables with command line key=value
-		// pairs, which are expected to be incident fields. This allows
-		// the command to be used in a more flexible way, such as from a
-		// script or with custom fields. The command line fields take
-		// precedence over environment variables, which take precedence
-		// over config file defaults and profile settings. The command
-		// line fields can also be used to remove fields by setting the
-		// value to an empty string.
+		// override environment variable settings with command line
+		// `key=value` pairs, which are expected to be incident fields.
+		// This allows the command to be used in a more flexible way,
+		// such as from a script or with custom fields. The command line
+		// fields take precedence over environment variables, which take
+		// precedence over config file defaults and profile settings.
+		// The command line fields can also be used to remove fields by
+		// setting the value to an empty string.
 		envRE := regexp.MustCompile(`^([A-Z_][A-Z0-9_]*)=(.*)$`)
 		_, _, params, err := cmd.FetchArgs(command)
 		if err != nil {
@@ -123,6 +122,7 @@ var raiseCmd = &cobra.Command{
 
 		cf := imsLoadConfigFile("ims")
 
+		// load and process defaults
 		if err = cf.UnmarshalKey("defaults", &defaults); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -132,8 +132,8 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		b, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
+		defaultsJSON, _ := json.MarshalIndent(incident, "", "    ")
+		log.Debug().Msgf("incident fields after processing defaults:\n%s", string(defaultsJSON))
 
 		if raiseCmdProfile == "" {
 			var ok bool
@@ -152,23 +152,23 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		b, _ = json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing profile:\n%s", string(b))
+		profileJSON, _ := json.MarshalIndent(incident, "", "    ")
+		log.Debug().Msgf("incident fields after processing profile (over defaults):\n%s", string(profileJSON))
 
-		// command line args can replace defaults and config file settings.
-		// parse key value pairs as fields for the request, and for now ignore
-		// everything else
-		for _, arg := range args {
-			s := strings.SplitN(arg, "=", 2)
-			if len(s) != 2 {
-				continue
-			}
-			if s[1] == "" {
-				delete(incident, s[0])
-			} else {
-				incident[s[0]] = s[1]
-			}
-		}
+		// // command line args can replace defaults and config file settings.
+		// // parse key value pairs as fields for the request, and for now ignore
+		// // everything else
+		// for _, arg := range args {
+		// 	s := strings.SplitN(arg, "=", 2)
+		// 	if len(s) != 2 {
+		// 		continue
+		// 	}
+		// 	if s[1] == "" {
+		// 		delete(incident, s[0])
+		// 	} else {
+		// 		incident[s[0]] = s[1]
+		// 	}
+		// }
 
 		if raiseCmdIMSType == "" {
 			raiseCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
@@ -185,38 +185,42 @@ var raiseCmd = &cobra.Command{
 
 		log.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
 
-		// iterate through proxy urls
-		for _, r := range config.Get[[]string](cf, cf.Join("ims-gateway", "url")) {
-			ccf := &ims.ClientConfig{
-				URL:     r + "/" + raiseCmdIMSType,
-				Token:   config.Get[string](cf, config.Join("ims-gateway", "authentication", "token")),
-				Timeout: config.Get[time.Duration](cf, config.Join("ims-gateway", "timeout")),
-			}
-			ccf.TLS.SkipVerify = config.Get[bool](cf, config.Join("ims-gateway", "tls", "skip-verify"))
-			ccf.TLS.Chain = config.Get[[]byte](cf, config.Join("ims-gateway", "tls", "chain"))
-			rc := ims.NewClient(ccf)
-
-			if raiseCmdIMSType == "snow" {
-				if raiseCmdTable == "" {
-					var ok bool
-					if raiseCmdTable, ok = incident[ims.SNOW_INCIDENT_TABLE]; !ok {
-						raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE_DEFAULT]
-					}
+		if raiseCmdIMSType == "snow" {
+			if raiseCmdTable == "" {
+				var ok bool
+				if raiseCmdTable, ok = incident[ims.SNOW_INCIDENT_TABLE]; !ok {
+					raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE_DEFAULT]
 				}
 			}
-			_, err = rc.Post(context.Background(), raiseCmdTable, incident, &result)
+		}
+
+		// iterate through ims-gateway urls
+		for r := range ims.Connect(cf.Sub("ims-gateway"), raiseCmdIMSType) {
+			log.Debug().Msgf("querying IMS at %s", r.BaseURL)
+			_, err = r.Post(context.Background(), raiseCmdTable, incident, &result)
 			if err != nil {
-				log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
+				if ue, ok := errors.AsType[*url.Error](err); ok {
+					log.Warn().Err(ue.Unwrap()).Msgf("connection error to %s, trying next endpoint (if any)", r.BaseURL)
+				} else {
+					log.Warn().Err(err).Msgf("error querying IMS at %s: %v", r.BaseURL, err)
+				}
 				continue
 			}
-
-			if result["action"] == "Failed" {
-				log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
-			}
-
-			fmt.Println(result["result"])
-			break
 		}
+
+		if err != nil {
+			if ue, ok := errors.AsType[*url.Error](err); ok {
+				log.Fatal().Err(ue.Unwrap()).Msgf("connection error to all endpoints: %v", ue.Unwrap())
+			} else if err != nil {
+				log.Fatal().Err(err).Msgf("error querying IMS at all endpoints: %v", err)
+			}
+		}
+
+		if result["action"] == "Failed" {
+			log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+		}
+
+		fmt.Println(result["result"])
 
 		return
 	},
@@ -237,10 +241,10 @@ func imsLoadConfigFile(name string) (cf *config.Config) {
 	}
 
 	cf, err = config.Read(name,
-		config.SetAppName("geneos"),
+		config.AppName(cordial.ExecutableName()),
 		config.UseGlobal(),
 		config.Format("yaml"),
-		config.SetConfigPath(raiseCmdConfigFile),
+		config.FilePath(raiseCmdConfigFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -248,10 +252,10 @@ func imsLoadConfigFile(name string) (cf *config.Config) {
 	}
 	log.Debug().Msgf("loaded config file %s",
 		config.Path(name,
-			config.SetAppName("geneos"),
+			config.AppName(cordial.ExecutableName()),
 			config.UseGlobal(),
 			config.Format("yaml"),
-			config.SetConfigPath(raiseCmdConfigFile)),
+			config.FilePath(raiseCmdConfigFile)),
 	)
 
 	return

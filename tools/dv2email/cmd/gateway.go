@@ -47,9 +47,9 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 	if username == "" {
 		var creds *config.Config
 		if gateway != "" {
-			creds = config.FindCreds("gateway:"+gateway, config.SetAppName("geneos"))
+			creds = config.FindCreds("gateway:"+gateway, config.AppName("geneos"))
 		} else {
-			creds = config.FindCreds("gateway", config.SetAppName("geneos"))
+			creds = config.FindCreds("gateway", config.AppName("geneos"))
 		}
 		if creds != nil {
 			username = config.Get[string](creds, "username")

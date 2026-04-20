@@ -160,16 +160,16 @@ func addFilter(filterType, category string, names []string) (err error) {
 	ts := time.Now()
 	// load existing
 	ig, err := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
 	igPath := config.Path(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -213,8 +213,8 @@ func addFilter(filterType, category string, names []string) (err error) {
 
 	// always save the result back
 	ig.Write(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(igPath),
+		config.AppName("geneos"),
+		config.FilePath(igPath),
 	)
 	return
 }
@@ -273,16 +273,16 @@ var removeIncludeCmd = &cobra.Command{
 // from AC2 command
 func removeFilter(filterType, category string, names []string) (err error) {
 	ig, err := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
 	igPath := config.Path(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -314,16 +314,16 @@ func removeFilter(filterType, category string, names []string) (err error) {
 
 	// always save the result back
 	ig.Write(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(igPath),
+		config.AppName("geneos"),
+		config.FilePath(igPath),
 	)
 	return
 }
 
 func listFilters(filterType string, category string, listFormat string) (err error) {
 	ig, err := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	r, _ := reporter.NewReporter(listFormat,
@@ -395,8 +395,8 @@ func listFilters(filterType string, category string, listFormat string) (err err
 // filter table contents
 func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterType string) error {
 	ig, err := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 		// config.MustExist(),
 	)
 
@@ -405,8 +405,8 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	}
 
 	log.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:

@@ -80,10 +80,10 @@ func LoadConfigFile() (cf *config.Config) {
 	var err error
 
 	cf, err = config.Read(cordial.ExecutableName(),
-		config.SetAppName("geneos"),
+		config.AppName("geneos"),
 		config.UseGlobal(),
 		config.Format("yaml"),
-		config.SetConfigPath(configFile),
+		config.FilePath(configFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -91,10 +91,10 @@ func LoadConfigFile() (cf *config.Config) {
 	}
 	log.Debug().Msgf("loaded config file %s",
 		config.Path(cordial.ExecutableName(),
-			config.SetAppName("geneos"),
+			config.AppName("geneos"),
 			config.UseGlobal(),
 			config.Format("yaml"),
-			config.SetConfigPath(configFile)),
+			config.FilePath(configFile)),
 	)
 
 	return

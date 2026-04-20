@@ -330,8 +330,8 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	if username == "" {
 		creds := config.FindCreds(server,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(config.Get[string](cf, "email.credentials-file")),
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, "email.credentials-file")),
 		)
 		if creds != nil {
 			username = config.Get[string](creds, "username")

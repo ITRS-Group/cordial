@@ -49,12 +49,12 @@ var logoutCmd = &cobra.Command{
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		if logoutCmdAll {
-			config.DeleteAllCreds(config.SetAppName(cordial.ExecutableName()))
+			config.DeleteAllCreds(config.AppName(cordial.ExecutableName()))
 			return
 		}
 		if len(args) != 0 {
 			for _, d := range args {
-				config.DeleteCreds(d, config.SetAppName(cordial.ExecutableName()))
+				config.DeleteCreds(d, config.AppName(cordial.ExecutableName()))
 			}
 		}
 	},

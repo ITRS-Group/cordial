@@ -33,7 +33,7 @@ var profilesDefault []byte
 // If the file does not exist, it creates a new one with default values.
 func Load() (pf *config.Config, err error) {
 	pf, err = config.Read("profiles",
-		config.SetAppName(cordial.ExecutableName()),
+		config.AppName(cordial.ExecutableName()),
 		config.Format("yaml"),
 		config.WithDefaults(profilesDefault, "yaml"),
 	)
@@ -42,13 +42,13 @@ func Load() (pf *config.Config, err error) {
 	}
 
 	if config.Path("profiles",
-		config.SetAppName(cordial.ExecutableName()),
+		config.AppName(cordial.ExecutableName()),
 		config.Format("yaml"),
 		config.WithDefaults(profilesDefault, "yaml"),
 		config.MustExist(), // Ensure the file exists, checking if creation is required
 	) == "internal defaults" {
 		if err = pf.Write("profiles",
-			config.SetAppName(cordial.ExecutableName()),
+			config.AppName(cordial.ExecutableName()),
 			config.Format("yaml"),
 		); err != nil {
 			return

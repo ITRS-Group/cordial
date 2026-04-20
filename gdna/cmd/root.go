@@ -117,8 +117,8 @@ func initConfig(cmd *cobra.Command) {
 
 	if cf == nil {
 		opts := []config.FileOptions{
-			config.SetAppName("geneos"),
-			config.SetConfigPath(cfgFile),
+			config.AppName("geneos"),
+			config.FilePath(cfgFile),
 			config.Format("yaml"),
 			config.WithDefaults(defaults, "yaml"),
 			config.StopOnInternalDefaultsErrors(),

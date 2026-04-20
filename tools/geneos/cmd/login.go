@@ -67,7 +67,7 @@ var loginCmd = &cobra.Command{
 		if loginCmdList {
 			var err2 error
 			cr, err2 := config.Read("credentials",
-				config.SetAppName(cordial.ExecutableName()),
+				config.AppName(cordial.ExecutableName()),
 				config.UseDefaults(false),
 				config.SkipWorkingDir(),
 			)
@@ -123,7 +123,7 @@ var loginCmd = &cobra.Command{
 			Domain:   urlMatch,
 			Username: loginCmdUsername,
 			Password: enc,
-		}, config.SetAppName(cordial.ExecutableName())); err != nil {
+		}, config.AppName(cordial.ExecutableName())); err != nil {
 			return err
 		}
 

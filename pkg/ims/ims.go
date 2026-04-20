@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"iter"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
@@ -126,6 +128,38 @@ func NewClient(cf *ClientConfig) *rest.Client {
 	)
 }
 
+// Connect returns a sequence of *ClientConfig for each URL in the
+// configuration. The caller can use this to attempt to connect to each
+// configured URL in turn until a successful connection is made.
+func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
+	return func(yield func(*rest.Client) bool) {
+		for _, r := range config.Get[[]string](imsCf, "url") {
+			ccf := &ClientConfig{
+				URL:     r + "/" + imsType,
+				Token:   config.Get[string](imsCf, config.Join("authentication", "token")),
+				Timeout: config.Get[time.Duration](imsCf, config.Join("timeout")),
+			}
+			ccf.TLS.SkipVerify = config.Get[bool](imsCf, config.Join("tls", "skip-verify"))
+			ccf.TLS.Chain = config.Get[[]byte](imsCf, config.Join("tls", "chain"))
+			ccf.Trace = config.Get[bool](imsCf, config.Join("trace"))
+
+			if !yield(NewClient(ccf)) {
+				return
+			}
+		}
+	}
+}
+
+// CorrelationID generates a correlation ID for the given data. The
+// algorithm used, SHA1, does not have to be cryptographically secure,
+// but should produce a reasonably unique ID for the given data. The
+// same data should produce the same correlation ID, and different data
+// should produce different correlation IDs with a very high
+// probability. The correlation ID is returned as a hexadecimal string.
+func CorrelationID(data string) string {
+	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
+}
+
 // debug transport for tracing
 
 type LogTransport struct {
@@ -156,8 +190,4 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
-}
-
-func CorrelationID(data string) string {
-	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
 }

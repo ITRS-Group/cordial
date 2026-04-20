@@ -139,8 +139,8 @@ func initConfig() {
 	// config.DefaultKeyDelimiter("::")
 
 	opts := []config.FileOptions{
-		config.SetAppName("geneos"),
-		config.SetConfigPath(cfgFile),
+		config.AppName("geneos"),
+		config.FilePath(cfgFile),
 		config.MergeSources(),
 		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),

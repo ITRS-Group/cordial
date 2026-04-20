@@ -215,7 +215,7 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 		}
 
 		if eusername == "" {
-			creds := config.FindCreds(smtpserver, config.SetAppName("geneos"))
+			creds := config.FindCreds(smtpserver, config.AppName("geneos"))
 			if creds != nil {
 				eusername = config.Get[string](creds, "username")
 				epassword = config.Get[*config.Secret](creds, "password")

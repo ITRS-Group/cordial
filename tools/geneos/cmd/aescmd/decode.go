@@ -43,7 +43,7 @@ func init() {
 
 	aesPrevUserKeyFile = config.KeyFile(
 		config.Path("prevkeyfile",
-			config.SetAppName(cordial.ExecutableName()),
+			config.AppName(cordial.ExecutableName()),
 			config.Format("aes"),
 			config.SkipWorkingDir(),
 		))

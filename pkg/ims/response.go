@@ -26,28 +26,6 @@ import (
 type results map[string]string
 type Results []results
 
-// snowResult is the response from ServiceNow. It contains the results
-// of the request, which is a slice of results. It also contains an
-// error message if the request failed. The status field is used to
-// indicate the status of the request. If the request was successful,
-// the status will be "success". If the request failed, the status will
-// be "error". The error field contains the error message and detail if
-// the request failed. The results field contains the results of the
-// request.
-type SnowResult struct {
-	Results Results `json:"result,omitempty"`
-	Error   struct {
-		Message string `json:"message"`
-		Detail  string `json:"detail"`
-	} `json:"error"`
-	Status string `json:"status,omitempty"`
-}
-
-type SnowResultsResponse struct {
-	Fields  []string `json:"fields,omitempty"`
-	Results Results  `json:"results,omitempty"`
-}
-
 // Response is the standard response from the IMS gateway, which may
 // include the status code and message from the gateway itself, as well as
 // any data returned by the gateway and the ID of the created or updated

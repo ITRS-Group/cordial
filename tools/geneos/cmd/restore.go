@@ -612,7 +612,7 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	if err = cf.Write(ct.String(),
 		config.Host(h),
 		config.SearchDirs(instanceDir),
-		config.SetAppName(i),
+		config.AppName(i),
 		config.IgnoreEmptyValues(),
 	); err != nil {
 		return err

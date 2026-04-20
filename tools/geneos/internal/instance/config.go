@@ -153,7 +153,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, aliases map[string]string) (err error) {
 	rcf, err := config.Read("rc",
 		config.Host(r),
-		config.SetConfigPath(p),
+		config.FilePath(p),
 		config.MustExist(),
 		config.Format("env"),
 		config.UseDefaults(false),
@@ -165,7 +165,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 		}
 		log.Debug().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
 			config.Host(r),
-			config.SetConfigPath(p),
+			config.FilePath(p),
 			config.Format("env"),
 			config.UseDefaults(false),
 		))
@@ -269,7 +269,7 @@ func SaveConfig(i geneos.Instance) (err error) {
 	if err = i.Config().Write(i.Type().String(),
 		config.Host(i.Host()),
 		config.SearchDirs(Home(i)),
-		config.SetAppName(i.Name()),
+		config.AppName(i.Name()),
 		config.IgnoreEmptyValues(),
 		config.IgnoreKeys(lpKeys...),
 	); err != nil {

@@ -438,7 +438,7 @@ func LoadHostConfig() {
 
 	hostsfile := config.Path(
 		"hosts",
-		config.SetAppName(cordial.ExecutableName()),
+		config.AppName(cordial.ExecutableName()),
 		config.UseDefaults(false),
 		config.SkipWorkingDir(),
 	)
@@ -448,8 +448,8 @@ func LoadHostConfig() {
 	// note that SetAppName only matters when PromoteFile returns an empty path
 	h, err := config.Read(
 		"hosts",
-		config.SetAppName(cordial.ExecutableName()),
-		config.SetConfigPath(confFile),
+		config.AppName(cordial.ExecutableName()),
+		config.FilePath(confFile),
 		config.UseDefaults(false),
 		config.SkipWorkingDir(),
 	)
@@ -501,5 +501,5 @@ func SaveHostConfig() error {
 		return true
 	})
 
-	return n.Write("hosts", config.SetAppName(cordial.ExecutableName()))
+	return n.Write("hosts", config.AppName(cordial.ExecutableName()))
 }

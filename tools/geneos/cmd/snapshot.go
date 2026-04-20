@@ -158,12 +158,12 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		//
 		// credential domain is gateway:NAME or gateway:* for wildcard
 		if username == "" {
-			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.SetAppName(cordial.ExecutableName()))
+			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.AppName(cordial.ExecutableName()))
 			if creds != nil {
 				username = config.Get[string](creds, "username")
 				password = config.Get[*config.Secret](creds, "password")
 			} else {
-				if creds = config.FindCreds(i.Type().String()+":*", config.SetAppName(cordial.ExecutableName())); creds != nil {
+				if creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName())); creds != nil {
 					username = config.Get[string](creds, "username")
 					password = config.Get[*config.Secret](creds, "password")
 				}

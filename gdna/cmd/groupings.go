@@ -114,8 +114,8 @@ var addGroupCmd = &cobra.Command{
 
 		// load existing
 		ig, err := config.Read(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			config.MustExist(),
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -125,15 +125,15 @@ var addGroupCmd = &cobra.Command{
 		if err != nil {
 			log.Warn().Err(err).Msg("loading")
 			igPath = config.Path(filterBase,
-				config.SetAppName("geneos"),
-				config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+				config.AppName("geneos"),
+				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 				config.SkipSystemDir(),
 				config.SkipWorkingDir(),
 			)
 		} else {
 			igPath = config.Path(filterBase,
-				config.SetAppName("geneos"),
-				config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+				config.AppName("geneos"),
+				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
@@ -228,8 +228,8 @@ var addGroupCmd = &cobra.Command{
 
 		// always save the result back
 		ig.Write(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(igPath),
+			config.AppName("geneos"),
+			config.FilePath(igPath),
 		)
 
 		return
@@ -275,8 +275,8 @@ var removeGroupCmd = &cobra.Command{
 
 		// load existing
 		ig, err := config.Read(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			config.MustExist(),
 		)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -287,15 +287,15 @@ var removeGroupCmd = &cobra.Command{
 		if err != nil {
 			log.Warn().Err(err).Msg("loading")
 			igPath = config.Path(filterBase,
-				config.SetAppName("geneos"),
-				config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+				config.AppName("geneos"),
+				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 				config.SkipSystemDir(),
 				config.SkipWorkingDir(),
 			)
 		} else {
 			igPath = config.Path(filterBase,
-				config.SetAppName("geneos"),
-				config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+				config.AppName("geneos"),
+				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
 		log.Debug().Msgf("loaded any existing filters from %q", igPath)
@@ -341,8 +341,8 @@ var removeGroupCmd = &cobra.Command{
 
 		// always save the result back
 		ig.Write(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(igPath),
+			config.AppName("geneos"),
+			config.FilePath(igPath),
 		)
 
 		return
@@ -372,13 +372,13 @@ var listGroupCmd = &cobra.Command{
 		// }
 
 		ig, _ := config.Read(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(config.Get[string](cf, cf.Join("filters", "file"))),
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
 		)
 
 		log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-			config.SetAppName("geneos"),
-			config.SetConfigPath(config.Get[string](cf, cf.Join("filters", "file"))),
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
 		))
 
 		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
@@ -427,13 +427,13 @@ var listGroupCmd = &cobra.Command{
 func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	// load persistence file
 	ig, _ := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:
@@ -548,13 +548,13 @@ OUTER:
 func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	// load persistence file
 	ig, _ := config.Read(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	log.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-		config.SetAppName("geneos"),
-		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:
