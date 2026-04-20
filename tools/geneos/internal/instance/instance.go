@@ -260,10 +260,10 @@ func Enable(i geneos.Instance) (err error) {
 	return i.Host().Remove(disableFile)
 }
 
-// Get return instance of component type ct, and loads the config. It is
-// an error if the config cannot be loaded. The instance is loaded from
-// the host given in the name after any '@' or, if none, localhost is
-// used.
+// Get return instance `name` of component type ct, and loads the
+// config. It is an error if the config cannot be loaded. The instance
+// is loaded from the host given in the name after any '@' or, if none,
+// localhost is used.
 func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error) {
 	if ct == nil || name == "" {
 		return nil, geneos.ErrInvalidArgs

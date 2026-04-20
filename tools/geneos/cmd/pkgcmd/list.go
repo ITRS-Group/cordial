@@ -96,9 +96,17 @@ var listCmd = &cobra.Command{
 			var b []byte
 			for _, v := range versions {
 				for _, l := range v.Links {
-					v.Instances += len(instance.Instances(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), instance.FilterParameters("version="+l)))
+					v.Instances += len(instance.Instances(
+						geneos.GetHost(v.Host),
+						geneos.ParseComponent(v.Component),
+						instance.FilterParameters("version="+l),
+					))
 				}
-				v.Instances += len(instance.Instances(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), instance.FilterParameters("version="+v.Version)))
+				v.Instances += len(instance.Instances(
+					geneos.GetHost(v.Host),
+					geneos.ParseComponent(v.Component),
+					instance.FilterParameters("version="+v.Version),
+				))
 			}
 			if listCmdIndent {
 				b, err = json.MarshalIndent(versions, "", "    ")

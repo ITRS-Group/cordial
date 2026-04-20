@@ -155,21 +155,6 @@ var raiseCmd = &cobra.Command{
 		profileJSON, _ := json.MarshalIndent(incident, "", "    ")
 		log.Debug().Msgf("incident fields after processing profile (over defaults):\n%s", string(profileJSON))
 
-		// // command line args can replace defaults and config file settings.
-		// // parse key value pairs as fields for the request, and for now ignore
-		// // everything else
-		// for _, arg := range args {
-		// 	s := strings.SplitN(arg, "=", 2)
-		// 	if len(s) != 2 {
-		// 		continue
-		// 	}
-		// 	if s[1] == "" {
-		// 		delete(incident, s[0])
-		// 	} else {
-		// 		incident[s[0]] = s[1]
-		// 	}
-		// }
-
 		if raiseCmdIMSType == "" {
 			raiseCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
 		}
@@ -194,7 +179,6 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		// iterate through ims-gateway urls
 		for r := range ims.Connect(cf.Sub("ims-gateway"), raiseCmdIMSType) {
 			log.Debug().Msgf("querying IMS at %s", r.BaseURL)
 			_, err = r.Post(context.Background(), raiseCmdTable, incident, &result)
