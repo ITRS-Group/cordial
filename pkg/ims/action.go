@@ -59,7 +59,7 @@ type ActionGroup struct {
 //     processing is required.
 func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool {
 	agcf := config.New(
-		config.WithDefaultConfig(cf),
+		config.DefaultsFrom(cf),
 		config.DefaultExpandOptions(
 			config.Prefix("match", matchPrefix),
 			config.Prefix("nomatch", noMatchPrefix),

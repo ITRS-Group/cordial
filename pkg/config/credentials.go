@@ -66,12 +66,12 @@ func (c *Config) FindCreds(p string) (creds *Config) {
 }
 
 // FindCreds looks for matching credentials in a default "credentials"
-// file. Options are the same as for [Load] but the default KeyDelimiter
+// file. Options are the same as for [Read] but the default KeyDelimiter
 // is set to "::" as credential domains are likely to be hostnames or
 // URLs. The longest match wins.
 func FindCreds(p string, options ...FileOptions) (creds *Config) {
 	options = append(options, KeyDelimiter("::"))
-	cf, err := Load("credentials", options...)
+	cf, err := Read("credentials", options...)
 	if err != nil {
 		return nil
 	}
@@ -84,26 +84,26 @@ func FindCreds(p string, options ...FileOptions) (creds *Config) {
 // an error un the underlying routines it is returned without change.
 func AddCreds(creds Credentials, options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
-	cf, err := Load("credentials", options...)
+	cf, err := Read("credentials", options...)
 	if err != nil {
 		return
 	}
 	Set(cf, cf.Join("credentials", creds.Domain), creds)
-	return cf.Save("credentials", options...)
+	return cf.Write("credentials", options...)
 }
 
 // DeleteCreds removes the entry for domain from the credentials file
 // identified by options.
 func DeleteCreds(domain string, options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
-	cf, err := Load("credentials", options...)
+	cf, err := Read("credentials", options...)
 	if err != nil {
 		return
 	}
 	credmap := Get[map[string]any](cf, "credentials")
 	delete(credmap, domain)
 	Set(cf, "credentials", credmap)
-	return cf.Save("credentials", options...)
+	return cf.Write("credentials", options...)
 }
 
 // DeleteAllCreds will remove all the credentials in the credentials
@@ -112,5 +112,5 @@ func DeleteAllCreds(options ...FileOptions) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf := New(options...)
 	Set(cf, "credentials", &Credentials{})
-	return cf.Save("credentials", options...)
+	return cf.Write("credentials", options...)
 }

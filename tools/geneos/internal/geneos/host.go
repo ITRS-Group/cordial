@@ -440,18 +440,18 @@ func LoadHostConfig() {
 		"hosts",
 		config.SetAppName(cordial.ExecutableName()),
 		config.UseDefaults(false),
-		config.IgnoreWorkingDir(),
+		config.SkipWorkingDir(),
 	)
 
 	confFile = config.MigrateFile(host.Localhost, hostsfile, path.Join(userConfDir, OldUserHostFile))
 
 	// note that SetAppName only matters when PromoteFile returns an empty path
-	h, err := config.Load(
+	h, err := config.Read(
 		"hosts",
 		config.SetAppName(cordial.ExecutableName()),
-		config.SetConfigFile(confFile),
+		config.SetConfigPath(confFile),
 		config.UseDefaults(false),
-		config.IgnoreWorkingDir(),
+		config.SkipWorkingDir(),
 	)
 	if err != nil {
 		log.Error().Err(err).Msg("")
@@ -501,5 +501,5 @@ func SaveHostConfig() error {
 		return true
 	})
 
-	return n.Save("hosts", config.SetAppName(cordial.ExecutableName()))
+	return n.Write("hosts", config.SetAppName(cordial.ExecutableName()))
 }

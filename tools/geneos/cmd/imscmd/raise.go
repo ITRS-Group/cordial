@@ -236,11 +236,11 @@ func imsLoadConfigFile(name string) (cf *config.Config) {
 		name = "ims"
 	}
 
-	cf, err = config.Load(name,
+	cf, err = config.Read(name,
 		config.SetAppName("geneos"),
 		config.UseGlobal(),
-		config.SetFileExtension("yaml"),
-		config.SetConfigFile(raiseCmdConfigFile),
+		config.Format("yaml"),
+		config.SetConfigPath(raiseCmdConfigFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -250,8 +250,8 @@ func imsLoadConfigFile(name string) (cf *config.Config) {
 		config.Path(name,
 			config.SetAppName("geneos"),
 			config.UseGlobal(),
-			config.SetFileExtension("yaml"),
-			config.SetConfigFile(raiseCmdConfigFile)),
+			config.Format("yaml"),
+			config.SetConfigPath(raiseCmdConfigFile)),
 	)
 
 	return

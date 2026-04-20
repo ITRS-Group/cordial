@@ -539,7 +539,7 @@ func writeSharedFile(h *geneos.Host, fp string, tr *tar.Reader, hdr *tar.Header)
 
 func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, r io.Reader) (err error) {
 	// restore config, update parameters for new root dir on dest host, write
-	cf, err := config.Load(ct.String(), config.SetConfigReader(r))
+	cf, err := config.Read(ct.String(), config.Reader(r))
 	if err != nil {
 		return err
 	}
@@ -609,9 +609,9 @@ func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, 
 	}
 	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
 
-	if err = cf.Save(ct.String(),
+	if err = cf.Write(ct.String(),
 		config.Host(h),
-		config.AddDirs(instanceDir),
+		config.SearchDirs(instanceDir),
 		config.SetAppName(i),
 		config.IgnoreEmptyValues(),
 	); err != nil {

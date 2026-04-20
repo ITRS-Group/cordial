@@ -141,8 +141,8 @@ func initConfig(cmd *cobra.Command) {
 	if cf == nil {
 		opts := []config.FileOptions{
 			config.SetAppName("geneos"),
-			config.SetConfigFile(conffile),
-			config.SetFileExtension("yaml"),
+			config.SetConfigPath(conffile),
+			config.Format("yaml"),
 			config.WithDefaults(defaults, "yaml"),
 			config.StopOnInternalDefaultsErrors(),
 		}
@@ -164,7 +164,7 @@ func initConfig(cmd *cobra.Command) {
 			)
 		}
 
-		cf, err = config.Load(cordial.ExecutableName(), opts...)
+		cf, err = config.Read(cordial.ExecutableName(), opts...)
 		if err != nil {
 			log.Fatal().Err(err).Msgf("loading from %s", config.Path(cordial.ExecutableName(), opts...))
 		}

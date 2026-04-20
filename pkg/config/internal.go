@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -21,7 +22,6 @@ import (
 	"github.com/maja42/goval"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -35,11 +35,18 @@ import (
 // internal placeholders, for now
 
 func (c *Config) allKeys() (keys []string) {
-	return c.viper.AllKeys()
+	s := c.allSettings()
+	return slices.Collect(maps.Keys(s))
 }
 
 func (c *Config) allSettings() (value map[string]any) {
-	return c.viper.AllSettings()
+	s := c.viper.AllSettings()
+	maps.DeleteFunc(s, func(_ string, v any) bool {
+		// delete any keys that have been marked as deleted
+		_, deleted := v.(deletedKey)
+		return deleted
+	})
+	return s
 }
 
 func (c *Config) setFs(fs afero.Fs) {
@@ -92,11 +99,6 @@ func (c *Config) bindEnv(input ...string) error {
 
 func (c *Config) registerAlias(alias, key string) {
 	c.viper.RegisterAlias(alias, key)
-}
-
-// BindPFlag binds a pflag.Flag to a key in the configuration.
-func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
-	return c.viper.BindPFlag(key, flag)
 }
 
 func expand[T string | []byte](c *Config, input string, options ...ExpandOptions) (value T) {
@@ -156,8 +158,6 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 
 	for k, v := range as {
 		switch ev := v.(type) {
-		case deletedKey:
-			continue
 		case string:
 			all[k] = expand[string](c, ev, options...)
 		case []string:
@@ -711,10 +711,11 @@ func (c *Config) sub(key string) *Config {
 	}
 }
 
+// unmarshalKey is a wrapper around Viper's UnmarshalKey that uses the same
+// default decoder configuration as our decode function, ensuring that
+// time.Duration values and string slices are properly handled when unmarshalling
+// into a struct. A key not being set is not an error.
 func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
-	if !c.isSet(key) {
-		return fmt.Errorf("key %q is not set", key)
-	}
 	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
 }
 

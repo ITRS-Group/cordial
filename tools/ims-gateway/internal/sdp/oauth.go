@@ -43,8 +43,8 @@ import (
 var DefaultUserKeyfile = config.KeyFile(
 	config.Path("keyfile",
 		config.SetAppName("geneos"), // we use the geneos keyfile, not a separate one for this integration
-		config.SetFileExtension("aes"),
-		config.IgnoreWorkingDir(),
+		config.Format("aes"),
+		config.SkipWorkingDir(),
 	),
 )
 
@@ -82,9 +82,9 @@ func (s *SDPTokenSource) Token() (*oauth2.Token, error) {
 }
 
 func loadToken() (token *oauth2.Token, err error) {
-	pf, err := config.Load("sdp.token",
+	pf, err := config.Read("sdp.token",
 		config.SetAppName("geneos"),
-		config.SetFileExtension("json"),
+		config.Format("json"),
 	)
 
 	token = &oauth2.Token{}
@@ -126,9 +126,9 @@ func saveToken(token *oauth2.Token) (err error) {
 	}
 	config.Set(pf, pf.Join("token", "refresh_token"), rt)
 
-	return pf.Save("sdp.token",
+	return pf.Write("sdp.token",
 		config.SetAppName("geneos"),
-		config.SetFileExtension("json"),
+		config.Format("json"),
 	)
 }
 

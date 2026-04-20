@@ -140,13 +140,13 @@ func initConfig() {
 
 	opts := []config.FileOptions{
 		config.SetAppName("geneos"),
-		config.SetConfigFile(cfgFile),
-		config.MergeSettings(),
-		config.SetFileExtension("yaml"),
+		config.SetConfigPath(cfgFile),
+		config.MergeSources(),
+		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),
 	}
 
-	cf, err = config.Load(execname, opts...)
+	cf, err = config.Read(execname, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 	}

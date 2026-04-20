@@ -60,9 +60,9 @@ geneos config set geneos="/opt/geneos"
 		if len(args) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
-		cf, err := config.Load(cordial.ExecutableName(),
-			config.IgnoreSystemDir(),
-			config.IgnoreWorkingDir(),
+		cf, err := config.Read(cordial.ExecutableName(),
+			config.SkipSystemDir(),
+			config.SkipWorkingDir(),
 		)
 		if err != nil {
 			return
@@ -78,6 +78,6 @@ geneos config set geneos="/opt/geneos"
 		}
 
 		log.Debug().Msgf("save config %q", cordial.ExecutableName())
-		return cf.Save(cordial.ExecutableName())
+		return cf.Write(cordial.ExecutableName())
 	},
 }

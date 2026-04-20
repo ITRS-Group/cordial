@@ -79,11 +79,11 @@ func Execute() {
 func LoadConfigFile() (cf *config.Config) {
 	var err error
 
-	cf, err = config.Load(cordial.ExecutableName(),
+	cf, err = config.Read(cordial.ExecutableName(),
 		config.SetAppName("geneos"),
 		config.UseGlobal(),
-		config.SetFileExtension("yaml"),
-		config.SetConfigFile(configFile),
+		config.Format("yaml"),
+		config.SetConfigPath(configFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -93,8 +93,8 @@ func LoadConfigFile() (cf *config.Config) {
 		config.Path(cordial.ExecutableName(),
 			config.SetAppName("geneos"),
 			config.UseGlobal(),
-			config.SetFileExtension("yaml"),
-			config.SetConfigFile(configFile)),
+			config.Format("yaml"),
+			config.SetConfigPath(configFile)),
 	)
 
 	return

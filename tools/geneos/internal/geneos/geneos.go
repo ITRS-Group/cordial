@@ -126,7 +126,8 @@ func Init(app string) {
 // run on an older installation it may return the value from the legacy
 // configuration item `itrshome` if `geneos` is not set.
 func LocalRoot() string {
-	return config.Get[string](config.Global(), cordial.ExecutableName(), config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
+	return config.Get[string](config.Global(), cordial.ExecutableName(),
+		config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
 }
 
 // SaveGlobalConfig saves the global configuration (in config.Global)
@@ -135,31 +136,40 @@ func LocalRoot() string {
 // also excluded from the saved configuration.
 func SaveGlobalConfig(name string) error {
 	cf := config.New()
-	globalsettings := make(map[string]string)
+	defaultSettings := make(map[string]string)
 	for _, ct := range AllComponents() {
 		for k, v := range ct.GlobalSettings {
 			// add main setting
-			globalsettings[k] = v
+			defaultSettings[k] = v
 			// also add aliases
-			globalsettings[ct.ConfigAliases[k]] = v
+			defaultSettings[ct.ConfigAliases[k]] = v
 
 		}
 	}
 
-	for _, k := range config.Global().AllKeys() {
+	for k, v := range config.Global().AllSettings() {
+		log.Debug().Msgf("checking global config key %q", k)
 		if k == "" {
+			panic("empty key in global config")
+		}
+
+		// don't set key if value is the current default
+
+		if _, ok := v.(string); !ok {
+			// skip non-string values
 			continue
 		}
 
-		if v, ok := globalsettings[k]; ok {
-			if config.Get[string](config.Global(), k) != v {
-				config.Set(cf, k, v)
-			}
-		} else {
-			config.Set(cf, k, config.Get[string](config.Global(), k))
+		if v == defaultSettings[k] {
+			log.Debug().Msgf("skipping global config key %q with default value %q", k, v)
+			continue
 		}
+
+		config.Set(cf, k, v)
 	}
-	return cf.Save(name) // config.SetAppName(cordial.ExecutableName()),
+
+	log.Debug().Msgf("saving global config with %#v keys", cf.AllSettings())
+	return cf.Write(name) // config.SetAppName(cordial.ExecutableName()),
 	// config.IgnoreEmptyValues(),
 
 }

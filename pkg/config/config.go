@@ -28,6 +28,7 @@ import (
 	"sync"
 
 	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -157,6 +158,11 @@ func (c *Config) SetConfigType(t string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	c.configType = t
+}
+
+// BindPFlag binds a pflag.Flag to a key in the configuration.
+func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
+	return c.viper.BindPFlag(key, flag)
 }
 
 // Sub returns a Config instance rooted at the key passed. If key does

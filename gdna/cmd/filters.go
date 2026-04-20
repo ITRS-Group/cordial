@@ -159,9 +159,9 @@ var addExcludeCmd = &cobra.Command{
 func addFilter(filterType, category string, names []string) (err error) {
 	ts := time.Now()
 	// load existing
-	ig, err := config.Load(filterBase,
+	ig, err := config.Read(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -169,7 +169,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 
 	igPath := config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -212,9 +212,9 @@ func addFilter(filterType, category string, names []string) (err error) {
 	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
-	ig.Save(filterBase,
+	ig.Write(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(igPath),
+		config.SetConfigPath(igPath),
 	)
 	return
 }
@@ -272,9 +272,9 @@ var removeIncludeCmd = &cobra.Command{
 // remove an include or exclude filter. names can be multiline strings,
 // from AC2 command
 func removeFilter(filterType, category string, names []string) (err error) {
-	ig, err := config.Load(filterBase,
+	ig, err := config.Read(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
@@ -282,7 +282,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 
 	igPath := config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 	log.Debug().Msgf("loaded any existing filters from %q", igPath)
 
@@ -313,17 +313,17 @@ func removeFilter(filterType, category string, names []string) (err error) {
 	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
-	ig.Save(filterBase,
+	ig.Write(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(igPath),
+		config.SetConfigPath(igPath),
 	)
 	return
 }
 
 func listFilters(filterType string, category string, listFormat string) (err error) {
-	ig, err := config.Load(filterBase,
+	ig, err := config.Read(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
 	r, _ := reporter.NewReporter(listFormat,
@@ -394,9 +394,9 @@ func listFilters(filterType string, category string, listFormat string) (err err
 // process the filters from the on-disk file and recreate the reporting
 // filter table contents
 func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterType string) error {
-	ig, err := config.Load(filterBase,
+	ig, err := config.Read(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 		// config.MustExist(),
 	)
 
@@ -406,7 +406,7 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 
 	log.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
 		config.SetAppName("geneos"),
-		config.SetConfigFile(config.Get[string](cf, config.Join("filters", "file"))),
+		config.SetConfigPath(config.Get[string](cf, config.Join("filters", "file"))),
 	))
 
 OUTER:

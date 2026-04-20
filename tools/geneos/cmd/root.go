@@ -57,8 +57,8 @@ var debug, quiet bool
 var DefaultUserKeyfile = config.KeyFile(
 	config.Path("keyfile",
 		config.SetAppName(cordial.ExecutableName()),
-		config.SetFileExtension("aes"),
-		config.IgnoreWorkingDir(),
+		config.Format("aes"),
+		config.SkipWorkingDir(),
 	),
 )
 
@@ -87,8 +87,8 @@ func init() {
 
 	GeneosCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/"+cordial.ExecutableName()+".json, "+
 		config.Path(cordial.ExecutableName(),
-			config.IgnoreUserConfDir(),
-			config.IgnoreWorkingDir())+
+			config.SkipUserConfDir(),
+			config.SkipWorkingDir())+
 		")")
 
 	GeneosCmd.PersistentFlags().BoolVar(&AllowRoot, "allow-root", false, "allow running as root (not recommended)")
@@ -327,12 +327,12 @@ func initConfig() {
 	// errors.
 	oldConfDir, _ := config.UserConfigDir()
 
-	cf, err := config.Load(cordial.ExecutableName(),
-		config.SetConfigFile(cfgFile),
+	cf, err := config.Read(cordial.ExecutableName(),
+		config.SetConfigPath(cfgFile),
 		config.UseGlobal(),
-		config.AddDirs(oldConfDir),
-		config.MergeSettings(),
-		config.IgnoreWorkingDir(),
+		config.SearchDirs(oldConfDir),
+		config.MergeSources(),
+		config.SkipWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
 		config.UseDefaults(false),
 	)
@@ -341,11 +341,11 @@ func initConfig() {
 	}
 
 	configPath = config.Path(cordial.ExecutableName(),
-		config.SetConfigFile(cfgFile),
+		config.SetConfigPath(cfgFile),
 		config.UseGlobal(),
-		config.AddDirs(oldConfDir),
-		config.MergeSettings(),
-		config.IgnoreWorkingDir(),
+		config.SearchDirs(oldConfDir),
+		config.MergeSources(),
+		config.SkipWorkingDir(),
 		config.WithEnvs("ITRS", "_"),
 		config.UseDefaults(false),
 		config.MustExist(),

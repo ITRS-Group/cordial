@@ -125,7 +125,7 @@ var queryCmd = &cobra.Command{
 				if queryCmdQuery == "" {
 					var b bytes.Buffer
 					sdpQuery := cf.Sub(config.Join("ims-gateway", "sdp", "default-query"))
-					if err = sdpQuery.SaveTo("sdp", &b, config.SetFileExtension("json")); err != nil {
+					if err = sdpQuery.Write("sdp", config.Writer(&b), config.Format("json")); err != nil {
 						log.Error().Err(err).Msgf("error saving SDP query parameters to buffer: %v", err)
 						return
 					}

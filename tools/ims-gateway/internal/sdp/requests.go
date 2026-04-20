@@ -75,8 +75,9 @@ func (c *client) createRequest(ctx context.Context, sdpCf *config.Config, lookup
 	var b bytes.Buffer
 	var resp string
 
-	if err = sdpCf.SaveTo("sdp", &b,
-		config.SetFileExtension("json"),
+	if err = sdpCf.Write("sdp",
+		config.Writer(&b),
+		config.Format("json"),
 		config.ExpandOnSave(
 			config.LookupTable(lookup),
 		),
@@ -101,8 +102,9 @@ func (c *client) editRequest(ctx context.Context, id int64, sdpCf *config.Config
 
 	sdpReqCf := sdpCf.Sub("edit_request")
 
-	if err = sdpReqCf.SaveTo("sdp", &b,
-		config.SetFileExtension("json"),
+	if err = sdpReqCf.Write("sdp",
+		config.Writer(&b),
+		config.Format("json"),
 		config.ExpandOnSave(
 			config.LookupTable(lookup),
 		),
@@ -135,8 +137,9 @@ func (c *client) addNote(ctx context.Context, id int64, sdpCf *config.Config, lo
 	// vs requests, so keeping it separate for now
 
 	sdpReqnoteCf := sdpCf.Sub("add_note")
-	if err = sdpReqnoteCf.SaveTo("sdp", &b,
-		config.SetFileExtension("json"),
+	if err = sdpReqnoteCf.Write("sdp",
+		config.Writer(&b),
+		config.Format("json"),
 		config.ExpandOnSave(
 			config.LookupTable(lookup),
 		),

@@ -29,26 +29,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Load reads configuration values from internal defaults, external
-// defaults and configuration files. The directories searched and the
-// configuration file names can be controlled using options. The first
-// match is loaded unless the config.MergeSettings() option is used, in
-// which case all defaults are merged and then all non-defaults are
-// merged in the order they were given.
+// Read reads configuration values from internal defaults, external
+// defaults and configuration files or an io.Reader. The directories
+// searched and the configuration file names can be controlled using
+// options. The first match is loaded unless the config.MergeSettings()
+// option is used, in which case all defaults are merged and then all
+// non-defaults are merged in the order they were given.
 //
 // Examples:
 //
-//		config.Load("geneos", config.SetGlobal())
+//	config.Read("geneos", config.SetGlobal())
 //
-//		//go:embed somefile.json
-//		var myDefaults []byte
+//	//go:embed somefile.json
+//	var myDefaults []byte
 //
-//		cf, err := config.Load("geneos",
-//	      config.WithDefaults(myDefaults, "json"),
-//	      config.SetConfigFile(configPath),
-//	    )
-//		if err != nil {
-//		  ...
+//	cf, err := config.Read("geneos",
+//	  config.WithDefaults(myDefaults, "json"),
+//	  config.SetConfigFile(configPath),
+//	)
+//	if err != nil {
+//	  ...
 //
 // Options can be passed to change the default behaviour and to pass any
 // embedded defaults or an existing viper.
@@ -71,7 +71,7 @@ import (
 // from an io.Reader then this takes precedence over file discovery or
 // SetConfigFile(). The configuration file format should be set with
 // SetFileExtension() or it defaults as above.
-func Load(name string, options ...FileOptions) (cf *Config, err error) {
+func Read(name string, options ...FileOptions) (cf *Config, err error) {
 	opts := evalLoadOptions(name, options...)
 	r := opts.remote
 
@@ -84,7 +84,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		}
 	} else {
 		cf = New(options...)
-		cf.configType = opts.extension
+		cf.configType = opts.format
 	}
 
 	// return first error after initialising the config structure.
@@ -140,7 +140,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			for _, dir := range confDirs {
 				d := New(options...)
 				d.setFs(r.GetFs())
-				d.setConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				d.setConfigFile(path.Join(dir, name+".defaults."+opts.format))
 				if err = d.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
@@ -154,7 +154,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		} else if len(confDirs) > 0 {
 			for _, dir := range confDirs {
 				defaults.setFs(r.GetFs())
-				defaults.setConfigFile(path.Join(dir, name+".defaults."+opts.extension))
+				defaults.setConfigFile(path.Join(dir, name+".defaults."+opts.format))
 				if err = defaults.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
@@ -176,12 +176,12 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 	}
 
 	// fixed configuration file, skip directory search
-	if opts.configFileReader != nil {
+	if opts.reader != nil {
 		ncf := New(options...)
 		ncf.setFs(r.GetFs())
-		ncf.setConfigType(opts.extension)
+		ncf.setConfigType(opts.format)
 
-		if err = ncf.readConfig(opts.configFileReader); err != nil {
+		if err = ncf.readConfig(opts.reader); err != nil {
 			return cf, fmt.Errorf("error reading config: %w", err)
 		}
 
@@ -193,8 +193,8 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		ncf.setFs(r.GetFs())
 		ncf.setConfigFile(opts.configFile)
 
-		if opts.extension != "" {
-			ncf.setConfigType(opts.extension)
+		if opts.format != "" {
+			ncf.setConfigType(opts.format)
 		}
 		if err = ncf.readInConfig(); err != nil {
 			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
@@ -220,7 +220,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		for _, dir := range confDirs {
 			d := New(options...)
 			d.setFs(r.GetFs())
-			d.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			d.setConfigFile(path.Join(dir, name+"."+opts.format))
 			if err = d.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
@@ -231,7 +231,7 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 			}
 			found++
 			// set the config file we found and loaded, so WatchConfig works
-			cf.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			cf.setConfigFile(path.Join(dir, name+"."+opts.format))
 
 			// merge, continue on failure
 			cf.MergeConfigMap(d.AllSettings())
@@ -244,17 +244,17 @@ func Load(name string, options ...FileOptions) (cf *Config, err error) {
 		ncf := New(options...)
 		ncf.setFs(r.GetFs())
 		for _, dir := range confDirs {
-			ncf.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			ncf.setConfigFile(path.Join(dir, name+"."+opts.format))
 			if err = ncf.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
-					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, name+"."+opts.extension), err)
+					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, name+"."+opts.format), err)
 				}
 			}
 
 			// set the config file we found and loaded, so WatchConfig works
-			cf.setConfigFile(path.Join(dir, name+"."+opts.extension))
+			cf.setConfigFile(path.Join(dir, name+"."+opts.format))
 
 			// merge into main config
 			cf.MergeConfigMap(ncf.AllSettings())
@@ -327,8 +327,8 @@ func Path(name string, options ...FileOptions) string {
 	}
 
 	filename := name
-	if opts.extension != "" {
-		filename = fmt.Sprintf("%s.%s", filename, opts.extension)
+	if opts.format != "" {
+		filename = fmt.Sprintf("%s.%s", filename, opts.format)
 	}
 
 	if len(confDirs) > 0 {

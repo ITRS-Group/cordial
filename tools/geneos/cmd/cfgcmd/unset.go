@@ -54,9 +54,9 @@ var unsetCmd = &cobra.Command{
 		}
 		args = append(args, params...)
 
-		orig, err := config.Load(cordial.ExecutableName(),
-			config.IgnoreWorkingDir(),
-			config.IgnoreSystemDir(),
+		orig, err := config.Read(cordial.ExecutableName(),
+			config.SkipWorkingDir(),
+			config.SkipSystemDir(),
 		)
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ var unsetCmd = &cobra.Command{
 		}
 
 		if changed {
-			return new.Save(cordial.ExecutableName())
+			return new.Write(cordial.ExecutableName())
 		}
 		return nil
 	},

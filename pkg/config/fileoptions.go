@@ -29,16 +29,17 @@ import (
 )
 
 var (
-	defaultKeyDelimiter  = "."
-	defaultFileExtension = "json"
+	defaultKeyDelimiter = "."
+	defaultFileFormat   = "json"
 )
 
 type fileOptions struct {
 	appName                     string
 	configDirs                  []string
 	configFile                  string
-	configFileReader            io.Reader
-	extension                   string // extension without "."
+	reader                      io.Reader
+	writer                      io.Writer
+	format                      string // extension without "."
 	delimiter                   string
 	defaultConfig               *Config
 	envPrefix                   string
@@ -117,13 +118,13 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 		}
 	}
 
-	if c.extension == "" {
-		c.extension = defaultFileExtension
+	if c.format == "" {
+		c.format = defaultFileFormat
 
 		if ext := path.Ext(c.configFile); ext != "" {
 			for _, e := range viper.SupportedExts {
 				if ext == "."+e {
-					c.extension = e
+					c.format = e
 					break
 				}
 			}
@@ -136,7 +137,7 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
 		appName:    configName,
-		extension:  defaultFileExtension,
+		format:     defaultFileFormat,
 		remote:     host.Localhost,
 		configDirs: []string{},
 	}
@@ -166,19 +167,19 @@ func DefaultKeyDelimiter(delimiter string) {
 // DefaultFileExtension sets the default file extension for all future
 // calls to config.New() and config.Load(). The initial default is "json"
 func DefaultFileExtension(extension string) {
-	defaultFileExtension = extension
+	defaultFileFormat = extension
 }
 
-// UseGlobal tells [Load] to set values in the global
+// UseGlobal tells [Read] to set values in the global
 // configuration structure instead of creating a new one. The global
-// configuration is then returned by [Load].
+// configuration is then returned by [Read].
 func UseGlobal() FileOptions {
 	return func(c *fileOptions) {
 		c.setGlobals = true
 	}
 }
 
-// UseDefaults tells [Load] whether to load defaults or not. The
+// UseDefaults tells [Read] whether to load defaults or not. The
 // default is true. Defaults are loaded from a file with the same name
 // as the main on but with an extra `.defaults` suffix before the
 // extension, i.e. for `config.yaml` the defaults file would be
@@ -206,7 +207,7 @@ func WithDefaults(defaults []byte, format string) FileOptions {
 	}
 }
 
-func WithDefaultConfig(cf *Config) FileOptions {
+func DefaultsFrom(cf *Config) FileOptions {
 	return func(c *fileOptions) {
 		c.defaultConfig = cf
 	}
@@ -237,7 +238,7 @@ func SetAppName(name string) FileOptions {
 	}
 }
 
-// SetConfigFile forces Load to load only the configuration at the given
+// SetConfigPath forces Load to load only the configuration at the given
 // path. This path must include the file extension. Defaults are still
 // loaded from all the normal directories unless [config.IgnoreDefaults]
 // is also passed as an option.
@@ -245,41 +246,50 @@ func SetAppName(name string) FileOptions {
 // If the argument is an empty string then the option is not used. This
 // also means it can be called with a command line flag value which can
 // default to an empty string
-func SetConfigFile(p string) FileOptions {
+func SetConfigPath(p string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.configFile = ResolveHome(p)
 	}
 }
 
-// SetConfigReader sets Load to read the main configuration from an
-// io.Reader in. The input is read until EOF or error.
+// Reader sets the source for the main configuration from io.Reader in.
+// The input is read until EOF or error.
 //
 // The caller must close the reader on return.
-func SetConfigReader(in io.Reader) FileOptions {
+func Reader(in io.Reader) FileOptions {
 	return func(fo *fileOptions) {
-		fo.configFileReader = in
+		fo.reader = in
 	}
 }
 
-// SetFileExtension sets the expected file extension and, by
-// implication, the format for the configuration. If this is not set and
-// the configuration file loaded has an extension then that is used.
-// This applies to both defaults and main configuration files (but not
+// Writer sets the destination for the configuration file to an
+// io.Writer. This overrides any file paths or directories set by other
+// options.
+func Writer(out io.Writer) FileOptions {
+	return func(fo *fileOptions) {
+		fo.writer = out
+	}
+}
+
+// Format sets the expected file extension and, by implication, the
+// format for the configuration. If this is not set and the
+// configuration file loaded has an extension then that is used. This
+// applies to both defaults and main configuration files (but not
 // embedded defaults). The default is "json". Any leading "." is
 // ignored.
-func SetFileExtension(extension string) FileOptions {
+func Format(extension string) FileOptions {
 	return func(fo *fileOptions) {
 		extension = strings.TrimLeft(extension, ".")
-		fo.extension = extension
+		fo.format = extension
 	}
 }
 
-// AddDirs adds paths as directories to search for the configuration and
+// SearchDirs adds paths as directories to search for the configuration and
 // defaults files. Directories are searched in the order given, and any
 // directories added with this option are checked before any built-in
 // list. This option can be given multiple times and each call appends
 // to the existing list.
-func AddDirs(paths ...string) FileOptions {
+func SearchDirs(paths ...string) FileOptions {
 	return func(c *fileOptions) {
 		c.configDirs = append(c.configDirs, paths...)
 	}
@@ -297,43 +307,43 @@ func FromDir(dir string) FileOptions {
 	}
 }
 
-// IgnoreWorkingDir tells [Load] not to search the working
+// SkipWorkingDir tells config.Read() not to search the working
 // directory of the process for configuration files. This should be used
 // when the caller may be running from an unknown or untrusted location.
-func IgnoreWorkingDir() FileOptions {
+func SkipWorkingDir() FileOptions {
 	return func(c *fileOptions) {
 		c.workingDir = ""
 	}
 }
 
-// IgnoreUserConfDir tells [Load] not to search under the user
+// SkipUserConfDir tells config.Read() not to search under the user
 // config directory. The user configuration directory is as per
 // [os.UserConfDir]
-func IgnoreUserConfDir() FileOptions {
+func SkipUserConfDir() FileOptions {
 	return func(c *fileOptions) {
 		c.userConfDir = ""
 	}
 }
 
-// IgnoreSystemDir tells Load() not to search in the system
+// SkipSystemDir tells config.Read() not to search in the system
 // configuration directory. This only applies on UNIX-like systems and
 // is normally `/etc` and a sub-directory of AppName.
-func IgnoreSystemDir() FileOptions {
+func SkipSystemDir() FileOptions {
 	return func(c *fileOptions) {
 		c.systemDir = ""
 	}
 }
 
-// MergeSettings change the default behaviour of Load which is to load
+// MergeSources change the default behaviour of Load which is to load
 // the first configuration file found, instead loading each
 // configuration file found and merging the settings together. Merging
 // is done using [viper.MergeConfigMap] and should result in the last
 // definition of each configuration item being used.
 //
-// MergeSettings applies to both default and main settings, but
+// MergeSources applies to both default and main settings, but
 // separately, i.e. all defaults are first merged and applied then the
 // main configuration files are merged and loaded.
-func MergeSettings() FileOptions {
+func MergeSources() FileOptions {
 	return func(fo *fileOptions) {
 		fo.merge = true
 	}
@@ -417,9 +427,9 @@ func DefaultExpandOptions(options ...ExpandOptions) FileOptions {
 	}
 }
 
-// IgnoreEmptyValues tells Save to ignore any keys with empty values
-// when writing the configuration to a file. This is off by default, and
-// all keys are saved regardless of their value. This can be useful to
+// IgnoreEmptyValues tells config.Write() to ignore any keys with empty
+// values when writing the configuration. This is false by default, and
+// all keys are written regardless of their value. This can be useful to
 // avoid writing empty values to a configuration file, which can help to
 // keep the file clean and easier to read.
 func IgnoreEmptyValues() FileOptions {
@@ -428,12 +438,9 @@ func IgnoreEmptyValues() FileOptions {
 	}
 }
 
-// IgnoreKeys tells Save to ignore the specified keys when writing the
-// configuration to a file. This is off by default, and all keys are
-// saved regardless of their name. This can be useful to avoid writing
-// certain keys to a configuration file, for example if they contain
-// sensitive information or if they are not relevant to the
-// configuration being saved.
+// IgnoreKeys tells config.Write() to ignore the specified keys when
+// writing the configuration. This is empty by default, and all keys are
+// written regardless of their name.
 func IgnoreKeys(keys ...string) FileOptions {
 	return func(fo *fileOptions) {
 		fo.ignoreKeys = append(fo.ignoreKeys, keys...)

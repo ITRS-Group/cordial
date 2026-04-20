@@ -19,7 +19,6 @@ package config
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -39,7 +38,11 @@ import (
 // other.
 var counter atomic.Int64
 
-// Save a configuration file for the named module.
+// Write a configuration file for the named module.
+//
+// The configuration can be written to an io.Writer, using
+// config.Writer() option, or to a file determined by the following
+// order of precedence:
 //
 // - The file specified by config.SetConfigFile() - A file name.ext in
 // the first directory give with config.AddDirs() - A file name.ext in
@@ -49,7 +52,7 @@ var counter atomic.Int64
 // match the remote destination, which can be set by Host() option with
 // a default of "localhost"
 //
-// Save writes to a temporary file with the process ID and original
+// Write writes to a temporary file with the process ID and original
 // extension appended and then tries to atomically rename the file to
 // the target name. This is to avoid leaving a partially written file if
 // the write operation is interrupted. It may result in a temporary file
@@ -60,44 +63,47 @@ var counter atomic.Int64
 // original extension is preserved to ensure that the temporary file is
 // recognized as a configuration file by any tools that may be
 // monitoring the directory for changes.
-func (c *Config) Save(name string, options ...FileOptions) (err error) {
-	log.Debug().Msg("saving configuration")
+func (c *Config) Write(name string, options ...FileOptions) (err error) {
 	var p string
 
+	log.Debug().Msg("saving configuration")
+
 	opts := evalSaveOptions(name, options...)
+
 	h := opts.remote
 
-	if ok, err := h.IsAvailable(); !ok {
-		return err
-	}
+	w := opts.writer
+	if w == nil {
+		if ok, err := h.IsAvailable(); !ok {
+			return err
+		}
 
-	filename := fmt.Sprintf("%s.%s", name, opts.extension)
+		filename := fmt.Sprintf("%s.%s", name, opts.format)
 
-	if opts.userConfDir != "" {
-		p = path.Join(opts.userConfDir, opts.appName, filename)
-	}
+		if opts.userConfDir != "" {
+			p = path.Join(opts.userConfDir, opts.appName, filename)
+		}
 
-	if len(opts.configDirs) > 0 {
-		p = path.Join(opts.configDirs[0], filename)
-	}
+		if len(opts.configDirs) > 0 {
+			p = path.Join(opts.configDirs[0], filename)
+		}
 
-	if opts.configFile != "" {
-		p = opts.configFile
-	}
+		if opts.configFile != "" {
+			p = opts.configFile
+		}
 
-	if p == "" {
-		return fmt.Errorf("cannot resolve save location: %w", os.ErrNotExist)
-	}
+		if p == "" {
+			return fmt.Errorf("cannot resolve save location: %w", os.ErrNotExist)
+		}
 
-	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
-		return
+		if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
+			return
+		}
 	}
 
 	// copy all keys and values to a new config object to avoid
 	// modifying the original config with any expansions or
-	// transformations needed for saving. This is to ensure that the
-	// original config remains unchanged and can be used for other
-	// purposes without any unintended side effects.
+	// transformations needed for saving.
 
 	nv := New()
 
@@ -122,10 +128,13 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	}
 	c.mutex.RUnlock()
 
-	nv.setFs(h.GetFs())
+	nv.setConfigType(opts.format)
 
-	// set the config type as well as the extension to ensure the correct format is used when writing the file
-	nv.setConfigFile(filepath.Ext(p))
+	if w != nil {
+		return nv.writeConfigTo(w)
+	}
+
+	nv.setFs(h.GetFs())
 
 	// write to path with process ID and original extension appended and
 	// then try to atomically rename
@@ -140,51 +149,4 @@ func (c *Config) Save(name string, options ...FileOptions) (err error) {
 	}
 
 	return
-}
-
-// SaveTo writes the configuration to the provided writer. The name and
-// options are used to determine the format of the configuration file,
-// but the actual output is written to the provided writer instead of a
-// file. This can be used to write the configuration to a different
-// destination, such as a network connection or an in-memory buffer,
-// rather than a file on disk.
-//
-// options can include both FileOptions and ExpandOptions, which are
-// used to determine the format of the configuration file and to expand
-// any dynamic values in the configuration, respectively. The function
-// will handle both types of options and apply them as needed when
-// writing the configuration to the provided writer.
-func (c *Config) SaveTo(name string, w io.Writer, options ...FileOptions) (err error) {
-	log.Debug().Msg("saving configuration")
-
-	opts := evalSaveOptions(name, options...)
-
-	nv := New()
-
-	c.mutex.RLock()
-	for _, k := range c.allKeys() {
-		if slices.Contains(opts.ignoreKeys, k) {
-			continue
-		}
-		v := get[any](c, k)
-		if opts.ignoreEmptyValues && isZero(v) {
-			continue
-		}
-		if opts.expandOnSave {
-			log.Debug().Msgf("expanding key: %s", k)
-			// test setting numbers
-			Set(nv, k, expand[string](c, Get[string](c, k, opts.expandOptions...)))
-		} else {
-			Set(nv, k, v)
-		}
-	}
-	c.mutex.RUnlock()
-
-	if opts.userConfDir != "" {
-		nv.setConfigType(opts.extension)
-	} else {
-		nv.setConfigType(defaultFileExtension)
-	}
-
-	return nv.writeConfigTo(w)
 }

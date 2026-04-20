@@ -87,7 +87,7 @@ func LoadConfig(i geneos.Instance) (err error) {
 	prefix := i.Type().LegacyPrefix
 	aliases := i.Type().LegacyParameters
 
-	cf, err := config.Load(i.Type().Name,
+	cf, err := config.Read(i.Type().Name,
 		config.Host(h),
 		config.FromDir(home),
 		config.UseDefaults(false),
@@ -151,11 +151,11 @@ func LoadConfig(i geneos.Instance) (err error) {
 //   - All other `name=value` entries are saved as environment variables
 //     in the configuration for the instance under the `Env` key.
 func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, aliases map[string]string) (err error) {
-	rcf, err := config.Load("rc",
+	rcf, err := config.Read("rc",
 		config.Host(r),
-		config.SetConfigFile(p),
+		config.SetConfigPath(p),
 		config.MustExist(),
-		config.SetFileExtension("env"),
+		config.Format("env"),
 		config.UseDefaults(false),
 	)
 
@@ -165,8 +165,8 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 		}
 		log.Debug().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
 			config.Host(r),
-			config.SetConfigFile(p),
-			config.SetFileExtension("env"),
+			config.SetConfigPath(p),
+			config.Format("env"),
 			config.UseDefaults(false),
 		))
 		return
@@ -266,9 +266,9 @@ func SaveConfig(i geneos.Instance) (err error) {
 
 	lpKeys := slices.Collect(maps.Keys(i.Type().LegacyParameters))
 
-	if err = i.Config().Save(i.Type().String(),
+	if err = i.Config().Write(i.Type().String(),
 		config.Host(i.Host()),
-		config.AddDirs(Home(i)),
+		config.SearchDirs(Home(i)),
 		config.SetAppName(i.Name()),
 		config.IgnoreEmptyValues(),
 		config.IgnoreKeys(lpKeys...),

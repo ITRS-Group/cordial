@@ -86,11 +86,11 @@ func LoadConfigFile(cmdName string) (cf *config.Config) {
 
 	configBasename := strings.Join([]string{Execname, cmdName}, ".")
 
-	cf, err = config.Load(configBasename,
+	cf, err = config.Read(configBasename,
 		config.SetAppName("geneos"),
 		config.UseGlobal(),
-		config.SetFileExtension("yaml"),
-		config.SetConfigFile(configFile),
+		config.Format("yaml"),
+		config.SetConfigPath(configFile),
 		config.MustExist(),
 	)
 	if err != nil {
@@ -100,8 +100,8 @@ func LoadConfigFile(cmdName string) (cf *config.Config) {
 		config.Path(configBasename,
 			config.SetAppName("geneos"),
 			config.UseGlobal(),
-			config.SetFileExtension("yaml"),
-			config.SetConfigFile(configFile)),
+			config.Format("yaml"),
+			config.SetConfigPath(configFile)),
 	)
 
 	return

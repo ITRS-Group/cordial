@@ -47,10 +47,10 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 		in = io.TeeReader(in, buf)
 	}
 
-	conf, err := config.Load(cordial.ExecutableName(),
+	conf, err := config.Read(cordial.ExecutableName(),
 		config.UseDefaults(false),
-		config.SetConfigReader(in),
-		config.SetFileExtension("yaml"),
+		config.Reader(in),
+		config.Format("yaml"),
 	)
 	if err != nil {
 		log.Error().Err(err).Msg("loading inventory")

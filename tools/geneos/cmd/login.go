@@ -66,10 +66,10 @@ var loginCmd = &cobra.Command{
 
 		if loginCmdList {
 			var err2 error
-			cr, err2 := config.Load("credentials",
+			cr, err2 := config.Read("credentials",
 				config.SetAppName(cordial.ExecutableName()),
 				config.UseDefaults(false),
-				config.IgnoreWorkingDir(),
+				config.SkipWorkingDir(),
 			)
 			if err2 != nil {
 				return err2

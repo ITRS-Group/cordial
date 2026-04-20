@@ -108,11 +108,11 @@ func RootCmd2() *cobra.Command {
 func initConfig() {
 	var err error
 
-	cf, err = config.Load(execname,
+	cf, err = config.Read(execname,
 		config.SetAppName("geneos"),
-		config.SetFileExtension("yaml"),
+		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),
-		config.SetConfigFile(configFile))
+		config.SetConfigPath(configFile))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to load configuration")
 	}
