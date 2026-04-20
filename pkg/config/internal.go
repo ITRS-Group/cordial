@@ -10,7 +10,6 @@ import (
 	"os"
 	"reflect"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -35,8 +34,13 @@ import (
 // internal placeholders, for now
 
 func (c *Config) allKeys() (keys []string) {
-	s := c.allSettings()
-	return slices.Collect(maps.Keys(s))
+	k := c.viper.AllKeys()
+	for _, key := range k {
+		if _, deleted := c.viper.Get(key).(deletedKey); !deleted {
+			keys = append(keys, key)
+		}
+	}
+	return keys
 }
 
 func (c *Config) allSettings() (value map[string]any) {
