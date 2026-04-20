@@ -73,6 +73,7 @@ func (c *Config) Write(name string, options ...FileOptions) (err error) {
 	h := opts.remote
 
 	w := opts.writer
+
 	if w == nil {
 		if ok, err := h.IsAvailable(); !ok {
 			return err
@@ -113,17 +114,17 @@ func (c *Config) Write(name string, options ...FileOptions) (err error) {
 			continue
 		}
 		v := get[any](c, k)
+
 		// if given the IgnoreEmptyValues option, skip aliases and keys
 		// with zero/empty values
 		if opts.ignoreEmptyValues && isZero(v) {
 			continue
 		}
 		if opts.expandOnSave {
-			log.Debug().Msgf("expanding key: %s", k)
 			// test setting numbers
-			Set(nv, k, expand[string](c, Get[string](c, k, opts.expandOptions...)))
+			set(nv, k, get[string](c, k, opts.expandOptions...))
 		} else {
-			Set(nv, k, v)
+			set(nv, k, v)
 		}
 	}
 	c.mutex.RUnlock()
