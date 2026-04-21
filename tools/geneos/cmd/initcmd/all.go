@@ -30,7 +30,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var allCmdLicenseFile, allCmdArchive string
+var allCmdLicenseFile string
 var allCmdMinimal bool
 
 func init() {
@@ -40,8 +40,6 @@ func init() {
 	allCmd.MarkFlagRequired("licence")
 
 	allCmd.Flags().BoolVarP(&allCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
-
-	allCmd.Flags().StringVarP(&allCmdArchive, "archive", "A", "", archiveOptionsText)
 	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
 
 	allCmd.Flags().SortFlags = false
@@ -79,7 +77,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args, initCmdExtras)
+		options, err := initProcessArgs(command, args, initCmdExtras)
 		if err != nil {
 			return
 		}
@@ -92,11 +90,6 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		if command.Flags().Changed("archive") {
-			options = append(options,
-				geneos.Source(allCmdArchive),
-			)
-		}
 		return initAll(geneos.LOCAL, options...)
 	},
 }

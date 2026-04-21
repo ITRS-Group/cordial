@@ -20,30 +20,21 @@ limitations under the License.
 package cmd
 
 import (
-	"archive/tar"
-	"compress/gzip"
 	_ "embed"
-	"errors"
 	"fmt"
-	"io"
-	"maps"
 	"os"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
-	"text/tabwriter"
 
-	"github.com/dsnet/compress/bzip2"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var restoreCmdCommon, restoreCmdCompression string
+var restoreCmdCompression string
 var restoreCmdShared, restoreCmdList bool
 
 func init() {
@@ -142,17 +133,31 @@ geneos restore gateway ABC x.tgz
 		// if no file names are found in args then assume STDIN. later
 		// we could look for named file patterns, if it proves useful
 		if len(files) == 0 {
-			if restoreCmdCompression == "" {
-				return fmt.Errorf("when reading from STDIN the compression type must be selected using --decompress/-z")
-			}
-			if err = restoreFromFile(h, ct, "-", names); err != nil {
+			// if err = restoreFromFile(h, ct, "-", names); err != nil {
+			if err = restore.Restore("-",
+				restore.Host(h),
+				restore.Component(ct),
+				restore.Names(names...),
+				restore.Compression(restoreCmdCompression),
+				restore.Shared(restoreCmdShared),
+				restore.List(restoreCmdList),
+				restore.ProgressTo(os.Stdout),
+			); err != nil {
 				return
 			}
 		} else {
 			for _, f := range files {
 				// process file
 				log.Debug().Msgf("checking file %s for ct %s and names %v", f, ct, names)
-				if err = restoreFromFile(h, ct, f, names); err != nil {
+				if err = restore.Restore(f,
+					restore.Host(h),
+					restore.Component(ct),
+					restore.Names(names...),
+					restore.Compression(restoreCmdCompression),
+					restore.Shared(restoreCmdShared),
+					restore.List(restoreCmdList),
+					restore.ProgressTo(os.Stdout),
+				); err != nil {
 					return
 				}
 			}
@@ -160,463 +165,4 @@ geneos restore gateway ABC x.tgz
 
 		return
 	},
-}
-
-// restoreFromFile reads the archive and looks for types ct and names,
-// which can be in the form "dest=src" to allow renaming instances. If
-// ct is nil then all matching types are restored and if names it empty
-// then all instances are restored. Existing instances with matching
-// names are not overwritten.
-//
-// TODO: shared file control (use flag selector and limit to ct, if not
-// nil)
-func restoreFromFile(h *geneos.Host, ct *geneos.Component, archive string, names []string) (err error) {
-	var tin io.ReadCloser
-	var fileType string
-
-	if archive == "-" {
-		fileType = restoreCmdCompression
-		archive = ""
-	} else {
-		for s, t := range fileTypes {
-			if strings.HasSuffix(archive, s) {
-				fileType = t
-				break
-			}
-		}
-	}
-
-	if fileType == "" {
-		return
-	}
-
-	// default source is STDIN
-	in := os.Stdin
-	if archive != "" {
-		if in, err = os.Open(archive); err != nil {
-			return
-		}
-		defer in.Close()
-	}
-
-	switch fileType {
-	case "", "none":
-		switch {
-		case strings.HasSuffix(archive, ".gz") || strings.HasSuffix(archive, ".tgz"):
-			if tin, err = gzip.NewReader(in); err != nil {
-				return
-			}
-			defer tin.Close()
-		case strings.HasSuffix(archive, ".bz2"):
-			if tin, err = bzip2.NewReader(in, nil); err != nil {
-				return
-			}
-			defer tin.Close()
-		default:
-			tin = in
-		}
-	case "gzip":
-		if tin, err = gzip.NewReader(in); err != nil {
-			return
-		}
-		defer tin.Close()
-	case "bzip2":
-		if tin, err = bzip2.NewReader(in, nil); err != nil {
-			return
-		}
-		defer tin.Close()
-	default:
-		err = fmt.Errorf("unknown decompression type %s", restoreCmdCompression)
-		return
-	}
-
-	// store paths processed mapped to types and instances, with record
-	// of skipping, to prevent overwrites, to anticipate instances that
-	// are spread out
-
-	// sizes - key is type:name and the value is the number of files
-	// written out. Initial value, when type:name is found in archive,
-	// is -1 to indicate destination either not tested or already
-	// exists.
-	sizes := map[string]int64{}
-
-	// mapping instance names from archive names to potentially new
-	// ones.
-	//
-	// wildcards are only allowed when no renaming is taking place
-	mapping := map[string]string{}
-
-	restoreAll := false
-	if len(names) == 1 && names[0] == "all" {
-		restoreAll = true
-	} else {
-		for _, name := range names {
-			dest, src, found := strings.Cut(name, "=")
-			if found {
-				if !instance.ValidName(src) || !instance.ValidName(dest) {
-					log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
-					return geneos.ErrInvalidArgs
-				}
-				mapping[dest] = src
-			} else {
-				mapping[name] = name
-			}
-		}
-	}
-
-	tr := tar.NewReader(tin)
-	for {
-		var ctSubdir string
-		var hdr *tar.Header
-
-		hdr, err = tr.Next()
-		if err == io.EOF {
-			err = nil
-			break
-		}
-		if err != nil {
-			return
-		}
-
-		filename, err2 := geneos.CleanRelativePath(hdr.Name)
-		if err2 != nil {
-			return err2
-		}
-
-		// decompose cleaned path, check for component type at top
-		// level, ignore all other dirs
-		ctName, rest, _ := strings.Cut(filename, "/")
-
-		// restore top level tls is restoring shared files
-		if ctName == "tls" && restoreCmdShared {
-			if _, ok := sizes["TLS:!SHARED"]; !ok {
-				sizes["TLS:!SHARED"] = -1
-			}
-			if err = writeSharedFile(h, path.Join("tls", rest), tr, hdr); err != nil {
-				if errors.Is(err, os.ErrExist) && restoreCmdList {
-					// up the count regardless of existence when listing
-					sizes["TLS:!SHARED"] += hdr.Size
-				}
-				continue
-			}
-			sizes["TLS:!SHARED"] += hdr.Size
-			continue
-		}
-
-		// check ctName is valid and if ct is not nil, filter for a match
-		nct := geneos.ParseComponent(ctName)
-		if nct == nil {
-			log.Debug().Msgf("unknown component type: %s, skipping", filename)
-			continue
-		}
-
-		// if a component type is wanted, reject others
-		if ct != nil && ct != nct {
-			log.Debug().Msgf("component type does not match: %s != %s, skipping", ct, nct)
-			continue
-		}
-
-		if rest != "" {
-			ctSubdir, rest, _ = strings.Cut(rest, "/")
-		}
-
-		// check for shared directories for given nct and restore if asked to
-		if restoreCmdShared {
-			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctSubdir)) {
-				if ct == nil || ct == nct {
-					if _, ok := sizes[nct.String()+":!SHARED"]; !ok {
-						sizes[nct.String()+":!SHARED"] = -1
-					}
-					if err = writeSharedFile(h, path.Join(nct.String(), ctSubdir, rest), tr, hdr); err != nil {
-						if errors.Is(err, os.ErrExist) && restoreCmdList {
-							// up the count regardless of existence when listing
-							sizes[nct.String()+":!SHARED"] += hdr.Size
-						}
-						continue
-					}
-					sizes[nct.String()+":!SHARED"] += hdr.Size
-					continue
-				}
-			}
-		}
-
-		if !strings.HasSuffix(ctSubdir, "s") {
-			continue
-		}
-		ctSubdir = strings.TrimSuffix(ctSubdir, "s")
-		packageCt := geneos.ParseComponent(ctSubdir)
-
-		if packageCt == nil || (nct != packageCt && nct != packageCt.ParentType) {
-			log.Debug().Msgf("top-level entry and home entry not matched: %s, skipping", filename)
-			continue
-		}
-
-		// "rest" is (should be) now "instance/content"
-		i, fp, _ := strings.Cut(rest, "/")
-
-		// we now have type (nct), instance name and filepath fp
-
-		// does the instance name match any of the names list, including wildcards?
-		if len(mapping) > 0 {
-			for k, v := range mapping {
-				if k == v {
-					if matched, _ := filepath.Match(k, i); matched {
-						// save
-						if err = processFile(h, packageCt, i, fp, tr, hdr, sizes); err != nil {
-							return
-						}
-					}
-				} else {
-					if v == i {
-						// rename and save
-						if err = processFile(h, packageCt, k, fp, tr, hdr, sizes); err != nil {
-							return
-						}
-					}
-				}
-			}
-			continue
-		}
-
-		// otherwise, if "all", restore all instances in the archive
-		if restoreAll {
-			if err = processFile(h, packageCt, i, fp, tr, hdr, sizes); err != nil {
-				return
-			}
-		}
-	}
-
-	fmt.Printf("\n%s:\n\n", archive)
-	t := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-	fmt.Fprintf(t, "Type\tName\tSize\n")
-	for _, k := range slices.Sorted(maps.Keys(sizes)) {
-		ctName, name, _ := strings.Cut(k, ":")
-
-		if name == "!SHARED" {
-			name = "(shared dirs)"
-		}
-		if restoreCmdList {
-			fmt.Fprintf(t, "%s\t%s\t%.3f MiB\n", ctName, name, float64(sizes[k])/(1024*1024))
-			continue
-		}
-
-		if sizes[k] > -1 {
-			if name != mapping[name] && !restoreAll {
-				fmt.Fprintf(t, "%s\t%s (from %s)\t%.3f MiB\n", ctName, name, mapping[name], float64(sizes[k])/(1024*1024))
-			} else {
-				fmt.Fprintf(t, "%s\t%s\t%.3f MiB\n", ctName, name, float64(sizes[k])/(1024*1024))
-			}
-
-		} else {
-			fmt.Fprintf(t, "%s\t%s\tskipped restoring\n", ctName, name)
-		}
-	}
-	t.Flush()
-	return
-}
-
-func processFile(h *geneos.Host, ct *geneos.Component, i, fp string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64) (err error) {
-	// otherwise restore all instances in the archive
-	if process, ok := sizes[ct.String()+":"+i]; ok {
-		if process > 0 {
-			if !restoreCmdList {
-				if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
-					// if written ok, add one more file
-					return
-				}
-			}
-			sizes[ct.String()+":"+i] += hdr.Size
-		}
-		return
-	}
-
-	// init sizes entry
-	if restoreCmdList {
-		sizes[ct.String()+":"+i] = hdr.Size
-		return
-	}
-
-	// otherwise init to -1
-	sizes[ct.String()+":"+i] = -1
-
-	// write file and update sizes
-	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", i)); err != nil {
-		// instance does not yet exist
-		if err = writeFile(h, ct, i, fp, tr, hdr); err != nil {
-			return
-		}
-		// first file written
-		sizes[ct.String()+":"+i] = hdr.Size
-	}
-	return
-}
-
-// writeFile reads the file from the tar reader and, if a regular file,
-// writes it to the instance directory, creating intermediate
-// directories as required, and setting permissions as per tar header.
-// Owner and group are ignored. Directory entries are used to create
-// directories with matching permissions, again ignoring owner and
-// group.
-func writeFile(h *geneos.Host, ct *geneos.Component, i string, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
-	if ct == nil {
-		return geneos.ErrInvalidArgs
-	}
-
-	instanceDir := h.PathTo(ct, ct.String()+"s", i)
-	destPath := path.Join(instanceDir, fp)
-
-	switch hdr.Typeflag {
-	case tar.TypeDir:
-		// create and set permissions
-		return h.MkdirAll(destPath, hdr.FileInfo().Mode().Perm())
-	case tar.TypeReg:
-		var w io.WriteCloser
-
-		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(path.Dir(destPath), 0775); err != nil {
-			return
-		}
-
-		// if the file is the instance config, then call rebuild to
-		// update paths and ports as required, and to remove legacy
-		// parameters, instead of just writing the file out
-		if fp == ct.String()+".json" {
-			return rebuildConfig(h, ct, i, instanceDir, tr)
-		}
-
-		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
-			log.Debug().Err(err).Msg("")
-			return
-		}
-		defer w.Close()
-
-		_, err = io.Copy(w, tr)
-		return
-	default:
-		// ignore
-	}
-	return
-}
-
-// writeSharedFile reads the file from the tar reader and, if a regular
-// file, writes it to the path fp relative to the host's root geneos,
-// creating intermediate directories as required, and setting
-// permissions as per tar header. Owner and group are ignored. Directory
-// entries are used to create directories with matching permissions,
-// again ignoring owner and group.
-func writeSharedFile(h *geneos.Host, fp string, tr *tar.Reader, hdr *tar.Header) (err error) {
-	switch hdr.Typeflag {
-	case tar.TypeDir:
-		// create and set permissions
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
-			return os.ErrExist
-		}
-		return h.MkdirAll(h.PathTo(fp), hdr.FileInfo().Mode().Perm())
-	case tar.TypeReg:
-		var w io.WriteCloser
-
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
-			return os.ErrExist
-		}
-
-		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(path.Dir(h.PathTo(fp)), 0775); err != nil {
-			return
-		}
-
-		if w, err = h.Create(h.PathTo(fp), hdr.FileInfo().Mode()); err != nil {
-			return
-		}
-		defer w.Close()
-
-		_, err = io.Copy(w, tr)
-		return
-	default:
-		// ignore
-	}
-	return
-}
-
-func rebuildConfig(h *geneos.Host, ct *geneos.Component, i, instanceDir string, r io.Reader) (err error) {
-	// restore config, update parameters for new root dir on dest host, write
-	cf, err := config.Read(ct.String(), config.Reader(r))
-	if err != nil {
-		return err
-	}
-
-	// update name in case this is a rename
-	config.Set(cf, "name", i)
-
-	oldHome := config.Get[string](cf, "home")
-	newHome := instanceDir
-
-	oldInstall := config.Get[string](cf, "install")
-	newInstall := h.PathTo("packages", ct.String())
-
-	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
-	newShared := ct.Shared(h)
-
-	version := config.Get[string](cf, "version", config.NoExpand())
-
-	for k, v := range cf.AllSettings() {
-		switch k {
-		case "libpaths":
-			// treat libpaths special, below
-			continue
-		case "port":
-			ports := instance.GetAllPorts(h)
-			if ports[config.Get[uint16](cf, k)] {
-				// port already in use, get the next one
-				config.Set(cf, k, instance.NextFreePort(h, ct))
-			}
-		default:
-			if vs, ok := v.(string); ok {
-				// replace home (unanchored)
-				if oldHome != newHome {
-					vs = strings.Replace(vs, oldHome, newHome, 1)
-				}
-
-				// replace install (unanchored)
-				if oldInstall != newInstall {
-					vs = strings.Replace(vs, oldInstall, newInstall, 1)
-				}
-
-				// replace shared (unanchored)
-				if oldShared != newShared {
-					vs = strings.Replace(vs, oldShared, newShared, 1)
-				}
-
-				config.Set(cf, k, vs)
-			}
-		}
-	}
-
-	libpaths := []string{}
-	np := "${config:install}"
-	nv := "${config:version}"
-
-	for _, p := range filepath.SplitList(config.Get[string](cf, "libpaths", config.NoExpand())) {
-		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
-			subpath := after
-			if after, ok := strings.CutPrefix(subpath, version); ok {
-				libpaths = append(libpaths, path.Join(np, nv, after))
-			} else {
-				libpaths = append(libpaths, path.Join(np, subpath))
-			}
-		} else {
-			libpaths = append(libpaths, p)
-		}
-	}
-	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
-
-	if err = cf.Write(ct.String(),
-		config.Host(h),
-		config.SearchDirs(instanceDir),
-		config.AppName(i),
-		config.IgnoreEmptyValues(),
-	); err != nil {
-		return err
-	}
-
-	return
 }

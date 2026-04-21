@@ -600,10 +600,12 @@ func deleteKey(c *Config, key string) {
 	c.viper.Set(key, deletedKey{})
 }
 
+// set a value
 func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 	opts := evalExpandOptions(c, options...)
+
 	if opts.noExpand {
-		c.viper.Set(key, fmt.Sprint(value))
+		c.viper.Set(key, value)
 		return
 	}
 
@@ -761,9 +763,10 @@ func (c *Config) replaceString(value string, options ...ExpandOptions) string {
 	opts := evalExpandOptions(c, options...)
 
 	for _, r := range opts.replacements {
-		sub := expand[string](c, c.viper.GetString(r), options...)
+		// e.g. "home" _> "/opt/itrs/geneos"
+		sub := get[string](c, r, options...)
 
-		// simple case, no expand substrings
+		// simple case, no expandable substrings
 		if !strings.Contains(value, "${") {
 			value = strings.ReplaceAll(value, sub, "${config:"+r+"}")
 			continue

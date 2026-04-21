@@ -235,11 +235,11 @@ func InitialValue(value any) ExpandOptions {
 // name with an equivalent expand string, where the value of the name
 // key is only tested as Set time.
 //
-// e.g. if ${home} is "/home/user" then:
+// e.g. if ${config:home} is "/home/user" then:
 //
 //	config.SetString("path", "/home/user/file.txt", config.Replace("home"))
 //
-// results in path being set to "${home}/file.txt" for future expansion,
+// results in path being set to "${config:home}/file.txt" for future expansion,
 // as "home" may change
 //
 // Replace can be used multiple times, each name being checked in order.

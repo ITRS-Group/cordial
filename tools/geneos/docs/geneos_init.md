@@ -137,6 +137,7 @@ geneos init [flags] [DIRECTORY]
 ### Options
 
 ```text
+  -r, --restore PATH              Restore from backup file PATH
   -l, --log                       Follow logs after starting instance(s)
   -F, --force                     Be forceful, ignore existing directories.
   -n, --name string               Use name for instances and configurations instead of the hostname
@@ -145,6 +146,7 @@ geneos init [flags] [DIRECTORY]
                                   This bundle must contain an unencrypted private key
                                   and matching signing certificate and other certificates up to the root CA.
       --insecure                  Do not create internal certificates for TLS support
+  -A, --archive string            Directory of releases for installation
   -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots                 Download from nexus snapshots. Requires -N
   -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")

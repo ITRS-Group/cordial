@@ -30,14 +30,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var demoCmdArchive string
 var demoCmdMinimal bool
 
 func init() {
 	initCmd.AddCommand(demoCmd)
 
 	demoCmd.Flags().BoolVarP(&demoCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
-	demoCmd.Flags().StringVarP(&demoCmdArchive, "archive", "A", "", archiveOptionsText)
 	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
 
 	demoCmd.Flags().SortFlags = false
@@ -70,7 +68,7 @@ var demoCmd = &cobra.Command{
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args, initCmdExtras)
+		options, err := initProcessArgs(command, args, initCmdExtras)
 		if err != nil {
 			return
 		}
@@ -83,11 +81,6 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		if command.Flags().Changed("archive") {
-			options = append(options,
-				geneos.Source(demoCmdArchive),
-			)
-		}
 		return initDemo(geneos.LOCAL, options...)
 	},
 }

@@ -142,7 +142,7 @@ func Install(h *Host, ct *Component, options ...PackageOptions) (err error) {
 	if len(ct.PackageTypes) > 0 {
 		for _, ct := range ct.PackageTypes {
 			if err = Install(h, ct, options...); err != nil {
-				log.Error().Err(err).Msg("")
+				log.Debug().Err(err).Msg("")
 			}
 		}
 		return nil

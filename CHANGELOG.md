@@ -1,15 +1,15 @@
 # Change Log
 
-## Version v1.26.0-beta4
+## Version v1.26.0-rc1
 
 >[!IMPORTANT]
-> This is an **beta** release of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
+> This is a **release candidate** of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
 
 >[!WARNING]
 >**BREAKING CHANGES**
->* `tools/geneos` has breaking changes to how TLS certificates are managed.
+>* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
->  To better support secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>  To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
 >  The release version has also skipped v1.25.x to emphasise these breaking changes.
 
@@ -44,6 +44,10 @@
   * GDNA now supports the License Daemon 7.8.0 and later for real-time fetching of license data from the now protected endpoint(s). It does not yet support the new `licd` binary summary files, but this is planned for a future release.
 
     Additional configuration is required to use this new feature, so please see the updated documentation for details.
+
+* `pkg/config`
+
+  * A major refactoring, including API changes, to modernise the configuration package and make it easier to use in other projects. In the unlikely event you are using this package (or any from the `pkg` directory) please be aware that breaking changes have been made and you should not update your dependencies to this version until you have reviewed the changes and made any necessary updates to your code.
 
 * `tools/ims-gateway`
 

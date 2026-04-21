@@ -22,7 +22,6 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
 
 ```text
   -M, --minimal                       use a minimal Netprobe release
-  -A, --archive string                Directory of releases for installation
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
 ```

@@ -70,11 +70,11 @@ func ExecutableName(version ...string) (execname string) {
 	execname, _ = filepath.EvalSymlinks(execname)
 	execname = path.Base(filepath.ToSlash(execname))
 
-	// strip any extension from the binary, to allow windows .EXE
-	// binary to work. Note we get the extension first, it may be
-	// capitalised. This will also remove any other extensions, users
-	// should use '-' or '_' instead.
-	execname = strings.TrimSuffix(execname, path.Ext(execname))
+	// strip any case-insensitive "exe" extension from the binary, to
+	// allow windows .EXE binary to work.
+	if strings.EqualFold(path.Ext(execname), "exe") {
+		execname = strings.TrimSuffix(execname, path.Ext(execname))
+	}
 
 	// finally strip the VERSION, if found, prefixed by a dash, on the
 	// end of the basename

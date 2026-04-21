@@ -20,7 +20,9 @@ package initcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path"
@@ -34,12 +36,14 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 const archiveOptionsText = "Directory of releases for installation"
 
 var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bool
+var initCmdRestore, initCmdArchive string
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
 var initCmdDLPassword *config.Secret
@@ -60,6 +64,8 @@ func init() {
 
 	// common flags, need checking
 
+	initCmd.Flags().StringVarP(&initCmdRestore, "restore", "r", "", "Restore from backup file `PATH`")
+
 	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
 	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
 	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
@@ -76,6 +82,7 @@ func init() {
 
 	// initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
 
+	initCmd.PersistentFlags().StringVarP(&initCmdArchive, "archive", "A", "", archiveOptionsText)
 	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
 	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
 
@@ -127,7 +134,7 @@ geneos init
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(args, initCmdExtras)
+		options, err := initProcessArgs(command, args, initCmdExtras)
 		if err != nil {
 			return err
 		}
@@ -139,6 +146,52 @@ geneos init
 		if err = initCommon(); err != nil {
 			return
 		}
+
+		if initCmdRestore != "" {
+			if err = restore.Restore(initCmdRestore,
+				restore.Host(geneos.LOCAL),
+				restore.Shared(true),
+				restore.ProgressTo(os.Stdout),
+			); err != nil {
+				log.Fatal().Err(err).Msgf("failed to restore from backup file %q", initCmdRestore)
+			}
+
+			installed := 0
+
+			for ct := range ct.OrList() {
+				log.Debug().Msgf("checking for releases for %s", ct.String())
+				v := instance.InstanceNames(geneos.LOCAL, ct)
+
+				log.Debug().Msgf("found releases for %s: %v", ct.String(), v)
+				if len(v) == 0 {
+					continue
+				}
+
+				if err = ct.MakeDirs(geneos.LOCAL); err != nil {
+					return err
+				}
+
+				if err = geneos.Install(geneos.LOCAL, ct, options...); err != nil {
+					if errors.Is(err, fs.ErrExist) {
+						err = nil
+						installed++
+						continue
+					}
+					if errors.Is(err, fs.ErrNotExist) && initCmdVersion != "latest" {
+						err = nil
+						installed++
+						continue
+					}
+					return err
+				}
+				installed++
+			}
+
+			if installed == 0 {
+				return fmt.Errorf("no matching release installed")
+			}
+		}
+
 		return
 	},
 }
@@ -162,13 +215,19 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOptions, err error) {
+func initProcessArgs(command *cobra.Command, args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOptions, err error) {
 	var root string
 
 	options = []geneos.PackageOptions{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),
+	}
+
+	if command.PersistentFlags().Changed("archive") {
+		options = append(options,
+			geneos.Source(initCmdArchive),
+		)
 	}
 
 	// if passed in extras, add any headers
