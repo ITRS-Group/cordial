@@ -24,9 +24,9 @@ import (
 	"os"
 
 	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/xpath"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
+	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -221,7 +221,7 @@ func gatewayURL(i geneos.Instance) (u *url.URL) {
 	port := config.Get[uint16](i.Config(), "port")
 	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
-	if instance.FileOf(i, "certificate") != "" {
+	if instance.FileOf(i, i.Config().Join("tls", "certificate")) != "" || instance.FileOf(i, "certificate") != "" {
 		u.Scheme = "https"
 	}
 	return

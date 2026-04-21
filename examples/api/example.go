@@ -9,8 +9,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/plugins"
-	"github.com/itrs-group/cordial/pkg/streams"
+	"github.com/itrs-group/cordial/pkg/geneos/plugins"
+	"github.com/itrs-group/cordial/pkg/geneos/streams"
 
 	"github.com/itrs-group/cordial/examples/api/cpu"
 	"github.com/itrs-group/cordial/examples/api/generic"

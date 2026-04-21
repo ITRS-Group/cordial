@@ -26,8 +26,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/plugins"
-	"github.com/itrs-group/cordial/pkg/xmlrpc"
+	"github.com/itrs-group/cordial/pkg/geneos/plugins"
+	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
 // An APIReporter connects to a Geneos Netprobe using the XML-RPC API

@@ -17,7 +17,7 @@ limitations under the License.
 
 package commands
 
-import "github.com/itrs-group/cordial/pkg/xpath"
+import "github.com/itrs-group/cordial/pkg/geneos/xpath"
 
 // SnoozeManual runs the internal command of the same name
 func (c *Connection) SnoozeManual(target *xpath.XPath, info string) (err error) {

@@ -29,9 +29,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/email"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
 var cfgFile string
@@ -107,7 +107,7 @@ type DV2EMailData struct {
 	// Dataviews is a slice of each Dataview's data, including Columns
 	// and Rows which are ordered names for the columns and rows
 	// respectively, suitable for range loops. See
-	// https://pkg.go.dev/github.com/itrs-group/cordial/pkg/commands#Dataview
+	// https://pkg.go.dev/github.com/itrs-group/cordial/pkg/geneos/commands#Dataview
 	// for details
 	Dataviews []*commands.Dataview
 

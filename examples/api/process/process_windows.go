@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 type Win32_Process struct {

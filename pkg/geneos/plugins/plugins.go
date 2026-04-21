@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/xmlrpc"
+	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
 // all Plugins must implement these methods

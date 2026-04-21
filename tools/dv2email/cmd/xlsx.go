@@ -29,8 +29,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
 // Hardwired cell defaults

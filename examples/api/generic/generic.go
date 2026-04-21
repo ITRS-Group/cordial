@@ -1,8 +1,8 @@
 package generic
 
 import (
-	"github.com/itrs-group/cordial/pkg/plugins"
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/plugins"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 	"github.com/rs/zerolog/log"
 )
 

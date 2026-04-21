@@ -31,9 +31,9 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/xpath"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
+	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 )
 
 // dataFile is a name and content as a buffer, returned from various builders

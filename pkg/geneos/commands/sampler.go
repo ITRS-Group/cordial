@@ -18,7 +18,7 @@ limitations under the License.
 package commands
 
 import (
-	"github.com/itrs-group/cordial/pkg/xpath"
+	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 )
 
 // SampleNow calls the internal command of the same name on the

@@ -26,7 +26,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/xpath"
+	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 )
 
 // DataItem is a Geneos data item and normally represents a headline or
@@ -40,8 +40,11 @@ type DataItem struct {
 
 // Dataview represents the contents of a Geneos dataview as returned by
 // [commands.Snapshot]. Name and XPath are populated from the request to
-// Snapshot while the three "Order" slices are constructed from the order
-// of the received JSON data.
+// Snapshot while the three "Order" slices are constructed from the
+// order of the received JSON data.
+//
+// HeadlineOrder, ColumnOrder and RowOrder are slice of the respective
+// names based on the order in the Gateway REST response
 type Dataview struct {
 	Name             string       `json:"name"`
 	XPath            *xpath.XPath `json:"xpath"`
@@ -50,22 +53,19 @@ type Dataview struct {
 	SnoozedAncestors bool         `json:"snoozed-ancestors"`
 
 	// Headlines is a map of headline names to data items
-	Headlines map[string]DataItem `json:"headlines,omitempty"`
+	HeadlineOrder []string            `json:"-"`
+	Headlines     map[string]DataItem `json:"headlines,omitempty"`
+
+	// While JSON does not support fixed orders for objects, the Geneos
+	// Gateway responds with the "natural" (i.e. internal) order for
+	// these object maps
+	ColumnOrder []string `json:"table-columns,omitempty"`
+	RowOrder    []string `json:"-"`
 
 	// Table is a map of row names to column names to data items, the
 	// first column (row name) not included in the map. A specific
 	// DataItem is Table["row"]["column"].
 	Table map[string]map[string]DataItem `json:"table,omitempty"`
-
-	// HeadlineOrder, ColumnOrder and RowOrder are slice of the
-	// respective names based on the order in the Gateway REST response
-	//
-	// While JSON does not support fixed orders for objects, the Geneos
-	// Gateway responds with the "natural" (i.e. internal) order for
-	// these object maps
-	HeadlineOrder []string `json:"-"`
-	ColumnOrder   []string `json:"-"`
-	RowOrder      []string `json:"-"`
 }
 
 // dataviewRaw contains json.RawMessage fields for further processing
@@ -76,6 +76,7 @@ type dataviewRaw struct {
 	Snoozed          bool            `json:"snoozed,omitempty"`
 	SnoozedAncestors bool            `json:"snoozed-ancestors,omitempty"`
 	Headlines        json.RawMessage `json:"headlines,omitempty"`
+	TableColumns     []string        `json:"table-columns,omitempty"`
 	Table            json.RawMessage `json:"table,omitempty"`
 }
 
@@ -84,6 +85,8 @@ type dataviewRaw struct {
 // os.ErrInvalid is returned as an empty Dataview object should not be
 // used.
 func (dv *Dataview) UnmarshalJSON(d []byte) (err error) {
+	var gotColumnOrder bool
+
 	if len(d) == 0 {
 		return os.ErrInvalid
 	}
@@ -129,6 +132,11 @@ func (dv *Dataview) UnmarshalJSON(d []byte) (err error) {
 		}
 	}
 
+	if len(dvr.TableColumns) > 0 {
+		gotColumnOrder = true
+		dv.ColumnOrder = dvr.TableColumns
+	}
+
 	// decode table, grab column order from first row, just decode the reset directly
 	dv.Table = map[string]map[string]DataItem{}
 	tdec := json.NewDecoder(bytes.NewReader(dvr.Table))
@@ -172,7 +180,9 @@ NEXTROW:
 						}
 						continue
 					case string:
-						dv.ColumnOrder = append(dv.ColumnOrder, c)
+						if !gotColumnOrder {
+							dv.ColumnOrder = append(dv.ColumnOrder, c)
+						}
 						var di DataItem
 						if err = tdec.Decode(&di); err != nil {
 							return err

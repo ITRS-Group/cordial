@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/xmlrpc"
+	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
 // pushCmd represents the push command

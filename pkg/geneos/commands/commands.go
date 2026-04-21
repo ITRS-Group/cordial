@@ -37,7 +37,8 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/xpath"
+	"github.com/itrs-group/cordial/pkg/geneos/xpath"
+	"github.com/rs/zerolog/log"
 )
 
 // Command is the wrapper for a Geneos REST Command
@@ -149,9 +150,11 @@ func (c *Connection) Redial() (err error) {
 	ping := func(*Connection) error {
 		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
 		if err != nil {
+			log.Debug().Msgf("ping failed: %s", err)
 			return err
 		}
 		if cr.Status == "error" {
+			log.Debug().Msgf("ping failed: %s", cr.Stderr)
 			return fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
 		}
 		return nil

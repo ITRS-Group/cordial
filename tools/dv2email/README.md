@@ -537,7 +537,7 @@ type DV2EMailData struct {
   // Dataviews is a slice of each Dataview's data, including Columns
   // and Rows which are ordered names for the columns and rows
   // respectively, suitable for range loops. See
-  // https://pkg.go.dev/github.com/itrs-group/cordial/pkg/commands#Dataview
+  // https://pkg.go.dev/github.com/itrs-group/cordial/pkg/geneos/commands#Dataview
   // for details
   Dataviews []*commands.Dataview
 

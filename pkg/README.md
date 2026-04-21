@@ -4,7 +4,7 @@ Cordial packages include a number of Go language interfaces to Geneos.
 
 ## commands
 
-The [commands](commands) package provides access to the Geneos Gateway REST Command API.
+The [commands](geneos/commands) package provides access to the Geneos Gateway REST Command API.
 
 ## config
 
@@ -18,16 +18,16 @@ The [geneos](geneos) package provides a data model for Geneos XML configurations
 
 These packages wrap the original SOAP XML-RPC API interface:
 
-* [plugins](plugins)
-* [samplers](samplers)
-* [streams](streams)
-* [xmlrpc](xmlrpc)
+* [plugins](geneos/plugins)
+* [samplers](geneos/samplers)
+* [streams](geneos/streams)
+* [xmlrpc](geneos/xmlrpc)
 
 The code is still in development and the API will evolve with releases. Feedback, via Issues, and Pull requests are welcome but without any guarantees if I'll have time to do them.
 
 The documentation for the underlying API is here: [XML-RPC API](https://docs.itrsgroup.com/docs/geneos/current/Netprobe/api/xml-rpc-api.html)
 
-While direct mappings from golang to the API are available in the [xmlrpc](xmlrpc) package most users will want to look at the higher-level [samplers](samplers) and [streams](streams) packages that try to implement an easier to use high-level interface.
+While direct mappings from golang to the API are available in the [xmlrpc](geneos/xmlrpc) package most users will want to look at the higher-level [samplers](geneos/samplers) and [streams](geneos/streams) packages that try to implement an easier to use high-level interface.
 
 ## Examples of use
 
@@ -59,7 +59,7 @@ First, import the necessary packages
 package generic
 
 import (
-    "github.com/itrs-group/cordial/pkg/plugins"
+    "github.com/itrs-group/cordial/pkg/geneos/plugins"
     "github.com/itrs-group/cordial/pkg/sampler"
 )
 ```
@@ -156,7 +156,7 @@ import (
     "time"
 
     "github.com/StackExchange/wmi"
-    "github.com/itrs-group/cordial/pkg/samplers"
+    "github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's
@@ -207,8 +207,8 @@ package main
 
 import (
 ...
-    "github.com/itrs-group/cordial/pkg/plugins"
-    "github.com/itrs-group/cordial/pkg/streams"
+    "github.com/itrs-group/cordial/pkg/geneos/plugins"
+    "github.com/itrs-group/cordial/pkg/geneos/streams"
 
     "example/generic" // this will depend on how you name it
 )
@@ -249,7 +249,7 @@ Basic support for [streams](geneos/pkg/streams) are included. Streams must be pr
 
 ```go
 import (
- "github.com/itrs-group/cordial/pkg/streams"
+ "github.com/itrs-group/cordial/pkg/geneos/streams"
 )
 ```
 

@@ -6,8 +6,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/plugins"
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/plugins"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 func init() {

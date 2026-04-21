@@ -65,7 +65,7 @@ type listCertLongType struct {
 	Valid             string        `json:"valid,omitempty"`
 	Certificate       string        `json:"certificate,omitempty"`
 	PrivateKey        string        `json:"privatekey,omitempty"`
-	Chainfile         string        `json:"chainfile,omitempty"`
+	TrustChain        string        `json:"trustchain,omitempty"`
 	Issuer            string        `json:"issuer,omitempty"`
 	SubAltNames       []string      `json:"sans,omitempty"`
 	IPs               []net.IP      `json:"ip_addresses,omitempty"`
@@ -495,7 +495,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			"Valid",
 			"CertificateFile",
 			"PrivateKeyFile",
-			"ChainFile",
+			"TrustChain",
 			"Issuer",
 			"SubjAltNames",
 			"IPs",
@@ -599,7 +599,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 				"Valid",
 				"CertificateFile",
 				"PrivateKeyFile",
-				"ChainFile",
+				"TrustChain",
 				"Issuer",
 				"SubjAltNames",
 				"IPs",
@@ -613,6 +613,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 }
 
 func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	cf := i.Config()
 	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
@@ -622,7 +623,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := config.Get[string](i.Config(), "chainfile")
+	trustchain := config.Get[string](cf, cf.Join("tls", "ca-bundle"), config.DefaultValue(config.Get[string](cf, "chainfile")))
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -637,9 +638,9 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, config.Get[string](i.Config(), "certificate"))
-		cols = append(cols, config.Get[string](i.Config(), "privatekey"))
-		cols = append(cols, chainfile)
+		cols = append(cols, config.Get[string](cf, cf.Join("tls", "certificate"), config.DefaultValue(config.Get[string](cf, "certificate"))))
+		cols = append(cols, config.Get[string](cf, cf.Join("tls", "privatekey"), config.DefaultValue(config.Get[string](cf, "privatekey"))))
+		cols = append(cols, trustchain)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
 		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
@@ -652,6 +653,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 }
 
 func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	cf := i.Config()
 	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
@@ -664,7 +666,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 		return
 	}
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := config.Get[string](i.Config(), "chainfile")
+	trustchain := config.Get[string](cf, cf.Join("tls", "ca-bundle"), config.DefaultValue(config.Get[string](cf, "chainfile")))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -678,9 +680,9 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, config.Get[string](i.Config(), "certificate"))
-		cols = append(cols, config.Get[string](i.Config(), "privatekey"))
-		cols = append(cols, chainfile)
+		cols = append(cols, config.Get[string](cf, cf.Join("tls", "certificate"), config.DefaultValue(config.Get[string](cf, "certificate"))))
+		cols = append(cols, config.Get[string](cf, cf.Join("tls", "privatekey"), config.DefaultValue(config.Get[string](cf, "privatekey"))))
+		cols = append(cols, trustchain)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
 		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
@@ -693,6 +695,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 }
 
 func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	cf := i.Config()
 	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
@@ -702,7 +705,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := config.Get[string](i.Config(), "chainfile")
+	trustchain := config.Get[string](cf, cf.Join("tls", "ca-bundle"), config.DefaultValue(config.Get[string](cf, "chainfile")))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -727,9 +730,9 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 	}
 	if listCmdLong {
 		cols = append(cols,
-			config.Get[string](i.Config(), "certificate"),
-			config.Get[string](i.Config(), "privatekey"),
-			chainfile,
+			config.Get[string](cf, cf.Join("tls", "certificate"), config.DefaultValue(config.Get[string](cf, "certificate"))),
+			config.Get[string](cf, cf.Join("tls", "privatekey"), config.DefaultValue(config.Get[string](cf, "privatekey"))),
+			trustchain,
 			cert.Issuer.CommonName,
 			strings.Join(cert.DNSNames, " "),
 		)
@@ -751,6 +754,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 }
 
 func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+	cf := i.Config()
 	resp = responses.NewResponse(i)
 
 	certChain, err := instance.ReadCertificates(i)
@@ -760,7 +764,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	chainfile := config.Get[string](i.Config(), "chainfile")
+	trustchain := config.Get[string](cf, cf.Join("tls", "ca-bundle"), config.DefaultValue(config.Get[string](cf, "chainfile")))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -779,9 +783,9 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Respo
 			cert.NotAfter,
 			cert.Subject.CommonName,
 			valid,
-			config.Get[string](i.Config(), "certificate"),
-			config.Get[string](i.Config(), "privatekey"),
-			chainfile,
+			config.Get[string](cf, cf.Join("tls", "certificate"), config.DefaultValue(config.Get[string](cf, "certificate"))),
+			config.Get[string](cf, cf.Join("tls", "privatekey"), config.DefaultValue(config.Get[string](cf, "privatekey"))),
+			trustchain,
 			cert.Issuer.CommonName,
 			cert.DNSNames,
 			cert.IPAddresses,

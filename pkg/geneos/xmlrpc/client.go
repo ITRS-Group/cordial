@@ -34,12 +34,14 @@ type Client struct {
 func NewClient(url *url.URL, options ...Options) (c *Client) {
 	opt := &xmlrpcOptions{}
 	evalOptions(opt, options...)
-	c = &Client{url: url}
-	if opt.insecureSkipVerify {
-		c.Client.Transport = &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+	c = &Client{
+		Client: http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: opt.insecureSkipVerify},
+			},
+		},
+		url: url,
 	}
 	// clean up idle connections every 30 seconds
 	ticker := time.NewTicker(30 * time.Second)

@@ -30,8 +30,8 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
 
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
 func createTextTemplate(cf *config.Config, data any, textTemplate string) (text string, err error) {

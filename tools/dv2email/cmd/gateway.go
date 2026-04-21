@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
 func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {

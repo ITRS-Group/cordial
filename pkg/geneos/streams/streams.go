@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/xmlrpc"
+	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
 type Stream struct {

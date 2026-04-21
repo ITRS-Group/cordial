@@ -26,8 +26,8 @@ import (
 	"github.com/aymerick/douceur/inliner"
 	"github.com/wneessen/go-mail"
 
-	"github.com/itrs-group/cordial/pkg/commands"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
 func createHTML(_ *config.Config, data any, htmlTemplate string, inlineCSS bool) (html string, err error) {

@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/StackExchange/wmi"
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's

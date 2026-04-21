@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/itrs-group/cordial/pkg/plugins"
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/plugins"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 type MemorySampler struct {

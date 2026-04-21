@@ -11,7 +11,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/itrs-group/cordial/pkg/samplers"
+	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 // cpustats must be exported, along with all it's fields, so that
