@@ -29,12 +29,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Read reads configuration values from internal defaults, external
-// defaults and configuration files or an io.Reader. The directories
-// searched and the configuration file names can be controlled using
-// options. The first match is loaded unless the config.MergeSettings()
-// option is used, in which case all defaults are merged and then all
-// non-defaults are merged in the order they were given.
+// Read reads configuration values for module from internal defaults,
+// external defaults and configuration files or an io.Reader. The
+// directories searched and the configuration file names can be
+// controlled using options. The first match is read and returned unless
+// the config.MergeSettings() option is used, in which case all defaults
+// are merged and then all non-defaults are merged in the order they
+// were given.
 //
 // Examples:
 //
@@ -71,8 +72,8 @@ import (
 // from an io.Reader then this takes precedence over file discovery or
 // SetConfigFile(). The configuration file format should be set with
 // SetFileExtension() or it defaults as above.
-func Read(name string, options ...FileOptions) (cf *Config, err error) {
-	opts := evalLoadOptions(name, options...)
+func Read(module string, options ...FileOptions) (cf *Config, err error) {
+	opts := evalLoadOptions(module, options...)
 	r := opts.remote
 
 	if opts.setGlobals {
@@ -140,7 +141,7 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 			for _, dir := range confDirs {
 				d := New(options...)
 				d.setFs(r.GetFs())
-				d.setConfigFile(path.Join(dir, name+".defaults."+opts.format))
+				d.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = d.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
@@ -154,7 +155,7 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 		} else if len(confDirs) > 0 {
 			for _, dir := range confDirs {
 				defaults.setFs(r.GetFs())
-				defaults.setConfigFile(path.Join(dir, name+".defaults."+opts.format))
+				defaults.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = defaults.readInConfig(); err != nil {
 					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
@@ -220,7 +221,7 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 		for _, dir := range confDirs {
 			d := New(options...)
 			d.setFs(r.GetFs())
-			d.setConfigFile(path.Join(dir, name+"."+opts.format))
+			d.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = d.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
@@ -231,7 +232,7 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 			}
 			found++
 			// set the config file we found and loaded, so WatchConfig works
-			cf.setConfigFile(path.Join(dir, name+"."+opts.format))
+			cf.setConfigFile(path.Join(dir, module+"."+opts.format))
 
 			// merge, continue on failure
 			cf.MergeConfigMap(d.AllSettings())
@@ -244,17 +245,17 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 		ncf := New(options...)
 		ncf.setFs(r.GetFs())
 		for _, dir := range confDirs {
-			ncf.setConfigFile(path.Join(dir, name+"."+opts.format))
+			ncf.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = ncf.readInConfig(); err != nil {
 				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
-					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, name+"."+opts.format), err)
+					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, module+"."+opts.format), err)
 				}
 			}
 
 			// set the config file we found and loaded, so WatchConfig works
-			cf.setConfigFile(path.Join(dir, name+"."+opts.format))
+			cf.setConfigFile(path.Join(dir, module+"."+opts.format))
 
 			// merge into main config
 			cf.MergeConfigMap(ncf.AllSettings())
@@ -296,8 +297,8 @@ func Read(name string, options ...FileOptions) (cf *Config, err error) {
 // If no internal defaults are defined then the string "none" is
 // returned (unless config.MustExist() is used, in which case an empty
 // string is returned).
-func Path(name string, options ...FileOptions) string {
-	opts := evalLoadOptions(name, options...)
+func Path(module string, options ...FileOptions) string {
+	opts := evalLoadOptions(module, options...)
 	r := opts.remote
 
 	if opts.configFile != "" {
@@ -326,7 +327,7 @@ func Path(name string, options ...FileOptions) string {
 		slices.Reverse(confDirs)
 	}
 
-	filename := name
+	filename := module
 	if opts.format != "" {
 		filename = fmt.Sprintf("%s.%s", filename, opts.format)
 	}

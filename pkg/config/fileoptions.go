@@ -80,7 +80,7 @@ func evalFileOptions(options ...FileOptions) (c *fileOptions) {
 	return
 }
 
-func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions) {
+func evalLoadOptions(module string, options ...FileOptions) (c *fileOptions) {
 	// init defaults
 	c = &fileOptions{
 		envDelimiter: "_",
@@ -103,7 +103,7 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 	}
 
 	if c.appName == "" {
-		c.appName = configName
+		c.appName = module
 	}
 
 	// if not cleared by options...
@@ -134,9 +134,9 @@ func evalLoadOptions(configName string, options ...FileOptions) (c *fileOptions)
 	return
 }
 
-func evalSaveOptions(configName string, options ...FileOptions) (c *fileOptions) {
+func evalSaveOptions(module string, options ...FileOptions) (c *fileOptions) {
 	c = &fileOptions{
-		appName:    configName,
+		appName:    module,
 		format:     defaultFileFormat,
 		remote:     host.Localhost,
 		configDirs: []string{},

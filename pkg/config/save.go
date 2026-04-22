@@ -44,9 +44,9 @@ var counter atomic.Int64
 // config.Writer() option, or to a file determined by the following
 // order of precedence:
 //
-// - The file specified by config.SetConfigFile() - A file name.ext in
-// the first directory give with config.AddDirs() - A file name.ext in
-// the user config directory + appname
+//   - The file specified by config.SetConfigFile()
+//   - A file name.ext in the first directory give with config.AddDirs()
+//   - A file name.ext in the user config directory + appname
 //
 // The filesystem target for the configuration object is updated to
 // match the remote destination, which can be set by Host() option with
@@ -63,12 +63,12 @@ var counter atomic.Int64
 // original extension is preserved to ensure that the temporary file is
 // recognized as a configuration file by any tools that may be
 // monitoring the directory for changes.
-func (c *Config) Write(name string, options ...FileOptions) (err error) {
+func (c *Config) Write(module string, options ...FileOptions) (err error) {
 	var p string
 
 	log.Debug().Msg("saving configuration")
 
-	opts := evalSaveOptions(name, options...)
+	opts := evalSaveOptions(module, options...)
 
 	h := opts.remote
 
@@ -79,7 +79,7 @@ func (c *Config) Write(name string, options ...FileOptions) (err error) {
 			return err
 		}
 
-		filename := fmt.Sprintf("%s.%s", name, opts.format)
+		filename := fmt.Sprintf("%s.%s", module, opts.format)
 
 		if opts.userConfDir != "" {
 			p = path.Join(opts.userConfDir, opts.appName, filename)

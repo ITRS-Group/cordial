@@ -44,7 +44,7 @@ The base URL for downloads for automating installations. Not yet used. If files 
 | [`geneos config import`](geneos_config_import.md)	 | import Instances |
 | [`geneos config set`](geneos_config_set.md)	 | Set program configuration |
 | [`geneos config show`](geneos_config_show.md)	 | Show program configuration |
-| [`geneos config unset`](geneos_config_unset.md)	 | Unset a program parameter |
+| [`geneos config unset`](geneos_config_unset.md)	 | Unset a global program parameter |
 
 ## SEE ALSO
 
