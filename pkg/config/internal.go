@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,8 @@ import (
 
 // internal placeholders, for now
 
+// allKeys returns all the keys in the config, excluding any that have
+// been marked as deleted. The keys are returned in sorted order.
 func (c *Config) allKeys() (keys []string) {
 	k := c.viper.AllKeys()
 	for _, key := range k {
@@ -40,6 +43,7 @@ func (c *Config) allKeys() (keys []string) {
 			keys = append(keys, key)
 		}
 	}
+	slices.Sort(keys)
 	return keys
 }
 

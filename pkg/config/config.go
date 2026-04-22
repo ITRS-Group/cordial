@@ -272,12 +272,22 @@ func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 	return c.mergeConfigMap(vals)
 }
 
+// AllKeys returns a slice of all the keys in the configuration,
+// excluding any that have been marked as deleted. The keys are returned
+// in sorted order.
 func (c *Config) AllKeys() (keys []string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return c.allKeys()
 }
 
+// AllSettings returns a map of all the settings in the configuration,
+// excluding any that have been marked as deleted. Only the top-level
+// keys are returned, i.e. nested keys are not included and are in the
+// value from the map.
+//
+// To return all the keys and values, use AllKeys to get the keys and
+// then Get to get the values for each key.
 func (c *Config) AllSettings() (value map[string]any) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
