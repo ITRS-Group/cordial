@@ -18,12 +18,14 @@ limitations under the License.
 package tlscmd
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
@@ -200,7 +202,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 	// paths is a list of files to examine, pre-resolved by the
 	// shell so we don't do any wildcard processing
 	//
-	// extensions are only checked for .pfx/.p12 files, others are
+	// extensions are only checked for .db/.pfx/.p12 files, others are
 	// assumed to be PEM and may contain certificates, private keys
 	// or both
 	//
@@ -220,6 +222,8 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
+		// treat a cacerts file specially, setting the password to
+		// "changeit" and only reading trusted certificate entries
 		if path.Base(p) == "cacerts" {
 			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewSecret([]byte("changeit")))
 			if err != nil {
@@ -243,11 +247,24 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
-		ext := strings.ToLower(path.Ext(p))
+		r, err2 := os.Open(p)
+		if err2 != nil {
+			log.Error().Err(err2).Str("file", p).Msg("unable to open file")
+			continue
+		}
 
-		if ext == certs.KeystoreExtension {
+		magic := make([]byte, 4)
+		_, err2 = r.Read(magic)
+		r.Close() // close regardless of read success
+		if err2 != nil && err2 != io.EOF {
+			log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+			continue
+		}
+
+		if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
+			log.Debug().Str("file", p).Msg("Java keystore magic number found")
 			if infoCmdPassword.String() == "" {
-				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
+				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read password")
 					// return err
@@ -298,6 +315,7 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 			continue
 		}
 
+		ext := strings.ToLower(path.Ext(p))
 		if ext == ".pfx" || ext == ".p12" {
 			if infoCmdPassword.IsNil() {
 				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
