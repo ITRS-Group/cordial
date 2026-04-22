@@ -133,7 +133,6 @@ geneos restore gateway ABC x.tgz
 		// if no file names are found in args then assume STDIN. later
 		// we could look for named file patterns, if it proves useful
 		if len(files) == 0 {
-			// if err = restoreFromFile(h, ct, "-", names); err != nil {
 			if err = restore.Restore("-",
 				restore.Host(h),
 				restore.Component(ct),
@@ -148,7 +147,6 @@ geneos restore gateway ABC x.tgz
 		} else {
 			for _, f := range files {
 				// process file
-				log.Debug().Msgf("checking file %s for ct %s and names %v", f, ct, names)
 				if err = restore.Restore(f,
 					restore.Host(h),
 					restore.Component(ct),

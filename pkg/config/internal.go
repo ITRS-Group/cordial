@@ -611,15 +611,15 @@ func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 
 	switch vt := any(value).(type) {
 	case string:
-		c.viper.Set(key, c.replaceString(vt, options...))
+		c.viper.Set(key, c.replaceStringParam(vt, options...))
 	case []string:
 		for i, v2 := range vt {
-			vt[i] = c.replaceString(v2, options...)
+			vt[i] = c.replaceStringParam(v2, options...)
 		}
 		c.viper.Set(key, vt)
 	case map[string]string:
 		for k, v := range vt {
-			c.viper.Set(key+c.delimiter+k, c.replaceString(v, options...))
+			c.viper.Set(key+c.delimiter+k, c.replaceStringParam(v, options...))
 		}
 	default:
 		// no replacement needed for non-string types, but still need to
@@ -752,19 +752,19 @@ func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstr
 	return c
 }
 
-// replaceString does the string replacement for the set function,
+// replaceStringParam does the string replacement for the set function,
 // replacing any config items in the value with their expanded values.
 // It is careful to skip any config items that are part of an expand
 // substring, e.g. `${config:foo}`. If the value to be replaced is
 // prefixed with `config:` then it is replaced with `${config:...}` to
 // ensure that it is not re-expanded when the value is later expanded as
 // a whole.
-func (c *Config) replaceString(value string, options ...ExpandOptions) string {
+func (c *Config) replaceStringParam(value string, options ...ExpandOptions) string {
 	opts := evalExpandOptions(c, options...)
 
 	for _, r := range opts.replacements {
-		// e.g. "home" _> "/opt/itrs/geneos"
-		sub := get[string](c, r, options...)
+		// e.g. "home" -> "/opt/itrs/geneos"
+		sub := get[string](c, r)
 
 		// simple case, no expandable substrings
 		if !strings.Contains(value, "${") {

@@ -133,11 +133,16 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				}
 				mapping[dest] = src
 			} else {
+				// no mapping, just restore name as is, but save in case of wildcards
 				mapping[name] = name
 			}
 		}
 	}
 
+	// we cannot guarantee the order of files in the archive, so we need
+	// to read through the whole archive and process files as we go,
+	// keeping track of what we've done to prevent overwriting files
+	// from the same archive, and to allow for wildcards and renaming.
 	tr := tar.NewReader(tin)
 	for {
 		var ctSubdir string
@@ -232,40 +237,40 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		}
 
 		// "rest" is (should be) now "instance/content"
-		i, fp, _ := strings.Cut(rest, "/")
+		instanceName, instRelfilePath, _ := strings.Cut(rest, "/")
 
 		// we now have type (nct), instance name and filepath fp
 
 		// does the instance name match any of the names list, including wildcards?
 		if len(mapping) > 0 {
-			for k, v := range mapping {
-				if k == v {
-					if matched, _ := filepath.Match(k, i); matched {
+			for dest, src := range mapping {
+				if dest == src {
+					if matched, _ := filepath.Match(dest, instanceName); matched {
 						// save
-						if err = processFile(i, fp, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
-						files[packageCt.String()+":"+i] += 1
+						files[packageCt.String()+":"+instanceName] += 1
 					}
 				} else {
-					if v == i {
+					if src == instanceName {
 						// rename and save
-						if err = processFile(k, fp, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(dest, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
-						files[packageCt.String()+":"+k] += 1
+						files[packageCt.String()+":"+dest] += 1
 					}
 				}
 			}
 			continue
 		}
 
-		// otherwise, if "all", restore all instances in the archive
+		// otherwise restore all instances in the archive
 		if restoreAll {
-			if err = processFile(i, fp, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+			if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 				return
 			}
-			files[packageCt.String()+":"+i] += 1
+			files[packageCt.String()+":"+instanceName] += 1
 		}
 	}
 
@@ -302,43 +307,43 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	return
 }
 
-func processFile(i, fp string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64, options ...RestoreOption) (err error) {
+func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64, options ...RestoreOption) (err error) {
 	opts := evalRestoreOptions(options...)
 
 	ct := opts.component
 	h := opts.host
 
 	// otherwise restore all instances in the archive
-	if process, ok := sizes[ct.String()+":"+i]; ok {
+	if process, ok := sizes[ct.String()+":"+instanceName]; ok {
 		if process > 0 {
 			if !opts.list {
-				if err = writeFile(i, fp, tr, hdr, opts); err != nil {
+				if err = writeFile(instanceName, instRelFilePath, tr, hdr, opts); err != nil {
 					// if written ok, add one more file
 					return
 				}
 			}
-			sizes[ct.String()+":"+i] += hdr.Size
+			sizes[ct.String()+":"+instanceName] += hdr.Size
 		}
 		return
 	}
 
 	// init sizes entry
 	if opts.list {
-		sizes[ct.String()+":"+i] = hdr.Size
+		sizes[ct.String()+":"+instanceName] = hdr.Size
 		return
 	}
 
 	// otherwise init to -1
-	sizes[ct.String()+":"+i] = -1
+	sizes[ct.String()+":"+instanceName] = -1
 
 	// write file and update sizes
-	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", i)); err != nil {
+	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", instanceName)); err != nil {
 		// instance does not yet exist
-		if err = writeFile(i, fp, tr, hdr, opts); err != nil {
+		if err = writeFile(instanceName, instRelFilePath, tr, hdr, opts); err != nil {
 			return
 		}
 		// first file written
-		sizes[ct.String()+":"+i] = hdr.Size
+		sizes[ct.String()+":"+instanceName] = hdr.Size
 	}
 	return
 }
@@ -349,7 +354,7 @@ func processFile(i, fp string, tr *tar.Reader, hdr *tar.Header, sizes map[string
 // Owner and group are ignored. Directory entries are used to create
 // directories with matching permissions, again ignoring owner and
 // group.
-func writeFile(i string, fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions) (err error) {
+func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions) (err error) {
 	ct := opts.component
 	h := opts.host
 
@@ -357,8 +362,8 @@ func writeFile(i string, fp string, tr *tar.Reader, hdr *tar.Header, opts *resto
 		return geneos.ErrInvalidArgs
 	}
 
-	instanceDir := h.PathTo(ct, ct.String()+"s", i)
-	destPath := path.Join(instanceDir, fp)
+	instanceDir := h.PathTo(ct, ct.String()+"s", instanceName)
+	destPath := path.Join(instanceDir, instRelFilePath)
 
 	switch hdr.Typeflag {
 	case tar.TypeDir:
@@ -375,8 +380,8 @@ func writeFile(i string, fp string, tr *tar.Reader, hdr *tar.Header, opts *resto
 		// if the file is the instance config, then call rebuild to
 		// update paths and ports as required, and to remove legacy
 		// parameters, instead of just writing the file out
-		if fp == ct.String()+".json" {
-			return rebuildConfig(i, instanceDir, hdr.Name, tr, opts)
+		if instRelFilePath == ct.String()+".json" {
+			return rebuildConfig(instanceName, instanceDir, hdr.Name, tr, opts)
 		}
 
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
@@ -434,7 +439,14 @@ func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOp
 	return
 }
 
-func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreOptions) (err error) {
+// rebuildConfig reads the component config file from the tar reader,
+// updates paths and ports as required, removes legacy parameters, and
+// writes the updated config to the instance directory. Paths are
+// updated based on the old home value in the config file and the new
+// home value based on the destination instance directory. Ports are
+// updated to avoid clashes with existing instances on the destination
+// host.
+func rebuildConfig(instanceName, instanceDir, homeRelFilePath string, r io.Reader, opts *restoreOptions) (err error) {
 	ct := opts.component
 	h := opts.host
 
@@ -445,19 +457,16 @@ func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreO
 	}
 
 	// update name in case this is a rename
-	config.Set(cf, "name", i)
+	config.Set(cf, "name", instanceName)
 
 	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
 
 	oldHome := config.Get[string](cf, "home")
-	newHome := instanceDir
+	// set new home
+	config.Set(cf, "home", instanceDir)
 
 	newGeneosDir := config.Get[string](h.Config, "geneos")
-	oldGeneosDir := strings.TrimSuffix(oldHome, "/"+filepath.Dir(fp))
-
-	// now set new home for Replace below
-	config.Set(cf, "home", newHome)
-	log.Debug().Msgf("setting home to %q for config rebuild. check %q", newHome, config.Get[string](cf, "home"))
+	oldGeneosDir := strings.TrimSuffix(oldHome, "/"+filepath.Dir(homeRelFilePath))
 
 	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", nct)
@@ -470,8 +479,8 @@ func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreO
 	for _, k := range cf.AllKeys() {
 		v := config.Get[any](cf, k, config.NoExpand())
 		switch k {
-		case "libpaths":
-			// treat libpaths special, below
+		case "libpaths", "home":
+			// treat libpaths and home special
 			continue
 		case "port":
 			ports := instance.GetAllPorts(h)
@@ -482,8 +491,8 @@ func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreO
 		default:
 			if vs, ok := v.(string); ok {
 				// replace home (unanchored)
-				if oldHome != newHome {
-					vs = strings.Replace(vs, oldHome, newHome, 1)
+				if oldHome != instanceDir {
+					vs = strings.Replace(vs, oldHome, instanceDir, 1)
 				}
 
 				// replace install (unanchored)
@@ -501,9 +510,7 @@ func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreO
 					vs = strings.Replace(vs, oldGeneosDir, newGeneosDir, 1)
 				}
 
-				log.Debug().Msgf("setting config key %s to %q", k, vs)
 				config.Set(cf, k, vs, config.Replace("home"))
-				log.Debug().Msgf("after setting, config key %s is %q", k, config.Get[string](cf, k))
 			}
 		}
 	}
@@ -531,7 +538,7 @@ func rebuildConfig(i, instanceDir string, fp string, r io.Reader, opts *restoreO
 	if err = cf.Write(ct.String(),
 		config.Host(h),
 		config.SearchDirs(instanceDir),
-		config.AppName(i),
+		config.AppName(instanceName),
 		config.IgnoreEmptyValues(),
 	); err != nil {
 		return err
