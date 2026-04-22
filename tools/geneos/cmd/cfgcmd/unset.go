@@ -19,6 +19,7 @@ package cfgcmd
 
 import (
 	_ "embed"
+	"strings"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -35,7 +36,7 @@ var unsetCmdDescription string
 
 var unsetCmd = &cobra.Command{
 	Use:          "unset [KEY...]",
-	Short:        "Unset a program parameter",
+	Short:        "Unset a global program parameter",
 	Long:         unsetCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -43,7 +44,6 @@ var unsetCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
-		var changed bool
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
 		}
@@ -54,29 +54,23 @@ var unsetCmd = &cobra.Command{
 		}
 		args = append(args, params...)
 
-		orig, err := config.Read(cordial.ExecutableName(),
+		if len(args) == 0 {
+			return command.Usage()
+		}
+
+		cf, err := config.Read(cordial.ExecutableName(),
 			config.SkipWorkingDir(),
 			config.SkipSystemDir(),
 		)
 		if err != nil {
 			return err
 		}
-		new := config.New()
 
-	OUTER:
-		for _, k := range orig.AllKeys() {
-			for _, a := range args {
-				if k == a {
-					changed = true
-					continue OUTER
-				}
-			}
-			config.Set(new, k, config.Get[any](orig, k))
+		for _, a := range args {
+			b, _, _ := strings.Cut(a, "=")
+			config.Delete(cf, b)
 		}
 
-		if changed {
-			return new.Write(cordial.ExecutableName())
-		}
-		return nil
+		return cf.Write(cordial.ExecutableName())
 	},
 }
