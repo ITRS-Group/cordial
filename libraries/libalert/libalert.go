@@ -238,7 +238,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		var contents string
 
 		if conf.IsSet("_TEMPLATE_HTML_FILE") {
-			// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
+			// TODO: update to fetch file directly rather than via config.Expand, which is really only for config values
 			contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_HTML_FILE")+"}")
 			if contents == "" {
 				log.Println("error reading", config.Get[string](conf, "_TEMPLATE_HTML_FILE"))
