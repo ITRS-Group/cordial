@@ -117,7 +117,7 @@ func (c *Config) Write(module string, options ...FileOptions) (err error) {
 
 		// if given the IgnoreEmptyValues option, skip aliases and keys
 		// with zero/empty values
-		if opts.ignoreEmptyValues && isZero(v) {
+		if opts.ignoreEmptyValues && isEmpty(v) {
 			continue
 		}
 		if opts.expandOnSave {

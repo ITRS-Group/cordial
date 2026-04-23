@@ -428,12 +428,12 @@ func DefaultExpandOptions(options ...ExpandOptions) FileOptions {
 	}
 }
 
-// IgnoreEmptyValues tells config.Write() to ignore any keys with empty
+// OmitEmptyValues tells config.Write() to ignore any keys with empty
 // values when writing the configuration. This is false by default, and
 // all keys are written regardless of their value. This can be useful to
 // avoid writing empty values to a configuration file, which can help to
 // keep the file clean and easier to read.
-func IgnoreEmptyValues() FileOptions {
+func OmitEmptyValues() FileOptions {
 	return func(fo *fileOptions) {
 		fo.ignoreEmptyValues = true
 	}

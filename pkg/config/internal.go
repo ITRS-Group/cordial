@@ -898,3 +898,16 @@ func isZero(n any) bool {
 	}
 	return false
 }
+
+func isEmpty(n any) bool {
+	v := reflect.ValueOf(n)
+	if !v.IsValid() {
+		return true
+	}
+	switch v.Kind() {
+	case reflect.Slice, reflect.Map:
+		return v.Len() == 0
+	default:
+		return isZero(n)
+	}
+}
