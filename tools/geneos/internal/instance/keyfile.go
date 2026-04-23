@@ -67,7 +67,7 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 	k := strings.Replace(string(keyfile), Home(i), "${config:home}", 1)
 	config.Set(i.Config(), "keyfile", k)
 
-	err = SaveConfig(i)
+	err = Write(i)
 	return
 }
 

@@ -80,7 +80,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}
 
 	if ct == nil {
-		for _, ct := range geneos.RealComponents() {
+		for ct := range ct.OrList() {
 			if err = Copy(ct, source, destination, options...); err != nil {
 				log.Debug().Err(err).Msg("")
 				if errors.Is(err, host.ErrNotExist) {
@@ -182,11 +182,10 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	config.Set(ncf, "home", path.Join(dst.Type().InstancesDir(dHost), dName))
 
 	// only set a new port if not set through command line parameters
-	if config.Get[int](ncf, "port") == 0 {
+	if config.Get[uint16](ncf, "port") == 0 {
 		if src.Host() == dHost {
 			if !opts.move {
-				dPort := NextFreePort(dHost, dst.Type())
-				config.Set(ncf, "port", dPort)
+				config.Set(ncf, "port", NextFreePort(dHost, dst.Type()))
 			} else {
 				config.Set(ncf, "port", config.Get[uint16](src.Config(), "port"))
 			}
@@ -195,42 +194,27 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			dPortsInUse := GetAllPorts(dHost)
 			if _, ok := dPortsInUse[sPort]; ok {
 				log.Debug().Msgf("found port in use: %d", sPort)
-				dPort := NextFreePort(dHost, dst.Type())
-				config.Set(ncf, "port", dPort)
+				config.Set(ncf, "port", NextFreePort(dHost, dst.Type()))
 			} else {
 				config.Set(ncf, "port", config.Get[uint16](src.Config(), "port"))
 			}
 		}
 	}
 
-	// update any component name only if the same as the instance name
-	log.Debug().Msgf("src name: %s, setting dst to %s", config.Get[string](src.Config(), "name"), destination)
-	// _, _, newname := Decompose(destination, geneos.LOCAL)
 	config.Set(ncf, "name", dName)
 
-	// fix-up any other config changes here
-	//
-	// 1. keyfile/prevkeyfile from absolute path to using `${config:home}` if there
-	keyfile := config.Get[string](ncf, "keyfile")
-	log.Debug().Msgf("keyfile: %q", keyfile)
-	if keyfile != "" {
-		// cannot use SetString(..., config.Replace("home") here as we
-		// need the *source* home directory
+	if keyfile := config.Get[string](ncf, "keyfile"); keyfile != "" {
 		k := strings.Replace(keyfile, src.Home(), "${config:home}", 1)
-		log.Debug().Msgf("setting keyfile: %q", k)
 		config.Set(ncf, "keyfile", k)
 	}
-	prevkeyfile := config.Get[string](ncf, "prevkeyfile")
-	if keyfile != "" {
-		// cannot use SetString(..., config.Replace("home") here as we
-		// need the *source* home directory
+	if prevkeyfile := config.Get[string](ncf, "prevkeyfile"); prevkeyfile != "" {
 		k := strings.Replace(prevkeyfile, src.Home(), "${config:home}", 1)
 		config.Set(ncf, "prevkeyfile", k)
 	}
 
 	// config changes don't matter until writing config succeeds
 	log.Debug().Msgf("writing: %v", ncf.AllSettings())
-	if err = SaveConfig(newdst); err != nil {
+	if err = Write(newdst); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}

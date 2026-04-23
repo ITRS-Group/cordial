@@ -221,7 +221,7 @@ func (g *Gateways) String() string {
 }
 
 func (g *Gateways) Load() (err error) {
-	return instance.LoadConfig(g)
+	return instance.Read(g)
 }
 
 func (g *Gateways) Unload() (err error) {
@@ -263,7 +263,7 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	config.Set(cf, "includes", make(map[int]string))
 
 	// try to save config early
-	if err = instance.SaveConfig(g); err != nil {
+	if err = instance.Write(g); err != nil {
 		log.Fatal().Err(err).Msg("")
 		return
 	}
@@ -361,7 +361,7 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if changed {
-		if err = instance.SaveConfig(g); err != nil {
+		if err = instance.Write(g); err != nil {
 			log.Error().Err(err).Msg("Cannot save configuration")
 			return
 		}

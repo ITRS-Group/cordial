@@ -175,7 +175,7 @@ func (n *Netprobes) String() string {
 }
 
 func (n *Netprobes) Load() (err error) {
-	return instance.LoadConfig(n)
+	return instance.Read(n)
 }
 
 func (n *Netprobes) Unload() (err error) {
@@ -204,7 +204,7 @@ func (n *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	}
 	config.Set(n.Config(), "port", port)
 
-	if err = instance.SaveConfig(n); err != nil {
+	if err = instance.Write(n); err != nil {
 		return
 	}
 

@@ -47,8 +47,7 @@ var initCmdRestore, initCmdArchive string
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
 var initCmdDLPassword *config.Secret
-
-var initCmdTLS bool
+var initCmdNoInstall, initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
@@ -64,10 +63,11 @@ func init() {
 
 	// common flags, need checking
 
-	initCmd.Flags().StringVarP(&initCmdRestore, "restore", "r", "", "Restore from backup file `PATH`")
+	initCmd.Flags().StringVarP(&initCmdRestore, "restore", "R", "", "Restore from backup file `PATH`")
+	initCmd.Flags().BoolVarP(&initCmdNoInstall, "no-install", "X", false, "Don't install any releases after restore")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
-	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Be forceful, ignore existing directories.")
+	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Ignore existing directories and files and overwrite")
 	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
@@ -158,37 +158,39 @@ geneos init
 
 			installed := 0
 
-			for ct := range ct.OrList() {
-				log.Debug().Msgf("checking for releases for %s", ct.String())
-				v := instance.InstanceNames(geneos.LOCAL, ct)
+			if !initCmdNoInstall {
+				for ct := range ct.OrList() {
+					log.Debug().Msgf("checking for releases for %s", ct.String())
+					v := instance.InstanceNames(geneos.LOCAL, ct)
 
-				log.Debug().Msgf("found releases for %s: %v", ct.String(), v)
-				if len(v) == 0 {
-					continue
-				}
-
-				if err = ct.MakeDirs(geneos.LOCAL); err != nil {
-					return err
-				}
-
-				if err = geneos.Install(geneos.LOCAL, ct, options...); err != nil {
-					if errors.Is(err, fs.ErrExist) {
-						err = nil
-						installed++
+					log.Debug().Msgf("found releases for %s: %v", ct.String(), v)
+					if len(v) == 0 {
 						continue
 					}
-					if errors.Is(err, fs.ErrNotExist) && initCmdVersion != "latest" {
-						err = nil
-						installed++
-						continue
-					}
-					return err
-				}
-				installed++
-			}
 
-			if installed == 0 {
-				return fmt.Errorf("no matching release installed")
+					if err = ct.MakeDirs(geneos.LOCAL); err != nil {
+						return err
+					}
+
+					if err = geneos.Install(geneos.LOCAL, ct, options...); err != nil {
+						if errors.Is(err, fs.ErrExist) {
+							err = nil
+							installed++
+							continue
+						}
+						if errors.Is(err, fs.ErrNotExist) && initCmdVersion != "latest" {
+							err = nil
+							installed++
+							continue
+						}
+						return err
+					}
+					installed++
+				}
+
+				if installed == 0 {
+					return fmt.Errorf("no matching release installed")
+				}
 			}
 		}
 

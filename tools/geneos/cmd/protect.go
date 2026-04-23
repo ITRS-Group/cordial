@@ -77,7 +77,7 @@ var protectCmd = &cobra.Command{
 				respM := instance.Migrate(i)
 				resp.Err = respM.Err
 			} else {
-				resp.Err = instance.SaveConfig(i)
+				resp.Err = instance.Write(i)
 			}
 			if resp.Err != nil {
 				return

@@ -158,7 +158,7 @@ func (l *Licds) String() string {
 }
 
 func (l *Licds) Load() (err error) {
-	return instance.LoadConfig(l)
+	return instance.Read(l)
 }
 
 func (l *Licds) Unload() (err error) {
@@ -188,7 +188,7 @@ func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	}
 	config.Set(l.Config(), "port", port)
 
-	if err = instance.SaveConfig(l); err != nil {
+	if err = instance.Write(l); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 

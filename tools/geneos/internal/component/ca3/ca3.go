@@ -173,7 +173,7 @@ func (n *CA3s) String() string {
 }
 
 func (n *CA3s) Load() (err error) {
-	return instance.LoadConfig(n)
+	return instance.Read(n)
 }
 
 func (n *CA3s) Unload() (err error) {
@@ -205,7 +205,7 @@ func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
 	config.Set(n.Config(), "port", port)
 
-	if err = instance.SaveConfig(n); err != nil {
+	if err = instance.Write(n); err != nil {
 		return
 	}
 

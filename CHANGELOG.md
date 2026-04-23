@@ -3,21 +3,18 @@
 ## Version v1.26.0-rc1
 
 >[!IMPORTANT]
-> This is a **release candidate** of v1.26.0. It is intended for testing and feedback only, and is not recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
+> This is a **release candidate** of v1.26.0. It is intended for testing and feedback only, and is not yet recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
 
 >[!WARNING]
 >**BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
->  To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
->  The release version has also skipped v1.25.x to emphasise these breaking changes.
-
->[!IMPORTANT]
-> In this beta release GDNA does not support docker as an installation method when used with licd version 7.8.0 and above. We hope to address this in a future beta or the final release.
+>   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 > [!NOTE]
-> **Released 2026-04-17** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-04-23** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.26.0 Highlights
 
@@ -37,7 +34,9 @@
 
   * A new `geneos incident` subsystem has been added. See `tools/ims-gateway` below for more details.
 
-  * Changes to protect against typos on the command line have been implemented.
+  * The `geneos init` command now supports the restoring of a backup created with the `geneos backup` command.
+
+  * Changes to protect against typos on the command line have been implemented. In addition the program will refuse to run commands which change the environment as the `root` user unless the `--allow-root` flag is given. This is to prevent accidental damage to the system by running `geneos` commands with elevated privileges. This can also be overridden globally by adding a configuration option `allow-root=true` to the user configuration file, but this is not recommended.
 
 * `gdna`
 

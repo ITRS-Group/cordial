@@ -178,7 +178,7 @@ func (w *Webservers) String() string {
 }
 
 func (w *Webservers) Load() (err error) {
-	return instance.LoadConfig(w)
+	return instance.Read(w)
 }
 
 func (w *Webservers) Unload() (err error) {
@@ -207,7 +207,7 @@ func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 	config.Set(w.Config(), "port", port)
-	if err = instance.SaveConfig(w); err != nil {
+	if err = instance.Write(w); err != nil {
 		return
 	}
 

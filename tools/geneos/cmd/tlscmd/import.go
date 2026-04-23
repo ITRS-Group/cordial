@@ -170,7 +170,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	}
 	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate, trust chain and key written", i))
 
-	if err := instance.SaveConfig(i); err != nil {
+	if err := instance.Write(i); err != nil {
 		return
 	}
 
@@ -185,6 +185,6 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 		resp.Details = append(resp.Details, fmt.Sprintf("%s ca-bundle updated", i))
 	}
 
-	resp.Err = instance.SaveConfig(i)
+	resp.Err = instance.Write(i)
 	return
 }

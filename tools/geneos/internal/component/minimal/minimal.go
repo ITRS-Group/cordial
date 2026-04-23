@@ -168,7 +168,7 @@ func (n *Minimals) String() string {
 }
 
 func (n *Minimals) Load() (err error) {
-	return instance.LoadConfig(n)
+	return instance.Read(n)
 }
 
 func (n *Minimals) Unload() (err error) {
@@ -198,7 +198,7 @@ func (n *Minimals) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	}
 	config.Set(n.Config(), "port", port)
 
-	if err = instance.SaveConfig(n); err != nil {
+	if err = instance.Write(n); err != nil {
 		return
 	}
 

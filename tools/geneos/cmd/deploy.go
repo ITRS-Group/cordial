@@ -311,7 +311,7 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-		if err = instance.SaveConfig(i); err != nil {
+		if err = instance.Write(i); err != nil {
 			return
 		}
 
@@ -367,7 +367,7 @@ var deployCmd = &cobra.Command{
 				fmt.Printf("%s ca-bundle updated\n", i)
 			}
 
-			if err = instance.SaveConfig(i); err != nil {
+			if err = instance.Write(i); err != nil {
 				return
 			}
 		}
@@ -402,7 +402,7 @@ var deployCmd = &cobra.Command{
 		// update home so save is correct
 		config.Set(cf, "home", instance.Home(i))
 
-		if err = instance.SaveConfig(i); err != nil {
+		if err = instance.Write(i); err != nil {
 			return
 		}
 

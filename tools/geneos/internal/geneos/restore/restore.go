@@ -29,15 +29,18 @@ var fileTypes = map[string]string{
 }
 
 // Restore reads the file at the local archive path and restores
-// matching instances matching component ct (all if nil) with names on
-// host h. names can be in the form "dest=src" to allow renaming
-// instances. If ct is nil then all matching types are restored and if
-// names it empty then all instances are restored. Existing instances
-// with matching names are not overwritten.
+// matching instances matching component ct (all if nil) with names.
+// names can be in the form "dest=src" to allow renaming instances. If
+// ct is nil then all matching types are restored and if names it empty
+// then all instances are restored. Existing instances with matching
+// names are not overwritten.
 //
 // TODO: shared file control (use flag selector and limit to ct, if not
 // nil)
 func Restore(archive string, options ...RestoreOption) (err error) {
+	// instancesRestored restored, for final Rebuilds
+	instancesRestored := map[string]geneos.Instance{}
+
 	var tin io.ReadCloser
 	var fileType string
 
@@ -251,6 +254,9 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 							return
 						}
 						files[packageCt.String()+":"+instanceName] += 1
+						if _, ok := instancesRestored[instanceName]; !ok {
+							instancesRestored[instanceName] = nil
+						}
 					}
 				} else {
 					if src == instanceName {
@@ -259,6 +265,9 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 							return
 						}
 						files[packageCt.String()+":"+dest] += 1
+						if _, ok := instancesRestored[dest]; !ok {
+							instancesRestored[dest] = nil
+						}
 					}
 				}
 			}
@@ -271,6 +280,9 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				return
 			}
 			files[packageCt.String()+":"+instanceName] += 1
+			if _, ok := instancesRestored[instanceName]; !ok {
+				instancesRestored[instanceName] = nil
+			}
 		}
 	}
 
@@ -279,14 +291,32 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	} else {
 		fmt.Fprintf(opts.progress, "Restoring from archive %s:\n", archive)
 	}
-	// t := tabwriter.NewWriter(opts.progress, 3, 8, 2, ' ', 0)
-	// fmt.Fprintf(t, "Type\tName\tSize\n")
+
 	for _, k := range slices.Sorted(maps.Keys(sizes)) {
 		ctName, name, _ := strings.Cut(k, ":")
 
 		if name == "!SHARED" {
 			name = "(shared dirs)"
+		} else {
+			if i, ok := instancesRestored[name]; ok && i == nil {
+				i, err = instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
+				if err != nil {
+					log.Debug().Err(err).Msgf("getting instance %s:%s for final rebuild", ctName, name)
+				} else {
+					instancesRestored[name] = i
+					if err = i.Rebuild(true); err != nil {
+						if !errors.Is(err, geneos.ErrNotSupported) {
+							log.Debug().Err(err).Msgf("rebuild of instance %s:%s", ctName, name)
+						} else {
+							err = nil
+						}
+					} else {
+						fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
+					}
+				}
+			}
 		}
+
 		if opts.list {
 			fmt.Fprintf(opts.progress, "%s %s %d files, total %.3f MiB\n", ctName, name, files[k], float64(sizes[k])/(1024*1024))
 			continue
@@ -303,7 +333,6 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			fmt.Fprintf(opts.progress, "%s %s already exists, skipping\n", ctName, name)
 		}
 	}
-	// t.Flush()
 	return
 }
 
@@ -362,8 +391,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 		return geneos.ErrInvalidArgs
 	}
 
-	instanceDir := h.PathTo(ct, ct.String()+"s", instanceName)
-	destPath := path.Join(instanceDir, instRelFilePath)
+	destPath := h.PathTo(ct, ct.String()+"s", instanceName, instRelFilePath)
 
 	switch hdr.Typeflag {
 	case tar.TypeDir:
@@ -381,7 +409,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 		// update paths and ports as required, and to remove legacy
 		// parameters, instead of just writing the file out
 		if instRelFilePath == ct.String()+".json" {
-			return rebuildConfig(instanceName, instanceDir, hdr.Name, tr, opts)
+			return rebuildConfig(instanceName, hdr.Name, tr, opts)
 		}
 
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
@@ -446,7 +474,7 @@ func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOp
 // home value based on the destination instance directory. Ports are
 // updated to avoid clashes with existing instances on the destination
 // host.
-func rebuildConfig(instanceName, instanceDir, homeRelFilePath string, r io.Reader, opts *restoreOptions) (err error) {
+func rebuildConfig(instanceName, homeRelFilePath string, r io.Reader, opts *restoreOptions) (err error) {
 	ct := opts.component
 	h := opts.host
 
@@ -456,90 +484,20 @@ func rebuildConfig(instanceName, instanceDir, homeRelFilePath string, r io.Reade
 		return err
 	}
 
-	// update name in case this is a rename
-	config.Set(cf, "name", instanceName)
-
-	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
-
-	oldHome := config.Get[string](cf, "home")
-	// set new home
-	config.Set(cf, "home", instanceDir)
-
-	newGeneosDir := config.Get[string](h.Config, "geneos")
-	oldGeneosDir := strings.TrimSuffix(oldHome, "/"+filepath.Dir(homeRelFilePath))
-
-	oldInstall := config.Get[string](cf, "install")
-	newInstall := h.PathTo("packages", nct)
-
-	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
-	newShared := ct.Shared(h)
-
-	version := config.Get[string](cf, "version", config.NoExpand())
-
-	for _, k := range cf.AllKeys() {
-		v := config.Get[any](cf, k, config.NoExpand())
-		switch k {
-		case "libpaths", "home":
-			// treat libpaths and home special
-			continue
-		case "port":
-			ports := instance.GetAllPorts(h)
-			if ports[config.Get[uint16](cf, k)] {
-				// port already in use, get the next one
-				config.Set(cf, k, instance.NextFreePort(h, ct))
-			}
-		default:
-			if vs, ok := v.(string); ok {
-				// replace home (unanchored)
-				if oldHome != instanceDir {
-					vs = strings.Replace(vs, oldHome, instanceDir, 1)
-				}
-
-				// replace install (unanchored)
-				if oldInstall != newInstall {
-					vs = strings.Replace(vs, oldInstall, newInstall, 1)
-				}
-
-				// replace shared (unanchored)
-				if oldShared != newShared {
-					vs = strings.Replace(vs, oldShared, newShared, 1)
-				}
-
-				// finally replace any remaining top-level paths
-				if oldGeneosDir != newGeneosDir {
-					vs = strings.Replace(vs, oldGeneosDir, newGeneosDir, 1)
-				}
-
-				config.Set(cf, k, vs, config.Replace("home"))
-			}
-		}
+	if err = instance.RefactorConfig(h, ct, cf, instance.NewName(instanceName)); err != nil {
+		return err
 	}
 
-	libpaths := []string{}
-	np := "${config:install}"
-	nv := "${config:version}"
-
-	for _, p := range filepath.SplitList(config.Get[string](cf, "libpaths", config.NoExpand())) {
-		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
-			subpath := after
-			if after, ok := strings.CutPrefix(subpath, version); ok {
-				libpaths = append(libpaths, path.Join(np, nv, after))
-			} else {
-				libpaths = append(libpaths, path.Join(np, subpath))
-			}
-		} else {
-			libpaths = append(libpaths, p)
-		}
+	// fix earlier mistake with default settings and quoting `none`
+	if listenip, ok := config.Lookup[string](cf, "listenip"); ok && listenip == `"none"` {
+		config.Set(cf, "listenip", "none")
 	}
-	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
-
-	config.Delete(cf, "user")
 
 	if err = cf.Write(ct.String(),
 		config.Host(h),
-		config.SearchDirs(instanceDir),
+		config.SearchDirs(h.PathTo(ct, ct.String()+"s", instanceName)),
 		config.AppName(instanceName),
-		config.IgnoreEmptyValues(),
+		config.OmitEmptyValues(),
 	); err != nil {
 		return err
 	}

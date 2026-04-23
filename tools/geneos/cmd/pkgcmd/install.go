@@ -344,11 +344,20 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			if !ctSet && !installCmdAllTypes {
+				// check for existing packages of type ct or, if this is
+				// a new installation, then instances that may not have
+				// anything installed yet
 				v, err := geneos.GetReleases(h, ct)
 				if err != nil {
 					return err
 				}
-				if len(v) == 0 {
+
+				i := instance.InstanceNames(h, ct)
+				if len(i) == 0 {
+					continue
+				}
+
+				if len(v) == 0 && len(i) == 0 {
 					continue
 				}
 			}

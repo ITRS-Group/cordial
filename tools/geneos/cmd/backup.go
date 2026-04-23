@@ -60,10 +60,10 @@ func init() {
 
 	backupCmd.Flags().StringVarP(&backupCmdOutput, "output", "o", "",
 		`Write to "DEST". Without a destination filename the command creates
-a file name based on the contents of the archive. If DEST is a directory
-or has a "/" suffix then the file is written to that directory using the
-same naming format as if no file was given. Directories are created
-as required.`,
+a file in the current directory with a name based on the contents of the
+archive. If DEST is a directory or has a "/" suffix then the file is
+written to that directory using the same naming format as if no file was
+given. Directories are created as required.`,
 	)
 
 	backupCmd.Flags().BoolVarP(&backupCmdIncludeDatetime, "datetime", "D", false,

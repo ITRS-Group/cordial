@@ -25,6 +25,7 @@ import (
 	"io/fs"
 	"maps"
 	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
@@ -54,7 +55,7 @@ func ConfigFileTypes() []string {
 	return []string{"json", "yaml"}
 }
 
-// LoadConfig will load the instance config file if available, otherwise
+// Read will load the instance config file if available, otherwise
 // try to load the "legacy" .rc file. The instance struct must be
 // initialised before the call.
 //
@@ -64,7 +65,7 @@ func ConfigFileTypes() []string {
 // support cache?
 //
 // error check core values - e.g. Name
-func LoadConfig(i geneos.Instance) (err error) {
+func Read(i geneos.Instance) (err error) {
 	start := time.Now()
 	h := i.Host()
 	home := Home(i)
@@ -248,12 +249,12 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 	return
 }
 
-// SaveConfig writes the instance configuration to the standard file for
+// Write writes the instance configuration to the standard file for
 // that instance. All legacy parameter (aliases) are removed from the
 // set of values saved. Any empty configuration values are removed from
 // the saved configuration.
-func SaveConfig(i geneos.Instance) (err error) {
-	log.Debug().Msgf("saving config for %s", i)
+func Write(i geneos.Instance) (err error) {
+	log.Debug().Msgf("writing config for %s", i)
 
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
@@ -275,7 +276,7 @@ func SaveConfig(i geneos.Instance) (err error) {
 		config.Host(i.Host()),
 		config.SearchDirs(Home(i)),
 		config.AppName(i.Name()),
-		config.IgnoreEmptyValues(),
+		config.OmitEmptyValues(),
 		config.IgnoreKeys(lpKeys...),
 	); err != nil {
 		log.Debug().Err(err).Msgf("saving config for %s", i)
@@ -471,7 +472,7 @@ func Migrate(i geneos.Instance) (resp *responses.Response) {
 	// remove type label before save
 	cf.SetConfigType("")
 
-	if resp.Err = SaveConfig(i); resp.Err != nil {
+	if resp.Err = Write(i); resp.Err != nil {
 		// restore label on error
 		cf.SetConfigType("rc")
 		log.Error().Err(resp.Err).Msg("failed to write new configuration file")
@@ -548,4 +549,175 @@ func DeleteSettingFromMap(i geneos.Instance, from map[string]any, key string) {
 		delete(from, a)
 	}
 	delete(from, key)
+}
+
+// RefactorConfig updates the instance config cf for the new instance
+// name and directory, based on the old home value in the config file
+// and the new home value based on the destination instance directory.
+//
+// Unless the option config.KeepPort() is passed, ports are updated to
+// avoid clashes with existing instances on the destination host. Paths
+// are updated based on the old home value in the config file and the
+// new home value based on the destination instance directory. Ports are
+// updated to avoid clashes with existing instances on the destination
+// host. Legacy parameters are removed.
+//
+// Any `user` setting is removed from the config, as this is no longer
+// supported.
+//
+// All paths with a instance directory prefix are updated to use
+// `${config:home}` instead.
+//
+// `libpaths` is updated to replace any paths with the old install
+// prefix to use `${config:install}` instead, and any paths with the old
+// version suffix to use `${config:version}` instead.
+func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, options ...ConfigOption) (err error) {
+	opts := evalConfigOptions(options...)
+
+	if opts.newName != "" {
+		config.Set(cf, "name", opts.newName)
+	}
+	name := config.Get[string](cf, "name")
+
+	oldHome := config.Get[string](cf, "home")
+	if opts.newDir != "" {
+		config.Set(cf, "home", opts.newDir)
+		return
+	}
+
+	// the root component name, from pkgtype or the component type
+	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
+
+	newGeneosDir := config.Get[string](h.Config, "geneos")
+	var oldGeneosDir string
+	if opts.newDir != "" {
+		oldGeneosDir = strings.TrimSuffix(oldHome, "/"+filepath.Dir(opts.newDir))
+	} else {
+		oldGeneosDir = strings.TrimSuffix(oldHome, path.Join("/", nct, ct.String()+"s", name))
+	}
+
+	log.Debug().Msgf("refactor config for %s: oldHome=%q newHome=%q oldGeneosDir=%q newGeneosDir=%q", name, oldHome, config.Get[string](cf, "home"), oldGeneosDir, newGeneosDir)
+
+	oldInstall := config.Get[string](cf, "install")
+	newInstall := h.PathTo("packages", nct)
+
+	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
+	newShared := ct.Shared(h)
+
+	version := config.Get[string](cf, "version", config.NoExpand())
+
+	for _, k := range cf.AllKeys() {
+		v := config.Get[any](cf, k, config.NoExpand())
+		switch k {
+		case "libpaths", "home":
+			continue
+		case "port":
+			if opts.keepPort {
+				continue
+			}
+			ports := GetAllPorts(h)
+			if ports[config.Get[uint16](cf, k)] {
+				// port already in use, get the next one
+				config.Set(cf, k, NextFreePort(h, ct))
+			}
+		default:
+			// update path components
+			if vs, ok := v.(string); ok {
+				// replace home (unanchored)
+				if opts.newDir != "" {
+					vs = strings.Replace(vs, oldHome, opts.newDir, 1)
+				}
+
+				// replace install (unanchored)
+				if oldInstall != newInstall {
+					vs = strings.Replace(vs, oldInstall, newInstall, 1)
+				}
+
+				// replace shared (unanchored)
+				if oldShared != newShared {
+					vs = strings.Replace(vs, oldShared, newShared, 1)
+				}
+
+				// finally replace any remaining top-level paths (e.g. shared or tls)
+				if oldGeneosDir != newGeneosDir {
+					vs = strings.Replace(vs, oldGeneosDir, newGeneosDir, 1)
+				}
+
+				config.Set(cf, k, vs, config.Replace("home"))
+			}
+		}
+	}
+
+	libpaths := []string{}
+	np := "${config:install}"
+	nv := "${config:version}"
+
+	for _, p := range filepath.SplitList(config.Get[string](cf, "libpaths", config.NoExpand())) {
+		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
+			subpath := after
+			if after, ok := strings.CutPrefix(subpath, version); ok {
+				libpaths = append(libpaths, path.Join(np, nv, after))
+			} else {
+				libpaths = append(libpaths, path.Join(np, subpath))
+			}
+		} else {
+			libpaths = append(libpaths, p)
+		}
+	}
+	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
+
+	config.Delete(cf, "user")
+
+	return
+}
+
+type configOptions struct {
+	newName  string
+	newDir   string
+	keepPort bool
+}
+type ConfigOption func(*configOptions)
+
+func evalConfigOptions(options ...ConfigOption) (opts *configOptions) {
+	opts = &configOptions{}
+	for _, opt := range options {
+		opt(opts)
+	}
+	return
+}
+
+// KeepPort controls whether to keep the same port number in the new
+// config or to update it to avoid clashes with existing instances on
+// the destination host. By default ports are updated to avoid clashes.
+// This option is used when copying an instance within the same host,
+// where there will be no clashes, and we want to keep the same port
+// numbers.
+func KeepPort() ConfigOption {
+	return func(opts *configOptions) {
+		opts.keepPort = true
+	}
+}
+
+// NewName returns a ConfigOption that sets the new instance name in the
+// config options, which is used by RefactorConfig to set the new name
+// in the config file. If not set, RefactorConfig will not update the
+// name of the instance.
+func NewName(name string) ConfigOption {
+	return func(opts *configOptions) {
+		opts.newName = name
+	}
+}
+
+// NewDir returns a ConfigOption that sets the new instance directory in
+// the config options, which is used by RefactorConfig to set the new
+// home in the config file. If not set, RefactorConfig will use the
+// default directory for the instance type on the destination host. This
+// option is used when copying an instance within the same host, where
+// we want to keep the same directory and just update the name, and
+// therefore the default would not be correct. It can also be used to
+// specify a custom directory for the new instance.
+func NewDir(dir string) ConfigOption {
+	return func(opts *configOptions) {
+		opts.newDir = dir
+	}
 }

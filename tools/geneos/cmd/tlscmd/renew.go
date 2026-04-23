@@ -195,7 +195,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			return
 		}
 
-		if resp.Err = instance.SaveConfig(i); resp.Err != nil {
+		if resp.Err = instance.Write(i); resp.Err != nil {
 			return
 		}
 

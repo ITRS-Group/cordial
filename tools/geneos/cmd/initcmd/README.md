@@ -2,7 +2,11 @@
 
 The `init` sub-system commands initialise your Geneos install environment ready to run Geneos instances.
 
-On it's own the `init` command will create a new directory (or use an existing one if it's considered empty) based on the options used. By default it will create a directory named `geneos` in your user's home directory unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path.
+On it's own the `init` command will create a new directory (or use an existing one if it's considered empty) based on the options used. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path.
+
+The `--restore/-R` option will restore a backup file created with the `backup` command. This will create the directory if it does not exist but will not remove or change any existing files. If the directory is not empty then you must also use the `--force/-F` option to force the use of this directory. Unlike the `restore` command, using `init --restore FILE` restores the complete contents of the backup file while rebuilding the instance configuration files to match the new root directory etc. Just like the `restore` command it does not alter the component configuration files, only those created and managed by the `geneos` command, so you will need to manually check and edit paths in files like `gateway.setup.xml` etc.
+
+The `--restore/-R` option will also install Geneos software releases used by the instances being restored. You must either provide download credentials using the `--user/-u` option (or run `geneos login` first) or have the packages already downloaded and then pass the containing directory path using the `--archive/-A` flag.
 
 The installation directory is considered empty if it exists but only contains `dot` files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` should work as expected.
 

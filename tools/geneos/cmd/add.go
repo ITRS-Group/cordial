@@ -154,7 +154,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		return
 	}
 
-	if err = instance.SaveConfig(i); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
@@ -213,7 +213,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 		log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
 		config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
 
-		if err = instance.SaveConfig(i); err != nil {
+		if err = instance.Write(i); err != nil {
 			return
 		}
 	}
@@ -260,7 +260,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	log.Debug().Msgf("set instance config items: %+v", items)
 	cf.SetKeyValuePairs(items...)
 	log.Debug().Msgf("instance config after setting items: %+v", cf.AllSettings())
-	if err = instance.SaveConfig(i); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 

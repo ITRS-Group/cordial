@@ -201,7 +201,7 @@ func (s *Sans) String() string {
 }
 
 func (s *Sans) Load() (err error) {
-	return instance.LoadConfig(s)
+	return instance.Read(s)
 }
 
 func (s *Sans) Unload() (err error) {
@@ -246,7 +246,7 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
-	if err = instance.SaveConfig(s); err != nil {
+	if err = instance.Write(s); err != nil {
 		return
 	}
 
@@ -299,7 +299,7 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		config.Set(cf, "gateways", gws)
-		if err = instance.SaveConfig(s); err != nil {
+		if err = instance.Write(s); err != nil {
 			return err
 		}
 	}

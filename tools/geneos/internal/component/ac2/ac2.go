@@ -156,7 +156,7 @@ func (n *AC2s) String() string {
 }
 
 func (n *AC2s) Load() (err error) {
-	return instance.LoadConfig(n)
+	return instance.Read(n)
 }
 
 func (n *AC2s) Unload() (err error) {
@@ -188,7 +188,7 @@ func (n *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	config.Set(n.Config(), "port", port)
 
-	if err = instance.SaveConfig(n); err != nil {
+	if err = instance.Write(n); err != nil {
 		return
 	}
 

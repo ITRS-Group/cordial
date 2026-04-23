@@ -188,6 +188,6 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.
 		resp.Summary = fmt.Sprintf("keyfile %s set", crc)
 	}
 
-	resp.Err = instance.SaveConfig(i)
+	resp.Err = instance.Write(i)
 	return
 }

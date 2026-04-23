@@ -185,7 +185,7 @@ func (s *Floatings) String() string {
 }
 
 func (s *Floatings) Load() (err error) {
-	return instance.LoadConfig(s)
+	return instance.Read(s)
 }
 
 func (s *Floatings) Unload() (err error) {
@@ -231,7 +231,7 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
-	if err = instance.SaveConfig(s); err != nil {
+	if err = instance.Write(s); err != nil {
 		return
 	}
 
@@ -283,7 +283,7 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		config.Set(cf, "gateways", gws)
-		if err = instance.SaveConfig(s); err != nil {
+		if err = instance.Write(s); err != nil {
 			return err
 		}
 	}

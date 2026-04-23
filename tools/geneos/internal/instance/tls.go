@@ -84,7 +84,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 	cf := i.Config()
 	config.Set(cf, cf.Join(TLSBASE, CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
-	if err = SaveConfig(i); err != nil {
+	if err = Write(i); err != nil {
 		return
 	}
 

@@ -111,7 +111,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 			respM := instance.Migrate(i)
 			resp.Err = respM.Err
 		} else {
-			resp.Err = instance.SaveConfig(i)
+			resp.Err = instance.Write(i)
 		}
 
 		return

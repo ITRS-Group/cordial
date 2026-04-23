@@ -1,6 +1,6 @@
 # `geneos backup` / `geneos save`
 
-Backup instance data in an archive file, either for backup or to be restored on another system using the `geneos restore` command.
+Backup instance data in an archive file, either for a safety backup or to be restored on another system using the `geneos restore` command.
 
 Each matching instance has it's primary configuration files included in the archive. By default no AES files, certificates or private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below then only files in the instance directory are included; Files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-a` flag is given in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
 
@@ -23,3 +23,5 @@ To include certificate and private key files, use the `--tls` option. Without th
 File over 2MiB are not included in the archive unless the `--all/-a` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
 
 The contents of the archive are relative to the root of the Geneos installation, and the `geneos load` command will refactor any changes to paths in the instance configuration JSON files.
+
+Note that instances are not stopped or restarted as part of the backup process. If files are locked or changed during the backup then the contents may be inconsistent. If you want to stop the instance before backup and restart it afterwards then you can use the `geneos stop` and `geneos start` commands in a script.

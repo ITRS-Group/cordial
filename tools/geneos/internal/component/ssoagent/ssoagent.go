@@ -180,7 +180,7 @@ func (w *SSOAgents) String() string {
 }
 
 func (w *SSOAgents) Load() (err error) {
-	return instance.LoadConfig(w)
+	return instance.Read(w)
 }
 
 func (w *SSOAgents) Unload() (err error) {
@@ -209,7 +209,7 @@ func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 	config.Set(s.Config(), "port", port)
-	if err = instance.SaveConfig(s); err != nil {
+	if err = instance.Write(s); err != nil {
 		return
 	}
 
