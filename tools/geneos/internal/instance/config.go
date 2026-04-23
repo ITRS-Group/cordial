@@ -264,6 +264,11 @@ func SaveConfig(i geneos.Instance) (err error) {
 		return resp.Err
 	}
 
+	// fix earlier mistake with default settings and quoting `none`
+	if listenip, ok := config.Lookup[string](i.Config(), "listenip"); ok && listenip == `"none"` {
+		config.Set(i.Config(), "listenip", "none")
+	}
+
 	lpKeys := slices.Collect(maps.Keys(i.Type().LegacyParameters))
 
 	if err = i.Config().Write(i.Type().String(),

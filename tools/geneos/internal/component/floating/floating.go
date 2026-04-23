@@ -86,7 +86,7 @@ var Floating = geneos.Component{
 		`floatingname={{.name}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
-		`listenip="none"`,
+		`listenip=none`,
 	},
 
 	Directories: []string{

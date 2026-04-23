@@ -99,7 +99,7 @@ var San = geneos.Component{
 		`sanname={{"${config:name}"}}`,
 		`setup={{join "${config:home}" "netprobe.setup.xml"}}`,
 		`autostart=true`,
-		`listenip="none"`,
+		`listenip=none`,
 	},
 
 	Directories: []string{
