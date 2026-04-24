@@ -288,6 +288,11 @@ COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
+RUN set -eux; \
+    dnf install -y libnsl2 fontconfig \
+    ; \
+    dnf clean all; \
+    ln -s /usr/lib64/libnsl.so.2 /usr/lib64/libnsl.so.1
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -301,10 +306,9 @@ COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 RUN set -eux; \
-    dnf install -y libnsl2 \
+    dnf install -y fontconfig \
     ; \
-    dnf clean all \
-    ;
+    dnf clean all
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
@@ -317,11 +321,10 @@ COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
-# RUN set -eux; \
-#     dnf install -y libnsl2 \
-#     ; \
-#     dnf clean all \
-#     ;
+RUN set -eux; \
+    dnf install -y libnsl libxcrypt-compat fontconfig \
+    ; \
+    dnf clean all
 RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos

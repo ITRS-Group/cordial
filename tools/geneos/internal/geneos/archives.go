@@ -735,7 +735,11 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		// webserver
 		if resp.StatusCode == 404 && platform != "" {
 			resp.Body.Close()
-			v.Del("title")
+			if ct.DownloadParams == nil {
+				v.Set("title", os+"-"+arch)
+			} else {
+				v.Del("title")
+			}
 			basepath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(basepath).String()
 
@@ -759,7 +763,6 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			}
 		}
 
-		// only use auth if required - but save auth for potential reuse below
 		var authBody []byte
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
@@ -800,13 +803,15 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 
 		if resp.StatusCode == 404 && platform != "" {
 			resp.Body.Close()
-			// try without platform type (e.g. no '-el8')
-			v.Del("title")
+			if ct.DownloadParams == nil {
+				v.Set("title", os+"-"+arch)
+			} else {
+				v.Del("title")
+			}
 			basepath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(basepath).String()
 
-			log.Debug().Msgf("platform download failed, retry source url: %q", source)
-			authReader := bytes.NewBuffer(authBody)
+			log.Debug().Msgf("trying source %q with auth", source)
 			req, err = http.NewRequest("POST", source, authReader)
 			if err != nil {
 				log.Error().Err(err).Msg("source, trying next if configured")

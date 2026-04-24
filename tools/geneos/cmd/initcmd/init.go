@@ -226,7 +226,7 @@ func initProcessArgs(command *cobra.Command, args []string, extras ...instance.S
 		geneos.Force(initCmdForce),
 	}
 
-	if command.PersistentFlags().Changed("archive") {
+	if initCmdArchive != "" {
 		options = append(options,
 			geneos.Source(initCmdArchive),
 		)

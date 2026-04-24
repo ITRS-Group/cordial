@@ -14,7 +14,7 @@
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 > [!NOTE]
-> **Released 2026-04-23** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.26.0 Highlights
 
@@ -62,6 +62,14 @@
 
   * The `geneos package install` command now ensures the `${GENEOS}/packages/download` directory exists before attempting to download packages to it, which fixes the command when run on a clean installation.
 
+  * Address inconsistencies in downloads of Web Server for platform specific versions.
+
+  * Add `el10` to the list of platform tags on downloads so if installing from a local directory on a non-el10 system that file will be ignored as platform specific.
+
+  * `geneos config unset` now works
+
+  * The default value for `listenip` for san and floating components incorrectly had quotes around the word `none`, which prevented the option from working and suppressing the listening socket on san and floating instances. The defaults have been changed and also anytime an existing instance configuration is written the quotes are removed. To ensure this change takes effect in your environment, run `geneos set san listenip=none` and `geneos set floating listenip=none` for any existing san and floating instances.
+
 ## Version v1.26.0 Changes
 
 * Update to Go 1.26.2 and update dependencies.
@@ -70,7 +78,11 @@
 
   * If you run `geneos` as root then most commands will refuse to run unless given the `--allow-root` flag. This is to prevent accidental damage to the system by running `geneos` commands with elevated privileges. This can also be overridden globally by adding a configuration option `allow-root=true` to the user configuration file, but this is not recommended.
 
+  * `geneos init` can now restore a backup created with `geneos backup`. This allows you to easily clone an existing instance configuration, or restore from a backup, when creating new instances. It will also try install missing binary release packages unless told not to. See the docs for more details: `geneos help init`
+
   * Added a download timeout option for package downloads. See `geneos help package install` for details.
+
+  * `geneos package upgrade` is an alias for `geneos package update`
 
 * `pkg/config`
 

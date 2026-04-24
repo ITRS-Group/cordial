@@ -64,8 +64,8 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 		opt(d)
 	}
 
-	// try to fill in username/password from credentials if not set
-	if d.source != "" && d.username == "" {
+	// only check username if the source is a valid URL, and not a file
+	if IsURL(d.source) && d.username == "" {
 		cr := config.FindCreds(d.source)
 		if cr != nil {
 			d.username = config.Get[string](cr, "username")

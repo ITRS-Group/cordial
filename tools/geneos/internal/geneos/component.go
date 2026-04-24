@@ -131,7 +131,8 @@ type Component struct {
 	DownloadNameRegexp *regexp.Regexp
 
 	// DownloadParams are custom parameters for the download URL. If nil
-	// (not len zero) then os=linux is used
+	// (not len zero) then os=OS is used, where OS is derived from the
+	// platform details
 	DownloadParams *[]string
 
 	// DownloadParamsNexus are custom parameters for Nexus downloads. If

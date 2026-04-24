@@ -260,7 +260,7 @@ var deployCmd = &cobra.Command{
 				geneos.Username(deployCmdUsername),
 				geneos.Headers(deployCmdExtras.Headers...),
 			}
-			if command.Flags().Changed("archive") {
+			if deployCmdArchive != "" {
 				options = append(options,
 					geneos.Source(deployCmdArchive),
 				)

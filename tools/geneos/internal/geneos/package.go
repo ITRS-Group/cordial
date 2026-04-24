@@ -38,6 +38,7 @@ import (
 var platformSuffixList = []string{
 	"el8",
 	"el9",
+	"el10",
 }
 
 // ReleaseDetails is a set of values for a release
