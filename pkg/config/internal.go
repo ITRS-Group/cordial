@@ -478,16 +478,12 @@ func getContents(s string) (string, int) {
 }
 
 // lookup is the internal function that returns a second boolean value
-// indicating whether the key was found in the config and is of the
-// correct type. `found` is true only if the configuration item is set,
-// not if the options provide a default value.
+// indicating whether the key was found in the config. The type is not
+// checked, leaving get() to fixup mappings. `found` is true only if the
+// configuration item is set, not if the options provide a default
+// value.
 func lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, found bool) {
 	if !c.isSet(key) {
-		return
-	}
-
-	v := c.viper.Get(key)
-	if _, ok := v.(T); !ok {
 		return
 	}
 
