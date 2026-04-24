@@ -10,7 +10,7 @@ This document describes the changes to the way that the `geneos` tools manages T
 In most cases it should be enough to simply run:
 
 ```bash
-geneos backup --shared --tls --aes
+geneos backup --shared --tls --aes all
 geneos tls migrate
 geneos restart
 ```
