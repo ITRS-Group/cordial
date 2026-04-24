@@ -696,6 +696,9 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	}
 
 	for _, bp := range basepaths {
+		var authReader io.Reader
+		var authBody []byte
+
 		// first try plain unauthenticated GET
 		basepath, _ := url.Parse(bp)
 		basepath.RawQuery = v.Encode()
@@ -754,6 +757,8 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			}
 		}
 
+		resp.Body.Close()
+
 		// if that fails, check for creds
 		if opts.username == "" {
 			creds := config.FindCreds(source, config.AppName(cordial.ExecutableName()))
@@ -763,46 +768,53 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			}
 		}
 
-		var authBody []byte
+		if opts.username != "" {
+			da := downloadauth{
+				Username: opts.username,
+				Password: opts.password.String(),
+			}
+			authBody, err = json.Marshal(da)
+			if err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			// make a copy as bytes.NewBuffer() takes ownership
+			ba := bytes.Clone(authBody)
+			authReader = bytes.NewBuffer(ba)
+		}
+
+		if authReader == nil {
+			log.Error().Msg("source requires authentication but no credentials found, trying next if configured")
+			continue
+		}
+		log.Debug().Msgf("retrying source %q with auth", source)
+
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if opts.username != "" {
-				da := downloadauth{
-					Username: opts.username,
-					Password: opts.password.String(),
+			req, err = http.NewRequest("POST", source, authReader)
+			if err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			req.Header.Set("Content-Type", "application/json")
+			// add any headers
+			for _, h := range opts.headers {
+				name, value, found := strings.Cut(h, "=")
+				if found {
+					req.Header.Add(name, value)
 				}
-				authBody, err = json.Marshal(da)
-				if err != nil {
-					log.Error().Err(err).Msg("source, trying next if configured")
-					continue
-				}
-				// make a copy as bytes.NewBuffer() takes ownership
-				ba := bytes.Clone(authBody)
-				authReader := bytes.NewBuffer(ba)
-				req, err = http.NewRequest("POST", source, authReader)
-				if err != nil {
-					log.Error().Err(err).Msg("source, trying next if configured")
-					continue
-				}
-				req.Header.Set("Content-Type", "application/json")
-				// add any headers
-				for _, h := range opts.headers {
-					name, value, found := strings.Cut(h, "=")
-					if found {
-						req.Header.Add(name, value)
-					}
-				}
-				if resp, err = client.Do(req); err != nil {
-					log.Error().Err(err).Msg("source, trying next if configured")
-					continue
-				}
-				if resp.StatusCode < 300 {
-					return
-				}
+			}
+			if resp, err = client.Do(req); err != nil {
+				log.Error().Err(err).Msg("source, trying next if configured")
+				continue
+			}
+			if resp.StatusCode < 300 {
+				return
 			}
 		}
 
+		resp.Body.Close()
+
 		if resp.StatusCode == 404 && platform != "" {
-			resp.Body.Close()
 			if ct.DownloadParams == nil {
 				v.Set("title", os+"-"+arch)
 			} else {
