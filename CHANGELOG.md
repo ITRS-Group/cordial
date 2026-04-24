@@ -1,9 +1,9 @@
 # Change Log
 
-## Version v1.26.0
+## Version v1.26.1
 
 >[!WARNING]
->Release v1.26.0 - **BREAKING CHANGES**
+>Release v1.26.1 - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
 >   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
@@ -13,7 +13,10 @@
 > [!NOTE]
 > **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.26.0 Highlights
+>[!NOTE]
+>**Please also note v1.26.0 was withdrawn due to a last minute issue.**
+
+### Version v1.26.1 Highlights
 
 * `tools/geneos`
 
@@ -49,7 +52,7 @@
 
   A new IMS Gateway component supports both ServiceNow and ServiceDesk Plus Incident Management Systems and can be used in conjunction with the new `geneos incident` commands to create, update and resolve incidents based on Geneos Alerts (and Actions).
 
-## Version v1.26.0 Fixes
+## Version v1.26.1 Fixes
 
 * `tools/geneos`
 
@@ -67,7 +70,7 @@
 
   * The default value for `listenip` for san and floating components incorrectly had quotes around the word `none`, which prevented the option from working and suppressing the listening socket on san and floating instances. The defaults have been changed and also anytime an existing instance configuration is written the quotes are removed. To ensure this change takes effect in your environment, run `geneos set san listenip=none` and `geneos set floating listenip=none` for any existing san and floating instances.
 
-## Version v1.26.0 Changes
+## Version v1.26.1 Changes
 
 * Update to Go 1.26.2 and update dependencies.
 
