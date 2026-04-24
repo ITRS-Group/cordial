@@ -1,12 +1,9 @@
 # Change Log
 
-## Version v1.26.0-rc1
-
->[!IMPORTANT]
-> This is a **release candidate** of v1.26.0. It is intended for testing and feedback only, and is not yet recommended for production use. Please report any issues via [github](https://github.com/ITRS-Group/cordial/issues).
+## Version v1.26.0
 
 >[!WARNING]
->**BREAKING CHANGES**
+>Release v1.26.0 - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
 >   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.

@@ -1,8 +1,16 @@
 # `cordial` - Geneos Utilities, Tools, Integrations and Packages
 
+>[!WARNING]
+>Release v1.26.0 - **BREAKING CHANGES**
+>* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
+>
+>   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>
+>   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
+
 > [!NOTE]
 >
-> This is **Version v1.26.0-rc1** - Released 2026-04-24 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.26.0** - Released 2026-04-24 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 
