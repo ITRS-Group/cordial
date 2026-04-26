@@ -38,13 +38,12 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// UpdateCACertsFiles appends the given root certificates to the
-// root certificate file at the specified path on the given host. It
-// ensures that all the given certificates are present in the file,
-// appending any that are missing. If the file does not exist or is
-// empty, it will be created with the provided certificates. Returns
-// true if the file was updated (certificates added or file created),
-// false if no changes were made.
+// UpdateCACertsFiles appends the given root certificates to the CA file
+// at the specified path on the given host. It ensures that all the
+// given certificates are present in the file, appending any that are
+// missing. If the file does not exist or is empty, it will be created
+// with the provided certificates. Returns true if the file was updated
+// (certificates added or file created), false if no changes were made.
 //
 // Returns an error if writing the file fails.
 //
@@ -60,11 +59,19 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 		return c == nil || !IsValidRootCA(c)
 	})
 
+	// read existing root certs, ignoring any non-root CA or expired
+	// certs. bail out if error other than file not existing is
+	// returned, otherwise we'll just create a new file with the
+	// provided certs
 	allCerts, err := ReadCertificates(h, basePath+PEMExtension)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		log.Error().Err(err).Msg("reading existing root certificates failed")
 		return false, err
 	}
+
+	// if no existing certs then just write the provided certs to a new
+	// file, noting we have removed invalid and expired certs from roots
+	// already
 	log.Debug().Msgf("found %d root certificates to sync", len(roots))
 	if allCerts == nil {
 		if err = WriteCertificates(h, basePath+PEMExtension, roots...); err != nil {
