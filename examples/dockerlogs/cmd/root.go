@@ -8,9 +8,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
+	"github.com/moby/moby/api/pkg/stdcopy"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/client"
 
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -18,7 +18,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/api"
 )
 
-var docker client.APIClient
+var moby client.APIClient
 
 func init() {
 
@@ -26,14 +26,14 @@ func init() {
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "dockerlogs",
+	Use:   "mobylogs",
 	Short: "Feed docker logs to Geneos API Streams plugin",
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		docker, err = client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+		moby, err = client.New(client.FromEnv, client.FromEnv)
 
 		ctx := context.Background()
-		allContainers, err := docker.ContainerList(ctx, container.ListOptions{})
+		result, err := moby.ContainerList(ctx, client.ContainerListOptions{All: true})
 		if err != nil {
 			return
 		}
@@ -49,8 +49,8 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		for _, i := range allContainers {
-			r, err := docker.ContainerLogs(ctx, i.ID, container.LogsOptions{
+		for _, i := range result.Items {
+			r, err := moby.ContainerLogs(ctx, i.ID, client.ContainerLogsOptions{
 				Follow:     true,
 				Timestamps: true,
 				ShowStderr: true,
