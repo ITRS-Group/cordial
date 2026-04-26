@@ -201,6 +201,22 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 	return
 }
 
+// DoSerial is a variant of Do that executes the function calls
+// serially. This is for use by functions that are not concurrency safe.
+func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
+	rs = make(responses.Responses)
+
+	instances := Instances(h, ct, FilterNames(names...))
+
+	for _, c := range instances {
+		resp := f(c, values...)
+		resp.Finish = time.Now()
+		rs[resp.Instance.String()] = resp
+	}
+
+	return
+}
+
 // DoInstances is a variant of Do that takes a slice of instances
 // instead of looking them up by host, type and name. This is for use by
 // functions that have already looked up instances and want to call a

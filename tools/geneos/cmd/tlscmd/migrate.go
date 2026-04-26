@@ -65,7 +65,11 @@ var migrateCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
+		// as each instance migration updates the ca-bundle, we need to
+		// run them serially to avoid concurrent writes to the file. If
+		// this becomes a bottleneck we can look at locking the file or
+		// batching the updates.
+		instance.DoSerial(geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
 		return
 	},
 }
