@@ -150,7 +150,7 @@ func SaveGlobalConfig(name string) error {
 	for k, v := range config.Global().AllSettings() {
 		log.Debug().Msgf("checking global config key %q", k)
 		if k == "" {
-			panic("empty key in global config")
+			continue
 		}
 
 		// don't set key if value is the current default
