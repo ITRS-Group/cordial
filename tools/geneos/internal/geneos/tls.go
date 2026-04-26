@@ -367,6 +367,14 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 // TLSSync merges and updates the `CABundleFilename` file on all remote hosts.
 func TLSSync() (err error) {
 	allRoots := []*x509.Certificate{}
+	// add local root cert if it exists - this is needed for syncing to
+	// remote hosts but also to update local ca-bundle with any new root
+	// cert created with TLSInit
+	rootCert, _, err := ReadRootCertificateAndKey()
+	if err == nil {
+		allRoots = append(allRoots, rootCert)
+	}
+
 	allHosts := append([]*Host{LOCAL}, RemoteHosts(false)...)
 	for _, h := range allHosts {
 		if certSlice, err := certs.ReadCertificates(h, PathToCABundle(h, certs.PEMExtension)); err == nil {
