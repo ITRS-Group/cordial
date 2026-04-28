@@ -28,7 +28,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err error) {
+func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 
 	if po.detach {
@@ -40,7 +40,7 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err er
 	return
 }
 
-func postStart(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
+func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	return
 }
 
