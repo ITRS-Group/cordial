@@ -25,8 +25,6 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
-
-	"github.com/spf13/viper"
 )
 
 // Read reads configuration values for module from internal defaults,
@@ -143,7 +141,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 				d.setFs(r.GetFs())
 				d.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = d.readInConfig(); err != nil {
-					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+					if errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
 					} else {
@@ -157,7 +155,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 				defaults.setFs(r.GetFs())
 				defaults.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = defaults.readInConfig(); err != nil {
-					if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+					if errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
 					} else {
@@ -198,7 +196,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 			ncf.setConfigType(opts.format)
 		}
 		if err = ncf.readInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+			if errors.Is(err, fs.ErrNotExist) {
 				if opts.mustExist {
 					return
 				}
@@ -223,7 +221,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 			d.setFs(r.GetFs())
 			d.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = d.readInConfig(); err != nil {
-				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+				if errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
 					continue
 				} else {
@@ -247,7 +245,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 		for _, dir := range confDirs {
 			ncf.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = ncf.readInConfig(); err != nil {
-				if _, ok := err.(viper.ConfigFileNotFoundError); ok || errors.Is(err, fs.ErrNotExist) {
+				if errors.Is(err, fs.ErrNotExist) {
 					continue
 				} else {
 					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, module+"."+opts.format), err)

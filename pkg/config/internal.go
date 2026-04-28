@@ -3,8 +3,10 @@ package config
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"maps"
 	"net/http"
 	"os"
@@ -70,7 +72,11 @@ func (c *Config) setConfigFile(f string) {
 }
 
 func (c *Config) readInConfig() (err error) {
-	return c.viper.ReadInConfig()
+	err = c.viper.ReadInConfig()
+	if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
+		return fs.ErrNotExist
+	}
+	return
 }
 
 func (c *Config) readConfig(r io.Reader) (err error) {
