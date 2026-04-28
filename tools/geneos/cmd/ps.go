@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -262,7 +264,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	}
 }
 
-func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, mtime time.Time, base, actual, uptodate string, ports []int, err error) {
+func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, mtime time.Time, base, actual, uptodate string, ports []int, children []int, err error) {
 	if instance.IsDisabled(i) {
 		err = geneos.ErrDisabled
 		return
@@ -276,9 +278,10 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 	}
 
 	pid = pi.PID
-	username = geneos.GetUsername(pi.UID)
-	groupname = geneos.GetGroupname(pi.GID)
+	username = process.GetUsername(pi.UID)
+	groupname = process.GetGroupname(pi.GID)
 	mtime = pi.CreationTime
+	children = pi.Children
 
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := config.Get[string](i.Config(), "pkgtype"); pkgtype != "" {
@@ -290,7 +293,31 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 	}
 
 	if i.Host().IsLocal() || psCmdLong {
-		ports = instance.ListeningPorts(i)
+		ports = instance.ListeningPorts(i.Host(), pid)
+	}
+
+	return
+}
+
+func checkCA(h *geneos.Host, pid int) (pi process.ProcessInfo, ok bool, err error) {
+	pi, err = process.GetProcessInfo(h, pid, false)
+	if err != nil {
+		return
+	}
+	if len(pi.Cmdline) == 0 {
+		err = fmt.Errorf("no cmdline for PID %d", pid)
+		return
+	}
+
+	if path.Base(pi.Cmdline[0]) != "java" {
+		return
+	}
+
+	for _, arg := range pi.Cmdline[1:] {
+		if strings.Contains(arg, "collection-agent") {
+			ok = true
+			return
+		}
 	}
 
 	return
@@ -299,7 +326,7 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
 
-	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, children, err := psInstanceCommon(i)
 	if err != nil {
 		return
 	}
@@ -349,7 +376,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		uid, gid := i.Host().GetFileOwner(hs)
+		uid, gid := host.GetFileOwner(i.Host(), hs)
 		resp.Details = append(resp.Details,
 			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
 				i.Type(),
@@ -357,15 +384,15 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 				i.Host(),
 				pid,
 				hs.Mode().Perm().String(),
-				geneos.GetUsername(uid),
-				geneos.GetGroupname(gid),
+				process.GetUsername(uid),
+				process.GetGroupname(gid),
 				hs.Size(),
 				hs.ModTime().Local().Format(time.RFC3339),
 				homedir,
 			))
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				uid, gid := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := host.GetFileOwner(i.Host(), fd.Stat)
 				path := fd.Path
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
@@ -384,8 +411,8 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 						fd.FD,
 						fdPerm,
 						fd.Stat.Mode().Perm().String(),
-						geneos.GetUsername(uid),
-						geneos.GetGroupname(gid),
+						process.GetUsername(uid),
+						process.GetGroupname(gid),
 						fd.Stat.Size(),
 						fd.Stat.ModTime().Local().Format(time.RFC3339),
 						path,
@@ -448,6 +475,40 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			actual,
 			i.Home(),
 		)
+		if len(children) > 0 && i.Type().IsA("netprobe") {
+			// check for CAs and list, but ignore other child processes (for now)
+			for _, childPID := range children {
+				if pi, ok, err := checkCA(i.Host(), childPID); err == nil && ok {
+					// list it
+					caports := instance.ListeningPorts(i.Host(), childPID)
+					var portlist string
+					portsString := []string{}
+					for _, p := range caports {
+						portsString = append(portsString, fmt.Sprint(p))
+					}
+					portlist = strings.Join(portsString, ",")
+					if !i.Host().IsLocal() && portlist == "" {
+						portlist = "..."
+					}
+					resp.Details = append(resp.Details,
+						fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
+							i.Type().String()+"/ca",
+							i.Name(),
+							i.Host(),
+							pi.PID,
+							portlist,
+							username,
+							groupname,
+							pi.CreationTime.Local().Format(time.RFC3339),
+							base,
+							uptodate,
+							actual,
+							i.Home(),
+						),
+					)
+				}
+			}
+		}
 	}
 
 	return
@@ -455,7 +516,7 @@ func psInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
-	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, _, err := psInstanceCommon(i)
 	if err != nil {
 		resp.Err = err
 		return
@@ -534,7 +595,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		uid, gid := i.Host().GetFileOwner(hs)
+		uid, gid := host.GetFileOwner(i.Host(), hs)
 
 		var row []string
 		if psCmdToolkit {
@@ -548,8 +609,8 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			fmt.Sprint(pid),
 			"cwd",
 			hs.Mode().Perm().String(),
-			geneos.GetUsername(uid),
-			geneos.GetGroupname(gid),
+			process.GetUsername(uid),
+			process.GetGroupname(gid),
 			fmt.Sprint(hs.Size()),
 			hs.ModTime().Local().Format(time.RFC3339),
 			homedir,
@@ -558,7 +619,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				uid, gid := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := host.GetFileOwner(i.Host(), fd.Stat)
 				path := fd.Path
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
@@ -580,8 +641,8 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 					fmt.Sprint(pid),
 					fmt.Sprintf("%d:%s", fd.FD, fdPerm),
 					fd.Stat.Mode().Perm().String(),
-					geneos.GetUsername(uid),
-					geneos.GetGroupname(gid),
+					process.GetUsername(uid),
+					process.GetGroupname(gid),
 					fmt.Sprint(fd.Stat.Size()),
 					fd.Stat.ModTime().Local().Format(time.RFC3339),
 					path,
@@ -695,7 +756,7 @@ type psInstanceNetwork struct {
 
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	resp = responses.NewResponse(i)
-	pid, username, groupname, mtime, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pid, username, groupname, mtime, base, actual, uptodate, ports, _, err := psInstanceCommon(i)
 	if err != nil {
 		return
 	}
@@ -737,7 +798,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		uid, gid := i.Host().GetFileOwner(hs)
+		uid, gid := host.GetFileOwner(i.Host(), hs)
 
 		files := []psInstanceFiles{}
 
@@ -748,8 +809,8 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			PID:      pid,
 			FD:       -1,
 			Perms:    hs.Mode().Perm(),
-			Username: geneos.GetUsername(uid),
-			Group:    geneos.GetGroupname(gid),
+			Username: process.GetUsername(uid),
+			Group:    process.GetGroupname(gid),
 			Size:     hs.Size(),
 			ModTime:  hs.ModTime(),
 			Path:     homedir,
@@ -757,7 +818,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 
 		for _, fd := range instance.Files(i) {
 			if path.IsAbs(fd.Path) {
-				uid, gid := i.Host().GetFileOwner(fd.Stat)
+				uid, gid := host.GetFileOwner(i.Host(), fd.Stat)
 				path := fd.Path
 				fdPerm := ""
 				m := fd.Lstat.Mode().Perm()
@@ -775,8 +836,8 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 					FD:       fd.FD,
 					FDPerms:  fdPerm,
 					Perms:    fd.Stat.Mode().Perm(),
-					Username: geneos.GetUsername(uid),
-					Group:    geneos.GetGroupname(gid),
+					Username: process.GetUsername(uid),
+					Group:    process.GetGroupname(gid),
 					Size:     fd.Stat.Size(),
 					ModTime:  fd.Stat.ModTime(),
 					Path:     path,

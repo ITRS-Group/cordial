@@ -27,11 +27,60 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/rs/zerolog/log"
 )
+
+// cache lookups, including fails
+const notfound = "[NOT FOUND]"
+
+var usernames sync.Map
+var groupnames sync.Map
+
+func GetUsername(uid int) (username string) {
+	if u, ok := usernames.Load(uid); ok {
+		username = u.(string)
+		if username == notfound {
+			username = fmt.Sprint(uid)
+		}
+		return
+	}
+
+	username = fmt.Sprint(uid)
+	u, err := user.LookupId(username)
+	if err != nil || u.Username == "" {
+		usernames.Store(uid, notfound)
+		return
+	}
+	username = u.Username
+	usernames.Store(uid, username)
+
+	return
+}
+
+func GetGroupname(gid int) (groupname string) {
+	if g, ok := groupnames.Load(gid); ok {
+		groupname = g.(string)
+		if groupname == notfound {
+			groupname = fmt.Sprint(gid)
+		}
+		return
+	}
+
+	groupname = fmt.Sprint(gid)
+	g, err := user.LookupGroupId(groupname)
+	if err != nil || g.Name == "" {
+		groupnames.Store(gid, notfound)
+		return
+	}
+	groupname = g.Name
+	groupnames.Store(gid, groupname)
+
+	return
+}
 
 func prepareCmd(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {

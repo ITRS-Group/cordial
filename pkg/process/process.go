@@ -353,13 +353,10 @@ func GetPID(h host.Host, binary string, resetcache bool, customCheckFunc func(ch
 	if binary == "" {
 		return 0, fmt.Errorf("binaryPrefix must not be empty")
 	}
+
 	c, ok := getProcCache(h, resetcache)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
-	}
-
-	if condition := h == nil || binary == ""; condition {
-		return 0, fmt.Errorf("host cannot be nil and binaryPrefix must not be empty")
 	}
 
 	for _, pc := range c.Entries {

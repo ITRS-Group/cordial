@@ -41,6 +41,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -282,7 +283,7 @@ geneos backup all
 			if !fi.Mode().IsRegular() && !fi.IsDir() {
 				return fmt.Errorf("%s is not a regular file or directory", p)
 			}
-			uid, gid := h.GetFileOwner(fi)
+			uid, gid := host.GetFileOwner(h, fi)
 			th := &tar.Header{
 				Format:  tar.FormatUnknown,
 				Name:    f,

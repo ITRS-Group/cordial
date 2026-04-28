@@ -28,6 +28,14 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+func GetUsername(uid int) (username string) {
+	return
+}
+
+func GetGroupname(gid int) (groupname string) {
+	return
+}
+
 func prepareCmd(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{

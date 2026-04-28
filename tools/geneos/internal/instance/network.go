@@ -251,20 +251,20 @@ func allTCPListenPorts(h *geneos.Host, ports map[int]int) (err error) {
 // ListeningPorts returns all TCP ports currently open for the process
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
-func ListeningPorts(i geneos.Instance) (ports []int) {
+func ListeningPorts(h *geneos.Host, pid int) (ports []int) {
 	var err error
 
-	if !IsRunning(i) {
+	if pid == 0 {
 		return
 	}
 
-	sockets := sockets(i)
+	sockets := sockets(h, pid)
 	if len(sockets) == 0 {
 		return
 	}
 
 	tcpports := make(map[int]int) // key = socket inode
-	if err = allTCPListenPorts(i.Host(), tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err = allTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Error().Err(err).Msg("continuing")
 	}
 
@@ -278,38 +278,23 @@ func ListeningPorts(i geneos.Instance) (ports []int) {
 	return
 }
 
-// ListeningPorts returns all TCP ports currently open for the process
-// running as the instance. An empty slice is returned if the process
-// cannot be found. The instance may be on a remote host.
-func ListeningPortsStrings(i geneos.Instance) (ports []string) {
-	intports := ListeningPorts(i)
-	if len(intports) == 0 {
-		return
-	}
-	for _, p := range intports {
-		ports = append(ports, fmt.Sprint(p))
-	}
-	return
-}
-
-// sockets returns a map[int]int of file descriptor to socket inode for all open
-// files for the process running as the instance. An empty map is
+// sockets returns a map[int]int of file descriptor to socket inode for
+// all open files for the process pid on host h. An empty map is
 // returned if the process cannot be found.
-func sockets(i geneos.Instance) (links map[int]int) {
+func sockets(h *geneos.Host, pid int) (links map[int]int) {
 	var inode int
 	links = make(map[int]int)
-	pid, err := GetPID(i)
-	if err != nil {
+	if pid == 0 {
 		return
 	}
 	file := fmt.Sprintf("/proc/%d/fd", pid)
-	fds, err := i.Host().ReadDir(file)
+	fds, err := h.ReadDir(file)
 	if err != nil {
 		return
 	}
 	for _, ent := range fds {
 		fd := ent.Name()
-		dest, err := i.Host().Readlink(path.Join(file, fd))
+		dest, err := h.Readlink(path.Join(file, fd))
 		if err != nil {
 			continue
 		}
