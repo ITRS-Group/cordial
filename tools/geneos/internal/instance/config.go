@@ -272,7 +272,7 @@ func Write(i geneos.Instance) (err error) {
 
 	lpKeys := slices.Collect(maps.Keys(i.Type().LegacyParameters))
 
-	if err = i.Config().Write(i.Type().String(),
+	if err = i.Config().Write(i.Type().Name,
 		config.Host(i.Host()),
 		config.SearchDirs(Home(i)),
 		config.AppName(i.Name()),
