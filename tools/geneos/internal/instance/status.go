@@ -22,7 +22,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -160,7 +159,7 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), false, i.Type().GetPID, i, i.Name())
 }
 
-// GetLivePID returns the PID of the process running for the instance.
+// GetLivePID returns the PID of the process running for the instance i.
 // It resets the process cache to ensure the check is live. If not found
 // then an err of os.ErrProcessDone is returned.
 //
@@ -171,31 +170,13 @@ func GetLivePID(i geneos.Instance) (pid int, err error) {
 	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), true, i.Type().GetPID, i, i.Name())
 }
 
-// GetPIDInfo returns the PID of the process for the instance i along
-// with the owner uid and gid and the start time.
-func GetPIDInfo(i geneos.Instance) (pid int, uid, gid int, mtime time.Time, err error) {
-	if pid, err = GetPID(i); err != nil {
-		log.Debug().Err(err).Msgf("failed to get PID for instance %s", i.Name())
+// GetProcessInfo returns process information for the instance i. If the
+// process is not found then an err of os.ErrProcessDone is returned.
+func GetProcessInfo(i geneos.Instance) (pi process.ProcessInfo, err error) {
+	pid, err := GetPID(i)
+	if err != nil {
 		return
 	}
 
-	if i.Host().ServerVersion() == "windows" {
-	} else {
-		var st os.FileInfo
-		st, err = i.Host().Stat(fmt.Sprintf("/proc/%d", pid))
-		if err == nil {
-			uid, gid = i.Host().GetFileOwner(st)
-		}
-		if st != nil {
-			// mtime is the last modification time of the /proc/<pid> directory
-			// which is the start time of the process.
-			mtime = st.ModTime()
-		} else {
-			// if we cannot stat the /proc/<pid> directory, then we cannot get
-			// the mtime, so set it to zero.
-			mtime = time.Time{}
-		}
-	}
-
-	return
+	return process.GetProcessInfo(i.Host(), pid, false)
 }

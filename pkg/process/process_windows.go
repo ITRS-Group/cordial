@@ -82,6 +82,7 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		// var argc int32
 
 		pid := uint32(pe.ProcessID)
+		ppid := uint32(pe.ParentProcessID)
 		exe := windows.UTF16ToString(pe.ExeFile[:])
 
 		if err = windows.Process32Next(h, &pe); err != nil {
@@ -92,15 +93,33 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 			continue
 		}
 
-		cmdLine, _, err := getProcessInfo(pid)
+		cmdLine, creationTime, err := getProcessInfo(pid)
 		if err != nil {
 			continue
 		}
 
+		uid, gid, err := getProcessUser(windows.Handle(pid))
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to get process user for pid %d", pid)
+			continue
+		}
+
 		c.Entries[int(pid)] = ProcessInfo{
-			PID:     int(pid),
-			Exe:     exe,
-			Cmdline: cmdLine,
+			PID:          int(pid),
+			PPID:         int(ppid),
+			Exe:          exe,
+			Cmdline:      cmdLine,
+			CreationTime: creationTime,
+			UID:          uid,
+			GID:          gid,
+		}
+	}
+
+	// build child lists
+	for _, p := range c.Entries {
+		if parent, ok := c.Entries[p.PPID]; ok {
+			parent.Children = append(parent.Children, p.PID)
+			c.Entries[p.PPID] = parent
 		}
 	}
 

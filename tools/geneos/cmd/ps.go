@@ -267,7 +267,7 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 		err = geneos.ErrDisabled
 		return
 	}
-	pid, uid, gid, mtime, err := instance.GetPIDInfo(i)
+	pi, err := instance.GetProcessInfo(i)
 	if err != nil {
 		if !errors.Is(err, os.ErrProcessDone) {
 			log.Debug().Err(err).Msgf("failed to get PID info for instance %s", i.Name())
@@ -275,8 +275,10 @@ func psInstanceCommon(i geneos.Instance) (pid int, username, groupname string, m
 		return
 	}
 
-	username = geneos.GetUsername(uid)
-	groupname = geneos.GetGroupname(gid)
+	pid = pi.PID
+	username = geneos.GetUsername(pi.UID)
+	groupname = geneos.GetGroupname(pi.GID)
+	mtime = pi.CreationTime
 
 	base, underlying, actual, _ := instance.LiveVersion(i, pid)
 	if pkgtype := config.Get[string](i.Config(), "pkgtype"); pkgtype != "" {

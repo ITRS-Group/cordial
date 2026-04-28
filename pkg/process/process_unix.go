@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -108,11 +107,35 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	c.Entries = make(map[int]ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
-		pid, err := strconv.Atoi(path.Base(dir))
+		st, err := os.Stat(dir)
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to stat %s", dir)
+			continue
+		}
+		if !st.IsDir() {
+			continue
+		}
+
+		pid, err := strconv.Atoi(st.Name())
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
 			continue
 		}
+		mtime := st.ModTime()
+
+		var ppid int
+		pstat, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to read stat for pid %d", pid)
+		} else {
+			fields := strings.Fields(string(pstat))
+			ppid, err = strconv.Atoi(fields[3])
+			if err != nil {
+				log.Debug().Err(err).Msgf("failed to parse ppid for pid %d", pid)
+				// leave ppid as zero if we cannot parse it
+			}
+		}
+
 		exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 		if err != nil {
 			continue
@@ -123,14 +146,43 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		}
 		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
 
+		uid, gid := ownerOfFile(st)
+
+		// status, err := readProcessStatus(nil, pid)
+		// if err != nil {
+		// 	log.Debug().Err(err).Msgf("failed to read status for pid %d", pid)
+		// 	continue
+		// 	// leave status as nil if we cannot read it
+		// }
 		c.Entries[pid] = ProcessInfo{
-			PID:     pid,
-			Exe:     exe,
-			Cmdline: cmdline,
+			PID:          pid,
+			PPID:         ppid,
+			Exe:          exe,
+			Cmdline:      cmdline,
+			CreationTime: mtime,
+			UID:          uid,
+			GID:          gid,
+			// status:       status, // not required locally
 		}
 	}
+
+	// build child lists
+	for _, p := range c.Entries {
+		if parent, ok := c.Entries[p.PPID]; ok {
+			parent.Children = append(parent.Children, p.PID)
+			c.Entries[p.PPID] = parent
+		}
+	}
+
 	c.LastUpdate = time.Now()
 	procCacheMap[nil] = c
 
 	return c, true
+}
+
+func ownerOfFile(st os.FileInfo) (uid, gid int) {
+	if stat, ok := st.Sys().(*syscall.Stat_t); ok {
+		return int(stat.Uid), int(stat.Gid)
+	}
+	return -1, -1
 }

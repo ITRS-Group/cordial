@@ -177,6 +177,8 @@ var procCacheTTL = 5 * time.Second
 // It is used to return information about a process on a host.
 type ProcessInfo struct {
 	PID          int
+	PPID         int
+	Children     []int
 	Exe          string
 	Cmdline      []string
 	CreationTime time.Time
@@ -184,6 +186,7 @@ type ProcessInfo struct {
 	GID          int
 	TCPPorts     []int
 	UDPPorts     []int
+	status       map[string]string // save the status key/value pairs for later use if required
 }
 
 // procCache is a map of host to procCache, which is used to cache
@@ -226,24 +229,107 @@ func getProcCache(h host.Host, resetcache bool) (c procCache, ok bool) {
 	c.Entries = make(map[int]ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
-		pid, _ := strconv.Atoi(path.Base(dir))
+		st, err := h.Stat(dir)
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to stat %s", dir)
+			continue
+		}
+		if !st.IsDir() {
+			continue
+		}
+		pid, err := strconv.Atoi(st.Name())
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
+			continue
+		}
+		mtime := st.ModTime()
+
+		var ppid int
+		pstat, err := h.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to read stat for pid %d", pid)
+		} else {
+			fields := strings.Fields(string(pstat))
+			ppid, err = strconv.Atoi(fields[3])
+			if err != nil {
+				log.Debug().Err(err).Msgf("failed to parse ppid for pid %d", pid)
+				// leave ppid as zero if we cannot parse it
+			}
+		}
+
 		exe, _ := h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+
 		b, err := h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to read cmdline for pid %d", pid)
 			continue
 		}
 		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
+
+		status, err := readProcessStatus(h, pid)
+		if err != nil {
+			log.Debug().Err(err).Msgf("failed to read status for pid %d", pid)
+			continue
+		}
+
+		var uid, gid = -1, -1
+		uids := strings.Fields(status["uid"])
+		gids := strings.Fields(status["gid"])
+
+		if len(uids) > 0 {
+			uid, _ = strconv.Atoi(uids[0])
+		}
+		if len(gids) > 0 {
+			gid, _ = strconv.Atoi(gids[0])
+		}
+
 		c.Entries[pid] = ProcessInfo{
-			PID:     pid,
-			Exe:     exe,
-			Cmdline: cmdline,
+			PID:          pid,
+			PPID:         ppid,
+			Exe:          exe,
+			Cmdline:      cmdline,
+			CreationTime: mtime,
+			UID:          uid,
+			GID:          gid,
+			status:       status,
 		}
 	}
+
+	// build child lists
+	for _, p := range c.Entries {
+		if parent, ok := c.Entries[p.PPID]; ok {
+			parent.Children = append(parent.Children, p.PID)
+			c.Entries[p.PPID] = parent
+		}
+	}
+
 	c.LastUpdate = time.Now()
 	procCacheMap[h] = c
 
 	return c, true
+}
+
+// readProcessStatus reads the /proc/<pid>/status file for the process
+// with the given pid on host h and returns a map of the entries in the
+// file. The keys in the map are the lowercase names of the entries in
+// the file, and the values are the corresponding values. If there is an
+// error reading the file then an error is returned.
+func readProcessStatus(h host.Host, pid int) (entries map[string]string, err error) {
+	b, err := h.ReadFile(fmt.Sprintf("/proc/%d/status", pid))
+	if err != nil {
+		return
+	}
+	entries = make(map[string]string)
+
+	lines := strings.Split(string(b), "\n")
+	for _, line := range lines {
+		name, value, found := strings.Cut(line, ":")
+		if !found {
+			continue
+		}
+		entries[strings.ToLower(strings.TrimSpace(name))] = strings.TrimSpace(value)
+	}
+	return entries, nil
 }
 
 // GetPID returns the PID of the process started with binary name and
@@ -315,18 +401,18 @@ func GetPID(h host.Host, binary string, resetcache bool, customCheckFunc func(ch
 }
 
 // GetProcessInfo returns information about the process pid on host h.
-// func GetProcessInfo(h host.Host, pid int, resetcache bool) (err error) {
-// 	c, ok := getProcCache(h, resetcache)
-// 	if !ok {
-// 		return fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
-// 	}
+func GetProcessInfo(h host.Host, pid int, resetcache bool) (pi ProcessInfo, err error) {
+	c, ok := getProcCache(h, resetcache)
+	if !ok {
+		return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+	}
 
-// 	if pc, ok := c.Entries[pid]; ok {
-// 		log.Debug().Msgf("matched pid %d exe %s cmdline %v", pc.PID, pc.Exe, pc.Cmdline)
-// 		return nil
-// 	}
-// 	return
-// }
+	if pc, ok := c.Entries[pid]; ok {
+		log.Debug().Msgf("matched pid %d exe %s cmdline %v", pc.PID, pc.Exe, pc.Cmdline)
+		return pc, nil
+	}
+	return pi, os.ErrProcessDone
+}
 
 // Program is a highly simplified representation of a program to manage
 // with Start or Batch.
