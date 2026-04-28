@@ -330,7 +330,7 @@ func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance ge
 // type ct, where both can be nil in which case all hosts or component
 // types are used respectively. The options allow filtering based on
 // names or parameter matches.
-func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOptions) (instances []geneos.Instance) {
+func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) (instances []geneos.Instance) {
 	var instanceNames []string
 
 	for ct := range ct.OrList() {
@@ -392,9 +392,9 @@ type instanceOptions struct {
 	names      []string
 	parameters []string
 }
-type InstanceOptions func(*instanceOptions)
+type InstanceOption func(*instanceOptions)
 
-func evalInstanceOptions(options ...InstanceOptions) (opts *instanceOptions) {
+func evalInstanceOptions(options ...InstanceOption) (opts *instanceOptions) {
 	opts = &instanceOptions{}
 	for _, opt := range options {
 		opt(opts)
@@ -402,13 +402,13 @@ func evalInstanceOptions(options ...InstanceOptions) (opts *instanceOptions) {
 	return
 }
 
-func FilterNames(names ...string) InstanceOptions {
+func FilterNames(names ...string) InstanceOption {
 	return func(io *instanceOptions) {
 		io.names = names
 	}
 }
 
-func FilterParameters(parameters ...string) InstanceOptions {
+func FilterParameters(parameters ...string) InstanceOption {
 	return func(io *instanceOptions) {
 		io.parameters = parameters
 	}

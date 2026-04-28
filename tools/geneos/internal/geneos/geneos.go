@@ -56,7 +56,7 @@ const DisableExtension = "disabled"
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
-func Initialise(h *Host, options ...PackageOptions) (err error) {
+func Initialise(h *Host, options ...PackageOption) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
 		log.Fatal().Msg("homedir not set")

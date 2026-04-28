@@ -139,7 +139,7 @@ func initConfig(cmd *cobra.Command) {
 	var deferredlog string
 
 	if cf == nil {
-		opts := []config.FileOptions{
+		opts := []config.FileOption{
 			config.AppName("geneos"),
 			config.FilePath(conffile),
 			config.Format("yaml"),

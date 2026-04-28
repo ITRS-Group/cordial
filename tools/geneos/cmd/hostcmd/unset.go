@@ -89,16 +89,11 @@ geneos host unset rem2 -i /path/to/id_rsa
 
 		for _, h := range hosts {
 			if len(unsetCmdKeys) > 0 {
-				settings := h.AllSettings()
-				log.Debug().Msgf("host %s settings %#v", h, settings)
 				for _, key := range unsetCmdKeys {
-					log.Debug().Msgf("deleting %s from host %s", key, h)
-					delete(settings, key)
+					k, _, _ := strings.Cut(key, "=")
+					log.Debug().Msgf("will delete %s from host %s", k, h)
+					config.Delete(h.Config, k)
 				}
-				// you can't delete keys in viper, so create an empty config, and merge in the settings left
-				h.Config = config.New()
-				h.MergeConfigMap(settings)
-				log.Debug().Msgf("host %s settings %#v", h, settings)
 			}
 
 			if len(unsetCmdPrivateKeyfiles) > 0 {

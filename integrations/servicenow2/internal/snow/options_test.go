@@ -177,7 +177,7 @@ func TestEvalReqOptions(t *testing.T) {
 
 	t.Run("no options", func(t *testing.T) {
 		opts := evalReqOptions()
-		
+
 		if opts.limit != "" {
 			t.Errorf("limit = %q, want empty", opts.limit)
 		}
@@ -200,53 +200,53 @@ func TestAssembleURL(t *testing.T) {
 	tests := []struct {
 		name     string
 		table    string
-		options  []Options
+		options  []Option
 		expected map[string]string // expected query parameters
 		path     string            // expected path
 	}{
 		{
-			name:  "basic table",
-			table: "incident",
-			options: []Options{},
+			name:    "basic table",
+			table:   "incident",
+			options: []Option{},
 			expected: map[string]string{
 				"sysparm_exclude_reference_link": "true",
 			},
 			path: "table/incident",
 		},
 		{
-			name:  "with limit",
-			table: "incident",
-			options: []Options{Limit(10)},
+			name:    "with limit",
+			table:   "incident",
+			options: []Option{Limit(10)},
 			expected: map[string]string{
-				"sysparm_limit": "10",
+				"sysparm_limit":                  "10",
 				"sysparm_exclude_reference_link": "true",
 			},
 			path: "table/incident",
 		},
 		{
-			name:  "with fields",
-			table: "incident",
-			options: []Options{Fields("sys_id,number")},
+			name:    "with fields",
+			table:   "incident",
+			options: []Option{Fields("sys_id,number")},
 			expected: map[string]string{
-				"sysparm_fields": "sys_id,number",
+				"sysparm_fields":                 "sys_id,number",
 				"sysparm_exclude_reference_link": "true",
 			},
 			path: "table/incident",
 		},
 		{
-			name:  "with query",
-			table: "incident",
-			options: []Options{Query("state=1")},
+			name:    "with query",
+			table:   "incident",
+			options: []Option{Query("state=1")},
 			expected: map[string]string{
-				"sysparm_query": "state=1",
+				"sysparm_query":                  "state=1",
 				"sysparm_exclude_reference_link": "true",
 			},
 			path: "table/incident",
 		},
 		{
-			name:  "with sys_id",
-			table: "incident",
-			options: []Options{SysID("test-id")},
+			name:    "with sys_id",
+			table:   "incident",
+			options: []Option{SysID("test-id")},
 			expected: map[string]string{
 				"sysparm_exclude_reference_link": "true",
 			},
@@ -255,7 +255,7 @@ func TestAssembleURL(t *testing.T) {
 		{
 			name:  "all options",
 			table: "incident",
-			options: []Options{
+			options: []Option{
 				Limit(5),
 				Fields("sys_id,number,state"),
 				Query("state=1^priority=1"),
@@ -264,11 +264,11 @@ func TestAssembleURL(t *testing.T) {
 				SysID("test-id"),
 			},
 			expected: map[string]string{
-				"sysparm_limit": "5",
-				"sysparm_fields": "sys_id,number,state",
-				"sysparm_query": "state=1^priority=1",
-				"sysparm_display_value": "true",
-				"sysparm_offset": "10",
+				"sysparm_limit":                  "5",
+				"sysparm_fields":                 "sys_id,number,state",
+				"sysparm_query":                  "state=1^priority=1",
+				"sysparm_display_value":          "true",
+				"sysparm_offset":                 "10",
 				"sysparm_exclude_reference_link": "true",
 			},
 			path: "table/incident/test-id",
@@ -278,7 +278,7 @@ func TestAssembleURL(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := AssembleURL(tt.table, tt.options...)
-			
+
 			// Check path
 			if result.Path != tt.path {
 				t.Errorf("path = %q, want %q", result.Path, tt.path)

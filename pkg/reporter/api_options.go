@@ -33,7 +33,7 @@ type apiReportOptions struct {
 	maxrows       int
 }
 
-func evalAPIOptions(options ...APIReporterOptions) (fro *apiReportOptions) {
+func evalAPIOptions(options ...APIReporterOption) (fro *apiReportOptions) {
 	fro = &apiReportOptions{
 		hostname:   "localhost",
 		port:       7036,
@@ -46,57 +46,57 @@ func evalAPIOptions(options ...APIReporterOptions) (fro *apiReportOptions) {
 	return
 }
 
-type APIReporterOptions func(*apiReportOptions)
+type APIReporterOption func(*apiReportOptions)
 
-func APIHostname(hostname string) APIReporterOptions {
+func APIHostname(hostname string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.hostname = hostname
 	}
 }
 
-func APIPort(port int) APIReporterOptions {
+func APIPort(port int) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.port = port
 	}
 }
 
-func APISecure(secure bool) APIReporterOptions {
+func APISecure(secure bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.secure = secure
 	}
 }
 
-func APISkipVerify(skip bool) APIReporterOptions {
+func APISkipVerify(skip bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.skipVerify = skip
 	}
 }
 
-func APIEntity(entity string) APIReporterOptions {
+func APIEntity(entity string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.entity = entity
 	}
 }
 
-func APISampler(sampler string) APIReporterOptions {
+func APISampler(sampler string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.sampler = sampler
 	}
 }
 
-func DataviewCreateDelay(delay time.Duration) APIReporterOptions {
+func DataviewCreateDelay(delay time.Duration) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.dvCreateDelay = delay
 	}
 }
 
-func ResetDataviews(reset bool) APIReporterOptions {
+func ResetDataviews(reset bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.reset = reset
 	}
 }
 
-func APIMaxRows(n int) APIReporterOptions {
+func APIMaxRows(n int) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.maxrows = n
 	}

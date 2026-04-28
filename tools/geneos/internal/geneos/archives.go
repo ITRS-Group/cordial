@@ -64,7 +64,7 @@ type downloadauth struct {
 //
 // LocalOnly()
 // DownloadOnly()
-func openArchive(ct *Component, options ...PackageOptions) (body io.ReadCloser, filename string, filesize int64, err error) {
+func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, filename string, filesize int64, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
@@ -238,7 +238,7 @@ type dirtime struct {
 // unarchive unpacks the gzipped archive passed as an io.Reader on the
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
-func unarchive(h *Host, ct *Component, archive io.Reader, filename string, filesize int64, options ...PackageOptions) (dest string, err error) {
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, filesize int64, options ...PackageOption) (dest string, err error) {
 	var version, platform, suffix string
 
 	opts := evalOptions(options...)
@@ -587,7 +587,7 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 // GeneosOptions supported are PlatformID, UseNexus, UseSnapshots,
 // Version, Username and Password. PlatformID and Version cannot be set
 // at the same time.
-func openRemoteArchive(ct *Component, options ...PackageOptions) (filename string, resp *http.Response, err error) {
+func openRemoteArchive(ct *Component, options ...PackageOption) (filename string, resp *http.Response, err error) {
 	var source string
 
 	opts := evalOptions(options...)

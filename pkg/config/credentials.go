@@ -69,7 +69,7 @@ func (c *Config) FindCreds(p string) (creds *Config) {
 // file. Options are the same as for [Read] but the default KeyDelimiter
 // is set to "::" as credential domains are likely to be hostnames or
 // URLs. The longest match wins.
-func FindCreds(p string, options ...FileOptions) (creds *Config) {
+func FindCreds(p string, options ...FileOption) (creds *Config) {
 	options = append(options, KeyDelimiter("::"))
 	cf, err := Read("credentials", options...)
 	if err != nil {
@@ -82,7 +82,7 @@ func FindCreds(p string, options ...FileOptions) (creds *Config) {
 // options. creds.Domain is used as the key for matching later on. Any
 // existing credential with the same Domain is overwritten. If there is
 // an error un the underlying routines it is returned without change.
-func AddCreds(creds Credentials, options ...FileOptions) (err error) {
+func AddCreds(creds Credentials, options ...FileOption) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf, err := Read("credentials", options...)
 	if err != nil {
@@ -94,7 +94,7 @@ func AddCreds(creds Credentials, options ...FileOptions) (err error) {
 
 // DeleteCreds removes the entry for domain from the credentials file
 // identified by options.
-func DeleteCreds(domain string, options ...FileOptions) (err error) {
+func DeleteCreds(domain string, options ...FileOption) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf, err := Read("credentials", options...)
 	if err != nil {
@@ -108,7 +108,7 @@ func DeleteCreds(domain string, options ...FileOptions) (err error) {
 
 // DeleteAllCreds will remove all the credentials in the credentials
 // file identified by options.
-func DeleteAllCreds(options ...FileOptions) (err error) {
+func DeleteAllCreds(options ...FileOption) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf := New(options...)
 	Set(cf, "credentials", &Credentials{})

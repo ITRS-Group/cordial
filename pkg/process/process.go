@@ -332,7 +332,7 @@ func GetPID(h host.Host, binary string, resetcache bool, customCheckFunc func(ch
 // with Start or Batch.
 //
 // Args and Env can be either a comma delimited string, which is split
-// by viper/mapstructure, or a slice of strings which is used as-is
+// by config, or a slice of strings which is used as-is
 type Program struct {
 	Executable string        `json:"executable,omitempty"` // Path to program, passed through exec.LookPath
 	Username   string        `json:"username,omitempty"`   // The name of the user, if empty use current

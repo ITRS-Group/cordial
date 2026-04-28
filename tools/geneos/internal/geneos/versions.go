@@ -122,7 +122,7 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 // download directory. If a platform ID is set using options then
 // include those otherwise only non-platform specific releases are
 // included.
-func LocalArchives(ct *Component, options ...PackageOptions) (archives []string, err error) {
+func LocalArchives(ct *Component, options ...PackageOption) (archives []string, err error) {
 	opts := evalOptions(options...)
 
 	if !IsDir(opts.source) {

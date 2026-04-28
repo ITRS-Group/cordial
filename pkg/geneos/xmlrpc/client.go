@@ -31,7 +31,7 @@ type Client struct {
 	url *url.URL
 }
 
-func NewClient(url *url.URL, options ...Options) (c *Client) {
+func NewClient(url *url.URL, options ...Option) (c *Client) {
 	opt := &xmlrpcOptions{}
 	evalOptions(opt, options...)
 	c = &Client{

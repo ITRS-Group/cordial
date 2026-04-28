@@ -72,7 +72,7 @@ import (
 // from an io.Reader then this takes precedence over file discovery or
 // SetConfigFile(). The configuration file format should be set with
 // SetFileExtension() or it defaults as above.
-func Read(module string, options ...FileOptions) (cf *Config, err error) {
+func Read(module string, options ...FileOption) (cf *Config, err error) {
 	opts := evalLoadOptions(module, options...)
 	r := opts.remote
 
@@ -297,7 +297,7 @@ func Read(module string, options ...FileOptions) (cf *Config, err error) {
 // If no internal defaults are defined then the string "none" is
 // returned (unless config.MustExist() is used, in which case an empty
 // string is returned).
-func Path(module string, options ...FileOptions) string {
+func Path(module string, options ...FileOption) string {
 	opts := evalLoadOptions(module, options...)
 	r := opts.remote
 

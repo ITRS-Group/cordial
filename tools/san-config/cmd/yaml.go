@@ -96,7 +96,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 
 	lookup := config.Get[map[string]string](cf, "inventory.mappings")
 
-	defFetchopts := []FetchOptions{InventoryType("yaml")}
+	defFetchopts := []FetchOption{InventoryType("yaml")}
 
 	switch config.Get[string](cf, "inventory.authentication.type") {
 	case "header":

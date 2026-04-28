@@ -24,10 +24,10 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// Options is an option type used for commands functions
-type Options func(*Connection)
+// Option is an option type used for commands functions
+type Option func(*Connection)
 
-func evalOptions(c *Connection, options ...Options) {
+func evalOptions(c *Connection, options ...Option) {
 	for _, opt := range options {
 		opt(c)
 	}
@@ -35,7 +35,7 @@ func evalOptions(c *Connection, options ...Options) {
 
 // SetBasicAuth configures basic authentication on the connection, given
 // a username and password (both as plain strings)
-func SetBasicAuth(username string, password *config.Secret) Options {
+func SetBasicAuth(username string, password *config.Secret) Option {
 	return func(c *Connection) {
 		if username != "" {
 			c.AuthType = Basic
@@ -47,7 +47,7 @@ func SetBasicAuth(username string, password *config.Secret) Options {
 
 // AllowInsecureCertificates allows unverified connections over TLS to
 // the gateway
-func AllowInsecureCertificates(opt bool) Options {
+func AllowInsecureCertificates(opt bool) Option {
 	return func(c *Connection) {
 		c.InsecureSkipVerify = opt
 	}
@@ -56,14 +56,14 @@ func AllowInsecureCertificates(opt bool) Options {
 // Ping overrides the built-in ping() function used to test the
 // availability of the gateway when used with DialGateways() and
 // Redial()
-func Ping(ping func(*Connection) error) Options {
+func Ping(ping func(*Connection) error) Option {
 	return func(c *Connection) {
 		c.ping = &ping
 	}
 }
 
 // Timeout sets the timeout of the REST connection as a time.Duration
-func Timeout(timeout time.Duration) Options {
+func Timeout(timeout time.Duration) Option {
 	return func(c *Connection) {
 		c.Timeout = timeout
 	}

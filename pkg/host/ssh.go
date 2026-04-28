@@ -70,7 +70,7 @@ func NewSSHRemote(name string, options ...any) Host {
 	return r
 }
 
-type SSHOptions func(*SSHRemote)
+type SSHOption func(*SSHRemote)
 
 func evalOptions(r *SSHRemote, options ...any) {
 	// defaults
@@ -82,32 +82,32 @@ func evalOptions(r *SSHRemote, options ...any) {
 
 	for _, opt := range options {
 		switch o := opt.(type) {
-		case SSHOptions:
+		case SSHOption:
 			o(r)
 		}
 	}
 
 }
 
-func Username(username string) SSHOptions {
+func Username(username string) SSHOption {
 	return func(s *SSHRemote) {
 		s.username = username
 	}
 }
 
-func Password(password *memguard.Enclave) SSHOptions {
+func Password(password *memguard.Enclave) SSHOption {
 	return func(s *SSHRemote) {
 		s.password = password
 	}
 }
 
-func Port(port uint16) SSHOptions {
+func Port(port uint16) SSHOption {
 	return func(s *SSHRemote) {
 		s.port = port
 	}
 }
 
-func Hostname(hostname string) SSHOptions {
+func Hostname(hostname string) SSHOption {
 	return func(s *SSHRemote) {
 		s.hostname = hostname
 	}
@@ -116,7 +116,7 @@ func Hostname(hostname string) SSHOptions {
 // PrivateKeyFiles add the given paths as private key files to use for
 // SSH connections. The files must (at this time) not be passphrase
 // protected.
-func PrivateKeyFiles(paths ...string) SSHOptions {
+func PrivateKeyFiles(paths ...string) SSHOption {
 	return func(s *SSHRemote) {
 		s.keys = append(s.keys, paths...)
 	}
@@ -670,7 +670,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 // shell and backgrounds and redirects. May not work on all remotes and
 // for all processes. errfile has stdout/stderr appended to it, use
 // '/dev/null' if no errfile is wanted.
-func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
+func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}
@@ -714,7 +714,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOptions) (err error) 
 // shell and waits for the process status before returning. It returns
 // the output and any error. errfile is an optional (remote) file for
 // stderr output
-func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOptions) (output []byte, err error) {
+func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err error) {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		err = errors.New("cannot run remote commands on windows")
 	}

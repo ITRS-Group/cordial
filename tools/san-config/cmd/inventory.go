@@ -45,7 +45,7 @@ type Inventory struct {
 }
 
 // ReadInventory reads the inventory from a file source
-func ReadInventory(cf *config.Config, file string, options ...FetchOptions) (inv *Inventory, err error) {
+func ReadInventory(cf *config.Config, file string, options ...FetchOption) (inv *Inventory, err error) {
 	fo := evalFetchOptions(options...)
 
 	if fo.ifmodified != nil {
@@ -77,7 +77,7 @@ func ReadInventory(cf *config.Config, file string, options ...FetchOptions) (inv
 
 // FetchInventory fetches an inventory file in JSON format from the
 // source URL with optional method (default GET), client and requests.
-func FetchInventory(cf *config.Config, source string, cacheFile string, options ...FetchOptions) (inv *Inventory, err error) {
+func FetchInventory(cf *config.Config, source string, cacheFile string, options ...FetchOption) (inv *Inventory, err error) {
 	var cache []byte
 
 	fo := evalFetchOptions(options...)
@@ -174,7 +174,7 @@ type fetchOptions struct {
 	password      *config.Secret
 }
 
-func evalFetchOptions(options ...FetchOptions) (f *fetchOptions) {
+func evalFetchOptions(options ...FetchOption) (f *fetchOptions) {
 	f = &fetchOptions{
 		inventoryType: "yaml",
 		method:        "GET",
@@ -195,25 +195,25 @@ func evalFetchOptions(options ...FetchOptions) (f *fetchOptions) {
 	return
 }
 
-// FetchOptions for FetchInventory options
-type FetchOptions func(*fetchOptions)
+// FetchOption for FetchInventory options
+type FetchOption func(*fetchOptions)
 
 // InventoryType sets the inventory format. The default is YAML.
-func InventoryType(t string) FetchOptions {
+func InventoryType(t string) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.inventoryType = t
 	}
 }
 
 // Method sets the fetch method, defaults to GET
-func Method(method string) FetchOptions {
+func Method(method string) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.method = method
 	}
 }
 
 // Client sets the http Client for FetchInventory
-func Client(client *http.Client) FetchOptions {
+func Client(client *http.Client) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.client = client
 	}
@@ -221,7 +221,7 @@ func Client(client *http.Client) FetchOptions {
 
 // AddHeader adds a header to the FetchInventory call. Any existing
 // header with the name name is overwritten
-func AddHeader(name string, values []string) FetchOptions {
+func AddHeader(name string, values []string) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.header[name] = values
 	}
@@ -229,14 +229,14 @@ func AddHeader(name string, values []string) FetchOptions {
 
 // IfModified checks if the inventory inv has changed since the last
 // request, using the If-Modified-Since header
-func IfModified(inv *Inventory) FetchOptions {
+func IfModified(inv *Inventory) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.ifmodified = inv
 	}
 }
 
 // BasicAuth sets up the request to use Basic Authentication
-func BasicAuth(username string, password *config.Secret) FetchOptions {
+func BasicAuth(username string, password *config.Secret) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.username = username
 		fo.password = password

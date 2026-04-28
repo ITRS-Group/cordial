@@ -7,8 +7,7 @@ import (
 	"time"
 )
 
-// Options are used to control behaviour of REST functions
-type Options func(*restOptions)
+type Option func(*restOptions)
 
 type restOptions struct {
 	baseURL      *url.URL
@@ -17,7 +16,7 @@ type restOptions struct {
 	logger       *slog.Logger
 }
 
-func evalOptions(options ...Options) (opts *restOptions) {
+func evalOptions(options ...Option) (opts *restOptions) {
 	opts = &restOptions{
 		client: &http.Client{
 			Timeout: 30 * time.Second,
@@ -32,7 +31,7 @@ func evalOptions(options ...Options) (opts *restOptions) {
 
 // BaseURLString sets the root of the REST API URL. The default is
 // "https://localhost"
-func BaseURLString(baseurl string) Options {
+func BaseURLString(baseurl string) Option {
 	return func(io *restOptions) {
 		io.baseURL, _ = url.Parse(baseurl)
 	}
@@ -40,7 +39,7 @@ func BaseURLString(baseurl string) Options {
 
 // BaseURLString sets the root of the REST API URL. The default is
 // "https://localhost"
-func BaseURL(baseurl *url.URL) Options {
+func BaseURL(baseurl *url.URL) Option {
 	return func(io *restOptions) {
 		io.baseURL = baseurl
 	}
@@ -48,7 +47,7 @@ func BaseURL(baseurl *url.URL) Options {
 
 // HTTPClient sets the http.Client to use for requests. The default is
 // the default http package client.
-func HTTPClient(client *http.Client) Options {
+func HTTPClient(client *http.Client) Option {
 	return func(io *restOptions) {
 		io.client = client
 	}
@@ -62,13 +61,13 @@ func HTTPClient(client *http.Client) Options {
 //	            req.SetBasicAuth(username, password.String())
 //	        }),
 //	    )
-func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Options {
+func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Option {
 	return func(ro *restOptions) {
 		ro.setupRequest = f
 	}
 }
 
-func Logger(logger *slog.Logger) Options {
+func Logger(logger *slog.Logger) Option {
 	return func(ro *restOptions) {
 		ro.logger = logger
 	}

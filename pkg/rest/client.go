@@ -60,7 +60,7 @@ type Client struct {
 
 // NewClient returns a *Client struct, ready to use. Unless options are
 // supplied the base URL defaults to `https://localhost:443`.
-func NewClient(options ...Options) *Client {
+func NewClient(options ...Option) *Client {
 	opts := evalOptions(options...)
 	return &Client{
 		BaseURL:      opts.baseURL,

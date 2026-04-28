@@ -200,7 +200,7 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 
 // ReadKVConfig reads a file containing key=value lines, returning a map
 // of key to value. We need this to preserve the case of keys, which
-// viper forces to lowercase, when writing this file back out via
+// config forces to lowercase, when writing this file back out via
 // WriteKVConfig().
 func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 	data, err := r.ReadFile(p)

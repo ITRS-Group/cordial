@@ -81,7 +81,7 @@ type TableData struct {
 	Response      TableResponses           `mapstructure:"response,omitempty"`
 }
 
-func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOptions) (sysID string, state int, err error) {
+func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOption) (sysID string, state int, err error) {
 	table, err := tableConfig(cf, tableName)
 	if err != nil {
 		return
@@ -171,7 +171,7 @@ func (x *results) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (c *client) getRecords(ctx context.Context, snowCfg *config.Config, table string, options ...Options) (response *ims.Response, err error) {
+func (c *client) getRecords(ctx context.Context, snowCfg *config.Config, table string, options ...Option) (response *ims.Response, err error) {
 	var result snowResult
 
 	response = &ims.Response{}
@@ -200,7 +200,7 @@ func (c *client) getRecords(ctx context.Context, snowCfg *config.Config, table s
 	return response, nil
 }
 
-func (c *client) doRequest(ctx context.Context, method string, snowCfg *config.Config, table string, record any, options ...Options) (result result, err error) {
+func (c *client) doRequest(ctx context.Context, method string, snowCfg *config.Config, table string, record any, options ...Option) (result result, err error) {
 	var r snowResult
 
 	// rc := newClient(snowCfg)
@@ -217,7 +217,7 @@ func (c *client) doRequest(ctx context.Context, method string, snowCfg *config.C
 	return
 }
 
-func assembleURL(table string, options ...Options) *url.URL {
+func assembleURL(table string, options ...Option) *url.URL {
 	opts := evalReqOptions(options...)
 
 	v := url.Values{}

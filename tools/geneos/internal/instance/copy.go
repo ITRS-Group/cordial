@@ -43,7 +43,7 @@ import (
 // files and directories normally.
 //
 // If ct is nil that all component types are considered
-func Copy(ct *geneos.Component, source, destination string, options ...CopyOptions) (err error) {
+func Copy(ct *geneos.Component, source, destination string, options ...CopyOption) (err error) {
 	var stopped, done bool
 	if source == destination {
 		return fmt.Errorf("%w: source and destination must have different names and/or locations", geneos.ErrInvalidArgs)
@@ -243,7 +243,7 @@ type copyOptions struct {
 	params []string
 }
 
-func evalCopyOptions(options ...CopyOptions) (co *copyOptions) {
+func evalCopyOptions(options ...CopyOption) (co *copyOptions) {
 	co = &copyOptions{}
 
 	for _, opt := range options {
@@ -252,10 +252,10 @@ func evalCopyOptions(options ...CopyOptions) (co *copyOptions) {
 	return
 }
 
-type CopyOptions func(*copyOptions)
+type CopyOption func(*copyOptions)
 
 // Move tells Copy to remove the source instance(s) after the copy.
-func Move() CopyOptions {
+func Move() CopyOption {
 	return func(co *copyOptions) {
 		co.move = true
 	}
@@ -264,7 +264,7 @@ func Move() CopyOptions {
 // Params add key=value parameters to the copied/moved destination,
 // overriding the values of the source. Currently only supports plain
 // paramaters, not structured ones like environments.
-func Params(p ...string) CopyOptions {
+func Params(p ...string) CopyOption {
 	return func(co *copyOptions) {
 		co.params = append(co.params, p...)
 	}

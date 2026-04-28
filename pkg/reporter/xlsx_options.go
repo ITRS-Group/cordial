@@ -21,7 +21,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-type XLSXReporterOptions func(*xlsxReportOptions)
+type XLSXReporterOption func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
 	scramble         bool
@@ -39,7 +39,7 @@ type xlsxReportOptions struct {
 	headlines        int
 }
 
-func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOptions) {
+func evalXLSXReportOptions(options ...XLSXReporterOption) (xo *xlsxReportOptions) {
 	xo = &xlsxReportOptions{
 		summarySheetName: "Summary",
 		dateFormat:       "yyyy-mm-ddThh:MM:ss",
@@ -58,14 +58,14 @@ func evalXLSXReportOptions(options ...XLSXReporterOptions) (xo *xlsxReportOption
 	return
 }
 
-func XLSXScramble(scramble bool) XLSXReporterOptions {
+func XLSXScramble(scramble bool) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.scramble = scramble
 	}
 }
 
 // XLSXPassword sets the workbook password
-func XLSXPassword(password *config.Secret) XLSXReporterOptions {
+func XLSXPassword(password *config.Secret) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.password = password
 	}
@@ -83,37 +83,37 @@ const (
 // list of name/value pairs. If passed XLSXHeadlinesHorizontal then headlines
 // are added as two rows with each headlines added as a single column,
 // name above value.
-func XLSXHeadlines(headlines int) XLSXReporterOptions {
+func XLSXHeadlines(headlines int) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.headlines = headlines
 	}
 }
 
-func SummarySheetName(name string) XLSXReporterOptions {
+func SummarySheetName(name string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.summarySheetName = name
 	}
 }
 
-func DateFormat(dateFormat string) XLSXReporterOptions {
+func DateFormat(dateFormat string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.dateFormat = dateFormat
 	}
 }
 
-func IntFormat(format int) XLSXReporterOptions {
+func IntFormat(format int) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.intFormat = format
 	}
 }
 
-func PercentFormat(format int) XLSXReporterOptions {
+func PercentFormat(format int) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.percentFormat = format
 	}
 }
 
-func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOptions {
+func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.undefinedColour = undefined
 		xro.okColour = ok
@@ -122,13 +122,13 @@ func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOption
 	}
 }
 
-func MinColumnWidth(n float64) XLSXReporterOptions {
+func MinColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.minColWidth = n
 	}
 }
 
-func MaxColumnWidth(n float64) XLSXReporterOptions {
+func MaxColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.maxColWidth = n
 	}

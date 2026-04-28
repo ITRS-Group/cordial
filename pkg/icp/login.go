@@ -19,7 +19,7 @@ var icp *ICP
 
 // Login sends a login request to the http endpoint and returns a token
 // or an error
-func Login(username string, password *config.Secret, options ...rest.Options) (icp *ICP, err error) {
+func Login(username string, password *config.Secret, options ...rest.Option) (icp *ICP, err error) {
 	creds := &LoginRequest{
 		Username: username,
 		Password: password.String(),

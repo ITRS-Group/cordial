@@ -48,11 +48,11 @@ type packageOptions struct {
 	version      string
 }
 
-// PackageOptions can be passed to various function and influence
+// PackageOption can be passed to various function and influence
 // behaviour related to download, unpacking and using release packages
-type PackageOptions func(*packageOptions)
+type PackageOption func(*packageOptions)
 
-func evalOptions(options ...PackageOptions) (d *packageOptions) {
+func evalOptions(options ...PackageOption) (d *packageOptions) {
 	// defaults
 	d = &packageOptions{
 		downloadbase: "releases",
@@ -79,7 +79,7 @@ func evalOptions(options ...PackageOptions) (d *packageOptions) {
 // Downloads are stored in the directory given to Source() or the
 // default `packages/download` directory. NoSave and DownloadOnly
 // are mutually exclusive.
-func DownloadOnly(download bool) PackageOptions {
+func DownloadOnly(download bool) PackageOption {
 	return func(d *packageOptions) {
 		d.downloadonly = download
 	}
@@ -87,7 +87,7 @@ func DownloadOnly(download bool) PackageOptions {
 
 // Destination sets the destination host for the installation. This is
 // used to determine the OS and architecture required for any download.
-func Destination(host *Host) PackageOptions {
+func Destination(host *Host) PackageOption {
 	return func(po *packageOptions) {
 		po.host = host
 	}
@@ -95,7 +95,7 @@ func Destination(host *Host) PackageOptions {
 
 // NoSave stops downloads from being saved in the archive directory.
 // NoSave and DownloadOnly are mutually exclusive.
-func NoSave(nosave bool) PackageOptions {
+func NoSave(nosave bool) PackageOption {
 	return func(d *packageOptions) {
 		d.nosave = nosave
 	}
@@ -103,7 +103,7 @@ func NoSave(nosave bool) PackageOptions {
 
 // LocalOnly uses only existing archives and prevents attempts to
 // download releases
-func LocalOnly(local bool) PackageOptions {
+func LocalOnly(local bool) PackageOption {
 	return func(d *packageOptions) {
 		d.localOnly = local
 	}
@@ -114,7 +114,7 @@ func LocalOnly(local bool) PackageOptions {
 // appropriate archive file(s), a specific file or a URL to a
 // release. If the file is a URL, it is downloaded to the local archive
 // directory, which defaults to `packages/downloads`.
-func Source(path string) PackageOptions {
+func Source(path string) PackageOption {
 	return func(d *packageOptions) {
 		d.source = path
 	}
@@ -122,7 +122,7 @@ func Source(path string) PackageOptions {
 
 // Force ignores existing directories or files and also overrides
 // protection for running instances in upgrades
-func Force(force bool) PackageOptions {
+func Force(force bool) PackageOption {
 	return func(d *packageOptions) {
 		d.force = force
 	}
@@ -130,27 +130,27 @@ func Force(force bool) PackageOptions {
 
 // OverrideVersion forces a specific version to be used and fails if not
 // available
-func OverrideVersion(version string) PackageOptions {
+func OverrideVersion(version string) PackageOption {
 	return func(d *packageOptions) {
 		d.override = version
 	}
 }
 
 // Restart sets the instances to be restarted around the update
-func Restart(instance ...Instance) PackageOptions {
+func Restart(instance ...Instance) PackageOption {
 	return func(d *packageOptions) {
 		d.restart = append(d.restart, instance...)
 	}
 }
 
 // DoUpdate sets the option to also do an update after an install
-func DoUpdate(update bool) PackageOptions {
+func DoUpdate(update bool) PackageOption {
 	return func(d *packageOptions) { d.doupdate = update }
 }
 
 // StartFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StartFunc(fn func(Instance, ...any) error) PackageOptions {
+func StartFunc(fn func(Instance, ...any) error) PackageOption {
 	return func(d *packageOptions) {
 		d.start = fn
 	}
@@ -158,7 +158,7 @@ func StartFunc(fn func(Instance, ...any) error) PackageOptions {
 
 // StopFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StopFunc(fn func(Instance, bool, bool) error) PackageOptions {
+func StopFunc(fn func(Instance, bool, bool) error) PackageOption {
 	return func(d *packageOptions) {
 		d.stop = fn
 	}
@@ -167,7 +167,7 @@ func StopFunc(fn func(Instance, bool, bool) error) PackageOptions {
 // Version sets the desired version number, defaults to "latest" in most
 // cases. The version number is in the form `[GA]X.Y.Z` (or `RA` for
 // snapshots)
-func Version(version string) PackageOptions {
+func Version(version string) PackageOption {
 	return func(d *packageOptions) {
 		d.version = version
 	}
@@ -175,7 +175,7 @@ func Version(version string) PackageOptions {
 
 // Basename sets the package binary basename, defaults to active_prod,
 // for symlinks for update.
-func Basename(basename string) PackageOptions {
+func Basename(basename string) PackageOption {
 	return func(d *packageOptions) {
 		d.basename = basename
 	}
@@ -183,7 +183,7 @@ func Basename(basename string) PackageOptions {
 
 // SetPlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8/9 releases from others.
-func SetPlatformID(platform string) PackageOptions {
+func SetPlatformID(platform string) PackageOption {
 	return func(d *packageOptions) {
 		d.platformId = platform
 	}
@@ -191,21 +191,21 @@ func SetPlatformID(platform string) PackageOptions {
 
 // UseRoot sets the Geneos installation home directory (aka `geneos` in
 // the settings)
-func UseRoot(root string) PackageOptions {
+func UseRoot(root string) PackageOption {
 	return func(d *packageOptions) {
 		d.geneosdir = root
 	}
 }
 
 // Username is the remote access username for downloads
-func Username(username string) PackageOptions {
+func Username(username string) PackageOption {
 	return func(d *packageOptions) {
 		d.username = username
 	}
 }
 
 // Password is the remote access password for downloads
-func Password(password *config.Secret) PackageOptions {
+func Password(password *config.Secret) PackageOption {
 	return func(d *packageOptions) {
 		d.password = password
 	}
@@ -215,7 +215,7 @@ func Password(password *config.Secret) PackageOptions {
 // downloads instead of the default download URL in the settings. This
 // also influences the way the remote path is searched and build, not
 // just the base URL.
-func UseNexus() PackageOptions {
+func UseNexus() PackageOption {
 	return func(d *packageOptions) {
 		d.downloadtype = "nexus"
 	}
@@ -223,7 +223,7 @@ func UseNexus() PackageOptions {
 
 // UseNexusSnapshots set the flag to use Nexus Snapshots rather than
 // Releases.
-func UseNexusSnapshots() PackageOptions {
+func UseNexusSnapshots() PackageOption {
 	return func(d *packageOptions) {
 		d.downloadbase = "snapshots"
 	}
@@ -233,7 +233,7 @@ func UseNexusSnapshots() PackageOptions {
 // passing to URL requests. The NAME=VALUE is decomposed just before the
 // request so that the order the headers are added as options is
 // preserved. A header in the wrong format is ignored.
-func Headers(header ...string) PackageOptions {
+func Headers(header ...string) PackageOption {
 	return func(d *packageOptions) {
 		d.headers = append(d.headers, header...)
 	}

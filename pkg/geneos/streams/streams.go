@@ -40,7 +40,7 @@ type Stream struct {
 // Open a stream for writing. `stream` is an optional stream name and
 // additional arguments are ignored. If no stream name is supplied then
 // the sampler name is used for the stream name.
-func Open(url *url.URL, entity, sampler string, stream string, options ...xmlrpc.Options) (s *Stream, err error) {
+func Open(url *url.URL, entity, sampler string, stream string, options ...xmlrpc.Option) (s *Stream, err error) {
 	name := sampler
 	if stream != "" {
 		name = stream

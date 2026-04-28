@@ -178,7 +178,7 @@ func (responses Responses) Formatted(w io.Writer, format string, headings []stri
 // and when structured logging is introduced.
 //
 // Report calls Flush() after writing to CSV or Tab writers.
-func (responses Responses) Report(writer any, options ...WriterOptions) {
+func (responses Responses) Report(writer any, options ...WriterOption) {
 	var rows [][]string
 
 	if len(responses) == 0 {
@@ -341,7 +341,7 @@ func (responses Responses) Report(writer any, options ...WriterOptions) {
 }
 
 // Report writes a single response to the writer w given the options.
-func (resp Response) Report(writer any, options ...WriterOptions) {
+func (resp Response) Report(writer any, options ...WriterOption) {
 	opts := evalWriterOptions(options...)
 
 	if resp.Err != nil && opts.skiponerr {
@@ -444,7 +444,7 @@ func (resp Response) Report(writer any, options ...WriterOptions) {
 
 // WriteHTML will structure the responses in a way that can be displayed
 // well in an HTML container. Currently does nothing.
-func (responses Responses) WriteHTML(writer any, options ...WriterOptions) {
+func (responses Responses) WriteHTML(writer any, options ...WriterOption) {
 	if len(responses) == 0 {
 		return
 	}

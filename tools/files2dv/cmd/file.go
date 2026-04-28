@@ -28,11 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 )
 
 func processFiles(dv *config.Config) (dataview Dataview, err error) {
@@ -54,7 +52,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	}
 
 	// try direct unmarshal, fall back to slice of strings
-	err = dv.UnmarshalKey("columns", &columns, viper.DecodeHook(mapstructure.TextUnmarshallerHookFunc()))
+	err = dv.UnmarshalKey("columns", &columns)
 	if err != nil {
 		// reset columns
 		columns = []Column{}

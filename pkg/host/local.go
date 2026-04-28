@@ -199,7 +199,7 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	return nil
 }
 
-func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
+func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 
 	errfile := po.errfile
@@ -240,7 +240,7 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
 
 // Run starts a program, waits for completion and returns the output
 // and/or any error. errfile is either absolute or relative to home.
-func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOptions) (output []byte, err error) {
+func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err error) {
 	po := evalProcessOptions(options...)
 	errfile := po.errfile
 	if errfile == "" {

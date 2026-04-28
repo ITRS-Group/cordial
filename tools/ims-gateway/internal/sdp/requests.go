@@ -46,7 +46,7 @@ import (
 // The function will handle the conversion of the search criteria to the
 // appropriate format for the API request, and will return a structured
 // response containing the list of requests.
-func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo any, opts ...config.ExpandOptions) (response *RequestGetListResponse, err error) {
+func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo any, opts ...config.ExpandOption) (response *RequestGetListResponse, err error) {
 	v := url.Values{}
 
 	switch s := listInfo.(type) {

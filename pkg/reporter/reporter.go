@@ -109,9 +109,9 @@ type reporterCommon struct {
 func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err error) {
 	// pull out general reporter options, which are passed to each
 	// reporter factory method
-	var ro []ReporterOptions
+	var ro []ReporterOption
 	options = slices.DeleteFunc(options, func(o any) bool {
-		if a, ok := o.(ReporterOptions); ok {
+		if a, ok := o.(ReporterOption); ok {
 			ro = append(ro, a)
 			return true
 		}
@@ -125,9 +125,9 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 	case "toolkit":
 		r = newToolkitReporter(w, opts)
 	case "api", "dataview":
-		var apioptions []APIReporterOptions
+		var apioptions []APIReporterOption
 		for _, o := range options {
-			if a, ok := o.(APIReporterOptions); ok {
+			if a, ok := o.(APIReporterOption); ok {
 				apioptions = append(apioptions, a)
 			} else {
 				panic("wrong option type")
@@ -135,9 +135,9 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 		}
 		r, err = newAPIReporter(opts, apioptions...)
 	case "xlsx":
-		var xlsxoptions []XLSXReporterOptions
+		var xlsxoptions []XLSXReporterOption
 		for _, o := range options {
-			if x, ok := o.(XLSXReporterOptions); ok {
+			if x, ok := o.(XLSXReporterOption); ok {
 				xlsxoptions = append(xlsxoptions, x)
 			} else {
 				panic("wrong option type")
@@ -145,12 +145,12 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 		}
 		r = newXLSXReporter(w, opts, xlsxoptions...)
 	case "table", "html", "markdown", "md", "tsv", "csv":
-		var fmtoptions = []FormattedReporterOptions{
+		var fmtoptions = []FormattedReporterOption{
 			Writer(w),
 			RenderAs(format),
 		}
 		for _, o := range options {
-			if f, ok := o.(FormattedReporterOptions); ok {
+			if f, ok := o.(FormattedReporterOption); ok {
 				fmtoptions = append(fmtoptions, f)
 			} else {
 				panic("wrong option type")

@@ -17,7 +17,7 @@ limitations under the License.
 
 package host
 
-type ProcessOptions func(*processOptions)
+type ProcessOption func(*processOptions)
 
 type processOptions struct {
 	errfile    string
@@ -25,7 +25,7 @@ type processOptions struct {
 	createCore bool
 }
 
-func evalProcessOptions(options ...ProcessOptions) (d *processOptions) {
+func evalProcessOptions(options ...ProcessOption) (d *processOptions) {
 	// defaults
 	d = &processOptions{}
 	for _, opt := range options {
@@ -34,20 +34,20 @@ func evalProcessOptions(options ...ProcessOptions) (d *processOptions) {
 	return
 }
 
-func ProcessErrfile(errfile string) ProcessOptions {
+func ProcessErrfile(errfile string) ProcessOption {
 	return func(po *processOptions) {
 		po.errfile = errfile
 	}
 }
 
 // ProcessDetach makes the process run detached from the parent
-func ProcessDetach() ProcessOptions {
+func ProcessDetach() ProcessOption {
 	return func(po *processOptions) {
 		po.detach = true
 	}
 }
 
-func ProcessCreateCore() ProcessOptions {
+func ProcessCreateCore() ProcessOption {
 	return func(po *processOptions) {
 		po.createCore = true
 	}

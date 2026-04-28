@@ -255,7 +255,7 @@ type varConf struct {
 	Value any
 }
 
-func getVars(conf *config.Config, key string, options ...config.ExpandOptions) (vars []geneos.Vars) {
+func getVars(conf *config.Config, key string, options ...config.ExpandOption) (vars []geneos.Vars) {
 	var vs []varConf
 	if err := conf.UnmarshalKey(key, &vs); err != nil {
 		log.Error().Err(err).Msgf("skipping %s", key)

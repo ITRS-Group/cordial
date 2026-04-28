@@ -39,15 +39,15 @@ type expandOptions struct {
 	useKeyFile         string
 }
 
-// ExpandOptions control the way configuration options undergo string
+// ExpandOption control the way configuration options undergo string
 // expansion through the underlying [ExpandString] functions.
-// ExpandOptions can be passed to any of the normal lookup functions
+// ExpandOption can be passed to any of the normal lookup functions
 // that are provided to override [viper] versions, such as [GetString].
 //
 // e.g.
 //
 //	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
-type ExpandOptions func(*expandOptions)
+type ExpandOption func(*expandOptions)
 
 // use a normal map, protected with mutex and not sync.Map as this is
 // copied into a normal map later on
@@ -58,7 +58,7 @@ var defaultFuncMaps = map[string]func(configItems map[string]any, name string, t
 }
 var defaultFuncMapsMutex sync.Mutex
 
-func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
+func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	e = &expandOptions{
 		externalFuncMaps: true,
 		funcMaps:         map[string]func(configItems map[string]any, name string, trim bool) (string, error){},
@@ -95,7 +95,7 @@ func evalExpandOptions(c *Config, options ...ExpandOptions) (e *expandOptions) {
 // SetDefaultExpandOptions sets defaults to all subsequent calls to
 // functions that perform configuration expansion. These defaults can be
 // reset by calling SetDefaultExpandOptions with no arguments.
-func (c *Config) SetDefaultExpandOptions(options ...ExpandOptions) {
+func (c *Config) SetDefaultExpandOptions(options ...ExpandOption) {
 	c.defaultExpandOptions = options
 }
 
@@ -104,7 +104,7 @@ func (c *Config) SetDefaultExpandOptions(options ...ExpandOptions) {
 // This is to allow the normal functions and methods to be called but to
 // receive the underlying configuration item, such as an encoded
 // password.
-func NoExpand() ExpandOptions {
+func NoExpand() ExpandOption {
 	return func(e *expandOptions) {
 		e.noExpand = true
 	}
@@ -113,7 +113,7 @@ func NoExpand() ExpandOptions {
 // NoDecode disables the expansion of encoded (`enc:`) values. Use this
 // option if you want the expanded value of the configuration item but
 // without decoding sensitive data such as secrets and passwords.
-func NoDecode(n bool) ExpandOptions {
+func NoDecode(n bool) ExpandOption {
 	return func(e *expandOptions) {
 		e.noDecode = n
 	}
@@ -127,7 +127,7 @@ func NoDecode(n bool) ExpandOptions {
 // match, if any, wins. If there is no match in any of the lookup maps
 // then a nil value is returned and environment variables are not
 // checked.
-func LookupTable(values ...map[string]string) ExpandOptions {
+func LookupTable(values ...map[string]string) ExpandOption {
 	return func(e *expandOptions) {
 		e.lookupTables = append(e.lookupTables, values...)
 	}
@@ -138,7 +138,7 @@ func LookupTable(values ...map[string]string) ExpandOptions {
 //
 // Deprecated: Use the singular LookupTable with a variadic list of
 // tables instead.
-func LookupTables(values []map[string]string) ExpandOptions {
+func LookupTables(values []map[string]string) ExpandOption {
 	return func(e *expandOptions) {
 		e.lookupTables = values
 	}
@@ -157,7 +157,7 @@ func LookupTables(values []map[string]string) ExpandOptions {
 // so. The function should return an error if the prefix matches but the
 // value is invalid for any reason, such as a network error when
 // fetching a URL or a missing file when fetching from the file system.
-func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool) (string, error)) ExpandOptions {
+func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool) (string, error)) ExpandOption {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fn
 	}
@@ -166,7 +166,7 @@ func Prefix(prefix string, fn func(configItems map[string]any, name string, trim
 // ExternalLookups enables or disables the built-in expansion options
 // that fetch data from outside the program, such as URLs and file
 // paths. The default is true.
-func ExternalLookups(yes bool) ExpandOptions {
+func ExternalLookups(yes bool) ExpandOption {
 	return func(e *expandOptions) {
 		e.externalFuncMaps = yes
 	}
@@ -175,7 +175,7 @@ func ExternalLookups(yes bool) ExpandOptions {
 // Expressions enables or disables the built-in expansion for
 // expressions via the `github.com/maja42/goval` package. The default is
 // false.
-func Expressions(yes bool) ExpandOptions {
+func Expressions(yes bool) ExpandOption {
 	return func(e *expandOptions) {
 		e.expressions = yes
 	}
@@ -187,7 +187,7 @@ func Expressions(yes bool) ExpandOptions {
 // need the schema explicitly added after the prefix. Using this option
 // allows standard function like [strings.ToUpper] to be used without
 // additional wrappers.
-func TrimPrefix() ExpandOptions {
+func TrimPrefix() ExpandOption {
 	return func(e *expandOptions) {
 		e.trimPrefix = true
 	}
@@ -196,7 +196,7 @@ func TrimPrefix() ExpandOptions {
 // TrimSpace enables the removal of leading and trailing spaces on all
 // values in an expansion. The default is `true`. If a default
 // value is given using the Default() then this is never trimmed.
-func TrimSpace(trim bool) ExpandOptions {
+func TrimSpace(trim bool) ExpandOption {
 	return func(e *expandOptions) {
 		e.trimSpace = trim
 	}
@@ -211,7 +211,7 @@ func TrimSpace(trim bool) ExpandOptions {
 // ignored. e.g.
 //
 //	config.Get[uint16]("config.value", config.DefaultValue(uint16(1234)))
-func DefaultValue(value any) ExpandOptions {
+func DefaultValue(value any) ExpandOption {
 	return func(e *expandOptions) {
 		e.defaultValue = value
 	}
@@ -224,7 +224,7 @@ func DefaultValue(value any) ExpandOptions {
 //
 // If config.NoExpand() is also used then this initial value is used as
 // a secondary default - i.e. if config.DefaultValue() is empty.
-func InitialValue(value any) ExpandOptions {
+func InitialValue(value any) ExpandOption {
 	return func(e *expandOptions) {
 		e.initialValue = value
 	}
@@ -247,7 +247,7 @@ func InitialValue(value any) ExpandOptions {
 // Expand strings in the value are never substituted.
 //
 // name is not checked for self-referencing
-func Replace(name string) ExpandOptions {
+func Replace(name string) ExpandOption {
 	return func(e *expandOptions) {
 		e.replacements = append(e.replacements, name)
 	}
@@ -256,7 +256,7 @@ func Replace(name string) ExpandOptions {
 // UseKeyfile overrides the path to the embedded keyfile in the
 // `${enc:/path:xxx}` value. This can be useful when the keyfile is
 // placed in an alternative location.
-func UseKeyfile(file string) ExpandOptions {
+func UseKeyfile(file string) ExpandOption {
 	return func(eo *expandOptions) {
 		eo.useKeyFile = file
 	}
@@ -265,7 +265,7 @@ func UseKeyfile(file string) ExpandOptions {
 // ExpandNonStringToCSV causes any non-string configuration item
 // expansions of lists to return a comma-separated list of any strings
 // in that list. Non-string values are skipped.
-func ExpandNonStringToCSV() ExpandOptions {
+func ExpandNonStringToCSV() ExpandOption {
 	return func(eo *expandOptions) {
 		eo.expandNonString = true
 		eo.expandNonStringCSV = true
@@ -274,7 +274,7 @@ func ExpandNonStringToCSV() ExpandOptions {
 
 // ExpandNonStringToJSON causes any non-string configuration expansions
 // to be returned as a JSON encoded string of the item
-func ExpandNonStringToJSON() ExpandOptions {
+func ExpandNonStringToJSON() ExpandOption {
 	return func(eo *expandOptions) {
 		eo.expandNonString = true
 	}

@@ -54,9 +54,9 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	options := []StartOptions{}
+	options := []StartOption{}
 	for _, o := range opts {
-		if option, ok := o.(StartOptions); ok {
+		if option, ok := o.(StartOption); ok {
 			options = append(options, option)
 		}
 	}
@@ -94,7 +94,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 // so can be used for display to a user without revealing secrets.
 //
 // Any extras arguments are appended without further checks
-func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOptions) (cmd *exec.Cmd, err error) {
+func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *exec.Cmd, err error) {
 	var env []string
 	var home string
 
@@ -172,9 +172,9 @@ type startOptions struct {
 	skipfilecheck bool
 }
 
-type StartOptions func(*startOptions)
+type StartOption func(*startOptions)
 
-func evalStartOptions(options ...StartOptions) (d *startOptions) {
+func evalStartOptions(options ...StartOption) (d *startOptions) {
 	// defaults
 	d = &startOptions{}
 	for _, opt := range options {
@@ -186,7 +186,7 @@ func evalStartOptions(options ...StartOptions) (d *startOptions) {
 // StartingExtras sets extra command line parameters by splitting extras
 // on spaces. Quotes, escaping and other shell-like separators are
 // ignored.
-func StartingExtras(extras string) StartOptions {
+func StartingExtras(extras string) StartOption {
 	return func(so *startOptions) {
 		so.extras = strings.Fields(extras)
 	}
@@ -194,13 +194,13 @@ func StartingExtras(extras string) StartOptions {
 
 // StartingEnvs takes a NameValues list of extra environment variables
 // to append to the standard list for the instance.
-func StartingEnvs(envs NameValues) StartOptions {
+func StartingEnvs(envs NameValues) StartOption {
 	return func(so *startOptions) {
 		so.envs = envs
 	}
 }
 
-func SkipFileCheck() StartOptions {
+func SkipFileCheck() StartOption {
 	return func(so *startOptions) {
 		so.skipfilecheck = true
 	}

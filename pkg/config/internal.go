@@ -109,7 +109,7 @@ func (c *Config) registerAlias(alias, key string) {
 	c.viper.RegisterAlias(alias, key)
 }
 
-func expand[T string | []byte](c *Config, input string, options ...ExpandOptions) (value T) {
+func expand[T string | []byte](c *Config, input string, options ...ExpandOption) (value T) {
 	opts := evalExpandOptions(c, options...)
 
 	if opts.noExpand {
@@ -160,7 +160,7 @@ func expand[T string | []byte](c *Config, input string, options ...ExpandOptions
 // applying Expand to all string values and all string slice
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
-func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any) {
+func (c *Config) expandAllSettings(options ...ExpandOption) (all map[string]any) {
 	as := c.allSettings()
 	all = make(map[string]any, len(as))
 
@@ -201,7 +201,7 @@ func (c *Config) expandAllSettings(options ...ExpandOptions) (all map[string]any
 // prefixed with `+encs+` (standard Geneos usage) then it is used
 // directly, otherwise the value is looked-up using the normal
 // conventions for external access, e.g. file or URL.
-func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOptions) (value T) {
+func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOption) (value T) {
 	opts := evalExpandOptions(c, options...)
 
 	keyfiles, encodedValue := splitEncFields(string(s))
@@ -259,7 +259,7 @@ func splitEncFields(enc string) (keyfiles, ciphertext string) {
 // resolved is not a plain string then it is either, for a slice of
 // values, returned as a string containing comma-separated strings found
 // or as a JSON encoded representation of the value.
-func (c *Config) expandRawString(s string, options ...ExpandOptions) (value string, err error) {
+func (c *Config) expandRawString(s string, options ...ExpandOption) (value string, err error) {
 	opts := evalExpandOptions(c, options...)
 	switch {
 	// if the string looks like a file path and there is a "file"
@@ -428,7 +428,7 @@ func _expand[T string | []byte](s string, mapping func(T) T) T {
 
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
-func (c *Config) expandStringSlice(input []string, options ...ExpandOptions) (vals []string) {
+func (c *Config) expandStringSlice(input []string, options ...ExpandOption) (vals []string) {
 	for _, v := range input {
 		vals = append(vals, expand[string](c, v, options...))
 	}
@@ -482,7 +482,7 @@ func getContents(s string) (string, int) {
 // checked, leaving get() to fixup mappings. `found` is true only if the
 // configuration item is set, not if the options provide a default
 // value.
-func lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, found bool) {
+func lookup[T any](c *Config, key string, options ...ExpandOption) (value T, found bool) {
 	if !c.isSet(key) {
 		return
 	}
@@ -490,7 +490,7 @@ func lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, fo
 	return get[T](c, key, options...), true
 }
 
-func get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
+func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	if !c.isSet(key) {
 		opts := evalExpandOptions(c, options...)
 		if !isZero(opts.defaultValue) {
@@ -601,7 +601,7 @@ func deleteKey(c *Config, key string) {
 }
 
 // set a value
-func set[T any](c *Config, key string, value T, options ...ExpandOptions) {
+func set[T any](c *Config, key string, value T, options ...ExpandOption) {
 	opts := evalExpandOptions(c, options...)
 
 	if opts.noExpand {
@@ -721,8 +721,8 @@ func (c *Config) sub(key string) *Config {
 // default decoder configuration as our decode function, ensuring that
 // time.Duration values and string slices are properly handled when unmarshalling
 // into a struct. A key not being set is not an error.
-func (c *Config) unmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
-	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, opts...))
+func (c *Config) unmarshalKey(key string, rawVal any, options ...ExpandOption) error {
+	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, options...))
 }
 
 // A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
@@ -736,18 +736,28 @@ func decode(input any, config *mapstructure.DecoderConfig) error {
 
 // defaultDecoderConfig returns default mapstructure.DecoderConfig with support
 // of time.Duration values & string slices
-func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstructure.DecoderConfig {
+func defaultDecoderConfig(output any, options ...ExpandOption) *mapstructure.DecoderConfig {
 	c := &mapstructure.DecoderConfig{
 		Metadata:         nil,
 		Result:           output,
 		WeaklyTypedInput: true,
+		TagName:          "mapstructure,json,yaml",
 		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeHookFunc(time.RFC3339),
 			mapstructure.StringToTimeDurationHookFunc(),
 			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.TextUnmarshallerHookFunc(),
 		),
 	}
-	for _, opt := range opts {
-		opt(c)
+	opts := evalExpandOptions(nil, options...)
+	if !opts.noExpand {
+		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
+			ExpandFieldsHook(options...),
+			mapstructure.StringToTimeHookFunc(time.RFC3339),
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.TextUnmarshallerHookFunc(),
+		)
 	}
 	return c
 }
@@ -759,7 +769,7 @@ func defaultDecoderConfig(output any, opts ...viper.DecoderConfigOption) *mapstr
 // prefixed with `config:` then it is replaced with `${config:...}` to
 // ensure that it is not re-expanded when the value is later expanded as
 // a whole.
-func (c *Config) replaceStringParam(value string, options ...ExpandOptions) string {
+func (c *Config) replaceStringParam(value string, options ...ExpandOption) string {
 	opts := evalExpandOptions(c, options...)
 
 	for _, r := range opts.replacements {

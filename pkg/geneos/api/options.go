@@ -21,9 +21,9 @@ type apiOptions struct {
 	insecureSkipVerify bool
 }
 
-type Options func(*apiOptions)
+type Option func(*apiOptions)
 
-func evalOptions(options ...Options) *apiOptions {
+func evalOptions(options ...Option) *apiOptions {
 	opts := &apiOptions{}
 	for _, opt := range options {
 		opt(opts)
@@ -32,7 +32,7 @@ func evalOptions(options ...Options) *apiOptions {
 }
 
 // InsecureSkipVerify
-func InsecureSkipVerify() Options {
+func InsecureSkipVerify() Option {
 	return func(c *apiOptions) {
 		c.insecureSkipVerify = true
 	}

@@ -56,7 +56,7 @@ type FormattedReporter struct {
 	htmlpreamble    string
 	htmlpostscript  string
 	orderbycolumns  []int
-	options         []FormattedReporterOptions
+	options         []FormattedReporterOption
 	scrambleColumns []string
 }
 
@@ -64,7 +64,7 @@ type FormattedReporter struct {
 var _ Reporter = (*FormattedReporter)(nil)
 
 // newFormattedReporter returns a new FormattedReporter reporter
-func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOptions) (t *FormattedReporter) {
+func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOption) (t *FormattedReporter) {
 	opts := evalFormattedOptions(options...)
 	t = &FormattedReporter{
 		reporterCommon: reporterCommon{
@@ -277,7 +277,7 @@ func (fr *FormattedReporter) Extension() string {
 	return fr.format
 }
 
-func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOptions) {
+func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOption) {
 	// update saved options
 	fr.options = options
 

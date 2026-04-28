@@ -21,7 +21,7 @@ type Hub struct {
 // underlying HTTP response
 var ErrServerError = errors.New("error from server (HTTP Status > 299)")
 
-func New(options ...rest.Options) *Hub {
+func New(options ...rest.Option) *Hub {
 	c := rest.NewClient(options...)
 	return &Hub{Client: c}
 }

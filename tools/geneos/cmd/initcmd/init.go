@@ -217,10 +217,10 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(command *cobra.Command, args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOptions, err error) {
+func initProcessArgs(command *cobra.Command, args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOption, err error) {
 	var root string
 
-	options = []geneos.PackageOptions{
+	options = []geneos.PackageOption{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),

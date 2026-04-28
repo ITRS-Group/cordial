@@ -52,7 +52,7 @@ const (
 // not used then the new key will be of the same type as the signing
 // key. If there is no signing key and the WithKeyType option is not
 // used then a default key type will be used.
-func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.Enclave, options ...CreateCertOptions) (cert *x509.Certificate, key *memguard.Enclave, err error) {
+func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.Enclave, options ...CreateCertOption) (cert *x509.Certificate, key *memguard.Enclave, err error) {
 	var certBytes []byte
 	var pub crypto.PublicKey
 	var keytype KeyType

@@ -20,7 +20,7 @@ var ErrServerError = errors.New("error from server (HTTP status > 299)")
 // New returns a new ICP object. BaseURL defaults to
 // "https://icp-api.itrsgroup.com/v2.0" and client, if nil, to a default
 // http.Client
-func New(options ...rest.Options) (icp *ICP) {
+func New(options ...rest.Option) (icp *ICP) {
 	return &ICP{
 		Client: rest.NewClient(options...),
 	}

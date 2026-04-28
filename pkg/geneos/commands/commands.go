@@ -117,7 +117,7 @@ const endpoint = "/rest/runCommand"
 // Options can be given to set authentication, ignore unverifiable
 // certificates and to override the default "ping" to check the gateway
 // connection
-func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
+func DialGateway(u *url.URL, options ...Option) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: []*url.URL{u},
 	}
@@ -132,7 +132,7 @@ func DialGateway(u *url.URL, options ...Options) (c *Connection, err error) {
 // then an error is returned.
 //
 // Options are the same as for DialGateway()
-func DialGateways(urls []*url.URL, options ...Options) (c *Connection, err error) {
+func DialGateways(urls []*url.URL, options ...Option) (c *Connection, err error) {
 	c = &Connection{
 		rrurls: urls,
 	}

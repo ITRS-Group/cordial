@@ -33,7 +33,7 @@ type formattedReporterOptions struct {
 	orderbycolumns   []int
 }
 
-func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedReporterOptions) {
+func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedReporterOptions) {
 	fro = &formattedReporterOptions{
 		renderas:         "table",
 		dvcssclass:       "table",
@@ -46,51 +46,51 @@ func evalFormattedOptions(options ...FormattedReporterOptions) (fro *formattedRe
 	return
 }
 
-type FormattedReporterOptions func(*formattedReporterOptions)
+type FormattedReporterOption func(*formattedReporterOptions)
 
-func Writer(w io.Writer) FormattedReporterOptions {
+func Writer(w io.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.writer = w
 	}
 }
 
-func ZipWriter(z *zip.Writer) FormattedReporterOptions {
+func ZipWriter(z *zip.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.zipWriter = z
 	}
 }
 
-func RenderAs(renderas string) FormattedReporterOptions {
+func RenderAs(renderas string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.renderas = renderas
 	}
 }
 
-func DataviewCSSClass(cssclass string) FormattedReporterOptions {
+func DataviewCSSClass(cssclass string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.dvcssclass = cssclass
 	}
 }
 
-func HeadlineCSSClass(cssclass string) FormattedReporterOptions {
+func HeadlineCSSClass(cssclass string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.headlinecssclass = cssclass
 	}
 }
 
-func HTMLPreamble(preamble string) FormattedReporterOptions {
+func HTMLPreamble(preamble string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpreamble = preamble
 	}
 }
 
-func HTMLPostscript(postscript string) FormattedReporterOptions {
+func HTMLPostscript(postscript string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpostscript = postscript
 	}
 }
 
-func OrderByColumns(cols ...int) FormattedReporterOptions {
+func OrderByColumns(cols ...int) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.orderbycolumns = cols
 	}

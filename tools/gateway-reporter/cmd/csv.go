@@ -274,7 +274,7 @@ func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities [
 	return
 }
 
-func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (cols, attrs, plugins []string, err error) {
+func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.ExpandOption) (cols, attrs, plugins []string, err error) {
 	cols = config.Get[[]string](cf, "output.reports.entities.columns",
 		config.DefaultValue([]string{"managedEntity", "probe", "hostname", "port"}),
 	)
@@ -297,7 +297,7 @@ func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.
 	return
 }
 
-func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (err error) {
+func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption) (err error) {
 	cols, attrs, plugins, err := outputEntityColumns(Entities, cf, conftable)
 
 	ecsv := csv.NewWriter(w)
@@ -350,7 +350,7 @@ func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, confta
 	return
 }
 
-func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
@@ -380,7 +380,7 @@ func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, co
 	return
 }
 
-func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
@@ -423,7 +423,7 @@ func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config,
 	return
 }
 
-func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	heading := []string{"rowname"}
@@ -463,7 +463,7 @@ func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config
 	return
 }
 
-func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
 	heading := []string{"rowname"}

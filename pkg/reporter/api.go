@@ -62,7 +62,7 @@ var _ Reporter = (*APIReporter)(nil)
 //
 // If reset is true then Dataviews are reset on the first use from
 // SetReport()
-func newAPIReporter(ropts *reporterOptions, options ...APIReporterOptions) (a *APIReporter, err error) {
+func newAPIReporter(ropts *reporterOptions, options ...APIReporterOption) (a *APIReporter, err error) {
 	opts := evalAPIOptions(options...)
 
 	a = &APIReporter{

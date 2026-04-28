@@ -91,7 +91,7 @@ type sheet struct {
 var _ Reporter = (*XLSXReporter)(nil)
 
 // NewTableReporter returns a new Table reporter
-func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporterOptions) (x *XLSXReporter) {
+func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporterOption) (x *XLSXReporter) {
 	opts := evalXLSXReportOptions(options...)
 
 	x = &XLSXReporter{

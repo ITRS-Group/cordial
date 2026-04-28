@@ -62,9 +62,6 @@ func validateFields(keys []string) bool {
 	}
 
 	// check keys are unique when lowercased
-	//
-	// NOTE: this could be skipped as viper lowercases all parameters
-	// names from yaml, but we change future YAML parsers
 	slices.SortFunc(keys, func(a, b string) int {
 		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
 	})

@@ -32,10 +32,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -141,9 +139,6 @@ var addGroupCmd = &cobra.Command{
 		var groups []Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}
@@ -187,9 +182,6 @@ var addGroupCmd = &cobra.Command{
 
 			if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
 				&allocations,
-				viper.DecodeHook(
-					mapstructure.StringToTimeHookFunc(time.RFC3339),
-				),
 			); err != nil {
 				panic(err)
 			}
@@ -303,9 +295,6 @@ var removeGroupCmd = &cobra.Command{
 		var groups []*Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}
@@ -389,9 +378,6 @@ var listGroupCmd = &cobra.Command{
 			var groups []Group
 			if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 				&groups,
-				viper.DecodeHook(
-					mapstructure.StringToTimeHookFunc(time.RFC3339),
-				),
 			); err != nil {
 				panic(err)
 			}
@@ -456,9 +442,6 @@ OUTER:
 		var groups []Group
 		if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 			&groups,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}
@@ -577,9 +560,6 @@ OUTER:
 		var allocations []Allocation
 		if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
 			&allocations,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}

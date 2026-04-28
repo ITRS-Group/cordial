@@ -164,7 +164,7 @@ func colWidth(chars int, min float64) float64 {
 	return w
 }
 
-func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions) (err error) {
+func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOption) (err error) {
 	sheet := config.Get[string](cf, "output.reports.entities.sheetname")
 	if _, err = x.NewSheet(sheet); err != nil {
 		return
@@ -274,7 +274,7 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 	// return
 }
 
-func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	rows := 0
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
@@ -368,7 +368,7 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 }
 
 // output two columns of data, sort both lists, output blanks for shorter list
-func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOptions, plugin string) (err error) {
+func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	sheet := config.Get[string](cf, config.Join("output", "reports", plugin, "sheetname"), config.DefaultValue(strings.ToTitle(plugin)))
 
 	if _, err = x.NewSheet(sheet); err != nil {

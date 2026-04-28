@@ -125,7 +125,7 @@ func TestStreamWrite(t *testing.T) {
 	// Skip the actual Write call since it would panic with nil client
 	// In a real test, we would use a mock client
 	t.Log("Skipping Stream.Write test due to nil client (would panic)")
-	
+
 	// Test the struct fields instead
 	if stream.entity != "test-entity" {
 		t.Errorf("Expected entity 'test-entity', got '%s'", stream.entity)
@@ -151,7 +151,7 @@ func TestApiOptionsStruct(t *testing.T) {
 
 func TestOptionsFunction(t *testing.T) {
 	// Test that Options is a function type
-	var opt Options
+	var opt Option
 	if opt == nil {
 		// This is expected for a zero value
 		t.Log("Options zero value is nil (expected)")

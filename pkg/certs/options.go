@@ -17,13 +17,13 @@ limitations under the License.
 
 package certs
 
-type CreateCertOptions func(*createCertOptions) error
+type CreateCertOption func(*createCertOptions) error
 
 type createCertOptions struct {
 	keytype KeyType
 }
 
-func evalCreateCertOptions(opts ...CreateCertOptions) (*createCertOptions, error) {
+func evalCreateCertOptions(opts ...CreateCertOption) (*createCertOptions, error) {
 	o := &createCertOptions{}
 	for _, opt := range opts {
 		if err := opt(o); err != nil {
@@ -33,7 +33,7 @@ func evalCreateCertOptions(opts ...CreateCertOptions) (*createCertOptions, error
 	return o, nil
 }
 
-func WithKeyType(keytype KeyType) CreateCertOptions {
+func WithKeyType(keytype KeyType) CreateCertOption {
 	return func(o *createCertOptions) error {
 		o.keytype = keytype
 		return nil

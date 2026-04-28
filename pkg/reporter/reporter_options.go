@@ -21,7 +21,7 @@ limitations under the License.
 // formats.
 package reporter
 
-type ReporterOptions func(*reporterOptions)
+type ReporterOption func(*reporterOptions)
 
 type reporterOptions struct {
 	scrambleNames   bool
@@ -29,7 +29,7 @@ type reporterOptions struct {
 	scrambleColumns []string
 }
 
-func evalReporterOptions(options ...ReporterOptions) (ro *reporterOptions) {
+func evalReporterOptions(options ...ReporterOption) (ro *reporterOptions) {
 	ro = &reporterOptions{
 		scrambleFunc: scrambleWords,
 	}
@@ -39,19 +39,19 @@ func evalReporterOptions(options ...ReporterOptions) (ro *reporterOptions) {
 	return
 }
 
-func Scramble(scramble bool) ReporterOptions {
+func Scramble(scramble bool) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleNames = scramble
 	}
 }
 
-func ScrambleFunc(fn func(in string) string) ReporterOptions {
+func ScrambleFunc(fn func(in string) string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleFunc = fn
 	}
 }
 
-func ScrambleColumns(columns []string) ReporterOptions {
+func ScrambleColumns(columns []string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleColumns = columns
 	}

@@ -249,7 +249,7 @@ var deployCmd = &cobra.Command{
 				}
 			}
 
-			options := []geneos.PackageOptions{
+			options := []geneos.PackageOption{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
 				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName())),

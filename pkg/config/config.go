@@ -37,7 +37,7 @@ type Config struct {
 	viper                *viper.Viper
 	mutex                *sync.RWMutex // mutex to protect concurrent access to the above viper
 	configType           string        // The type of configuration file loaded ("rc", "json", "yaml" etc) - this is not the same as the config type used for unmarshalling, which is determined by the file extension or SetConfigType() call and is stored in viper.ConfigType()
-	defaultExpandOptions []ExpandOptions
+	defaultExpandOptions []ExpandOption
 	delimiter            string
 	appUserConfDir       string
 }
@@ -60,7 +60,7 @@ func Global() *Config {
 // ResetConfig reinitialises the global configuration object. Existing
 // settings will be copied over. This is primarily to be able to change
 // the default delimiter after start-up.
-func ResetConfig(options ...FileOptions) {
+func ResetConfig(options ...FileOption) {
 	globalMutex.Lock()
 	defer globalMutex.Unlock()
 
@@ -72,7 +72,7 @@ func ResetConfig(options ...FileOptions) {
 // New returns a Config instance initialised with a new viper instance.
 // Can be called with config.DefaultExpandOptions(...) to set defaults for
 // future calls that use Expand.
-func New(options ...FileOptions) *Config {
+func New(options ...FileOption) *Config {
 	var appUserConfDir string
 	opts := evalFileOptions(options...)
 	if userConfDir, err := UserConfigDir(); err == nil {
@@ -176,7 +176,7 @@ func (c *Config) Sub(key string) *Config {
 	return c.sub(key)
 }
 
-func Set[T any](c *Config, key string, value T, options ...ExpandOptions) {
+func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	set(c, key, value, options...)
@@ -212,13 +212,13 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOptions) {
 // If the option [`config.Default`] is used, then the type must be
 // identical to T. If it is not, then the default value is the zero
 // value for the type T.
-func Get[T any](c *Config, key string, options ...ExpandOptions) (value T) {
+func Get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return get[T](c, key, options...)
 }
 
-func Lookup[T any](c *Config, key string, options ...ExpandOptions) (value T, found bool) {
+func Lookup[T any](c *Config, key string, options ...ExpandOption) (value T, found bool) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 	return lookup[T](c, key, options...)
@@ -235,7 +235,7 @@ func Delete(c *Config, key string) {
 // given. This is intended to be used in Unmarshal calls to allow for
 // dynamic values in the configuration file. The hook will only expand
 // string fields, and will leave other types unchanged.
-var ExpandFieldsHook = func(opts ...ExpandOptions) mapstructure.DecodeHookFunc {
+var ExpandFieldsHook = func(options ...ExpandOption) mapstructure.DecodeHookFunc {
 	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
 		if f.Kind() != reflect.String {
 			return data, nil
@@ -243,14 +243,14 @@ var ExpandFieldsHook = func(opts ...ExpandOptions) mapstructure.DecodeHookFunc {
 
 		str := data.(string)
 
-		return expand[string](global, str, opts...), nil
+		return expand[string](global, str, options...), nil
 	}
 }
 
-func (c *Config) UnmarshalKey(key string, rawVal any, opts ...viper.DecoderConfigOption) error {
+func (c *Config) UnmarshalKey(key string, rawVal any, options ...ExpandOption) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	return c.unmarshalKey(key, rawVal, opts...)
+	return c.unmarshalKey(key, rawVal, options...)
 }
 
 // SetKeyValuePairs takes a list of `key=value` pairs as strings and applies

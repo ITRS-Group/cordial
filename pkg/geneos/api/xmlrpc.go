@@ -60,7 +60,7 @@ var _ APIClient = (*XMLRPCClient)(nil)
 
 // NewXMLRPCClient returns a new client that uses endpoint and with the
 // features set by options. The endpoint would normally end in `/xmlrpc`
-func NewXMLRPCClient(endpoint string, options ...Options) (c APIClient, err error) {
+func NewXMLRPCClient(endpoint string, options ...Option) (c APIClient, err error) {
 	opts := evalOptions(options...)
 	roundtripper := &roundTripper{
 		transport: &http.Transport{

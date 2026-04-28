@@ -360,7 +360,7 @@ func initConfig() {
 	// support old set-ups
 	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")
 
-	// manual alias+remove as the viper.RegisterAlias doesn't work as expected
+	// manual alias+remove as the config.RegisterAlias doesn't work as expected
 	if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
 		if _, ok := config.Lookup[string](cf, cordial.ExecutableName()); !ok {
 			config.Set(cf, cordial.ExecutableName(), ih)

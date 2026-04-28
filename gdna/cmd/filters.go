@@ -47,10 +47,8 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -177,9 +175,6 @@ func addFilter(filterType, category string, names []string) (err error) {
 	var filters []Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
-		viper.DecodeHook(
-			mapstructure.StringToTimeHookFunc(time.RFC3339),
-		),
 	); err != nil {
 		panic(err)
 	}
@@ -289,9 +284,6 @@ func removeFilter(filterType, category string, names []string) (err error) {
 	var filters []*Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
-		viper.DecodeHook(
-			mapstructure.StringToTimeHookFunc(time.RFC3339),
-		),
 	); err != nil {
 		panic(err)
 	}
@@ -341,9 +333,6 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}
@@ -367,9 +356,6 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
 		); err != nil {
 			panic(err)
 		}
@@ -428,10 +414,7 @@ OUTER:
 		defer insertStmt.Close()
 
 		var x []*Filter
-		if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x,
-			viper.DecodeHook(
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			)); err != nil {
+		if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x); err != nil {
 			panic(err)
 		}
 		// if nothing on-disk then load any defaults
@@ -490,7 +473,7 @@ OUTER:
 //
 // but we have to expand the table names before passing them back as
 // expand does not recurse.
-func buildFilterSQL(cf *config.Config) config.ExpandOptions {
+func buildFilterSQL(cf *config.Config) config.ExpandOption {
 	// build a prefix "filters" that takes a table name to test and a list of filter categories,
 	// e.g. "${filter:gw:gateway,source}"
 	return config.Prefix("filters", func(_ map[string]any, s string, b bool) (r string, err error) {

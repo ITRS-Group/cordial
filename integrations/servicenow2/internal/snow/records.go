@@ -81,7 +81,7 @@ type TableData struct {
 	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
-func LookupRecord(ctx *Context, options ...config.ExpandOptions) (sys_id string, state int, err error) {
+func LookupRecord(ctx *Context, options ...config.ExpandOption) (sys_id string, state int, err error) {
 	cf := ctx.Conf
 
 	table, err := TableConfig(cf, ctx.Param("table"))
@@ -154,7 +154,7 @@ func (x *Results) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func GetRecords(ctx *Context, table string, options ...Options) (results Results, err error) {
+func GetRecords(ctx *Context, table string, options ...Option) (results Results, err error) {
 	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
 	_, err = rc.Get(ctx.Request().Context(), AssembleURL(table, options...), nil, &result)
@@ -166,7 +166,7 @@ func GetRecords(ctx *Context, table string, options ...Options) (results Results
 	return
 }
 
-func GetRecord(ctx *Context, table string, options ...Options) (results results, err error) {
+func GetRecord(ctx *Context, table string, options ...Option) (results results, err error) {
 	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
 	// ensure limit is set to 1
@@ -183,7 +183,7 @@ func GetRecord(ctx *Context, table string, options ...Options) (results results,
 	return
 }
 
-func PostRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
+func PostRecord(ctx *Context, table string, record Record, options ...Option) (result results, err error) {
 	var r snowResult
 
 	cf := ctx.Conf.Sub("servicenow")
@@ -208,7 +208,7 @@ func PostRecord(ctx *Context, table string, record Record, options ...Options) (
 	return
 }
 
-func PutRecord(ctx *Context, table string, record Record, options ...Options) (result results, err error) {
+func PutRecord(ctx *Context, table string, record Record, options ...Option) (result results, err error) {
 	var r snowResult
 
 	cf := ctx.Conf.Sub("servicenow")
@@ -234,7 +234,7 @@ func PutRecord(ctx *Context, table string, record Record, options ...Options) (r
 	return
 }
 
-func AssembleURL(table string, options ...Options) *url.URL {
+func AssembleURL(table string, options ...Option) *url.URL {
 	opts := evalReqOptions(options...)
 
 	v := url.Values{}

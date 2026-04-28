@@ -138,7 +138,7 @@ func initConfig() {
 
 	// config.DefaultKeyDelimiter("::")
 
-	opts := []config.FileOptions{
+	opts := []config.FileOption{
 		config.AppName("geneos"),
 		config.FilePath(cfgFile),
 		config.MergeSources(),

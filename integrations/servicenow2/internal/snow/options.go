@@ -30,9 +30,9 @@ type reqOptions struct {
 	sysID   string
 }
 
-type Options func(*reqOptions)
+type Option func(*reqOptions)
 
-func evalReqOptions(options ...Options) (opts *reqOptions) {
+func evalReqOptions(options ...Option) (opts *reqOptions) {
 	opts = &reqOptions{}
 	for _, r := range options {
 		r(opts)
@@ -40,38 +40,38 @@ func evalReqOptions(options ...Options) (opts *reqOptions) {
 	return
 }
 
-func Limit(limit int) Options {
+func Limit(limit int) Option {
 	return func(ro *reqOptions) {
 		ro.limit = fmt.Sprintf("%d", limit)
 	}
 }
 
-func Fields(fields string) Options {
+func Fields(fields string) Option {
 	return func(ro *reqOptions) {
 		ro.fields = fields
 	}
 }
 
-func Offset(offset string) Options {
+func Offset(offset string) Option {
 	return func(ro *reqOptions) {
 		ro.offset = offset
 	}
 }
 
-func Query(query string) Options {
+func Query(query string) Option {
 	return func(ro *reqOptions) {
 		ro.query = query
 	}
 }
 
 // Display sets the `sysparm_display_value` parameter
-func Display(display string) Options {
+func Display(display string) Option {
 	return func(ro *reqOptions) {
 		ro.display = display
 	}
 }
 
-func SysID(sysID string) Options {
+func SysID(sysID string) Option {
 	return func(ro *reqOptions) {
 		ro.sysID = sysID
 	}

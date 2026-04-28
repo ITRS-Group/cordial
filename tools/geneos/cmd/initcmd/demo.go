@@ -85,7 +85,7 @@ var demoCmd = &cobra.Command{
 	},
 }
 
-func initDemo(h *geneos.Host, options ...geneos.PackageOptions) (err error) {
+func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	empty := []string{}
 	g := []string{"Demo Gateway@" + h.String()}
 

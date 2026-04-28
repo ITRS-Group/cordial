@@ -63,7 +63,7 @@ var counter atomic.Int64
 // original extension is preserved to ensure that the temporary file is
 // recognized as a configuration file by any tools that may be
 // monitoring the directory for changes.
-func (c *Config) Write(module string, options ...FileOptions) (err error) {
+func (c *Config) Write(module string, options ...FileOption) (err error) {
 	var p string
 
 	log.Debug().Msg("saving configuration")

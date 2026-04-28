@@ -92,7 +92,7 @@ func ReadAll(source string) (b []byte, err error) {
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
 // returned. If any other stage fails then err is returned from the
 // underlying package.
-func openSource(source string, options ...PackageOptions) (from io.ReadCloser, filename string, filesize int64, err error) {
+func openSource(source string, options ...PackageOption) (from io.ReadCloser, filename string, filesize int64, err error) {
 	opts := evalOptions(options...)
 
 	filesize = -1 // unknown

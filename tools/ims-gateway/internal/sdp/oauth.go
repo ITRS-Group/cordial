@@ -29,9 +29,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -89,17 +87,7 @@ func loadToken() (token *oauth2.Token, err error) {
 
 	token = &oauth2.Token{}
 
-	if err = pf.UnmarshalKey("token", &token,
-		viper.DecoderConfigOption(func(dc *mapstructure.DecoderConfig) {
-			dc.TagName = "json"
-		}),
-		viper.DecodeHook(
-			mapstructure.ComposeDecodeHookFunc(
-				config.ExpandFieldsHook(),
-				mapstructure.StringToTimeHookFunc(time.RFC3339),
-			),
-		),
-	); err != nil {
+	if err = pf.UnmarshalKey("token", &token); err != nil {
 		return nil, err
 	}
 

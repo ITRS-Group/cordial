@@ -33,7 +33,7 @@ import (
 // procSetupOS is called before the process is started, and can be used
 // to perform any OS-specific setup, such as setting process attributes
 // or resource limits.
-func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err error) {
+func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 
 	if cmd.SysProcAttr == nil {
@@ -79,7 +79,7 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOptions) (err er
 // postStart is called after the process has started, and can be used to
 // perform any additional setup that requires the process to be running,
 // such as setting resource limits or signal handlers.
-func postStart(cmd *exec.Cmd, options ...ProcessOptions) (err error) {
+func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 
 	// this doesn't work as memguard lowers the hard limit to 0. There

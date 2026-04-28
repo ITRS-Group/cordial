@@ -49,7 +49,7 @@ func (discardCloser) Close() error { return nil }
 // that as the log file unless it is either "-" (which means use STDOUT
 // (not STDERR) or equal to the [os.DevNull] value, in which case is
 // [io.Discard].
-func LogInit(prefix string, options ...LogOptions) {
+func LogInit(prefix string, options ...LogOption) {
 	var noColour bool
 	var out io.WriteCloser
 	out = os.Stderr
@@ -126,9 +126,9 @@ type logOpts struct {
 	level         zerolog.Level
 }
 
-type LogOptions func(*logOpts)
+type LogOption func(*logOpts)
 
-func evalLoggerOptions(options ...LogOptions) *logOpts {
+func evalLoggerOptions(options ...LogOption) *logOpts {
 	opts := &logOpts{
 		rotateOnStart: true,
 	}
@@ -139,7 +139,7 @@ func evalLoggerOptions(options ...LogOptions) *logOpts {
 	return opts
 }
 
-func SetLogfile(logfile string) LogOptions {
+func SetLogfile(logfile string) LogOption {
 	return func(lo *logOpts) {
 		lo.logfile = config.ResolveHome(logfile)
 	}
@@ -148,7 +148,7 @@ func SetLogfile(logfile string) LogOptions {
 // LumberJackOptions set the log writer to the configured lumberjack
 // settings but only if the lj.Filename field is not empty, otherwise it
 // is ignored.
-func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
+func LumberjackOptions(lj *lumberjack.Logger) LogOption {
 	return func(lo *logOpts) {
 		if lj.Filename != "" {
 			lj.Filename = config.ResolveHome(lj.Filename)
@@ -157,14 +157,14 @@ func LumberjackOptions(lj *lumberjack.Logger) LogOptions {
 	}
 }
 
-func RotateOnStart(rotate bool) LogOptions {
+func RotateOnStart(rotate bool) LogOption {
 	return func(lo *logOpts) {
 		lo.rotateOnStart = rotate
 	}
 }
 
 // LogLevel takes a slog debug level to use as a default
-func LogLevel(level slog.Level) LogOptions {
+func LogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		switch level {
 		case slog.LevelDebug:
