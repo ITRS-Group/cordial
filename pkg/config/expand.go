@@ -163,24 +163,24 @@ package config
 import "github.com/awnumar/memguard"
 
 func Expand[T string | []byte](c *Config, input string, options ...ExpandOption) (value T) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return expand[T](c, input, options...)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
 // slice
 func ExpandStringSlice(input []string, options ...ExpandOption) []string {
-	global.mutex.RLock()
-	defer global.mutex.RUnlock()
+	global.rwmutex.RLock()
+	defer global.rwmutex.RUnlock()
 	return global.expandStringSlice(input, options...)
 }
 
 // ExpandPassword expands the input string and returns a *Secret. The
 // TrimSPace option is ignored.
 func (c *Config) ExpandToPassword(input string, options ...ExpandOption) *Secret {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return &Secret{memguard.NewEnclave(expand[[]byte](c, input, options...))}
 }
 
@@ -189,7 +189,7 @@ func (c *Config) ExpandToPassword(input string, options ...ExpandOption) *Secret
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
 func (c *Config) ExpandAllSettings(options ...ExpandOption) (all map[string]any) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.expandAllSettings(options...)
 }

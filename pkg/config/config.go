@@ -29,13 +29,12 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 )
 
 // Config structure
 type Config struct {
-	viper                *viper.Viper
-	mutex                *sync.RWMutex // mutex to protect concurrent access to the above viper
+	config               *config
+	rwmutex              *sync.RWMutex // mutex to protect concurrent access to the above viper
 	configType           string        // The type of configuration file loaded ("rc", "json", "yaml" etc) - this is not the same as the config type used for unmarshalling, which is determined by the file extension or SetConfigType() call and is stored in viper.ConfigType()
 	defaultExpandOptions []ExpandOption
 	delimiter            string
@@ -80,10 +79,8 @@ func New(options ...FileOption) *Config {
 		appUserConfDir = path.Join(userConfDir, opts.appName)
 	}
 	cf := &Config{
-		viper: viper.NewWithOptions(
-			viper.KeyDelimiter(opts.delimiter),
-			viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envDelimiter, "-", opts.envDelimiter))),
-		mutex:                &sync.RWMutex{},
+		config:               newWithOptions(opts),
+		rwmutex:              &sync.RWMutex{},
 		delimiter:            opts.delimiter,
 		appUserConfDir:       appUserConfDir,
 		defaultExpandOptions: opts.expandOptions,
@@ -96,8 +93,8 @@ func New(options ...FileOption) *Config {
 	if len(opts.internalDefaults) > 0 {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults := &Config{
-			viper: viper.New(),
-			mutex: &sync.RWMutex{},
+			config:  newConfig(),
+			rwmutex: &sync.RWMutex{},
 		}
 		internalDefaults.setConfigType(opts.internalDefaultsFormat)
 		if err := internalDefaults.readConfig(buf); err == nil || !opts.internalDefaultsCheckErrors {
@@ -149,20 +146,20 @@ func (c *Config) Delimiter() string {
 }
 
 func (c *Config) ConfigType() string {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.configType
 }
 
 func (c *Config) SetConfigType(t string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	c.configType = t
 }
 
 // BindPFlag binds a pflag.Flag to a key in the configuration.
 func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
-	return c.viper.BindPFlag(key, flag)
+	return c.bindPFlag(key, flag)
 }
 
 // Sub returns a Config instance rooted at the key passed. If key does
@@ -171,14 +168,14 @@ func (c *Config) BindPFlag(key string, flag *pflag.Flag) (err error) {
 //
 // Note that viper.Sub() does NOT merge defaults
 func (c *Config) Sub(key string) *Config {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.sub(key)
 }
 
 func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	set(c, key, value, options...)
 }
 
@@ -213,20 +210,20 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 // identical to T. If it is not, then the default value is the zero
 // value for the type T.
 func Get[T any](c *Config, key string, options ...ExpandOption) (value T) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return get[T](c, key, options...)
 }
 
 func Lookup[T any](c *Config, key string, options ...ExpandOption) (value T, found bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return lookup[T](c, key, options...)
 }
 
 func Delete(c *Config, key string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	deleteKey(c, key)
 }
 
@@ -248,8 +245,8 @@ var ExpandFieldsHook = func(options ...ExpandOption) mapstructure.DecodeHookFunc
 }
 
 func (c *Config) UnmarshalKey(key string, rawVal any, options ...ExpandOption) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	return c.unmarshalKey(key, rawVal, options...)
 }
 
@@ -261,14 +258,14 @@ func (c *Config) UnmarshalKey(key string, rawVal any, options ...ExpandOption) e
 // then it is considered a command line option and is appended with a
 // space separator, otherwise it is simply concatenated.
 func (c *Config) SetKeyValuePairs(items ...string) (err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	return c.setKeyValuePairs(items...)
 }
 
 func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	return c.mergeConfigMap(vals)
 }
 
@@ -276,8 +273,8 @@ func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 // excluding any that have been marked as deleted. The keys are returned
 // in sorted order.
 func (c *Config) AllKeys() (keys []string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.allKeys()
 }
 
@@ -289,49 +286,49 @@ func (c *Config) AllKeys() (keys []string) {
 // To return all the keys and values, use AllKeys to get the keys and
 // then Get to get the values for each key.
 func (c *Config) AllSettings() (value map[string]any) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.allSettings()
 }
 
 func (c *Config) SetEnvPrefix(prefix string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	c.setEnvPrefix(prefix)
 }
 
 func (c *Config) AutomaticEnv() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	c.automaticEnv()
 }
 
 func (c *Config) Default(key string, value any) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	c.setDefault(key, value)
 }
 
 func (c *Config) IsSet(key string) (value bool) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.isSet(key)
 }
 
 func (c *Config) ConfigFileUsed() (f string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
 	return c.configFileUsed()
 }
 
 func (c *Config) RegisterAlias(alias, key string) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	c.registerAlias(alias, key)
 }
 
 func (c *Config) BindEnv(input ...string) (err error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
 	return c.bindEnv(input...)
 }

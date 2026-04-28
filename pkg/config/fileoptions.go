@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -122,7 +121,7 @@ func evalLoadOptions(module string, options ...FileOption) (c *fileOptions) {
 		c.format = defaultFileFormat
 
 		if ext := path.Ext(c.configFile); ext != "" {
-			for _, e := range viper.SupportedExts {
+			for _, e := range SupportedExts {
 				if ext == "."+e {
 					c.format = e
 					break

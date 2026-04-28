@@ -24,7 +24,6 @@ import (
 	"regexp"
 
 	"github.com/gurkankaymak/hocon"
-	"github.com/spf13/viper"
 )
 
 var discardRE = regexp.MustCompile(`(?m)^\s*#.*$`)
@@ -39,7 +38,7 @@ func (c *Config) MergeHOCONConfig(conf string) (err error) {
 		return
 	}
 
-	vc := viper.New()
+	vc := New()
 	vc.SetConfigType("json")
 
 	j, err := json.Marshal(hc.GetRoot())
@@ -48,7 +47,7 @@ func (c *Config) MergeHOCONConfig(conf string) (err error) {
 		return
 	}
 	cs := bytes.NewReader(j)
-	if err := vc.ReadConfig(cs); err != nil {
+	if err := vc.readConfig(cs); err != nil {
 		return err
 	}
 

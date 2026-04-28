@@ -108,7 +108,7 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 
 	nv := New()
 
-	c.mutex.RLock()
+	c.rwmutex.RLock()
 	for _, k := range c.allKeys() {
 		if slices.Contains(opts.ignoreKeys, k) {
 			continue
@@ -127,7 +127,7 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 			set(nv, k, v)
 		}
 	}
-	c.mutex.RUnlock()
+	c.rwmutex.RUnlock()
 
 	nv.setConfigType(opts.format)
 

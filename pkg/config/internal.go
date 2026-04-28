@@ -24,10 +24,26 @@ import (
 	"github.com/maja42/goval"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
+
+var SupportedExts = viper.SupportedExts
+
+type config struct {
+	*viper.Viper
+}
+
+func newConfig() *config {
+	return &config{Viper: viper.New()}
+}
+
+func newWithOptions(opts *fileOptions) *config {
+	return &config{Viper: viper.NewWithOptions(viper.KeyDelimiter(opts.delimiter),
+		viper.EnvKeyReplacer(strings.NewReplacer(opts.delimiter, opts.envDelimiter, "-", opts.envDelimiter)))}
+}
 
 // internal routines that don't lock the config structure and also, for
 // now, call the Viper methods directly. These are used by the public
@@ -39,9 +55,9 @@ import (
 // allKeys returns all the keys in the config, excluding any that have
 // been marked as deleted. The keys are returned in sorted order.
 func (c *Config) allKeys() (keys []string) {
-	k := c.viper.AllKeys()
+	k := c.config.AllKeys()
 	for _, key := range k {
-		if _, deleted := c.viper.Get(key).(deletedKey); !deleted {
+		if _, deleted := c.config.Get(key).(deletedKey); !deleted {
 			keys = append(keys, key)
 		}
 	}
@@ -50,7 +66,7 @@ func (c *Config) allKeys() (keys []string) {
 }
 
 func (c *Config) allSettings() (value map[string]any) {
-	s := c.viper.AllSettings()
+	s := c.config.AllSettings()
 	maps.DeleteFunc(s, func(_ string, v any) bool {
 		// delete any keys that have been marked as deleted
 		_, deleted := v.(deletedKey)
@@ -60,19 +76,19 @@ func (c *Config) allSettings() (value map[string]any) {
 }
 
 func (c *Config) setFs(fs afero.Fs) {
-	c.viper.SetFs(fs)
+	c.config.SetFs(fs)
 }
 
 func (c *Config) setConfigType(t string) {
-	c.viper.SetConfigType(t)
+	c.config.SetConfigType(t)
 }
 
 func (c *Config) setConfigFile(f string) {
-	c.viper.SetConfigFile(f)
+	c.config.SetConfigFile(f)
 }
 
 func (c *Config) readInConfig() (err error) {
-	err = c.viper.ReadInConfig()
+	err = c.config.ReadInConfig()
 	if _, ok := errors.AsType[viper.ConfigFileNotFoundError](err); ok {
 		return fs.ErrNotExist
 	}
@@ -80,39 +96,44 @@ func (c *Config) readInConfig() (err error) {
 }
 
 func (c *Config) readConfig(r io.Reader) (err error) {
-	return c.viper.ReadConfig(r)
+	return c.config.ReadConfig(r)
 }
 
 func (c *Config) writeConfigAs(path string) (err error) {
-	return c.viper.WriteConfigAs(path)
+	return c.config.WriteConfigAs(path)
 }
 
 func (c *Config) writeConfigTo(w io.Writer) (err error) {
-	return c.viper.WriteConfigTo(w)
+	return c.config.WriteConfigTo(w)
 }
 
 func (c *Config) configFileUsed() (f string) {
-	return c.viper.ConfigFileUsed()
+	return c.config.ConfigFileUsed()
 }
 
 func (c *Config) onConfigChange(run func(in fsnotify.Event)) {
-	c.viper.OnConfigChange(run)
+	c.config.OnConfigChange(run)
 }
 
 func (c *Config) watchConfig() {
-	c.viper.WatchConfig()
+	c.config.WatchConfig()
 }
 
 func (c *Config) automaticEnv() {
-	c.viper.AutomaticEnv()
+	c.config.AutomaticEnv()
 }
 
 func (c *Config) bindEnv(input ...string) error {
-	return c.viper.BindEnv(input...)
+	return c.config.BindEnv(input...)
+}
+
+// bindPFlag binds a pflag.Flag to a key in the configuration.
+func (c *Config) bindPFlag(key string, flag *pflag.Flag) (err error) {
+	return c.config.BindPFlag(key, flag)
 }
 
 func (c *Config) registerAlias(alias, key string) {
-	c.viper.RegisterAlias(alias, key)
+	c.config.RegisterAlias(alias, key)
 }
 
 func expand[T string | []byte](c *Config, input string, options ...ExpandOption) (value T) {
@@ -291,14 +312,14 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 			s = strings.TrimPrefix(s, "config:")
 			if !opts.expandNonString {
 				// this call to GetString() must NOT be recursive
-				value = c.viper.GetString(s)
+				value = c.config.GetString(s)
 				if opts.trimSpace {
 					value = strings.TrimSpace(value)
 				}
 				return
 			}
 
-			v := c.viper.Get(s)
+			v := c.config.Get(s)
 
 			switch w := v.(type) {
 			case deletedKey:
@@ -510,27 +531,27 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 
 	switch any(*new(T)).(type) {
 	case bool:
-		v, _ := strconv.ParseBool(expand[string](c, c.viper.GetString(key), options...))
+		v, _ := strconv.ParseBool(expand[string](c, c.config.GetString(key), options...))
 		return any(v).(T)
 	case int:
-		v, _ := strconv.ParseInt(expand[string](c, c.viper.GetString(key), options...), 10, 0)
+		v, _ := strconv.ParseInt(expand[string](c, c.config.GetString(key), options...), 10, 0)
 		return any(int(v)).(T)
 	case int64:
-		v, _ := strconv.ParseInt(expand[string](c, c.viper.GetString(key), options...), 10, 64)
+		v, _ := strconv.ParseInt(expand[string](c, c.config.GetString(key), options...), 10, 64)
 		return any(v).(T)
 	case uint:
-		v, _ := strconv.ParseUint(expand[string](c, c.viper.GetString(key), options...), 10, 0)
+		v, _ := strconv.ParseUint(expand[string](c, c.config.GetString(key), options...), 10, 0)
 		return any(uint(v)).(T)
 	case uint16:
-		v, _ := strconv.ParseUint(expand[string](c, c.viper.GetString(key), options...), 10, 16)
+		v, _ := strconv.ParseUint(expand[string](c, c.config.GetString(key), options...), 10, 16)
 		return any(uint16(v)).(T)
 	case float64:
-		v, _ := strconv.ParseFloat(expand[string](c, c.viper.GetString(key), options...), 64)
+		v, _ := strconv.ParseFloat(expand[string](c, c.config.GetString(key), options...), 64)
 		return any(v).(T)
 	case string:
-		return any(expand[string](c, c.viper.GetString(key), options...)).(T)
+		return any(expand[string](c, c.config.GetString(key), options...)).(T)
 	case []byte:
-		return any(expand[[]byte](c, c.viper.GetString(key), options...)).(T)
+		return any(expand[[]byte](c, c.config.GetString(key), options...)).(T)
 	case []string:
 		var result []string
 		opts := evalExpandOptions(c, options...)
@@ -541,7 +562,7 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 		// expand() is too late as it needs to test and use the
 		// correct type
 		if c.isSet(key) {
-			result = c.viper.GetStringSlice(key)
+			result = c.config.GetStringSlice(key)
 		} else if init, ok := opts.initialValue.([]string); ok {
 			result = init
 		} else if def, ok := opts.defaultValue.([]string); ok {
@@ -554,7 +575,7 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 		}
 		return any(slice).(T)
 	case map[string]any:
-		v := c.viper.GetStringMap(key)
+		v := c.config.GetStringMap(key)
 		if v == nil {
 			v = make(map[string]any)
 		}
@@ -585,12 +606,12 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 		}
 		return any(result).(T)
 	case time.Duration:
-		v, _ := time.ParseDuration(expand[string](c, c.viper.GetString(key), options...))
+		v, _ := time.ParseDuration(expand[string](c, c.config.GetString(key), options...))
 		return any(v).(T)
 	case *Secret:
-		return any(&Secret{memguard.NewEnclave(expand[[]byte](c, c.viper.GetString(key), options...))}).(T)
+		return any(&Secret{memguard.NewEnclave(expand[[]byte](c, c.config.GetString(key), options...))}).(T)
 	default:
-		return any(c.viper.Get(key)).(T)
+		return any(c.config.Get(key)).(T)
 	}
 }
 
@@ -603,7 +624,7 @@ type deletedKey struct{}
 // TODO: save routines should check for this value and not save it, to
 // avoid confusion if the config file is edited by hand.
 func deleteKey(c *Config, key string) {
-	c.viper.Set(key, deletedKey{})
+	c.config.Set(key, deletedKey{})
 }
 
 // set a value
@@ -611,35 +632,35 @@ func set[T any](c *Config, key string, value T, options ...ExpandOption) {
 	opts := evalExpandOptions(c, options...)
 
 	if opts.noExpand {
-		c.viper.Set(key, value)
+		c.config.Set(key, value)
 		return
 	}
 
 	switch vt := any(value).(type) {
 	case string:
-		c.viper.Set(key, c.replaceStringParam(vt, options...))
+		c.config.Set(key, c.replaceStringParam(vt, options...))
 	case []string:
 		for i, v2 := range vt {
 			vt[i] = c.replaceStringParam(v2, options...)
 		}
-		c.viper.Set(key, vt)
+		c.config.Set(key, vt)
 	case map[string]string:
 		for k, v := range vt {
-			c.viper.Set(key+c.delimiter+k, c.replaceStringParam(v, options...))
+			c.config.Set(key+c.delimiter+k, c.replaceStringParam(v, options...))
 		}
 	default:
 		// no replacement needed for non-string types, but still need to
 		// set the value in the config
-		c.viper.Set(key, vt)
+		c.config.Set(key, vt)
 	}
 }
 
 func (c *Config) isSet(key string) (value bool) {
-	set := c.viper.IsSet(key)
+	set := c.config.IsSet(key)
 	deleted := false
 	if set {
 		// check if the value is the deleted marker
-		if _, ok := c.viper.Get(key).(deletedKey); ok {
+		if _, ok := c.config.Get(key).(deletedKey); ok {
 			deleted = true
 		}
 	}
@@ -647,15 +668,15 @@ func (c *Config) isSet(key string) (value bool) {
 }
 
 func (c *Config) mergeConfigMap(vals map[string]any) (err error) {
-	return c.viper.MergeConfigMap(vals)
+	return c.config.MergeConfigMap(vals)
 }
 
 func (c *Config) setDefault(key string, value any) {
-	c.viper.SetDefault(key, value)
+	c.config.SetDefault(key, value)
 }
 
 func (c *Config) setEnvPrefix(prefix string) {
-	c.viper.SetEnvPrefix(prefix)
+	c.config.SetEnvPrefix(prefix)
 }
 
 // itemRE is used to parse key-value pairs passed as strings, e.g. from
@@ -708,14 +729,14 @@ func (c *Config) setKeyValuePairs(items ...string) (err error) {
 // sub-configs for saving. It assumes that the caller has already
 // acquired the read lock if needed.
 func (c *Config) sub(key string) *Config {
-	vcf := c.viper.Sub(key)
+	vcf := &config{Viper: c.config.Sub(key)}
 
-	if vcf == nil {
-		vcf = viper.New()
+	if vcf.Viper == nil {
+		vcf = newConfig()
 	}
 	return &Config{
-		viper:                vcf,
-		mutex:                &sync.RWMutex{}, // never copy mutex, always create a new one
+		config:               vcf,
+		rwmutex:              &sync.RWMutex{}, // never copy mutex, always create a new one
 		configType:           c.configType,
 		delimiter:            c.delimiter,
 		defaultExpandOptions: c.defaultExpandOptions,
@@ -728,7 +749,7 @@ func (c *Config) sub(key string) *Config {
 // time.Duration values and string slices are properly handled when unmarshalling
 // into a struct. A key not being set is not an error.
 func (c *Config) unmarshalKey(key string, rawVal any, options ...ExpandOption) error {
-	return decode(c.viper.Get(key), defaultDecoderConfig(rawVal, options...))
+	return decode(c.config.Get(key), defaultDecoderConfig(rawVal, options...))
 }
 
 // A wrapper around mapstructure.Decode that mimics the WeakDecode functionality
