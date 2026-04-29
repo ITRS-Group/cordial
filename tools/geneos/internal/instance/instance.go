@@ -19,7 +19,6 @@ package instance
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path"
 	"regexp"
@@ -43,36 +42,6 @@ type Instance struct {
 	InstanceHost    *geneos.Host      `json:"-"`
 	Component       *geneos.Component `json:"-"`
 	ConfigLoaded    time.Time         `json:"-"`
-}
-
-type ProcessFDs struct {
-	PID   int
-	FD    int
-	Path  string
-	Lstat fs.FileInfo
-	Stat  fs.FileInfo
-	Conn  *SocketConnection
-}
-
-// ProcessStats is an example of a structure to pass to
-// instance.ProcessStatus, using a field number for `stat` and a line
-// prefix for `status` tags. OpenFiles and OpenSockets are counts of
-// their respective names.
-type ProcessStats struct {
-	Pid         int64         `stat:"0"`
-	Utime       time.Duration `stat:"13"`
-	Stime       time.Duration `stat:"14"`
-	CUtime      time.Duration `stat:"15"`
-	CStime      time.Duration `stat:"16"`
-	State       string        `status:"State"`
-	Threads     int64         `status:"Threads"`
-	VmRSS       int64         `status:"VmRSS"`
-	VmHWM       int64         `status:"VmHWM"`
-	RssAnon     int64         `status:"RssAnon"`
-	RssFile     int64         `status:"RssFile"`
-	RssShmem    int64         `status:"RssShmem"`
-	OpenFiles   int64
-	OpenSockets int64
 }
 
 // IsA returns true if instance i has a type that is component of one of

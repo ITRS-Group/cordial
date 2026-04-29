@@ -29,11 +29,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
-
-	"github.com/rs/zerolog/log"
 )
 
 // OldUserHostFile is a legacy name that will be deprecated in the
@@ -147,6 +147,13 @@ func (h *Host) String() string {
 		return ""
 	}
 	return config.Get[string](h.Config, "name")
+}
+
+func (h *Host) MarshalJSON() (b []byte, err error) {
+	if h == nil {
+		return []byte(`"unknown"`), nil
+	}
+	return []byte(`"` + h.String() + `"`), nil
 }
 
 // GetHost returns a pointer to a Host. If passed an empty name, returns

@@ -20,15 +20,28 @@ limitations under the License.
 package host
 
 import (
+	"io/fs"
 	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/unix"
 )
+
+func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
+	if h.IsLocal() {
+		uid = int(info.Sys().(*syscall.Stat_t).Uid)
+		gid = int(info.Sys().(*syscall.Stat_t).Gid)
+	} else {
+		uid = int(info.Sys().(*sftp.FileStat).UID)
+		gid = int(info.Sys().(*sftp.FileStat).GID)
+	}
+	return
+}
 
 // procSetupOS is called before the process is started, and can be used
 // to perform any OS-specific setup, such as setting process attributes

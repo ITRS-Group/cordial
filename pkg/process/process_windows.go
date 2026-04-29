@@ -24,9 +24,14 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows"
 )
+
+func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
+	return
+}
 
 func GetUsername(uid int) (username string) {
 	return

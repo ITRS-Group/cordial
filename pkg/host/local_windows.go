@@ -19,14 +19,31 @@ package host
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 
 	"github.com/Microsoft/go-winio"
+	"github.com/pkg/sftp"
 	"golang.org/x/sys/windows"
 )
+
+func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
+	uid, gid = -1, -1
+	if h.IsLocal() {
+		if stat, ok := info.Sys().(*windows.Win32FileAttributeData); ok {
+			// Windows doesn't have the concept of UID/GID, but we can return the file's owner SID as a string
+			uid = int(stat.FileAttributes)
+			gid = 0 // GID is not applicable on Windows
+		}
+	} else {
+		uid = int(info.Sys().(*sftp.FileStat).UID)
+		gid = int(info.Sys().(*sftp.FileStat).GID)
+	}
+	return
+}
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)

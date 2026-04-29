@@ -176,17 +176,6 @@ func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err erro
 	return
 }
 
-func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
-	if h.IsLocal() {
-		uid = int(info.Sys().(*syscall.Stat_t).Uid)
-		gid = int(info.Sys().(*syscall.Stat_t).Gid)
-	} else {
-		uid = int(info.Sys().(*sftp.FileStat).UID)
-		gid = int(info.Sys().(*sftp.FileStat).GID)
-	}
-	return
-}
-
 func processDirEntry(fi fs.FileInfo, srcHost Host, srcPath string, dstHost Host, dstPath string) (err error) {
 	switch {
 	case fi.IsDir():

@@ -260,6 +260,15 @@ func (ct *Component) String() (name string) {
 	return ct.Name
 }
 
+// MarshalJSON returns the JSON encoding of ct. If ct is nil then return
+// the JSON encoding of "unknown".
+func (ct *Component) MarshalJSON() (b []byte, err error) {
+	if ct == nil {
+		return []byte(`"unknown"`), nil
+	}
+	return []byte(`"` + ct.Name + `"`), nil
+}
+
 // IsA returns true is any of the names match the any of the names
 // defined in Aliases. The check is case-insensitive.
 func (ct *Component) IsA(names ...string) bool {
