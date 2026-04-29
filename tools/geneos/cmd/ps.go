@@ -256,6 +256,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceJSON).Report(os.Stdout, responses.IndentJSON(psCmdIndent))
+
 	case psCmdToolkit:
 		psCSVWriter := csv.NewWriter(os.Stdout)
 
@@ -278,7 +279,9 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		resp.Report(psCSVWriter, responses.IgnoreErr(geneos.ErrDisabled))
 		switch {
 		case psCmdShowNet:
+			// no headlines yet
 		case psCmdShowFiles:
+			// no headlines yet
 		default:
 			var notRunning int
 			var disabled int
@@ -295,6 +298,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			fmt.Printf("<!>notRunning,%d\n", notRunning)
 			fmt.Printf("<!>disabled,%d\n", disabled)
 		}
+
 	case psCmdCSV:
 		var columns []string
 		switch {
@@ -312,16 +316,15 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		psCSVWriter := csv.NewWriter(os.Stdout)
 		psCSVWriter.Write(columns)
 		instance.Do(geneos.GetHost(Hostname), ct, names, psInstanceCSV).Report(psCSVWriter)
+
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdShowNet {
 			fmt.Fprintln(psTabWriter, strings.Join(netCSVColumns, "\t"))
 		} else if psCmdShowFiles {
-			fmt.Fprintf(psTabWriter,
-				"Type\tName\tHost\tPID\tFD\tPerms\tUser:Group\tSize\tLast Modified\tPath\n",
-			)
+			fmt.Fprintln(psTabWriter, strings.Join(fileCSVColumns, "\t"))
 		} else if psCmdLong {
-			fmt.Fprintf(psTabWriter, "Type\tName\tHost\tPID\tPorts\tUser\tGroup\tStarttime\tVersion\tHome\tState\tThreads\tOpen Files\tOpen Sockets\tRSS\tRSSAnon\tRSSMax\tTotalUserTime\tTotalKernelTime\tTotalChildUserTime\tTotalChildKernelTime\n")
+			fmt.Fprintln(psTabWriter, strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t"))
 		} else {
 			fmt.Fprintln(psTabWriter, strings.Join(instanceCSVColumns, "\t"))
 		}
@@ -451,7 +454,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		}
 		uid, gid := host.GetFileOwner(h, hs)
 		resp.Details = append(resp.Details,
-			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s:%s\t%d\t%s\t%s",
+			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
 				ct,
 				name,
 				h,
@@ -479,14 +482,14 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 				fdPerm += "w"
 			}
 			resp.Details = append(resp.Details,
-				fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s:%s\t%d\t%s\t%s",
+				fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
 					ct,
 					name,
 					h,
 					pid,
 					fd.FD,
 					fdPerm,
-					fd.Stat.Mode().Perm().String(),
+					fd.Stat.Mode().Perm(),
 					process.GetUsername(uid),
 					process.GetGroupname(gid),
 					fd.Stat.Size(),

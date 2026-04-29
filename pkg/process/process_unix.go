@@ -103,12 +103,13 @@ func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
 	}
 
 	// /proc/PID/stat contains utime and ctime, which are not in status.
-	// field[1] is surrounds by parenthesis to protect embedded spaces,
-	// so this has to be split more carefully
 	stat, err := h.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
 	if err != nil {
 		return
 	}
+
+	// field[1] is surrounds by parenthesis to protect embedded spaces,
+	// so this has to be split more carefully
 	pidStat, rest, _ := strings.Cut(string(stat), " (")
 	execStat, rest, _ := strings.Cut(rest, ") ")
 
