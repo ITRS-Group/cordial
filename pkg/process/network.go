@@ -198,7 +198,7 @@ func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
 // ListeningPorts returns all TCP ports currently open for the process
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on a remote host.
-func ListeningPorts(h host.Host, pid int) (ports []int) {
+func ListeningPorts(h host.Host, pid int64) (ports []int) {
 	var err error
 
 	if pid == 0 {
@@ -228,7 +228,7 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 // sockets returns a map[int]int of file descriptor to socket inode for
 // all open files for the process pid on host h. An empty map is
 // returned if the process cannot be found.
-func sockets(h host.Host, pid int) (links map[int]int) {
+func sockets(h host.Host, pid int64) (links map[int]int) {
 	var inode int
 	links = make(map[int]int)
 	if pid == 0 {

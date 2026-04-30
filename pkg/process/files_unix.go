@@ -15,7 +15,7 @@ import (
 // OpenFiles returns a map of file descriptor to file details for all files
 // for the instance. An empty map is returned if the process cannot be
 // found.
-func OpenFiles(h host.Host, pid int) (files []ProcessFDs) {
+func OpenFiles(h host.Host, pid int64) (files []ProcessFDs) {
 	fdDir := fmt.Sprintf("/proc/%d/fd", pid)
 	fds, err := h.ReadDir(fdDir)
 	if err != nil {

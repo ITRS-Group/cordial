@@ -47,7 +47,7 @@ func retErrIfFalse(ret bool, err error) error {
 //
 // TODO: return error windows
 // TODO: look at remote processes
-func Start(h host.Host, program Program, options ...Options) (pid int, err error) {
+func Start(h host.Host, program Program, options ...ProgramOption) (pid int64, err error) {
 	opts := evalOptions(options...)
 
 	if h == nil {
@@ -157,7 +157,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 	}
 
 	// only valid if long running
-	pid, err = GetPID(h, p, true, nil, nil)
+	pid, err = PID(h, p, []string{}, RefreshCache())
 	err = retErrIfFalse(program.IgnoreErr, err)
 	return
 }
@@ -166,7 +166,7 @@ func Start(h host.Host, program Program, options ...Options) (pid int, err error
 // returns err then Batch returns immediately. Set IgnoreErr in Program
 // to not return errors for each stage. If any stage has Restart set and
 // it is supported then a reaper is run and the done channel returned.
-func Batch(h host.Host, batch []Program, options ...Options) (done chan struct{}, err error) {
+func Batch(h host.Host, batch []Program, options ...ProgramOption) (done chan struct{}, err error) {
 	r := false
 	for _, program := range batch {
 		if program.Restart {

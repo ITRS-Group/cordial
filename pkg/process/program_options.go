@@ -17,17 +17,17 @@ limitations under the License.
 
 package process
 
-type processOptions struct {
+type programOptions struct {
 	lookup     []map[string]string
 	expandArgs bool
 	expandEnv  bool
 }
 
-// Options for Start and Batch
-type Options func(*processOptions)
+// ProgramOption for Start and Batch
+type ProgramOption func(*programOptions)
 
-func evalOptions(options ...Options) (opts *processOptions) {
-	opts = &processOptions{}
+func evalOptions(options ...ProgramOption) (opts *programOptions) {
+	opts = &programOptions{}
 	// opts.lookup = []map[string]string{}{}
 	for _, o := range options {
 		o(opts)
@@ -38,8 +38,8 @@ func evalOptions(options ...Options) (opts *processOptions) {
 // ExpandArgs controls the expansion of the values in the Args slice. If
 // this option is used then each element of the Args slice is passed to
 // ExpandString with an lookup tables set using LookupTable().
-func ExpandArgs() Options {
-	return func(po *processOptions) {
+func ExpandArgs() ProgramOption {
+	return func(po *programOptions) {
 		po.expandArgs = true
 	}
 }
@@ -47,16 +47,16 @@ func ExpandArgs() Options {
 // ExpandEnv controls the expansion of the values in the Env slice. If
 // this option is used then each element of the Env slice is passed to
 // ExpandString with an lookup tables set using LookupTable().
-func ExpandEnv() Options {
-	return func(po *processOptions) {
+func ExpandEnv() ProgramOption {
+	return func(po *programOptions) {
 		po.expandEnv = true
 	}
 }
 
 // LookupTable adds a lookup map (string to string) to the set of lookup
 // tables passed to ExpandString.
-func LookupTable(table map[string]string) Options {
-	return func(po *processOptions) {
+func LookupTable(table map[string]string) ProgramOption {
+	return func(po *programOptions) {
 		po.lookup = append(po.lookup, table)
 	}
 }

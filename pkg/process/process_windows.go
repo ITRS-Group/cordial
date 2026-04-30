@@ -29,7 +29,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
+func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
 	return
 }
 
@@ -56,11 +56,6 @@ func setCredentials(cmd *exec.Cmd, user, group any) {
 	// not implemented
 }
 
-func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
-	// not implemented
-	return
-}
-
 func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
@@ -73,7 +68,7 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		}
 	}
 
-	c.Entries = map[int]ProcessInfo{}
+	c.Entries = map[int64]ProcessInfo{}
 
 	h, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
@@ -94,8 +89,8 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		// var retLen uint32
 		// var argc int32
 
-		pid := uint32(pe.ProcessID)
-		ppid := uint32(pe.ParentProcessID)
+		pid := pe.ProcessID
+		ppid := pe.ParentProcessID
 		exe := windows.UTF16ToString(pe.ExeFile[:])
 
 		if err = windows.Process32Next(h, &pe); err != nil {
@@ -117,9 +112,9 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 			continue
 		}
 
-		c.Entries[int(pid)] = ProcessInfo{
-			PID:          int(pid),
-			PPID:         int(ppid),
+		c.Entries[int64(pid)] = ProcessInfo{
+			PID:          int64(pid),
+			PPID:         int64(ppid),
 			Exe:          exe,
 			Cmdline:      cmdLine,
 			CreationTime: creationTime,

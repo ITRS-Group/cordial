@@ -1,0 +1,55 @@
+//go:build !windows
+
+package process
+
+import (
+	"os"
+	"os/exec"
+	"os/user"
+	"strconv"
+	"syscall"
+)
+
+func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
+	// setting the Credential struct causes errors and confusion if you
+	// are not privileged
+	if os.Getuid() != 0 && os.Geteuid() != 0 {
+		return os.ErrPermission
+	}
+
+	u, err := user.Lookup(username)
+	if err != nil {
+		return
+	}
+	uid, err := strconv.ParseUint(u.Uid, 10, 32)
+	if err != nil {
+		return
+	}
+	gid, err := strconv.ParseUint(u.Gid, 10, 32)
+	if err != nil {
+		return
+	}
+	groups := []uint32{}
+	gids, _ := u.GroupIds()
+	for _, g := range gids {
+		var gid uint64
+		gid, err = strconv.ParseUint(g, 10, 32)
+		if err != nil {
+			return
+		}
+		groups = append(groups, uint32(gid))
+	}
+	creds := &syscall.Credential{
+		Uid:    uint32(uid),
+		Gid:    uint32(gid),
+		Groups: groups,
+	}
+	if cmd.SysProcAttr == nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: creds,
+		}
+	} else {
+		cmd.SysProcAttr.Credential = creds
+	}
+	return
+}

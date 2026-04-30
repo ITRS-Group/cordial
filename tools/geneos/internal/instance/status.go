@@ -106,7 +106,7 @@ func CompareVersion(i geneos.Instance, version string) int {
 // "loop-detected" and err set to syscall.ELOOP to prevent infinite
 // loops. If the instance is not running or the executable path cannot
 // be determined then actual will be returned as "unknown".
-func LiveVersion(i geneos.Instance, pid int) (base string, version string, actual string, err error) {
+func LiveVersion(i geneos.Instance, pid int64) (base string, version string, actual string, err error) {
 	actual = "unknown"
 	cf := i.Config()
 	base = config.Get[string](cf, "version")
@@ -155,8 +155,8 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 // The process is identified by checking the conventions used to start
 // Geneos processes. If a component type defines it's own GetPID()
 // custom check then that is used instead.
-func GetPID(i geneos.Instance) (pid int, err error) {
-	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), false, i.Type().GetPID, i, i.Name())
+func GetPID(i geneos.Instance) (pid int64, err error) {
+	return process.PID(i.Host(), config.Get[string](i.Config(), "binary"), []string{i.Name()}, process.CustomChecker(i.Type().GetPID, i))
 }
 
 // GetLivePID returns the PID of the process running for the instance i.
@@ -166,8 +166,8 @@ func GetPID(i geneos.Instance) (pid int, err error) {
 // The process is identified by checking the conventions used to start
 // Geneos processes. If a component type defines it's own GetPID()
 // custom check then that is used instead.
-func GetLivePID(i geneos.Instance) (pid int, err error) {
-	return process.GetPID(i.Host(), config.Get[string](i.Config(), "binary"), true, i.Type().GetPID, i, i.Name())
+func GetLivePID(i geneos.Instance) (pid int64, err error) {
+	return process.PID(i.Host(), config.Get[string](i.Config(), "binary"), []string{i.Name()}, process.CustomChecker(i.Type().GetPID, i), process.RefreshCache())
 }
 
 // GetProcessInfo returns process information for the instance i. If the

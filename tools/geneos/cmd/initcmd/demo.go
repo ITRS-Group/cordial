@@ -24,6 +24,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/rs/zerolog/log"
@@ -151,6 +152,6 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	cmd.CommandPS(nil, empty, empty)
+	pscmd.CommandPS(nil, empty, empty)
 	return
 }

@@ -124,7 +124,7 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 		return os.ErrProcessDone
 	}
 
-	if err = i.Host().Signal(pid, signal); err != nil {
+	if err = i.Host().Signal(int(pid), signal); err != nil {
 		return
 	}
 

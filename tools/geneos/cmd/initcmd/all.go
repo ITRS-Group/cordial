@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -150,6 +151,6 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	cmd.CommandPS(nil, e, e)
+	pscmd.CommandPS(nil, e, e)
 	return
 }

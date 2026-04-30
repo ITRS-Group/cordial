@@ -93,7 +93,7 @@ func GetGroupname(gid int) (groupname string) {
 // pstats. pstats must be a point to a struct and must be initialised
 // before calling. Use the instance.ProcessStats struct as a useful
 // default.
-func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
+func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
 	var scClkTck int64
 
 	if h.IsLocal() {
@@ -218,6 +218,10 @@ func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
 			if statusField, ok := ft.Tag.Lookup("status"); ok {
 				if v, ok := statusFields[statusField]; ok && fv.CanSet() {
 					switch fv.Kind() {
+					case reflect.Slice:
+						if fv.Type().Elem().Kind() == reflect.String {
+							fv.Set(reflect.ValueOf(strings.Fields(v)))
+						}
 					case reflect.String:
 						fv.SetString(v)
 					case reflect.Int64: // assume kB values
@@ -249,50 +253,6 @@ func prepareCmd(cmd *exec.Cmd) {
 	}
 }
 
-func setCredentialsFromUsername(cmd *exec.Cmd, username string) (err error) {
-	// setting the Credential struct causes errors and confusion if you
-	// are not privileged
-	if os.Getuid() != 0 && os.Geteuid() != 0 {
-		return os.ErrPermission
-	}
-
-	u, err := user.Lookup(username)
-	if err != nil {
-		return
-	}
-	uid, err := strconv.ParseUint(u.Uid, 10, 32)
-	if err != nil {
-		return
-	}
-	gid, err := strconv.ParseUint(u.Gid, 10, 32)
-	if err != nil {
-		return
-	}
-	groups := []uint32{}
-	gids, _ := u.GroupIds()
-	for _, g := range gids {
-		var gid uint64
-		gid, err = strconv.ParseUint(g, 10, 32)
-		if err != nil {
-			return
-		}
-		groups = append(groups, uint32(gid))
-	}
-	creds := &syscall.Credential{
-		Uid:    uint32(uid),
-		Gid:    uint32(gid),
-		Groups: groups,
-	}
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Credential: creds,
-		}
-	} else {
-		cmd.SysProcAttr.Credential = creds
-	}
-	return
-}
-
 func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
@@ -310,7 +270,7 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	if err != nil {
 		return
 	}
-	c.Entries = make(map[int]ProcessInfo, len(dirs))
+	c.Entries = make(map[int64]ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
 		st, err := os.Stat(dir)
@@ -322,37 +282,36 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 			continue
 		}
 
-		pid, err := strconv.Atoi(st.Name())
+		pid, err := strconv.ParseInt(st.Name(), 10, 64)
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
 			continue
 		}
 		mtime := st.ModTime()
 
-		var ppid int
-		pstat, err := os.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
-		if err != nil {
-			log.Debug().Err(err).Msgf("failed to read stat for pid %d", pid)
-		} else {
-			fields := strings.Fields(string(pstat))
-			ppid, err = strconv.Atoi(fields[3])
-			if err != nil {
-				log.Debug().Err(err).Msgf("failed to parse ppid for pid %d", pid)
-				// leave ppid as zero if we cannot parse it
-			}
-		}
-
 		exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 		if err != nil {
 			continue
 		}
+		exe = strings.TrimSuffix(exe, " (deleted)")
+
 		b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 		if err != nil {
 			continue
 		}
 		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
 
-		uid, gid := ownerOfFile(st)
+		uid, gid := -1, -1
+
+		pstatus := &ProcessStats{}
+		ProcessStatus(host.Localhost, pid, pstatus)
+
+		if len(pstatus.UIDs) > 0 {
+			uid, _ = strconv.Atoi(pstatus.UIDs[0])
+		}
+		if len(pstatus.GIDs) > 0 {
+			gid, _ = strconv.Atoi(pstatus.GIDs[0])
+		}
 
 		// status, err := readProcessStatus(nil, pid)
 		// if err != nil {
@@ -361,14 +320,15 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		// 	// leave status as nil if we cannot read it
 		// }
 		c.Entries[pid] = ProcessInfo{
-			PID:          pid,
-			PPID:         ppid,
+			PID:          pstatus.PID,
+			PPID:         pstatus.PPID,
 			Exe:          exe,
 			Cmdline:      cmdline,
 			CreationTime: mtime,
 			UID:          uid,
 			GID:          gid,
-			// status:       status, // not required locally
+			Username:     GetUsername(uid),
+			Groupname:    GetGroupname(gid),
 		}
 	}
 
