@@ -23,8 +23,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -129,7 +127,6 @@ func LiveVersion(i geneos.Instance, pid int) (base string, version string, actua
 		actual = "unknown"
 		return
 	}
-	log.Debug().Msgf("actual=%s pkgtype=%s", actual, pkgtype)
 
 	// account for java based components, like webserver, sso-agent and
 	// ca3. just return the version the base points to, which may not be

@@ -65,7 +65,11 @@ func psNetworkJSON(i geneos.Instance, pid int, resp *responses.Response) (err er
 	name := i.Name()
 
 	conns := []psInstanceNetwork{}
-	for _, fd := range process.OpenFiles(h, pid) {
+	pi, err := process.ProcessStatus[*process.ProcessInfo](h, pid)
+	if err != nil {
+		return
+	}
+	for _, fd := range pi.OpenFiles {
 		if fd.Conn != nil {
 			// socket
 			c := fd.Conn

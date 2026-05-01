@@ -29,7 +29,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
+func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 	return
 }
 
@@ -68,7 +68,7 @@ func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 		}
 	}
 
-	c.Entries = map[int64]*ProcessInfo{}
+	c.Entries = map[int]*ProcessInfo{}
 
 	h, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
@@ -96,7 +96,7 @@ func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 
 		pid := pe.ProcessID
 
-		cmdLine, creationTime, err := getProcessInfo(pid)
+		cmdLine, StartTime, err := getProcessInfo(pid)
 		if err != nil {
 			continue
 		}
@@ -107,18 +107,18 @@ func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 			continue
 		}
 
-		c.Entries[int64(pid)] = &ProcessInfo{
-			PID:          int64(pid),
-			PPID:         int64(pe.ParentProcessID),
-			Exe:          windows.UTF16ToString(pe.ExeFile[:]),
-			Cmdline:      cmdLine,
-			CreationTime: creationTime,
-			UID:          uid,
-			GID:          gid,
-			Username:     GetUsername(uid),
-			Groupname:    GetGroupname(gid),
-			Children:     []int64{},
-			GIDs:         []string{},
+		c.Entries[int(pid)] = &ProcessInfo{
+			PID:       int(pid),
+			PPID:      int(pe.ParentProcessID),
+			Exe:       windows.UTF16ToString(pe.ExeFile[:]),
+			Cmdline:   cmdLine,
+			StartTime: StartTime,
+			UID:       uid,
+			GID:       gid,
+			Username:  GetUsername(uid),
+			Groupname: GetGroupname(gid),
+			Children:  []int{},
+			GIDs:      []string{},
 		}
 	}
 
@@ -136,7 +136,7 @@ func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 	return c, true
 }
 
-func getProcessInfo(pid uint32) (cmdLine []string, creationTime time.Time, err error) {
+func getProcessInfo(pid uint32) (cmdLine []string, StartTime time.Time, err error) {
 	var pbi windows.PROCESS_BASIC_INFORMATION
 	var retLen uint32
 	var argc int32
@@ -212,7 +212,7 @@ func getProcessInfo(pid uint32) (cmdLine []string, creationTime time.Time, err e
 		return
 	}
 	// convert to time.Time
-	creationTime = time.Unix(0, int64(createTime.Nanoseconds()))
+	StartTime = time.Unix(0, int64(createTime.Nanoseconds()))
 
 	return
 }

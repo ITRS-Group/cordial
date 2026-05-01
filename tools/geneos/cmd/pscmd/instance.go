@@ -13,7 +13,7 @@ import (
 
 type psInstance struct {
 	psCommon
-	Ports     []int     `json:"ports"`
+	Ports     string    `json:"ports"`
 	User      string    `json:"user,omitempty"`
 	Group     string    `json:"group,omitempty"`
 	Starttime time.Time `json:"starttime,omitempty"`
@@ -86,14 +86,9 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 	h := i.Host()
 	name := i.Name()
 
-	pi, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
 		return
-	}
-
-	// ensure empty slice marshals as [] instead of null
-	if len(ports) == 0 {
-		ports = make([]int, 0)
 	}
 
 	psData := psInstance{
@@ -103,41 +98,47 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 			Host: h,
 			PID:  pi.PID,
 		},
-		Ports:     ports,
+		Ports:     pi.ListeningPorts,
 		User:      pi.Username,
 		Group:     pi.Groupname,
-		Starttime: pi.CreationTime,
+		Starttime: pi.StartTime,
 		Version:   fmt.Sprintf("%s%s%s", base, uptodate, actual),
 		Home:      i.Home(),
 	}
 
 	if psCmdLong {
-		psData.Extra = &process.ProcessInfo{}
-		process.ProcessStatus(h, pi.PID, psData.Extra)
+		psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
 	}
 
 	resp.Value = psData
 	return
 }
 
-func checkCA(h *geneos.Host, pid int) (pi *process.ProcessInfo, ok bool, err error) {
-	pi, err = process.GetProcessInfo(h, pid, false)
-	if err != nil {
-		return
-	}
-	if len(pi.Cmdline) == 0 {
-		err = fmt.Errorf("no cmdline for PID %d", pid)
+func checkCA(h *geneos.Host, ct *geneos.Component, chidren []int) (pi *process.ProcessInfo, ok bool, err error) {
+	if !ct.IsA("netprobe") {
 		return
 	}
 
-	if path.Base(pi.Cmdline[0]) != "java" {
-		return
-	}
-
-	for _, arg := range pi.Cmdline[1:] {
-		if strings.Contains(arg, "collection-agent") {
-			ok = true
+	for _, pid := range chidren {
+		pi, err = process.GetProcessInfo(h, pid, false)
+		if err != nil {
 			return
+		}
+
+		if len(pi.Cmdline) == 0 {
+			err = fmt.Errorf("no cmdline for PID %d", pid)
+			return
+		}
+
+		if path.Base(pi.Cmdline[0]) != "java" {
+			return
+		}
+
+		for _, arg := range pi.Cmdline[1:] {
+			if strings.Contains(arg, "collection-agent") {
+				ok = true
+				return
+			}
 		}
 	}
 

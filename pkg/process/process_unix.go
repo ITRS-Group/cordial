@@ -22,10 +22,8 @@ package process
 import (
 	"bufio"
 	"fmt"
-	"io/fs"
 	"os/exec"
 	"os/user"
-	"path"
 	"reflect"
 	"strconv"
 	"strings"
@@ -90,8 +88,12 @@ func GetGroupname(gid int) (groupname string) {
 // pstats. pstats must be a point to a struct and must be initialised
 // before calling. Use the instance.ProcessStats struct as a useful
 // default.
-func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
+func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 	var scClkTck int64
+
+	if reflect.TypeOf(pstats).Kind() != reflect.Ptr || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
+		panic("pstats must be a pointer to a struct")
+	}
 
 	if h.IsLocal() {
 		scClkTck, _ = sysconf.Sysconf(sysconf.SC_CLK_TCK)
@@ -131,73 +133,162 @@ func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
 	}
 
 	st := reflect.TypeOf(pstats).Elem()
+
+	if reflect.ValueOf(pstats).IsNil() {
+		pstats = reflect.New(st).Interface().(T)
+	}
+
 	sv := reflect.ValueOf(pstats).Elem()
 	for i := 0; i < st.NumField(); i++ {
 		ft := st.Field(i)
 		fv := sv.Field(i)
 
-		// special cases
+		// special cases first
 		switch ft.Name {
 		case "OpenFiles":
+			// if an int, then a count, if a slice or string, then a
+			// list of open files. For now we just support count, but we
+			// could add the list in future if needed.
 			if fv.CanSet() {
-				var openfiles int64
-				fdDir := fmt.Sprintf("/proc/%d/fd", pid)
-				dirents, err := h.ReadDir(fdDir)
-				if err != nil {
-					continue
-				}
-				for _, d := range dirents {
-					// skip non symlinks
-					s, err := d.Info()
-					if err != nil || s.Mode()&fs.ModeSymlink == 0 {
-						continue
-					}
+				of := OpenFiles(h, pid)
+				switch fv.Type().Kind() {
+				case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
+					fv.SetInt(int64(len(of)))
+				case reflect.Slice:
+					switch fv.Type().Elem().Kind() {
+					case reflect.Struct:
+						if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
+							fv.Set(reflect.ValueOf(of))
+						}
 
-					linkVal, err := h.Readlink(path.Join(fdDir, d.Name()))
-					if err != nil {
-						continue
+					case reflect.String:
+						var openfiles []string
+						for _, f := range of {
+							openfiles = append(openfiles, f.Path)
+						}
+						fv.Set(reflect.ValueOf(openfiles))
 					}
-					if path.IsAbs(linkVal) {
-						openfiles++
+				case reflect.String:
+					var openfiles []string
+					for _, f := range of {
+						openfiles = append(openfiles, f.Path)
 					}
+					if len(openfiles) > 0 {
+						fv.SetString(strings.Join(openfiles, ","))
+					} else {
+						fv.SetString("NONE")
+					}
+				default:
+					// do nothing if it's not an int or a slice or string
 				}
-				fv.SetInt(openfiles)
 			}
 
 		case "OpenSockets":
 			if fv.CanSet() {
-				var opensockets int64
-				fdDir := fmt.Sprintf("/proc/%d/fd", pid)
-				dirents, err := h.ReadDir(fdDir)
-				if err != nil {
-					continue
-				}
-				for _, d := range dirents {
-					// skip non symlinks
-					s, err := d.Info()
-					if err != nil || s.Mode()&fs.ModeSymlink == 0 {
-						continue
-					}
-					linkVal, err := h.Readlink(path.Join(fdDir, d.Name()))
-					if err != nil {
-						continue
-					}
-					if strings.HasPrefix(linkVal, "socket:[") {
-						opensockets++
+				var opensockets int64 = 0
+				of := OpenFiles(h, pid)
+				for _, f := range of {
+					if f.Conn != nil {
+						// socket
+						c := f.Conn
+						if strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp") {
+							opensockets++
+						}
 					}
 				}
 				fv.SetInt(opensockets)
 			}
 
+			// ListeningPorts can be a slice or a string. If a slice it
+			// can be a slice of int or string.
+		case "ListeningPorts":
+			if fv.CanSet() {
+				ports := ListeningPorts(h, pid)
+				switch fv.Type().Kind() {
+				case reflect.Slice:
+					switch fv.Type().Elem().Kind() {
+					case reflect.Int:
+						fv.Set(reflect.ValueOf(ports))
+					case reflect.String:
+						var portlist []string
+						for _, p := range ports {
+							portlist = append(portlist, fmt.Sprint(p))
+						}
+						fv.Set(reflect.ValueOf(portlist))
+					}
+				case reflect.String:
+					var portlist []string
+					for _, p := range ports {
+						portlist = append(portlist, fmt.Sprint(p))
+					}
+					if len(portlist) > 0 {
+						fv.SetString(strings.Join(portlist, ","))
+					} else {
+						fv.SetString("NONE")
+					}
+				default:
+					// do nothing if it's not a slice of int or string, or a string
+				}
+			}
+
+		case "Exe":
+			if fv.CanSet() && fv.Type().Kind() == reflect.String {
+				exe := fmt.Sprintf("/proc/%d/exe", pid)
+				exeVal, err := h.Readlink(exe)
+				if err == nil {
+					fv.SetString(strings.TrimSuffix(exeVal, " (deleted)"))
+				}
+			}
+
+		case "Cmdline":
+			if fv.CanSet() && fv.Type().Kind() == reflect.Slice && fv.Type().Elem().Kind() == reflect.String {
+				cmdlineBytes, err := h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+				if err == nil {
+					fv.Set(reflect.ValueOf(strings.Split(strings.TrimSuffix(string(cmdlineBytes), "\000"), "\000")))
+				}
+			}
+
+		case "UID":
+			if fv.CanSet() && fv.Type().Kind() == reflect.Int {
+				if v, ok := statusFields["Uid"]; ok {
+					uidStr := strings.Fields(v)[0]
+					if uid, err := strconv.Atoi(uidStr); err == nil {
+						fv.SetInt(int64(uid))
+						// find a Username field and set that too if it exists
+						if uv := sv.FieldByName("Username"); uv.IsValid() {
+							if uv.CanSet() && uv.Type().Kind() == reflect.String {
+								uv.SetString(GetUsername(uid))
+							}
+						}
+					}
+				}
+			}
+
+		case "GID":
+			if fv.CanSet() && fv.Type().Kind() == reflect.Int {
+				if v, ok := statusFields["Gid"]; ok {
+					gidStr := strings.Fields(v)[0]
+					if gid, err := strconv.Atoi(gidStr); err == nil {
+						fv.SetInt(int64(gid))
+						// find a Groupname field and set that too if it exists
+						if gv := sv.FieldByName("Groupname"); gv.IsValid() {
+							if gv.CanSet() && gv.Type().Kind() == reflect.String {
+								gv.SetString(GetGroupname(gid))
+							}
+						}
+					}
+				}
+			}
+
 		default:
 			// for "stat" tag, lookup the field by index, if it exists
-			if statField, ok := ft.Tag.Lookup("stat"); ok {
-				if idx, err := strconv.Atoi(statField); err == nil {
+			if i, ok := ft.Tag.Lookup("stat"); ok {
+				if idx, err := strconv.Atoi(i); err == nil {
 					if len(statFields) > idx && fv.CanSet() {
 						switch fv.Kind() {
 						case reflect.String:
 							fv.SetString(statFields[idx])
-						case reflect.Int64:
+						case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
 							if iv, err := strconv.ParseInt(statFields[idx], 10, 64); err == nil {
 								if fv.Type().String() == "time.Duration" {
 									fv.SetInt(iv * int64(time.Second) / scClkTck)
@@ -220,7 +311,7 @@ func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
 						}
 					case reflect.String:
 						fv.SetString(v)
-					case reflect.Int64: // assume kB values
+					case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
 						v, found := strings.CutSuffix(v, " kB")
 						if iv, err := strconv.ParseInt(v, 10, 64); err == nil {
 							if found {

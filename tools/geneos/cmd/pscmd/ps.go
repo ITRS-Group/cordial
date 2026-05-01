@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -164,9 +163,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	}
 }
 
-func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual, uptodate string, ports []int, err error) {
-	h := i.Host()
-
+func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual, uptodate string, err error) {
 	if instance.IsDisabled(i) {
 		err = geneos.ErrDisabled
 		return
@@ -188,10 +185,6 @@ func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual,
 		uptodate = "<>"
 	}
 
-	if h.IsLocal() || psCmdLong {
-		ports = process.ListeningPorts(h, pi.PID)
-	}
-
 	return
 }
 
@@ -202,7 +195,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	ct := i.Type()
 	name := i.Name()
 
-	pi, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
 		return
 	}
@@ -222,97 +215,70 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		return
 	}
 
-	var portlist string
-	portsString := []string{}
-	for _, p := range ports {
-		portsString = append(portsString, fmt.Sprint(p))
-	}
-	portlist = strings.Join(portsString, ",")
-	if !h.IsLocal() && portlist == "" {
-		portlist = "..."
-	}
-	if len(ports) == 0 {
-		portlist = "NONE"
+	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
+		ct,
+		name,
+		h,
+		pi.PID,
+		pi.ListeningPorts,
+		pi.Username,
+		pi.Groupname,
+		pi.StartTime.Local().Format(time.RFC3339),
+		base,
+		uptodate,
+		actual,
+		i.Home(),
+	)
+
+	if psCmdLong {
+		resp.Summary += fmt.Sprintf("\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+			pi.State,
+			pi.Threads,
+			len(pi.OpenFiles),
+			pi.OpenSockets,
+			float64(pi.VmRSS)/(1024*1024),
+			float64(pi.RssAnon)/(1024*1024),
+			float64(pi.VmHWM)/(1024*1024),
+			pi.Utime.Seconds(),
+			pi.Stime.Seconds(),
+			pi.CUtime.Seconds(),
+			pi.CStime.Seconds(),
+		)
 	}
 
-	p := &process.ProcessInfo{}
-	if err := process.ProcessStatus(h, pi.PID, p); err == nil && psCmdLong {
-		resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
-			ct,
+	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
+		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		line := fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
+			ct.String()+"/ca",
 			name,
 			h,
-			pi.PID,
-			portlist,
-			pi.Username,
-			pi.Groupname,
-			pi.CreationTime.Local().Format(time.RFC3339),
-			base,
-			uptodate,
-			actual,
-			i.Home(),
-			p.State,
-			p.Threads,
-			p.OpenFiles,
-			p.OpenSockets,
-			float64(p.VmRSS)/(1024*1024),
-			float64(p.RssAnon)/(1024*1024),
-			float64(p.VmHWM)/(1024*1024),
-			p.Utime.Seconds(),
-			p.Stime.Seconds(),
-			p.CUtime.Seconds(),
-			p.CStime.Seconds(),
-		)
-	} else {
-		resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
-			ct,
-			name,
-			h,
-			pi.PID,
-			portlist,
-			pi.Username,
-			pi.Groupname,
-			pi.CreationTime.Local().Format(time.RFC3339),
+			capi.PID,
+			capi.ListeningPorts,
+			capi.Username,
+			capi.Groupname,
+			capi.StartTime.Local().Format(time.RFC3339),
 			base,
 			uptodate,
 			actual,
 			i.Home(),
 		)
-
-		// look for a collection agent child process
-		if len(pi.Children) > 0 && ct.IsA("netprobe") {
-			// check for CAs and list, but ignore other child processes (for now)
-			for _, childPID := range pi.Children {
-				if pi, ok, err := checkCA(h, childPID); err == nil && ok {
-					// list it
-					caports := process.ListeningPorts(h, childPID)
-					var portlist string
-					portsString := []string{}
-					for _, p := range caports {
-						portsString = append(portsString, fmt.Sprint(p))
-					}
-					portlist = strings.Join(portsString, ",")
-					if !h.IsLocal() && portlist == "" {
-						portlist = "..."
-					}
-					resp.Details = append(resp.Details,
-						fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
-							ct.String()+"/ca",
-							name,
-							h,
-							pi.PID,
-							portlist,
-							pi.Username,
-							pi.Groupname,
-							pi.CreationTime.Local().Format(time.RFC3339),
-							base,
-							uptodate,
-							actual,
-							i.Home(),
-						),
-					)
-				}
-			}
+		if psCmdLong {
+			line += fmt.Sprintf("\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+				capi.State,
+				capi.Threads,
+				len(capi.OpenFiles),
+				capi.OpenSockets,
+				float64(capi.VmRSS)/(1024*1024),
+				float64(capi.RssAnon)/(1024*1024),
+				float64(capi.VmHWM)/(1024*1024),
+				capi.Utime.Seconds(),
+				capi.Stime.Seconds(),
+				capi.CUtime.Seconds(),
+				capi.CStime.Seconds(),
+			)
 		}
+		resp.Details = append(resp.Details, line)
 	}
 
 	return
@@ -325,7 +291,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	ct := i.Type()
 	name := i.Name()
 
-	pi, base, actual, uptodate, ports, err := psInstanceCommon(i)
+	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
 		resp.Err = err
 		return
@@ -346,16 +312,6 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		return
 	}
 
-	var portlist string
-	portsString := []string{}
-	for _, p := range ports {
-		portsString = append(portsString, fmt.Sprint(p))
-	}
-	portlist = strings.Join(portsString, " ")
-	if !h.IsLocal() && portlist == "" {
-		portlist = "..."
-	}
-
 	var row []string
 
 	if psCmdToolkit {
@@ -367,21 +323,21 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		name,
 		h.String(),
 		fmt.Sprint(pi.PID),
-		portlist,
+		pi.ListeningPorts,
 		pi.Username,
 		pi.Groupname,
-		pi.CreationTime.Local().Format(time.RFC3339),
+		pi.StartTime.Local().Format(time.RFC3339),
 		fmt.Sprintf("%s%s%s", base, uptodate, actual),
 		i.Home(),
 	)
 
 	if psCmdLong {
-		p := &process.ProcessInfo{}
-		if err := process.ProcessStatus(h, pi.PID, p); err == nil {
+		p, _ := process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
+		if p != nil {
 			row = append(row,
 				p.State,
 				fmt.Sprint(p.Threads),
-				fmt.Sprint(p.OpenFiles),
+				fmt.Sprint(len(p.OpenFiles)),
 				fmt.Sprint(p.OpenSockets),
 				fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
 				fmt.Sprintf("%.2f MiB", float64(p.RssAnon)/(1024*1024)),

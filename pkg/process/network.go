@@ -197,7 +197,7 @@ func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
 
 // ListeningPorts returns all TCP ports currently open for the process
 // running as the instance. An empty slice is returned if the process
-// cannot be found. The instance may be on a remote host.
+// cannot be found. The instance may be on remote host h.
 func ListeningPorts(h host.Host, pid int) (ports []int) {
 	var err error
 
@@ -218,7 +218,6 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 	for _, s := range sockets {
 		if port, ok := tcpports[s]; ok {
 			ports = append(ports, port)
-			log.Debug().Msgf("process listening on %v", port)
 		}
 	}
 	sort.Ints(ports)
