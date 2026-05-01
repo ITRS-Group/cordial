@@ -37,50 +37,51 @@ type procCache struct {
 	LastUpdate time.Time
 
 	// Entries is the map of process entries, indexed by PID
-	Entries map[int64]ProcessInfo
+	Entries map[int]*ProcessInfo
 }
 
 var procCacheTTL = 5 * time.Second
 
-// ProcessInfo is a struct that holds information about a process.
-// It is used to return information about a process on a host.
-type ProcessInfo struct {
-	PID          int64
-	PPID         int64
-	Children     []int64
-	Exe          string
-	Cmdline      []string
-	CreationTime time.Time
-	UID          int
-	GID          int
-	Username     string
-	Groupname    string
-	TCPPorts     []int
-	UDPPorts     []int
-}
-
-// ProcessStats is an example of a structure to pass to
+// ProcessInfo is an example of a structure to pass to
 // instance.ProcessStatus, using a field number for `stat` and a line
 // prefix for `status` tags. OpenFiles and OpenSockets fields are counts
 // of their respective names.
-type ProcessStats struct {
-	PID         int64         `stat:"0" json:"-"`
-	PPID        int64         `stat:"3"`
-	Utime       time.Duration `stat:"13"`
-	Stime       time.Duration `stat:"14"`
-	CUtime      time.Duration `stat:"15"`
-	CStime      time.Duration `stat:"16"`
-	UIDs        []string      `status:"Uid" json:"-"`
-	GIDs        []string      `status:"Gid" json:"-"`
-	State       string        `status:"State"`
-	Threads     int64         `status:"Threads"`
-	VmRSS       int64         `status:"VmRSS"`
-	VmHWM       int64         `status:"VmHWM"`
-	RssAnon     int64         `status:"RssAnon"`
-	RssFile     int64         `status:"RssFile"`
-	RssShmem    int64         `status:"RssShmem"`
-	OpenFiles   int64
-	OpenSockets int64
+type ProcessInfo struct {
+	PID      int           `stat:"0" json:"-"`
+	PPID     int           `stat:"3"`
+	Utime    time.Duration `stat:"13"`
+	Stime    time.Duration `stat:"14"`
+	CUtime   time.Duration `stat:"15"`
+	CStime   time.Duration `stat:"16"`
+	UIDs     []string      `status:"Uid" json:"-"`
+	GIDs     []string      `status:"Gid" json:"-"`
+	State    string        `status:"State"`
+	Threads  int64         `status:"Threads"`
+	VmRSS    int64         `status:"VmRSS"`
+	VmHWM    int64         `status:"VmHWM"`
+	RssAnon  int64         `status:"RssAnon"`
+	RssFile  int64         `status:"RssFile"`
+	RssShmem int64         `status:"RssShmem"`
+
+	// special fields that are not from /proc/PID/stat or
+	// /proc/PID/status but are calculated from other information, such
+	// as the number of open files and sockets
+	OpenFiles   int64 `json:"-"` // calculated from /proc/PID/fd
+	OpenSockets int64 `json:"-"` // calculated from /proc/PID/fd and /proc/PID/net/tcp and /proc/PID/net/udp
+
+	// these fields are not filled by ProcessStatus but are included in ProcessInfo for convenience
+	TCPPorts     []int     `json:"-"` // calculated from /proc/PID/net/tcp
+	UDPPorts     []int     `json:"-"` // calculated from /proc/PID/net/udp
+	Exe          string    `json:"-"`
+	Cmdline      []string  `json:"-"`
+	CreationTime time.Time `json:"-"`
+	Children     []int     `json:"-"`
+	UID          int       `json:"-"` // real UID
+	EUID         int       `json:"-"` // effective UID
+	GID          int       `json:"-"` // real GID
+	EGID         int       `json:"-"` // effective GID
+	Username     string    `json:"-"`
+	Groupname    string    `json:"-"`
 }
 
 // procCache is a map of host to procCache, which is used to cache
@@ -101,12 +102,12 @@ var procCacheMap = make(map[host.Host]procCache)
 //
 // this assumes host h is Linux with an accessible /proc filesystem
 func getProcCache(h host.Host, refreshCache bool) (c procCache, ok bool) {
-	if h.IsLocal() {
-		return getLocalProcCache(refreshCache)
-	}
-
 	// remote support for Linux only for now
 	if h.ServerVersion() == "windows" {
+		if h.IsLocal() {
+			// local windows only, for now
+			return getWindowsProcCache(refreshCache)
+		}
 		return
 	}
 
@@ -128,7 +129,7 @@ func getProcCache(h host.Host, refreshCache bool) (c procCache, ok bool) {
 	if err != nil {
 		return c, false
 	}
-	c.Entries = make(map[int64]ProcessInfo, len(dirs))
+	c.Entries = make(map[int]*ProcessInfo, len(dirs))
 
 	for _, dir := range dirs {
 		st, err := h.Stat(dir)
@@ -139,50 +140,47 @@ func getProcCache(h host.Host, refreshCache bool) (c procCache, ok bool) {
 		if !st.IsDir() {
 			continue
 		}
-		pid, err := strconv.ParseInt(st.Name(), 10, 64)
+		pid, err := strconv.Atoi(st.Name())
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
 			continue
 		}
-		mtime := st.ModTime()
 
-		// this does not truncate the binary name, which can happen in
-		// /proc/PID/stat, but we need to remove any " (deleted)" suffix
-		// that can be added to the exe name when the binary is deleted
-		// after the process starts
-		exe, _ := h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-		exe = strings.TrimSuffix(exe, " (deleted)")
+		psexe, _ := h.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
 
 		b, err := h.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to read cmdline for pid %d", pid)
 			continue
 		}
-		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
 
-		var uid, gid = -1, -1
+		pstatus := &ProcessInfo{
+			PID:          pid,
+			UID:          -1,
+			GID:          -1,
+			EUID:         -1,
+			EGID:         -1,
+			CreationTime: st.ModTime(),
+			Exe:          strings.TrimSuffix(psexe, " (deleted)"),
+			Cmdline:      strings.Split(strings.TrimSuffix(string(b), "\000"), "\000"),
+		}
 
-		pstatus := &ProcessStats{}
-		ProcessStatus(h, pid, pstatus)
+		if err = ProcessStatus(h, pid, pstatus); err != nil {
+			log.Debug().Err(err).Msgf("failed to get process status for pid %d", pid)
+			continue
+		}
 
 		if len(pstatus.UIDs) > 0 {
-			uid, _ = strconv.Atoi(pstatus.UIDs[0])
+			pstatus.UID, _ = strconv.Atoi(pstatus.UIDs[0])
 		}
 		if len(pstatus.GIDs) > 0 {
-			gid, _ = strconv.Atoi(pstatus.GIDs[0])
+			pstatus.GID, _ = strconv.Atoi(pstatus.GIDs[0])
 		}
 
-		c.Entries[pid] = ProcessInfo{
-			PID:          pstatus.PID,
-			PPID:         pstatus.PPID,
-			Exe:          exe,
-			Cmdline:      cmdline,
-			CreationTime: mtime,
-			UID:          uid,
-			GID:          gid,
-			Username:     GetUsername(uid),
-			Groupname:    GetGroupname(gid),
-		}
+		pstatus.Username = GetUsername(pstatus.UID)
+		pstatus.Groupname = GetGroupname(pstatus.GID)
+
+		c.Entries[pid] = pstatus
 	}
 
 	// build child lists
@@ -211,7 +209,7 @@ func getProcCache(h host.Host, refreshCache bool) (c procCache, ok bool) {
 // host to get the process entries, which can be expensive. The cache is
 // updated every 5 seconds, or when the cache is empty. The cache can be
 // reset/refreshed by passing the RefreshCache() option.
-func PID(h host.Host, executable string, args []string, options ...ProcessOption) (int64, error) {
+func PID(h host.Host, executable string, args []string, options ...ProcessOption) (pid int, err error) {
 	if h == nil {
 		return 0, fmt.Errorf("host cannot be nil")
 	}
@@ -264,7 +262,7 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 }
 
 // GetProcessInfo returns information about the process pid on host h.
-func GetProcessInfo(h host.Host, pid int64, resetcache bool) (pi ProcessInfo, err error) {
+func GetProcessInfo(h host.Host, pid int, resetcache bool) (pi *ProcessInfo, err error) {
 	c, ok := getProcCache(h, resetcache)
 	if !ok {
 		return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())

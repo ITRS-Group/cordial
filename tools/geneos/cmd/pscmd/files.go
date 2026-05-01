@@ -59,7 +59,7 @@ var fileCSVColumns = []string{
 
 var fileCSVHeader = strings.Join(fileCSVColumns, "\t")
 
-func psFilesJSON(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psFilesJSON(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -125,7 +125,7 @@ func psFilesJSON(i geneos.Instance, pid int64, resp *responses.Response) (err er
 	return
 }
 
-func psFilesCSV(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psFilesCSV(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -196,7 +196,7 @@ func psFilesCSV(i geneos.Instance, pid int64, resp *responses.Response) (err err
 	return
 }
 
-func psFilesTable(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()

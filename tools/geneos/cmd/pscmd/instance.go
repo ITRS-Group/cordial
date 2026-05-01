@@ -2,6 +2,7 @@ package pscmd
 
 import (
 	"fmt"
+	"path"
 	"strings"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 type psInstance struct {
 	psCommon
-	Ports     []int     `json:"ports,omitempty"`
+	Ports     []int     `json:"ports"`
 	User      string    `json:"user,omitempty"`
 	Group     string    `json:"group,omitempty"`
 	Starttime time.Time `json:"starttime,omitempty"`
@@ -20,7 +21,7 @@ type psInstance struct {
 	Home      string    `json:"home,omitempty"`
 
 	// Extra fields, when `--long` is used
-	Extra *process.ProcessStats `json:"extra,omitempty"`
+	Extra *process.ProcessInfo `json:"extra,omitempty"`
 }
 
 var instanceToolkitColumns = []string{
@@ -90,6 +91,11 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 		return
 	}
 
+	// ensure empty slice marshals as [] instead of null
+	if len(ports) == 0 {
+		ports = make([]int, 0)
+	}
+
 	psData := psInstance{
 		psCommon: psCommon{
 			Type: ct,
@@ -106,10 +112,34 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 	}
 
 	if psCmdLong {
-		psData.Extra = &process.ProcessStats{}
+		psData.Extra = &process.ProcessInfo{}
 		process.ProcessStatus(h, pi.PID, psData.Extra)
 	}
 
 	resp.Value = psData
+	return
+}
+
+func checkCA(h *geneos.Host, pid int) (pi *process.ProcessInfo, ok bool, err error) {
+	pi, err = process.GetProcessInfo(h, pid, false)
+	if err != nil {
+		return
+	}
+	if len(pi.Cmdline) == 0 {
+		err = fmt.Errorf("no cmdline for PID %d", pid)
+		return
+	}
+
+	if path.Base(pi.Cmdline[0]) != "java" {
+		return
+	}
+
+	for _, arg := range pi.Cmdline[1:] {
+		if strings.Contains(arg, "collection-agent") {
+			ok = true
+			return
+		}
+	}
+
 	return
 }

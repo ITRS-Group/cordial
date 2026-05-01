@@ -3,13 +3,11 @@ package process
 import (
 	"fmt"
 	"io"
-	"io/fs"
 	"os"
 	"os/exec"
 	"os/user"
 	"path"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-reap"
@@ -47,7 +45,7 @@ func retErrIfFalse(ret bool, err error) error {
 //
 // TODO: return error windows
 // TODO: look at remote processes
-func Start(h host.Host, program Program, options ...ProgramOption) (pid int64, err error) {
+func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err error) {
 	opts := evalOptions(options...)
 
 	if h == nil {
@@ -183,45 +181,6 @@ func Batch(h host.Host, batch []Program, options ...ProgramOption) (done chan st
 
 	if err == os.ErrProcessDone {
 		err = nil
-	}
-	return
-}
-
-// keep this for later, not yet required but useful
-func writerFromAny(dest any, flags int, perms fs.FileMode) (writer io.Writer, err error) {
-	switch e := dest.(type) {
-	case string:
-		// open and set
-		w, err := os.OpenFile(e, flags, perms)
-		if err != nil {
-			return nil, err
-
-		}
-		writer = w
-	default:
-		if w, ok := e.(io.Writer); ok {
-			writer = w
-		}
-		err = fmt.Errorf("unknown writer destination type %T", e)
-	}
-	return
-}
-
-// sliceFromAny returns a slice of strings from value. If value is a
-// string then it is split using strings.Fields(), if it is a slice of
-// strings then it is returned otherwise and empty slice and error are
-// returned.
-func sliceFromAny(value any) (out []string, err error) {
-	if value == nil {
-		return
-	}
-	switch e := value.(type) {
-	case string:
-		out = strings.Fields(e)
-	case []string:
-		out = e
-	default:
-		err = fmt.Errorf("unsupported type %T", e)
 	}
 	return
 }

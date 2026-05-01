@@ -59,7 +59,7 @@ var netCSVColumns = []string{
 
 var netCSVHeader = strings.Join(netCSVColumns, "\t")
 
-func psNetworkJSON(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psNetworkJSON(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -95,7 +95,7 @@ func psNetworkJSON(i geneos.Instance, pid int64, resp *responses.Response) (err 
 	return
 }
 
-func psNetworkCSV(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psNetworkCSV(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -165,7 +165,7 @@ func psNetworkCSV(i geneos.Instance, pid int64, resp *responses.Response) (err e
 	return
 }
 
-func psNetworkTable(i geneos.Instance, pid int64, resp *responses.Response) (err error) {
+func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()

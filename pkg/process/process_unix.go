@@ -23,11 +23,9 @@ import (
 	"bufio"
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 	"os/user"
 	"path"
-	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -36,7 +34,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 	"github.com/tklauser/go-sysconf"
 )
 
@@ -93,7 +90,7 @@ func GetGroupname(gid int) (groupname string) {
 // pstats. pstats must be a point to a struct and must be initialised
 // before calling. Use the instance.ProcessStats struct as a useful
 // default.
-func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
+func ProcessStatus(h host.Host, pid int, pstats any) (err error) {
 	var scClkTck int64
 
 	if h.IsLocal() {
@@ -208,7 +205,6 @@ func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
 									fv.SetInt(iv)
 								}
 							}
-
 						}
 					}
 				}
@@ -237,6 +233,7 @@ func ProcessStatus(h host.Host, pid int64, pstats any) (err error) {
 				}
 			}
 
+			// do nothing if there are no tags we care about
 		}
 	}
 
@@ -253,102 +250,7 @@ func prepareCmd(cmd *exec.Cmd) {
 	}
 }
 
-func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
-	procCacheMutex.Lock()
-	defer procCacheMutex.Unlock()
-
-	if !resetcache {
-		if c, ok = procCacheMap[nil]; ok {
-			if time.Since(c.LastUpdate) < procCacheTTL {
-				return
-			}
-		}
-	}
-
-	// cache is empty or expired, update it
-	dirs, err := filepath.Glob("/proc/[0-9]*")
-	if err != nil {
-		return
-	}
-	c.Entries = make(map[int64]ProcessInfo, len(dirs))
-
-	for _, dir := range dirs {
-		st, err := os.Stat(dir)
-		if err != nil {
-			log.Debug().Err(err).Msgf("failed to stat %s", dir)
-			continue
-		}
-		if !st.IsDir() {
-			continue
-		}
-
-		pid, err := strconv.ParseInt(st.Name(), 10, 64)
-		if err != nil {
-			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
-			continue
-		}
-		mtime := st.ModTime()
-
-		exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-		if err != nil {
-			continue
-		}
-		exe = strings.TrimSuffix(exe, " (deleted)")
-
-		b, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-		if err != nil {
-			continue
-		}
-		cmdline := strings.Split(strings.TrimSuffix(string(b), "\000"), "\000")
-
-		uid, gid := -1, -1
-
-		pstatus := &ProcessStats{}
-		ProcessStatus(host.Localhost, pid, pstatus)
-
-		if len(pstatus.UIDs) > 0 {
-			uid, _ = strconv.Atoi(pstatus.UIDs[0])
-		}
-		if len(pstatus.GIDs) > 0 {
-			gid, _ = strconv.Atoi(pstatus.GIDs[0])
-		}
-
-		// status, err := readProcessStatus(nil, pid)
-		// if err != nil {
-		// 	log.Debug().Err(err).Msgf("failed to read status for pid %d", pid)
-		// 	continue
-		// 	// leave status as nil if we cannot read it
-		// }
-		c.Entries[pid] = ProcessInfo{
-			PID:          pstatus.PID,
-			PPID:         pstatus.PPID,
-			Exe:          exe,
-			Cmdline:      cmdline,
-			CreationTime: mtime,
-			UID:          uid,
-			GID:          gid,
-			Username:     GetUsername(uid),
-			Groupname:    GetGroupname(gid),
-		}
-	}
-
-	// build child lists
-	for _, p := range c.Entries {
-		if parent, ok := c.Entries[p.PPID]; ok {
-			parent.Children = append(parent.Children, p.PID)
-			c.Entries[p.PPID] = parent
-		}
-	}
-
-	c.LastUpdate = time.Now()
-	procCacheMap[nil] = c
-
-	return c, true
-}
-
-func ownerOfFile(st os.FileInfo) (uid, gid int) {
-	if stat, ok := st.Sys().(*syscall.Stat_t); ok {
-		return int(stat.Uid), int(stat.Gid)
-	}
-	return -1, -1
+// stub
+func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
+	return
 }

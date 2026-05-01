@@ -56,7 +56,7 @@ func setCredentials(cmd *exec.Cmd, user, group any) {
 	// not implemented
 }
 
-func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
+func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
@@ -68,7 +68,7 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		}
 	}
 
-	c.Entries = map[int64]ProcessInfo{}
+	c.Entries = map[int64]*ProcessInfo{}
 
 	h, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
@@ -85,13 +85,6 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 	}
 
 	for {
-		// var pbi windows.PROCESS_BASIC_INFORMATION
-		// var retLen uint32
-		// var argc int32
-
-		pid := pe.ProcessID
-		ppid := pe.ParentProcessID
-		exe := windows.UTF16ToString(pe.ExeFile[:])
 
 		if err = windows.Process32Next(h, &pe); err != nil {
 			// done
@@ -100,6 +93,8 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 		if pe.ProcessID == 0 {
 			continue
 		}
+
+		pid := pe.ProcessID
 
 		cmdLine, creationTime, err := getProcessInfo(pid)
 		if err != nil {
@@ -112,14 +107,18 @@ func getLocalProcCache(resetcache bool) (c procCache, ok bool) {
 			continue
 		}
 
-		c.Entries[int64(pid)] = ProcessInfo{
+		c.Entries[int64(pid)] = &ProcessInfo{
 			PID:          int64(pid),
-			PPID:         int64(ppid),
-			Exe:          exe,
+			PPID:         int64(pe.ParentProcessID),
+			Exe:          windows.UTF16ToString(pe.ExeFile[:]),
 			Cmdline:      cmdLine,
 			CreationTime: creationTime,
 			UID:          uid,
 			GID:          gid,
+			Username:     GetUsername(uid),
+			Groupname:    GetGroupname(gid),
+			Children:     []int64{},
+			GIDs:         []string{},
 		}
 	}
 

@@ -3,7 +3,7 @@ package process
 import "io/fs"
 
 type ProcessFDs struct {
-	PID   int64
+	PID   int
 	FD    int
 	Path  string
 	Lstat fs.FileInfo

@@ -87,7 +87,7 @@ type psCommon struct {
 	Type *geneos.Component `json:"type"`
 	Name string            `json:"name"`
 	Host *geneos.Host      `json:"host"`
-	PID  int64             `json:"pid"`
+	PID  int               `json:"pid"`
 }
 
 // CommandPS writes running instance information to STDOUT
@@ -96,9 +96,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Report(os.Stdout, responses.IndentJSON(psCmdIndent))
 
-	case psCmdToolkit:
-		psCSVWriter := csv.NewWriter(os.Stdout)
-
+	case psCmdCSV, psCmdToolkit:
 		var columns []string
 
 		switch {
@@ -107,54 +105,48 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		case psCmdShowFiles:
 			columns = fileToolkitColumns
 		default:
-			columns = instanceToolkitColumns
-			if psCmdLong {
-				columns = append(columns, instanceToolkitExtraColumns...)
-			}
-		}
-
-		psCSVWriter.Write(columns)
-		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
-		resp.Report(psCSVWriter, responses.IgnoreErr(geneos.ErrDisabled))
-		switch {
-		case psCmdShowNet:
-			// no headlines yet
-		case psCmdShowFiles:
-			// no headlines yet
-		default:
-			var notRunning int
-			var disabled int
-			for _, r := range resp {
-				if errors.Is(r.Err, os.ErrProcessDone) {
-					notRunning++
+			if psCmdToolkit {
+				columns = instanceToolkitColumns
+				if psCmdLong {
+					columns = append(columns, instanceToolkitExtraColumns...)
 				}
-				if errors.Is(r.Err, geneos.ErrDisabled) {
-					disabled++
+			} else {
+				columns = instanceCSVColumns
+				if psCmdLong {
+					columns = append(columns, instanceCSVExtraColumns...)
 				}
-			}
-			fmt.Printf("<!>instances,%d\n", len(resp))
-			fmt.Printf("<!>running,%d\n", len(resp)-notRunning-disabled)
-			fmt.Printf("<!>notRunning,%d\n", notRunning)
-			fmt.Printf("<!>disabled,%d\n", disabled)
-		}
-
-	case psCmdCSV:
-		var columns []string
-		switch {
-		case psCmdShowNet:
-			columns = netCSVColumns
-		case psCmdShowFiles:
-			columns = fileCSVColumns
-		default:
-			columns = instanceCSVColumns
-			if psCmdLong {
-				columns = append(columns, instanceCSVExtraColumns...)
 			}
 		}
 
 		psCSVWriter := csv.NewWriter(os.Stdout)
 		psCSVWriter.Write(columns)
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV).Report(psCSVWriter)
+
+		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
+		resp.Report(psCSVWriter, responses.IgnoreErr(geneos.ErrDisabled))
+
+		if psCmdToolkit {
+			switch {
+			case psCmdShowNet:
+				// no headlines yet
+			case psCmdShowFiles:
+				// no headlines yet
+			default:
+				var notRunning int
+				var disabled int
+				for _, r := range resp {
+					if errors.Is(r.Err, os.ErrProcessDone) {
+						notRunning++
+					}
+					if errors.Is(r.Err, geneos.ErrDisabled) {
+						disabled++
+					}
+				}
+				fmt.Printf("<!>instances,%d\n", len(resp))
+				fmt.Printf("<!>running,%d\n", len(resp)-notRunning-disabled)
+				fmt.Printf("<!>notRunning,%d\n", notRunning)
+				fmt.Printf("<!>disabled,%d\n", disabled)
+			}
+		}
 
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -168,11 +160,11 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			fmt.Fprintln(psTabWriter, instanceCSVHeader)
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Report(psTabWriter)
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Report(psTabWriter, responses.IgnoreErr(geneos.ErrDisabled))
 	}
 }
 
-func psInstanceCommon(i geneos.Instance) (pi process.ProcessInfo, base, actual, uptodate string, ports []int, err error) {
+func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual, uptodate string, ports []int, err error) {
 	h := i.Host()
 
 	if instance.IsDisabled(i) {
@@ -198,30 +190,6 @@ func psInstanceCommon(i geneos.Instance) (pi process.ProcessInfo, base, actual, 
 
 	if h.IsLocal() || psCmdLong {
 		ports = process.ListeningPorts(h, pi.PID)
-	}
-
-	return
-}
-
-func checkCA(h *geneos.Host, pid int64) (pi process.ProcessInfo, ok bool, err error) {
-	pi, err = process.GetProcessInfo(h, pid, false)
-	if err != nil {
-		return
-	}
-	if len(pi.Cmdline) == 0 {
-		err = fmt.Errorf("no cmdline for PID %d", pid)
-		return
-	}
-
-	if path.Base(pi.Cmdline[0]) != "java" {
-		return
-	}
-
-	for _, arg := range pi.Cmdline[1:] {
-		if strings.Contains(arg, "collection-agent") {
-			ok = true
-			return
-		}
 	}
 
 	return
@@ -263,8 +231,11 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	if !h.IsLocal() && portlist == "" {
 		portlist = "..."
 	}
+	if len(ports) == 0 {
+		portlist = "NONE"
+	}
 
-	p := &process.ProcessStats{}
+	p := &process.ProcessInfo{}
 	if err := process.ProcessStatus(h, pi.PID, p); err == nil && psCmdLong {
 		resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
 			ct,
@@ -405,7 +376,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	)
 
 	if psCmdLong {
-		p := &process.ProcessStats{}
+		p := &process.ProcessInfo{}
 		if err := process.ProcessStatus(h, pi.PID, p); err == nil {
 			row = append(row,
 				p.State,
