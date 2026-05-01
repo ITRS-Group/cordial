@@ -248,6 +248,15 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 				}
 			}
 
+		case "Cwd":
+			if fv.CanSet() && fv.Type().Kind() == reflect.String {
+				cwd := fmt.Sprintf("/proc/%d/cwd", pid)
+				cwdVal, err := h.Readlink(cwd)
+				if err == nil {
+					fv.SetString(cwdVal)
+				}
+			}
+
 		case "UID":
 			if fv.CanSet() && fv.Type().Kind() == reflect.Int {
 				if v, ok := statusFields["Uid"]; ok {

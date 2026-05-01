@@ -59,6 +59,7 @@ type ProcessInfo struct {
 	// these fields are not filled by ProcessStatus but are included in ProcessInfo for convenience
 	TCPPorts  []int     `json:"-"` // calculated from /proc/PID/net/tcp
 	UDPPorts  []int     `json:"-"` // calculated from /proc/PID/net/udp
+	Cwd       string    `json:"-"` // calculated from /proc/PID/cwd
 	Exe       string    `json:"-"`
 	Cmdline   []string  `json:"-"`
 	StartTime time.Time `json:"-"`

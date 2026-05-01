@@ -12,6 +12,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/rs/zerolog/log"
 )
 
 type psInstanceFiles struct {
@@ -201,7 +202,12 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 	h := i.Host()
 	name := i.Name()
 
-	homedir := i.Home()
+	pi, _, _, _, err := psInstanceCommon(i)
+	if err != nil {
+		return
+	}
+
+	homedir := pi.Cwd
 	hs, err := h.Stat(homedir)
 	if err != nil {
 		resp.Err = err
@@ -251,6 +257,61 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 				fd.Stat.ModTime().Local().Format(time.RFC3339),
 				path,
 			))
+	}
+
+	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		homedir := capi.Cwd
+		hs, err := h.Stat(homedir)
+		if err != nil {
+			resp.Err = err
+			return err
+		}
+		uid, gid := host.GetFileOwner(h, hs)
+		resp.Details = append(resp.Details,
+			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
+				ct.String()+"/ca",
+				name,
+				h,
+				capi.PID,
+				hs.Mode().Perm().String(),
+				process.GetUsername(uid),
+				process.GetGroupname(gid),
+				hs.Size(),
+				hs.ModTime().Local().Format(time.RFC3339),
+				homedir,
+			))
+		for _, fd := range capi.OpenFiles {
+			if !path.IsAbs(fd.Path) {
+				continue
+			}
+
+			uid, gid := host.GetFileOwner(h, fd.Stat)
+			path := fd.Path
+			fdPerm := ""
+			m := fd.Lstat.Mode().Perm()
+			if m&0400 == 0400 {
+				fdPerm += "r"
+			}
+			if m&0200 == 0200 {
+				fdPerm += "w"
+			}
+			resp.Details = append(resp.Details,
+				fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
+					ct.String()+"/ca",
+					name,
+					h,
+					capi.PID,
+					fd.FD,
+					fdPerm,
+					fd.Stat.Mode().Perm(),
+					process.GetUsername(uid),
+					process.GetGroupname(gid),
+					fd.Stat.Size(),
+					fd.Stat.ModTime().Local().Format(time.RFC3339),
+					path,
+				))
+		}
 	}
 
 	return

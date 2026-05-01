@@ -9,6 +9,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/rs/zerolog/log"
 )
 
 type psInstanceNetwork struct {
@@ -174,7 +175,11 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err e
 	h := i.Host()
 	name := i.Name()
 
-	for _, fd := range process.OpenFiles(h, pid) {
+	pi, _, _, _, err := psInstanceCommon(i)
+	if err != nil {
+		return
+	}
+	for _, fd := range pi.OpenFiles {
 		if fd.Conn == nil {
 			continue
 		}
@@ -209,5 +214,43 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err e
 				c.RxQueue,
 			))
 	}
+
+	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		for _, fd := range capi.OpenFiles {
+			if fd.Conn == nil {
+				continue
+			}
+			c := fd.Conn
+			if !(strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp")) {
+				continue
+			}
+			remAddr := "-"
+			if !c.RemoteAddr.Equal(net.IPv4(0, 0, 0, 0)) {
+				remAddr = fmt.Sprint(c.RemoteAddr)
+			}
+			remPort := "-"
+			if c.RemotePort != 0 {
+				remPort = fmt.Sprint(c.RemotePort)
+			}
+			resp.Details = append(resp.Details,
+				fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
+					ct.String()+"/ca",
+					name,
+					h,
+					pi.PID,
+					fd.FD,
+					c.Protocol,
+					c.LocalAddr,
+					c.LocalPort,
+					remAddr,
+					remPort,
+					c.Status,
+					c.TxQueue,
+					c.RxQueue,
+				))
+		}
+	}
+
 	return
 }
