@@ -110,8 +110,9 @@ ENV NODE_ENV=$NODE_ENV
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
+    rm -f /etc/apt/apt.conf.d/docker-clean; \
     apt update; \
     apt install -y --no-install-recommends \
         wget \
@@ -267,8 +268,10 @@ COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
+    rm -f /etc/apt/apt.conf.d/docker-clean; \
     apt update; \
     apt install -y --no-install-recommends \
     fontconfig \
@@ -344,7 +347,7 @@ COPY --chmod=555 gdna/docker/start-up.sh /etc/geneos/gdna/start-up.sh
 
 ENV DEBIANFRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
     apt update; \
     apt install -y --no-install-recommends \
