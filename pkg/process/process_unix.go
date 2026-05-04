@@ -143,93 +143,24 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 		ft := st.Field(i)
 		fv := sv.Field(i)
 
+		if lookup, ok := ft.Tag.Lookup("cache"); ok && lookup == "lazy" {
+			// skip filling this field for now, it will be filled on demand when requested
+			continue
+
+			// if not lazy or no cache tag, then fill it now drop
+			// through to fill it below
+		}
+
 		// special cases first
 		switch ft.Name {
 		case "OpenFiles":
-			// if an int, then a count, if a slice or string, then a
-			// list of open files. For now we just support count, but we
-			// could add the list in future if needed.
-			if fv.CanSet() {
-				of := OpenFiles(h, pid)
-				switch fv.Type().Kind() {
-				case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
-					fv.SetInt(int64(len(of)))
-				case reflect.Slice:
-					switch fv.Type().Elem().Kind() {
-					case reflect.Struct:
-						if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
-							fv.Set(reflect.ValueOf(of))
-						}
-
-					case reflect.String:
-						var openfiles []string
-						for _, f := range of {
-							openfiles = append(openfiles, f.Path)
-						}
-						fv.Set(reflect.ValueOf(openfiles))
-					}
-				case reflect.String:
-					var openfiles []string
-					for _, f := range of {
-						openfiles = append(openfiles, f.Path)
-					}
-					if len(openfiles) > 0 {
-						fv.SetString(strings.Join(openfiles, ","))
-					} else {
-						fv.SetString("NONE")
-					}
-				default:
-					// do nothing if it's not an int or a slice or string
-				}
-			}
+			ProcessStatusOpenFiles(h, pid, fv)
 
 		case "OpenSockets":
-			if fv.CanSet() {
-				var opensockets int64 = 0
-				of := OpenFiles(h, pid)
-				for _, f := range of {
-					if f.Conn != nil {
-						// socket
-						c := f.Conn
-						if strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp") {
-							opensockets++
-						}
-					}
-				}
-				fv.SetInt(opensockets)
-			}
+			ProcessStatusOpenSockets(h, pid, fv)
 
-			// ListeningPorts can be a slice or a string. If a slice it
-			// can be a slice of int or string.
 		case "ListeningPorts":
-			if fv.CanSet() {
-				ports := ListeningPorts(h, pid)
-				switch fv.Type().Kind() {
-				case reflect.Slice:
-					switch fv.Type().Elem().Kind() {
-					case reflect.Int:
-						fv.Set(reflect.ValueOf(ports))
-					case reflect.String:
-						var portlist []string
-						for _, p := range ports {
-							portlist = append(portlist, fmt.Sprint(p))
-						}
-						fv.Set(reflect.ValueOf(portlist))
-					}
-				case reflect.String:
-					var portlist []string
-					for _, p := range ports {
-						portlist = append(portlist, fmt.Sprint(p))
-					}
-					if len(portlist) > 0 {
-						fv.SetString(strings.Join(portlist, ","))
-					} else {
-						fv.SetString("NONE")
-					}
-				default:
-					// do nothing if it's not a slice of int or string, or a string
-				}
-			}
+			ProcessStatusListeningPorts(h, pid, fv)
 
 		case "Exe":
 			if fv.CanSet() && fv.Type().Kind() == reflect.String {
@@ -338,6 +269,90 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 	}
 
 	return
+}
+
+func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
+	if fv.CanSet() {
+		of := OpenFiles(h, pid)
+		switch fv.Type().Kind() {
+		case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
+			fv.SetInt(int64(len(of)))
+		case reflect.Slice:
+			switch fv.Type().Elem().Kind() {
+			case reflect.Struct:
+				if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
+					fv.Set(reflect.ValueOf(of))
+				}
+
+			case reflect.String:
+				var openfiles []string
+				for _, f := range of {
+					openfiles = append(openfiles, f.Path)
+				}
+				fv.Set(reflect.ValueOf(openfiles))
+			}
+		case reflect.String:
+			var openfiles []string
+			for _, f := range of {
+				openfiles = append(openfiles, f.Path)
+			}
+			if len(openfiles) > 0 {
+				fv.SetString(strings.Join(openfiles, ","))
+			} else {
+				fv.SetString("NONE")
+			}
+		default:
+			// do nothing if it's not an int or a slice or string
+		}
+	}
+}
+
+func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
+	if fv.CanSet() {
+		var opensockets int64 = 0
+		of := OpenFiles(h, pid)
+		for _, f := range of {
+			if f.Conn != nil {
+				// socket
+				c := f.Conn
+				if strings.HasPrefix(c.Protocol, "tcp") || strings.HasPrefix(c.Protocol, "udp") {
+					opensockets++
+				}
+			}
+		}
+		fv.SetInt(opensockets)
+	}
+}
+
+func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
+	if fv.CanSet() {
+		ports := ListeningPorts(h, pid)
+		switch fv.Type().Kind() {
+		case reflect.Slice:
+			switch fv.Type().Elem().Kind() {
+			case reflect.Int:
+				fv.Set(reflect.ValueOf(ports))
+			case reflect.String:
+				var portlist []string
+				for _, p := range ports {
+					portlist = append(portlist, fmt.Sprint(p))
+				}
+				fv.Set(reflect.ValueOf(portlist))
+			}
+		case reflect.String:
+			var portlist []string
+			for _, p := range ports {
+				portlist = append(portlist, fmt.Sprint(p))
+			}
+			if len(portlist) > 0 {
+				fv.SetString(strings.Join(portlist, ","))
+			} else {
+				fv.SetString("NONE")
+			}
+		default:
+			// do nothing if it's not a slice of int or string, or a string
+		}
+	}
 }
 
 func prepareCmd(cmd *exec.Cmd) {

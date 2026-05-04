@@ -51,17 +51,12 @@ func prepareCmd(cmd *exec.Cmd) {
 	}
 }
 
-// user and group are sids
-func setCredentials(cmd *exec.Cmd, user, group any) {
-	// not implemented
-}
-
 func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
 	if !resetcache {
-		if c, ok = procCacheMap[nil]; ok {
+		if c, ok = procCacheMap[nil].(procCache); ok {
 			if time.Since(c.LastUpdate) < procCacheTTL {
 				return
 			}

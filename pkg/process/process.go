@@ -31,7 +31,10 @@ import (
 // ProcessInfo is an example of a structure to pass to
 // instance.ProcessStatus, using a field number for `stat` and a line
 // prefix for `status` tags. OpenFiles and OpenSockets fields are counts
-// of their respective names.
+// of their respective names. Some fields may be expensive to fill for
+// all processes, so they are marked with `cache:"lazy"` to indicate
+// that they should be filled on demand when requested, rather than when
+// the process information is first retrieved.
 type ProcessInfo struct {
 	PID      int           `stat:"0" json:"-"`
 	PPID     int           `stat:"3"`
@@ -52,13 +55,13 @@ type ProcessInfo struct {
 	// special fields that are not from /proc/PID/stat or
 	// /proc/PID/status but are calculated from other information, such
 	// as the number of open files and sockets
-	OpenFiles      []ProcessFDs `json:"-"` // calculated from /proc/PID/fd
-	OpenSockets    int64        `json:"-"` // calculated from /proc/PID/fd and /proc/PID/net/tcp and /proc/PID/net/udp
-	ListeningPorts string       `json:"-"` // calculated from /proc/PID/net/tcp and /proc/PID/net/udp
+	OpenFiles      []ProcessFDs `cache:"lazy" json:"-"` // calculated from /proc/PID/fd
+	OpenSockets    int64        `cache:"lazy" json:"-"` // calculated from /proc/PID/fd and /proc/PID/net/tcp and /proc/PID/net/udp
+	ListeningPorts string       `cache:"lazy" json:"-"` // calculated from /proc/PID/net/tcp and /proc/PID/net/udp
 
 	// these fields are not filled by ProcessStatus but are included in ProcessInfo for convenience
-	TCPPorts  []int     `json:"-"` // calculated from /proc/PID/net/tcp
-	UDPPorts  []int     `json:"-"` // calculated from /proc/PID/net/udp
+	// TCPPorts  []int     `json:"-"` // calculated from /proc/PID/net/tcp
+	// UDPPorts  []int     `json:"-"` // calculated from /proc/PID/net/udp
 	Cwd       string    `json:"-"` // calculated from /proc/PID/cwd
 	Exe       string    `json:"-"`
 	Cmdline   []string  `json:"-"`
@@ -70,6 +73,16 @@ type ProcessInfo struct {
 	EGID      int       `json:"-"` // effective GID
 	Username  string    `json:"-"`
 	Groupname string    `json:"-"`
+}
+
+// ProcessInfo is an example of a structure to pass to
+// instance.ProcessStatus, using a field number for `stat` and a line
+// prefix for `status` tags. OpenFiles and OpenSockets fields are counts
+// of their respective names.
+type ProcessInfoMinimal struct {
+	PID     int      `stat:"0" json:"-"`
+	Exe     string   `json:"-"`
+	Cmdline []string `json:"-"`
 }
 
 // PID returns the PID of the process started with executable name and
@@ -93,7 +106,7 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 	}
 
 	opts := evalProcessOptions(options...)
-	c, ok := getProcesses[*ProcessInfo](h, opts.refreshCache)
+	c, ok := getProcesses[*ProcessInfoMinimal](h, opts.refreshCache)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
 	}
@@ -145,6 +158,8 @@ func GetProcessInfo(h host.Host, pid int, resetcache bool) (pi *ProcessInfo, err
 	}
 
 	if pc, ok := c[pid]; ok {
+		// check and fill cache for lazy fields
+		checkAndFillCache(h, pid, pc)
 		return pc, nil
 	}
 	return pi, os.ErrProcessDone

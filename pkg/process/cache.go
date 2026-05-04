@@ -39,8 +39,6 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 				return
 			}
 		}
-		// if not found, or the type has changed, refresh the cache,
-		// drop through
 	}
 
 	// cache is empty or expired, update it
@@ -131,4 +129,21 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 	procCacheMap[h] = c
 
 	return c, true
+}
+
+func checkAndFillCache(h host.Host, pid int, pc *ProcessInfo) {
+	// check if OpenFiles is empty, if so fill it
+	if len(pc.OpenFiles) == 0 {
+		ProcessStatusOpenFiles(h, pid, reflect.ValueOf(pc).Elem().FieldByName("OpenFiles"))
+	}
+
+	// check if OpenSockets is zero, if so fill it
+	if pc.OpenSockets == 0 {
+		ProcessStatusOpenSockets(h, pid, reflect.ValueOf(pc).Elem().FieldByName("OpenSockets"))
+	}
+
+	// check if ListeningPorts is empty, if so fill it
+	if pc.ListeningPorts == "" {
+		ProcessStatusListeningPorts(h, pid, reflect.ValueOf(pc).Elem().FieldByName("ListeningPorts"))
+	}
 }
