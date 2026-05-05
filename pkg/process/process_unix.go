@@ -91,7 +91,7 @@ func GetGroupname(gid int) (groupname string) {
 func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 	var scClkTck int64
 
-	if reflect.TypeOf(pstats).Kind() != reflect.Ptr || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
+	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
 		panic("pstats must be a pointer to a struct")
 	}
 
@@ -222,7 +222,7 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 
 		default:
 			// for "stat" tag, lookup the field by index, if it exists
-			if i, ok := ft.Tag.Lookup("stat"); ok {
+			if i, ok := ft.Tag.Lookup("proc_pid_stat"); ok {
 				if idx, err := strconv.Atoi(i); err == nil {
 					if len(statFields) > idx && fv.CanSet() {
 						switch fv.Kind() {
@@ -242,7 +242,7 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 			}
 
 			// for "status" tag, lookup the value by matching name, if it exists
-			if statusField, ok := ft.Tag.Lookup("status"); ok {
+			if statusField, ok := ft.Tag.Lookup("proc_pid_status"); ok {
 				if v, ok := statusFields[statusField]; ok && fv.CanSet() {
 					switch fv.Kind() {
 					case reflect.Slice:

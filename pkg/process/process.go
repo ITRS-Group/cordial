@@ -36,21 +36,21 @@ import (
 // that they should be filled on demand when requested, rather than when
 // the process information is first retrieved.
 type ProcessInfo struct {
-	PID      int           `stat:"0" json:"-"`
-	PPID     int           `stat:"3"`
-	Utime    time.Duration `stat:"13"`
-	Stime    time.Duration `stat:"14"`
-	CUtime   time.Duration `stat:"15"`
-	CStime   time.Duration `stat:"16"`
-	UIDs     []string      `status:"Uid" json:"-"`
-	GIDs     []string      `status:"Gid" json:"-"`
-	State    string        `status:"State"`
-	Threads  int64         `status:"Threads"`
-	VmRSS    int64         `status:"VmRSS"`
-	VmHWM    int64         `status:"VmHWM"`
-	RssAnon  int64         `status:"RssAnon"`
-	RssFile  int64         `status:"RssFile"`
-	RssShmem int64         `status:"RssShmem"`
+	PID      int           `proc_pid_stat:"0" json:"-"`
+	PPID     int           `proc_pid_stat:"3"`
+	Utime    time.Duration `proc_pid_stat:"13"`
+	Stime    time.Duration `proc_pid_stat:"14"`
+	CUtime   time.Duration `proc_pid_stat:"15"`
+	CStime   time.Duration `proc_pid_stat:"16"`
+	UIDs     []string      `proc_pid_status:"Uid" json:"-"`
+	GIDs     []string      `proc_pid_status:"Gid" json:"-"`
+	State    string        `proc_pid_status:"State"`
+	Threads  int64         `proc_pid_status:"Threads"`
+	VmRSS    int64         `proc_pid_status:"VmRSS"`
+	VmHWM    int64         `proc_pid_status:"VmHWM"`
+	RssAnon  int64         `proc_pid_status:"RssAnon"`
+	RssFile  int64         `proc_pid_status:"RssFile"`
+	RssShmem int64         `proc_pid_status:"RssShmem"`
 
 	// special fields that are not from /proc/PID/stat or
 	// /proc/PID/status but are calculated from other information, such
@@ -80,7 +80,7 @@ type ProcessInfo struct {
 // prefix for `status` tags. OpenFiles and OpenSockets fields are counts
 // of their respective names.
 type ProcessInfoMinimal struct {
-	PID     int      `stat:"0" json:"-"`
+	PID     int      `proc_pid_stat:"0" json:"-"`
 	Exe     string   `json:"-"`
 	Cmdline []string `json:"-"`
 }
