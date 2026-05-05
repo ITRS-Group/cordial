@@ -72,7 +72,7 @@ func ExecutableName(version ...string) (execname string) {
 
 	// strip any case-insensitive "exe" extension from the binary, to
 	// allow windows .EXE binary to work.
-	if strings.EqualFold(path.Ext(execname), "exe") {
+	if strings.EqualFold(path.Ext(execname), ".exe") {
 		execname = strings.TrimSuffix(execname, path.Ext(execname))
 	}
 
