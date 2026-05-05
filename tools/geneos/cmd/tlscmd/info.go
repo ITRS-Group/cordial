@@ -50,7 +50,7 @@ import (
 
 // var infoCmdJSON, infoCmdIndent, infoCmdCSV, infoCmdToolkit bool
 var infoCmdFormat string
-var infoCmdLong bool
+var infoCmdLong, infoCmdLeafOnly bool
 var infoCmdPassword *config.Secret
 
 func init() {
@@ -58,24 +58,24 @@ func init() {
 
 	infoCmdPassword = &config.Secret{}
 
+	infoCmd.Flags().BoolVarP(&infoCmdLeafOnly, "leaf-only", "L", false,
+		"Only output leaf certificates (i.e. skip CA certificates and any\ncertificate without a matching private key in any file)")
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
 	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
+
+	infoCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/info.md
 var infoCmdDescription string
 
-type certContents struct {
+type certInfo struct {
+	Path         string
 	Alias        []string
 	Certificates []*x509.Certificate
 	PrivateKeys  []*memguard.Enclave
-}
-
-type certInfo struct {
-	Path     string
-	Contents certContents
 }
 
 var columns = []string{
@@ -86,6 +86,7 @@ var columns = []string{
 	"IsCA",
 	"ExtKeyUsage",
 	"SANDNSNames",
+	"PrivateKeyPresent",
 }
 
 var columnsLong = []string{
@@ -143,10 +144,29 @@ var infoCmd = &cobra.Command{
 		lines := [][]string{}
 
 		for i := range certInfos {
-			for n, c := range certInfos[i].Contents.Certificates {
+			for n, c := range certInfos[i].Certificates {
+				privateKeyPresent := slices.ContainsFunc(certInfos, func(ci certInfo) bool {
+					for _, pk := range ci.PrivateKeys {
+						if certs.CheckKeyMatch(pk, c) {
+							return true
+						}
+					}
+					return false
+				})
+
+				if infoCmdLeafOnly {
+					// skip if it's a CA cert or if it doesn't have a matching private key in any file
+					if c.IsCA {
+						continue
+					}
+					if !privateKeyPresent {
+						continue
+					}
+				}
+
 				var fileandindex string
-				if len(certInfos[i].Contents.Alias) > n && certInfos[i].Contents.Alias[n] != "" {
-					fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Contents.Alias[n])
+				if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
+					fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Alias[n])
 				} else {
 					fileandindex = fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n)
 				}
@@ -160,6 +180,7 @@ var infoCmd = &cobra.Command{
 						strconv.FormatBool(c.IsCA),
 						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
 						fmt.Sprintf("%v", c.DNSNames),
+						strconv.FormatBool(privateKeyPresent),
 					})
 				} else {
 					lines = append(lines, []string{
@@ -196,8 +217,8 @@ var infoCmd = &cobra.Command{
 	},
 }
 
-func readFiles(paths []string) (certInfos []certInfo, err error) {
-	certInfos = make([]certInfo, len(paths))
+func readFiles(paths []string) (ci []certInfo, err error) {
+	ci = make([]certInfo, len(paths))
 
 	// paths is a list of files to examine, pre-resolved by the
 	// shell so we don't do any wildcard processing
@@ -209,159 +230,176 @@ func readFiles(paths []string) (certInfos []certInfo, err error) {
 	// each PEM file can contain multiple entries and they are
 	// listed in order
 	for i, p := range paths {
-		certInfos[i].Path, err = filepath.Abs(p)
+		if err = readFile(p, &ci[i]); err != nil {
+			continue
+		}
+	}
+	return
+}
+
+func readFile(p string, ci *certInfo) (err error) {
+	ci.Path, err = filepath.Abs(p)
+	if err != nil {
+		log.Error().Err(err).Str("file", p).Msg("unable to get absolute path")
+		return
+	}
+	// ci.Contents = certContents{}
+
+	contents, err2 := os.ReadFile(p)
+	if err2 != nil {
+		log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+		return
+	}
+
+	// treat a cacerts file specially, setting the password to
+	// "changeit" and only reading trusted certificate entries
+	if path.Base(p) == "cacerts" {
+		k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewSecret([]byte("changeit")))
 		if err != nil {
-			log.Error().Err(err).Str("file", p).Msg("unable to get absolute path")
-			continue
+			log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+			return err
 		}
-		certInfos[i].Contents = certContents{}
-
-		contents, err2 := os.ReadFile(p)
-		if err2 != nil {
-			log.Error().Err(err2).Str("file", p).Msg("unable to read file")
-			continue
-		}
-
-		// treat a cacerts file specially, setting the password to
-		// "changeit" and only reading trusted certificate entries
-		if path.Base(p) == "cacerts" {
-			k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewSecret([]byte("changeit")))
+		for _, alias := range k.Aliases() {
+			entry, err := k.GetTrustedCertificateEntry(alias)
 			if err != nil {
-				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
-				continue
+				log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java truststore", alias)
+				return err
 			}
-			for _, alias := range k.Aliases() {
+			cert, err := x509.ParseCertificate(entry.Certificate.Content)
+			if err != nil {
+				log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java truststore")
+				return err
+			}
+			ci.Alias = append(ci.Alias, alias)
+			ci.Certificates = append(ci.Certificates, cert)
+		}
+		return nil
+	}
+
+	r, err2 := os.Open(p)
+	if err2 != nil {
+		log.Error().Err(err2).Str("file", p).Msg("unable to open file")
+		return err2
+	}
+
+	magic := make([]byte, 4)
+	_, err2 = r.Read(magic)
+	r.Close() // close regardless of read success
+	if err2 != nil && err2 != io.EOF {
+		log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+		return err2
+	}
+
+	if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
+		log.Debug().Str("file", p).Msg("Java keystore magic number found")
+		if infoCmdPassword.String() == "" {
+			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
+			if err != nil {
+				log.Fatal().Err(err).Msg("Failed to read password")
+				// return err
+			}
+		}
+		k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
+		if err != nil {
+			log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+			return err
+		}
+		for _, alias := range k.Aliases() {
+			switch {
+			case k.IsPrivateKeyEntry(alias):
+				pke, err := k.GetPrivateKeyEntry(alias, infoCmdPassword.Bytes())
+				if err != nil {
+					log.Error().Err(err).Str("alias", alias).Msgf("unable to get private key entry %q from Java keystore", alias)
+					return err
+				}
+				ci.PrivateKeys = append(ci.PrivateKeys, memguard.NewEnclave(pke.PrivateKey))
+
+				chain := pke.CertificateChain
+				for n, cert := range chain {
+					parsedCert, err := x509.ParseCertificate(cert.Content)
+					if err != nil {
+						log.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
+						return err
+					}
+					ci.Alias = append(ci.Alias, alias+"["+strconv.Itoa(n)+"]")
+					ci.Certificates = append(ci.Certificates, parsedCert)
+				}
+			case k.IsTrustedCertificateEntry(alias):
 				entry, err := k.GetTrustedCertificateEntry(alias)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java truststore", alias)
-					continue
+					log.Error().Err(err).Str("alias", alias).Msgf("unable to get CA certificate entry %q from Java keystore", alias)
+					return err
 				}
 				cert, err := x509.ParseCertificate(entry.Certificate.Content)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java truststore")
-					continue
+					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
+					return err
 				}
-				certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
-				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
-			}
-			continue
-		}
-
-		r, err2 := os.Open(p)
-		if err2 != nil {
-			log.Error().Err(err2).Str("file", p).Msg("unable to open file")
-			continue
-		}
-
-		magic := make([]byte, 4)
-		_, err2 = r.Read(magic)
-		r.Close() // close regardless of read success
-		if err2 != nil && err2 != io.EOF {
-			log.Error().Err(err2).Str("file", p).Msg("unable to read file")
-			continue
-		}
-
-		if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
-			log.Debug().Str("file", p).Msg("Java keystore magic number found")
-			if infoCmdPassword.String() == "" {
-				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
-				if err != nil {
-					log.Fatal().Err(err).Msg("Failed to read password")
-					// return err
+				if slices.Contains(ci.Alias, alias) {
+					return err
 				}
-			}
-			k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
-			if err != nil {
-				log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
-				continue
-			}
-			for _, alias := range k.Aliases() {
-				switch {
-				case k.IsPrivateKeyEntry(alias):
-					chain, err := k.GetPrivateKeyEntryCertificateChain(alias)
-					if err != nil {
-						log.Error().Err(err).Str("alias", alias).Msgf("unable to get private certificate chain %q from Java keystore", alias)
-						continue
-					}
-					for n, cert := range chain {
-						parsedCert, err := x509.ParseCertificate(cert.Content)
-						if err != nil {
-							log.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
-							continue
-						}
-						certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias+"["+strconv.Itoa(n)+"]")
-						certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, parsedCert)
-					}
-				case k.IsTrustedCertificateEntry(alias):
-					entry, err := k.GetTrustedCertificateEntry(alias)
-					if err != nil {
-						log.Error().Err(err).Str("alias", alias).Msgf("unable to get CA certificate entry %q from Java keystore", alias)
-						continue
-					}
-					cert, err := x509.ParseCertificate(entry.Certificate.Content)
-					if err != nil {
-						log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
-						continue
-					}
-					if slices.Contains(certInfos[i].Contents.Alias, alias) {
-						continue
-					}
-					certInfos[i].Contents.Alias = append(certInfos[i].Contents.Alias, alias)
-					certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, cert)
-				default:
-					continue
-				}
-			}
-			continue
-		}
-
-		ext := strings.ToLower(path.Ext(p))
-		if ext == ".pfx" || ext == ".p12" {
-			if infoCmdPassword.IsNil() {
-				infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
-				if err != nil {
-					return
-				}
-			}
-
-			key, c, chain, err := pkcs12.DecodeChain(contents, infoCmdPassword.String())
-			if err != nil {
-				return nil, err
-			}
-			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
-			certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, chain...)
-
-			pk, err := x509.MarshalPKCS8PrivateKey(key)
-			if err != nil {
-				return nil, err
-			}
-			certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(pk))
-			continue
-		}
-
-		for {
-			block, rest := pem.Decode(contents)
-			if block == nil {
-				break
-			}
-			switch block.Type {
-			case "CERTIFICATE":
-				var c *x509.Certificate
-				c, err = x509.ParseCertificate(block.Bytes)
-				if err != nil {
-					return
-				}
-				certInfos[i].Contents.Certificates = append(certInfos[i].Contents.Certificates, c)
-			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				// save all private keys for later matching
-				certInfos[i].Contents.PrivateKeys = append(certInfos[i].Contents.PrivateKeys, memguard.NewEnclave(block.Bytes))
+				ci.Alias = append(ci.Alias, alias)
+				ci.Certificates = append(ci.Certificates, cert)
 			default:
-				err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
+				return err
 			}
-			contents = rest
 		}
+		return err
 	}
 
+	ext := strings.ToLower(path.Ext(p))
+	if ext == ".pfx" || ext == ".p12" {
+		if infoCmdPassword.IsNil() {
+			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
+			if err != nil {
+				return
+			}
+		}
+
+		key, c, chain, err := pkcs12.DecodeChain(contents, infoCmdPassword.String())
+		if err != nil {
+			log.Error().Err(err).Str("file", p).Msg("unable to decode PKCS#12 file - is the password correct?")
+			return err
+		}
+		ci.Certificates = append(ci.Certificates, c)
+		ci.Certificates = append(ci.Certificates, chain...)
+
+		pk, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			log.Error().Err(err).Str("file", p).Msg("unable to marshal private key from PKCS#12 file")
+			return err
+		}
+		mpk := memguard.NewEnclave(pk)
+		if !certs.CheckKeyMatch(mpk, c) {
+			log.Warn().Str("file", p).Msg("private key does not match certificate in PKCS#12 file")
+		} else {
+			log.Debug().Str("file", p).Msg("added private key from PKCS#12 file to list for matching with certificates")
+		}
+		ci.PrivateKeys = append(ci.PrivateKeys, mpk)
+		return err
+	}
+
+	for {
+		block, rest := pem.Decode(contents)
+		if block == nil {
+			break
+		}
+		switch block.Type {
+		case "CERTIFICATE":
+			var c *x509.Certificate
+			c, err = x509.ParseCertificate(block.Bytes)
+			if err != nil {
+				return
+			}
+			ci.Certificates = append(ci.Certificates, c)
+		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
+			// save all private keys for later matching
+			ci.PrivateKeys = append(ci.PrivateKeys, memguard.NewEnclave(block.Bytes))
+		default:
+			err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
+		}
+		contents = rest
+	}
 	return
 }
 
