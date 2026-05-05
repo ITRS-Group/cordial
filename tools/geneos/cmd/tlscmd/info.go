@@ -18,14 +18,18 @@ limitations under the License.
 package tlscmd
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/url"
 	"os"
@@ -48,10 +52,16 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+type infoCmdConnectsType []string
+type infoCmdRootsType []string
+
 // var infoCmdJSON, infoCmdIndent, infoCmdCSV, infoCmdToolkit bool
 var infoCmdFormat string
 var infoCmdLong, infoCmdLeafOnly bool
 var infoCmdPassword *config.Secret
+var infoCmdConnects infoCmdConnectsType
+var infoCmdConnectsFile string
+var infoCmdRoots infoCmdRootsType
 
 func init() {
 	tlsCmd.AddCommand(infoCmd)
@@ -65,6 +75,10 @@ func init() {
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
 	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
 
+	infoCmd.Flags().VarP(&infoCmdConnects, "connect", "c", "Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.")
+	infoCmd.Flags().StringVarP(&infoCmdConnectsFile, "connect-file", "", "", "Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.")
+	infoCmd.Flags().VarP(&infoCmdRoots, "roots", "r", "Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).")
+
 	infoCmd.Flags().SortFlags = false
 }
 
@@ -72,10 +86,12 @@ func init() {
 var infoCmdDescription string
 
 type certInfo struct {
-	Path         string
-	Alias        []string
-	Certificates []*x509.Certificate
-	PrivateKeys  []*memguard.Enclave
+	Path               string
+	Error              error
+	Alias              []string
+	CertChain          []*x509.Certificate
+	CerificateVerified []bool
+	PrivateKeys        []*memguard.Enclave
 }
 
 var columns = []string{
@@ -85,29 +101,30 @@ var columns = []string{
 	"NotAfter",
 	"IsCA",
 	"ExtKeyUsage",
-	"SANDNSNames",
-	"PrivateKeyPresent",
+	"PrivateKeyMatch",
+	"Verified",
 }
 
 var columnsLong = []string{
 	"PathAndIndex",
 	"CommonName",
 	"IssuerCommonName",
-	"Serial",
-	"SKID",
-	"AKID",
 	"NotBefore",
 	"NotAfter",
 	"IsCA",
 	"KeyUsage",
 	"ExtKeyUsage",
+	"PrivateKeyMatch",
+	"Verified",
+	"Serial",
+	"SKID",
+	"AKID",
 	"SANDNSNames",
 	"SANEmailAddresses",
 	"SANIPAddresses",
 	"SANURIs",
 	"SHA1Fingerprint",
 	"SHA256Fingerprint",
-	// "Private Key Present",
 }
 
 var infoCmd = &cobra.Command{
@@ -124,9 +141,80 @@ var infoCmd = &cobra.Command{
 		// gather cert info
 		certInfos := make([]certInfo, len(paths))
 
-		certInfos, err = readFiles(paths)
+		roots, err := x509.SystemCertPool()
+		if err != nil {
+			log.Error().Err(err).Msg("unable to load system root CAs, skipping system roots")
+			roots = x509.NewCertPool()
+		}
+
+		cabundle, err := os.ReadFile(geneos.PathToCABundlePEM(geneos.LOCAL))
+		if err == nil {
+			log.Debug().Msgf("loaded Geneos CA bundle from %s", geneos.PathToCABundlePEM(geneos.LOCAL))
+			if ok := roots.AppendCertsFromPEM(cabundle); !ok {
+				log.Error().Msg("unable to parse any certificates from Geneos CA bundle")
+			}
+		}
+
+		if len(infoCmdRoots) > 0 {
+			for _, r := range infoCmdRoots {
+				contents, err := os.ReadFile(r)
+				if err != nil {
+					log.Error().Err(err).Str("file", r).Msg("unable to read roots file")
+					return err
+				}
+				if !roots.AppendCertsFromPEM(contents) {
+					log.Error().Str("file", r).Msg("unable to parse any certificates from roots file")
+					return fmt.Errorf("unable to parse any certificates from roots file: %s", r)
+				}
+			}
+		}
+
+		certInfos, err = readFiles(paths, roots)
 		if err != nil {
 			return
+		}
+
+		if len(infoCmdConnects) > 0 {
+			for _, addr := range infoCmdConnects {
+				ci, _ := getCertificatesFromConnection(addr, roots)
+				// if err != nil {
+				// 	log.Error().Err(err).Str("address", addr).Msg("unable to get certificates from connection")
+				// 	continue
+				// }
+				certInfos = append(certInfos, ci)
+			}
+		}
+
+		if infoCmdConnectsFile != "" {
+			var r io.ReadCloser
+			if infoCmdConnectsFile == "-" {
+				r = os.Stdin
+			} else {
+				r, err = os.Open(infoCmdConnectsFile)
+				if err != nil {
+					log.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("unable to open connects file")
+					return err
+				}
+				defer r.Close()
+			}
+
+			scanner := bufio.NewScanner(r)
+			for scanner.Scan() {
+				addr := strings.TrimSpace(scanner.Text())
+				if addr == "" || strings.HasPrefix(addr, "#") {
+					continue
+				}
+				ci, _ := getCertificatesFromConnection(addr, roots)
+				// if err != nil {
+				// 	log.Error().Err(err).Str("address", addr).Msg("unable to get certificates from connection")
+				// 	continue
+				// }
+				certInfos = append(certInfos, ci)
+			}
+			if err := scanner.Err(); err != nil {
+				log.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("error reading connects file")
+				return err
+			}
 		}
 
 		// prepare reporter
@@ -143,8 +231,20 @@ var infoCmd = &cobra.Command{
 
 		lines := [][]string{}
 
-		for i := range certInfos {
-			for n, c := range certInfos[i].Certificates {
+		var totalVerified, totalCerts, totalExpired, totalExpiring30days int64
+
+		for i, ci := range certInfos {
+			if ci.Error != nil {
+				lines = append(lines, []string{
+					strings.TrimSuffix(path.Base(ci.Path), ":443"),
+					"Error: " + ci.Error.Error(),
+				})
+				continue
+			}
+			for n, c := range ci.CertChain {
+				var verified bool
+				var fileandindex string
+
 				privateKeyPresent := slices.ContainsFunc(certInfos, func(ci certInfo) bool {
 					for _, pk := range ci.PrivateKeys {
 						if certs.CheckKeyMatch(pk, c) {
@@ -159,16 +259,29 @@ var infoCmd = &cobra.Command{
 					if c.IsCA {
 						continue
 					}
-					if !privateKeyPresent {
-						continue
+					fileandindex = strings.TrimSuffix(path.Base(certInfos[i].Path), ":443")
+				} else {
+					if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
+						fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Alias[n])
+					} else {
+						fileandindex = fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n)
+						fileandindex = strings.TrimSuffix(fileandindex, ":443")
 					}
 				}
 
-				var fileandindex string
-				if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
-					fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Alias[n])
-				} else {
-					fileandindex = fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n)
+				if len(ci.CerificateVerified) > n {
+					if ci.CerificateVerified[n] {
+						verified = true
+						totalVerified++
+					}
+				}
+
+				totalCerts++
+				if c.NotAfter.Before(time.Now()) {
+					totalExpired++
+				}
+				if c.NotAfter.Before(time.Now().Add(30 * 24 * time.Hour)) {
+					totalExpiring30days++
 				}
 
 				if !infoCmdLong {
@@ -178,27 +291,38 @@ var infoCmd = &cobra.Command{
 						c.Issuer.CommonName,
 						c.NotAfter.UTC().Format(time.RFC3339),
 						strconv.FormatBool(c.IsCA),
-						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
-						fmt.Sprintf("%v", c.DNSNames),
+						extKeyUsageToString(c.ExtKeyUsage),
 						strconv.FormatBool(privateKeyPresent),
+						strconv.FormatBool(verified),
 					})
 				} else {
+					dnsNames := "None"
+					if len(c.DNSNames) > 0 {
+						dnsNames = strings.Join(c.DNSNames, " ")
+					}
+					emailAddresses := "None"
+					if len(c.EmailAddresses) > 0 {
+						emailAddresses = strings.Join(c.EmailAddresses, " ")
+					}
+
 					lines = append(lines, []string{
 						fileandindex,
 						c.Subject.CommonName,
 						c.Issuer.CommonName,
-						fmt.Sprintf("%X", c.SerialNumber),
-						fmt.Sprintf("%X", c.SubjectKeyId),
-						fmt.Sprintf("%X", c.AuthorityKeyId),
 						c.NotBefore.UTC().Format(time.RFC3339),
 						c.NotAfter.UTC().Format(time.RFC3339),
 						strconv.FormatBool(c.IsCA),
-						fmt.Sprintf("%v", keyUsageToString(c.KeyUsage)),
-						fmt.Sprintf("%v", extKeyUsageToString(c.ExtKeyUsage)),
-						fmt.Sprintf("%v", c.DNSNames),
-						fmt.Sprintf("%v", c.EmailAddresses),
-						fmt.Sprintf("%v", infoMap(c.IPAddresses, func(ip net.IP) string { return ip.String() })),
-						fmt.Sprintf("%v", infoMap(c.URIs, func(uri *url.URL) string { return uri.String() })),
+						keyUsageToString(c.KeyUsage),
+						extKeyUsageToString(c.ExtKeyUsage),
+						strconv.FormatBool(privateKeyPresent),
+						strconv.FormatBool(verified),
+						fmt.Sprintf("%X", c.SerialNumber),
+						fmt.Sprintf("%X", c.SubjectKeyId),
+						fmt.Sprintf("%X", c.AuthorityKeyId),
+						dnsNames,
+						emailAddresses,
+						infoMapString(c.IPAddresses, func(ip net.IP) string { return ip.String() }),
+						infoMapString(c.URIs, func(uri *url.URL) string { return uri.String() }),
 						fmt.Sprintf("%X", sha1.Sum(c.Raw)),
 						fmt.Sprintf("%X", sha256.Sum256(c.Raw)),
 					})
@@ -211,13 +335,119 @@ var infoCmd = &cobra.Command{
 		} else {
 			rp.UpdateTable(columns, lines)
 		}
+
+		if infoCmdFormat == "toolkit" {
+			// rp.AddHeadline()
+			rp.AddHeadline("totalCerts", strconv.FormatInt(totalCerts, 10))
+			rp.AddHeadline("totalVerified", strconv.FormatInt(totalVerified, 10))
+			rp.AddHeadline("totalExpired", strconv.FormatInt(totalExpired, 10))
+			rp.AddHeadline("totalExpiring30days", strconv.FormatInt(totalExpiring30days, 10))
+		}
+
 		rp.Render()
 
 		return
 	},
 }
 
-func readFiles(paths []string) (ci []certInfo, err error) {
+func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certInfo, err error) {
+	u, err := url.Parse(addr)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		if host, port, found := strings.Cut(addr, ":"); found {
+			u = &url.URL{
+				Scheme: "https",
+				Host:   net.JoinHostPort(host, port),
+			}
+		} else {
+			u = &url.URL{
+				Scheme: "https",
+				Host:   net.JoinHostPort(addr, "443"),
+			}
+		}
+	}
+	if u.Port() == "" {
+		u.Host = net.JoinHostPort(u.Host, "443")
+	}
+
+	ci = certInfo{
+		Path: u.Host,
+	}
+
+	var verifiedChains [][]*x509.Certificate
+	conn, err := tls.Dial("tcp", u.Host, &tls.Config{
+		// RootCAs: roots,
+		InsecureSkipVerify: true,
+		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) (err error) {
+			// Parse the root/leaf certificates
+			log.Debug().Msgf("verifying peer certificate with %d rawcerts", len(rawCerts))
+
+			certs := make([]*x509.Certificate, len(rawCerts))
+			for i, asn1Data := range rawCerts {
+				cert, err := x509.ParseCertificate(asn1Data)
+				if err != nil {
+					return fmt.Errorf("failed to parse certificate from server: %v", err)
+				}
+				certs[i] = cert
+			}
+
+			// 3. Setup verification options
+			opts := x509.VerifyOptions{
+				Roots:         roots,
+				Intermediates: x509.NewCertPool(),
+			}
+
+			// Add intermediate certificates to the pool
+			for _, cert := range certs[1:] {
+				log.Debug().Msgf("adding intermediate certificate with Subject CN=%s to pool for verification", cert.Subject.CommonName)
+				opts.Intermediates.AddCert(cert)
+			}
+
+			// Perform verification (DNSName is empty, so hostname check is skipped)
+			verifiedChains, err = certs[0].Verify(opts)
+			return err
+		},
+	})
+
+	if err != nil {
+		// Check if the error is a certificate verification error
+		_, ok := errors.AsType[*tls.CertificateVerificationError](err)
+		_, ok2 := errors.AsType[x509.UnknownAuthorityError](err)
+		if ok || ok2 {
+			log.Debug().Err(err).Str("address", addr).Msg("TLS certificate verification failed, retrying with InsecureSkipVerify to get certificates anyway")
+			// try again with skip verify
+			conn, err = tls.Dial("tcp", u.Host, &tls.Config{
+				InsecureSkipVerify: true,
+			})
+			if err != nil {
+				log.Debug().Err(err).Str("address", addr).Msg("unable to connect to address with TLS")
+				ci.Error = err
+				return
+			}
+		} else {
+			log.Debug().Err(err).Str("address", addr).Msgf("unable to connect to address with TLS (error type %T)", err)
+			ci.Error = err
+			return
+		}
+	}
+
+	defer conn.Close()
+
+	var verified bool
+	if len(verifiedChains) > 0 {
+		log.Debug().Str("address", addr).Msg("TLS certificate chain successfully verified")
+		verified = true
+	}
+
+	// count certs, if the leaf is verified then all certs are verified, otherwise none are
+	certs := conn.ConnectionState().PeerCertificates
+
+	ci.CertChain = certs
+	ci.CerificateVerified = slices.Repeat([]bool{verified}, len(certs))
+
+	return
+}
+
+func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo, err error) {
 	ci = make([]certInfo, len(paths))
 
 	// paths is a list of files to examine, pre-resolved by the
@@ -234,6 +464,28 @@ func readFiles(paths []string) (ci []certInfo, err error) {
 			continue
 		}
 	}
+
+	// verify cert chains
+	for i := range ci {
+		for n, c := range ci[i].CertChain {
+			opts := x509.VerifyOptions{
+				Roots:         roots, // nil means use system roots
+				Intermediates: x509.NewCertPool(),
+			}
+			for j, ic := range ci[i].CertChain {
+				if j == n {
+					continue
+				}
+				opts.Intermediates.AddCert(ic)
+			}
+			if _, err = c.Verify(opts); err != nil {
+				ci[i].CerificateVerified = append(ci[i].CerificateVerified, false)
+			} else {
+				ci[i].CerificateVerified = append(ci[i].CerificateVerified, true)
+			}
+		}
+	}
+
 	return
 }
 
@@ -271,7 +523,7 @@ func readFile(p string, ci *certInfo) (err error) {
 				return err
 			}
 			ci.Alias = append(ci.Alias, alias)
-			ci.Certificates = append(ci.Certificates, cert)
+			ci.CertChain = append(ci.CertChain, cert)
 		}
 		return nil
 	}
@@ -322,7 +574,7 @@ func readFile(p string, ci *certInfo) (err error) {
 						return err
 					}
 					ci.Alias = append(ci.Alias, alias+"["+strconv.Itoa(n)+"]")
-					ci.Certificates = append(ci.Certificates, parsedCert)
+					ci.CertChain = append(ci.CertChain, parsedCert)
 				}
 			case k.IsTrustedCertificateEntry(alias):
 				entry, err := k.GetTrustedCertificateEntry(alias)
@@ -339,7 +591,7 @@ func readFile(p string, ci *certInfo) (err error) {
 					return err
 				}
 				ci.Alias = append(ci.Alias, alias)
-				ci.Certificates = append(ci.Certificates, cert)
+				ci.CertChain = append(ci.CertChain, cert)
 			default:
 				return err
 			}
@@ -361,8 +613,8 @@ func readFile(p string, ci *certInfo) (err error) {
 			log.Error().Err(err).Str("file", p).Msg("unable to decode PKCS#12 file - is the password correct?")
 			return err
 		}
-		ci.Certificates = append(ci.Certificates, c)
-		ci.Certificates = append(ci.Certificates, chain...)
+		ci.CertChain = append(ci.CertChain, c)
+		ci.CertChain = append(ci.CertChain, chain...)
 
 		pk, err := x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
@@ -391,7 +643,7 @@ func readFile(p string, ci *certInfo) (err error) {
 			if err != nil {
 				return
 			}
-			ci.Certificates = append(ci.Certificates, c)
+			ci.CertChain = append(ci.CertChain, c)
 		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 			// save all private keys for later matching
 			ci.PrivateKeys = append(ci.PrivateKeys, memguard.NewEnclave(block.Bytes))
@@ -400,18 +652,26 @@ func readFile(p string, ci *certInfo) (err error) {
 		}
 		contents = rest
 	}
+
 	return
 }
 
-func infoMap[T, V any](ts []T, fn func(T) V) []V {
+func infoMapString[T, V any](ts []T, fn func(T) V) string {
 	result := make([]V, len(ts))
 	for i, t := range ts {
 		result[i] = fn(t)
 	}
-	return result
+	if len(result) == 0 {
+		return "None"
+	}
+	stringsResult := make([]string, len(result))
+	for i, r := range result {
+		stringsResult[i] = fmt.Sprintf("%v", r)
+	}
+	return strings.Join(stringsResult, " ")
 }
 
-func keyUsageToString(ku x509.KeyUsage) []string {
+func keyUsageToString(ku x509.KeyUsage) string {
 	usages := []string{}
 	usageMap := map[x509.KeyUsage]string{
 		x509.KeyUsageDigitalSignature:  "DigitalSignature",
@@ -424,15 +684,19 @@ func keyUsageToString(ku x509.KeyUsage) []string {
 		x509.KeyUsageEncipherOnly:      "EncipherOnly",
 		x509.KeyUsageDecipherOnly:      "DecipherOnly",
 	}
-	for k, v := range usageMap {
+	keys := slices.Sorted(maps.Keys(usageMap))
+	for _, k := range keys {
 		if ku&k != 0 {
-			usages = append(usages, v)
+			usages = append(usages, usageMap[k])
 		}
 	}
-	return usages
+	if len(usages) == 0 {
+		return "None"
+	}
+	return strings.Join(usages, " ")
 }
 
-func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
+func extKeyUsageToString(eku []x509.ExtKeyUsage) string {
 	usages := []string{}
 	usageMap := map[x509.ExtKeyUsage]string{
 		x509.ExtKeyUsageAny:                            "Any",
@@ -450,14 +714,44 @@ func extKeyUsageToString(eku []x509.ExtKeyUsage) []string {
 		x509.ExtKeyUsageMicrosoftCommercialCodeSigning: "MicrosoftCommercialCodeSigning",
 		x509.ExtKeyUsageMicrosoftKernelCodeSigning:     "MicrosoftKernelCodeSigning",
 	}
-	for k, v := range usageMap {
+	keys := slices.Sorted(maps.Keys(usageMap))
+	for _, k := range keys {
 		if containsExtKeyUsage(eku, k) {
-			usages = append(usages, v)
+			usages = append(usages, usageMap[k])
 		}
 	}
-	return usages
+	if len(usages) == 0 {
+		return "None"
+	}
+	return strings.Join(usages, " ")
 }
 
 func containsExtKeyUsage(usages []x509.ExtKeyUsage, usage x509.ExtKeyUsage) bool {
 	return slices.Contains(usages, usage)
+}
+
+func (c *infoCmdConnectsType) String() string {
+	return strings.Join(*c, ", ")
+}
+
+func (c *infoCmdConnectsType) Set(value string) error {
+	*c = append(*c, value)
+	return nil
+}
+
+func (c *infoCmdConnectsType) Type() string {
+	return "connect"
+}
+
+func (r *infoCmdRootsType) String() string {
+	return strings.Join(*r, ", ")
+}
+
+func (r *infoCmdRootsType) Set(value string) error {
+	*r = append(*r, value)
+	return nil
+}
+
+func (r *infoCmdRootsType) Type() string {
+	return "roots"
 }
