@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 	"strings"
 
@@ -31,6 +32,7 @@ import (
 
 func init() {
 	GeneosCmd.AddCommand(cleanCmd)
+	GeneosCmd.AddCommand(resetCmd)
 
 	cleanCmd.Flags().BoolVarP(&cleanCmdFull, "full", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
 	cleanCmd.Flags().SortFlags = false
@@ -69,7 +71,50 @@ geneos clean --full netprobe
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
+			resp.Completed = append(resp.Completed, "configured files and directories removed")
 			resp.Err = instance.Clean(i, cleanCmdFull)
+			return
+		}).Report(os.Stdout)
+		return nil
+	},
+}
+
+//go:embed _docs/reset.md
+var resetCmdDescription string
+
+var resetCmd = &cobra.Command{
+	Use:     "reset [flags] [TYPE] [NAME...]",
+	GroupID: CommandGroupManage,
+	Short:   "Reset Instance Directories",
+	Long:    resetCmdDescription,
+	Example: strings.ReplaceAll(`
+# Stop all netprobes and remove all non-essential files from working 
+# directories, then restart netprobes
+geneos reset netprobe
+`, "|", "`"),
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		CmdGlobal:                "false",
+		CmdRequireHome:           "true",
+		CmdWildcardNames:         "true",
+		CmdAllInstancesMustMatch: "true",
+		CmdNonInstanceArgsError:  "true",
+	},
+	RunE: func(command *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return fmt.Errorf("you must provide at least the component type or one instance name or the 'all' keyword to match all instances")
+		}
+		ct, names, _, err := FetchArgs(command)
+		if err != nil {
+			return err
+		}
+		if ct == nil && len(names) == 0 {
+			return fmt.Errorf("no matching instances")
+		}
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+			resp = responses.NewResponse(i)
+			resp.Completed = append(resp.Completed, "configured files and directories removed")
+			resp.Err = instance.Clean(i, true)
 			return
 		}).Report(os.Stdout)
 		return nil
