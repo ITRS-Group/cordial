@@ -38,6 +38,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/awnumar/memguard"
@@ -88,6 +89,7 @@ var infoCmdDescription string
 type certInfo struct {
 	Path               string
 	Error              error
+	ResponseTime       time.Duration
 	Alias              []string
 	CertChain          []*x509.Certificate
 	CerificateVerified []bool
@@ -96,6 +98,7 @@ type certInfo struct {
 
 var columns = []string{
 	"FileAndIndex",
+	"Status",
 	"CommonName",
 	"IssuerCommonName",
 	"NotAfter",
@@ -103,10 +106,12 @@ var columns = []string{
 	"ExtKeyUsage",
 	"PrivateKeyMatch",
 	"Verified",
+	"ResponseTime",
 }
 
 var columnsLong = []string{
 	"PathAndIndex",
+	"Status",
 	"CommonName",
 	"IssuerCommonName",
 	"NotBefore",
@@ -125,6 +130,7 @@ var columnsLong = []string{
 	"SANURIs",
 	"SHA1Fingerprint",
 	"SHA256Fingerprint",
+	"ResponseTime",
 }
 
 var infoCmd = &cobra.Command{
@@ -172,9 +178,20 @@ var infoCmd = &cobra.Command{
 		certInfos = readFiles(paths, roots)
 
 		if len(infoCmdConnects) > 0 {
+			var wg sync.WaitGroup
+			ch := make(chan certInfo, len(infoCmdConnects))
 			for _, addr := range infoCmdConnects {
-				// on error ci has the ci.Error field set, so preserve it
-				ci, _ := getCertificatesFromConnection(addr, roots)
+				wg.Add(1)
+				go func(ch chan certInfo, addr string) {
+					defer wg.Done()
+					ci := getCertificatesFromConnection(addr, roots)
+					ch <- ci
+				}(ch, addr)
+			}
+			wg.Wait()
+			close(ch)
+
+			for ci := range ch {
 				certInfos = append(certInfos, ci)
 			}
 		}
@@ -192,14 +209,39 @@ var infoCmd = &cobra.Command{
 				defer r.Close()
 			}
 
+			// first count the number of lines, so we can create a
+			// channel of the right capacty
+			var lines []string
 			scanner := bufio.NewScanner(r)
 			for scanner.Scan() {
 				addr := strings.TrimSpace(scanner.Text())
 				if addr == "" || strings.HasPrefix(addr, "#") {
 					continue
 				}
-				// on error ci has the ci.Error field set, so preserve it
-				ci, _ := getCertificatesFromConnection(addr, roots)
+				lines = append(lines, addr)
+			}
+
+			var wg sync.WaitGroup
+			ch := make(chan certInfo, len(lines))
+
+			for _, addr := range lines {
+				wg.Add(1)
+				if len(ch) == cap(ch) {
+					log.Warn().Msg("channel buffer full, waiting for some connections to finish before starting new ones")
+				}
+				go func(ch chan certInfo, addr string) {
+					defer wg.Done()
+					ci := getCertificatesFromConnection(addr, roots)
+					ch <- ci
+				}(ch, addr)
+
+				// ci := getCertificatesFromConnection(addr, roots)
+				// certInfos = append(certInfos, ci)
+			}
+			wg.Wait()
+			close(ch)
+
+			for ci := range ch {
 				certInfos = append(certInfos, ci)
 			}
 			if err := scanner.Err(); err != nil {
@@ -224,17 +266,23 @@ var infoCmd = &cobra.Command{
 
 		var totalVerified, totalCerts, totalExpired, totalExpiring30days int64
 
+		// sort output by path, allow lop below to order by index
+		slices.SortFunc(certInfos, func(a, b certInfo) int {
+			return strings.Compare(a.Path, b.Path)
+		})
+
 		for i, ci := range certInfos {
 			if ci.Error != nil {
 				lines = append(lines, []string{
 					strings.TrimSuffix(path.Base(ci.Path), ":443"),
-					"Error: " + ci.Error.Error(),
+					ci.Error.Error(),
 				})
 				continue
 			}
 			for n, c := range ci.CertChain {
 				var verified bool
 				var fileandindex string
+				status := "OK"
 
 				privateKeyPresent := slices.ContainsFunc(certInfos, func(ci certInfo) bool {
 					for _, pk := range ci.PrivateKeys {
@@ -252,11 +300,11 @@ var infoCmd = &cobra.Command{
 					}
 					fileandindex = strings.TrimSuffix(path.Base(certInfos[i].Path), ":443")
 				} else {
+					name := strings.TrimSuffix(path.Base(certInfos[i].Path), ":443")
 					if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
-						fileandindex = fmt.Sprintf("%s:%s", path.Base(certInfos[i].Path), certInfos[i].Alias[n])
+						fileandindex = fmt.Sprintf("%s/%s", name, certInfos[i].Alias[n])
 					} else {
-						fileandindex = fmt.Sprintf("%s:%d", path.Base(certInfos[i].Path), n)
-						fileandindex = strings.TrimSuffix(fileandindex, ":443")
+						fileandindex = fmt.Sprintf("%s/%d", name, n+1)
 					}
 				}
 
@@ -264,11 +312,14 @@ var infoCmd = &cobra.Command{
 					if ci.CerificateVerified[n] {
 						verified = true
 						totalVerified++
+					} else {
+						status = "Unverified"
 					}
 				}
 
 				totalCerts++
 				if c.NotAfter.Before(time.Now()) {
+					status = "Expired"
 					totalExpired++
 				}
 				if c.NotAfter.Before(time.Now().Add(30 * 24 * time.Hour)) {
@@ -278,6 +329,7 @@ var infoCmd = &cobra.Command{
 				if !infoCmdLong {
 					lines = append(lines, []string{
 						fileandindex,
+						status,
 						c.Subject.CommonName,
 						c.Issuer.CommonName,
 						c.NotAfter.UTC().Format(time.RFC3339),
@@ -285,6 +337,7 @@ var infoCmd = &cobra.Command{
 						extKeyUsageToString(c.ExtKeyUsage),
 						strconv.FormatBool(privateKeyPresent),
 						strconv.FormatBool(verified),
+						fmt.Sprintf("%dms", ci.ResponseTime.Milliseconds()),
 					})
 				} else {
 					dnsNames := "None"
@@ -298,6 +351,7 @@ var infoCmd = &cobra.Command{
 
 					lines = append(lines, []string{
 						fileandindex,
+						status,
 						c.Subject.CommonName,
 						c.Issuer.CommonName,
 						c.NotBefore.UTC().Format(time.RFC3339),
@@ -316,6 +370,7 @@ var infoCmd = &cobra.Command{
 						infoMapString(c.URIs, func(uri *url.URL) string { return uri.String() }),
 						fmt.Sprintf("%X", sha1.Sum(c.Raw)),
 						fmt.Sprintf("%X", sha256.Sum256(c.Raw)),
+						fmt.Sprintf("%dms", ci.ResponseTime.Milliseconds()),
 					})
 				}
 			}
@@ -341,7 +396,7 @@ var infoCmd = &cobra.Command{
 	},
 }
 
-func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certInfo, err error) {
+func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certInfo) {
 	u, err := url.Parse(addr)
 	if err != nil || u.Scheme == "" || u.Host == "" {
 		if host, port, found := strings.Cut(addr, ":"); found {
@@ -363,6 +418,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	ci = certInfo{
 		Path: u.Host,
 	}
+	start := time.Now()
 
 	var verifiedChains [][]*x509.Certificate
 	conn, err := tls.Dial("tcp", u.Host, &tls.Config{
@@ -404,6 +460,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 		_, ok := errors.AsType[*tls.CertificateVerificationError](err)
 		_, ok2 := errors.AsType[x509.UnknownAuthorityError](err)
 		if ok || ok2 {
+			start = time.Now() // reset start time to exclude time taken by failed verification attempt
 			log.Debug().Err(err).Str("address", addr).Msg("TLS certificate verification failed, retrying with InsecureSkipVerify to get certificates anyway")
 			// try again with skip verify
 			conn, err = tls.Dial("tcp", u.Host, &tls.Config{
@@ -422,6 +479,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	}
 
 	defer conn.Close()
+	ci.ResponseTime = time.Since(start)
 
 	var verified bool
 	if len(verifiedChains) > 0 {
@@ -569,7 +627,7 @@ func readFile(p string, ci *certInfo) (err error) {
 						log.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
 						return err
 					}
-					ci.Alias = append(ci.Alias, alias+"["+strconv.Itoa(n)+"]")
+					ci.Alias = append(ci.Alias, alias+"["+strconv.FormatInt(int64(n+1), 10)+"]")
 					ci.CertChain = append(ci.CertChain, parsedCert)
 				}
 			case k.IsTrustedCertificateEntry(alias):
