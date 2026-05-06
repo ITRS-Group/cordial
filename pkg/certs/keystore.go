@@ -142,7 +142,7 @@ func ReadKeystore(h host.Host, path string, password *config.Secret) (k *KeyStor
 		pw = password.Bytes()
 		defer memguard.WipeBytes(pw)
 	}
-	if err = k.Load(r, pw); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := k.Load(r, pw); err != nil && !errors.Is(err, os.ErrNotExist) {
 		// If file exists but cannot be read as a modern keystore, try
 		// to convert a JCEKS formatted keystore
 		return readJCEKS(h, path, password)

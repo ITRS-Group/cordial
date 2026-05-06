@@ -87,7 +87,7 @@ func loadToken() (token *oauth2.Token, err error) {
 
 	token = &oauth2.Token{}
 
-	if err = pf.UnmarshalKey("token", &token); err != nil {
+	if err := pf.UnmarshalKey("token", &token); err != nil {
 		return nil, err
 	}
 

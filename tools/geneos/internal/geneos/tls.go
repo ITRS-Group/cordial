@@ -283,7 +283,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
 	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+certs.PEMExtension))
 
 	// remove any existing root private key
-	if err = LOCAL.Remove(path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := LOCAL.Remove(path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		fmt.Printf("cannot delete existing root private key %q. Please delete manually\n", path.Join(confDir, RootCABasename+certs.KEYExtension))
 	}
 

@@ -289,9 +289,8 @@ func Write(i geneos.Instance) (err error) {
 	}
 
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
-	if err = i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
+	if err := i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
 		log.Debug().Msgf("%s: rebuild not supported", i.String())
-		err = nil
 	}
 
 	log.Debug().Err(err).Msgf("config for %s saved", i)

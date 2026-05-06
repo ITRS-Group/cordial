@@ -199,8 +199,6 @@ func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
 // running as the instance. An empty slice is returned if the process
 // cannot be found. The instance may be on remote host h.
 func ListeningPorts(h host.Host, pid int) (ports []int) {
-	var err error
-
 	if pid == 0 {
 		return
 	}
@@ -211,7 +209,7 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 	}
 
 	tcpports := make(map[int]int) // key = socket inode
-	if err = AllTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := AllTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Error().Err(err).Msg("continuing")
 	}
 

@@ -247,11 +247,11 @@ geneos uninstall --version 5.14.1
 func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release *geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
-		if err = h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if err := h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			log.Error().Err(err).Msg("")
 			continue
 		}
-		if err = h.Symlink(newVersion, link); err != nil {
+		if err := h.Symlink(newVersion, link); err != nil {
 			log.Error().Err(err).Msgf("cannot link %s to %s", link, newVersion)
 			continue
 		}

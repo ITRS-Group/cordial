@@ -220,9 +220,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}
 
 	// src.Unload()
-	if err = newdst.Rebuild(false); err != nil && err != geneos.ErrNotSupported {
+	if err := newdst.Rebuild(false); err != nil && err != geneos.ErrNotSupported {
 		log.Debug().Err(err).Msg("")
-		return
+		return err
 	}
 
 	done = true

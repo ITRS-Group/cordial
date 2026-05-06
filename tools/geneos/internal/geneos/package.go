@@ -223,7 +223,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 	// update each associated package type for a parent component
 	if len(ct.PackageTypes) > 0 {
 		for _, ct := range ct.PackageTypes {
-			if err = Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
+			if err := Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
 				log.Error().Err(err).Msg("")
 			}
 		}
@@ -302,10 +302,10 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 		}
 	}
 
-	if err = h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := h.Remove(basepath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
-	if err = h.Symlink(version, basepath); err != nil {
+	if err := h.Symlink(version, basepath); err != nil {
 		return err
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)

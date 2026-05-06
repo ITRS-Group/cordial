@@ -97,7 +97,7 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 		basename := strings.TrimSuffix(path.Base(kp), ext)
 		dir := path.Dir(kp)
 		bkp := path.Join(dir, basename+backup+ext)
-		if err = i.Host().Rename(kp, bkp); err != nil {
+		if err := i.Host().Rename(kp, bkp); err != nil {
 			return "", 0, err
 		}
 		config.Set(i.Config(), "prevkeyfile", bkp)

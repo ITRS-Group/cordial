@@ -63,8 +63,8 @@ func Clean(i geneos.Instance, full bool) (err error) {
 	if !IsRunning(i) {
 		stopped = false
 		// stop failed?
-	} else if err = Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
-		return
+	} else if err := Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+		return err
 	} else {
 		stopped = true
 	}

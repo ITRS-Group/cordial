@@ -41,12 +41,12 @@ const lockDirSuffix = "lck"
 // of completed files.
 // A lock directory is created for each file, but not for the whole
 // operation.
-func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string) (err error) {
+func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string) error {
 	var done []string
 
 	for _, p := range params {
 		log.Debug().Str("instance", i.String()).Str("file", p).Msg("rolling file")
-		if err = rollOneFileParam(i, p, newSuffix, oldSuffix); err != nil {
+		if err := rollOneFileParam(i, p, newSuffix, oldSuffix); err != nil {
 			break
 		}
 		done = append(done, p)
@@ -54,7 +54,7 @@ func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string)
 
 	// unroll on error, just reversing the done list and the prefixes
 	if len(done) != len(params) {
-		_ = RollFiles(i, oldSuffix, newSuffix, done...)
+		err := RollFiles(i, oldSuffix, newSuffix, done...)
 		return fmt.Errorf("failed to roll files for %s: %w", i, err)
 	}
 
@@ -92,7 +92,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 	}
 
 	// create lock directory or fail if it already exists
-	if err = h.Mkdir(lockPath, 0o700); err != nil {
+	if err := h.Mkdir(lockPath, 0o700); err != nil {
 		return fmt.Errorf("could not create lock for %s: %w", i, err)
 	}
 	defer h.Remove(lockPath)
@@ -102,14 +102,14 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 	if !noOriginal {
 		// backup existing files. On UNIX Rename is atomic, but not on all systems
 		log.Debug().Str("instance", i.String()).Str("file", path).Str("backup", oldPath).Msg("backing up original file")
-		if err = h.Rename(path, oldPath); err != nil {
-			return
+		if err := h.Rename(path, oldPath); err != nil {
+			return err
 		}
 	}
 
 	// atomically link new files into place
 	log.Debug().Str("instance", i.String()).Str("file", newPath).Msg("linking new file into place")
-	if err = h.Link(newPath, path); err != nil {
+	if err := h.Link(newPath, path); err != nil {
 		log.Error().Err(err).Str("instance", i.String()).Str("file", newPath).Msg("failed to link new file into place")
 		// try to restore the original file, if it existed
 		if !noOriginal {
@@ -119,7 +119,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 				err = fmt.Errorf("%v; additionally failed to restore original file: %w", err, err2)
 			}
 		}
-		return
+		return err
 	}
 
 	log.Debug().Str("instance", i.String()).Str("file", path).Msg("rolled file successfully")

@@ -32,7 +32,7 @@ import (
 )
 
 // Start runs the instance.
-func Start(i geneos.Instance, opts ...any) (err error) {
+func Start(i geneos.Instance, opts ...any) error {
 	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
@@ -50,7 +50,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	}
 
 	binary := config.Get[string](i.Config(), "program")
-	if _, err = i.Host().Stat(binary); err != nil {
+	if _, err := i.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
@@ -62,7 +62,7 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	}
 	cmd, err := BuildCmd(i, false, options...)
 	if err != nil {
-		return
+		return err
 	}
 	if cmd == nil {
 		return fmt.Errorf("BuildCmd() returned nil")
@@ -72,8 +72,8 @@ func Start(i geneos.Instance, opts ...any) (err error) {
 	errfile := ComponentFilepath(i, "txt")
 
 	log.Debug().Msgf("starting '%s'", cmd.String())
-	if err = i.Host().Start(cmd, host.ProcessErrfile(errfile)); err != nil {
-		return
+	if err := i.Host().Start(cmd, host.ProcessErrfile(errfile)); err != nil {
+		return err
 	}
 	// wait a bit for the process to start before checking
 	time.Sleep(250 * time.Millisecond)

@@ -193,8 +193,8 @@ func (h *Local) TempDir() string {
 
 func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	proc, _ := os.FindProcess(pid)
-	if err = proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
-		return
+	if err := proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
+		return err
 	}
 	return nil
 }

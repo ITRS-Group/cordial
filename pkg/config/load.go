@@ -101,8 +101,8 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 		buf := bytes.NewBuffer(opts.internalDefaults)
 		internalDefaults := New(options...)
 		internalDefaults.setConfigType(opts.internalDefaultsFormat)
-		if err = internalDefaults.readConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
-			return
+		if err := internalDefaults.readConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
+			return nil, fmt.Errorf("error reading internal defaults: %w", err)
 		}
 		defaults.MergeConfigMap(internalDefaults.AllSettings())
 	}
