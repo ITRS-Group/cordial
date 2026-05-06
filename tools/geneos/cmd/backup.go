@@ -120,7 +120,7 @@ geneos backup all
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:                "false",
+		CmdGlobal:                "true",
 		CmdRequireHome:           "true",
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
@@ -350,7 +350,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 		}
 
 		for _, i := range ignore {
-			if before, ok0 := strings.CutSuffix(i, "/"); ok0 {
+			if before, ok := strings.CutSuffix(i, "/"); ok {
 				ignoreDirs = append(ignoreDirs, before)
 			} else {
 				ignoreFiles = append(ignoreFiles, i)
@@ -395,11 +395,17 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 
 	resp.Completed = []string{"included in backup"}
 
+	// add global tls directory, in all cases
+	if err := walkDir(i.Host(), i.Host().PathTo("tls")+"/", "tls", contents, ignoreDirs, []string{}); err != nil {
+		log.Debug().Err(err).Msg("")
+	}
+
 	if !backupCmdIncludeShared {
 		return
 	}
 
-	// then walk the shared directories, if any, for ct checking and updating contents
+	// then walk the shared directories, if any, for ct checking and
+	// updating contents.
 	for _, s := range ct.SharedDirectories {
 		if err := walkDir(
 			i.Host(),
@@ -410,13 +416,6 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Res
 			ignoreFiles,
 		); err != nil {
 			// missing dirs and inaccessible files are probably not errors
-			log.Debug().Err(err).Msg("")
-		}
-	}
-
-	// add global tls directory when shared and tls flags given
-	if backupCmdIncludeTLS {
-		if err := walkDir(i.Host(), i.Host().PathTo("tls"), "tls", contents, ignoreDirs, ignoreFiles); err != nil {
 			log.Debug().Err(err).Msg("")
 		}
 	}

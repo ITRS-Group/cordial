@@ -143,10 +143,6 @@ geneos init
 			log.Fatal().Err(err).Msg("")
 		}
 
-		if err = initCommon(); err != nil {
-			return
-		}
-
 		if initCmdRestore != "" {
 			if err = restore.Restore(initCmdRestore,
 				restore.Host(geneos.LOCAL),
@@ -192,6 +188,10 @@ geneos init
 					return fmt.Errorf("no matching release installed")
 				}
 			}
+		}
+
+		if err = initCommon(); err != nil {
+			return
 		}
 
 		return
