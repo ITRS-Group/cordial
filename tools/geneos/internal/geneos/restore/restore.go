@@ -16,6 +16,7 @@ import (
 	"github.com/dsnet/compress/bzip2"
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -175,8 +176,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				sizes["TLS:!SHARED"] = -1
 				files["TLS:!SHARED"] = 0
 			}
-			// TODO: merge ca-bundle files instead of skipping if already exists
-			if err = writeSharedFile(path.Join("tls", rest), tr, hdr, opts); err != nil {
+			if err = writeSharedTLSFile(path.Join("tls", rest), tr, hdr, opts); err != nil {
 				if errors.Is(err, os.ErrExist) && opts.list {
 					// up the count regardless of existence when listing
 					sizes["TLS:!SHARED"] += hdr.Size
@@ -447,6 +447,65 @@ func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOp
 		var w io.WriteCloser
 
 		if _, err := h.Stat(h.PathTo(fp)); err == nil {
+			return os.ErrExist
+		}
+
+		// create intermediate dirs, write, set perms
+		if err = h.MkdirAll(path.Dir(h.PathTo(fp)), 0775); err != nil {
+			return
+		}
+
+		if w, err = h.Create(h.PathTo(fp), hdr.FileInfo().Mode()); err != nil {
+			return
+		}
+		defer w.Close()
+
+		_, err = io.Copy(w, tr)
+		return
+	default:
+		// ignore
+	}
+	return
+}
+
+// writeSharedTLSFile reads the file from the tar reader and, if a
+// regular file, checks for the global CA Bundle, in which case it
+// merges the contents, otherwise it writes it to the path fp relative
+// to the host's root geneos, creating intermediate directories as
+// required, and setting permissions as per tar header. Owner and group
+// are ignored. Directory entries are used to create directories with
+// matching permissions, again ignoring owner and group.
+func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions) (err error) {
+	h := opts.host
+
+	switch hdr.Typeflag {
+	case tar.TypeDir:
+		// create and set permissions
+		if _, err := h.Stat(h.PathTo(fp)); err == nil {
+			return os.ErrExist
+		}
+		return h.MkdirAll(h.PathTo(fp), hdr.FileInfo().Mode().Perm())
+	case tar.TypeReg:
+		var w io.WriteCloser
+
+		if _, err := h.Stat(h.PathTo(fp)); err == nil {
+			if path.Base(fp) == geneos.CABundleBasename+certs.PEMExtension {
+				// merge the existing and new CA bundle files
+				roots, err := certs.ReadCertificatesFrom(tr)
+				if err != nil {
+					return err
+				}
+				updated, err := certs.UpdateCACertsFiles(h, h.PathTo(path.Dir(fp), geneos.CABundleBasename), roots...)
+				if err != nil {
+					return err
+				}
+				if updated {
+					log.Debug().Msg("CA bundle updated")
+				}
+				return nil
+			}
+			// UpdateCACertsFiles writes both PEM and Java truststores
+			// from the PEM file. So ignore others that already exist.
 			return os.ErrExist
 		}
 
