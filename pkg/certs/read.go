@@ -22,6 +22,7 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -42,6 +43,33 @@ func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate, err 
 	}
 
 	data, err := h.ReadFile(path)
+	if err != nil {
+		return
+	}
+
+	for {
+		p, rest := pem.Decode(data)
+		if p == nil {
+			break
+		}
+		if p.Type == "CERTIFICATE" {
+			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
+				certs = append(certs, c)
+			}
+		}
+		data = rest
+	}
+
+	return
+}
+
+// ReadCertificatesFrom reads and parses all certificates from the given
+// io.Reader. If the reader cannot be read an error is returned. If no
+// certificates are found in the reader then no error is returned. The
+// returned certificates are not validated beyond the parsing
+// functionality of the underlying Go crypto/x509 package.
+func ReadCertificatesFrom(r io.Reader) (certs []*x509.Certificate, err error) {
+	data, err := io.ReadAll(r)
 	if err != nil {
 		return
 	}
