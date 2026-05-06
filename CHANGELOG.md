@@ -19,11 +19,15 @@
 
   * Fix `geneos tls ls` to work when no user-level signing certificate or key exists. This allows import of external instance TLS bundles without needing to first create a signing certificate and key.
 
+  * Update `geneos restore` and `geneos init --restore` underlying function to handle the TLS CA bundle file specially.
+
+  * Fix `geneos init --restore` ordering so that imported signing bundles are merged with restored CA bundles.
+
 ### Version v1.26.2 Changes
 
 * `tools/geneos`
 
-  * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md)
+  * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md). Note that columns, column names and ordering has changed.
 
   * `ps`/`status` command - Add detection of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
 
