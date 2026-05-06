@@ -38,11 +38,12 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// UpdateCACertsFiles appends the given root certificates to the CA file
-// at the specified path on the given host. It ensures that all the
-// given certificates are present in the file, appending any that are
-// missing. If the file does not exist or is empty, it will be created
-// with the provided certificates. Returns true if the file was updated
+// UpdateCACertsFiles appends the given root certificates to the CA
+// files at the specified basePath prefix on the given host. It writes
+// both a PEM files and a Java truststore. It ensures that all the given
+// certificates are present in the file, appending any that are missing.
+// If the file does not exist or is empty, it will be created with the
+// provided certificates. Returns true if the file was updated
 // (certificates added or file created), false if no changes were made.
 //
 // Returns an error if writing the file fails.
