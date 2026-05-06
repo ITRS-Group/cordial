@@ -169,18 +169,12 @@ var infoCmd = &cobra.Command{
 			}
 		}
 
-		certInfos, err = readFiles(paths, roots)
-		if err != nil {
-			return
-		}
+		certInfos = readFiles(paths, roots)
 
 		if len(infoCmdConnects) > 0 {
 			for _, addr := range infoCmdConnects {
+				// on error ci has the ci.Error field set, so preserve it
 				ci, _ := getCertificatesFromConnection(addr, roots)
-				// if err != nil {
-				// 	log.Error().Err(err).Str("address", addr).Msg("unable to get certificates from connection")
-				// 	continue
-				// }
 				certInfos = append(certInfos, ci)
 			}
 		}
@@ -204,11 +198,8 @@ var infoCmd = &cobra.Command{
 				if addr == "" || strings.HasPrefix(addr, "#") {
 					continue
 				}
+				// on error ci has the ci.Error field set, so preserve it
 				ci, _ := getCertificatesFromConnection(addr, roots)
-				// if err != nil {
-				// 	log.Error().Err(err).Str("address", addr).Msg("unable to get certificates from connection")
-				// 	continue
-				// }
 				certInfos = append(certInfos, ci)
 			}
 			if err := scanner.Err(); err != nil {
@@ -447,7 +438,12 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	return
 }
 
-func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo, err error) {
+// readFiles reads the specified files and extracts certificate
+// information, returning a slice of certInfo. Errors are stored in
+// ci.Error for each file, and processing continues for all files even
+// if some have errors. The roots parameter is used for verifying
+// certificate chains.
+func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo) {
 	ci = make([]certInfo, len(paths))
 
 	// paths is a list of files to examine, pre-resolved by the
@@ -460,7 +456,7 @@ func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo, err error) 
 	// each PEM file can contain multiple entries and they are
 	// listed in order
 	for i, p := range paths {
-		if err = readFile(p, &ci[i]); err != nil {
+		if err := readFile(p, &ci[i]); err != nil {
 			continue
 		}
 	}
@@ -478,7 +474,7 @@ func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo, err error) 
 				}
 				opts.Intermediates.AddCert(ic)
 			}
-			if _, err = c.Verify(opts); err != nil {
+			if _, err := c.Verify(opts); err != nil {
 				ci[i].CerificateVerified = append(ci[i].CerificateVerified, false)
 			} else {
 				ci[i].CerificateVerified = append(ci[i].CerificateVerified, true)

@@ -1,5 +1,3 @@
-# `geneos tls info`
-
 This command displays information about TLS certificates, either in local files or from remote endpoints. It can show details about the certificate chain, including verification status, expiration dates, and more.
 
 You can pass multiple files or endpoints to check, and the output can be formatted in different ways, including a human-readable table or a format suitable for further processing.
@@ -19,6 +17,8 @@ For certificate verification you can specify additional root certificate files u
 A certificate is considered verified if it can be chained to a trusted root certificate and is not expired. The hostname is *NOT* used for verifiation. The output includes a "Verified" column which indicates whether the certificate is verified. If a private key is present in a file and it matches a certificate then the PrivateKeyMatched colum will show `true`. In general this will only apply to local files.
 
 The total number of certificates processed, the number of verified certificates, the number of expired certificates, and the number of certificates expiring within 30 days are included in the output headlines when using the `toolkit` format.
+
+Note: This command will work without an initialised Geneos environment, and there is also a `geneos.exe` Windows build which can be used on Windows systems without installing the full Geneos package. However, if you run this command in an environment where the `geneos` program is available, it will use the `ca-bundle.pem` file from the Geneos installation for certificate verification if it exists.
 
 ## Toolkit Sampler Example
 
