@@ -124,9 +124,6 @@ var listCmd = &cobra.Command{
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return
 		}
-		// if rootKey == nil {
-		// 	return fmt.Errorf("no root private key found")
-		// }
 
 		signingCertFile, err = geneos.SigningCertificatePath()
 		if err != nil {
@@ -136,9 +133,6 @@ var listCmd = &cobra.Command{
 		// TODO: this may not be an error
 		signingCert, signingKey, err = geneos.ReadSigningCertificateAndKey()
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			return
-		}
-		if signingKey == nil {
 			return
 		}
 
