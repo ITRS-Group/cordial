@@ -175,6 +175,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				sizes["TLS:!SHARED"] = -1
 				files["TLS:!SHARED"] = 0
 			}
+			// TODO: merge ca-bundle files instead of skipping if already exists
 			if err = writeSharedFile(path.Join("tls", rest), tr, hdr, opts); err != nil {
 				if errors.Is(err, os.ErrExist) && opts.list {
 					// up the count regardless of existence when listing
