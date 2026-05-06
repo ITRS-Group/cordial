@@ -1,4 +1,4 @@
-Move / rename instance(s) `SOURCE` to `DESTINATION`.
+The `move` command will move instances from `SOURCE` to `DESTINATION`. The instance is stopped before, and restarted after, the instance is moved. It is an error to try to move an instance to one that already exists with the same name.
 
 If `TYPE` is not given than each component type that has a matching instance `SOURCE` will be moved to `DESTINATION`. If `DESTINATION` is given as an @ followed by a `host` then the instance is moved to the host but the name retained. In all cases, `host` means the name of a pre-defined `geneos host` remote or `@localhost`, not the server hostname.
 

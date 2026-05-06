@@ -1,4 +1,4 @@
-All matching instances whose TYPE supported templates for configuration file will have them rebuilt depending on the `config::rebuild` setting for each instance.
+The `rebuild` command will rebuild all matching instances whose TYPE supports templates for configuration file depending on the `config::rebuild` setting for each instance.
 
 The values for the `config::rebuild` option are: `never`, `initial` and `always`. The default value depends on the TYPE; For Gateways it is `initial` and for SANs and Floating Netprobes it is `always`.
 

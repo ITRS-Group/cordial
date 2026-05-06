@@ -1,6 +1,6 @@
 # `geneos unset`
 
-Unset (remove) configuration parameters from matching instances. This command is `unset` rather than `remove` as that is reserved as an alias for the `delete` command.
+The `unset` command removes configuration parameters from matching instances. This command is `unset` rather than `remove` as that is reserved as an alias for the `delete` command.
 
 Unlike the `geneos set` command, where parameters are in the form of KEY=VALUE, there is no way to distinguish a KEY to remove and a possible instance name, so you must use one or more `--key`/`-k` options to unset each simple parameter. If the parameter you are removing is a member of the `config` map then you must use the correct delimiter, in this case `::`.
 

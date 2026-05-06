@@ -1,6 +1,6 @@
 # `geneos stop`
 
-Stop the matching instances.
+The `stop` command stops the matching instances.
 
 Stop will  show how long each proceess took to stop or kill.
 

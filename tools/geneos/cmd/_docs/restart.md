@@ -1,8 +1,8 @@
-Restart the matching instances.
+The `restart` command restarts the matching instances.
 
 By default this is identical to running `geneos stop` followed by `geneos start`.
 
-If the `--all`/`-a` option is given then all matching instances are started regardless of whether they were stopped by the command.
+If the `--all`/`-a` option is given then all matching instances are started regardless of whether they were stopped by the command, useful if you are not full aware of the runtime state of instances.
 
 Protected instances will not be restarted unless the `--force`/`-F` option is given.
 

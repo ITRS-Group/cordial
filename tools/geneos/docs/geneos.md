@@ -64,6 +64,7 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos enable`](geneos_enable.md)	 | Enable instance |
 | [`geneos move / mv / rename`](geneos_move.md)	 | Move instances |
 | [`geneos protect`](geneos_protect.md)	 | Mark instances as protected |
+| [`geneos reset`](geneos_reset.md)	 | Reset Instance Directories |
 
 ---
 

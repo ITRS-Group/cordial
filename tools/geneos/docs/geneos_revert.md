@@ -1,6 +1,6 @@
 # `geneos revert`
 
-The command will revert the `.rc.orig` suffixed configuration file for all matching instances.
+The `revert` command will revert the `.rc.orig` suffixed configuration file for all matching instances.
 
 For any instance that is `protected` this will fail and an error reported.
 

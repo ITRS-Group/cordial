@@ -1,6 +1,6 @@
-The default behaviour is to show the last 10 lines of the log file for each matching instance. The order of instances cannot be predicted.
+The `logs` command shows the log file contents for matching instances. The default behaviour is to show the last 10 lines of the log file for each matching instance. The order of instances cannot be predicted.
 
-You can control the basic behaviour of the command with three options. The `--lines`/`-n` option controls how many lines to output per instance at the start of the program. The `--cat`/`-c` options will output the whole log file and any `--lines`/`-n` option is ignored. The `--follow`/`-f` option will show the last 10 lines (unless you ask for more with the `--lines`/`-n` option) and then wait for the log to be updated, just like the standard `tail -f` command except it will work for all matching instances including remote ones. `--cat`/`-c` and `--follow`/`-f` are mutually exclusive.
+You can control the behaviour with three options. The `--lines`/`-n` option controls how many lines to output per instance at the start of the program. The `--cat`/`-c` options will output the whole log file and any `--lines`/`-n` option is ignored. The `--follow`/`-f` option will show the last 10 lines (unless you ask for more with the `--lines`/`-n` option) and then wait for the log to be updated, just like the standard `tail -f` command except it will work for all matching instances including remote ones. `--cat`/`-c` and `--follow`/`-f` are mutually exclusive.
 
 The `--stderr`/`-E` option controls whether the separate `STDERR` log (if there is one) for each matching instance is also shown along with the main log. If used with the `--nostandard`/`-N` option to suppress normal log files then only error output is shown.
 

@@ -1,6 +1,6 @@
 # `geneos login`
 
-The login command will store credentials in your local configuration directory for use with `geneos` and other tools from `cordial`. Passwords are encrypted using a key file which is created if it does not already exist.
+The `login` command will store credentials in your local configuration directory for use with `geneos` and other tools from `cordial`. Passwords are encrypted using a key file which is created if it does not already exist.
 
 If not given `DOMAIN` defaults to `itrsgroup.com`. When credentials are used, the destination is checked against all stored credentials and the longest match is selected.
 

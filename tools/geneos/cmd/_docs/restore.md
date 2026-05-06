@@ -1,10 +1,10 @@
-# `geneos restore` / `geneos load`
-
-Restore one or more instances and/or shared directories from an archive created by `geneos backup`.
+The `restore` command restores one or more instances and/or shared directories from an archive created by `geneos backup`.
 
 Use the `--list/-l` flag to show the high-level contents from the archive that match other arguments given.
 
 Without either a component type or at least one instance name or pattern the command will do nothing. If given a component type without instance names all matching instances of that component type will be restored. Without a component type but with instances names, all matching instances, regardless of component type, will be restored. To restore all instances use the name `all`. Instance names can use wildcard patterns in shell (or "glob") format. Using the `--shared/-s` flag to restore any shared files and directories only applies to the matching component type if it given.
+
+Those backup archives that contain a `tls/` directory will have the contents restored, which may overwrite existing files.
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
