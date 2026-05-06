@@ -1,5 +1,34 @@
 # Change Log
 
+>[!WARNING]
+>Release v1.26 and later - **BREAKING CHANGES**
+>* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
+>
+>   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>
+>   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
+
+## Version v1.26.2
+
+> [!NOTE]
+> **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.26.2 Fixes
+
+* `tools/geneos`
+
+  * Fix `geneos tls ls` to work when no user-level signing certificate or key exists. This allows import of external instance TLS bundles without needing to first create a signing certificate and key.
+
+### Version v1.26.2 Changes
+
+* `tools/geneos`
+
+  * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md)
+
+  * `ps`/`status` command - Add detection of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
+
+---
+
 ## Version v1.26.1
 
 >[!WARNING]
