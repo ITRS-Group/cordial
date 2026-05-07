@@ -8,12 +8,12 @@
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
-## Version v1.26.2
+## Version v1.27.0
 
 > [!NOTE]
-> **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-05-07** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.26.2 Fixes
+### Version v1.27.0 Fixes
 
 * `tools/geneos`
 
@@ -25,7 +25,7 @@
 
   * Fix `geneos init --restore` ordering so that imported signing bundles are merged with restored CA bundles.
 
-### Version v1.26.2 Changes
+### Version v1.27.0 Changes
 
 * `tools/geneos`
 
@@ -34,6 +34,8 @@
   * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md). Note that columns, column names and ordering has changed.
 
   * `ps`/`status` command - Add detection of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
+
+  * Add a `--raw`/`-r` option to `aes decode` to output just the decoded value without any prefix or newline if the decoded value is not part of the secret. This is useful for scripting and other automation where you just want the decoded value.
 
 ---
 
