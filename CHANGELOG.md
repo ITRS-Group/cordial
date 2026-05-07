@@ -17,6 +17,8 @@
 
 * `tools/geneos`
 
+  = Fix handing of `sso-agent` config file (via `pkg/config`), so that the configuration can be built from the HOCON formatted file `conf/sso-agent.conf` and so started etc.
+
   * Fix `geneos tls ls` to work when no user-level signing certificate or key exists. This allows import of external instance TLS bundles without needing to first create a signing certificate and key.
 
   * Update `geneos restore` and `geneos init --restore` underlying function to handle the TLS CA bundle file specially.
