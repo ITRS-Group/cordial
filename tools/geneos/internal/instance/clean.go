@@ -36,8 +36,10 @@ import (
 // stopped and the entries in FullClean are removed. Any instances
 // stopped are started up, but any that were already stopped will be
 // left stopped.
-func Clean(i geneos.Instance, full bool) (err error) {
+func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 	var stopped bool
+
+	opts := evalCleanOptions(options...)
 
 	ct := i.Type()
 
@@ -51,7 +53,7 @@ func Clean(i geneos.Instance, full bool) (err error) {
 		purgelist = append(purgelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
 	}
 
-	if !full {
+	if !opts.full {
 		if len(cleanlist) > 0 {
 			if err = RemovePaths(i, cleanlist...); err == nil {
 				log.Debug().Msgf("%s cleaned", i)
@@ -63,7 +65,7 @@ func Clean(i geneos.Instance, full bool) (err error) {
 	if !IsRunning(i) {
 		stopped = false
 		// stop failed?
-	} else if err := Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+	} else if err := Stop(i, opts.force, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
 		return err
 	} else {
 		stopped = true
@@ -79,7 +81,7 @@ func Clean(i geneos.Instance, full bool) (err error) {
 			return
 		}
 	}
-	log.Debug().Msgf("%s fully cleaned", i)
+	log.Debug().Msgf("%s created files removed", i)
 	if stopped {
 		err = Start(i)
 	}

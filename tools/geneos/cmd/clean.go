@@ -30,15 +30,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var cleanCmdFull bool
+
 func init() {
 	Cmd.AddCommand(cleanCmd)
-	Cmd.AddCommand(resetCmd)
 
 	cleanCmd.Flags().BoolVarP(&cleanCmdFull, "full", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
+	cleanCmd.Flags().MarkDeprecated("full", "Please use the `reset` command instead `clean --full`")
+
 	cleanCmd.Flags().SortFlags = false
 }
-
-var cleanCmdFull bool
 
 //go:embed _docs/clean.md
 var cleanCmdDescription string
@@ -52,9 +53,6 @@ var cleanCmd = &cobra.Command{
 # Delete old logs and config file backups without affecting the running
 # instance
 geneos clean gateway Gateway1
-# Stop all netprobes and remove all non-essential files from working 
-# directories, then restart netprobes
-geneos clean --full netprobe
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -72,11 +70,21 @@ geneos clean --full netprobe
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
 			resp.Completed = append(resp.Completed, "configured files and directories removed")
-			resp.Err = instance.Clean(i, cleanCmdFull)
+			resp.Err = instance.Clean(i, instance.FullClean(cleanCmdFull))
 			return
 		}).Report(os.Stdout)
 		return nil
 	},
+}
+
+var resetCmdForce bool
+
+func init() {
+	Cmd.AddCommand(resetCmd)
+
+	resetCmd.Flags().BoolVarP(&resetCmdForce, "force", "F", false, "Force reset (require for proteced instances) even if instance is running")
+
+	resetCmd.Flags().SortFlags = false
 }
 
 //go:embed _docs/reset.md
@@ -113,8 +121,8 @@ geneos reset netprobe
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp = responses.NewResponse(i)
-			resp.Completed = append(resp.Completed, "configured files and directories removed")
-			resp.Err = instance.Clean(i, true)
+			resp.Completed = append(resp.Completed, "transient files and directories removed")
+			resp.Err = instance.Clean(i, instance.FullClean(true), instance.ForceClean(resetCmdForce))
 			return
 		}).Report(os.Stdout)
 		return nil

@@ -228,7 +228,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	done = true
 
 	// now a full clean on the destination
-	if err = Clean(newdst, true); err != nil {
+	if err = Clean(newdst, FullClean(true)); err != nil {
 		return
 	}
 

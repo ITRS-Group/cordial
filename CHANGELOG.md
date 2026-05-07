@@ -27,6 +27,8 @@
 
 * `tools/geneos`
 
+  * Add a `reset` command which is the same as `clean --full` but will not match any instance by default, to protect against unintended restarts. Use `geneos reset all` to act on all instances (that are not protected).
+
   * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md). Note that columns, column names and ordering has changed.
 
   * `ps`/`status` command - Add detection of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
