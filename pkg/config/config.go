@@ -155,6 +155,7 @@ func (c *Config) SetConfigType(t string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.configType = t
+	c.setConfigType(t)
 }
 
 // BindPFlag binds a pflag.Flag to a key in the configuration.
