@@ -35,7 +35,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
 )
 
 const (
@@ -372,11 +371,11 @@ func initConfig() {
 	geneos.InitHosts(cordial.ExecutableName())
 	log.Debug().Msg("hosts loaded")
 
-	// for now, always load profiles, even if not used
-	_, err = profiles.Load()
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to load profiles")
-	}
+	// TODO ignore profiles for now
+	// _, err = profiles.Load()
+	// if err != nil {
+	// 	log.Fatal().Err(err).Msg("failed to load profiles")
+	// }
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is
