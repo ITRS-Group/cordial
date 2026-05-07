@@ -25,6 +25,8 @@ import (
 	"path"
 	"path/filepath"
 	"slices"
+
+	"github.com/rs/zerolog/log"
 )
 
 // Read reads configuration values for module from internal defaults,
@@ -73,6 +75,8 @@ import (
 func Read(module string, options ...FileOption) (cf *Config, err error) {
 	opts := evalLoadOptions(module, options...)
 	r := opts.remote
+
+	log.Debug().Str("module", module).Interface("options", opts).Msg("loading configuration")
 
 	if opts.setGlobals {
 		ResetConfig(options...)
