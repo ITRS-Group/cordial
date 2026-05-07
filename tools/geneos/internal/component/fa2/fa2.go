@@ -51,6 +51,7 @@ var FA2 = geneos.Component{
 		config.Join(Name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
+			"*.db",
 		}, ":"),
 	},
 	PortRange: config.Join(Name, "ports"),
