@@ -42,11 +42,10 @@ func (c *Config) MergeHOCONConfig(conf string) (err error) {
 	vc.SetConfigType("json")
 
 	j, err := json.Marshal(hc.GetRoot())
-	j = shrinkBackSlashRE.ReplaceAll(j, []byte{'\\'})
 	if err != nil {
 		return
 	}
-	cs := bytes.NewReader(j)
+	cs := bytes.NewReader(shrinkBackSlashRE.ReplaceAll(j, []byte{'\\'}))
 	if err := vc.readConfig(cs); err != nil {
 		return err
 	}
