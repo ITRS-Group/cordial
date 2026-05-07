@@ -37,6 +37,7 @@ import (
 
 var decodeCmdAESFILE, decodeCmdPrevAESFILE, aesPrevUserKeyFile config.KeyFile
 var decodeCmdPassword, decodeCmdSource, decodeCmdExpandString string
+var decodeCmdRaw bool
 
 func init() {
 	aesCmd.AddCommand(decodeCmd)
@@ -51,11 +52,12 @@ func init() {
 	decodeCmdAESFILE = cmd.UserKeyFile
 	decodeCmdPrevAESFILE = aesPrevUserKeyFile
 
-	decodeCmd.Flags().StringVarP(&decodeCmdExpandString, "expandable", "e", "", "The keyfile and ciphertext in expandable format (including '${...}')")
 	decodeCmd.Flags().VarP(&decodeCmdAESFILE, "keyfile", "k", "Path to keyfile")
 	decodeCmd.Flags().VarP(&decodeCmdPrevAESFILE, "previous", "v", "Path to previous keyfile")
+	decodeCmd.Flags().StringVarP(&decodeCmdExpandString, "expandable", "e", "", "The keyfile and ciphertext in expandable format (including '${...}')")
 	decodeCmd.Flags().StringVarP(&decodeCmdPassword, "password", "p", "", "Geneos formatted AES256 password")
 	decodeCmd.Flags().StringVarP(&decodeCmdSource, "source", "s", "", "Alternative source for password")
+	decodeCmd.Flags().BoolVarP(&decodeCmdRaw, "raw", "r", false, "Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)")
 
 	decodeCmd.Flags().SortFlags = false
 }
@@ -92,9 +94,13 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
 
-		// XXX Allow -e to provide non-inline sources, e.g. stdin, file etc.
+		// TODO Allow -e to provide non-inline sources, e.g. stdin, file etc.
 		if strings.HasPrefix(decodeCmdExpandString, "${enc:") {
-			fmt.Println(config.Expand[string](config.Global(), decodeCmdExpandString))
+			if decodeCmdRaw {
+				fmt.Print(config.Expand[string](config.Global(), decodeCmdExpandString))
+			} else {
+				fmt.Println(config.Expand[string](config.Global(), decodeCmdExpandString))
+			}
 			return nil
 		}
 
@@ -123,7 +129,11 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			if err != nil {
 				continue
 			}
-			fmt.Printf("decoded: %s\n", e)
+			if decodeCmdRaw {
+				fmt.Print(e)
+			} else {
+				fmt.Printf("decoded: %s\n", e)
+			}
 			return nil
 		}
 
