@@ -37,8 +37,8 @@ var stopCmdDescription string
 var restartCmdDescription string
 
 func init() {
-	GDNACmd.AddCommand(stopCmd)
-	GDNACmd.AddCommand(restartCmd)
+	Cmd.AddCommand(stopCmd)
+	Cmd.AddCommand(restartCmd)
 }
 
 var stopCmd = &cobra.Command{

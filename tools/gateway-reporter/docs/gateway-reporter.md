@@ -1,15 +1,5 @@
 # `gateway-reporter`
 
-Report on Geneos Gateway XML files
-
-```text
-gateway-reporter
-```
-
-## Commands
-
-* [`gateway-reporter report`](gateway-reporter_report.md)	 - Report on Geneos Gateway XML files
-
 When run with no arguments `gateway-reporter` will work as a Gateway validation hook, using the configuration defaults and those in external `gateway-reporter.yaml` files, to produce monitoring coverage reports based on the merged configuration supplied by the executing Gateway. There must be a symbolic link from `validate-setup` in the Gateway hooks directory to the `gateway-reporter` program. If you choose to rename the program to `validate-setup` and place it in the configured hooks directory then all configuration files will also have to be renamed to `validate-setup.yaml` to match.
 
 The contents of the reports, their formats and destination directory are taken from configuration files and built-in defaults. The configuration file is normally loaded from the following locations, each one found overriding similar settings from the previous one (and the defaults):
@@ -35,6 +25,18 @@ If the Gateway is permanently configured with a hooks directory then the `gatewa
 The other way to run `gateway-reporter` as a validation hook is to use `geneos show -V --hook DIR`, which runs a single-shot Gateway with the appropriate arguments to invoke the validation hook.
 
 To have more control over the Gateway configuration merging process or to use a pre-merged file, use the `gateway-reporter report` command.
+
+## Usage
+
+```text
+gateway-reporter
+```
+
+## Commands
+
+| Command | Description |
+|-------|-------|
+| [`gateway-reporter report`](gateway-reporter_report.md)	 | Report on Geneos Gateway XML files |
 
 ### Options
 

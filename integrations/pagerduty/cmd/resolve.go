@@ -32,6 +32,6 @@ var resolveCmd = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(resolveCmd)
+	Cmd.AddCommand(resolveCmd)
 
 }

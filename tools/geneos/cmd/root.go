@@ -85,33 +85,33 @@ func init() {
 	config.DefaultKeyDelimiter("::")
 	config.ResetConfig(config.KeyDelimiter("::"))
 
-	GeneosCmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/"+cordial.ExecutableName()+".json, "+
+	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/"+cordial.ExecutableName()+".json, "+
 		config.Path(cordial.ExecutableName(),
 			config.SkipUserConfDir(),
 			config.SkipWorkingDir())+
 		")")
 
-	GeneosCmd.PersistentFlags().BoolVar(&AllowRoot, "allow-root", false, "allow running as root (not recommended)")
-	GeneosCmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "all", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
-	GeneosCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	GeneosCmd.PersistentFlags().MarkHidden("debug")
-	GeneosCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
-	GeneosCmd.PersistentFlags().MarkHidden("quiet")
+	Cmd.PersistentFlags().BoolVar(&AllowRoot, "allow-root", false, "allow running as root (not recommended)")
+	Cmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "all", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().MarkHidden("debug")
+	Cmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "quiet mode")
+	Cmd.PersistentFlags().MarkHidden("quiet")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	GeneosCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	GeneosCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
 	// catch common abbreviations and typos
-	GeneosCmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
+	Cmd.PersistentFlags().SetNormalizeFunc(cmdNormalizeFunc)
 
 	// this doesn't work as expected, define sort = false in each command
 	// RootCmd.PersistentFlags().SortFlags = false
-	GeneosCmd.Flags().SortFlags = false
+	Cmd.Flags().SortFlags = false
 
 	// save orig help func, check if this is a --help call or a help command
-	helpfunc := GeneosCmd.HelpFunc()
-	GeneosCmd.SetHelpFunc(func(c *cobra.Command, s []string) {
+	helpfunc := Cmd.HelpFunc()
+	Cmd.SetHelpFunc(func(c *cobra.Command, s []string) {
 		if b, _ := c.Flags().GetBool("help"); b {
 			c.Usage()
 			fmt.Println("")
@@ -168,8 +168,8 @@ func cmddata(command *cobra.Command) *CmdValType {
 	return nil
 }
 
-// GeneosCmd represents the base command when called without any subcommands
-var GeneosCmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:   cordial.ExecutableName() + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
 	Short: "Take control of your Geneos environments",
 	Long:  geneosCmdDescription,
@@ -283,9 +283,9 @@ geneos restart
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(GeneosCmd)
+	cordial.RenderHelpAsMD(Cmd)
 
-	err := GeneosCmd.Execute()
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

@@ -41,7 +41,7 @@ import (
 var psCmdLong, psCmdShowFiles, psCmdShowNet, psCmdJSON, psCmdIndent, psCmdCSV, psCmdToolkit bool
 
 func init() {
-	cmd.GeneosCmd.AddCommand(psCmd)
+	cmd.Cmd.AddCommand(psCmd)
 
 	psCmd.Flags().BoolVarP(&psCmdShowFiles, "files", "f", false, "Show open files")
 	psCmd.Flags().BoolVarP(&psCmdShowNet, "network", "n", false, "Show TCP sockets")

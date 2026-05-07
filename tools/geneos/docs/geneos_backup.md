@@ -28,6 +28,8 @@ The contents of the archive are relative to the root of the Geneos installation,
 
 Note that instances are not stopped or restarted as part of the backup process. If files are locked or changed during the backup then the contents may be inconsistent. If you want to stop the instance before backup and restart it afterwards then you can use the `geneos stop` and `geneos start` commands in a script.
 
+## Usage
+
 ```text
 geneos backup [flags] [all] | [TYPE] [NAME...]
 ```
@@ -50,6 +52,9 @@ geneos backup [flags] [all] | [TYPE] [NAME...]
                         
       --aes             Include AES key files.
       --tls             Include certificates, private keys and certificate chains.
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

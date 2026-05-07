@@ -37,7 +37,7 @@ var setCmdValues = instance.SetConfigValues{}
 var setCmdDescription string
 
 func init() {
-	GeneosCmd.AddCommand(setCmd)
+	Cmd.AddCommand(setCmd)
 
 	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "keyfile to use for encoding secrets\ndefault is instance configured keyfile")
 

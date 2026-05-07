@@ -35,7 +35,7 @@ var unsetCmdWarned bool
 var unsetCmdValues = instance.UnsetConfigValues{}
 
 func init() {
-	GeneosCmd.AddCommand(unsetCmd)
+	Cmd.AddCommand(unsetCmd)
 
 	unsetCmd.Flags().VarP(&unsetCmdValues.Keys, "key", "k", "Unset configuration parameter `KEY`\n(Repeat as required)")
 

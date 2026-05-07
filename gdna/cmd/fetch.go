@@ -77,7 +77,7 @@ var fetchCmd = &cobra.Command{
 var fetchCmdSources Sources
 
 func init() {
-	GDNACmd.AddCommand(fetchCmd)
+	Cmd.AddCommand(fetchCmd)
 
 	fetchCmd.Flags().BoolVarP(&postProcess, "post-process", "p", false, "post process data for reporting database")
 	fetchCmd.Flags().BoolVarP(&overrideFiletime, "time", "T", false, "Override file times with the current time (for testing only)")

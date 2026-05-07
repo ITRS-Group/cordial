@@ -46,7 +46,7 @@ var emailCmdSubject, emailCmdFrom, emailCmdTo, emailCmdCc, emailCmdBcc string
 var emailCmdContents string
 
 func init() {
-	GDNACmd.AddCommand(emailCmd)
+	Cmd.AddCommand(emailCmd)
 
 	emailCmd.Flags().StringVarP(&reportNames, "report", "r", "", reportNamesDescription)
 

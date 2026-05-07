@@ -46,20 +46,20 @@ const (
 )
 
 func init() {
-	GDNACmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	GDNACmd.PersistentFlags().MarkHidden("debug")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().MarkHidden("debug")
 
-	GDNACmd.PersistentFlags().BoolVarP(&trace, "trace", "t", false, "enable trace output (SQL queries etc.) - implies debug")
-	GDNACmd.PersistentFlags().MarkHidden("trace")
+	Cmd.PersistentFlags().BoolVarP(&trace, "trace", "t", false, "enable trace output (SQL queries etc.) - implies debug")
+	Cmd.PersistentFlags().MarkHidden("trace")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	GDNACmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	GDNACmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
-	GDNACmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "Use configuration `FILE`")
-	GDNACmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "Use configuration `FILE`")
+	Cmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", execname+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
-	GDNACmd.Flags().SortFlags = false
+	Cmd.Flags().SortFlags = false
 
 	// cobra.OnInitialize(initConfig)
 }
@@ -72,8 +72,8 @@ var defaults []byte
 //go:embed _docs/gdna.md
 var rootCmdDescription string
 
-// GDNACmd represents the base command when called without any subcommands
-var GDNACmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:   "gdna [FLAGS...]",
 	Short: "Process Geneos License Usage Data",
 	Long:  rootCmdDescription,
@@ -103,9 +103,9 @@ var GDNACmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(GDNACmd)
+	cordial.RenderHelpAsMD(Cmd)
 
-	err := GDNACmd.Execute()
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

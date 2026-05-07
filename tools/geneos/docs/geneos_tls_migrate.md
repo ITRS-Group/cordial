@@ -30,6 +30,8 @@ The instance parameters are updated as follows:
 
 Each component type will use the above parameters as appropriate. For example, the `truststore` and `truststore-password` parameters are only applicable to the `webserver` component.
 
+## Usage
+
 ```text
 geneos tls migrate [TYPE] [NAME...] [flags]
 ```
@@ -37,7 +39,10 @@ geneos tls migrate [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-  -c, --check   check if instance is already migrated
+      --allow-root      allow running as root (not recommended)
+  -c, --check           check if instance is already migrated
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

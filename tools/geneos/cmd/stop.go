@@ -32,7 +32,7 @@ var stopCmdForce, stopCmdKill bool
 var stopCmdPort uint16
 
 func init() {
-	GeneosCmd.AddCommand(stopCmd)
+	Cmd.AddCommand(stopCmd)
 
 	stopCmd.Flags().Uint16VarP(&stopCmdPort, "port", "p", 0, "Stop instance matching port (overrides TYPE and NAME)")
 	stopCmd.Flags().BoolVarP(&stopCmdForce, "force", "F", false, "Stop protected instances")

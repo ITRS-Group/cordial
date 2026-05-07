@@ -52,7 +52,7 @@ var showCmdRaw, showCmdSetup, showCmdMerge, showCmdValidate bool
 var showCmdOutput, showCmdHooksDir string
 
 func init() {
-	GeneosCmd.AddCommand(showCmd)
+	Cmd.AddCommand(showCmd)
 
 	showCmd.Flags().StringVarP(&showCmdOutput, "output", "o", "", "Output file, default stdout")
 

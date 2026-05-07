@@ -14,6 +14,8 @@ Base links that are in use by protected instance are not updated without the `--
 
 Otherwise, by default any running instances that use the base link that is being upgraded will be restarted around the update. While not recommended you can prevent this by passing a false value to the `--restart`/`-R` option (`--restart=false`). 
 
+## Usage
+
 ```text
 geneos package update [flags] [TYPE] [VERSION]
 ```
@@ -25,6 +27,9 @@ geneos package update [flags] [TYPE] [VERSION]
   -b, --base string      Base name for the symlink, defaults to active_prod (default "active_prod")
   -R, --restart          Restart all instances that may have an update applied (default true)
   -F, --force            Will also update and restart protected instances
+      --allow-root       allow running as root (not recommended)
+  -G, --config string    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

@@ -10,6 +10,8 @@ If there is already a configuration file with a `.rc` suffix then the command wi
 
 If called with the `--executables`/`-X` option then instead of instance configurations the command will remove any symbolic links from legacy `ctl` command in `${GENEOS_HOME}/bin` that point to the command.
 
+## Usage
+
 ```text
 geneos revert [--executables|-X] | [TYPE] [NAME...]
 ```
@@ -17,7 +19,10 @@ geneos revert [--executables|-X] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -X, --executables   Revert 'ctl' executables
+  -X, --executables     Revert 'ctl' executables
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

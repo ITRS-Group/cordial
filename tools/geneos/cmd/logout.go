@@ -29,7 +29,7 @@ import (
 var logoutCmdAll bool
 
 func init() {
-	GeneosCmd.AddCommand(logoutCmd)
+	Cmd.AddCommand(logoutCmd)
 
 	logoutCmd.Flags().BoolVarP(&logoutCmdAll, "all", "A", false, "remove all credentials")
 }

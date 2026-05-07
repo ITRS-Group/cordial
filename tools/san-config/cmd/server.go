@@ -43,7 +43,7 @@ var daemon bool
 var logfile string
 
 func init() {
-	rootCmd.AddCommand(serverCmd)
+	Cmd.AddCommand(serverCmd)
 
 	serverCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Run as a daemon")
 	serverCmd.Flags().StringVarP(&logfile, "logfile", "L", "", "Override configured log file path")

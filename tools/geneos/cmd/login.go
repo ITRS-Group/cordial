@@ -35,7 +35,7 @@ var loginKeyfile config.KeyFile
 var loginCmdList bool
 
 func init() {
-	GeneosCmd.AddCommand(loginCmd)
+	Cmd.AddCommand(loginCmd)
 
 	loginCmdPassword = &config.Secret{}
 

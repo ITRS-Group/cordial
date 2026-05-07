@@ -91,7 +91,7 @@ func TestProxyFlags(t *testing.T) {
 func TestProxyCommandAddedToRoot(t *testing.T) {
 	// Test that the proxy command is added to the root command
 	found := false
-	for _, subCmd := range cmd.RootCmd.Commands() {
+	for _, subCmd := range cmd.Cmd.Commands() {
 		if subCmd.Name() == "proxy" {
 			found = true
 			break
@@ -203,7 +203,7 @@ func TestCommandName(t *testing.T) {
 
 func TestCommandParent(t *testing.T) {
 	// Test that the command is properly attached to root
-	if routerCmd.Parent() != cmd.RootCmd {
+	if routerCmd.Parent() != cmd.Cmd {
 		t.Error("Expected proxy command to be child of root command")
 	}
 }

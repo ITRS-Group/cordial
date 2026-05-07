@@ -101,13 +101,13 @@ func TestClientFlags(t *testing.T) {
 func TestClientCommandAddedToRoot(t *testing.T) {
 	// Test that the client command is added to the root command
 	found := false
-	for _, subCmd := range cmd.RootCmd.Commands() {
+	for _, subCmd := range cmd.Cmd.Commands() {
 		if subCmd.Name() == "client" {
 			found = true
 			break
 		}
 	}
-	
+
 	if !found {
 		t.Error("Expected client command to be added to root command")
 	}
@@ -131,8 +131,8 @@ func TestGlobalFlags(t *testing.T) {
 func TestActionGroup(t *testing.T) {
 	// Test the ActionGroup struct
 	actionGroup := ActionGroup{
-		If:   []string{"state=1"},
-		Set:  map[string]string{"urgency": "2", "impact": "2"},
+		If:    []string{"state=1"},
+		Set:   map[string]string{"urgency": "2", "impact": "2"},
 		Unset: []string{"caller_id"},
 		Subgroup: []ActionGroup{
 			{

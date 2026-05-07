@@ -18,6 +18,8 @@ The credentials file itself can be world readable as the security is through the
 
 Future releases will support extended credential sets, for example SSH and 2-legged OAuth ClientID/ClientSecret (such as application keys from cloud providers). Another addition may be the automatic encryption of non-password data in credentials.
 
+## Usage
+
 ```text
 geneos login [flags] [DOMAIN]
 ```
@@ -29,6 +31,9 @@ geneos login [flags] [DOMAIN]
   -p, --password SECRET   Password
   -k, --keyfile KEYFILE   Key file to use
   -l, --list              List the names of the currently stored credentials
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

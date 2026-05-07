@@ -18,6 +18,8 @@ Here:
   
 `PATH` is the root Geneos directory used on the target host. If not defined, it is set to the same as the local Geneos root directory.
 
+## Usage
+
 ```text
 geneos host add [flags] [NAME] [SSHURL]
 ```
@@ -30,6 +32,9 @@ geneos host add [flags] [NAME] [SSHURL]
   -P, --password SECRET   Password
   -k, --keyfile KEYFILE   Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
   -i, --privatekey PATH   Private key file
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

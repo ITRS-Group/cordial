@@ -29,22 +29,12 @@ import (
 )
 
 func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
-	flags := cmd.NonInheritedFlags()
+	flags := cmd.Flags()
 	flags.SetOutput(buf)
 	if flags.HasAvailableFlags() {
 		buf.WriteString("### Options\n\n```text\n")
 		flags.PrintDefaults()
 		buf.WriteString("```\n\n")
-	}
-
-	if !cmd.SilenceUsage {
-		parentFlags := cmd.InheritedFlags()
-		parentFlags.SetOutput(buf)
-		if parentFlags.HasAvailableFlags() {
-			buf.WriteString("### Options inherited from parent commands\n\n```text\n")
-			parentFlags.PrintDefaults()
-			buf.WriteString("```\n\n")
-		}
 	}
 	return nil
 }
@@ -69,7 +59,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		buf.WriteString(cmd.Short + "\n\n")
 	}
 	if cmd.Runnable() {
-		fmt.Fprintf(buf, "```text\n%s\n```\n", cmd.UseLine())
+		fmt.Fprintf(buf, "## Usage\n\n```text\n%s\n```\n", cmd.UseLine())
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()

@@ -18,6 +18,8 @@ For normal output each instance's underlying configuration is in an object key `
 By default the interpolated ("expandable" values are expanded) values are shown. The see the underlying value use the `--raw`/`-r` option.
 
 No values that are encrypted are shown decrypted with or without the `--raw`/`-r` option.
+## Usage
+
 ```text
 geneos show [flags] [TYPE] [NAME...]
 ```
@@ -32,6 +34,9 @@ geneos show [flags] [TYPE] [NAME...]
   -V, --validate        Validate Gateway configurations using the Gateway -validate flag
       --hooks string    Hooks directory
                         (may clash with instance parameters if set for normal execution)
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

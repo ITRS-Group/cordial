@@ -4,6 +4,8 @@ The `protect` command marks matching instances as protected. Various operations 
 
 To reverse this you must use the same command with the `-U` flag. There is no `unprotect` command. This is by design.
 
+## Usage
+
 ```text
 geneos protect [flags] [TYPE] [NAME...]
 ```
@@ -11,7 +13,10 @@ geneos protect [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -U, --unprotect   unprotect instances
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -U, --unprotect       unprotect instances
 ```
 
 ## SEE ALSO

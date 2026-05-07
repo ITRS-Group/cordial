@@ -57,12 +57,12 @@ func init() {
 
 	cordial.LogInit(execname)
 
-	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	RootCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 }
 
 func initConfig() {
@@ -91,8 +91,8 @@ func initConfig() {
 	cf.AutomaticEnv()
 }
 
-// RootCmd represents the base command when called without any subcommands
-var RootCmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:          "gateway-reporter",
 	Short:        "Report on Geneos Gateway XML files",
 	Long:         rootCmdDescription,
@@ -222,9 +222,9 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the listCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(RootCmd)
+	cordial.RenderHelpAsMD(Cmd)
 
-	err := RootCmd.Execute()
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

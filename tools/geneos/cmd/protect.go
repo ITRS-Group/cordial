@@ -31,7 +31,7 @@ import (
 var protectCmdUnprotect bool
 
 func init() {
-	GeneosCmd.AddCommand(protectCmd)
+	Cmd.AddCommand(protectCmd)
 
 	protectCmd.Flags().BoolVarP(&protectCmdUnprotect, "unprotect", "U", false, "unprotect instances")
 }

@@ -16,8 +16,18 @@ If the component supports `geneos rebuild` then this is run after the copy but b
 
 Copying between hosts is fully supported.
 
+## Usage
+
 ```text
 geneos copy [TYPE] SOURCE DESTINATION [KEY=VALUE...]
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

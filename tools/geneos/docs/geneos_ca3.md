@@ -15,8 +15,18 @@ Component specific parameters:
 | minheap           | 512M                          | Java minimum memory                                   |
 | maxheap           | 512M                          | Java maximum memory                                   |
 
+## Usage
+
 ```text
 geneos ca3
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

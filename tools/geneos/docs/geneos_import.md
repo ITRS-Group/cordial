@@ -14,6 +14,8 @@ If the `--common`/`-c` option is used then a TYPE must also be specified. Each c
 
 Future releases may add support for directories and.or unarchiving of `tar.gz`/`zip` and other file archives.
 
+## Usage
+
 ```text
 geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 ```
@@ -22,6 +24,9 @@ geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 
 ```text
   -c, --common SUFFIX   Import files to a component directory named TYPE_SUFFIX
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

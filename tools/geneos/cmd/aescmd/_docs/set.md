@@ -1,4 +1,4 @@
-Import a key file and set parameters on matching instances.
+The `aes set` command imports a key file and sets parameters on matching instances.
 
 To create a key file with new contents use the `aes new` command.
 

@@ -45,27 +45,27 @@ var toArg, ccArg, bccArg, subjectArg string
 func init() {
 	// cobra.OnInitialize(initConfig)
 
-	DV2EMAILCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
+	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
 
-	DV2EMAILCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	DV2EMAILCmd.PersistentFlags().MarkHidden("debug")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().MarkHidden("debug")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	DV2EMAILCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	DV2EMAILCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
-	DV2EMAILCmd.PersistentFlags().StringVarP(&entityArg, "entity", "E", "", "entity name, ignored if _VARIBLEPATH set in environment")
-	DV2EMAILCmd.PersistentFlags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name, ignored if _VARIBLEPATH set in environment")
-	DV2EMAILCmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIBLEPATH set in environment\nTo explicitly select empty/no type use --type/-T \"\"")
-	DV2EMAILCmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIBLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&entityArg, "entity", "E", "", "entity name, ignored if _VARIBLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name, ignored if _VARIBLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIBLEPATH set in environment\nTo explicitly select empty/no type use --type/-T \"\"")
+	Cmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIBLEPATH set in environment")
 
-	DV2EMAILCmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
-	DV2EMAILCmd.Flags().StringVarP(&toArg, "to", "t", "", "To as comma-separated emails")
-	DV2EMAILCmd.Flags().StringVarP(&ccArg, "cc", "c", "", "Cc as comma-separated emails")
-	DV2EMAILCmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "Bcc as comma-separated emails")
-	DV2EMAILCmd.Flags().StringVarP(&subjectArg, "subject", "s", "", "Subject of the email")
+	Cmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
+	Cmd.Flags().StringVarP(&toArg, "to", "t", "", "To as comma-separated emails")
+	Cmd.Flags().StringVarP(&ccArg, "cc", "c", "", "Cc as comma-separated emails")
+	Cmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "Bcc as comma-separated emails")
+	Cmd.Flags().StringVarP(&subjectArg, "subject", "s", "", "Subject of the email")
 
-	DV2EMAILCmd.Flags().SortFlags = false
+	Cmd.Flags().SortFlags = false
 }
 
 // global config
@@ -121,8 +121,8 @@ var defaults []byte
 //go:embed _docs/root.md
 var DV2EMAILCmdDescription string
 
-// DV2EMAILCmd represents the base command when called without any subcommands
-var DV2EMAILCmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:          "dv2email",
 	Short:        "Email a Dataview following Geneos Action/Effect conventions",
 	Long:         DV2EMAILCmdDescription,
@@ -199,9 +199,9 @@ var DV2EMAILCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(DV2EMAILCmd)
+	cordial.RenderHelpAsMD(Cmd)
 
-	err := DV2EMAILCmd.Execute()
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

@@ -9,6 +9,8 @@ To see open files use the `--files/-f` flag, or to see open sockets use the `--n
 The default output is a table format intended for humans but this can be changed to CSV format using the `--csv`/`-c` flag or JSON with the `--json`/`-j` or `--pretty`/`-i` options, the latter option formatting the output over multiple, indented lines. Use the `--toolkit/-t` flag to report in Geneos Toolkit specific CSV format, which includes headlines and a unique first column to act as the row name.
 
 Any Netprobes that have a running Collection Agent managed process will show a `netprobe/ca` entry along with details of the Collection Agent process.
+## Usage
+
 ```text
 geneos ps [flags] [TYPE] [NAMES...]
 ```
@@ -16,13 +18,16 @@ geneos ps [flags] [TYPE] [NAMES...]
 ### Options
 
 ```text
-  -f, --files     Show open files
-  -n, --network   Show TCP sockets
-  -l, --long      Show more output (remote ports etc.)
-  -j, --json      Output JSON
-  -i, --pretty    Output indented JSON
-  -c, --csv       Output CSV
-  -t, --toolkit   Output Toolkit formatted CSV
+  -f, --files           Show open files
+  -n, --network         Show TCP sockets
+  -l, --long            Show more output (remote ports etc.)
+  -j, --json            Output JSON
+  -i, --pretty          Output indented JSON
+  -c, --csv             Output CSV
+  -t, --toolkit         Output Toolkit formatted CSV
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

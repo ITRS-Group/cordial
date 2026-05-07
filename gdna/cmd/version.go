@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	GDNACmd.AddCommand(versionCmd)
+	Cmd.AddCommand(versionCmd)
 }
 
 //go:embed _docs/version.md

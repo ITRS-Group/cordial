@@ -1,6 +1,6 @@
 # `geneos aes encode`
 
-Encode plaintext to a Geneos AES256 format password using a key file, or create a Gateway "app key" file.
+The `aes encode` command either encodes plaintext to a Geneos AES256 format password using a key file, or creates a Gateway "app key" file.
 
 A key file should be provided using the `-keyfile`/`-k` option for a file path, the `--crc`/`-c` option for the CRC of a shared key file, or otherwise all matching instances that have a configured key file are used to produce an encrypted password.
 
@@ -8,7 +8,7 @@ Without matching `TYPE` or `NAME` the encode command with not update all instanc
 
 ## Encoding Passwords
 
-For encoding passwords, the plaintext password can be provided in one three ways:
+For encoding passwords, the password can be provided in one three ways:
 
 1. The default is to prompt for the plaintext and again to verify they match.
 2. Alternatively the password can be provided directly on the command line using the `-p plaintext` flag or,
@@ -36,6 +36,8 @@ The app key file contents are written to STDOUT unless you supply an `-app-key-f
 
 The contents of the app key output of saved file should be identical to that of the `-store-app-key` Gateway command line option but using an external key file (only).
 
+## Usage
+
 ```text
 geneos aes encode [flags] [TYPE] [NAME...]
 ```
@@ -53,6 +55,9 @@ geneos aes encode [flags] [TYPE] [NAME...]
   -C, --client-id SECRET       Client ID for --app-key, prompted if not set
   -S, --client-secret SECRET   Client Secret for --app-key, prompted if not set
   -a, --app-key-file string    App-key filename, if saving per instance, otherwise defaults to STDOUT
+      --allow-root             allow running as root (not recommended)
+  -G, --config string          config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME          Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

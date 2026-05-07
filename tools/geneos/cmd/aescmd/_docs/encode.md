@@ -1,4 +1,4 @@
-Encode plaintext to a Geneos AES256 format password using a key file, or create a Gateway "app key" file.
+The `aes encode` command either encodes plaintext to a Geneos AES256 format password using a key file, or creates a Gateway "app key" file.
 
 A key file should be provided using the `-keyfile`/`-k` option for a file path, the `--crc`/`-c` option for the CRC of a shared key file, or otherwise all matching instances that have a configured key file are used to produce an encrypted password.
 
@@ -6,7 +6,7 @@ Without matching `TYPE` or `NAME` the encode command with not update all instanc
 
 ## Encoding Passwords
 
-For encoding passwords, the plaintext password can be provided in one three ways:
+For encoding passwords, the password can be provided in one three ways:
 
 1. The default is to prompt for the plaintext and again to verify they match.
 2. Alternatively the password can be provided directly on the command line using the `-p plaintext` flag or,

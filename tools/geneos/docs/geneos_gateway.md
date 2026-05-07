@@ -186,8 +186,18 @@ geneos set gateway example2 -i 100:/path/to/include
 
 The setting value is `priority:path` and path can be a relative or absolute path or a URL. In the case of a URL the source is NOT downloaded but instead the URL is written as-is in the template output.
 
+## Usage
+
 ```text
 geneos gateway
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

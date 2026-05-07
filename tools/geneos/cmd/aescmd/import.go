@@ -51,7 +51,7 @@ var importCmd = &cobra.Command{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "true",
 	},
-	Deprecated: "Please use the `" + cordial.ExecutableName() + " aes set` command instead",
+	Deprecated: "Please use `" + cordial.ExecutableName() + " aes set` instead",
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		return
 	},

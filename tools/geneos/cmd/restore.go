@@ -38,7 +38,7 @@ var restoreCmdCompression string
 var restoreCmdShared, restoreCmdList bool
 
 func init() {
-	GeneosCmd.AddCommand(restoreCmd)
+	Cmd.AddCommand(restoreCmd)
 
 	restoreCmd.Flags().BoolVarP(&restoreCmdShared, "shared", "s", false, "include shared files")
 

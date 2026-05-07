@@ -126,6 +126,8 @@ You still have to configure the Gateway to connect to the Netprobe, but all thre
 geneos ps
 ```
 
+## Usage
+
 ```text
 geneos init [flags] [DIRECTORY]
 ```
@@ -161,6 +163,9 @@ geneos init [flags] [DIRECTORY]
                                   (Repeat as required)
       --header NAME=VALUE         HTTP header in the format NAME=VALUE
                                   (Repeat as required)
+      --allow-root                allow running as root (not recommended)
+  -G, --config string             config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

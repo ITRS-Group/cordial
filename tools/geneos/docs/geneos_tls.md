@@ -33,6 +33,14 @@ Those components that act as clients and connect to servers, Geneos or otherwise
 | [`geneos tls renew`](geneos_tls_renew.md)	 | Renew instance certificates |
 | [`geneos tls sync`](geneos_tls_sync.md)	 | Sync remote hosts certificate chain files |
 
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+```
+
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

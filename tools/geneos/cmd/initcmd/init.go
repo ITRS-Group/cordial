@@ -54,7 +54,7 @@ var initCmdNoInstall, initCmdTLS bool
 var initCmdExtras = instance.SetConfigValues{}
 
 func init() {
-	cmd.GeneosCmd.AddCommand(initCmd)
+	cmd.Cmd.AddCommand(initCmd)
 
 	initCmdDLPassword = &config.Secret{}
 

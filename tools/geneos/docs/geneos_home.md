@@ -12,8 +12,18 @@ For obvious reasons this only applies to the local host and the `--host`/`-H` op
 
 If the resulting path contains whitespace your shell will see this as multiple arguments and a typical `cd` will fail. To avoid this wrap the expansion in double quotes, e.g. `cd "$(geneos home 'Demo Gateway')"`. The best solution is to not use white space in any instance name or directory path above it. (Note: We tried outputting a quoted path but the bash shell ignores these quotes inside `$(...)`)
 
+## Usage
+
 ```text
 geneos home [TYPE] [NAME]
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

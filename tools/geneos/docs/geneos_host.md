@@ -72,6 +72,14 @@ The remote connections over SSH mean there are limitations to the features avail
 | [`geneos host show`](geneos_host_show.md)	 | Show details of remote host configuration |
 | [`geneos host unset`](geneos_host_unset.md)	 | Unset Host Parameters |
 
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+```
+
 ## SEE ALSO
 
 * [geneos](geneos.md)	 - Take control of your Geneos environments

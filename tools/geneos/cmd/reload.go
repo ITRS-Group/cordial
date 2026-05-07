@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	GeneosCmd.AddCommand(reloadCmd)
+	Cmd.AddCommand(reloadCmd)
 }
 
 //go:embed _docs/reload.md

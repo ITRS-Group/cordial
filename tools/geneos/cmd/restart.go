@@ -35,7 +35,7 @@ var restartCmdEnvs instance.NameValues
 var restartCmdPort uint16
 
 func init() {
-	GeneosCmd.AddCommand(restartCmd)
+	Cmd.AddCommand(restartCmd)
 
 	restartCmd.Flags().BoolVarP(&restartCmdAll, "all", "a", false, "Start all matching instances, not just those already running")
 	restartCmd.Flags().BoolVarP(&restartCmdForce, "force", "F", false, "Force restart of protected instances")

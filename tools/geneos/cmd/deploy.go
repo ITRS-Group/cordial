@@ -50,7 +50,7 @@ var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
 
 func init() {
-	GeneosCmd.AddCommand(deployCmd)
+	Cmd.AddCommand(deployCmd)
 
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")

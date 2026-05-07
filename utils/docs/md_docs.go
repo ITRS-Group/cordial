@@ -29,19 +29,11 @@ import (
 )
 
 func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
-	flags := cmd.NonInheritedFlags()
+	flags := cmd.Flags()
 	flags.SetOutput(buf)
 	if flags.HasAvailableFlags() {
 		buf.WriteString("### Options\n\n```text\n")
 		flags.PrintDefaults()
-		buf.WriteString("```\n\n")
-	}
-
-	parentFlags := cmd.InheritedFlags()
-	parentFlags.SetOutput(buf)
-	if parentFlags.HasAvailableFlags() {
-		buf.WriteString("### Options inherited from parent commands\n\n```text\n")
-		parentFlags.PrintDefaults()
 		buf.WriteString("```\n\n")
 	}
 	return nil
@@ -61,9 +53,13 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	name := cmd.CommandPath()
 
 	buf.WriteString("# `" + name + "`\n\n")
-	buf.WriteString(cmd.Short + "\n\n")
+	if len(cmd.Long) > 0 {
+		buf.WriteString(cmd.Long + "\n")
+	} else {
+		buf.WriteString(cmd.Short + "\n\n")
+	}
 	if cmd.Runnable() {
-		buf.WriteString(fmt.Sprintf("```text\n%s\n```\n", cmd.UseLine()))
+		fmt.Fprintf(buf, "## Usage\n\n```text\n%s\n```\n", cmd.UseLine())
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
@@ -74,48 +70,74 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		if len(groups) > 0 {
 			for i, group := range groups {
 				cmdHeader := false
+				hasAliases := false
 				for _, child := range children {
 					if child.GroupID != group.ID {
 						continue
 					}
-					if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
+					if len(child.Aliases) > 0 {
+						hasAliases = true
+					}
+				}
+				for _, child := range children {
+					if child.GroupID != group.ID {
 						continue
 					}
 					if !cmdHeader {
 						buf.WriteString("## " + group.Title + "\n\n")
+						if hasAliases {
+							buf.WriteString("| Command / Aliases | Description |\n")
+						} else {
+							buf.WriteString("| Command | Description |\n")
+						}
+						buf.WriteString("|-------|-------|\n")
 						cmdHeader = true
 					}
 
-					cname := name + " " + child.Name()
-					link := cname + ".md"
-					link = strings.ReplaceAll(link, " ", "_")
-					buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+					var cname strings.Builder
+					cname.WriteString(name + " " + child.Name())
+					for _, alias := range child.Aliases {
+						cname.WriteString(" / " + alias)
+					}
+					link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
+					fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname.String(), linkHandler(link), child.Short)
 				}
 				if i != len(groups)-1 {
-					buf.WriteString("\n")
+					buf.WriteString("\n---\n\n")
 				}
 			}
 		} else {
 			hadChildren := true
+			hasAliases := false
+			for _, child := range children {
+				if len(child.Aliases) > 0 {
+					hasAliases = true
+				}
+			}
 			for _, child := range children {
 				if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 					continue
 				}
 				if !child.HasAvailableSubCommands() && hadChildren {
 					buf.WriteString("\n## Commands\n\n")
+					if hasAliases {
+						buf.WriteString("| Command / Aliases | Description |\n")
+					} else {
+						buf.WriteString("| Command | Description |\n")
+					}
+					buf.WriteString("|-------|-------|\n")
 					hadChildren = false
 				}
-				cname := name + " " + child.Name()
-				link := cname + ".md"
-				link = strings.ReplaceAll(link, " ", "_")
-				buf.WriteString(fmt.Sprintf("* [`%s`](%s)\t - %s\n", cname, linkHandler(link), child.Short))
+				var cname strings.Builder
+				cname.WriteString(name + " " + child.Name())
+				for _, alias := range child.Aliases {
+					cname.WriteString(" / " + alias)
+				}
+				link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
+				fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname.String(), linkHandler(link), child.Short)
 			}
 		}
 		buf.WriteString("\n")
-	}
-
-	if len(cmd.Long) > 0 {
-		buf.WriteString(cmd.Long + "\n")
 	}
 
 	if err := printOptions(buf, cmd, name); err != nil {
@@ -124,7 +146,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 
 	if len(cmd.Example) > 0 {
 		buf.WriteString("## Examples\n\n")
-		buf.WriteString(fmt.Sprintf("```bash%s\n```\n\n", cmd.Example))
+		fmt.Fprintf(buf, "```bash%s\n```\n\n", cmd.Example)
 	}
 
 	if hasSeeAlso(cmd) {
@@ -134,7 +156,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			pname := parent.CommandPath()
 			link := pname + ".md"
 			link = strings.ReplaceAll(link, " ", "_")
-			buf.WriteString(fmt.Sprintf("* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short))
+			fmt.Fprintf(buf, "* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short)
 			cmd.VisitParents(func(c *cobra.Command) {
 				if c.DisableAutoGenTag {
 					cmd.DisableAutoGenTag = c.DisableAutoGenTag
@@ -231,17 +253,3 @@ func (s subsystemsThenNames) Less(i, j int) bool {
 	}
 	return s[i].Name() < s[j].Name()
 }
-
-// type groupsThenNames []*cobra.Command
-
-// func (s groupsThenNames) Len() int      { return len(s) }
-// func (s groupsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-// func (s groupsThenNames) Less(i, j int) bool {
-// 	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
-// 		return true
-// 	}
-// 	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
-// 		return false
-// 	}
-// 	return s[i].Name() < s[j].Name()
-// }

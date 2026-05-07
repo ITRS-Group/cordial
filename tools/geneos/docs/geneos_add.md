@@ -24,6 +24,8 @@ Any additional command line arguments are used to set configuration values. Any 
 
 You can select the distribution of SAN or Floating Netprobe using the special syntax for the `NAME` in the form `TYPE:NAME`. The only supported `TYPE` at the moment, in addition to the default `netprobe`, is `fa2` allowing you to deploy Fix Analyser 2 based SAN and Floating probes.
 
+## Usage
+
 ```text
 geneos add [flags] TYPE NAME [KEY=VALUE...]
 ```
@@ -65,6 +67,9 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
                                       (Repeat as required, san only)
       --insecure                      Do not create certificates for TLS support.
                                       Ignored if --instance-bundle is given.
+      --allow-root                    allow running as root (not recommended)
+  -G, --config string                 config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

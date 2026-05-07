@@ -30,6 +30,8 @@ Geneos User Variables are set using `--variable`/`-v` and have the format `[TYPE
 
 Future releases may add other special options and also may offer a simpler way of configuring SANs and Floating Netprobes to connect to Gateway also managed by the same `geneos` program.
 
+## Usage
+
 ```text
 geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 ```
@@ -53,6 +55,9 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
+      --allow-root                    allow running as root (not recommended)
+  -G, --config string                 config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

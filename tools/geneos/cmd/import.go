@@ -32,7 +32,7 @@ import (
 var importCmdCommon string
 
 func init() {
-	GeneosCmd.AddCommand(importCmd)
+	Cmd.AddCommand(importCmd)
 
 	importCmd.Flags().StringVarP(&importCmdCommon, "common", "c", "", "Import files to a component directory named TYPE_`SUFFIX`")
 

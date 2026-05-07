@@ -6,6 +6,8 @@ Exports either the local signer private key, certificate and root certificate su
 
 The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
 
+## Usage
+
 ```text
 geneos tls export [flags] [TYPE] [NAME...]
 ```
@@ -13,7 +15,10 @@ geneos tls export [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -D, --dest string   Output destination, default to stdout
+  -D, --dest string     Output destination, default to stdout
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

@@ -31,7 +31,7 @@ import (
 var rebuildCmdForce, rebuildCmdReload bool
 
 func init() {
-	GeneosCmd.AddCommand(rebuildCmd)
+	Cmd.AddCommand(rebuildCmd)
 
 	rebuildCmd.Flags().BoolVarP(&rebuildCmdForce, "force", "F", false, "Force rebuild")
 	rebuildCmd.Flags().BoolVarP(&rebuildCmdReload, "reload", "r", false, "Reload instances after rebuild")

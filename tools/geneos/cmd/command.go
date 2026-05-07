@@ -35,7 +35,7 @@ var commandCmdExtras string
 var commandCmdEnvs instance.NameValues
 
 func init() {
-	GeneosCmd.AddCommand(commandCmd)
+	Cmd.AddCommand(commandCmd)
 
 	commandCmd.Flags().StringVarP(&commandCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")
 	commandCmd.Flags().VarP(&commandCmdEnvs, "env", "e", "Extra environment variable (Repeat as required)")

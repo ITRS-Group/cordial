@@ -40,7 +40,7 @@ var listCmdFormat string
 var listFormat string
 
 func init() {
-	GDNACmd.AddCommand(listCmd)
+	Cmd.AddCommand(listCmd)
 	listCmd.AddCommand(listReportCmd)
 	listCmd.AddCommand(listExcludeCmd)
 	listCmd.AddCommand(listIncludeCmd)

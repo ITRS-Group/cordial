@@ -64,18 +64,18 @@ var configFile, execname string
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "local config file")
+	Cmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "local config file")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	RootCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
 	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 
-// RootCmd represents the base command when called without any subcommands
-var RootCmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:   "pagerduty",
 	Short: "Send a pagerduty event",
 	Long:  ``,
@@ -93,15 +93,15 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(RootCmd)
-	err := RootCmd.Execute()
+	cordial.RenderHelpAsMD(Cmd)
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 func RootCmd2() *cobra.Command {
-	return RootCmd
+	return Cmd
 }
 
 // initConfig reads in config file and ENV variables if set.

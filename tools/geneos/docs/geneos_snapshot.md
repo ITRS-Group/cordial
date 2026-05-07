@@ -14,6 +14,8 @@ Flags to select which properties of data items are available: `-V`, `-S`, `-Z`, 
 
 To help capture diagnostic information the `-x` option can be used to capture matching xpaths without the dataview contents. `-l` can be used to limit the number of dataviews (or xpaths) but the limit is not applied in any defined order.
 
+## Usage
+
 ```text
 geneos snapshot [flags] [gateway] [NAME] XPATH...
 ```
@@ -28,6 +30,9 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
   -u, --username string   Username
   -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
   -x, --xpaths            just show matching xpaths
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

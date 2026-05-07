@@ -8,8 +8,18 @@ While you can set arbitrary keys only some have any meaning. The most important 
 
 For an explanation of the various configuration parameters see the main documentation.
 
+## Usage
+
 ```text
 geneos config set [KEY=VALUE...] [flags]
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

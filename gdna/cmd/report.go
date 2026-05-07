@@ -71,7 +71,7 @@ type Report struct {
 const reportNamesDescription = "Run only the matching reports, for multiple reports use a\ncomma-separated list. Report names can include shell-style wildcards.\nSplit reports can be suffixed with ':value' to limit the report\nto the value given."
 
 func init() {
-	GDNACmd.AddCommand(reportCmd)
+	Cmd.AddCommand(reportCmd)
 
 	reportCmd.Flags().StringVarP(&output, "output", "o", "-", "output destination `file`, default is console (stdout)")
 	reportCmd.Flags().StringVarP(&outputFormat, "format", "F", "dataview", "output `format` - one of: dataview, table, html, markdown,\ntoolkit, csv, xslx")

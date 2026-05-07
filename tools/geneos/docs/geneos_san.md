@@ -32,8 +32,18 @@ Selecting the underlying Netprobe type (For Fix Analyser 2 below) A San instance
 
 If a "certificate", a "chainfile" or the "secure" parameters exist then the default template will build Gateway connections using TLS.
 
+## Usage
+
 ```text
 geneos san
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

@@ -31,7 +31,7 @@ import (
 var versionCmdToolkit bool
 
 func init() {
-	GeneosCmd.AddCommand(versionCmd)
+	Cmd.AddCommand(versionCmd)
 
 	versionCmd.Flags().BoolVarP(&versionCmdToolkit, "toolkit", "t", false, "toolkit formatted CSV output")
 }

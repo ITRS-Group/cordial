@@ -29,17 +29,17 @@ func TestMainFunction(t *testing.T) {
 	// We can't directly test main() as it calls cmd.Execute() which may exit
 	// Instead, we test that the command structure is properly set up
 
-	if cmd.RootCmd == nil {
+	if cmd.Cmd == nil {
 		t.Fatal("Expected RootCmd to be initialized by imported packages")
 	}
 
 	// Test that the root command has the expected structure
-	if cmd.RootCmd.Use != "servicenow2" {
-		t.Errorf("Expected root command use to be 'servicenow2', got %q", cmd.RootCmd.Use)
+	if cmd.Cmd.Use != "servicenow2" {
+		t.Errorf("Expected root command use to be 'servicenow2', got %q", cmd.Cmd.Use)
 	}
 
 	// Test that subcommands are registered
-	commands := cmd.RootCmd.Commands()
+	commands := cmd.Cmd.Commands()
 	if len(commands) == 0 {
 		t.Error("Expected subcommands to be registered")
 	}
@@ -68,7 +68,7 @@ func TestPackageImports(t *testing.T) {
 	// initialization code has run properly
 
 	// The cmd package should be imported and initialized
-	if cmd.RootCmd == nil {
+	if cmd.Cmd == nil {
 		t.Error("cmd package not properly imported/initialized")
 	}
 
@@ -76,7 +76,7 @@ func TestPackageImports(t *testing.T) {
 	foundClient := false
 	foundProxy := false
 
-	for _, command := range cmd.RootCmd.Commands() {
+	for _, command := range cmd.Cmd.Commands() {
 		switch command.Name() {
 		case "client":
 			foundClient = true
@@ -109,54 +109,54 @@ func TestCommandExecution(t *testing.T) {
 	// Instead, we validate the command structure
 
 	// Test that help flag is available
-	helpFlag := cmd.RootCmd.PersistentFlags().Lookup("help")
+	helpFlag := cmd.Cmd.PersistentFlags().Lookup("help")
 	if helpFlag == nil {
 		t.Error("Expected help flag to be available")
 	}
 
 	// Test that version is set
-	if cmd.RootCmd.Version == "" {
+	if cmd.Cmd.Version == "" {
 		t.Error("Expected version to be set")
 	}
 
 	// Test command validation
-	if err := cmd.RootCmd.ValidateArgs([]string{}); err != nil {
+	if err := cmd.Cmd.ValidateArgs([]string{}); err != nil {
 		t.Errorf("Root command validation failed: %v", err)
 	}
 }
 
 func TestApplicationStructure(t *testing.T) {
 	// Test that the application is properly structured
-	
+
 	// Root command should exist
-	if cmd.RootCmd == nil {
+	if cmd.Cmd == nil {
 		t.Fatal("Root command should be initialized")
 	}
 
 	// Should have the correct application name
-	if cmd.RootCmd.Use != "servicenow2" {
-		t.Errorf("Expected application name 'servicenow2', got %q", cmd.RootCmd.Use)
+	if cmd.Cmd.Use != "servicenow2" {
+		t.Errorf("Expected application name 'servicenow2', got %q", cmd.Cmd.Use)
 	}
 
 	// Should have a description
-	if cmd.RootCmd.Short == "" {
+	if cmd.Cmd.Short == "" {
 		t.Error("Expected application to have a short description")
 	}
 
 	// Should have version information
-	if cmd.RootCmd.Version == "" {
+	if cmd.Cmd.Version == "" {
 		t.Error("Expected application to have version information")
 	}
 
 	// Should have persistent flags
-	if !cmd.RootCmd.PersistentFlags().HasAvailableFlags() {
+	if !cmd.Cmd.PersistentFlags().HasAvailableFlags() {
 		t.Error("Expected application to have persistent flags")
 	}
 }
 
 func TestSubcommandStructure(t *testing.T) {
 	// Test the structure of subcommands
-	commands := cmd.RootCmd.Commands()
+	commands := cmd.Cmd.Commands()
 
 	for _, command := range commands {
 		// Each command should have a name
@@ -180,24 +180,24 @@ func TestCommandLineCompatibility(t *testing.T) {
 	// Test that the application follows expected command line conventions
 
 	// Should support --help
-	helpFlag := cmd.RootCmd.PersistentFlags().Lookup("help")
+	helpFlag := cmd.Cmd.PersistentFlags().Lookup("help")
 	if helpFlag == nil {
 		t.Error("Expected --help flag to be available")
 	}
 
 	// Should support --version (through cobra's built-in version flag)
-	if cmd.RootCmd.Version == "" {
+	if cmd.Cmd.Version == "" {
 		t.Error("Expected version to be available")
 	}
 
 	// Should support --conf flag for configuration
-	confFlag := cmd.RootCmd.PersistentFlags().Lookup("conf")
+	confFlag := cmd.Cmd.PersistentFlags().Lookup("conf")
 	if confFlag == nil {
 		t.Error("Expected --conf flag to be available")
 	}
 
 	// Should support --debug flag
-	debugFlag := cmd.RootCmd.PersistentFlags().Lookup("debug")
+	debugFlag := cmd.Cmd.PersistentFlags().Lookup("debug")
 	if debugFlag == nil {
 		t.Error("Expected --debug flag to be available")
 	}
@@ -207,17 +207,17 @@ func TestApplicationMetadata(t *testing.T) {
 	// Test application metadata
 
 	// Should have completion disabled
-	if !cmd.RootCmd.CompletionOptions.DisableDefaultCmd {
+	if !cmd.Cmd.CompletionOptions.DisableDefaultCmd {
 		t.Error("Expected completion to be disabled")
 	}
 
 	// Should have auto-gen tag disabled
-	if !cmd.RootCmd.DisableAutoGenTag {
+	if !cmd.Cmd.DisableAutoGenTag {
 		t.Error("Expected auto-gen tag to be disabled")
 	}
 
 	// Should silence usage on errors
-	if !cmd.RootCmd.SilenceUsage {
+	if !cmd.Cmd.SilenceUsage {
 		t.Error("Expected usage to be silenced")
 	}
 }

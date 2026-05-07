@@ -37,22 +37,22 @@ var debug bool
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
+	Cmd.PersistentFlags().StringVarP(&conffile, "conf", "c", "", "override config file")
 
-	RootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	RootCmd.PersistentFlags().MarkHidden("debug")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().MarkHidden("debug")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	RootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	RootCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
-	RootCmd.Flags().SortFlags = false
+	Cmd.Flags().SortFlags = false
 
 	execname = path.Base(os.Args[0])
 	cordial.LogInit(execname)
 }
 
-var RootCmd = &cobra.Command{
+var Cmd = &cobra.Command{
 	Use:   "servicenow",
 	Short: "Geneos to ServiceNow integration",
 	Long:  ``,
@@ -67,8 +67,8 @@ var RootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(RootCmd)
-	err := RootCmd.Execute()
+	cordial.RenderHelpAsMD(Cmd)
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

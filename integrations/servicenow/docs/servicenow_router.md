@@ -1,11 +1,5 @@
 # `servicenow router`
 
-Run a ServiceNow integration router
-
-```text
-servicenow router [flags]
-```
-
 
 Run an ITRS Geneos to ServiceNow router.
 
@@ -28,15 +22,16 @@ shared with the submission client function, and uses this to look-up,
 map and submit incidents.
 
 
+## Usage
+
+```text
+servicenow router [flags]
+```
+
 ### Options
 
 ```text
-  -D, --daemon   Daemonise the router process
-```
-
-### Options inherited from parent commands
-
-```text
+  -D, --daemon        Daemonise the router process
   -c, --conf string   override config file
 ```
 

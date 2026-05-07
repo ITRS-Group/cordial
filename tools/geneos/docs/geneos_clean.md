@@ -7,6 +7,8 @@ The default behaviour is to leave the instance running and only remove known to 
 With the `--full`/`-F` option, the command will stop the instance, remove all non-essential files from the working directory of the instance and restart the instance. The `reset` command has the same effect but will additionally limit global execution, to avoid mistakes, unless `all` is given.
 
 **Note**: Files removed by `geneos clean` are defined in the geneos main configuration file `geneos.json` as `[TYPE]::clean`. Files removed by `geneos clean -F` or `geneos clean --full` are defined in the geneos main configuration file `geneos.json` as `[TYPE]::purge`. Both these lists are formatted as a PathListSeparator (typically a colon) separated list of file pattern globs (not regular expressions).
+## Usage
+
 ```text
 geneos clean [flags] [TYPE] [NAME...]
 ```
@@ -14,7 +16,10 @@ geneos clean [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -F, --full   Perform a full clean. Removes more files than basic clean and restarts instances
+  -F, --full            Perform a full clean. Removes more files than basic clean and restarts instances
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

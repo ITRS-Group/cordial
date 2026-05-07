@@ -1,1 +1,1 @@
-This command has been deprecated in favour of the `geneos aes set` command.
+The `aes import` command has been deprecated in favour of the `geneos aes set` command.

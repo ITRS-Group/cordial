@@ -39,6 +39,8 @@ When using this option you can also use the `--source`/`-L` flag one or more tim
 
 To create a ZIP archive of reports, you can use the `--zip`/`-Z` option along with `--reports`/`-r` options to select which reports to include in the archive. The output file specified with `--output`/`-o` will be created as a ZIP file containing the selected reports in the specified format (defaulting to CSV). When combined with `--adhoc`/`-A` and `--source`/`-L` options, this allows you to create portable report archives from ad-hoc data sources without needing a configuration file.
 
+## Usage
+
 ```text
 gdna report
 ```
@@ -66,6 +68,8 @@ gdna report
   -e, --entity Entity       Send reports to Managed Entity (default "GDNA")
   -s, --sampler Sampler     Send reports to Sampler (default "GDNA")
   -R, --reset               Reset/Delete configured Dataviews
+  -f, --config FILE         Use configuration FILE
+  -l, --logfile file        Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

@@ -43,26 +43,26 @@ var nowatchconfig bool
 var hostname, hosttype, output string
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
-	rootCmd.PersistentFlags().MarkHidden("debug")
+	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
+	Cmd.PersistentFlags().MarkHidden("debug")
 
-	rootCmd.PersistentFlags().BoolVarP(&trace, "trace", "t", false, "enable trace output (SQL queries etc.) - implies debug")
-	rootCmd.PersistentFlags().MarkHidden("trace")
+	Cmd.PersistentFlags().BoolVarP(&trace, "trace", "t", false, "enable trace output (SQL queries etc.) - implies debug")
+	Cmd.PersistentFlags().MarkHidden("trace")
 
-	rootCmd.PersistentFlags().StringVar(&conffile, "config", "", "path to configuration file")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", cordial.ExecutableName()+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+	Cmd.PersistentFlags().StringVar(&conffile, "config", "", "path to configuration file")
+	Cmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", cordial.ExecutableName()+".log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
-	rootCmd.PersistentFlags().BoolVarP(&nowatchconfig, "nowatch", "N", false, "Do not watch configuration file for changes")
+	Cmd.PersistentFlags().BoolVarP(&nowatchconfig, "nowatch", "N", false, "Do not watch configuration file for changes")
 
 	// how to remove the help flag help text from the help output! Sigh...
-	rootCmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
-	rootCmd.PersistentFlags().MarkHidden("help")
+	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
+	Cmd.PersistentFlags().MarkHidden("help")
 
-	rootCmd.Flags().StringVarP(&hostname, "host", "H", "", "create configuration for `HOSTNAME`")
-	rootCmd.Flags().StringVarP(&hosttype, "type", "T", "", "override hosttype")
-	rootCmd.Flags().StringVarP(&output, "output", "o", "", "output to `FILE`")
+	Cmd.Flags().StringVarP(&hostname, "host", "H", "", "create configuration for `HOSTNAME`")
+	Cmd.Flags().StringVarP(&hosttype, "type", "T", "", "override hosttype")
+	Cmd.Flags().StringVarP(&output, "output", "o", "", "output to `FILE`")
 
-	rootCmd.SetHelpCommand(&cobra.Command{
+	Cmd.SetHelpCommand(&cobra.Command{
 		Use:    "no-help",
 		Hidden: true,
 	})
@@ -73,8 +73,8 @@ var defaults []byte
 
 var uuidNS uuid.UUID
 
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
+// Cmd represents the base command when called without any subcommands
+var Cmd = &cobra.Command{
 	Use:   cordial.ExecutableName(),
 	Short: "Generate SAN configurations",
 	Long:  ``,
@@ -125,7 +125,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := Cmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}

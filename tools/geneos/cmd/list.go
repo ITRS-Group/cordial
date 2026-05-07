@@ -49,7 +49,7 @@ type listCmdType struct {
 var listCmdJSON, listCmdCSV, listCmdIndent, listCmdToolkit bool
 
 func init() {
-	GeneosCmd.AddCommand(listCmd)
+	Cmd.AddCommand(listCmd)
 
 	listCmd.PersistentFlags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
 	listCmd.PersistentFlags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")

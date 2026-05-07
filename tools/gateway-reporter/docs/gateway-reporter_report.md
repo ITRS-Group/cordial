@@ -1,11 +1,5 @@
 # `gateway-reporter report`
 
-Report on Geneos Gateway XML files
-
-```text
-gateway-reporter report [flags] [SETUP...]
-```
-
 The `report` command will produce report(s) for the Gateway setup files given as arguments. With no arguments the command will read a configuration file from STDIN, which can also be given as `-`. Paths to setup files can be local files, including prefixed with a `~/` to indicate relative to the users home directory or a URL to a remote setup file.
 
 The contents of the reports, their formats and destination directory are taken from command configuration files and built-in defaults. Configuration files are loaded from the following locations, each one found overriding similar settings from the previous one (and the defaults):
@@ -27,6 +21,12 @@ The output directory can be set with the `--output/-o DIR` option. Merging is co
 
 If the setup file being processed does not contain a Gateway name, either because the setup file is not bering fully merged or the Gateway name is set on the command line, then use the `--prefix/-p` option to set the `${gateway}` in the report paths above and in the reports themselves.
 
+## Usage
+
+```text
+gateway-reporter report [flags] [SETUP...]
+```
+
 ### Options
 
 ```text
@@ -34,13 +34,8 @@ If the setup file being processed does not contain a Gateway name, either becaus
   -m, --merge                Create a merged config file. --install must be set
   -i, --install BINARY|DIR   Path to the gateway installation BINARY|DIR
   -p, --prefix name          Report prefix for configurations without a Gateway name
-```
-
-### Options inherited from parent commands
-
-```text
-  -f, --config string   config file (default is $HOME/.config/geneos/docs.yaml)
-  -d, --debug           enable extra debug output
+  -f, --config string        config file (default is $HOME/.config/geneos/docs.yaml)
+  -d, --debug                enable extra debug output
 ```
 
 ## SEE ALSO

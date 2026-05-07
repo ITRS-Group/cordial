@@ -8,6 +8,8 @@ WARNING: Be careful removing keys that are necessary for instances to be managea
 
 You can also unset values for structured parameters. For `--include`/`-i` options the parameter key is the `PRIORITY` of the include file set while for the other options it is the `NAME`. Note that for structured parameters the `NAME` is case-sensitive. See the usage flags for more details.
 
+## Usage
+
 ```text
 geneos unset [flags] [TYPE] [NAME...]
 ```
@@ -29,6 +31,9 @@ geneos unset [flags] [TYPE] [NAME...]
                            (Repeat as required, san only)
   -v, --variable NAME      Remove the variable NAME
                            (Repeat as required, san only)
+      --allow-root         allow running as root (not recommended)
+  -G, --config string      config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

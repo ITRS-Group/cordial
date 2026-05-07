@@ -57,7 +57,7 @@ var backupCmdLimitSize, backupCmdCompression string
 var maxsize int64
 
 func init() {
-	GeneosCmd.AddCommand(backupCmd)
+	Cmd.AddCommand(backupCmd)
 
 	backupCmd.Flags().StringVarP(&backupCmdOutput, "output", "o", "",
 		`Write to "DEST". Without a destination filename the command creates

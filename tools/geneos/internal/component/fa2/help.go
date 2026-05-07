@@ -30,7 +30,7 @@ import (
 var fa2Description string
 
 func init() {
-	cmd.GeneosCmd.AddCommand(helpDocCmd)
+	cmd.Cmd.AddCommand(helpDocCmd)
 }
 
 var helpDocCmd = &cobra.Command{
@@ -40,5 +40,5 @@ var helpDocCmd = &cobra.Command{
 	Long:                  fa2Description,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
-	Run:                   cmd.GeneosCmd.HelpFunc(),
+	Run:                   cmd.Cmd.HelpFunc(),
 }

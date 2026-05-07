@@ -12,6 +12,8 @@ The input can be in either PEM or PFX/PKCS#12 format. If the input is in PFX/PKC
 
 Any trust root certificates in the bundle will be added to the local trust store if they are not already present.
 
+## Usage
+
 ```text
 geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ```
@@ -24,6 +26,9 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
                           PFX/PKCS#12 files are identified by the .pfx or .p12
                           file extension and only supported for instance bundles
   -k, --key file          Private key file for certificate, PEM format only
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

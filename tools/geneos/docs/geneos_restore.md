@@ -18,6 +18,8 @@ To read from STDIN use `-` but then you must also specify the compression type u
 
 When restoring an instance any changes to the paths in the instance configuration will be updated to match the destination host's `geneos` root. No component specific files will be changed, including `gateway.setup.xml` and so on.
 
+## Usage
+
 ```text
 geneos restore [flags] [TYPE] [[DEST=]NAME...]
 ```
@@ -30,6 +32,9 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
                           if not given then the file name is used to guess the type
                           MUST be supplied if the source is stdin (`-`)
   -l, --list              list the contents of the archive(s)
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

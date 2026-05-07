@@ -36,6 +36,8 @@ To use a proxy, when direct connectivity from your server may not be available, 
 
 The default timeout for a single timeout is 60 seconds. This may be too short for larger downloads or if your network connection is slow. You can change this with the `download::timeout` configuration parameter, e.g. `geneos config set download::timeout=120s` to set it to 120 seconds. The value must be a valid Go duration string, e.g. `30s`, `1m`, `1h30m` and so on.
 
+## Usage
+
 ```text
 geneos package install [flags] [TYPE] [FILE|URL...]
 ```
@@ -61,6 +63,9 @@ geneos package install [flags] [TYPE] [FILE|URL...]
   -A, --all                 Install all types available, not just those types already installed
       --header NAME=VALUE   HTTP header in the format NAME=VALUE
                             (Repeat as required)
+      --allow-root          allow running as root (not recommended)
+  -G, --config string       config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

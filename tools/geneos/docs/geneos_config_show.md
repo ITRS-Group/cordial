@@ -8,6 +8,8 @@ If any arguments are given then they are treated as a list of keys to limit the 
 
 No values that are encrypted are shown decrypted.
 
+## Usage
+
 ```text
 geneos config show [KEY...] [flags]
 ```
@@ -15,7 +17,10 @@ geneos config show [KEY...] [flags]
 ### Options
 
 ```text
-  -a, --all   Show all the parameters including all defaults
+  -a, --all             Show all the parameters including all defaults
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

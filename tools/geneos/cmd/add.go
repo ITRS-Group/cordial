@@ -45,7 +45,7 @@ var addCmdBundlePassword = &config.Secret{}
 var addCmdExtras = instance.SetConfigValues{}
 
 func init() {
-	GeneosCmd.AddCommand(addCmd)
+	Cmd.AddCommand(addCmd)
 
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")

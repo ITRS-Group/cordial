@@ -22,8 +22,8 @@ import "github.com/spf13/cobra"
 var addCmdUser, addCmdComment, addCmdOrigin string
 
 func init() {
-	GDNACmd.AddCommand(addCmd)
-	GDNACmd.AddCommand(removeCmd)
+	Cmd.AddCommand(addCmd)
+	Cmd.AddCommand(removeCmd)
 
 	addCmd.PersistentFlags().StringVar(&addCmdUser, "user", "", "user adding these items")
 	addCmd.PersistentFlags().StringVar(&addCmdComment, "comment", "", "comment for these items")

@@ -16,6 +16,8 @@ In plain, table output, format the Flags column contains:
 
 In other output formats each flag gets it's own column or field.
 
+## Usage
+
 ```text
 geneos list [flags] [TYPE] [NAME...]
 ```
@@ -23,10 +25,13 @@ geneos list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -c, --csv       Output CSV
-  -j, --json      Output JSON
-  -i, --pretty    Output indented JSON
-  -t, --toolkit   Output Toolkit formatted CSV
+  -c, --csv             Output CSV
+  -j, --json            Output JSON
+  -i, --pretty          Output indented JSON
+  -t, --toolkit         Output Toolkit formatted CSV
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

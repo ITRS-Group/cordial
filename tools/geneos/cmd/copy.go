@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	GeneosCmd.AddCommand(copyCmd)
+	Cmd.AddCommand(copyCmd)
 
 }
 

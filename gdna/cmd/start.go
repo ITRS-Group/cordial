@@ -40,7 +40,7 @@ var netprobePort int16
 var secure, skipVerify, onStart, onStartEMail bool
 
 func init() {
-	GDNACmd.AddCommand(startCmd)
+	Cmd.AddCommand(startCmd)
 
 	startCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the process")
 	startCmd.Flags().BoolVarP(&once, "once", "1", false, "Run once and exit")

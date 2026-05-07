@@ -22,13 +22,17 @@ package main
 import (
 	"os"
 
+	// main command directory for documentation
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+
+	// subsystems from commands for documentation
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/imscmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
 	// components from internals for documentation
@@ -52,7 +56,7 @@ type docs struct {
 }
 
 var doclist = []docs{
-	{cmd.GeneosCmd, "../../docs"},
+	{cmd.Cmd, "../../docs"},
 }
 
 func main() {

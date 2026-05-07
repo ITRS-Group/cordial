@@ -1,11 +1,5 @@
 # `servicenow incident`
 
-Raise or update a ServiceNow incident
-
-```text
-servicenow incident [flags]
-```
-
 
 Raise or update a ServiceNow incident from ITRS Geneos.
 
@@ -16,6 +10,12 @@ instance which is responsible for sending the request to the
 ServiceNow API.
 
 
+
+## Usage
+
+```text
+servicenow incident [flags]
+```
 
 ### Options
 
@@ -28,12 +28,7 @@ ServiceNow API.
   -f, --search string     sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED
   -S, --severity string   Geneos severity. Maps depending on configuration settings. (default "3")
   -U, --updateonly        If set no incident creation will be done
-```
-
-### Options inherited from parent commands
-
-```text
-  -c, --conf string   override config file
+  -c, --conf string       override config file
 ```
 
 ## SEE ALSO

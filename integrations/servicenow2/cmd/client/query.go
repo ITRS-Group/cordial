@@ -36,7 +36,7 @@ var queryCmdTable, queryCmdQuery, queryCmdFormat string
 var queryCmdRaw bool
 
 func init() {
-	cmd.RootCmd.AddCommand(queryCmd)
+	cmd.Cmd.AddCommand(queryCmd)
 
 	queryCmd.Flags().StringVarP(&queryCmdTable, "table", "t", "", "servicenow table, defaults to incident")
 	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "q", "", "query")

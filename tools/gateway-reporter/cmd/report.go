@@ -40,7 +40,7 @@ var reportCmdOutDir, reportCmdPrefix, reportCmdInstallation string
 var reportCmdMerge bool
 
 func init() {
-	RootCmd.AddCommand(reportCmd)
+	Cmd.AddCommand(reportCmd)
 
 	reportCmd.Flags().StringVarP(&reportCmdOutDir, "out", "o", "", "Write reports to `DIRECTORY`. Default `/tmp/gateway-reporter`")
 

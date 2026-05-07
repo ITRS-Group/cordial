@@ -18,7 +18,7 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 | [`geneos package uninstall / delete / remove / rm`](geneos_package_uninstall.md)	 | Uninstall Geneos releases |
 | [`geneos package update / upgrade`](geneos_package_update.md)	 | Update the active version of installed Geneos package |
 
-### Options inherited from parent commands
+### Options
 
 ```text
       --allow-root      allow running as root (not recommended)

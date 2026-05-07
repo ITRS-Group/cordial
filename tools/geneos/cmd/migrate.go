@@ -33,7 +33,7 @@ import (
 var migrateCmdExecutables bool
 
 func init() {
-	GeneosCmd.AddCommand(migrateCmd)
+	Cmd.AddCommand(migrateCmd)
 
 	migrateCmd.Flags().BoolVarP(&migrateCmdExecutables, "executables", "X", false, "Migrate executables by symlinking to this binary")
 	migrateCmd.Flags().SortFlags = false

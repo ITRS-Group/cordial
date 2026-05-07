@@ -32,7 +32,7 @@ import (
 var disableCmdForce, disableCmdStop bool
 
 func init() {
-	GeneosCmd.AddCommand(disableCmd)
+	Cmd.AddCommand(disableCmd)
 
 	disableCmd.Flags().BoolVarP(&disableCmdStop, "stop", "S", false, "Stop instances")
 	disableCmd.Flags().BoolVarP(&disableCmdForce, "force", "F", false, "Force disable instances")

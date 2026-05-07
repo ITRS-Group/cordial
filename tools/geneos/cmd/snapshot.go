@@ -40,7 +40,7 @@ var snapshotCmdUsername string
 var snapshotCmdPassword *config.Secret
 
 func init() {
-	GeneosCmd.AddCommand(snapshotCmd)
+	Cmd.AddCommand(snapshotCmd)
 
 	snapshotCmd.Flags().SortFlags = false
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")

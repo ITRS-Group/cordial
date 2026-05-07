@@ -2,6 +2,8 @@
 
 List excluded items
 
+## Usage
+
 ```text
 gdna list includes [CATEGORY]
 ```
@@ -9,7 +11,9 @@ gdna list includes [CATEGORY]
 ### Options
 
 ```text
+  -f, --config FILE     Use configuration FILE
   -F, --format string   output format
+  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

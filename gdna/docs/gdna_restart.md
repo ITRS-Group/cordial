@@ -2,8 +2,17 @@
 
 Restart background GDNA process
 
+## Usage
+
 ```text
 gdna restart
+```
+
+### Options
+
+```text
+  -f, --config FILE    Use configuration FILE
+  -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

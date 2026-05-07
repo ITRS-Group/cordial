@@ -15,6 +15,8 @@ Certificates for each instance are validated and the "Valid" column or field con
 
 The Common Name (`CN`) and the Subject Alternative Names (`SAN`) values in the certificate are not otherwise checked as Geneos does not use these.
 
+## Usage
+
 ```text
 geneos tls list [flags] [TYPE] [NAME...]
 ```
@@ -22,12 +24,15 @@ geneos tls list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -a, --all       Show all certs, including root and signing certs
-  -l, --long      Long output
-  -j, --json      Output JSON
-  -i, --pretty    Output indented JSON
-  -c, --csv       Output CSV
-  -t, --toolkit   Output Toolkit formatted CSV
+  -a, --all             Show all certs, including root and signing certs
+  -l, --long            Long output
+  -j, --json            Output JSON
+  -i, --pretty          Output indented JSON
+  -c, --csv             Output CSV
+  -t, --toolkit         Output Toolkit formatted CSV
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

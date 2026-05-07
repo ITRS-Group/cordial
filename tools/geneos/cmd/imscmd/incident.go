@@ -29,7 +29,7 @@ import (
 var incidentCmdDescription string
 
 func init() {
-	cmd.GeneosCmd.AddCommand(incidentCmd)
+	cmd.Cmd.AddCommand(incidentCmd)
 }
 
 var incidentCmd = &cobra.Command{

@@ -23,10 +23,16 @@ package main
 import (
 	"os"
 
+	gdnaCmd "github.com/itrs-group/cordial/gdna/cmd"
+
 	pdCmd "github.com/itrs-group/cordial/integrations/pagerduty/cmd"
 	snowCmd "github.com/itrs-group/cordial/integrations/servicenow/cmd"
+	snow2Cmd "github.com/itrs-group/cordial/integrations/servicenow2/cmd"
+
 	dv2email "github.com/itrs-group/cordial/tools/dv2email/cmd"
 	gatewayReporter "github.com/itrs-group/cordial/tools/gateway-reporter/cmd"
+	imsGatewayCmd "github.com/itrs-group/cordial/tools/ims-gateway/cmd"
+	sanCfgCmd "github.com/itrs-group/cordial/tools/san-config/cmd"
 
 	"github.com/spf13/cobra"
 )
@@ -37,11 +43,16 @@ type docs struct {
 }
 
 var doclist = []docs{
-	{dv2email.DV2EMAILCmd, "../../tools/dv2email/docs"},
-	{gatewayReporter.RootCmd, "../../tools/gateway-reporter/docs"},
+	{gdnaCmd.Cmd, "../../gdna/docs"},
 
-	{snowCmd.RootCmd, "../../integrations/servicenow/docs"},
-	{pdCmd.RootCmd, "../../integrations/pagerduty/docs"},
+	{dv2email.Cmd, "../../tools/dv2email/docs"},
+	{imsGatewayCmd.Cmd, "../../tools/ims-gateway/docs"},
+	{gatewayReporter.Cmd, "../../tools/gateway-reporter/docs"},
+	{sanCfgCmd.Cmd, "../../tools/san-config/docs"},
+
+	{snowCmd.Cmd, "../../integrations/servicenow/docs"},
+	{snow2Cmd.Cmd, "../../integrations/servicenow2/docs"},
+	{pdCmd.Cmd, "../../integrations/pagerduty/docs"},
 }
 
 func main() {

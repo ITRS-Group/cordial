@@ -35,7 +35,7 @@ var startCmdEnvs instance.NameValues
 var startCmdPort uint16
 
 func init() {
-	GeneosCmd.AddCommand(startCmd)
+	Cmd.AddCommand(startCmd)
 
 	startCmd.Flags().Uint16VarP(&startCmdPort, "port", "p", 0, "Start instance matching port (overrides TYPE and NAME)")
 	startCmd.Flags().StringVarP(&startCmdExtras, "extras", "x", "", "Extra args passed to process, split on spaces and quoting ignored")

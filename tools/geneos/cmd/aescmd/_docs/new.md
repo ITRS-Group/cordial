@@ -1,6 +1,6 @@
-Create a new key file. With no other options the contents are written to STDOUT.
+The `aes new` command creates a new key file. By default, the contents are written to STDOUT.
 
-To write to a specific file use the `--keyfile`/`-k` option. To write to your user's default key file location use the `--user`/`-u` flag. If both these options are used then the `--user` flag takes precedence.
+To write to a specific file use the `--keyfile`/`-k` option. To write to your user's default key file location use the `--user`/`-u` flag. If both these options are used then the `--user`/`-u` flag takes precedence.
 
 If the `--shared`/`-S` flag is set then the new key file is written to the shared `keyfiles` directory of component `TYPE`, using the base-name of its 8-hexadecimal digit checksum to distinguish it from other key files. In all examples the CRC is shown as `DEADBEEF` in honour of many generations of previous UNIX documentation. There is a very small chance of a checksum clash. If TYPE is not given then all components that support key files are used. When saving key files to shared component directories the contents of the key file are not written to STDOUT, but if combined with `--keyfile/-k` or `--user/-U` then the same key file is written to both places.
 

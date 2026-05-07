@@ -6,6 +6,8 @@ Query for a list of incidents and their details. This command is used to query t
 
 The command relies on a configuration file, normally locates in `${HOME}/.config/geneos/ims.yaml`, to provide the connection details for the `ims-gateway` program. If the configuration file is not found or is invalid then an error will be returned. You can specify an alternative configuration file using the `--config`/`-C` option.
 
+## Usage
+
 ```text
 geneos incident query [FLAGS] [flags]
 ```
@@ -18,6 +20,9 @@ geneos incident query [FLAGS] [flags]
   -R, --snow-raw            turn ServiceNow sys_display off, i.e. return raw values instead of display values
   -Q, --query string        query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. default taken from config file
   -f, --format csv          output format: csv or json (default "csv")
+      --allow-root          allow running as root (not recommended)
+  -G, --config string       config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

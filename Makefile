@@ -40,7 +40,6 @@ docs:
 	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 	cd utils/docs && go build && ./docs
 	cd tools/geneos/utils/docs && go build && ./docs
-	cd gdna/docs && go build && ./docs
 
 clean:
 	-docker rm cordial-build-$(VERSION)

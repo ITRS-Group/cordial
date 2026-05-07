@@ -6,6 +6,8 @@ You can limit the reports included using the `--report`/`-r` option, which accep
 
 You can override some of the configuration file settings using command ling flags to set the email Subject with the `--subject` flag, the sender From address with the `--from` flag and the recipients using `--to`/`--cc`/`--bcc` flags.
 
+## Usage
+
 ```text
 gdna email
 ```
@@ -26,6 +28,8 @@ gdna email
                           (comma separated, but remember to quote as one argument)
       --bcc string        Override configured email Bcc
                           (comma separated, but remember to quote as one argument)
+  -f, --config FILE       Use configuration FILE
+  -l, --logfile file      Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

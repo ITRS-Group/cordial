@@ -33,35 +33,35 @@ const (
 )
 
 func init() {
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupSubsystems,
 		Title: "Subsystems",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupProcess,
 		Title: "Control Instances",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupView,
 		Title: "Inspect Instances",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupManage,
 		Title: "Manage Instances",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupConfig,
 		Title: "Configure Instances",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupCredentials,
 		Title: "Manage Credentials",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupOther,
 		Title: "Miscellaneous",
 	})
-	GeneosCmd.AddGroup(&cobra.Group{
+	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,
 		Title: "Component Types",
 	})

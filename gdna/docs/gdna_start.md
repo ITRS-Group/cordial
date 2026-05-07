@@ -3,6 +3,8 @@
 Use `gdna start` to start a background process that acquires, process and reports data as well as being able to optionally send email reports on a schedule.
 
 
+## Usage
+
 ```text
 gdna start
 ```
@@ -25,6 +27,8 @@ gdna start
   -e, --entity Entity       Send reports to Managed Entity (default "GDNA")
   -s, --sampler Sampler     Send reports to Sampler (default "GDNA")
   -R, --reset               Reset/Delete configured Dataviews on first run
+  -f, --config FILE         Use configuration FILE
+  -l, --logfile file        Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

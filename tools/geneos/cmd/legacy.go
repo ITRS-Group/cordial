@@ -33,8 +33,8 @@ func init() {
 	showCmd.AddCommand(showHostCmd)
 
 	updateCmd.AddCommand(updateLsCmd)
-	GeneosCmd.AddCommand(installCmd)
-	GeneosCmd.AddCommand(updateCmd)
+	Cmd.AddCommand(installCmd)
+	Cmd.AddCommand(updateCmd)
 
 	showCmd.AddCommand(showGlobalCmd)
 	setCmd.AddCommand(setGlobalCmd)

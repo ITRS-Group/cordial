@@ -57,6 +57,8 @@ $ geneos aes encode -A gatewayHub /tmp/app.key
 $ geneos deploy gateway central1 -I /tmp/app.key -x "-port 7103" --keyfile ${HOME}/.config/geneos/keyfile.aes gateway-hub=https://hub.example.com:8081 app-key=app.key setup='none'
 ```
 
+## Usage
+
 ```text
 geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```
@@ -124,6 +126,9 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       (Repeat as required, san only)
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
+      --allow-root                    allow running as root (not recommended)
+  -G, --config string                 config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## Examples

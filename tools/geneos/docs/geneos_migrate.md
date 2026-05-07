@@ -4,6 +4,8 @@ The `migrate` command will move instances from old director structures to curren
 
 The `--executables`/`-X` option instead creates symbolic links in the ${GENEOS_HOME}/bin directory for names that match the original `ctl` scripts pointing back to the `geneos` program.
 
+## Usage
+
 ```text
 geneos migrate [--executables|-X] | [TYPE] [NAME...]
 ```
@@ -11,7 +13,10 @@ geneos migrate [--executables|-X] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -X, --executables   Migrate executables by symlinking to this binary
+  -X, --executables     Migrate executables by symlinking to this binary
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

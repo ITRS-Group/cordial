@@ -29,7 +29,7 @@ import (
 var sdpAuthCmdCode = &config.Secret{}
 
 func init() {
-	rootCmd.AddCommand(sdpAuthCmd)
+	Cmd.AddCommand(sdpAuthCmd)
 
 	sdpAuthCmd.Flags().VarP(sdpAuthCmdCode, "code", "a", "Authorization code received from ServiceDesk Plus, prompted if not given")
 

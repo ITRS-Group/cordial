@@ -16,6 +16,8 @@ Each block of output has a header indicating the details of the instance and the
 
 Future releases may add support for more complex filtering using regular expressions and also multiple filters.
 
+## Usage
+
 ```text
 geneos logs [flags] [TYPE] [NAME...]
 ```
@@ -31,6 +33,9 @@ geneos logs [flags] [TYPE] [NAME...]
   -C, --ca              Include Collection Agent log for Netprobe instances
   -g, --match string    Match lines with STRING
   -v, --ignore string   Match lines without STRING
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

@@ -10,6 +10,8 @@ With the `--log`/`-l` option the command will follow the logs of all instances s
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos start gateway Example -x -skip-cache`.
 
+## Usage
+
 ```text
 geneos start [flags] [TYPE] [NAME...]
 ```
@@ -21,6 +23,9 @@ geneos start [flags] [TYPE] [NAME...]
   -x, --extras string    Extra args passed to process, split on spaces and quoting ignored
   -e, --env NAME=VALUE   Extra environment variable (Repeat as required)
   -l, --log              Follow logs after starting instance
+      --allow-root       allow running as root (not recommended)
+  -G, --config string    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

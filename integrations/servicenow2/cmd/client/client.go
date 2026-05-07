@@ -56,7 +56,7 @@ var clientCmdProfile, clientCmdTable string
 var clientCmdQuiet bool
 
 func init() {
-	cmd.RootCmd.AddCommand(clientCmd)
+	cmd.Cmd.AddCommand(clientCmd)
 
 	clientCmd.Flags().StringVarP(&clientCmdProfile, "profile", "p", "", "profile to use for field creation")
 	clientCmd.Flags().StringVarP(&clientCmdTable, "table", "t", "", "servicenow table, defaults typically to incident")

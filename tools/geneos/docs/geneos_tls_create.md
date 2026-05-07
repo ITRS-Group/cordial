@@ -20,6 +20,8 @@ You can add Subject Alternative Names (SANs) to the certificate using the `--san
 
 If a certificate already exists for the specified Common Name then an error will be returned unless you use the `--force`/`-F` option to overwrite it.
 
+## Usage
+
 ```text
 geneos tls create [flags]
 ```
@@ -49,6 +51,9 @@ geneos tls create [flags]
                            Ignored for --signing.
   -u, --san-url VALUE      Subject-Alternative-Name URL (repeat as required).
                            Ignored for --signing.
+      --allow-root         allow running as root (not recommended)
+  -G, --config string      config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

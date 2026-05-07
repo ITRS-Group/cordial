@@ -36,7 +36,7 @@ import (
 var revertCmdExecutables bool
 
 func init() {
-	GeneosCmd.AddCommand(revertCmd)
+	Cmd.AddCommand(revertCmd)
 
 	revertCmd.Flags().BoolVarP(&revertCmdExecutables, "executables", "X", false, "Revert 'ctl' executables")
 	revertCmd.Flags().SortFlags = false

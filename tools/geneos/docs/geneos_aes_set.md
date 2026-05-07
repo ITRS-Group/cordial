@@ -1,6 +1,6 @@
 # `geneos aes set`
 
-Import a key file and set parameters on matching instances.
+The `aes set` command imports a key file and sets parameters on matching instances.
 
 To create a key file with new contents use the `aes new` command.
 
@@ -11,6 +11,8 @@ If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an 
 Depending on the `--no-roll`/`-N` flag, any matching instances may have their `prevkeyfile` parameter updated to reference any original key file and, if a new key file is written in a non-shared location the previous file is also renamed using the suffix in the `--backup`/`-b` flag.
 
 Key files are only set on components that support them.
+
+## Usage
 
 ```text
 geneos aes set [flags] [TYPE] [NAME...]
@@ -25,6 +27,9 @@ geneos aes set [flags] [TYPE] [NAME...]
   -b, --backup string        Backup any existing keyfile with extension given (default "-prev")
   -N, --no-roll              Do not roll any existing keyfile to previous keyfile setting
   -s, --shared               Set as a shared keyfile, using the CRC as the file name prefix
+      --allow-root           allow running as root (not recommended)
+  -G, --config string        config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME        Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

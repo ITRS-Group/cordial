@@ -42,7 +42,7 @@ var daemon bool
 var logFile string
 
 func init() {
-	cmd.RootCmd.AddCommand(routerCmd)
+	cmd.Cmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
 	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")

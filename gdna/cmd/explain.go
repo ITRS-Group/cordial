@@ -48,7 +48,7 @@ type node struct {
 var explainCmdDescription string
 
 func init() {
-	GDNACmd.AddCommand(explainCmd)
+	Cmd.AddCommand(explainCmd)
 }
 
 var explainCmd = &cobra.Command{

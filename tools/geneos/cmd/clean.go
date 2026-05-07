@@ -31,8 +31,8 @@ import (
 )
 
 func init() {
-	GeneosCmd.AddCommand(cleanCmd)
-	GeneosCmd.AddCommand(resetCmd)
+	Cmd.AddCommand(cleanCmd)
+	Cmd.AddCommand(resetCmd)
 
 	cleanCmd.Flags().BoolVarP(&cleanCmdFull, "full", "F", false, "Perform a full clean. Removes more files than basic clean and restarts instances")
 	cleanCmd.Flags().SortFlags = false

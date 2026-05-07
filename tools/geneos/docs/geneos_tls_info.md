@@ -36,6 +36,8 @@ And then under the (lower) Advanced tab, in the Script box, set Contents to a li
 
 Attach this sampler to a Managed Entity where the `geneos` program is installed (edit the path above to suit) and it should display one row for each endpoint that can be connected. Endpoints that cannot be contacted will show an error in the `CommonName` column.
 
+## Usage
+
 ```text
 geneos tls info [PATH...] [flags]
 ```
@@ -51,6 +53,9 @@ geneos tls info [PATH...] [flags]
   -c, --connect connect       Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.
       --connect-file string   Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
   -r, --roots roots           Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
+      --allow-root            allow running as root (not recommended)
+  -G, --config string         config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

@@ -14,6 +14,8 @@ The initial configuration file for the Gateway is built from the default templat
 
 Other flags inherited from the `geneos init` command can be used to influence the installation.
 
+## Usage
+
 ```text
 geneos init demo [flags] [USERNAME] [DIRECTORY]
 ```
@@ -24,6 +26,27 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
   -M, --minimal                       use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)
+  -l, --log                           Follow logs after starting instance(s)
+  -F, --force                         Ignore existing directories and files and overwrite
+  -n, --name string                   Use name for instances and configurations instead of the hostname
+  -T, --tls                           Create internal certificates for TLS support
+  -C, --signing-bundle string         signing bundle in PEM format.
+                                      This bundle must contain an unencrypted private key
+                                      and matching signing certificate and other certificates up to the root CA.
+      --insecure                      Do not create internal certificates for TLS support
+  -A, --archive string                Directory of releases for installation
+  -N, --nexus                         Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -S, --snapshots                     Download from nexus snapshots. Requires -N
+  -V, --version VERSION               Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+  -u, --username string               Username for downloads (password prompted)
+  -w, --gateway-template string       A gateway template file
+  -e, --env NAME=VALUE                Environment variable for instance start-up
+                                      (Repeat as required)
+      --header NAME=VALUE             HTTP header in the format NAME=VALUE
+                                      (Repeat as required)
+      --allow-root                    allow running as root (not recommended)
+  -G, --config string                 config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
 ```
 
 ## SEE ALSO

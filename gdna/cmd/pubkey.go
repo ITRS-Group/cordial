@@ -35,7 +35,7 @@ var pubkeyCmdDescription string
 var pubkeyCmdOutput string
 
 func init() {
-	GDNACmd.AddCommand(pubkeyCmd)
+	Cmd.AddCommand(pubkeyCmd)
 
 	pubkeyCmd.Flags().StringVarP(&pubkeyCmdOutput, "output", "o", "", "Output file for public key (default: stdout)")
 }

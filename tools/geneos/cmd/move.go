@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	GeneosCmd.AddCommand(moveCmd)
+	Cmd.AddCommand(moveCmd)
 }
 
 //go:embed _docs/move.md

@@ -1,4 +1,4 @@
-List details of the key files referenced by matching instances.
+The `aes list` command lists details of the key files referenced by matching instances.
 
 If given the `--shared`/`-S` flag then the key files in the shared component directory are listed. This can be filtered by host with the `--host`/`-H` and/or by component `TYPE`.
 

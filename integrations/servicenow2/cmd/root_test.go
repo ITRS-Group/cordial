@@ -26,42 +26,42 @@ import (
 
 func TestRootCommand(t *testing.T) {
 	// Test that the root command is properly initialized
-	if RootCmd == nil {
+	if Cmd == nil {
 		t.Fatal("Expected RootCmd to be initialized, got nil")
 	}
 
-	if RootCmd.Use != "servicenow2" {
-		t.Errorf("Expected RootCmd.Use to be 'servicenow2', got %q", RootCmd.Use)
+	if Cmd.Use != "servicenow2" {
+		t.Errorf("Expected RootCmd.Use to be 'servicenow2', got %q", Cmd.Use)
 	}
 
-	if RootCmd.Short != "Geneos to ServiceNow integration" {
-		t.Errorf("Expected RootCmd.Short to be 'Geneos to ServiceNow integration', got %q", RootCmd.Short)
+	if Cmd.Short != "Geneos to ServiceNow integration" {
+		t.Errorf("Expected RootCmd.Short to be 'Geneos to ServiceNow integration', got %q", Cmd.Short)
 	}
 
 	// Test that version is set
-	if RootCmd.Version == "" {
+	if Cmd.Version == "" {
 		t.Error("Expected RootCmd.Version to be set, got empty string")
 	}
 
 	// Test flags
-	if !RootCmd.PersistentFlags().HasAvailableFlags() {
+	if !Cmd.PersistentFlags().HasAvailableFlags() {
 		t.Error("Expected RootCmd to have persistent flags")
 	}
 
 	// Check for conf flag
-	confFlag := RootCmd.PersistentFlags().Lookup("conf")
+	confFlag := Cmd.PersistentFlags().Lookup("conf")
 	if confFlag == nil {
 		t.Error("Expected 'conf' flag to be defined")
 	}
 
 	// Check for debug flag
-	debugFlag := RootCmd.PersistentFlags().Lookup("debug")
+	debugFlag := Cmd.PersistentFlags().Lookup("debug")
 	if debugFlag == nil {
 		t.Error("Expected 'debug' flag to be defined")
 	}
 
 	// Check for help flag
-	helpFlag := RootCmd.PersistentFlags().Lookup("help")
+	helpFlag := Cmd.PersistentFlags().Lookup("help")
 	if helpFlag == nil {
 		t.Error("Expected 'help' flag to be defined")
 	}
@@ -95,7 +95,7 @@ func TestFlags(t *testing.T) {
 	cmd := &cobra.Command{
 		Use: "test",
 	}
-	
+
 	var testConfigFile string
 	var testDebug bool
 
@@ -132,11 +132,11 @@ func TestLoadConfigFile(t *testing.T) {
 	// Note: We can't test the actual loading because it calls log.Fatal on failure
 	// which would exit the test process. Instead, we test the function exists and
 	// has the expected signature.
-	
+
 	// Save original values
 	originalConfigFile := configFile
 	originalExecname := Execname
-	
+
 	defer func() {
 		// Restore original values
 		configFile = originalConfigFile
@@ -146,7 +146,7 @@ func TestLoadConfigFile(t *testing.T) {
 	// Set test values
 	configFile = ""
 	Execname = "servicenow2"
-	
+
 	// We can't actually call LoadConfigFile in tests because it uses log.Fatal
 	// which would terminate the test process. This test just verifies the function
 	// signature and structure.
@@ -156,11 +156,11 @@ func TestLoadConfigFile(t *testing.T) {
 func TestLoadConfigFileWithCustomPath(t *testing.T) {
 	// Test LoadConfigFile function with custom config file path
 	// Note: We can't test the actual loading because it calls log.Fatal on failure
-	
+
 	// Save original values
 	originalConfigFile := configFile
 	originalExecname := Execname
-	
+
 	defer func() {
 		// Restore original values
 		configFile = originalConfigFile
@@ -170,7 +170,7 @@ func TestLoadConfigFileWithCustomPath(t *testing.T) {
 	// Set test values for custom path scenario
 	configFile = "/nonexistent/path/config.yaml"
 	Execname = "servicenow2"
-	
+
 	// We can't actually call LoadConfigFile in tests because it uses log.Fatal
 	// This test documents the custom path behavior.
 	t.Log("LoadConfigFile with custom path behavior tested (function signature only)")
@@ -192,10 +192,10 @@ func TestConfigBasename(t *testing.T) {
 		t.Run(tt.execname+"."+tt.cmdName, func(t *testing.T) {
 			// Save original value
 			originalExecname := Execname
-			
+
 			// Set test value
 			Execname = tt.execname
-			
+
 			defer func() {
 				// Restore original value
 				Execname = originalExecname
@@ -212,19 +212,19 @@ func TestConfigBasename(t *testing.T) {
 
 func TestCommandStructure(t *testing.T) {
 	// Test that the command structure is properly set up
-	if RootCmd.CompletionOptions.DisableDefaultCmd != true {
+	if Cmd.CompletionOptions.DisableDefaultCmd != true {
 		t.Error("Expected completion to be disabled")
 	}
 
-	if RootCmd.DisableAutoGenTag != true {
+	if Cmd.DisableAutoGenTag != true {
 		t.Error("Expected auto-generated tag to be disabled")
 	}
 
-	if RootCmd.SilenceUsage != true {
+	if Cmd.SilenceUsage != true {
 		t.Error("Expected usage to be silenced")
 	}
 
-	if RootCmd.Flags().SortFlags {
+	if Cmd.Flags().SortFlags {
 		t.Error("Expected flags to not be sorted (SortFlags should be false)")
 	}
 }
@@ -248,7 +248,7 @@ func TestDebugFlag(t *testing.T) {
 	// Since we can't easily test the cobra initialization without running the full command,
 	// we'll test the flag definition
 
-	debugFlag := RootCmd.PersistentFlags().Lookup("debug")
+	debugFlag := Cmd.PersistentFlags().Lookup("debug")
 	if debugFlag == nil {
 		t.Fatal("Expected debug flag to be defined")
 	}
@@ -269,7 +269,7 @@ func TestDebugFlag(t *testing.T) {
 
 func TestHelpFlag(t *testing.T) {
 	// Test that help flag is properly configured
-	helpFlag := RootCmd.PersistentFlags().Lookup("help")
+	helpFlag := Cmd.PersistentFlags().Lookup("help")
 	if helpFlag == nil {
 		t.Fatal("Expected help flag to be defined")
 	}

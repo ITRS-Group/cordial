@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	cmd.GeneosCmd.AddCommand(configCmd)
+	cmd.Cmd.AddCommand(configCmd)
 }
 
 //go:embed README.md

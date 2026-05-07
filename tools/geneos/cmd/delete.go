@@ -32,7 +32,7 @@ import (
 var deleteCmdStop, deleteCmdForce bool
 
 func init() {
-	GeneosCmd.AddCommand(deleteCmd)
+	Cmd.AddCommand(deleteCmd)
 
 	deleteCmd.Flags().BoolVarP(&deleteCmdStop, "stop", "S", false, "Stop instances first")
 	deleteCmd.Flags().BoolVarP(&deleteCmdForce, "force", "F", false, "Force delete of protected instances")

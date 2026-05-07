@@ -28,7 +28,7 @@ import (
 )
 
 func init() {
-	GeneosCmd.AddCommand(homeCmd)
+	Cmd.AddCommand(homeCmd)
 }
 
 //go:embed _docs/home.md

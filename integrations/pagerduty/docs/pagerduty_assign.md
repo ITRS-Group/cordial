@@ -2,11 +2,13 @@
 
 Send a Pagerduty trigger event
 
+## Usage
+
 ```text
 pagerduty assign [flags]
 ```
 
-### Options inherited from parent commands
+### Options
 
 ```text
   -c, --conf string   local config file

@@ -39,7 +39,7 @@ var exportCmdDir string
 var exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder string
 
 func init() {
-	DV2EMAILCmd.AddCommand(exportCmd)
+	Cmd.AddCommand(exportCmd)
 
 	exportCmd.Flags().StringVar(&exportCmdDir, "dir", "", "destination `directory`, defaults to current")
 
