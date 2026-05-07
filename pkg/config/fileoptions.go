@@ -279,8 +279,7 @@ func Writer(out io.Writer) FileOption {
 // ignored.
 func Format(extension string) FileOption {
 	return func(fo *fileOptions) {
-		extension = strings.TrimLeft(extension, ".")
-		fo.format = extension
+		fo.format = strings.TrimLeft(extension, ".")
 	}
 }
 
