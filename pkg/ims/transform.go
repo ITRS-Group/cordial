@@ -1,4 +1,4 @@
-package common
+package ims
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -32,12 +34,21 @@ type Transform struct {
 // 2. Remove: For each key in the `Remove` slice, if the key is present
 // in the incident, it is removed from the incident.
 //
-// 3. Rename: For each key/value pair in the `Rename` map, if the key is
-// present in the incident, it is renamed to the value specified in the
-// `Rename` map. If a field is renamed from a name that starts with `__`
-// to a name that does not start with `__`, it will not be deleted after
-// renaming. This allows for fields that are meant to be preserved
-// during renaming to be retained.
+// 3. Rename:
+//
+//	a. Each input field with the prefix `__IDPNAME_` is renamed to the
+//	same name without the prefix. For example,
+//	`__IDPNAME_short_description` would be renamed to
+//	`short_description`. This allows for fields that are meant to be
+//	preserved during renaming to be retained, as they will not be deleted
+//	after renaming.
+//
+//	b. For each key/value pair in the `Rename` map, if the key is present
+//	in the incident, it is renamed to the value specified in the `Rename`
+//	map. If a field is renamed from a name that starts with `__` to a
+//	name that does not start with `__`, it will not be deleted after
+//	renaming. This allows for fields that are meant to be preserved
+//	during renaming to be retained.
 //
 // 4. MustInclude: For each key in the `MustInclude` slice, if the key
 // is not present in the incident after applying the previous
@@ -49,50 +60,62 @@ type Transform struct {
 // incident that do not match any of the regular expressions in the
 // `Filter` slice are removed from the incident. This allows for
 // filtering out any fields that are not explicitly allowed by the
-// regular expressions in the `Filter` slice.
-func (s Transform) Apply(cf *config.Config, incident map[string]string) (incidentFields map[string]string, err error) {
-	incidentFields = maps.Clone(incident)
-
-	maps.DeleteFunc(incident, func(e, _ string) bool { return strings.HasPrefix(e, "__") })
+// regular expressions in the `Filter` slice. The regular expressions
+// supported are in Go [regexp/syntax](https://pkg.go.dev/regexp/syntax)
+// syntax.
+func (s Transform) Apply(cf *config.Config, idp string, incidentIn map[string]string) (incidentOut map[string]string, err error) {
+	incidentOut = maps.Clone(incidentIn)
 
 	for k, v := range s.Defaults {
-		if i, ok := incident[k]; !ok || i == "" {
-			incident[k] = config.Expand[string](cf, v)
+		if i, ok := incidentOut[k]; !ok || i == "" {
+			log.Debug().Msgf("setting default value for field %q to %q", k, config.Expand[string](cf, v))
+			incidentOut[k] = config.Expand[string](cf, v)
 		}
 	}
 
 	for _, e := range s.Remove {
-		delete(incident, e)
+		log.Debug().Msgf("removing field %q", e)
+		delete(incidentOut, e)
 	}
 
 	for k, v := range s.Rename {
-		if _, ok := incident[k]; ok {
-			incident[v] = incident[k]
-			// skip fields prefixed with `__` either before or after rename
-			if strings.HasPrefix(k, "__") && !strings.HasPrefix(v, "__") {
-				continue
-			}
-			delete(incident, k)
+		if _, ok := incidentOut[k]; ok {
+			log.Debug().Msgf("renaming field %q to %q", k, v)
+			incidentOut[v] = incidentOut[k]
+			delete(incidentOut, k)
 		}
 	}
 
 	for _, i := range s.MustInclude {
-		if _, ok := incident[i]; !ok {
+		if _, ok := incidentOut[i]; !ok {
+			incidentOut = map[string]string{}
 			err = fmt.Errorf("missing required field %q", i)
 			return
 		}
+		log.Debug().Msgf("required field %q is present", i)
 	}
 
 	if len(s.Filter) > 0 {
-		for key := range incident {
+		log.Debug().Msgf("filtering fields using %d regular expressions", len(s.Filter))
+		for key := range incidentOut {
 			if !slices.ContainsFunc(s.Filter, func(f string) bool {
 				match, _ := regexp.MatchString(f, key)
 				return match
 			}) {
-				delete(incident, key)
+				delete(incidentOut, key)
 			}
 		}
 	}
+
+	maps.DeleteFunc(incidentOut, func(e, _ string) bool {
+		if strings.HasPrefix(e, "__") {
+			log.Debug().Msgf("removing internal field %q", e)
+			return true
+		}
+		return false
+	})
+
+	log.Debug().Msgf("transformed incident fields: %v", incidentOut)
 
 	return
 }
