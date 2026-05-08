@@ -8,7 +8,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
 )
 
 type psInstance struct {
@@ -81,7 +80,7 @@ var instanceCSVExtraColumns = []string{
 var instanceCSVHeader = strings.Join(instanceCSVColumns, "\t")
 var instanceCSVLongHeader = strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t")
 
-func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
+func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -91,7 +90,7 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 		return
 	}
 
-	psData := psInstance{
+	psData := &psInstance{
 		psCommon: psCommon{
 			Type: ct,
 			Name: name,
@@ -110,8 +109,7 @@ func psInstanceJSON2(i geneos.Instance, resp *responses.Response) (err error) {
 		psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
 	}
 
-	resp.Value = psData
-	return
+	return psData, nil
 }
 
 func checkCA(h *geneos.Host, ct *geneos.Component, chidren []int) (pi *process.ProcessInfo, ok bool, err error) {

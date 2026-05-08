@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/rs/zerolog/log"
 	"github.com/tklauser/go-sysconf"
 )
 
@@ -89,6 +90,16 @@ func GetGroupname(gid int) (groupname string) {
 // before calling. Use the instance.ProcessStats struct as a useful
 // default.
 func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
+	return processStatus[T](h, pid, true)
+}
+
+// processStatus is the internal implementation of ProcessStatus, with
+// an additional fillCache parameter to control whether to fill fields
+// tagged with `cache:"lazy"` or not. If fillCache is false, then fields
+// tagged with `cache:"lazy"` will be skipped and left as their zero
+// value, and it is the caller's responsibility to call processStatus
+// again with fillCache true to fill those fields when needed.
+func processStatus[T any](h host.Host, pid int, fillCache bool) (pstats T, err error) {
 	var scClkTck int64
 
 	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
@@ -143,7 +154,7 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 		ft := st.Field(i)
 		fv := sv.Field(i)
 
-		if lookup, ok := ft.Tag.Lookup("cache"); ok && lookup == "lazy" {
+		if lookup, ok := ft.Tag.Lookup("cache"); !fillCache && ok && lookup == "lazy" {
 			// skip filling this field for now, it will be filled on demand when requested
 			continue
 
@@ -272,8 +283,10 @@ func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
 }
 
 func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
+	log.Debug().Msgf("getting open files for pid %d", pid)
 	if fv.CanSet() {
 		of := OpenFiles(h, pid)
+		log.Debug().Msgf("pid %d has %d open files", pid, len(of))
 		switch fv.Type().Kind() {
 		case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
 			fv.SetInt(int64(len(of)))

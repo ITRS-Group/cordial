@@ -60,7 +60,7 @@ var fileCSVColumns = []string{
 
 var fileCSVHeader = strings.Join(fileCSVColumns, "\t")
 
-func psFilesJSON(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -68,12 +68,12 @@ func psFilesJSON(i geneos.Instance, pid int, resp *responses.Response) (err erro
 	homedir := i.Home()
 	hs, err := h.Stat(homedir)
 	if err != nil {
-		resp.Err = err
 		return
 	}
 	uid, gid := host.GetFileOwner(h, hs)
 
-	files := []psInstanceFiles{}
+	openFiles := process.OpenFiles(h, pid)
+	files = make([]psInstanceFiles, 0, len(openFiles)+1)
 
 	files = append(files, psInstanceFiles{
 		psCommon: psCommon{
@@ -91,7 +91,7 @@ func psFilesJSON(i geneos.Instance, pid int, resp *responses.Response) (err erro
 		Path:     homedir,
 	})
 
-	for _, fd := range process.OpenFiles(h, pid) {
+	for _, fd := range openFiles {
 		if path.IsAbs(fd.Path) {
 			uid, gid := host.GetFileOwner(h, fd.Stat)
 			path := fd.Path
@@ -122,7 +122,6 @@ func psFilesJSON(i geneos.Instance, pid int, resp *responses.Response) (err erro
 		}
 	}
 
-	resp.Value = files
 	return
 }
 

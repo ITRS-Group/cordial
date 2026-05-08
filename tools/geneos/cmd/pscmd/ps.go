@@ -370,21 +370,27 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	}
 
 	if psCmdShowNet {
-		if err = psNetworkJSON(i, pid, resp); err != nil {
+		if conns, err := psNetworkJSON(i, pid); err != nil {
 			resp.Err = err
+		} else {
+			resp.Value = conns
 		}
 		return
 	}
 
 	if psCmdShowFiles {
-		if err := psFilesJSON(i, pid, resp); err != nil {
+		if files, err := psFilesJSON(i, pid); err != nil {
 			resp.Err = err
+		} else {
+			resp.Value = files
 		}
 		return
 	}
 
-	if err = psInstanceJSON2(i, resp); err != nil {
+	if psData, err := getInstanceData(i); err != nil {
 		resp.Err = err
+	} else {
+		resp.Value = psData
 	}
 	return
 }

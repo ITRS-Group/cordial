@@ -60,16 +60,18 @@ var netCSVColumns = []string{
 
 var netCSVHeader = strings.Join(netCSVColumns, "\t")
 
-func psNetworkJSON(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psNetworkJSON(i geneos.Instance, pid int) (conns []psInstanceNetwork, err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
 
-	conns := []psInstanceNetwork{}
 	pi, err := process.ProcessStatus[*process.ProcessInfo](h, pid)
 	if err != nil {
 		return
 	}
+
+	conns = make([]psInstanceNetwork, 0, len(pi.OpenFiles))
+
 	for _, fd := range pi.OpenFiles {
 		if fd.Conn != nil {
 			// socket
@@ -96,7 +98,7 @@ func psNetworkJSON(i geneos.Instance, pid int, resp *responses.Response) (err er
 			})
 		}
 	}
-	resp.Value = conns
+
 	return
 }
 

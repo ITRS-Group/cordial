@@ -31,6 +31,20 @@ var procCacheMutex sync.Mutex
 var procCacheLastUpdate = make(map[host.Host]time.Time)
 var procCacheMap = make(map[host.Host]any)
 
+// getProcesses returns the process entries for host h from the cache, if
+// the cache is not stale. If the cache is stale or empty, it updates the
+// cache and returns the new entries. The type of the entries is determined
+// by the type parameter T, which must be a struct that can be populated
+// from the process status information.
+//
+// The cache is updated by reading the /proc filesystem on the host, and
+// building a map of PID to process status information. If the type T has
+// PID, PPID and Children fields, it also builds child lists based on linked
+// PID and PPID fields.
+//
+// The function returns the process entries and a boolean indicating whether
+// the cache was successfully updated or not. If the host does not support
+// process lookups, it returns false.
 func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
@@ -66,7 +80,7 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 		}
 
 		var pstatus T
-		if pstatus, err = ProcessStatus[T](h, pid); err != nil {
+		if pstatus, err = processStatus[T](h, pid, false); err != nil {
 			log.Debug().Err(err).Msgf("failed to get process status for pid %d", pid)
 			continue
 		}
