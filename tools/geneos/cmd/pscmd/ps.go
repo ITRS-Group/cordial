@@ -31,6 +31,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -120,7 +121,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			}
 		}
 
-		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
+		resps := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
 
 		headlines := map[string]string{}
 
@@ -133,7 +134,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			default:
 				var notRunning int
 				var disabled int
-				for _, r := range resp {
+				for _, r := range resps {
 					if errors.Is(r.Err, os.ErrProcessDone) {
 						notRunning++
 					}
@@ -142,16 +143,19 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 					}
 				}
 				headlines = map[string]string{
-					"instances":  fmt.Sprint(len(resp)),
-					"running":    fmt.Sprint(len(resp) - notRunning - disabled),
+					"instances":  fmt.Sprint(len(resps)),
+					"running":    fmt.Sprint(len(resps) - notRunning - disabled),
 					"notRunning": fmt.Sprint(notRunning),
 					"disabled":   fmt.Sprint(disabled),
 				}
 			}
 		}
-		resp.Formatted(os.Stdout, format, columns, nil,
+
+		resps.Formatted(os.Stdout, format, columns, nil,
 			responses.IgnoreErr(geneos.ErrDisabled),
-			responses.AddHeadlines(headlines))
+			responses.AddHeadlines(headlines),
+			reporter.OrderByColumns(0, 1, 2),
+		)
 
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
@@ -358,6 +362,49 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	}
 
 	resp.Rows = append(resp.Rows, row)
+
+	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+		row := []string{}
+		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
+		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		if psCmdToolkit {
+			row = append(row, instance.IDString(i)+" # ca")
+		}
+
+		row = append(row,
+			ct.String()+"/ca",
+			name,
+			h.String(),
+			fmt.Sprint(capi.PID),
+			capi.ListeningPorts,
+			capi.Username,
+			capi.Groupname,
+			capi.StartTime.Local().Format(time.RFC3339),
+			fmt.Sprintf("%s%s%s", base, uptodate, actual),
+			i.Home(),
+		)
+
+		if psCmdLong {
+			p, _ := process.GetProcessInfo(h, pi.PID, false)
+			if p != nil {
+				row = append(row,
+					p.State,
+					fmt.Sprint(p.Threads),
+					fmt.Sprint(len(p.OpenFiles)),
+					fmt.Sprint(p.OpenSockets),
+					fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
+					fmt.Sprintf("%.2f MiB", float64(p.RssAnon)/(1024*1024)),
+					fmt.Sprintf("%.2f MiB", float64(p.VmHWM)/(1024*1024)),
+					fmt.Sprintf("%.2f s", p.Utime.Seconds()),
+					fmt.Sprintf("%.2f s", p.Stime.Seconds()),
+					fmt.Sprintf("%.2f s", p.CUtime.Seconds()),
+					fmt.Sprintf("%.2f s", p.CStime.Seconds()),
+				)
+			}
+		}
+		resp.Rows = append(resp.Rows, row)
+	}
+
 	return
 }
 
