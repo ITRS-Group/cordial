@@ -142,7 +142,7 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		if err = cf.UnmarshalKey(cf.Join("profiles", raiseCmdProfile), &profileGroups); err != nil {
+		if err = cf.UnmarshalKey(cf.Join("profiles", raiseCmdProfile), &profileGroups, config.NoExpand()); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {
