@@ -114,23 +114,23 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 }
 
 func checkCA(h *geneos.Host, ct *geneos.Component, chidren []int) (pi *process.ProcessInfo, ok bool, err error) {
-	if !ct.IsA("netprobe") {
+	if !ct.IsA("netprobe") || len(chidren) == 0 {
 		return
 	}
 
 	for _, pid := range chidren {
 		pi, err = process.GetProcessInfo(h, pid, false)
 		if err != nil {
-			return
+			continue
 		}
 
 		if len(pi.Cmdline) == 0 {
 			err = fmt.Errorf("no cmdline for PID %d", pid)
-			return
+			continue
 		}
 
 		if path.Base(pi.Cmdline[0]) != "java" {
-			return
+			continue
 		}
 
 		for _, arg := range pi.Cmdline[1:] {
