@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.5.0-250804 at 2026-05-08 12:33:55 by PeterGalbavy on ITRSLP372-->
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.9.0-260414/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.5.0-250804 at 2026-05-08 15:32:08 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.9.1-260505/gateway.xsd">
 	<managedEntities>
 		<managedEntityGroup name="Geneos Cordial">
 			<attribute name="APPLICATION">Geneos</attribute>
@@ -37,7 +37,7 @@ You may need to define your own Environment to override the paths to the binary 
 				<sampler ref="Cordial Summary"/>
 				<sampler ref="Instances"/>
 				<sampler ref="Installed Releases"/>
-				<sampler ref="Active"/>
+				<sampler ref="Running"/>
 				<sampler ref="Certificates"/>
 				<sampler ref="AES Files"/>
 			</type>
@@ -54,23 +54,6 @@ You may need to define your own Environment to override the paths to the binary 
 	<samplers>
 		<samplerGroup name="Geneos Cordial">
 			<samplerGroup name="Cordial Status">
-				<sampler name="Active">
-					<var-group>
-						<var ref="SAMPLER_GROUP"/>
-					</var-group>
-					<plugin>
-						<toolkit>
-							<samplerScript>
-								<var ref="GENEOS_EXEC"/>
-								<data> </data>
-								<var ref="GENEOS_CONFIG"/>
-								<data> ps -tl </data>
-								<var ref="GENEOS_HOSTS"/>
-							</samplerScript>
-							<showExecutionDuration>false</showExecutionDuration>
-						</toolkit>
-					</plugin>
-				</sampler>
 				<sampler name="AES Files">
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
@@ -176,6 +159,23 @@ You may need to define your own Environment to override the paths to the binary 
 						</toolkit>
 					</plugin>
 				</sampler>
+				<sampler name="Running">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="GENEOS_EXEC"/>
+								<data> </data>
+								<var ref="GENEOS_CONFIG"/>
+								<data> ps -tl </data>
+								<var ref="GENEOS_HOSTS"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
 			</samplerGroup>
 			<samplerGroup name="Cordial Diagnostics">
 				<sampler name="Open Files">
@@ -252,10 +252,10 @@ You may need to define your own Environment to override the paths to the binary 
 						<priorityGroup>100</priorityGroup>
 					</rule>
 				</default>
-				<ruleGroup name="Active">
+				<ruleGroup name="Running">
 					<rule name="Version Mismatch">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -283,8 +283,8 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 					<rule name="Leaking Files and Sockets">
 						<targets>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
-							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Active&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -672,7 +672,7 @@ You may need to define your own Environment to override the paths to the binary 
 									<transaction>
 										<update>
 											<property>state/@severity</property>
-											<severity>ok</severity>
+											<severity>undefined</severity>
 										</update>
 									</transaction>
 								</if>
