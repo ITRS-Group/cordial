@@ -109,6 +109,8 @@ var queryCmd = &cobra.Command{
 				f := line[col]
 				// escape commas for Toolkit input
 				f = strings.ReplaceAll(f, ",", "\\,")
+				// escape newlines for Toolkit input
+				f = strings.ReplaceAll(f, "\n", "\\n")
 				fields = append(fields, f)
 			}
 			fmt.Println(strings.Join(fields, ","))
