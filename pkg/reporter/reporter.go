@@ -128,7 +128,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 			if a, ok := o.(APIReporterOption); ok {
 				apioptions = append(apioptions, a)
 			} else {
-				panic("wrong option type")
+				panic(fmt.Sprintf("wrong option type: %T", o))
 			}
 		}
 		r, err = newAPIReporter(opts, apioptions...)
@@ -138,7 +138,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 			if x, ok := o.(XLSXReporterOption); ok {
 				xlsxoptions = append(xlsxoptions, x)
 			} else {
-				panic("wrong option type")
+				panic(fmt.Sprintf("wrong option type: %T", o))
 			}
 		}
 		r = newXLSXReporter(w, opts, xlsxoptions...)
@@ -151,7 +151,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 			if f, ok := o.(FormattedReporterOption); ok {
 				fmtoptions = append(fmtoptions, f)
 			} else {
-				panic("wrong option type")
+				panic(fmt.Sprintf("wrong option type: %T", o))
 			}
 		}
 		r = newFormattedReporter(opts, fmtoptions...)
