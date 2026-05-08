@@ -25,6 +25,8 @@
 
   * Fix `geneos init --restore` ordering so that imported signing bundles are merged with restored CA bundles.
 
+  * The output of `ps --toolkit` misformatted listening port with unescaped commas which have now been replced by spaces.
+
 ### Version v1.27.0 Changes
 
 * `tools/geneos`
@@ -36,6 +38,10 @@
   * `ps`/`status` command - Add detection of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
 
   * Add a `--raw`/`-r` option to `aes decode` to output just the decoded value without any prefix or newline if the decoded value is not part of the secret. This is useful for scripting and other automation where you just want the decoded value.
+
+  * The `package list` command now supports an `--instances`/`-I` flag in `toolkit` output mode to show which instances each package is installed on.
+
+  * Update the self-monitoring include file to support recent changes and the take advantage of the new `--instances`/`-I` flag for package listing to show which packages are installed on each instance.
 
 ---
 
