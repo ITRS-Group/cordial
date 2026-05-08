@@ -124,7 +124,7 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if len(fr.columns) == 0 {
 		// init
 		fr.columns = columns
-		fr.table = map[string][]string{}
+		fr.table = make(map[string][]string, len(data))
 	}
 
 	if len(data) == 0 {
