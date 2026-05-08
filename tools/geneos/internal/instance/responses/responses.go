@@ -120,13 +120,14 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 //
 // If any response has a non-nil Err field then it is skipped.
 func (responses Responses) Formatted(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
-	reporterOptions := []any{}
-	writerOptions := []WriterOption{}
+	writerOptions := make([]WriterOption, 0, len(options))
+	reporterOptions := make([]any, 0, len(options))
+
 	for _, o := range options {
-		if ro, ok := o.(WriterOption); !ok {
-			reporterOptions = append(reporterOptions, ro)
-		} else {
+		if ro, ok := o.(WriterOption); ok {
 			writerOptions = append(writerOptions, ro)
+		} else {
+			reporterOptions = append(reporterOptions, o)
 		}
 	}
 
