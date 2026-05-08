@@ -52,10 +52,13 @@ func init() {
 	tlsCmd.AddCommand(createCmd)
 
 	createCmd.Flags().StringVarP(&createCmdDestDir, "dest", "D", ".", "Destination `directory` to write certificate chain and private key to.\nFor bundles use a dash '-' for stdout.")
+	createCmd.Flags().MarkDeprecated("dest", "use --output/-o")
 
-	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. Defaults to hostname except for --signing.\nIgnored for --signing.")
+	createCmd.Flags().StringVarP(&createCmdDestDir, "output", "o", ".", "Write to `directory`. Files have the common name as the basename.\nFor bundles use a dash '-' for stdout.")
 
-	createCmd.Flags().StringVarP(&createCmdSigning, "signing", "S", "", "Create a new signing certificate bundle with `NAME`\nas part of the Common Name, typically the hostname\nof the target machine this will be used on.")
+	createCmd.Flags().StringVarP(&createCmdCN, "cname", "c", "", "Common Name for certificate. `CNAME` defaults to hostname except.\nIgnored for --signing.")
+
+	createCmd.Flags().StringVarP(&createCmdSigning, "signing", "S", "", "Create a new signing certificate bundle using `CNAME` for the Common Name.\nIf written to a directory the file will be called\n\"geneos-signing-certificate-(CNAME).pem\".\nRequires a root certificate (\"rootCA.pem\") and private key (\"rootCA.key\")\nto be present in the user configuration directory.")
 
 	createCmd.Flags().IntVarP(&createCmdExpiry, "expiry", "E", 365, "Certificate expiry duration in `days`. Ignored for --signing")
 

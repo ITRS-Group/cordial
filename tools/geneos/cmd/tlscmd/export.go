@@ -43,6 +43,9 @@ func init() {
 	tlsCmd.AddCommand(exportCmd)
 
 	exportCmd.Flags().StringVarP(&exportCmdOutput, "dest", "D", "", "Output destination, default to stdout")
+	exportCmd.Flags().MarkDeprecated("dest", "use --output/-o")
+
+	exportCmd.Flags().StringVarP(&exportCmdOutput, "output", "o", "", "Output to `FILE`, default to stdout")
 
 	exportCmd.Flags().BoolVarP(&exportCmdNoRoot, "no-root", "N", false, "Do not include the root CA certificate")
 	exportCmd.Flags().MarkDeprecated("no-root", "root CA should always be in the exported bundle")
