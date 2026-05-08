@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 	"github.com/tklauser/go-sysconf"
 )
 
@@ -268,10 +267,8 @@ func processStatus[T any](h host.Host, pid int) (pstats T, err error) {
 }
 
 func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
-	log.Debug().Msgf("getting open files for pid %d", pid)
 	if fv.CanSet() {
 		of := OpenFiles(h, pid)
-		log.Debug().Msgf("pid %d has %d open files", pid, len(of))
 		switch fv.Type().Kind() {
 		case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
 			fv.SetInt(int64(len(of)))
