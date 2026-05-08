@@ -60,22 +60,27 @@ func send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request := map[string]string{}
+	request := make(ims.Values)
+	requestIn := make(ims.Values)
 
-	if err = json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err = json.NewDecoder(r.Body).Decode(&requestIn); err != nil {
 		response.Error = fmt.Sprintf("error decoding request body: %v", err)
 		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "failed"),
-			config.LookupTable(request,
+			config.LookupTable(
+				requestIn,
 				map[string]string{
 					"__error":     response.Error,
 					"__timestamp": response.StartTime.Format(time.RFC3339),
-				}),
+				},
+			),
 			config.TrimSpace(false),
 		)
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
+
+	maps.Copy(request, requestIn)
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(request))) {
@@ -94,17 +99,18 @@ func send(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: `correlation_id` may only be Snow specific
-	if _, ok = request["correlation_id"]; !ok {
-		if len(request[ims.INCIDENT_CORRELATION]) == 0 {
+	if _, ok = requestIn["correlation_id"]; !ok {
+		if len(requestIn[ims.INCIDENT_CORRELATION]) == 0 {
 			response.Error = ims.INCIDENT_CORRELATION + " or correlation_id is required"
 			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 			return
 		}
-		request["correlation_id"] = ims.CorrelationID(request[ims.INCIDENT_CORRELATION])
+		requestIn["correlation_id"] = ims.CorrelationID(requestIn[ims.INCIDENT_CORRELATION])
 	}
 
+	// find any existing request
 	log.Debug().Msgf("search: %s", config.Get[any](sdpCf, sdpCf.Join("requests", "search")))
-	resp, err := c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "search")), config.LookupTable(request))
+	resp, err := c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "search")), config.LookupTable(requestIn))
 	if err != nil {
 		response.Error = fmt.Sprintf("%v", err)
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
@@ -117,10 +123,30 @@ func send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	requestTransformed := maps.Clone(request)
+
+	// apply a transform to fields before using them for lookups in create/update
+	if transform, ok := config.Lookup[ims.Transform](cf, cf.Join("sdp", "requests", "transform")); ok {
+		requestTransformed, err = transform.Apply(cf, "sdp", request)
+		if err != nil {
+			response.Error = fmt.Sprintf("error applying transform: %v", err)
+			response.ResultDetail = config.Expand[string](cf,
+				cf.Join("sdp", "response", "failed"),
+				config.LookupTable(requestTransformed, map[string]string{
+					"__error":     response.Error,
+					"__timestamp": response.StartTime.Format(time.RFC3339),
+				}),
+				config.TrimSpace(false),
+			)
+			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+			return
+		}
+	}
+
 	// create new request if no existing request found with the same
 	// correlation ID and __incident_update_only is not set to true
 	if resp.ListInfo.RowCount == 0 {
-		if request["__incident_update_only"] == "true" {
+		if requestIn["__incident_update_only"] == "true" {
 			response.Error = "no existing request found with the same correlation ID and __incident_update_only is set to true"
 			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 			return
@@ -134,7 +160,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 		log.Info().Msgf("no existing request found, creating new request")
 
-		createResponse, err := c.createRequest(r.Context(), cf.Sub(cf.Join("sdp", "requests", "create")), request)
+		createResponse, err := c.createRequest(r.Context(), cf.Sub(cf.Join("sdp", "requests", "create")), requestTransformed)
 		if err != nil {
 			response.Error = fmt.Sprintf("%v", err)
 			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
@@ -146,7 +172,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		response.Status = http.StatusText(http.StatusOK)
 		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "created"),
-			config.LookupTable(request,
+			config.LookupTable(requestTransformed,
 				map[string]string{
 					"__request_id": config.Get[string](createResponse, "request_id"),
 					"__timestamp":  response.StartTime.Format(time.RFC3339),
@@ -177,7 +203,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	sdpUpdateCf := cf.Sub(cf.Join("sdp", "requests", "update"))
 
-	noteResponse, err := c.addNote(r.Context(), requestID, sdpUpdateCf, request)
+	noteResponse, err := c.addNote(r.Context(), requestID, sdpUpdateCf, requestIn)
 	if err != nil {
 		response.Error = fmt.Sprintf("%v", err)
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
@@ -187,7 +213,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	log.Info().Msgf("existing request found, updating request")
 
-	updateResponse, err := c.editRequest(r.Context(), requestID, sdpUpdateCf, request)
+	updateResponse, err := c.editRequest(r.Context(), requestID, sdpUpdateCf, requestTransformed)
 	if err != nil {
 		response.Error = fmt.Sprintf("%v", err)
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
@@ -199,7 +225,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	response.Status = http.StatusText(http.StatusOK)
 	response.ResultDetail = config.Get[string](cf,
 		cf.Join("sdp", "response", "updated"),
-		config.LookupTable(request,
+		config.LookupTable(requestTransformed,
 			map[string]string{
 				"__request_id": config.Get[string](updateResponse, "request_id"),
 				"__timestamp":  response.StartTime.Format(time.RFC3339),

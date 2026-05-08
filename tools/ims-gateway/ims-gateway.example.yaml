@@ -283,8 +283,8 @@ snow:
             state: 1
           remove: [ watch_list ]
           rename:
-            _body_text: description
-            _subject: short_description
+            __incident_body_text: description
+            __incident_subject: short_description
           must-include: [ short_description, description ]
 
         # current state 1 - is a new incident
@@ -292,7 +292,7 @@ snow:
           defaults:
             state: 2
           rename:
-            _body_text: work_notes
+            __incident_body_text: work_notes
           remove: [ short_description ]
           must-include: [ work_notes ]
 
@@ -301,7 +301,7 @@ snow:
           defaults:
             state: 2
           rename:
-            _body_text: work_notes
+            __incident_body_text: work_notes
           remove: [ short_description ]
 
         # current state 6 - resolved
@@ -310,8 +310,8 @@ snow:
             state: 1
           remove: [ short_description ]
           rename:
-            _subject: short_description
-            _body_text: work_notes
+            __incident_subject: short_description
+            __incident_body_text: work_notes
 
       # the query endpoint is configured below
       query:

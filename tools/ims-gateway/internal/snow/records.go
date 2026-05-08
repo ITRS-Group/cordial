@@ -30,7 +30,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
-	"github.com/itrs-group/cordial/tools/ims-gateway/internal/common"
 )
 
 type result map[string]string
@@ -73,12 +72,12 @@ type TableResponses struct {
 }
 
 type TableData struct {
-	Name          string                   `mapstructure:"name,omitempty"`
-	Search        string                   `mapstructure:"search,omitempty"`
-	Query         TableQuery               `mapstructure:"query,omitempty"`
-	Defaults      map[string]string        `mapstructure:"defaults,omitempty"`
-	CurrentStates map[int]common.Transform `mapstructure:"current-state,omitempty"`
-	Response      TableResponses           `mapstructure:"response,omitempty"`
+	Name          string                `mapstructure:"name,omitempty"`
+	Search        string                `mapstructure:"search,omitempty"`
+	Query         TableQuery            `mapstructure:"query,omitempty"`
+	Defaults      ims.Values            `mapstructure:"defaults,omitempty"`
+	CurrentStates map[int]ims.Transform `mapstructure:"current-state,omitempty"`
+	Response      TableResponses        `mapstructure:"response,omitempty"`
 }
 
 func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOption) (sysID string, state int, err error) {
@@ -257,7 +256,7 @@ func assembleURL(table string, options ...Option) *url.URL {
 func tableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
 	var tables []TableData
 
-	if err = cf.UnmarshalKey(cf.Join("snow", "tables"), &tables); err != nil {
+	if err = cf.UnmarshalKey(cf.Join("snow", "tables"), &tables, config.NoExpand()); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}
