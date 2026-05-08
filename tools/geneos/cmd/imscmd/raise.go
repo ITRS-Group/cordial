@@ -174,7 +174,7 @@ var raiseCmd = &cobra.Command{
 			if raiseCmdTable == "" {
 				var ok bool
 				if raiseCmdTable, ok = incident[ims.SNOW_INCIDENT_TABLE]; !ok {
-					raiseCmdTable = incident[ims.SNOW_INCIDENT_TABLE_DEFAULT]
+					raiseCmdTable = ims.SNOW_INCIDENT_TABLE_DEFAULT
 				}
 			}
 		}
