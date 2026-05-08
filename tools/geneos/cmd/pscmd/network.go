@@ -65,7 +65,8 @@ func psNetworkJSON(i geneos.Instance, pid int) (conns []psInstanceNetwork, err e
 	h := i.Host()
 	name := i.Name()
 
-	pi, err := process.ProcessStatus[*process.ProcessInfo](h, pid)
+	// pi, err := process.ProcessStatus[*process.ProcessInfo](h, pid)
+	pi, err := process.GetProcessInfo(h, pid, false)
 	if err != nil {
 		return
 	}

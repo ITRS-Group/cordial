@@ -84,22 +84,7 @@ func GetGroupname(gid int) (groupname string) {
 	return
 }
 
-// ProcessStatus reads the instance process `stats` and `status` files
-// in /proc and returns values that match the tags in the structure
-// pstats. pstats must be a point to a struct and must be initialised
-// before calling. Use the instance.ProcessStats struct as a useful
-// default.
-func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
-	return processStatus[T](h, pid, true)
-}
-
-// processStatus is the internal implementation of ProcessStatus, with
-// an additional fillCache parameter to control whether to fill fields
-// tagged with `cache:"lazy"` or not. If fillCache is false, then fields
-// tagged with `cache:"lazy"` will be skipped and left as their zero
-// value, and it is the caller's responsibility to call processStatus
-// again with fillCache true to fill those fields when needed.
-func processStatus[T any](h host.Host, pid int, fillCache bool) (pstats T, err error) {
+func processStatus[T any](h host.Host, pid int) (pstats T, err error) {
 	var scClkTck int64
 
 	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
@@ -154,7 +139,7 @@ func processStatus[T any](h host.Host, pid int, fillCache bool) (pstats T, err e
 		ft := st.Field(i)
 		fv := sv.Field(i)
 
-		if lookup, ok := ft.Tag.Lookup("cache"); !fillCache && ok && lookup == "lazy" {
+		if lookup, ok := ft.Tag.Lookup("cache"); ok && lookup == "lazy" {
 			// skip filling this field for now, it will be filled on demand when requested
 			continue
 

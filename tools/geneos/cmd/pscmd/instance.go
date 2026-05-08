@@ -106,7 +106,8 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	}
 
 	if psCmdLong {
-		psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
+		// psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
+		psData.Extra, _ = process.GetProcessInfo(h, pi.PID, false)
 	}
 
 	return psData, nil

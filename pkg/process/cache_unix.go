@@ -80,7 +80,7 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 		}
 
 		var pstatus T
-		if pstatus, err = processStatus[T](h, pid, false); err != nil {
+		if pstatus, err = processStatus[T](h, pid); err != nil {
 			log.Debug().Err(err).Msgf("failed to get process status for pid %d", pid)
 			continue
 		}
