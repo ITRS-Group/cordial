@@ -271,7 +271,7 @@ func AssembleURL(table string, options ...Option) *url.URL {
 func TableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
 	var tables []TableData
 
-	if err = cf.UnmarshalKey("servicenow.tables", &tables); err != nil {
+	if err = cf.UnmarshalKey("servicenow.tables", &tables, config.NoExpand()); err != nil {
 		log.Debug().Err(err).Msg("")
 		return
 	}

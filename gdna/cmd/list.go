@@ -162,7 +162,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 			}
 		}
 
-		if err = cf.UnmarshalKey(config.Join("reports", name), &rep); err != nil {
+		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
 			log.Error().Err(err).Msg("reports configuration format incorrect")
 			return
 		}

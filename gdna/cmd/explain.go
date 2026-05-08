@@ -90,7 +90,7 @@ var explainCmd = &cobra.Command{
 
 		var report Report
 
-		if err = cf.UnmarshalKey(config.Join("reports", name), &report); err != nil {
+		if err = cf.UnmarshalKey(config.Join("reports", name), &report, config.NoExpand()); err != nil {
 			log.Error().Err(err).Msg("reports configuration format incorrect")
 			return
 		}

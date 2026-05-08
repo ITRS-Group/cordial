@@ -52,7 +52,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	}
 
 	// try direct unmarshal, fall back to slice of strings
-	err = dv.UnmarshalKey("columns", &columns)
+	err = dv.UnmarshalKey("columns", &columns, config.NoExpand())
 	if err != nil {
 		// reset columns
 		columns = []Column{}

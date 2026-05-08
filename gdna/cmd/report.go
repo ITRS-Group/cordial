@@ -330,7 +330,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 			break
 		}
 
-		if err = cf.UnmarshalKey(config.Join("reports", name), &rep); err != nil {
+		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
 			log.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", name)
 			continue
 		}

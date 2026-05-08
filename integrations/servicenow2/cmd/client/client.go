@@ -303,7 +303,7 @@ var clientCmd = &cobra.Command{
 			}),
 		)
 
-		if err = cf.UnmarshalKey("defaults", &defaults); err != nil {
+		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range defaults {
@@ -322,7 +322,7 @@ var clientCmd = &cobra.Command{
 			}
 		}
 
-		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups); err != nil {
+		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups, config.NoExpand()); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {

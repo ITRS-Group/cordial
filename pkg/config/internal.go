@@ -776,7 +776,7 @@ func defaultDecoderConfig(output any, options ...ExpandOption) *mapstructure.Dec
 			mapstructure.TextUnmarshallerHookFunc(),
 		),
 	}
-	opts := evalExpandOptions(nil, options...)
+	opts := evalExpandOptions(global, options...)
 	if !opts.noExpand {
 		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
 			ExpandFieldsHook(options...),

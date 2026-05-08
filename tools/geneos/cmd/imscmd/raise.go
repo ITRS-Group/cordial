@@ -123,7 +123,7 @@ var raiseCmd = &cobra.Command{
 		cf := imsLoadConfigFile("ims")
 
 		// load and process defaults
-		if err = cf.UnmarshalKey("defaults", &defaults); err != nil {
+		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 		for _, g := range defaults {
