@@ -19,7 +19,6 @@ package pscmd
 
 import (
 	_ "embed"
-	"encoding/csv"
 	"errors"
 	"fmt"
 	"os"
@@ -97,6 +96,10 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 
 	case psCmdCSV, psCmdToolkit:
 		var columns []string
+		format := "csv"
+		if psCmdToolkit {
+			format = "toolkit"
+		}
 
 		switch {
 		case psCmdShowNet:
@@ -117,11 +120,9 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			}
 		}
 
-		psCSVWriter := csv.NewWriter(os.Stdout)
-		psCSVWriter.Write(columns)
-
 		resp := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
-		resp.Report(psCSVWriter, responses.IgnoreErr(geneos.ErrDisabled))
+
+		headlines := map[string]string{}
 
 		if psCmdToolkit {
 			switch {
@@ -140,12 +141,17 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 						disabled++
 					}
 				}
-				fmt.Printf("<!>instances,%d\n", len(resp))
-				fmt.Printf("<!>running,%d\n", len(resp)-notRunning-disabled)
-				fmt.Printf("<!>notRunning,%d\n", notRunning)
-				fmt.Printf("<!>disabled,%d\n", disabled)
+				headlines = map[string]string{
+					"instances":  fmt.Sprint(len(resp)),
+					"running":    fmt.Sprint(len(resp) - notRunning - disabled),
+					"notRunning": fmt.Sprint(notRunning),
+					"disabled":   fmt.Sprint(disabled),
+				}
 			}
 		}
+		resp.Formatted(os.Stdout, format, columns, nil,
+			responses.IgnoreErr(geneos.ErrDisabled),
+			responses.AddHeadlines(headlines))
 
 	default:
 		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)

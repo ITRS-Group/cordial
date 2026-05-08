@@ -45,6 +45,7 @@ type writeOptions struct {
 	suffix       string // trailing suffix after each response, default "\n"
 	asJSON       bool   // output each value as (unrolled) JSON. false is output using plain Print()
 	indentJSON   bool
+	headlines    map[string]string // optional headlines to include in the output, for formats that support it (toolkit, table, html)
 }
 
 var globalWriteOptions = writeOptions{
@@ -177,5 +178,25 @@ func CompletedOnly() WriterOption {
 func ValueOnly() WriterOption {
 	return func(wo *writeOptions) {
 		wo.outputFields = outputFieldValue
+	}
+}
+
+func AddHeadline(key, value string) WriterOption {
+	return func(wo *writeOptions) {
+		if wo.headlines == nil {
+			wo.headlines = make(map[string]string)
+		}
+		wo.headlines[key] = value
+	}
+}
+
+func AddHeadlines(headlines map[string]string) WriterOption {
+	return func(wo *writeOptions) {
+		if wo.headlines == nil {
+			wo.headlines = make(map[string]string)
+		}
+		for k, v := range headlines {
+			wo.headlines[k] = v
+		}
 	}
 }

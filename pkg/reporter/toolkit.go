@@ -21,6 +21,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"strings"
 )
 
 type ToolkitReporter struct {
@@ -62,6 +63,15 @@ func (t *ToolkitReporter) AddHeadline(name, value string) {
 func (t *ToolkitReporter) UpdateTable(columns []string, data [][]string) {
 	if t.scrambleNames {
 		scrambleColumns(columns, t.scrambleColumns, data)
+	}
+	// escape commas and newlines in the data, as Toolkit CSV format does not support quoting
+	for i, row := range data {
+		for j, cell := range row {
+			// replace commas and newlines with spaces or escaped newlines
+			cell = strings.ReplaceAll(cell, ",", " ")
+			cell = strings.ReplaceAll(cell, "\n", "\\n")
+			data[i][j] = cell
+		}
 	}
 	t.table = append([][]string{columns}, data...)
 }

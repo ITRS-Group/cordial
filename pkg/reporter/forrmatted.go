@@ -201,7 +201,7 @@ func (fr *FormattedReporter) Render() {
 			}
 		}
 
-		// render table
+		// reset for render table
 		fr.t.ResetHeaders()
 		fr.t.ResetRows()
 		if fr.format != "csv" {

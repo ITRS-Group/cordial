@@ -120,7 +120,19 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 //
 // If any response has a non-nil Err field then it is skipped.
 func (responses Responses) Formatted(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
-	r, err := reporter.NewReporter(format, w, options...)
+	reporterOptions := []any{}
+	writerOptions := []WriterOption{}
+	for _, o := range options {
+		if ro, ok := o.(WriterOption); !ok {
+			reporterOptions = append(reporterOptions, ro)
+		} else {
+			writerOptions = append(writerOptions, ro)
+		}
+	}
+
+	opts := evalWriterOptions(writerOptions...)
+
+	r, err := reporter.NewReporter(format, w, reporterOptions...)
 	if err != nil {
 		return err
 	}
@@ -137,12 +149,22 @@ func (responses Responses) Formatted(w io.Writer, format string, headings []stri
 		rows = prequel
 	}
 
+RESPONSES:
 	for _, k := range slices.Sorted(maps.Keys(responses)) {
 		resp := responses[k]
+		for _, i := range opts.ignoreerr {
+			if errors.Is(resp.Err, i) {
+				continue RESPONSES
+			}
+		}
 		if resp.Err != nil {
 			continue
 		}
 		rows = append(rows, resp.Rows...)
+	}
+
+	for name, value := range opts.headlines {
+		r.AddHeadline(name, value)
 	}
 
 	r.UpdateTable(headings, rows)

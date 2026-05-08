@@ -122,8 +122,6 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 	switch format {
 	case "column", "tabwriter":
 		r = newTabWriterReporter(w, opts)
-	case "toolkit":
-		r = newToolkitReporter(w, opts)
 	case "api", "dataview":
 		var apioptions []APIReporterOption
 		for _, o := range options {
@@ -157,6 +155,11 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 			}
 		}
 		r = newFormattedReporter(opts, fmtoptions...)
+
+	case "toolkit":
+		// don't use formatted reporter, as Toolkit CSV format is different to normal CSV, keep it simple
+		r = newToolkitReporter(w, opts)
+
 	default:
 		err = fmt.Errorf("unknown report type %q", format)
 		return
