@@ -275,7 +275,7 @@ var infoCmd = &cobra.Command{
 			if ci.Error != nil {
 				lines = append(lines, []string{
 					strings.TrimSuffix(path.Base(ci.Path), ":443"),
-					ci.Error.Error(),
+					"ERROR: " + ci.Error.Error(),
 				})
 				continue
 			}
