@@ -30,12 +30,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var listCmdJSON, listCmdIndent, listCmdCSV, listCmdToolkit bool
+var listCmdJSON, listCmdIndent, listCmdCSV, listCmdToolkit, listCmdShowInstances bool
 
 func init() {
 	packageCmd.AddCommand(listCmd)
@@ -44,6 +45,7 @@ func init() {
 	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
 	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
 	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
+	listCmd.Flags().BoolVarP(&listCmdShowInstances, "instances", "I", false, "Show instances using each version in toolkit mode, using '#' as a separator")
 
 	listCmd.Flags().SortFlags = false
 }
@@ -150,6 +152,26 @@ var listCmd = &cobra.Command{
 					d.ModTime.Format(time.RFC3339),
 					d.Path,
 				})
+				if listCmdShowInstances {
+					instances := []geneos.Instance{}
+					for _, v := range d.Links {
+						instances = append(instances, instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+v))...)
+					}
+					instances = append(instances, instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.FilterParameters("version="+d.Version))...)
+					for _, i := range instances {
+						w.Write([]string{
+							id + " # " + i.Name(),
+							d.Component,
+							d.Host,
+							d.Version,
+							fmt.Sprintf("%v", d.Latest),
+							"",
+							config.Get[string](i.Config(), "version"),
+							d.ModTime.Format(time.RFC3339),
+							d.Path,
+						})
+					}
+				}
 			}
 			w.Flush()
 		case listCmdCSV:
