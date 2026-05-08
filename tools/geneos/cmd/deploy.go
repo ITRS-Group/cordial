@@ -413,6 +413,9 @@ var deployCmd = &cobra.Command{
 
 		_ = instance.ImportFiles(i, deployCmdImportFiles...)
 
+		// make sure base version link exists
+		geneos.Update(h, ct, geneos.Basename(config.Get[string](cf, "version")))
+
 		fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
 		if deployCmdStart || deployCmdLogs {

@@ -146,7 +146,7 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
 	var wg sync.WaitGroup
 
-	instances := Instances(h, ct, FilterNames(names...))
+	instances := Instances(h, ct, MatchNames(names...))
 	rs = make(responses.Responses, len(instances))
 	ch := make(chan *responses.Response, len(instances))
 
@@ -175,7 +175,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
 	rs = make(responses.Responses)
 
-	instances := Instances(h, ct, FilterNames(names...))
+	instances := Instances(h, ct, MatchNames(names...))
 
 	for _, c := range instances {
 		resp := f(c, values...)
@@ -338,10 +338,11 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 			if v == "" {
 				continue
 			}
-			s := strings.SplitN(v, "=", 2)
-			if len(s) == 2 {
-				params[s[0]] = s[1]
+			k, v, found := strings.Cut(v, "=")
+			if !found {
+				continue
 			}
+			params[k] = v
 		}
 
 		instances = slices.DeleteFunc(instances, func(i geneos.Instance) bool {
@@ -371,13 +372,20 @@ func evalInstanceOptions(options ...InstanceOption) (opts *instanceOptions) {
 	return
 }
 
-func FilterNames(names ...string) InstanceOption {
+// MatchNames returns an InstanceOption that filters instances based on
+// matching names. The names should be in the form [TYPE:]NAME[@HOST] and
+// are ORed together. If a name is not in that form it is ignored.
+func MatchNames(names ...string) InstanceOption {
 	return func(io *instanceOptions) {
 		io.names = names
 	}
 }
 
-func FilterParameters(parameters ...string) InstanceOption {
+// MatchParameters returns an InstanceOption that filters instances
+// based on matching config parameters. The parameters should be in the
+// form "key=value" and are ANDed together. If a parameter is not in
+// that form it is ignored.
+func MatchParameters(parameters ...string) InstanceOption {
 	return func(io *instanceOptions) {
 		io.parameters = parameters
 	}

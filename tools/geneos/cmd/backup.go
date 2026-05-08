@@ -198,7 +198,7 @@ geneos backup all
 				archive += "-" + ct.String()
 			}
 
-			instances := instance.Instances(h, ct, instance.FilterNames(names...))
+			instances := instance.Instances(h, ct, instance.MatchNames(names...))
 			switch len(instances) {
 			case 0:
 				return fmt.Errorf("no matching instances found")

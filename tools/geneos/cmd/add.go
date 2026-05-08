@@ -271,6 +271,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 
 	_ = instance.ImportFiles(i, addCmdImportFiles...)
 
+	// make sure base version link exists
+	geneos.Update(h, ct, geneos.Basename(config.Get[string](cf, "version")))
+
 	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
 	if addCmdStart || addCmdLogs {

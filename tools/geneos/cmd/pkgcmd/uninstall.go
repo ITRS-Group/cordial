@@ -37,11 +37,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+var uninstallCmdBase string
 var uninstallCmdVersion string
 var uninstallCmdAll, uninstallCmdForce, uninstallCmdKeep, uninstallCmdUpdate bool
 
 func init() {
 	packageCmd.AddCommand(uninstallCmd)
+
+	uninstallCmd.Flags().StringVarP(&uninstallCmdBase, "base", "b", "active_prod", "Remove the base link `BASE` for matching TYPEs if no instances reference it.\nThis overrides other options below.")
 
 	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall `VERSION`")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
@@ -62,7 +65,7 @@ var uninstallCmd = &cobra.Command{
 	Aliases: []string{"delete", "remove", "rm"},
 	Example: strings.ReplaceAll(`
 geneos uninstall netprobe
-geneos uninstall --version 5.14.1
+geneos uninstall --version 7.4.2
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -75,6 +78,32 @@ geneos uninstall --version 5.14.1
 			return err
 		}
 		h := geneos.GetHost(cmd.Hostname)
+
+		if uninstallCmdBase != "" {
+			for h := range h.OrList() {
+				for ct := range ct.OrList() {
+					instances := instance.Instances(h, ct, instance.MatchParameters("version="+uninstallCmdBase))
+					if len(instances) > 0 {
+						fmt.Printf("skipping %q on %s as it has %d instances referencing base link %q\n", ct, h, len(instances), uninstallCmdBase)
+						continue
+					}
+
+					// otherwise remove the base link if it exists
+					baseLink := h.PathTo("packages", ct.String(), uninstallCmdBase)
+
+					if err = h.Remove(baseLink); err != nil && !errors.Is(err, fs.ErrNotExist) {
+						log.Error().Err(err).Msgf("cannot remove base link %q", baseLink)
+						continue
+					}
+					if err == nil {
+						fmt.Printf("removed %q on %q base link %q\n", ct, h, uninstallCmdBase)
+					}
+				}
+			}
+
+			err = nil
+			return
+		}
 
 		// allow version to be the first arg unless the flag is given
 		version := uninstallCmdVersion

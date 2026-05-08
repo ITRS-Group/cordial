@@ -293,7 +293,7 @@ geneos install netprobe -b active_dev -U
 			return Install(h, ct, options...)
 		}
 
-		if len(instance.Instances(h, ct, instance.FilterParameters("protected=true", "version="+installCmdBase))) > 0 && installCmdUpdate && !installCmdForce {
+		if len(instance.Instances(h, ct, instance.MatchParameters("protected=true", "version="+installCmdBase))) > 0 && installCmdUpdate && !installCmdForce {
 			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
 			return
 		}
