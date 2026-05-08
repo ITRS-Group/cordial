@@ -90,6 +90,9 @@ func HTMLPostscript(postscript string) FormattedReporterOption {
 	}
 }
 
+// OrderByColumns sets the column indices to order the table by, in
+// order of precedence. The default is to order by the first column
+// only.
 func OrderByColumns(cols ...int) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.orderbycolumns = cols
