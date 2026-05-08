@@ -38,7 +38,7 @@ const (
 	SNOW_CMDB_CI_DEFAULT = "__snow_cmdb_ci_default"
 	SNOW_CMDB_SEARCH     = "__snow_cmdb_search"
 	SNOW_CMDB_TABLE      = "__snow_cmdb_table"
-	SNOW_INCIDENT_TABLE  = "__snow_incident_table"
+	SNOW_INCIDENT_TABLE  = "__snow_table"
 )
 
 // snowResult is the response from ServiceNow. It contains the results
