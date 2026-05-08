@@ -27,6 +27,8 @@ geneos package uninstall [flags] [TYPE] [VERSION]
 ### Options
 
 ```text
+  -b, --base BASE         Remove the base link BASE for matching TYPEs if no instances reference it.
+                          This overrides other options below. (default "active_prod")
   -V, --version VERSION   Uninstall VERSION
   -A, --all               Uninstall all releases, stopping and disabling running instances
   -k, --keep              Keep cached downloads
@@ -41,7 +43,7 @@ geneos package uninstall [flags] [TYPE] [VERSION]
 
 ```bash
 geneos uninstall netprobe
-geneos uninstall --version 5.14.1
+geneos uninstall --version 7.4.2
 
 ```
 

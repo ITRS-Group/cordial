@@ -29,13 +29,15 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -D, --dest directory     Destination directory to write certificate chain and private key to.
+  -o, --output directory   Write to directory. Files have the common name as the basename.
                            For bundles use a dash '-' for stdout. (default ".")
-  -c, --cname string       Common Name for certificate. Defaults to hostname except for --signing.
+  -c, --cname CNAME        Common Name for certificate. CNAME defaults to hostname except.
                            Ignored for --signing.
-  -S, --signing NAME       Create a new signing certificate bundle with NAME
-                           as part of the Common Name, typically the hostname
-                           of the target machine this will be used on.
+  -S, --signing CNAME      Create a new signing certificate bundle using CNAME for the Common Name.
+                           If written to a directory the file will be called
+                           "geneos-signing-certificate-(CNAME).pem".
+                           Requires a root certificate ("rootCA.pem") and private key ("rootCA.key")
+                           to be present in the user configuration directory.
   -E, --expiry days        Certificate expiry duration in days. Ignored for --signing (default 365)
   -F, --force              Runs "tls init" (but do not replace existing root and signing)
                            and overwrite any existing file in the 'out' directory

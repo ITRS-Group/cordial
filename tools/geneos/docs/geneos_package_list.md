@@ -19,6 +19,7 @@ geneos package list [flags] [TYPE]
   -i, --pretty          Output indented JSON
   -c, --csv             Output CSV
   -t, --toolkit         Output Toolkit formatted CSV
+  -I, --instances       Show instances using each version in toolkit mode, using '#' as a separator
       --allow-root      allow running as root (not recommended)
   -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
