@@ -19,17 +19,17 @@ package cmd
 
 import (
 	_ "embed"
-	"encoding/csv"
 	"fmt"
 	"os"
 	"path"
-	"text/tabwriter"
+
+	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
-	"github.com/spf13/cobra"
 )
 
 type listCmdType struct {
@@ -84,10 +84,21 @@ var listCmd = &cobra.Command{
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Report(os.Stdout, responses.IndentJSON(listCmdIndent))
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
-			listCSVWriter := csv.NewWriter(os.Stdout)
-			listCSVWriter.Write([]string{
+			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			headlines := make(map[string]string)
+			headlines["totalInstances"] = fmt.Sprintf("%d", len(resp))
+			for _, ct := range geneos.RealComponents() {
+				var count int
+				for _, r := range resp {
+					if r.Instance.Type() == ct {
+						count++
+					}
+				}
+				headlines[ct.String()] = fmt.Sprintf("%d", count)
+			}
+			resp.Formatted(os.Stdout, "toolkit", []string{
 				"ID",
 				"type",
 				"name",
@@ -100,22 +111,10 @@ var listCmd = &cobra.Command{
 				"port",
 				"version",
 				"home",
-			})
-			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
-			resp.Report(listCSVWriter)
-			fmt.Printf("<!>instances,%d\n", len(resp))
-			for _, ct := range geneos.RealComponents() {
-				var count int
-				for _, r := range resp {
-					if r.Instance.Type() == ct {
-						count++
-					}
-				}
-				fmt.Printf("<!>%ss,%d\n", ct, count)
-			}
+			}, nil, responses.AddHeadlines(headlines), reporter.OrderByColumns(0))
 		case listCmdCSV:
-			listCSVWriter := csv.NewWriter(os.Stdout)
-			listCSVWriter.Write([]string{
+			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp.Formatted(os.Stdout, "csv", []string{
 				"Type",
 				"Name",
 				"Host",
@@ -127,12 +126,20 @@ var listCmd = &cobra.Command{
 				"Port",
 				"Version",
 				"Home",
-			})
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV).Report(listCSVWriter)
+			},
+				nil,
+				reporter.OrderByColumns(0, 1, 2),
+			)
 		default:
-			listTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
-			fmt.Fprintf(listTabWriter, "Type\tName\tHost\tFlags\tPort\tVersion\tHome\n")
-			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Report(listTabWriter)
+			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
+				"Type",
+				"Name",
+				"Host",
+				"Flags",
+				"Port",
+				"Version",
+				"Home",
+			}, nil, reporter.OrderByColumns(0, 1, 2))
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -170,7 +177,15 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%s:%s\t%s", i.Type(), i.Name(), i.Host(), flags, config.Get[uint16](i.Config(), "port"), base, underlying, i.Home())
+	resp.Rows = append(resp.Rows, []string{
+		i.Type().String(),
+		i.Name(),
+		i.Host().String(),
+		flags,
+		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
+		fmt.Sprintf("%s:%s", base, underlying),
+		i.Home(),
+	})
 	return
 }
 
