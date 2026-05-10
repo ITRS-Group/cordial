@@ -43,20 +43,24 @@ import (
 type Responses map[string]*Response
 
 // Response is a consolidated set of responses from commands
+//
+// TODO: Cleanup, fields are misused and overlap
 type Response struct {
 	Instance  geneos.Instance
 	Summary   string     // single line response
 	Details   []string   // multiple lines of output
 	Completed []string   // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
 	Value     any        // arbitrary value (typically for JSON output)
+	Values    []any      // arbitrary values (typically for JSON output), which are merged into a single slice when merging responses
 	Rows      [][]string // rows of values (for CSV)
-	Start     time.Time
-	Finish    time.Time
-	Err       error
+
+	Start  time.Time
+	Finish time.Time
+	Err    error
 }
 
-// NewResponse returns a pointer to an initialised Response structure,
-// using instance i. The Start time is set to time.Now().
+// NewResponse returns a new Response structure for instance i. The
+// Start time is set to time.Now().
 func NewResponse(i geneos.Instance) *Response {
 	return &Response{
 		Instance: i,
@@ -73,7 +77,8 @@ func NewResponse(i geneos.Instance) *Response {
 // joined using errors.Join()
 //
 // This should only be used where a sequence of actions are being
-// performed and a single response is expected.
+// performed and a single response per instance is expected. It should
+// not be used across different instances.
 func MergeResponse(r1, r2 *Response) (resp *Response) {
 	resp = NewResponse(r1.Instance)
 	resp.Completed = append(r1.Completed, r2.Completed...)
@@ -112,13 +117,17 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 	return
 }
 
-// Formatted outputs the responses as a report in the specified format to
-// writer w. headings are the column headings to use. prequel is any
+// Formatted outputs the responses as a report in the specified format
+// to writer w. headings are the column headings to use. prequel is any
 // rows to add before the response rows.
 //
 // options are any reporter.ReporterOptions to control the output.
 //
 // If any response has a non-nil Err field then it is skipped.
+//
+// The response struct field used is Rows for table rows and headlines
+// should be passed in as a responses.ReporterOption with
+// responses.AddHeadlines()
 func (responses Responses) Formatted(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
 	writerOptions := make([]WriterOption, 0, len(options))
 	reporterOptions := make([]any, 0, len(options))
@@ -132,6 +141,12 @@ func (responses Responses) Formatted(w io.Writer, format string, headings []stri
 	}
 
 	opts := evalWriterOptions(writerOptions...)
+
+	// special case "json"
+	if format == "json" {
+		responses.Report(w, writerOptions...)
+		return nil
+	}
 
 	r, err := reporter.NewReporter(format, w, reporterOptions...)
 	if err != nil {
@@ -463,16 +478,6 @@ func (resp Response) Report(writer any, options ...WriterOption) {
 			fmt.Fprintf(opts.stderr, opts.timesformat, resp.Instance, s)
 		}
 	}
-}
-
-// WriteHTML will structure the responses in a way that can be displayed
-// well in an HTML container. Currently does nothing.
-func (responses Responses) WriteHTML(writer any, options ...WriterOption) {
-	if len(responses) == 0 {
-		return
-	}
-	// opts := evalWriterOptions(options...)
-
 }
 
 // joinNatural joins words with commas except the last pair, which are
