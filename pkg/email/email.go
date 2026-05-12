@@ -207,11 +207,11 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	var eusername, smtpserver string
 
 	if cf != nil {
-		eusername = config.Get[string](cf, "email.username")
-		smtpserver = config.Get[string](cf, "email.smtp")
+		eusername = config.Get[string](cf, cf.Join("email", "username"))
+		smtpserver = config.Get[string](cf, cf.Join("email", "smtp"))
 
 		if eusername != "" {
-			epassword = config.Get[*config.Secret](cf, "email.password")
+			epassword = config.Get[*config.Secret](cf, cf.Join("email", "password"))
 		}
 
 		if eusername == "" {
@@ -227,14 +227,14 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	em.Default("_smtp_password", epassword.String())
 	em.Default("_smtp_server", smtpserver)
 	if cf != nil {
-		em.Default("_smtp_tls", config.Get[string](cf, "email.use-tls"))
-		em.Default("_smtp_tls_insecure", config.Get[bool](cf, "email.tls-skip-verify"))
-		em.Default("_smtp_port", config.Get[int](cf, "email.port"))
-		em.Default("_from", config.Get[string](cf, "email.from"))
-		em.Default("_to", config.Get[string](cf, "email.to"))
-		em.Default("_cc", config.Get[string](cf, "email.cc"))
-		em.Default("_bcc", config.Get[string](cf, "email.bcc"))
-		em.Default("_subject", config.Get[string](cf, "email.subject"))
+		em.Default("_smtp_tls", config.Get[string](cf, cf.Join("email", "use-tls")))
+		em.Default("_smtp_tls_insecure", config.Get[bool](cf, cf.Join("email", "tls-skip-verify")))
+		em.Default("_smtp_port", config.Get[int](cf, cf.Join("email", "port")))
+		em.Default("_from", config.Get[string](cf, cf.Join("email", "from")))
+		em.Default("_to", config.Get[string](cf, cf.Join("email", "to")))
+		em.Default("_cc", config.Get[string](cf, cf.Join("email", "cc")))
+		em.Default("_bcc", config.Get[string](cf, cf.Join("email", "bcc")))
+		em.Default("_subject", config.Get[string](cf, cf.Join("email", "subject")))
 	}
 
 	for _, e := range os.Environ() {

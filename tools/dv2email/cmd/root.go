@@ -60,10 +60,11 @@ func init() {
 	Cmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIBLEPATH set in environment")
 
 	Cmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
-	Cmd.Flags().StringVarP(&toArg, "to", "t", "", "To as comma-separated emails")
-	Cmd.Flags().StringVarP(&ccArg, "cc", "c", "", "Cc as comma-separated emails")
-	Cmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "Bcc as comma-separated emails")
-	Cmd.Flags().StringVarP(&subjectArg, "subject", "s", "", "Subject of the email")
+
+	Cmd.Flags().StringVarP(&toArg, "to", "t", "", "`\"TO, ...\"` recipients as a comma-separated list of email addresses")
+	Cmd.Flags().StringVarP(&ccArg, "cc", "c", "", "`\"CC, ...\"` recipients as a comma-separated list of email addresses")
+	Cmd.Flags().StringVarP(&bccArg, "bcc", "b", "", "`\"BCC, ...\"` recipients as a comma-separated list of email addresses")
+	Cmd.Flags().StringVarP(&subjectArg, "subject", "s", "", "`\"SUBJECT\"` of the email")
 
 	Cmd.Flags().SortFlags = false
 }
@@ -158,7 +159,7 @@ var Cmd = &cobra.Command{
 			return
 		}
 
-		switch config.Get[string](cf, "email.split") {
+		switch config.Get[string](cf, cf.Join("email", "split")) {
 		case "entity":
 			entities := map[string][]*commands.Dataview{}
 			for _, d := range data.Dataviews {

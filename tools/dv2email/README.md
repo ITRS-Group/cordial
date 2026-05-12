@@ -25,8 +25,8 @@ Local files can be any combination of the above, except `text+html`, which is an
 
 You have to enable the REST Command API in your Gateways. You should have a user account on the Gateways that support password authentication and is limited to `data` permissions, i.e. a read-only account. How to do this can be found in the following documentation:
 
-* [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_commands_tr.html#REST_Service)
-* [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/6.3.0/Gateway_Reference_Guide/geneos_authentication_tr.html)
+* [REST Service 🔗](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_commands_tr/index.html#rest-service)
+* [Authentication 🔗](https://docs.itrsgroup.com/docs/geneos/current/security/access-controls/geneos_authentication_tr/index.html)
 
 For the examples in this documentation we will use the `readonly` account name, but you can use any valid Genoes user name.
 
@@ -70,8 +70,15 @@ gateway:
 email:
   smtp: smtp.example.com
   port: 465
+  # default values, overridden by environment variables (`_TO`, etc.)
+  # when running from a Gateway Action or Effect, or by command line
+  # values - see below
   from: geneos@example.com
   to: alerts@example.com
+  cc: cc@example.com
+  bcc: bcc@example.com
+  subject: Geneos Alert
+
   contents: [ text+html, images, xlsx ]
 
 files: [ xlsx ]
@@ -99,12 +106,12 @@ You should now be able to test your configuration. You can do this by simulating
 
 ```bash
 $ cd $(geneos home MyGateway)
-$ _VARIABLEPATH='//dataview[(@name="SOMEDATAVIEWNAME")]' dv2email export
+$ _VARIABLEPATH='//dataview[(@name="DATAVIEWNAME")]' dv2email export
 written dataviews-20231123112233.txt
 written dataviews-20231123112233.xlsx
 ```
 
-> ❕ Replace `SOMEDATAVIEWNAME` above with the name of a Dataview on your Gateway that is likely to match exactly one Dataview. If it matches more than one Dataview then `dv2email` will fetch and process each one.
+> ❕ Replace `DATAVIEWNAME` above with the name of a Dataview on your Gateway that is likely to match exactly one Dataview. If it matches more than one Dataview then `dv2email` will fetch and process each one.
 
 You should see a list of file(s) written, or appropriate errors if there were problems connecting to the Gateway or locating the desired dataview. You should address any errors and try again before moving on to the next test.
 
@@ -135,10 +142,21 @@ While there are some command line flags, you will not need to use them in normal
 
 ## How It Works
 
-The program has been designed to primarily run from a Geneos Gateway Action or Effect and work with the environment variables that the Gateway sets when running an Action from a Rule or an Effect from an Alert. The full list of environment variables and their values differ slightly based on which trigger is used and also the data item that the Action or Effect is run against. Full details are documented here:
+The program has been designed to primarily run from a Geneos Gateway Action or Effect and work with the environment variables that the Gateway sets when running an Action from a Rule or an Effect from an Alert.
 
-* [`Actions` 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Action_Configuration)
-* [`Effects` 🔗](https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/geneos_rulesactionsalerts_tr.html#Alerting-Effects)
+To control the source, destinations and subject of the email `dv2email` looks for the following environment variables, which are normally set by Geneos when running from an Alert and Effect:
+
+| Environment Variable | Description                                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `_TO`                | The email address(es) to send to, as comma-separated values, also a command line flag `--to`               |
+| `_CC`                | The email address(es) to send a copy to, as comma-separated values, also a command line flag `--cc`        |
+| `_BCC`               | The email address(es) to send a blind copy to, as comma-separated values, also a command line flag `--bcc` |
+| `_FROM`              | The email address to send from                                                                             |
+| `_SUBJECT`           | The subject of the email, also a command line flag `--subject`                                             |
+
+Note that the `_FROM` address is the *envelope* sender and is not directly related to the username of the authentication used for connecting to the SMTP server.
+
+If any of these are set on the command line they override environment variables, which in turn override the configuration file settings.
 
 The primary difference for `dv2email` is that when running from an `Alert` and `Effect` some of the email headers are automatically set based on the Notification set-up. `dv2email` will recognise these and process them as expected. For `Actions` the `To`, `From`, `Subject` items must be set. You can define defaults in the configuration files and override them using `userdata` functions in the Rule, e.g. (in the Geneos configuration):
 
@@ -150,6 +168,11 @@ if value < 1 then
 else
 ...
 ```
+
+The full list of environment variables and their values differ slightly based on which trigger is used and also the data item that the Action or Effect is run against. Full details are documented here:
+
+* [`Actions` 🔗](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#action-configuration)
+* [`Effects` 🔗](https://docs.itrsgroup.com/docs/geneos/7.9.0/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html#variables-passed-to-effect)
 
 The contents of the email are assembled from the two templates (text and HTML), any image attachments and a dynamically created XLSX file.
 
