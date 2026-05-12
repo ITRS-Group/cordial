@@ -21,12 +21,15 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"maps"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
+	"github.com/rs/zerolog/log"
 )
 
 // FormattedReporter implements a Reporter that outputs in various formatted
@@ -49,15 +52,14 @@ type FormattedReporter struct {
 	headlines     map[string]string
 	headlinestyle table.Style
 
-	columns         []string
-	tableOrder      []string
-	table           map[string][]string
-	tablestyle      table.Style
-	htmlpreamble    string
-	htmlpostscript  string
-	orderbycolumns  []int
-	options         []FormattedReporterOption
-	scrambleColumns []string
+	columns          []string
+	rowsBytableOrder map[string][][]string
+	tablestyle       table.Style
+	htmlpreamble     string
+	htmlpostscript   string
+	orderbycolumns   []int
+	options          []FormattedReporterOption
+	scrambleColumns  []string
 }
 
 // ensure that *FormattedReporter is a Reporter
@@ -111,20 +113,32 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 	return nil
 }
 
+// AddHeadline adds a headline to the reporter. The order of headlines
+// is preserved, and the headlines are rendered in the order they were
+// added.
 func (fr *FormattedReporter) AddHeadline(name, value string) {
-	if len(fr.headlineOrder) == 0 {
-		// init map
+	if fr.headlines == nil {
 		fr.headlines = map[string]string{}
 	}
 	fr.headlineOrder = append(fr.headlineOrder, name)
 	fr.headlines[name] = value
 }
 
+// AddHeadlines adds multiple headlines to the reporter. The order of
+// headlines is NOT preserved.
+func (fr *FormattedReporter) AddHeadlines(headlines map[string]string) {
+	if fr.headlines == nil {
+		fr.headlines = maps.Clone(headlines)
+		return
+	}
+	maps.Copy(fr.headlines, headlines)
+}
+
 func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if len(fr.columns) == 0 {
 		// init
 		fr.columns = columns
-		fr.table = make(map[string][]string, len(data))
+		fr.rowsBytableOrder = make(map[string][][]string, len(data))
 	}
 
 	if len(data) == 0 {
@@ -133,19 +147,33 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if fr.scrambleNames {
 		scrambleColumns(columns, fr.scrambleColumns, data)
 	}
+	orderColumns := []int{}
+	if len(fr.orderbycolumns) == 0 {
+		log.Debug().Msgf("no orderbycolumns specified, defaulting to all columns in order")
+		for i := range columns {
+			orderColumns = append(orderColumns, i)
+		}
+	} else {
+		log.Debug().Msgf("orderbycolumns specified: %v", fr.orderbycolumns)
+		for _, c := range fr.orderbycolumns {
+			if c < len(columns) {
+				orderColumns = append(orderColumns, c)
+			}
+		}
+	}
+
 	for _, row := range data {
 		order := ""
-		for _, c := range fr.orderbycolumns {
+		for _, c := range orderColumns {
 			if c < len(row) {
 				order += row[c] + "\000"
 			}
 		}
-		fr.tableOrder = append(fr.tableOrder, order)
-		fr.table[order] = row
+		fr.rowsBytableOrder[order] = append(fr.rowsBytableOrder[order], row)
 	}
 }
 
-func (fr *FormattedReporter) Remove(report Report) (err error) {
+func (fr *FormattedReporter) Reset(report Report) (err error) {
 	// do nothing
 	return
 }
@@ -220,12 +248,15 @@ func (fr *FormattedReporter) Render() {
 		headings = append(headings, h)
 	}
 	fr.t.AppendHeader(headings)
-	for _, rn := range fr.tableOrder {
-		row := table.Row{}
-		for cn := range fr.columns {
-			row = append(row, fr.table[rn][cn])
+	// sort by order of rows (which can be grouped) and then by order of columns
+	for _, rn := range slices.Sorted(maps.Keys(fr.rowsBytableOrder)) {
+		for _, r := range fr.rowsBytableOrder[rn] {
+			row := table.Row{}
+			for cn := range fr.columns {
+				row = append(row, r[cn])
+			}
+			fr.t.AppendRow(row)
 		}
-		fr.t.AppendRow(row)
 	}
 	fr.t.SetStyle(fr.tablestyle)
 	if fr.t.Length() > 0 || fr.z != nil {

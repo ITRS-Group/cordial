@@ -20,6 +20,7 @@ package reporter
 import (
 	"fmt"
 	"io"
+	"maps"
 	"path"
 	"regexp"
 	"slices"
@@ -233,7 +234,11 @@ func (x *XLSXReporter) Prepare(report Report) (err error) {
 	return
 }
 
-func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
+// UpdateTable takes a table of data in the form of a slice of slices of
+// strings and writes them to the configured XLSXReporter. The first
+// slice must be the column names. UpdateTable replaces all existing data
+// in the sheet.
+func (x *XLSXReporter) UpdateTable(columns []string, rows [][]string) {
 	sheet := x.sheets[x.currentSheet]
 	if sheet == nil {
 		return
@@ -244,15 +249,15 @@ func (x *XLSXReporter) UpdateTable(columns []string, data [][]string) {
 		sheet.columnWidths = append(sheet.columnWidths, limitWidth(len(c), x.minColWidth, x.maxColWidth))
 	}
 
-	if len(data) == 0 {
+	if len(rows) == 0 {
 		return
 	}
 
 	if x.scrambleNames {
-		scrambleColumns(columns, sheet.scrambleColumns, data)
+		scrambleColumns(columns, sheet.scrambleColumns, rows)
 	}
 
-	for _, cellsString := range data {
+	for _, cellsString := range rows {
 		sheet.rows[cellsString[0]] = cellsString
 		sheet.rowOrder = append(sheet.rowOrder, cellsString[0])
 
@@ -427,20 +432,41 @@ func logicalWrapper(logic string) string {
 	}
 }
 
-func (x *XLSXReporter) Remove(report Report) (err error) {
+func (x *XLSXReporter) Reset(report Report) (err error) {
 	// do nothing, yet
 	return
 }
 
+// AddHeadline adds a headline to the reporter. The order of headlines
+// is preserved, and the headlines are rendered in the order they were
+// added.
 func (x *XLSXReporter) AddHeadline(name, value string) {
-	sheet := x.sheets[x.currentSheet]
+	sheet, ok := x.sheets[x.currentSheet]
+	if !ok {
+		return
+	}
 
-	if len(sheet.headlineOrder) == 0 {
+	if sheet.headlines == nil {
 		sheet.headlines = make(map[string]string)
 	}
 
 	sheet.headlineOrder = append(sheet.headlineOrder, name)
 	sheet.headlines[name] = value
+}
+
+// AddHeadlines adds multiple headlines to the reporter. The order of
+// headlines is NOT preserved.
+func (x *XLSXReporter) AddHeadlines(headlines map[string]string) {
+	sheet, ok := x.sheets[x.currentSheet]
+	if !ok {
+		return
+	}
+
+	if sheet.headlines == nil {
+		sheet.headlines = maps.Clone(headlines)
+		return
+	}
+	maps.Copy(sheet.headlines, headlines)
 }
 
 func (x *XLSXReporter) Render() {

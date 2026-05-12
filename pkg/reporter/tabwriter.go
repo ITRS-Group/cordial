@@ -55,28 +55,20 @@ func (t *TabWriterReporter) AddHeadline(name, value string) {
 	// No-op for tabwriter
 }
 
-// UpdateTable sets the headings and rows for the table.
-//
-// It quotes fields as necessary.
-func (t *TabWriterReporter) UpdateTable(headings []string, rows [][]string) {
-	if len(headings) > 0 {
-		t.Columns = []string{}
-		for _, h := range headings {
-			t.Columns = append(t.Columns, tabWriterCheckAndQuote(h))
-		}
-	}
-	t.rows = [][]string{}
-	for _, row := range rows {
-		var quotedRow []string
-		for _, field := range row {
-			quotedRow = append(quotedRow, tabWriterCheckAndQuote(field))
-		}
-		t.rows = append(t.rows, quotedRow)
-	}
+func (t *TabWriterReporter) AddHeadlines(headlines map[string]string) {
+	// No-op for tabwriter
 }
 
-// Remove is a no-op for TabWriterReporter.
-func (t *TabWriterReporter) Remove(report Report) error {
+// UpdateTable sets the main data table to the rows given. The first row
+// must be the column names. It overwrites any existing table data. Data
+// is output as-is and no quoting takes place
+func (t *TabWriterReporter) UpdateTable(columns []string, rows [][]string) {
+	t.Columns = columns
+	t.rows = rows
+}
+
+// Reset is a no-op for TabWriterReporter.
+func (t *TabWriterReporter) Reset(report Report) error {
 	return nil
 }
 

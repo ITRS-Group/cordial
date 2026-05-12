@@ -34,11 +34,14 @@ type Reporter interface {
 	// AddHeadline adds a single headline to the current report dataview / sheet etc.
 	AddHeadline(name, value string)
 
-	// UpdateTable sets the main data table to the rows given. The first row must be the column names.
-	UpdateTable(headings []string, rows [][]string)
+	// AddHeadlines adds multiple headlines to the current report dataview / sheet etc.
+	AddHeadlines(headlines map[string]string)
 
-	// Remove deletes an existing report, e.g. an existing Dataview from a previous run
-	Remove(report Report) error
+	// UpdateTable sets the main data table to the rows given. The first row must be the column names.
+	UpdateTable(columns []string, rows [][]string)
+
+	// Reset deletes an existing report, e.g. an existing Dataview from a previous run
+	Reset(report Report) error
 
 	// Render writes the current report to the destination selected with Prepare()
 	Render()

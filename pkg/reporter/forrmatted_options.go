@@ -38,7 +38,7 @@ func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedRep
 		renderas:         "table",
 		dvcssclass:       "table",
 		headlinecssclass: "headlines",
-		orderbycolumns:   []int{0},
+		// orderbycolumns:   []int{0},
 	}
 	for _, opt := range options {
 		opt(fro)

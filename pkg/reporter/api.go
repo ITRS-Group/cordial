@@ -141,13 +141,13 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 // strings and writes them to the configured APIReporter. The first
 // slice must be the column names. UpdateTable replaces all existing data
 // in the Dataview.
-func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
-	if a.maxrows > 0 && len(data) > a.maxrows {
-		data = data[:a.maxrows+1]
+func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
+	if a.maxrows > 0 && len(rows) > a.maxrows {
+		rows = rows[:a.maxrows+1]
 	}
 
 	if a.scrambleNames {
-		scrambleColumns(columns, a.scrambleColumns, data)
+		scrambleColumns(columns, a.scrambleColumns, rows)
 	}
 
 	// check if columns have changed
@@ -170,20 +170,26 @@ func (a *APIReporter) UpdateTable(columns []string, data [][]string) {
 			return
 		}
 	}
-	if err := a.dv.UpdateTable(columns, data...); err != nil {
+	if err := a.dv.UpdateTable(columns, rows...); err != nil {
 		log.Error().Err(err).Msg("")
 	}
 }
 
 func (a *APIReporter) AddHeadline(name, value string) {
 	if a.dv != nil {
-		start := time.Now()
 		a.dv.Headline(name, value)
-		log.Debug().Dur("duration", time.Since(start)).Msgf("added headline %s", name)
 	}
 }
 
-func (a *APIReporter) Remove(report Report) error {
+func (a *APIReporter) AddHeadlines(headlines map[string]string) {
+	if a.dv != nil {
+		for name, value := range headlines {
+			a.dv.Headline(name, value)
+		}
+	}
+}
+
+func (a *APIReporter) Reset(report Report) error {
 	if a == nil || a.conn == nil {
 		return nil
 	}

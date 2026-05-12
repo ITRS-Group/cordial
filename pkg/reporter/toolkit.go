@@ -21,6 +21,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
+	"maps"
 	"strings"
 )
 
@@ -54,29 +55,35 @@ func (t *ToolkitReporter) Prepare(report Report) error {
 	return nil
 }
 
-// AddHeadline writes a Geneos Toolkit formatted headline to the
-// reporter.
+// AddHeadline adds a headline to the reporter.
 func (t *ToolkitReporter) AddHeadline(name, value string) {
 	t.headlines[name] = value
 }
 
-func (t *ToolkitReporter) UpdateTable(columns []string, data [][]string) {
+// AddHeadlines adds multiple headlines to the reporter.
+func (t *ToolkitReporter) AddHeadlines(headlines map[string]string) {
+	maps.Copy(t.headlines, headlines)
+}
+
+// UpdateTable sets the main data table to the rows given. The first row
+// must be the column names. It overwrites any existing table data.
+func (t *ToolkitReporter) UpdateTable(columns []string, rows [][]string) {
 	if t.scrambleNames {
-		scrambleColumns(columns, t.scrambleColumns, data)
+		scrambleColumns(columns, t.scrambleColumns, rows)
 	}
 	// escape commas and newlines in the data, as Toolkit CSV format does not support quoting
-	for i, row := range data {
+	for i, row := range rows {
 		for j, cell := range row {
 			// replace commas and newlines with spaces or escaped newlines
 			cell = strings.ReplaceAll(cell, ",", " ")
 			cell = strings.ReplaceAll(cell, "\n", "\\n")
-			data[i][j] = cell
+			rows[i][j] = cell
 		}
 	}
-	t.table = append([][]string{columns}, data...)
+	t.table = append([][]string{columns}, rows...)
 }
 
-func (t *ToolkitReporter) Remove(report Report) (err error) {
+func (t *ToolkitReporter) Reset(report Report) (err error) {
 	// do nothing
 	return
 }

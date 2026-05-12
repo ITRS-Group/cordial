@@ -74,7 +74,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 				rep := reporter.Report{}
 				rep.Title = title
 				rep.Dataview.Group = group
-				r.Remove(rep)
+				r.Reset(rep)
 			}
 			return err
 		}
@@ -90,7 +90,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 				rep := reporter.Report{}
 				rep.Title = title
 				rep.Dataview.Group = group
-				r.Remove(rep)
+				r.Reset(rep)
 			}
 			return err
 		}
@@ -129,7 +129,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 					rep := reporter.Report{}
 					rep.Title = title
 					rep.Dataview.Group = group
-					r.Remove(rep)
+					r.Reset(rep)
 				}
 			}
 			rows.Close()
