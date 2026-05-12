@@ -40,32 +40,111 @@ import (
 // Responses is a collection of command responses, the key is typically
 // an instance name (from i.String()) but can be any other label that is
 // suitable in the circumstances.
-type Responses map[string]*Response
+type Responses map[string]*General
 
-// Response is a consolidated set of responses from commands
+// General is a consolidated set of responses from commands
 //
 // TODO: Cleanup, fields are misused and overlap
-type Response struct {
-	Instance  geneos.Instance
-	Summary   string     // single line response
-	Details   []string   // multiple lines of output
-	Completed []string   // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
-	Value     any        // arbitrary value (typically for JSON output)
-	Values    []any      // arbitrary values (typically for JSON output), which are merged into a single slice when merging responses
-	Rows      [][]string // rows of values (for CSV)
+type General struct {
+	Instance   geneos.Instance
+	Duration   time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
+	ResultText []string      // free format text output, typically for human consumption
+	Completed  []string      // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
+	Err        error         // error from command, if any
+	Value      any           // arbitrary value (typically for JSON output)
+	Values     []any         // arbitrary values (typically for JSON output), which are merged into a single slice when merging responses
+	Dataview   *Dataview     // dataview for reporting, each should have same columns
+	start      time.Time     // start time of opertation, set by NewResponse() and can be overridden when merging responses
+}
 
-	Start  time.Time
-	Finish time.Time
-	Err    error
+type Table struct {
+	Instance geneos.Instance
+	Duration time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
+	Err      error
+	Dataview *Dataview
+	start    time.Time
+}
+
+type Text struct {
+	Instance   geneos.Instance
+	Duration   time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
+	Err        error
+	ResultText []string
+	Completed  []string
+	start      time.Time
+}
+
+type Response interface {
+	General | Table | Text
+}
+
+// Dataview is a simple struct to hold the data for a dataview, which
+// can then be passed to the reporter as a single value for JSON output,
+// or converted to rows for CSV output. The Columns field is the column
+// headings, and the Table field is the rows of data. The Headlines
+// field is a map of headline name to value, which can be used to add
+// headlines to the report.
+type Dataview struct {
+	Columns   []string
+	Table     [][]string
+	Headlines map[string]string
+}
+
+func SetFinish[R Response](resp *R) {
+	switch any(*resp).(type) {
+	case General:
+		r := any(*resp).(General)
+		r.Duration = time.Since(r.start)
+		*resp = any(r).(R)
+	case Table:
+		r := any(*resp).(Table)
+		r.Duration = time.Since(r.start)
+		*resp = any(r).(R)
+	case Text:
+		r := any(*resp).(Text)
+		r.Duration = time.Since(r.start)
+		*resp = any(r).(R)
+	default:
+		log.Fatal().Msgf("unsupported response type %T", resp)
+	}
 }
 
 // NewResponse returns a new Response structure for instance i. The
 // Start time is set to time.Now().
-func NewResponse(i geneos.Instance) *Response {
-	return &Response{
+func NewResponse(i geneos.Instance) *General {
+	return &General{
 		Instance: i,
-		Start:    time.Now(),
+		start:    time.Now(),
+		Dataview: &Dataview{},
 	}
+}
+
+func New[R Response](i geneos.Instance) *R {
+	var resp *R
+	switch any(resp).(type) {
+	case *General:
+		resp = any(&General{
+			Instance: i,
+			start:    time.Now(),
+			Dataview: &Dataview{},
+		}).(*R)
+	case *Table:
+		resp = any(&Table{
+			Instance: i,
+			start:    time.Now(),
+			Dataview: &Dataview{},
+		}).(*R)
+	case *Text:
+		resp = any(&Text{
+			Instance:   i,
+			start:      time.Now(),
+			ResultText: []string{},
+			Completed:  []string{},
+		}).(*R)
+	default:
+		log.Fatal().Msgf("unsupported response type %T", resp)
+	}
+	return any(resp).(*R)
 }
 
 // MergeResponse merges r1 and r2 and returns a single response pointer.
@@ -79,21 +158,18 @@ func NewResponse(i geneos.Instance) *Response {
 // This should only be used where a sequence of actions are being
 // performed and a single response per instance is expected. It should
 // not be used across different instances.
-func MergeResponse(r1, r2 *Response) (resp *Response) {
+func MergeResponse(r1, r2 *General) (resp *General) {
 	resp = NewResponse(r1.Instance)
 	resp.Completed = append(r1.Completed, r2.Completed...)
-	resp.Rows = append(r1.Rows, r2.Rows...)
+	resp.Dataview.Table = append(r1.Dataview.Table, r2.Dataview.Table...)
 	resp.Err = errors.Join(r1.Err, r2.Err)
 
-	resp.Start = r1.Start
-	if resp.Start.IsZero() {
-		resp.Start = r2.Start
+	resp.start = r1.start
+	if resp.start.IsZero() {
+		resp.start = r2.start
 	}
 
-	resp.Finish = r2.Finish
-	if resp.Finish.IsZero() {
-		resp.Finish = r1.Finish
-	}
+	resp.Duration = r1.Duration + r2.Duration
 
 	switch {
 	case r1.Value == nil:
@@ -104,16 +180,18 @@ func MergeResponse(r1, r2 *Response) (resp *Response) {
 		resp.Value = r1.Value
 	}
 
-	switch {
-	case r1.Summary != "" && r2.Summary != "":
-		resp.Details = append(resp.Details, r1.Summary, r2.Summary)
-	case r1.Summary != "":
-		resp.Summary = r1.Summary
-	case r2.Summary != "":
-		resp.Summary = r2.Summary
-	}
+	resp.Values = append(r1.Values, r2.Values...)
 
-	r1.Details = append(r1.Details, r2.Details...)
+	// switch {
+	// case r1.Summary != "" && r2.Summary != "":
+	// 	resp.Details = append(resp.Details, r1.Summary, r2.Summary)
+	// case r1.Summary != "":
+	// 	resp.Summary = r1.Summary
+	// case r2.Summary != "":
+	// 	resp.Summary = r2.Summary
+	// }
+
+	r1.ResultText = append(r1.ResultText, r2.ResultText...)
 	return
 }
 
@@ -142,9 +220,33 @@ func (responses Responses) Formatted(w io.Writer, format string, headings []stri
 
 	opts := evalWriterOptions(writerOptions...)
 
-	// special case "json"
+	// special case "json", merge multiple Values and Value into a single slice and output
 	if format == "json" {
-		responses.Report(w, writerOptions...)
+		var data []any
+		j := json.NewEncoder(w)
+		j.SetEscapeHTML(false)
+		if opts.indentJSON {
+			j.SetIndent("", "    ")
+		}
+		for _, k := range slices.Sorted(maps.Keys(responses)) {
+			resp := responses[k]
+			for _, i := range opts.ignoreerr {
+				if errors.Is(resp.Err, i) {
+					continue
+				}
+			}
+			if resp.Err != nil {
+				continue
+			}
+			if resp.Value != nil {
+				data = append(data, resp.Value)
+			}
+			if len(resp.Values) > 0 {
+				data = append(data, resp.Values...)
+			}
+		}
+
+		j.Encode(data)
 		return nil
 	}
 
@@ -176,12 +278,14 @@ RESPONSES:
 		if resp.Err != nil {
 			continue
 		}
-		rows = append(rows, resp.Rows...)
+		rows = append(rows, resp.Dataview.Table...)
 	}
 
-	for name, value := range opts.headlines {
-		r.AddHeadline(name, value)
-	}
+	// for name, value := range opts.headlines {
+	// 	r.AddHeadline(name, value)
+	// }
+
+	r.AddHeadlines(opts.headlines)
 
 	r.UpdateTable(headings, rows)
 	r.Render()
@@ -242,20 +346,35 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 
 		switch w := writer.(type) {
 		case *reporter.TabWriterReporter:
-			rows = append(rows, resp.Rows...)
+			rows = append(rows, resp.Dataview.Table...)
 		case *tabwriter.Writer:
-			if resp.Summary != "" {
-				fmt.Fprintf(w, "%s\n", resp.Summary)
-			}
-			for _, line := range resp.Details {
+			// if resp.Summary != "" {
+			// 	fmt.Fprintf(w, "%s\n", resp.Summary)
+			// }
+			for _, line := range resp.ResultText {
 				if line != "" {
 					fmt.Fprintf(w, "%s\n", line)
 				}
 			}
 		case *csv.Writer:
-			w.WriteAll(resp.Rows) // WriteAll calls Flush()
+			w.WriteAll(resp.Dataview.Table)
+			// w.WriteAll(resp.Rows) // WriteAll calls Flush()
 		case io.Writer:
-			// json from values, a bit painful - fix later
+			// json from values, a bit painful - fix later if Values is
+			// not nil then format - but no merging, yet. Use Formatted
+			// instead.
+			if len(resp.Values) > 0 {
+				var b bytes.Buffer
+				j := json.NewEncoder(&b)
+				j.SetEscapeHTML(false)
+				if opts.indentJSON {
+					j.SetIndent("    ", "    ")
+				}
+				j.Encode(resp.Values)
+				b.WriteTo(w)
+				continue
+			}
+
 			// only support for an array of "Values", which is unrolled
 			if resp.Value != nil && (opts.outputFields == 0 || opts.outputFields&outputFieldValue != 0) {
 				if opts.asJSON {
@@ -311,21 +430,14 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 				}
 			}
 
-			// string(s) - append a newline unless one is present
-			if resp.Summary != "" && (opts.outputFields == 0 || opts.outputFields&outputFieldSummary != 0) {
-				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-				fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
-				fmt.Fprint(w, opts.suffix)
-			}
-
 			if len(resp.Completed) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldCompleted != 0) {
 				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
 				fmt.Fprint(w, joinNatural(resp.Completed...))
 				fmt.Fprint(w, opts.suffix)
 			}
 
-			if len(resp.Details) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0) {
-				for _, s := range resp.Details {
+			if len(resp.ResultText) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0) {
+				for _, s := range resp.ResultText {
 					fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 				}
 			}
@@ -371,7 +483,7 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 			}
 
 			if !errored && !ignored && opts.showtimes {
-				s := r.Finish.Sub(r.Start).Seconds()
+				s := r.Duration.Seconds()
 				fmt.Fprintf(opts.stderr, opts.timesformat, r.Instance, s)
 			}
 		}
@@ -379,7 +491,7 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 }
 
 // Report writes a single response to the writer w given the options.
-func (resp Response) Report(writer any, options ...WriterOption) {
+func (resp General) Report(writer any, options ...WriterOption) {
 	opts := evalWriterOptions(options...)
 
 	if resp.Err != nil && opts.skiponerr {
@@ -400,21 +512,23 @@ func (resp Response) Report(writer any, options ...WriterOption) {
 
 	switch w := writer.(type) {
 	case *reporter.TabWriterReporter:
-		w.UpdateTable(w.Columns, resp.Rows)
+		w.UpdateTable(w.Columns, resp.Dataview.Table)
+		// w.UpdateTable(w.Columns, resp.Rows)
 		w.Render()
 		w.Close()
 	case *tabwriter.Writer:
-		if resp.Summary != "" {
-			fmt.Fprintf(w, "%s\n", resp.Summary)
-		}
-		for _, line := range resp.Details {
+		// if resp.Summary != "" {
+		// 	fmt.Fprintf(w, "%s\n", resp.Summary)
+		// }
+		for _, line := range resp.ResultText {
 			if line != "" {
 				fmt.Fprintf(w, "%s\n", line)
 			}
 		}
 		w.Flush()
 	case *csv.Writer:
-		w.WriteAll(resp.Rows) // WriteAll calls Flush()
+		w.WriteAll(resp.Dataview.Table)
+		// w.WriteAll(resp.Rows) // WriteAll calls Flush()
 	case io.Writer:
 		if resp.Value != nil && (opts.outputFields == 0 || opts.outputFields&outputFieldValue != 0) {
 			if opts.asJSON {
@@ -432,11 +546,11 @@ func (resp Response) Report(writer any, options ...WriterOption) {
 		}
 
 		// string(s) - append a newline unless one is present
-		if resp.Summary != "" && (opts.outputFields == 0 || opts.outputFields&outputFieldSummary != 0) {
-			fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-			fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
-			fmt.Fprint(w, opts.suffix)
-		}
+		// if resp.Summary != "" && (opts.outputFields == 0 || opts.outputFields&outputFieldSummary != 0) {
+		// 	fmt.Fprintf(w, opts.prefixformat, resp.Instance)
+		// 	fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
+		// 	fmt.Fprint(w, opts.suffix)
+		// }
 
 		if len(resp.Completed) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldCompleted != 0) {
 			log.Debug().Msgf("writing %d completed actions", len(resp.Completed))
@@ -445,9 +559,9 @@ func (resp Response) Report(writer any, options ...WriterOption) {
 			fmt.Fprint(w, opts.suffix)
 		}
 
-		if len(resp.Details) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0) {
-			log.Debug().Msgf("writing %d detail lines", len(resp.Details))
-			for _, s := range resp.Details {
+		if len(resp.ResultText) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0) {
+			log.Debug().Msgf("writing %d detail lines", len(resp.ResultText))
+			for _, s := range resp.ResultText {
 				log.Debug().Msgf("writing detail line: %s", s)
 				fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 			}
@@ -474,7 +588,7 @@ func (resp Response) Report(writer any, options ...WriterOption) {
 		}
 
 		if !errored && !ignored && opts.showtimes {
-			s := resp.Finish.Sub(resp.Start).Seconds()
+			s := resp.Duration.Seconds()
 			fmt.Fprintf(opts.stderr, opts.timesformat, resp.Instance, s)
 		}
 	}

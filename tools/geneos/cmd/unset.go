@@ -79,7 +79,7 @@ geneos unset san -g Gateway1
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.NewResponse(i)
 
 			cf := i.Config()

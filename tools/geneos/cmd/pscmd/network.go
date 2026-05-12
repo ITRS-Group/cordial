@@ -103,7 +103,7 @@ func psNetworkJSON(i geneos.Instance, pid int) (conns []psInstanceNetwork, err e
 	return
 }
 
-func psNetworkCSV(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psNetworkCSV(i geneos.Instance, pid int, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -128,7 +128,7 @@ func psNetworkCSV(i geneos.Instance, pid int, resp *responses.Response) (err err
 		"",
 		"",
 	)
-	resp.Rows = append(resp.Rows, row)
+	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	for _, fd := range process.OpenFiles(h, pid) {
 		if fd.Conn != nil {
@@ -166,14 +166,14 @@ func psNetworkCSV(i geneos.Instance, pid int, resp *responses.Response) (err err
 				fmt.Sprint(c.TxQueue),
 				fmt.Sprint(c.RxQueue),
 			)
-			resp.Rows = append(resp.Rows, row)
+			resp.Dataview.Table = append(resp.Dataview.Table, row)
 		}
 	}
 
 	return
 }
 
-func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psNetworkTable(i geneos.Instance, pid int, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -200,22 +200,22 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err e
 		if c.RemotePort != 0 {
 			remPort = fmt.Sprint(c.RemotePort)
 		}
-		resp.Details = append(resp.Details,
-			fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
-				ct,
-				name,
-				h,
-				pid,
-				fd.FD,
-				c.Protocol,
-				c.LocalAddr,
-				c.LocalPort,
-				remAddr,
-				remPort,
-				c.Status,
-				c.TxQueue,
-				c.RxQueue,
-			))
+		row := []string{
+			ct.String(),
+			name,
+			h.String(),
+			fmt.Sprint(pid),
+			fmt.Sprint(fd.FD),
+			c.Protocol,
+			c.LocalAddr.String(),
+			fmt.Sprint(c.LocalPort),
+			remAddr,
+			remPort,
+			c.Status,
+			fmt.Sprint(c.TxQueue),
+			fmt.Sprint(c.RxQueue),
+		}
+		resp.Dataview.Table = append(resp.Dataview.Table, row)
 	}
 
 	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
@@ -236,22 +236,22 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.Response) (err e
 			if c.RemotePort != 0 {
 				remPort = fmt.Sprint(c.RemotePort)
 			}
-			resp.Details = append(resp.Details,
-				fmt.Sprintf("%s\t%s\t%s\t%d\t%d\t%s\t%s\t%d\t%s\t%s\t%s\t%d\t%d",
-					ct.String()+"/ca",
-					name,
-					h,
-					pi.PID,
-					fd.FD,
-					c.Protocol,
-					c.LocalAddr,
-					c.LocalPort,
-					remAddr,
-					remPort,
-					c.Status,
-					c.TxQueue,
-					c.RxQueue,
-				))
+			row := []string{
+				ct.String() + "/ca",
+				name,
+				h.String(),
+				fmt.Sprint(capi.PID),
+				fmt.Sprint(fd.FD),
+				c.Protocol,
+				c.LocalAddr.String(),
+				fmt.Sprint(c.LocalPort),
+				remAddr,
+				remPort,
+				c.Status,
+				fmt.Sprint(c.TxQueue),
+				fmt.Sprint(c.RxQueue),
+			}
+			resp.Dataview.Table = append(resp.Dataview.Table, row)
 		}
 	}
 

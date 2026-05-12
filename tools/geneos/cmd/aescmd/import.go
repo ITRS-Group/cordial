@@ -24,6 +24,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var importCmdKeyfileSource string
@@ -31,7 +32,7 @@ var importCmdKeyfileSource string
 func init() {
 	aesCmd.AddCommand(importCmd)
 
-	importCmdKeyfileSource = string(cmd.DefaultUserKeyfile)
+	importCmdKeyfileSource = string(geneos.DefaultUserKeyfile)
 
 	importCmd.Flags().StringVarP(&importCmdKeyfileSource, "keyfile", "k", "", "`PATH` to key file. Use a dash (`-`) to be prompted for the contents of the key file on the console")
 

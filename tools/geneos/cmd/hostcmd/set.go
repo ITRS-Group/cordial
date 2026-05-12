@@ -90,7 +90,7 @@ var setCmd = &cobra.Command{
 		}
 
 		if setCmdKeyfile == "" {
-			setCmdKeyfile = cmd.DefaultUserKeyfile
+			setCmdKeyfile = geneos.DefaultUserKeyfile
 		}
 
 		// check for passwords

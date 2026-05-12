@@ -75,8 +75,8 @@ var startCmd = &cobra.Command{
 				fmt.Printf("no instances using port %d found\n", startCmdPort)
 				return
 			}
-			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
-				resp = responses.NewResponse(i)
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
+				resp = responses.New[responses.General](i)
 				resp.Err = instance.Start(i,
 					instance.StartingExtras(startCmdExtras),
 					instance.StartingEnvs(startCmdEnvs),
@@ -104,8 +104,8 @@ var startCmd = &cobra.Command{
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
 func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.Response) {
-		resp = responses.NewResponse(i)
+	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		resp = responses.New[responses.General](i)
 		if instance.IsAutoStart(i) || autostart {
 			resp.Err = instance.Start(i,
 				instance.StartingExtras(startCmdExtras),

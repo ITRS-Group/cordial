@@ -71,7 +71,7 @@ var stopCmd = &cobra.Command{
 				fmt.Printf("no instances using port %d found\n", stopCmdPort)
 				return
 			}
-			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
 				resp = responses.NewResponse(i)
 				resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 				return
@@ -86,7 +86,7 @@ var stopCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.NewResponse(i)
 			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 			return

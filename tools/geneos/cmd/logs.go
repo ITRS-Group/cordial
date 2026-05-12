@@ -158,7 +158,7 @@ func outHeaderString(i geneos.Instance, path string) (lines []string) {
 	return
 }
 
-func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
@@ -167,7 +167,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Details = lines
+		resp.ResultText = lines
 	}
 
 	if !logCmdNoNormal {
@@ -176,7 +176,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Details = append(resp.Details, lines...)
+		resp.ResultText = append(resp.ResultText, lines...)
 	}
 
 	if logCmdCALog && i.Type().IsA("netprobe") {
@@ -185,7 +185,7 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Details = append(resp.Details, lines...)
+		resp.ResultText = append(resp.ResultText, lines...)
 	}
 
 	return
@@ -340,11 +340,11 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 	return
 }
 
-func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
-		if resp.Details, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
+		if resp.ResultText, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
 			return
 		}
 	}
@@ -354,7 +354,7 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Details = append(resp.Details, lines...)
+		resp.ResultText = append(resp.ResultText, lines...)
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
 		lines, err := logCatInstanceFile(i, instance.PathTo(i, "calogfile"))
@@ -362,7 +362,7 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
 			resp.Err = err
 			return
 		}
-		resp.Details = append(resp.Details, lines...)
+		resp.ResultText = append(resp.ResultText, lines...)
 	}
 	return
 }
@@ -385,7 +385,7 @@ func logCatInstanceFile(i geneos.Instance, logfile string) (lines []string, err 
 // add local logs to a watcher list
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
-func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {

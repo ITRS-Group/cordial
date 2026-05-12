@@ -20,11 +20,13 @@ package instance
 import (
 	"encoding/hex"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -75,6 +77,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	var secrets []string
 
 	cf := i.Config()
+	ct := i.Type()
 
 	// only bother with keyfile if we need it later?
 	if len(set.SecureEnvs) > 0 || len(set.SecureParams) > 0 {
@@ -83,7 +86,26 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 		}
 
 		if k == "" {
-			return fmt.Errorf("%s: no keyfile", i)
+			if slices.Contains(geneos.UsesKeyFiles(), ct) {
+				if err = CreateAESKeyFile(i); err != nil {
+					return
+				}
+				k = config.KeyFile(config.Get[string](cf, "keyfile"))
+			} else {
+				// try user keyfile or create for components that don't use key files
+				crc, created, err := geneos.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
+				if err != nil {
+					return err
+				}
+
+				if created {
+					fmt.Printf("%s created, checksum %08X\n", geneos.DefaultUserKeyfile, crc)
+				}
+
+				k = geneos.DefaultUserKeyfile
+			}
+
+			// return fmt.Errorf("%s: no keyfile", i)
 		}
 	}
 

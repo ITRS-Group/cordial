@@ -22,13 +22,23 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
+)
+
+// DefaultUserKeyfile is the path to the user's key file as a
+// config.Keyfile type
+var DefaultUserKeyfile = config.KeyFile(
+	config.Path("keyfile",
+		config.AppName(cordial.ExecutableName()),
+		config.Format("aes"),
+		config.SkipWorkingDir(),
+	),
 )
 
 // KeyFilePath returns the absolute path to either the given keyfile or
@@ -197,43 +207,4 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 	}
 	log.Debug().Msgf("keyfile saved to %s on %s", p, h)
 	return
-}
-
-// KeyFileNormalise returns the input in for format "DIR/HEX.aes" where
-// HEX is an 8 hexadecimal digit string in uppercase and DIR is any
-// leading path before the file name. If the input is neither an 8 digit
-// hex string (in upper or lower case) with or without the extension
-// ".aes" (in upper or lower case) then the input is returned unchanged.
-func KeyFileNormalise(in string) (out string) {
-	out = in
-
-	dir, file := path.Split(in)
-	file = strings.ToUpper(file)
-	ext := path.Ext(file) // ext is now in UPPER case
-
-	log.Debug().Msgf("dir=%s file=%s ext=%s", dir, file, ext)
-
-	if ext != "" && ext != ".AES" {
-		return
-	}
-	file = strings.TrimSuffix(file, ext)
-
-	hex, err := strconv.ParseUint(file, 16, 32)
-	if err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-
-	if fmt.Sprintf("%08X", hex) != file {
-		log.Debug().Msgf("hex and file not the same: %X != %s", hex, file)
-		return
-	}
-
-	if dir == "" {
-		log.Debug().Msgf("returning: %s", file+".aes")
-		return file + ".aes"
-	}
-
-	log.Debug().Msgf("returning: %s/%s", dir, file+".aes")
-	return path.Join(dir, file+".aes")
 }

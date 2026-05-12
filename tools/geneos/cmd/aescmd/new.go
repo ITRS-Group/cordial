@@ -77,7 +77,7 @@ geneos aes new -S gateway
 		kv := config.NewRandomKeyValues()
 
 		if newCmdSaveUser {
-			newCmdKeyfile = cmd.DefaultUserKeyfile
+			newCmdKeyfile = geneos.DefaultUserKeyfile
 		}
 
 		if newCmdKeyfile != "" {
@@ -133,7 +133,7 @@ geneos aes new -S gateway
 	},
 }
 
-func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -151,11 +151,11 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Respon
 		return
 	}
 
-	resp.Summary = fmt.Sprintf("keyfile written to %q", keyfile)
+	resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile written to %q", keyfile))
 	return
 }
 
-func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.Response) {
+func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
@@ -180,9 +180,9 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.
 	instance.RollAESKeyFile(i, kv, "-prev")
 	pkp := config.Get[string](i.Config(), "prevkeyfile")
 	if pkp != "" {
-		resp.Summary = fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp)
+		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp))
 	} else {
-		resp.Summary = fmt.Sprintf("keyfile %q written\n", keyfile)
+		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %q written\n", keyfile))
 	}
 	return
 }

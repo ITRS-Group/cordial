@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"text/tabwriter"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -31,7 +30,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
-	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -93,7 +91,11 @@ type psCommon struct {
 func CommandPS(ct *geneos.Component, names []string, params []string) {
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Report(os.Stdout, responses.IndentJSON(psCmdIndent))
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
+			responses.IndentJSON(psCmdIndent),
+			responses.IgnoreErr(geneos.ErrDisabled),
+			responses.IgnoreErr(os.ErrProcessDone),
+		)
 
 	case psCmdCSV, psCmdToolkit:
 		var columns []string
@@ -104,9 +106,17 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 
 		switch {
 		case psCmdShowNet:
-			columns = netToolkitColumns
+			if psCmdToolkit {
+				columns = netToolkitColumns
+			} else {
+				columns = netCSVColumns
+			}
 		case psCmdShowFiles:
-			columns = fileToolkitColumns
+			if psCmdToolkit {
+				columns = fileToolkitColumns
+			} else {
+				columns = fileCSVColumns
+			}
 		default:
 			if psCmdToolkit {
 				columns = instanceToolkitColumns
@@ -154,22 +164,25 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		resps.Formatted(os.Stdout, format, columns, nil,
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.AddHeadlines(headlines),
-			reporter.OrderByColumns(0, 1, 2),
 		)
 
 	default:
-		psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
+		var columns []string
+
+		// psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdShowNet {
-			fmt.Fprintln(psTabWriter, netCSVHeader)
+			columns = netCSVColumns
 		} else if psCmdShowFiles {
-			fmt.Fprintln(psTabWriter, fileCSVHeader)
+			columns = fileCSVColumns
 		} else if psCmdLong {
-			fmt.Fprintln(psTabWriter, instanceCSVLongHeader)
+			columns = append(instanceCSVColumns, instanceCSVExtraColumns...)
 		} else {
-			fmt.Fprintln(psTabWriter, instanceCSVHeader)
+			columns = instanceCSVColumns
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Report(psTabWriter, responses.IgnoreErr(geneos.ErrDisabled))
+		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
+
+		// Report(psTabWriter, responses.IgnoreErr(geneos.ErrDisabled))
 	}
 }
 
@@ -198,7 +211,7 @@ func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual,
 	return
 }
 
-func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	h := i.Host()
@@ -225,76 +238,78 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		return
 	}
 
-	resp.Summary = fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
-		ct,
+	row := []string{}
+	row = append(row,
+		ct.String(),
 		name,
-		h,
-		pi.PID,
+		h.String(),
+		fmt.Sprint(pi.PID),
 		pi.ListeningPorts,
 		pi.Username,
 		pi.Groupname,
 		pi.StartTime.Local().Format(time.RFC3339),
-		base,
-		uptodate,
-		actual,
+		fmt.Sprintf("%s%s%s", base, uptodate, actual),
 		i.Home(),
 	)
 
 	if psCmdLong {
-		resp.Summary += fmt.Sprintf("\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+		row = append(row,
 			pi.State,
-			pi.Threads,
-			len(pi.OpenFiles),
-			pi.OpenSockets,
-			float64(pi.VmRSS)/(1024*1024),
-			float64(pi.RssAnon)/(1024*1024),
-			float64(pi.VmHWM)/(1024*1024),
-			pi.Utime.Seconds(),
-			pi.Stime.Seconds(),
-			pi.CUtime.Seconds(),
-			pi.CStime.Seconds(),
+			fmt.Sprint(pi.Threads),
+			fmt.Sprint(len(pi.OpenFiles)),
+			fmt.Sprint(pi.OpenSockets),
+			fmt.Sprintf("%.2f MiB", float64(pi.VmRSS)/(1024*1024)),
+			fmt.Sprintf("%.2f MiB", float64(pi.RssAnon)/(1024*1024)),
+			fmt.Sprintf("%.2f MiB", float64(pi.VmHWM)/(1024*1024)),
+			fmt.Sprintf("%.2f s", pi.Utime.Seconds()),
+			fmt.Sprintf("%.2f s", pi.Stime.Seconds()),
+			fmt.Sprintf("%.2f s", pi.CUtime.Seconds()),
+			fmt.Sprintf("%.2f s", pi.CStime.Seconds()),
 		)
 	}
+
+	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
 		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
-		line := fmt.Sprintf("%s\t%s\t%s\t%d\t%s\t%s\t%s\t%s\t%s%s%s\t%s",
+
+		row := []string{}
+		row = append(row,
 			ct.String()+"/ca",
 			name,
-			h,
-			capi.PID,
+			h.String(),
+			fmt.Sprint(capi.PID),
 			capi.ListeningPorts,
 			capi.Username,
 			capi.Groupname,
 			capi.StartTime.Local().Format(time.RFC3339),
-			base,
-			uptodate,
-			actual,
+			fmt.Sprintf("%s%s%s", base, uptodate, actual),
 			i.Home(),
 		)
+
 		if psCmdLong {
-			line += fmt.Sprintf("\t%s\t%d\t%d\t%d\t%.2f MiB\t%.2f MiB\t%.2f MiB\t%.2f s\t%.2f s\t%.2f s\t%.2f s",
+			row = append(row,
 				capi.State,
-				capi.Threads,
-				len(capi.OpenFiles),
-				capi.OpenSockets,
-				float64(capi.VmRSS)/(1024*1024),
-				float64(capi.RssAnon)/(1024*1024),
-				float64(capi.VmHWM)/(1024*1024),
-				capi.Utime.Seconds(),
-				capi.Stime.Seconds(),
-				capi.CUtime.Seconds(),
-				capi.CStime.Seconds(),
+				fmt.Sprint(capi.Threads),
+				fmt.Sprint(len(capi.OpenFiles)),
+				fmt.Sprint(capi.OpenSockets),
+				fmt.Sprintf("%.2f MiB", float64(capi.VmRSS)/(1024*1024)),
+				fmt.Sprintf("%.2f MiB", float64(capi.RssAnon)/(1024*1024)),
+				fmt.Sprintf("%.2f MiB", float64(capi.VmHWM)/(1024*1024)),
+				fmt.Sprintf("%.2f s", capi.Utime.Seconds()),
+				fmt.Sprintf("%.2f s", capi.Stime.Seconds()),
+				fmt.Sprintf("%.2f s", capi.CUtime.Seconds()),
+				fmt.Sprintf("%.2f s", capi.CStime.Seconds()),
 			)
 		}
-		resp.Details = append(resp.Details, line)
+		resp.Dataview.Table = append(resp.Dataview.Table, row)
 	}
 
 	return
 }
 
-func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	h := i.Host()
@@ -361,7 +376,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		}
 	}
 
-	resp.Rows = append(resp.Rows, row)
+	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
 		row := []string{}
@@ -402,13 +417,13 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 				)
 			}
 		}
-		resp.Rows = append(resp.Rows, row)
+		resp.Dataview.Table = append(resp.Dataview.Table, row)
 	}
 
 	return
 }
 
-func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	pid, err := instance.GetPID(i)
@@ -421,7 +436,9 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		if conns, err := psNetworkJSON(i, pid); err != nil {
 			resp.Err = err
 		} else {
-			resp.Value = conns
+			for _, c := range conns {
+				resp.Values = append(resp.Values, c)
+			}
 		}
 		return
 	}
@@ -430,7 +447,9 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		if files, err := psFilesJSON(i, pid); err != nil {
 			resp.Err = err
 		} else {
-			resp.Value = files
+			for _, f := range files {
+				resp.Values = append(resp.Values, f)
+			}
 		}
 		return
 	}
@@ -438,7 +457,7 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	if psData, err := getInstanceData(i); err != nil {
 		resp.Err = err
 	} else {
-		resp.Value = psData
+		resp.Values = append(resp.Values, psData)
 	}
 	return
 }

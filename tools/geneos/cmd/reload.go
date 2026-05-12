@@ -61,7 +61,7 @@ var reloadCmd = &cobra.Command{
 	},
 }
 
-func ReloadInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func ReloadInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if err := i.Reload(); err == nil {

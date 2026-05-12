@@ -60,7 +60,7 @@ func init() {
 	hostCmd.AddCommand(addCmd)
 
 	addCmdPassword = &config.Secret{}
-	addCmdKeyfile = cmd.DefaultUserKeyfile
+	addCmdKeyfile = geneos.DefaultUserKeyfile
 	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
 	addCmd.Flags().VarP(addCmdPassword, "password", "P", "Password")

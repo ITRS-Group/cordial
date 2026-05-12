@@ -67,7 +67,7 @@ var deleteCmd = &cobra.Command{
 	},
 }
 
-func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if instance.IsProtected(i) && !deleteCmdForce {

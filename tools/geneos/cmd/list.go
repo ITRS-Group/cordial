@@ -26,7 +26,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -111,7 +110,7 @@ var listCmd = &cobra.Command{
 				"port",
 				"version",
 				"home",
-			}, nil, responses.AddHeadlines(headlines), reporter.OrderByColumns(0))
+			}, nil, responses.AddHeadlines(headlines))
 		case listCmdCSV:
 			resp := instance.Do(geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			resp.Formatted(os.Stdout, "csv", []string{
@@ -128,7 +127,6 @@ var listCmd = &cobra.Command{
 				"Home",
 			},
 				nil,
-				reporter.OrderByColumns(0, 1, 2),
 			)
 		default:
 			instance.Do(geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
@@ -139,7 +137,7 @@ var listCmd = &cobra.Command{
 				"Port",
 				"Version",
 				"Home",
-			}, nil, reporter.OrderByColumns(0, 1, 2))
+			}, nil)
 		}
 		if err == os.ErrNotExist {
 			err = nil
@@ -148,7 +146,7 @@ var listCmd = &cobra.Command{
 	},
 }
 
-func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	var flags string
@@ -177,7 +175,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		base = path.Join(pkgtype, base)
 	}
 
-	resp.Rows = append(resp.Rows, []string{
+	resp.Dataview.Table = append(resp.Dataview.Table, []string{
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
@@ -189,7 +187,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.Response) {
 	return
 }
 
-func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	running := "N"
@@ -232,11 +230,11 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
 		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
 		fmt.Sprintf("%s:%s", base, underlying), i.Home(),
 	)
-	resp.Rows = append(resp.Rows, row)
+	resp.Dataview.Table = append(resp.Dataview.Table, row)
 	return
 }
 
-func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	base, underlying, _ := instance.Version(i)

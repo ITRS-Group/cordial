@@ -96,7 +96,7 @@ var migrateCmd = &cobra.Command{
 //
 // Finally, the instance configuration is updated to use the new TLS
 // parameters and old parameters are cleared.
-func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	var truststorePath, keystorePath string
 	var truststorePassword, keystorePassword *config.Secret
 

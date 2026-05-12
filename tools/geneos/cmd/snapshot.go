@@ -113,7 +113,7 @@ var snapshotCmd = &cobra.Command{
 	},
 }
 
-func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {

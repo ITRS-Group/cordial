@@ -127,7 +127,7 @@ var showCmd = &cobra.Command{
 	},
 }
 
-func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 	cf := i.Config()
 
@@ -198,7 +198,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Res
 }
 
 // showInstanceConfig returns a slice of showConfig structs per instance
-func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Response) {
+func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
@@ -266,7 +266,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Respo
 	return
 }
 
-func showInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func showInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	// remove aliases

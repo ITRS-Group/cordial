@@ -150,7 +150,7 @@ geneos tls import /path/to/file.pem
 
 // tlsWriteInstance writes the certificate, key and chain to the instance.
 // It returns a Response indicating success or failure.
-func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 	cf := i.Config()
 
@@ -168,7 +168,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	if resp.Err = instance.WriteCertificateAndKey(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
 		return
 	}
-	resp.Details = append(resp.Details, fmt.Sprintf("%s certificate, trust chain and key written", i))
+	resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s certificate, trust chain and key written", i))
 
 	if err := instance.Write(i); err != nil {
 		return
@@ -182,7 +182,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.Respons
 	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if updated {
-		resp.Details = append(resp.Details, fmt.Sprintf("%s ca-bundle updated", i))
+		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s ca-bundle updated", i))
 	}
 
 	resp.Err = instance.Write(i)

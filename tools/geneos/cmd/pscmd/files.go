@@ -125,7 +125,7 @@ func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error
 	return
 }
 
-func psFilesCSV(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psFilesCSV(i geneos.Instance, pid int, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -156,7 +156,7 @@ func psFilesCSV(i geneos.Instance, pid int, resp *responses.Response) (err error
 		hs.ModTime().Local().Format(time.RFC3339),
 		homedir,
 	)
-	resp.Rows = append(resp.Rows, row)
+	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	for _, fd := range process.OpenFiles(h, pid) {
 		if path.IsAbs(fd.Path) {
@@ -188,15 +188,14 @@ func psFilesCSV(i geneos.Instance, pid int, resp *responses.Response) (err error
 				fd.Stat.ModTime().Local().Format(time.RFC3339),
 				path,
 			)
-			resp.Rows = append(resp.Rows, row)
-
+			resp.Dataview.Table = append(resp.Dataview.Table, row)
 		}
 	}
 
 	return
 }
 
-func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err error) {
+func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
@@ -213,19 +212,32 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 		return
 	}
 	uid, gid := host.GetFileOwner(h, hs)
-	resp.Details = append(resp.Details,
-		fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
-			ct,
-			name,
-			h,
-			pid,
-			hs.Mode().Perm().String(),
-			process.GetUsername(uid),
-			process.GetGroupname(gid),
-			hs.Size(),
-			hs.ModTime().Local().Format(time.RFC3339),
-			homedir,
-		))
+	resp.Dataview.Table = append(resp.Dataview.Table, []string{
+		ct.String(),
+		name,
+		h.String(),
+		fmt.Sprint(pid),
+		"cwd",
+		hs.Mode().Perm().String(),
+		process.GetUsername(uid),
+		process.GetGroupname(gid),
+		fmt.Sprint(hs.Size()),
+		hs.ModTime().Local().Format(time.RFC3339),
+		homedir,
+	})
+	// resp.Details = append(resp.Details,
+	// 	fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
+	// 		ct,
+	// 		name,
+	// 		h,
+	// 		pid,
+	// 		hs.Mode().Perm().String(),
+	// 		process.GetUsername(uid),
+	// 		process.GetGroupname(gid),
+	// 		hs.Size(),
+	// 		hs.ModTime().Local().Format(time.RFC3339),
+	// 		homedir,
+	// 	))
 	for _, fd := range process.OpenFiles(h, pid) {
 		if !path.IsAbs(fd.Path) {
 			continue
@@ -241,21 +253,34 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 		if m&0200 == 0200 {
 			fdPerm += "w"
 		}
-		resp.Details = append(resp.Details,
-			fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
-				ct,
-				name,
-				h,
-				pid,
-				fd.FD,
-				fdPerm,
-				fd.Stat.Mode().Perm(),
-				process.GetUsername(uid),
-				process.GetGroupname(gid),
-				fd.Stat.Size(),
-				fd.Stat.ModTime().Local().Format(time.RFC3339),
-				path,
-			))
+		resp.Dataview.Table = append(resp.Dataview.Table, []string{
+			ct.String(),
+			name,
+			h.String(),
+			fmt.Sprint(pid),
+			fmt.Sprintf("%d:%s", fd.FD, fdPerm),
+			fd.Stat.Mode().Perm().String(),
+			process.GetUsername(uid),
+			process.GetGroupname(gid),
+			fmt.Sprint(fd.Stat.Size()),
+			fd.Stat.ModTime().Local().Format(time.RFC3339),
+			path,
+		})
+		// resp.Details = append(resp.Details,
+		// 	fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
+		// 		ct,
+		// 		name,
+		// 		h,
+		// 		pid,
+		// 		fd.FD,
+		// 		fdPerm,
+		// 		fd.Stat.Mode().Perm(),
+		// 		process.GetUsername(uid),
+		// 		process.GetGroupname(gid),
+		// 		fd.Stat.Size(),
+		// 		fd.Stat.ModTime().Local().Format(time.RFC3339),
+		// 		path,
+		// 	))
 	}
 
 	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
@@ -267,19 +292,32 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 			return err
 		}
 		uid, gid := host.GetFileOwner(h, hs)
-		resp.Details = append(resp.Details,
-			fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
-				ct.String()+"/ca",
-				name,
-				h,
-				capi.PID,
-				hs.Mode().Perm().String(),
-				process.GetUsername(uid),
-				process.GetGroupname(gid),
-				hs.Size(),
-				hs.ModTime().Local().Format(time.RFC3339),
-				homedir,
-			))
+		resp.Dataview.Table = append(resp.Dataview.Table, []string{
+			ct.String() + "/ca",
+			name,
+			h.String(),
+			fmt.Sprint(capi.PID),
+			"cwd",
+			hs.Mode().Perm().String(),
+			process.GetUsername(uid),
+			process.GetGroupname(gid),
+			fmt.Sprint(hs.Size()),
+			hs.ModTime().Local().Format(time.RFC3339),
+			homedir,
+		})
+		// resp.Details = append(resp.Details,
+		// 	fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
+		// 		ct.String()+"/ca",
+		// 		name,
+		// 		h,
+		// 		capi.PID,
+		// 		hs.Mode().Perm().String(),
+		// 		process.GetUsername(uid),
+		// 		process.GetGroupname(gid),
+		// 		hs.Size(),
+		// 		hs.ModTime().Local().Format(time.RFC3339),
+		// 		homedir,
+		// 	))
 		for _, fd := range capi.OpenFiles {
 			if !path.IsAbs(fd.Path) {
 				continue
@@ -295,21 +333,35 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.Response) (err err
 			if m&0200 == 0200 {
 				fdPerm += "w"
 			}
-			resp.Details = append(resp.Details,
-				fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
-					ct.String()+"/ca",
-					name,
-					h,
-					capi.PID,
-					fd.FD,
-					fdPerm,
-					fd.Stat.Mode().Perm(),
-					process.GetUsername(uid),
-					process.GetGroupname(gid),
-					fd.Stat.Size(),
-					fd.Stat.ModTime().Local().Format(time.RFC3339),
-					path,
-				))
+			resp.Dataview.Table = append(resp.Dataview.Table, []string{
+				ct.String() + "/ca",
+				name,
+				h.String(),
+				fmt.Sprint(capi.PID),
+				fmt.Sprintf("%d:%s", fd.FD, fdPerm),
+				fd.Stat.Mode().Perm().String(),
+				process.GetUsername(uid),
+				process.GetGroupname(gid),
+				fmt.Sprint(fd.Stat.Size()),
+				fd.Stat.ModTime().Local().Format(time.RFC3339),
+				path,
+			})
+
+			// resp.Details = append(resp.Details,
+			// 	fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
+			// 		ct.String()+"/ca",
+			// 		name,
+			// 		h,
+			// 		capi.PID,
+			// 		fd.FD,
+			// 		fdPerm,
+			// 		fd.Stat.Mode().Perm(),
+			// 		process.GetUsername(uid),
+			// 		process.GetGroupname(gid),
+			// 		fd.Stat.Size(),
+			// 		fd.Stat.ModTime().Local().Format(time.RFC3339),
+			// 		path,
+			// 	))
 		}
 	}
 

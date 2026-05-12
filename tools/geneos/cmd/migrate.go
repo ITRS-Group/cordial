@@ -70,7 +70,7 @@ var migrateCmd = &cobra.Command{
 	},
 }
 
-func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func migrateInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if resp = instance.Migrate(i); resp.Err != nil {
 		resp.Err = fmt.Errorf("cannot migrate configuration: %w", resp.Err)
 	}

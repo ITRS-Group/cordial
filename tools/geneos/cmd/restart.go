@@ -80,7 +80,7 @@ var restartCmd = &cobra.Command{
 				fmt.Printf("no instances using port %d found\n", restartCmdPort)
 				return
 			}
-			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
 				resp = responses.NewResponse(i)
 				resp.Err = instance.Stop(i, restartCmdForce, false)
 				if resp.Err == nil || restartCmdAll {
@@ -95,7 +95,7 @@ var restartCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.Response) {
+		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.NewResponse(i)
 			resp.Err = instance.Stop(i, restartCmdForce, false)
 			if resp.Err == nil || restartCmdAll {

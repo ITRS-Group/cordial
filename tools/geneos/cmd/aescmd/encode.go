@@ -107,7 +107,7 @@ var encodeCmd = &cobra.Command{
 				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
 
 				if keyfilepath == "" {
-					keyfile = cmd.DefaultUserKeyfile
+					keyfile = geneos.DefaultUserKeyfile
 				} else {
 					if _, err := os.Stat(keyfilepath); err != nil {
 						return err
@@ -115,7 +115,7 @@ var encodeCmd = &cobra.Command{
 
 					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
-						keyfile = cmd.DefaultUserKeyfile
+						keyfile = geneos.DefaultUserKeyfile
 					}
 				}
 
@@ -157,7 +157,7 @@ var encodeCmd = &cobra.Command{
 				}
 			}
 
-			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 				resp = responses.NewResponse(i)
 				if !i.Type().UsesKeyfiles {
 					return
@@ -168,7 +168,7 @@ var encodeCmd = &cobra.Command{
 				var keyfile config.KeyFile
 
 				if keyfilepath == "" {
-					keyfile = cmd.DefaultUserKeyfile
+					keyfile = geneos.DefaultUserKeyfile
 				} else {
 					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
@@ -245,7 +245,7 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.NewResponse(i)
 
 			if len(params) == 0 {

@@ -98,7 +98,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 	// set params only once
 	setCmdValues.Params = params
 
-	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.Response) {
+	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 		resp = responses.NewResponse(i)
 
 		cf := i.Config()

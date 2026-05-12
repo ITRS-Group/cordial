@@ -44,7 +44,7 @@ const (
 // this also creates a new private key
 //
 // skip if certificate exists and is valid
-func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *responses.Response) {
+func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if i == nil || i.Type() == nil {
@@ -56,7 +56,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 	cert, err := ReadLeafCertificate(i)
 	if err == nil {
 		if certs.IsValidLeafCert(cert) {
-			resp.Summary = "certificate already exists and is valid (use the `renew` command to overwrite)"
+			resp.ResultText = append(resp.ResultText, "certificate already exists and is valid (use the `renew` command to overwrite)")
 			return
 		}
 	}
@@ -89,7 +89,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 	}
 
 	resp.Completed = append(resp.Completed, "new certificate and private key created")
-	resp.Details = []string{string(certs.CertificateComments(cert))}
+	resp.ResultText = []string{string(certs.CertificateComments(cert))}
 	return
 }
 

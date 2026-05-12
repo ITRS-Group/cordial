@@ -55,13 +55,13 @@ var passwordCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var secret *config.Secret
 
-		crc, created, err := cmd.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
+		crc, created, err := geneos.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
 		if err != nil {
 			return
 		}
 
 		if created {
-			fmt.Printf("%s created, checksum %08X\n", cmd.DefaultUserKeyfile, crc)
+			fmt.Printf("%s created, checksum %08X\n", geneos.DefaultUserKeyfile, crc)
 		}
 
 		if !passwordCmdString.IsNil() {
@@ -79,7 +79,7 @@ var passwordCmd = &cobra.Command{
 				return
 			}
 		}
-		e, err := cmd.DefaultUserKeyfile.Encode(host.Localhost, secret, true)
+		e, err := geneos.DefaultUserKeyfile.Encode(host.Localhost, secret, true)
 		if err != nil {
 			return err
 		}

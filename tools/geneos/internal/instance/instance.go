@@ -143,12 +143,12 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
 	var wg sync.WaitGroup
 
 	instances := Instances(h, ct, MatchNames(names...))
 	rs = make(responses.Responses, len(instances))
-	ch := make(chan *responses.Response, len(instances))
+	ch := make(chan *responses.General, len(instances))
 
 	for _, c := range instances {
 		wg.Add(1)
@@ -156,7 +156,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 			defer wg.Done()
 
 			resp := f(c, values...)
-			resp.Finish = time.Now()
+			responses.SetFinish(resp)
 			ch <- resp
 		}(c)
 	}
@@ -172,14 +172,14 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 // DoSerial is a variant of Do that executes the function calls
 // serially. This is for use by functions that are not concurrency safe.
-func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
+func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
 	rs = make(responses.Responses)
 
 	instances := Instances(h, ct, MatchNames(names...))
 
 	for _, c := range instances {
 		resp := f(c, values...)
-		resp.Finish = time.Now()
+		responses.SetFinish(resp)
 		rs[resp.Instance.String()] = resp
 	}
 
@@ -190,11 +190,11 @@ func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneo
 // instead of looking them up by host, type and name. This is for use by
 // functions that have already looked up instances and want to call a
 // function on them concurrently.
-func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.Response, values ...any) (rs responses.Responses) {
+func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
 	var wg sync.WaitGroup
 
 	rs = make(responses.Responses, len(instances))
-	ch := make(chan *responses.Response, len(instances))
+	ch := make(chan *responses.General, len(instances))
 
 	for _, c := range instances {
 		wg.Add(1)
@@ -202,7 +202,7 @@ func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *r
 			defer wg.Done()
 
 			resp := f(c, values...)
-			resp.Finish = time.Now()
+			responses.SetFinish(resp)
 			ch <- resp
 		}(c)
 	}

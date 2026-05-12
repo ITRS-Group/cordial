@@ -47,19 +47,19 @@ var cfgFile string
 var Hostname string
 
 // UserKeyFile is the path to the user's key file. It starts as DefaultUserKeyFile but can be changed.
-var UserKeyFile = DefaultUserKeyfile
+var UserKeyFile = geneos.DefaultUserKeyfile
 
 var debug, quiet bool
 
 // DefaultUserKeyfile is the path to the user's key file as a
-// config.Keyfile type
-var DefaultUserKeyfile = config.KeyFile(
-	config.Path("keyfile",
-		config.AppName(cordial.ExecutableName()),
-		config.Format("aes"),
-		config.SkipWorkingDir(),
-	),
-)
+// config.Keyfile type - definition moved to internal/geneos/keyfile.go
+// var DefaultUserKeyfile = config.KeyFile(
+// 	config.Path("keyfile",
+// 		config.AppName(cordial.ExecutableName()),
+// 		config.Format("aes"),
+// 		config.SkipWorkingDir(),
+// 	),
+// )
 
 var GeneosUnsetError = errors.New(strings.ReplaceAll(`Geneos location not set.
 

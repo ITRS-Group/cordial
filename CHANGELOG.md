@@ -29,6 +29,10 @@
 
   * The `add` and `deploy` commands will now ensure that a base link to an installed package is created if it does not already exist
 
+* `tools/dv2email`
+
+  * Add clarifications to documentation and fix links to ITRS docs
+
 ### Version v1.27.0 Changes
 
 * `tools/geneos`

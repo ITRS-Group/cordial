@@ -38,7 +38,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -153,7 +152,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.General{
 					Value: listCertType{
 						cordial.ExecutableName(),
 						geneos.RootCABasename,
@@ -165,7 +164,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 					}}
 			}
 			if signingCert != nil {
-				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.General{
 					Value: listCertType{
 						cordial.ExecutableName(),
 						geneos.SigningCertBasename,
@@ -223,12 +222,14 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
 		var expiringWeek, expiringMonth, invalid int
+
+		// TODO do this with more structured data (use responses.Value?)
 		for _, c := range resp {
 			var t time.Duration
-			if len(c.Rows) == 0 {
+			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Rows[0][4] + "s"); err != nil {
+			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
 				err = nil
 				continue
 			}
@@ -238,7 +239,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			if t < time.Hour*24*7 {
 				expiringWeek++
 			}
-			if c.Rows[0][7] != "true" {
+			if c.Dataview.Table[0][7] != "true" {
 				invalid++
 			}
 		}
@@ -286,7 +287,6 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 				"Valid",
 			},
 			prequel,
-			reporter.OrderByColumns(0, 1, 2),
 		)
 
 	default:
@@ -344,7 +344,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		results := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
-				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.General{
 					Value: listCertLongType{
 						cordial.ExecutableName(),
 						geneos.RootCABasename,
@@ -364,7 +364,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 					}}
 			}
 			if signingCert != nil {
-				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.Response{
+				results[cordial.ExecutableName()+" "+geneos.SigningCertBasename] = &responses.General{
 					Value: listCertLongType{
 						cordial.ExecutableName(),
 						geneos.SigningCertBasename,
@@ -457,10 +457,10 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 		var expiringWeek, expiringMonth, invalid int
 		for _, c := range resp {
 			var t time.Duration
-			if len(c.Rows) == 0 {
+			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Rows[0][4] + "s"); err != nil {
+			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
 				err = nil
 				continue
 			}
@@ -470,7 +470,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			if t < time.Hour*24*7 {
 				expiringWeek++
 			}
-			if c.Rows[0][7] != "true" {
+			if c.Dataview.Table[0][7] != "true" {
 				invalid++
 			}
 		}
@@ -606,7 +606,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 	return
 }
 
-func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
 	resp = responses.NewResponse(i)
 
@@ -642,11 +642,11 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.Response)
 		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
-	resp.Rows = append(resp.Rows, cols)
+	resp.Dataview.Table = append(resp.Dataview.Table, cols)
 	return
 }
 
-func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
 	resp = responses.NewResponse(i)
 
@@ -684,11 +684,11 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Respon
 		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
-	resp.Rows = append(resp.Rows, cols)
+	resp.Dataview.Table = append(resp.Dataview.Table, cols)
 	return
 }
 
-func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
 	resp = responses.NewResponse(i)
 
@@ -743,11 +743,11 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Re
 		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
 	}
 
-	resp.Rows = append(resp.Rows, cols)
+	resp.Dataview.Table = append(resp.Dataview.Table, cols)
 	return
 }
 
-func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Response) {
+func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
 	resp = responses.NewResponse(i)
 

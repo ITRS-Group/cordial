@@ -313,7 +313,7 @@ geneos backup all
 // getInstanceFilePaths returns a list of paths to backup for the
 // instance and returns the results in the string slice pointer in
 // params[0].
-func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Response) {
+func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.General) {
 	var ignoreDirs, ignoreFiles []string
 
 	resp = responses.NewResponse(i)

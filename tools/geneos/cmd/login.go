@@ -27,6 +27,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var loginCmdUsername string
@@ -89,10 +90,10 @@ var loginCmd = &cobra.Command{
 
 		if loginKeyfile == "" {
 			// use default, create if none
-			loginKeyfile = DefaultUserKeyfile
+			loginKeyfile = geneos.DefaultUserKeyfile
 		}
 
-		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, DefaultUserKeyfile)
+		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, geneos.DefaultUserKeyfile)
 
 		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost); err != nil {
 			return err

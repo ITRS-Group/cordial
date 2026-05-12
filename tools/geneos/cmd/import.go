@@ -124,7 +124,7 @@ func ImportFiles(ct *geneos.Component, args []string, params []string) (err erro
 // 'geneos import netprobe example3 scripts/=myscript.sh'
 //
 // local directories are created
-func importInstance(i geneos.Instance, params ...any) (resp *responses.Response) {
+func importInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if len(params) == 0 {
