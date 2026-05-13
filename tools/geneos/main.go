@@ -60,6 +60,9 @@ func init() {
 	// strip any whitespace from the embedded VERSION value as early as
 	// possible
 	cordial.VERSION = strings.TrimSpace(cordial.VERSION)
+
+	// run OS specific start-up code here
+	startUp()
 }
 
 func main() {
