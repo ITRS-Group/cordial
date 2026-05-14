@@ -37,7 +37,7 @@ import (
 )
 
 var addCmdInit, addCmdPrompt bool
-var addCmdPassword *config.Secret
+var addCmdPassword config.Secret
 var addCmdKeyfile config.KeyFile
 var addCmdPrivateKeyfiles PrivateKeyFiles
 
@@ -59,11 +59,12 @@ func (i *PrivateKeyFiles) Type() string {
 func init() {
 	hostCmd.AddCommand(addCmd)
 
-	addCmdPassword = &config.Secret{}
+	addCmdPassword = config.Secret{}
+
 	addCmdKeyfile = geneos.DefaultUserKeyfile
 	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
-	addCmd.Flags().VarP(addCmdPassword, "password", "P", "Password")
+	addCmd.Flags().VarP(&addCmdPassword, "password", "P", "Password")
 	addCmd.Flags().VarP(&addCmdKeyfile, "keyfile", "k", "Keyfile for encryption of stored password")
 	addCmd.Flags().VarP(&addCmdPrivateKeyfiles, "privatekey", "i", "Private key file")
 
@@ -93,7 +94,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var sshurl *url.URL
 		var name string
 		var password string
-		var pw = &config.Secret{}
+		var pw config.Secret
 
 		cf := config.New()
 
@@ -141,11 +142,11 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			if err != nil {
 				return
 			}
-		} else if !addCmdPassword.IsNil() {
+		} else if len(addCmdPassword) > 0 {
 			pw = addCmdPassword
 		}
 
-		if !pw.IsNil() && pw.Size() > 0 {
+		if len(pw) > 0 {
 			var crc uint32
 			var created bool
 			crc, created, err = addCmdKeyfile.ReadOrCreate(host.Localhost)
@@ -194,7 +195,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			host.Hostname(config.Get[string](cf, "hostname")),
 			host.Username(config.Get[string](cf, "username")),
 			host.Port(uint16(config.Get[int](cf, "port"))),
-			host.Password(pw.Enclave),
+			host.Password(pw),
 			host.PrivateKeyFiles(config.Get[[]string](cf, "privatekeys")...),
 		)
 

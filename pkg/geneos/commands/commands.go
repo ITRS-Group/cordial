@@ -93,7 +93,7 @@ type Connection struct {
 	BaseURL            *url.URL
 	AuthType           int
 	Username           string
-	Password           *config.Secret
+	Password           config.Secret
 	SSO                SSOAuth
 	InsecureSkipVerify bool
 	Timeout            time.Duration

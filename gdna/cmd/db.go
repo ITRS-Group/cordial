@@ -950,6 +950,8 @@ func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName
 // Support for http/https/file and plain paths as well as "~/" prefix to
 // mean home directory.
 func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
+	var signedToken string
+
 	source = config.ResolveHome(source)
 	u, err := url.Parse(source)
 	if err != nil {
@@ -958,32 +960,30 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 
 	dbUpdated := config.Get[bool](cf, cf.Join("db", "updated"))
 
-	var signedToken string
-
 	// new authentication, if private key exists.
 	//
 	// first try to parse the value, as it may be embedded PEM,
 	// otherwise try to read it as a file path.
-	if privateKey := config.Get[*config.Secret](cf, cf.Join("gdna", "licd-private-key")); !privateKey.IsNil() {
-		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
+	if privateKey := config.Get[config.Secret](cf, cf.Join("gdna", "licd-private-key")); len(privateKey) > 0 {
+		var signingMethod jwt.SigningMethod
+
+		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
 		if err != nil {
-			privateKeyPath := privateKey.String()
+			privateKeyPath := string(privateKey)
 			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
 				log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
 				return sources, err
 			}
 		}
+		clear(privateKey)
 
-		pkey, err := certs.ParsePrivateKey(pk)
+		pkey, pkeyType, err := certs.ParsePrivateKey(pk)
 		if err != nil {
 			log.Error().Err(err).Msg("parsing private key")
 			return sources, err
 		}
 
-		var signingMethod jwt.SigningMethod
-
-		pkeyType := certs.PrivateKeyType(pk)
 		switch pkeyType {
 		case certs.RSA:
 			signingMethod = jwt.SigningMethodRS256

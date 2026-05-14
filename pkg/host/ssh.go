@@ -35,7 +35,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
 	"github.com/skeema/knownhosts"
@@ -56,7 +55,7 @@ type SSHRemote struct {
 	username    string
 	hostname    string
 	port        uint16
-	password    *memguard.Enclave // cannot use *config.Secret because of import loop
+	password    []byte // cannot use *config.Secret because of import loop
 	keys        []string
 	failed      error
 	lastAttempt time.Time
@@ -95,7 +94,7 @@ func Username(username string) SSHOption {
 	}
 }
 
-func Password(password *memguard.Enclave) SSHOption {
+func Password(password []byte) SSHOption {
 	return func(s *SSHRemote) {
 		s.password = password
 	}
@@ -131,7 +130,7 @@ func (s *SSHRemote) Hostname() string {
 }
 
 // load any/all the known private keys with no passphrase
-func readSSHkeys(passphrase *memguard.Enclave, homedir string, files ...string) (signers []ssh.Signer) {
+func readSSHkeys(passphrase []byte, homedir string, files ...string) (signers []ssh.Signer) {
 	for _, p := range files {
 		key, err := os.ReadFile(p)
 		if err != nil {
@@ -141,12 +140,7 @@ func readSSHkeys(passphrase *memguard.Enclave, homedir string, files ...string) 
 		pperr := &ssh.PassphraseMissingError{}
 		if err != nil && errors.As(err, &pperr) {
 			err = nil
-			pw, err := passphrase.Open()
-			if err != nil {
-				continue
-			}
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, pw.Bytes())
-			pw.Destroy()
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
 
 			if err != nil {
 				continue
@@ -166,7 +160,7 @@ func readSSHkeys(passphrase *memguard.Enclave, homedir string, files ...string) 
 // format of `HOST|IP[:PORT]` where PORT defaults to 22. username is the
 // remote login to use and if empty defaults to the local username as
 // found by [user.Current]
-func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...string) (client *ssh.Client, err error) {
+func sshConnect(dest, username string, password []byte, keyfiles ...string) (client *ssh.Client, err error) {
 	var authmethods []ssh.AuthMethod
 	var homedir string
 
@@ -205,10 +199,8 @@ func sshConnect(dest, username string, password *memguard.Enclave, keyfiles ...s
 	// but not both
 	if signers := readSSHkeys(password, homedir, keyfiles...); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
-	} else if password != nil && password.Size() > 0 {
-		l, _ := password.Open()
-		defer l.Destroy()
-		authmethods = append(authmethods, ssh.Password(l.String()))
+	} else if password != nil && len(password) > 0 {
+		authmethods = append(authmethods, ssh.Password(string(password)))
 	}
 
 	config := &ssh.ClientConfig{

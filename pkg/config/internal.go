@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/maja42/goval"
@@ -608,8 +607,12 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	case time.Duration:
 		v, _ := time.ParseDuration(expand[string](c, c.config.GetString(key), options...))
 		return any(v).(T)
-	case *Secret:
-		return any(&Secret{memguard.NewEnclave(expand[[]byte](c, c.config.GetString(key), options...))}).(T)
+	// case *Secret:
+	// 	s := Secret(expand[[]byte](c, c.config.GetString(key), options...))
+	// 	return any(&s).(T)
+	case Secret:
+		s := Secret(expand[[]byte](c, c.config.GetString(key), options...))
+		return any(s).(T)
 	default:
 		return any(c.config.Get(key)).(T)
 	}

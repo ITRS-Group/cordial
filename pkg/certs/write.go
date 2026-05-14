@@ -32,7 +32,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -170,7 +169,7 @@ func WriteCertificatesTo(w io.Writer, certs ...*x509.Certificate) (n int, err er
 // WriteCertificatesAndKeyTo writes the given certificate and optional
 // private key in PEM format to the provided io.Writer. The total number
 // of bytes written and any error encountered are returned.
-func WriteCertificatesAndKeyTo(w io.Writer, key *memguard.Enclave, certChain ...*x509.Certificate) (n int, err error) {
+func WriteCertificatesAndKeyTo(w io.Writer, key PrivateKey, certChain ...*x509.Certificate) (n int, err error) {
 	var m int
 
 	if key != nil {
@@ -205,11 +204,13 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 	if err != nil {
 		return
 	}
+	defer clear(privateKey)
 
 	root, key, err := CreateCertificate(template, template, privateKey)
 	if err != nil {
 		return
 	}
+	defer clear(key)
 
 	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, root); err != nil {
 		return
@@ -228,7 +229,7 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 // true than any existing cert and key are overwritten.
 //
 // The certificate is returned on success, but the private key is not.
-func WriteNewSigningCert(basefilepath string, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (signing *x509.Certificate, err error) {
+func WriteNewSigningCert(basefilepath string, rootCert *x509.Certificate, rootKey PrivateKey, cn string) (signing *x509.Certificate, err error) {
 	template := Template(cn,
 		Days(5*365),
 		IsCA(),
@@ -242,6 +243,7 @@ func WriteNewSigningCert(basefilepath string, rootCert *x509.Certificate, rootKe
 	if err != nil {
 		return
 	}
+	defer clear(key)
 
 	if err = WriteCertificates(host.Localhost, basefilepath+PEMExtension, signing); err != nil {
 		return
@@ -259,7 +261,7 @@ func WriteNewSigningCert(basefilepath string, rootCert *x509.Certificate, rootKe
 // resulting private key and certificate in PEM format to the provided
 // io.Writer. The total number of bytes written and any error
 // encountered are returned.
-func WriteNewSigningCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *memguard.Enclave, cn string) (n int, err error) {
+func WriteNewSigningCertTo(w io.Writer, rootCert *x509.Certificate, rootKey PrivateKey, cn string) (n int, err error) {
 	template := Template(cn,
 		Days(5*365),
 		IsCA(),
@@ -281,7 +283,7 @@ func WriteNewSigningCertTo(w io.Writer, rootCert *x509.Certificate, rootKey *mem
 // PEM file to path on host h. sets file permissions to 0600 (before
 // umask). Directories in the path are created with 0755 permissions if
 // they do not already exist.
-func WritePrivateKey(h host.Host, keypath string, key *memguard.Enclave) (err error) {
+func WritePrivateKey(h host.Host, keypath string, key PrivateKey) (err error) {
 	var b bytes.Buffer
 	if _, err = WritePrivateKeyTo(&b, key); err != nil {
 		return err
@@ -296,19 +298,19 @@ func WritePrivateKey(h host.Host, keypath string, key *memguard.Enclave) (err er
 // WritePrivateKeyTo writes the given private key in PEM format to
 // the provided io.Writer. The total number of bytes written and any
 // error encountered are returned.
-func WritePrivateKeyTo(w io.Writer, key *memguard.Enclave) (n int, err error) {
+func WritePrivateKeyTo(w io.Writer, key PrivateKey) (n int, err error) {
 	var m int
 
 	if n, err = w.Write(PrivateKeyComments(key)); err != nil {
 		return
 	}
 
-	l, _ := key.Open()
-	defer l.Destroy()
+	// l, _ := key.Open()
+	// defer l.Destroy()
 
 	p := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
-		Bytes: l.Bytes(),
+		Bytes: key,
 	})
 	if m, err = w.Write(p); err != nil {
 		return
@@ -372,8 +374,12 @@ func CertificateComments(cert *x509.Certificate, titles ...string) []byte {
 // the given private key. If titles are provided they are included
 // at the top of the comments, if not a default title of "Private Key"
 // is used.
-func PrivateKeyComments(key *memguard.Enclave, titles ...string) []byte {
+func PrivateKeyComments(key PrivateKey, titles ...string) []byte {
 	output := &bytes.Buffer{}
+	_, keyType, err := ParsePrivateKey(key)
+	if err != nil {
+		log.Debug().Err(err).Msg("parsing private key for comments failed")
+	}
 
 	if len(titles) > 0 {
 		for _, title := range titles {
@@ -383,7 +389,7 @@ func PrivateKeyComments(key *memguard.Enclave, titles ...string) []byte {
 		output.WriteString("# Private Key\n")
 	}
 	output.WriteString("#\n")
-	output.WriteString("#   Key Type: " + string(PrivateKeyType(key)) + "\n#\n")
+	output.WriteString("#   Key Type: " + string(keyType) + "\n#\n")
 
 	return output.Bytes()
 }

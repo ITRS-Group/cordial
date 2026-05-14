@@ -21,8 +21,6 @@ import (
 	"crypto/x509"
 	"strings"
 
-	"github.com/awnumar/memguard"
-
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -100,7 +98,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 // parameters and clear any values in the old style `certificate` and
 // `privatekey` parameters. It does not write the instance
 // configuration, expecting the caller to do so after any other updates.
-func WriteCertificateAndKey(i geneos.Instance, key *memguard.Enclave, certChain ...*x509.Certificate) (err error) {
+func WriteCertificateAndKey(i geneos.Instance, key certs.PrivateKey, certChain ...*x509.Certificate) (err error) {
 	if err = writeCertificates(i, certChain); err != nil {
 		return
 	}
@@ -152,7 +150,7 @@ func writeCertificates(i geneos.Instance, certSlice []*x509.Certificate) (err er
 // If any extensions are passed (as ext), they are appended to the
 // filename with dot separators, e.g. for temporary files and the
 // instance config is not updated.
-func writePrivateKey(i geneos.Instance, key *memguard.Enclave, ext ...string) (err error) {
+func writePrivateKey(i geneos.Instance, key certs.PrivateKey, ext ...string) (err error) {
 	if i == nil || i.Type() == nil {
 		return geneos.ErrInvalidArgs
 	}
@@ -208,7 +206,7 @@ func ReadLeafCertificate(i geneos.Instance, ext ...string) (cert *x509.Certifica
 	return nil, geneos.ErrNotExist
 }
 
-func ReadCertificatesWithKey(i geneos.Instance, ext ...string) (certChain []*x509.Certificate, key *memguard.Enclave, err error) {
+func ReadCertificatesWithKey(i geneos.Instance, ext ...string) (certChain []*x509.Certificate, key certs.PrivateKey, err error) {
 	certChain, err = ReadCertificates(i, ext...)
 	if err != nil {
 		return
@@ -261,7 +259,7 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 }
 
 // ReadPrivateKey reads the instance RSA private key
-func ReadPrivateKey(i geneos.Instance, ext ...string) (key *memguard.Enclave, err error) {
+func ReadPrivateKey(i geneos.Instance, ext ...string) (key certs.PrivateKey, err error) {
 	var keyPath string
 
 	if i == nil || i.Type() == nil {

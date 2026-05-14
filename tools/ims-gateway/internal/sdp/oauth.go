@@ -48,7 +48,7 @@ var DefaultUserKeyfile = config.KeyFile(
 
 type Config struct {
 	oauth2.Config
-	Code *config.Secret
+	Code config.Secret
 }
 
 type SDPTokenSource struct {
@@ -124,17 +124,17 @@ func saveToken(token *oauth2.Token) (err error) {
 //
 // The oauth2/clientcredentials package tries to use the code twice, once to get the token
 // and once to refresh it, which fails. So we have to do this manually.
-func InitialAuth(sdpCf *config.Config, code *config.Secret) (tok *oauth2.Token, err error) {
+func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, err error) {
 	var tcc *tls.Config
 
 	clientID := config.Get[string](sdpCf, "client-id")
-	clientSecret := config.Get[*config.Secret](sdpCf, "client-secret")
+	clientSecret := config.Get[config.Secret](sdpCf, "client-secret")
 
-	if clientID == "" || clientSecret.IsNil() {
+	if clientID == "" || len(clientSecret) == 0 {
 		return nil, fmt.Errorf("client-id and/or client-secret are not valid")
 	}
 
-	if code == nil || code.IsNil() {
+	if len(code) == 0 {
 		err = fmt.Errorf("authorization code is required for initial authentication")
 		return
 	}

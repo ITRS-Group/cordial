@@ -34,30 +34,29 @@ import (
 )
 
 var encodeCmdKeyfile config.KeyFile
-var encodeCmdString, encodeCmdClientID, encodeCmdClientSecret *config.Secret
+var encodeCmdString, encodeCmdClientID, encodeCmdClientSecret config.Secret
 var encodeCmdSource, encodeCmdProvider, encodeCmdAppKeyFile, encodeCmdCRC string
 var encodeCmdExpandable, encodeCmdAskOnce bool
 
 func init() {
 	aesCmd.AddCommand(encodeCmd)
 
-	encodeCmdString = &config.Secret{}
-
 	encodeCmd.Flags().BoolVarP(&encodeCmdExpandable, "expandable", "e", false, "Output in 'expandable' format")
 	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
 	encodeCmd.Flags().StringVarP(&encodeCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
 
-	encodeCmd.Flags().VarP(encodeCmdString, "password", "p", "Password")
+	encodeCmdString = config.Secret{}
+	encodeCmd.Flags().VarP(&encodeCmdString, "password", "p", "Password")
 	encodeCmd.Flags().StringVarP(&encodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
 	encodeCmd.Flags().BoolVarP(&encodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
 	encodeCmd.Flags().StringVarP(&encodeCmdProvider, "app-key", "A", "", "SSO `PROVIDER`, one of ssoAgent, obcerv, gatewayHub")
 
-	encodeCmdClientID = &config.Secret{}
-	encodeCmd.Flags().VarP(encodeCmdClientID, "client-id", "C", "Client ID for --app-key, prompted if not set")
+	encodeCmdClientID = config.Secret{}
+	encodeCmdClientSecret = config.Secret{}
+	encodeCmd.Flags().VarP(&encodeCmdClientID, "client-id", "C", "Client ID for --app-key, prompted if not set")
+	encodeCmd.Flags().VarP(&encodeCmdClientSecret, "client-secret", "S", "Client Secret for --app-key, prompted if not set")
 
-	encodeCmdClientSecret = &config.Secret{}
-	encodeCmd.Flags().VarP(encodeCmdClientSecret, "client-secret", "S", "Client Secret for --app-key, prompted if not set")
 	encodeCmd.Flags().StringVarP(&encodeCmdAppKeyFile, "app-key-file", "a", "", "App-key filename, if saving per instance, otherwise defaults to STDOUT")
 
 	encodeCmd.Flags().SortFlags = false
@@ -119,14 +118,14 @@ var encodeCmd = &cobra.Command{
 					}
 				}
 
-				if encodeCmdClientID.IsNil() {
+				if len(encodeCmdClientID) == 0 {
 					encodeCmdClientID, err = config.ReadPasswordInput(false, 3, "Client ID")
 					if err != nil {
 						return
 					}
 				}
 
-				if encodeCmdClientSecret.IsNil() {
+				if len(encodeCmdClientSecret) == 0 {
 					encodeCmdClientSecret, err = config.ReadPasswordInput(false, 3, "Client Secret")
 					if err != nil {
 						return
@@ -143,14 +142,14 @@ var encodeCmd = &cobra.Command{
 				return nil
 			}
 
-			if encodeCmdClientID.IsNil() {
+			if len(encodeCmdClientID) == 0 {
 				encodeCmdClientID, err = config.ReadPasswordInput(false, 3, "Client ID")
 				if err != nil {
 					return
 				}
 			}
 
-			if encodeCmdClientSecret.IsNil() {
+			if len(encodeCmdClientSecret) == 0 {
 				encodeCmdClientSecret, err = config.ReadPasswordInput(false, 3, "Client Secret")
 				if err != nil {
 					return
@@ -205,15 +204,15 @@ var encodeCmd = &cobra.Command{
 			return
 		}
 
-		var secret *config.Secret
-		if !encodeCmdString.IsNil() {
+		var secret config.Secret
+		if len(encodeCmdString) > 0 {
 			secret = encodeCmdString
 		} else if encodeCmdSource != "" {
 			pt, err := geneos.ReadAll(encodeCmdSource)
 			if err != nil {
 				return err
 			}
-			secret = config.NewSecret(pt)
+			secret = config.Secret(pt)
 		} else {
 			secret, err = config.ReadPasswordInput(!encodeCmdAskOnce, 0)
 			if err != nil {
@@ -261,7 +260,7 @@ var encodeCmd = &cobra.Command{
 				return
 			}
 
-			secret, ok := params[0].(*config.Secret)
+			secret, ok := params[0].(config.Secret)
 			if !ok {
 				panic("wrong type")
 			}

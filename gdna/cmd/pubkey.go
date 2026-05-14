@@ -71,12 +71,12 @@ var pubkeyCmd = &cobra.Command{
 }
 
 func printPublicKey() error {
-	if privateKey, ok := config.Lookup[*config.Secret](cf, cf.Join("gdna", "licd-private-key")); ok && !privateKey.IsNil() {
-		pk, err := certs.ReadPrivateKeyFromPEM(privateKey.Bytes())
+	if privateKey, ok := config.Lookup[config.Secret](cf, cf.Join("gdna", "licd-private-key")); ok && len(privateKey) > 0 {
+		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
 		if err != nil {
 			// try reading from file path if the value is not a valid
 			// PEM-encoded private key
-			privateKeyPath := privateKey.String()
+			privateKeyPath := string(privateKey)
 			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
 				log.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)

@@ -33,7 +33,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/rs/zerolog/log"
 
@@ -242,9 +241,9 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	}
 
 	truststorePath := instance.Abs(s, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
-	truststorePassword := config.Get[*config.Secret](ssoconf,
+	truststorePassword := config.Get[config.Secret](ssoconf,
 		config.Join("server", "trust_store", "password"),
-		config.DefaultValue(config.NewSecret("changeit")),
+		config.DefaultValue(config.Secret("changeit")),
 	)
 
 	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
@@ -262,9 +261,9 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		var changed bool
 
 		keystorePath := instance.Abs(s, ksl)
-		keystorePassword := config.Get[*config.Secret](ssoconf,
+		keystorePassword := config.Get[config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
-			config.DefaultValue(config.NewSecret("changeit")),
+			config.DefaultValue(config.Secret("changeit")),
 		)
 
 		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
@@ -311,7 +310,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 }
 
 // generate a keypair for ssoagent keystore if not present
-func genkeypair() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
 		return
@@ -362,7 +361,7 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	args = append(args, javaopts...)
 
 	truststorePath := config.Get[string](ssoconf, config.Join("server", "trust_store", "location"))
-	truststorePassword := config.Get[*config.Secret](ssoconf, config.Join("server", "trust_store", "password"))
+	truststorePassword := config.Get[config.Secret](ssoconf, config.Join("server", "trust_store", "password"))
 
 	if truststorePath != "" {
 		truststorePath = instance.Abs(i, truststorePath)

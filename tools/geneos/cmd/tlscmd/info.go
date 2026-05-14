@@ -41,7 +41,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"software.sslmate.com/src/go-pkcs12"
@@ -59,7 +58,7 @@ type infoCmdRootsType []string
 // var infoCmdJSON, infoCmdIndent, infoCmdCSV, infoCmdToolkit bool
 var infoCmdFormat string
 var infoCmdLong, infoCmdLeafOnly bool
-var infoCmdPassword *config.Secret
+var infoCmdPassword config.Secret
 var infoCmdConnects infoCmdConnectsType
 var infoCmdConnectsFile string
 var infoCmdRoots infoCmdRootsType
@@ -67,14 +66,14 @@ var infoCmdRoots infoCmdRootsType
 func init() {
 	tlsCmd.AddCommand(infoCmd)
 
-	infoCmdPassword = &config.Secret{}
+	infoCmdPassword = config.Secret{}
 
 	infoCmd.Flags().BoolVarP(&infoCmdLeafOnly, "leaf-only", "L", false,
 		"Only output leaf certificates (i.e. skip CA certificates and any\ncertificate without a matching private key in any file)")
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
 
 	infoCmd.Flags().StringVarP(&infoCmdFormat, "format", "f", "column", "Output format (column, table, csv, toolkit)")
-	infoCmd.Flags().VarP(infoCmdPassword, "password", "p", "Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
+	infoCmd.Flags().VarP(&infoCmdPassword, "password", "p", "Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p \"\" to specify empty password.")
 
 	infoCmd.Flags().VarP(&infoCmdConnects, "connect", "c", "Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.")
 	infoCmd.Flags().StringVarP(&infoCmdConnectsFile, "connect-file", "", "", "Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.")
@@ -93,7 +92,7 @@ type certInfo struct {
 	Alias              []string
 	CertChain          []*x509.Certificate
 	CerificateVerified []bool
-	PrivateKeys        []*memguard.Enclave
+	PrivateKeys        []certs.PrivateKey
 }
 
 var columns = []string{
@@ -560,7 +559,7 @@ func readFile(p string, ci *certInfo) (err error) {
 	// treat a cacerts file specially, setting the password to
 	// "changeit" and only reading trusted certificate entries
 	if path.Base(p) == "cacerts" {
-		k, err := certs.ReadKeystore(geneos.LOCAL, p, config.NewSecret([]byte("changeit")))
+		k, err := certs.ReadKeystore(geneos.LOCAL, p, config.Secret("changeit"))
 		if err != nil {
 			log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
 			return err
@@ -613,12 +612,12 @@ func readFile(p string, ci *certInfo) (err error) {
 		for _, alias := range k.Aliases() {
 			switch {
 			case k.IsPrivateKeyEntry(alias):
-				pke, err := k.GetPrivateKeyEntry(alias, infoCmdPassword.Bytes())
+				pke, err := k.GetPrivateKeyEntry(alias, infoCmdPassword)
 				if err != nil {
 					log.Error().Err(err).Str("alias", alias).Msgf("unable to get private key entry %q from Java keystore", alias)
 					return err
 				}
-				ci.PrivateKeys = append(ci.PrivateKeys, memguard.NewEnclave(pke.PrivateKey))
+				ci.PrivateKeys = append(ci.PrivateKeys, pke.PrivateKey)
 
 				chain := pke.CertificateChain
 				for n, cert := range chain {
@@ -655,7 +654,7 @@ func readFile(p string, ci *certInfo) (err error) {
 
 	ext := strings.ToLower(path.Ext(p))
 	if ext == ".pfx" || ext == ".p12" {
-		if infoCmdPassword.IsNil() {
+		if len(infoCmdPassword) == 0 {
 			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
 			if err != nil {
 				return
@@ -675,7 +674,7 @@ func readFile(p string, ci *certInfo) (err error) {
 			log.Error().Err(err).Str("file", p).Msg("unable to marshal private key from PKCS#12 file")
 			return err
 		}
-		mpk := memguard.NewEnclave(pk)
+		mpk := certs.PrivateKey(pk)
 		if !certs.CheckKeyMatch(mpk, c) {
 			log.Warn().Str("file", p).Msg("private key does not match certificate in PKCS#12 file")
 		} else {
@@ -700,7 +699,7 @@ func readFile(p string, ci *certInfo) (err error) {
 			ci.CertChain = append(ci.CertChain, c)
 		case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 			// save all private keys for later matching
-			ci.PrivateKeys = append(ci.PrivateKeys, memguard.NewEnclave(block.Bytes))
+			ci.PrivateKeys = append(ci.PrivateKeys, block.Bytes)
 		default:
 			err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
 		}

@@ -120,12 +120,10 @@ geneos tls export gateway mygateway
 			Bytes: signing.Raw,
 		})
 
-		key, _ := signingKey.Open()
 		pemKey := pem.EncodeToMemory(&pem.Block{
 			Type:  "PRIVATE KEY",
-			Bytes: key.Bytes(),
+			Bytes: []byte(signingKey),
 		})
-		defer key.Destroy()
 
 		output := []byte("# Geneos Root and Signing Certificates\n#\n")
 		output = append(output, certs.PrivateKeyComments(signingKey, "Signing Private Key")...)

@@ -244,7 +244,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 		r, _ = reporter.NewReporter("xlsx", w,
 			reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
 			reporter.Scramble(scrambleNames || config.Get[bool](cf, cf.Join("xlsx", "scramble"))),
-			reporter.XLSXPassword(config.Get[*config.Secret](cf, cf.Join("xlsx", "password"))),
+			reporter.XLSXPassword(config.Get[config.Secret](cf, cf.Join("xlsx", "password"))),
 			reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
 			reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
 			reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),

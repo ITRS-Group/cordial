@@ -488,7 +488,7 @@ func LoadHostConfig() {
 			host.Username(config.Get[string](v, "username")), // username is the login name for the remote host
 			host.Hostname(config.Get[string](v, "hostname")),
 			host.Port(config.Get[uint16](v, "port")),
-			host.Password(config.Get[*config.Secret](v, "password").Enclave),
+			host.Password(config.Get[config.Secret](v, "password")),
 			host.PrivateKeyFiles(config.Get[[]string](v, "privatekeys")...),
 		)
 		hosts.Store(config.Get[string](v, "name"), &Host{r, v, config.Get[bool](v, "hidden"), true})

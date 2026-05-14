@@ -61,9 +61,9 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	}
 
 	clientID := config.Get[string](sdpCf, "client-id")
-	clientSecret := config.Get[*config.Secret](sdpCf, "client-secret")
+	clientSecret := config.Get[config.Secret](sdpCf, "client-secret")
 
-	if clientID == "" || clientSecret.IsNil() {
+	if clientID == "" || len(clientSecret) == 0 {
 		err = fmt.Errorf("client-id and/or client-secret are not valid")
 		return
 	}

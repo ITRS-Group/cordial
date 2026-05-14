@@ -36,12 +36,13 @@ import (
 )
 
 var importCmdPrivateKey string
-var importCmdPassword = &config.Secret{}
+var importCmdPassword config.Secret
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmd.Flags().VarP(importCmdPassword, "password", "p",
+	importCmdPassword = config.Secret{}
+	importCmd.Flags().VarP(&importCmdPassword, "password", "p",
 		`Plaintext password for PFX/PKCS#12 file decryption.
 You will be prompted if not supplied as an argument.
 PFX/PKCS#12 files are identified by the .pfx or .p12

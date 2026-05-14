@@ -21,17 +21,17 @@ dv2email
 ### Options
 
 ```text
-  -i, --inline-css        inline CSS for better mail client support (default true)
-  -t, --to string         To as comma-separated emails
-  -c, --cc string         Cc as comma-separated emails
-  -b, --bcc string        Bcc as comma-separated emails
-  -s, --subject string    Subject of the email
-  -f, --config string     config file (default is $HOME/.config/geneos/dv2email.yaml)
-  -D, --dataview string   dataview name, ignored if _VARIBLEPATH set in environment
-  -E, --entity string     entity name, ignored if _VARIBLEPATH set in environment
-  -S, --sampler string    sampler name, ignored if _VARIBLEPATH set in environment
-  -T, --type string       type name, ignored if _VARIBLEPATH set in environment
-                          To explicitly select empty/no type use --type/-T ""
+  -i, --inline-css          inline CSS for better mail client support (default true)
+  -t, --to "TO, ..."        "TO, ..." recipients as a comma-separated list of email addresses
+  -c, --cc "CC, ..."        "CC, ..." recipients as a comma-separated list of email addresses
+  -b, --bcc "BCC, ..."      "BCC, ..." recipients as a comma-separated list of email addresses
+  -s, --subject "SUBJECT"   "SUBJECT" of the email
+  -f, --config string       config file (default is $HOME/.config/geneos/dv2email.yaml)
+  -D, --dataview string     dataview name, ignored if _VARIBLEPATH set in environment
+  -E, --entity string       entity name, ignored if _VARIBLEPATH set in environment
+  -S, --sampler string      sampler name, ignored if _VARIBLEPATH set in environment
+  -T, --type string         type name, ignored if _VARIBLEPATH set in environment
+                            To explicitly select empty/no type use --type/-T ""
 ```
 
 ## SEE ALSO

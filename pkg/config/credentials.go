@@ -26,7 +26,7 @@ import (
 // Credentials handling functions
 
 // Credentials can carry a number of different credential types. Add
-// more as required. Eventually this will go into memguard.
+// more as required.
 type Credentials struct {
 	Domain       string `json:"domain,omitempty"`
 	Username     string `json:"username,omitempty"`

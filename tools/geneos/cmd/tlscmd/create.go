@@ -27,7 +27,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -134,7 +133,7 @@ var createCmd = &cobra.Command{
 // to the destination given. The key type is determined by the string
 // argument, which can be "rsa", "ecdsa", "ed25519" or "ecdh". If the
 // key type is not recognized, an error is returned.
-func CreateKey(destination string, overwrite bool, keytype certs.KeyType) (key *memguard.Enclave, pub crypto.PublicKey, err error) {
+func CreateKey(destination string, overwrite bool, keytype certs.KeyType) (key certs.PrivateKey, pub crypto.PublicKey, err error) {
 	var b bytes.Buffer
 	var basepath string
 

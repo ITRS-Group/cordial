@@ -54,7 +54,7 @@ type XLSXReporter struct {
 	plainStyle   int
 
 	// top level scramble toggle
-	password *config.Secret
+	password config.Secret
 
 	// conditional format global styles
 	cond        map[string]*int

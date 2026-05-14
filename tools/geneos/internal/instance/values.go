@@ -183,7 +183,7 @@ func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (param
 		if s.Ciphertext != "" {
 			continue
 		}
-		if s.Secret.IsNil() {
+		if len(s.Secret) == 0 {
 			log.Fatal().Msg("secret is not set")
 		}
 		s.Ciphertext, err = k.Encode(i.Host(), s.Secret, true)
@@ -252,7 +252,7 @@ type SecureValues []*SecureValue
 
 type SecureValue struct {
 	Value      string
-	Secret     *config.Secret
+	Secret     config.Secret
 	Ciphertext string
 }
 
@@ -276,7 +276,7 @@ func (p *SecureValues) Set(v string) error {
 	} else {
 		*p = append(*p, &SecureValue{
 			Value:  s[0],
-			Secret: config.NewSecret([]byte(s[1])),
+			Secret: config.Secret(s[1]),
 		})
 	}
 	return nil

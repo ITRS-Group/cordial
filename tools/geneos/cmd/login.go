@@ -31,17 +31,17 @@ import (
 )
 
 var loginCmdUsername string
-var loginCmdPassword *config.Secret
+var loginCmdPassword config.Secret
 var loginKeyfile config.KeyFile
 var loginCmdList bool
 
 func init() {
 	Cmd.AddCommand(loginCmd)
 
-	loginCmdPassword = &config.Secret{}
+	loginCmdPassword = config.Secret{}
 
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
-	loginCmd.Flags().VarP(loginCmdPassword, "password", "p", "Password")
+	loginCmd.Flags().VarP(&loginCmdPassword, "password", "p", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Key file to use")
 	loginCmd.Flags().BoolVarP(&loginCmdList, "list", "l", false, "List the names of the currently stored credentials")
 
@@ -102,7 +102,7 @@ var loginCmd = &cobra.Command{
 		}
 
 		var enc string
-		if loginCmdPassword.IsNil() {
+		if len(loginCmdPassword) == 0 {
 			// prompt for password
 			enc, err = loginKeyfile.EncodePasswordInput(host.Localhost, true)
 			if err != nil {

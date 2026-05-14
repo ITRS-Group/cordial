@@ -160,8 +160,6 @@ limitations under the License.
 // string ${unchanged} as there is no recursive lookups.
 package config
 
-import "github.com/awnumar/memguard"
-
 func Expand[T string | []byte](c *Config, input string, options ...ExpandOption) (value T) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
@@ -176,12 +174,12 @@ func ExpandStringSlice(input []string, options ...ExpandOption) []string {
 	return global.expandStringSlice(input, options...)
 }
 
-// ExpandPassword expands the input string and returns a *Secret. The
+// ExpandPassword expands the input string and returns a Secret. The
 // TrimSPace option is ignored.
-func (c *Config) ExpandToPassword(input string, options ...ExpandOption) *Secret {
+func (c *Config) ExpandToPassword(input string, options ...ExpandOption) Secret {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
-	return &Secret{memguard.NewEnclave(expand[[]byte](c, input, options...))}
+	return Secret(expand[[]byte](c, input, options...))
 }
 
 // ExpandAllSettings returns all the settings from config structure c

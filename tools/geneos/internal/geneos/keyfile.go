@@ -57,7 +57,7 @@ func (ct *Component) KeyFilePath(h *Host, keyfile config.KeyFile, keycrc string)
 	return ct.Shared(h, "keyfiles", keycrc+".aes"), nil
 }
 
-// ReadKeyValues returns a memguard enclave in kv containing the key
+// ReadKeyValues returns a *config.KeyValues in kv containing the key
 // values from the source. `source` can be a path to a file, a `-` for
 // STDIN (in which case an optional prompt is output) or a remote URL.
 func ReadKeyValues(source string, prompt ...string) (kv *config.KeyValues, err error) {

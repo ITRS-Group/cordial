@@ -203,7 +203,7 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	// creds can come from `geneos` credentials for the mail server
 	// domain
 
-	epassword := &config.Secret{}
+	var epassword config.Secret
 	var eusername, smtpserver string
 
 	if cf != nil {
@@ -211,14 +211,14 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 		smtpserver = config.Get[string](cf, cf.Join("email", "smtp"))
 
 		if eusername != "" {
-			epassword = config.Get[*config.Secret](cf, cf.Join("email", "password"))
+			epassword = config.Get[config.Secret](cf, cf.Join("email", "password"))
 		}
 
 		if eusername == "" {
 			creds := config.FindCreds(smtpserver, config.AppName("geneos"))
 			if creds != nil {
 				eusername = config.Get[string](creds, "username")
-				epassword = config.Get[*config.Secret](creds, "password")
+				epassword = config.Get[config.Secret](creds, "password")
 			}
 		}
 	}

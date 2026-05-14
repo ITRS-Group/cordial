@@ -201,7 +201,7 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 //   - map[string]string
 //   - []map[string]string
 //   - time.Duration
-//   - *config.Secret
+//   - config.Secret
 //
 // Other types are returned as-is and the caller is expected to do any
 // necessary type assertion. Other specific types may be added in the

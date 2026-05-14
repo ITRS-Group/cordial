@@ -31,7 +31,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/rs/zerolog/log"
 	"software.sslmate.com/src/go-pkcs12"
@@ -52,7 +51,7 @@ const (
 // not used then the new key will be of the same type as the signing
 // key. If there is no signing key and the WithKeyType option is not
 // used then a default key type will be used.
-func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.Enclave, options ...CreateCertOption) (cert *x509.Certificate, key *memguard.Enclave, err error) {
+func CreateCertificate(template, parent *x509.Certificate, signingKey PrivateKey, options ...CreateCertOption) (cert *x509.Certificate, key PrivateKey, err error) {
 	var certBytes []byte
 	var pub crypto.PublicKey
 	var keytype KeyType
@@ -70,24 +69,18 @@ func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.
 		return
 	}
 
-	if keytype == "" {
-		// create a new key of the same type as the signing cert key or use a default type
-		keytype = PrivateKeyType(signingKey)
+	priv, privKeyType, err := ParsePrivateKey(signingKey)
+	if err != nil {
+		return
 	}
 
 	if keytype == "" {
-		keytype = DefaultKeyType
+		keytype = privKeyType
 	}
 
 	key, pub, err = GenerateKey(keytype)
 	if err != nil {
 		panic(err)
-	}
-
-	priv, err := ParsePrivateKey(signingKey)
-	if err != nil {
-		key = nil
-		return
 	}
 
 	// add a subject key identifier if missing. this is optional but
@@ -110,11 +103,13 @@ func CreateCertificate(template, parent *x509.Certificate, signingKey *memguard.
 	}
 
 	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, pub, priv); err != nil {
+		clear(key)
 		key = nil
 		return
 	}
 
 	if cert, err = x509.ParseCertificate(certBytes); err != nil {
+		clear(key)
 		key = nil
 		return
 	}
@@ -182,7 +177,7 @@ type CertificateBundle struct {
 	Leaf      *x509.Certificate
 	FullChain []*x509.Certificate
 	Root      *x509.Certificate
-	Key       *memguard.Enclave
+	Key       PrivateKey
 	Valid     bool
 }
 
@@ -337,7 +332,7 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 // private keys found. Encrypted private keys and other types of blocks
 // are not supported and will be skipped. If there are no certificates
 // or private keys found then empty clients are returned without error.
-func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []*memguard.Enclave, err error) {
+func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []PrivateKey, err error) {
 	var block *pem.Block
 
 	for _, d := range data {
@@ -367,7 +362,7 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 					log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
 				}
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				keys = append(keys, memguard.NewEnclave(block.Bytes))
+				keys = append(keys, PrivateKey(block.Bytes))
 			default:
 				log.Warn().Msgf("unsupported PEM type found: %s, skipping", block.Type)
 			}
@@ -387,7 +382,7 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	var roots []*x509.Certificate
 	var chains [][]*x509.Certificate
-	var keys []*memguard.Enclave
+	var keys []PrivateKey
 
 	if len(data) == 0 {
 		err = fmt.Errorf("no data to process")
@@ -458,7 +453,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	return
 }
 
-func P12ToCertBundle(pfxPath string, password *config.Secret) (certBundle *CertificateBundle, err error) {
+func P12ToCertBundle(pfxPath string, password config.Secret) (certBundle *CertificateBundle, err error) {
 	pfxData, err := os.ReadFile(pfxPath)
 	if err != nil {
 		err = fmt.Errorf("failed to read PFX file: %w", err)
@@ -474,20 +469,19 @@ func P12ToCertBundle(pfxPath string, password *config.Secret) (certBundle *Certi
 		err = fmt.Errorf("failed to marshal private key: %w", err)
 		return
 	}
-	k := memguard.NewEnclave(pk)
 
 	leaf, intermediates, root, err := ParseCertChain(append([]*x509.Certificate{c}, caCerts...)...)
 	if err != nil {
 		err = fmt.Errorf("failed to decompose certificate chain: %w", err)
 		return
 	}
-	if leaf == nil || k == nil || !CheckKeyMatch(k, leaf) {
+	if leaf == nil || pk == nil || !CheckKeyMatch(PrivateKey(pk), leaf) {
 		err = fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		return
 	}
 	certBundle = &CertificateBundle{
 		Leaf:      leaf,
-		Key:       k,
+		Key:       PrivateKey(pk),
 		FullChain: append([]*x509.Certificate{leaf}, intermediates...),
 		Root:      root,
 		Valid:     true,

@@ -121,7 +121,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 
 func promptForSecrets(prompt string, v instance.SecureValues) (err error) {
 	for _, s := range v {
-		if s.Secret.IsNil() {
+		if len(s.Secret) == 0 {
 			// prompt
 			s.Secret, err = config.ReadPasswordInput(true, 3,
 				fmt.Sprintf("Enter Secret for %s %q", prompt, s.Value),

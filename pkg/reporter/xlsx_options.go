@@ -25,7 +25,7 @@ type XLSXReporterOption func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
 	scramble         bool
-	password         *config.Secret
+	password         config.Secret
 	summarySheetName string
 	dateFormat       string
 	intFormat        int
@@ -65,7 +65,7 @@ func XLSXScramble(scramble bool) XLSXReporterOption {
 }
 
 // XLSXPassword sets the workbook password
-func XLSXPassword(password *config.Secret) XLSXReporterOption {
+func XLSXPassword(password config.Secret) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.password = password
 	}

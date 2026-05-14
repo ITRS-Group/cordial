@@ -218,7 +218,7 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.General) (err er
 		resp.Dataview.Table = append(resp.Dataview.Table, row)
 	}
 
-	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
 		for _, fd := range capi.OpenFiles {
 			if fd.Conn == nil {

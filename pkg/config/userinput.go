@@ -18,6 +18,7 @@ limitations under the License.
 package config
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -116,20 +117,20 @@ func ReadPEM(from, prompt string) (data []byte, err error) {
 	return
 }
 
-// ReadPasswordInput prompts the user for a password without echoing the input.
-// This is returned as a memguard LockBuffer. If match is true then the user is
-// prompted twice and the two instances checked for a match. Up to maxtries
-// attempts are allowed after which an error is returned. If maxtries is 0 then
-// a default of 3 attempts is set.
+// ReadPasswordInput prompts the user for a password without echoing the
+// input. This is returned as a Secret. If match is true then the user
+// is prompted twice and the two instances checked for a match. Up to
+// maxtries attempts are allowed after which an error is returned. If
+// maxtries is 0 then a default of 3 attempts is set.
 //
-// If prompt is given then it must either be one or two strings, depending on
-// match set. The prompt(s) are suffixed with ": " in both cases. The defaults
-// are "Password" and "Re-enter Password".
+// If prompt is given then it must either be one or two strings,
+// depending on match set. The prompt(s) are suffixed with ": " in both
+// cases. The defaults are "Password" and "Re-enter Password".
 //
 // On error the pw is empty and does not need to be Destroy()ed.
 //
 // If STDIN is not a terminal then config.ErrNotInteractive is returned.
-func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret *Secret, err error) {
+func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret Secret, err error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		err = ErrNotInteractive
 		return
@@ -152,7 +153,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret *Secr
 				fmt.Printf("%s: ", prompt[0])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw1 := NewSecret(pwt)
+			pw1 := Secret(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
@@ -163,26 +164,19 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret *Secr
 				fmt.Printf("%s: ", prompt[1])
 			}
 			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw2 := NewSecret(pwt)
+			pw2 := Secret(pwt)
 			fmt.Println() // always move to new line even on error
 			if err != nil {
 				return
 			}
 
-			if pw1.IsNil() || pw2.IsNil() {
+			if len(pw1) == 0 || len(pw2) == 0 {
 				fmt.Println("Invalid password(s)")
 				continue
 			}
-			pw1b, _ := pw1.Open()
-			pw2b, _ := pw2.Open()
-			if pw1b.EqualTo(pw2b.Bytes()) {
-				matched = true
-			}
-			pw1b.Destroy()
-			pw2b.Destroy()
-
-			if matched {
+			if bytes.Equal(pw1, pw2) {
 				secret = pw1
+				matched = true
 				break
 			}
 			fmt.Println("Entries do not match")
@@ -199,7 +193,7 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret *Secr
 			fmt.Printf("%s: ", strings.Join(prompt, " "))
 		}
 		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-		secret = NewSecret(pwt)
+		secret = Secret(pwt)
 		fmt.Println() // always move to new line even on error
 		if err != nil {
 			return

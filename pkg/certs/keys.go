@@ -12,11 +12,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
-
-	"github.com/awnumar/memguard"
 )
 
 type KeyType string
+type PrivateKey []byte
 
 const (
 	RSA     KeyType = "rsa"
@@ -28,8 +27,8 @@ const (
 // DefaultKeyType is the default key type
 const DefaultKeyType = ECDH
 
-func (k KeyType) String() string {
-	return string(k)
+func (k *KeyType) String() string {
+	return string(*k)
 }
 
 func (k *KeyType) Set(s string) error {
@@ -47,34 +46,9 @@ func (k *KeyType) Type() string {
 	return "KeyType"
 }
 
-// PrivateKeyType returns the type of the DER encoded private key,
-// suitable for use to NewPrivateKey
-func PrivateKeyType(der *memguard.Enclave) (keyType KeyType) {
-	if der == nil {
-		return
-	}
-	key, err := ParsePrivateKey(der)
-	if err != nil {
-		return
-	}
-
-	switch key.(type) {
-	case *rsa.PrivateKey:
-		return RSA
-	case *ecdsa.PrivateKey:
-		return ECDSA
-	case *ecdh.PrivateKey:
-		return ECDH
-	case ed25519.PrivateKey: // not a pointer
-		return ED25519
-	default:
-		return ""
-	}
-}
-
 // GenerateKey returns a PKCS#8 DER encoded private key as an enclave
 // using the keyType specified.
-func GenerateKey(keyType KeyType) (privateKey *memguard.Enclave, publicKey any, err error) {
+func GenerateKey(keyType KeyType) (privateKey PrivateKey, publicKey any, err error) {
 	var pKey any
 	switch keyType {
 	case RSA:
@@ -115,7 +89,7 @@ func GenerateKey(keyType KeyType) (privateKey *memguard.Enclave, publicKey any, 
 	if err != nil {
 		return
 	}
-	privateKey = memguard.NewEnclave(key)
+	privateKey = PrivateKey(key)
 
 	return
 }
@@ -123,24 +97,28 @@ func GenerateKey(keyType KeyType) (privateKey *memguard.Enclave, publicKey any, 
 // ParsePrivateKey parses the DER encoded private key enclave, first as
 // PKCS#8 and then as a PKCS#1 and finally as SEC1 (EC) if that fails.
 // It returns the private key or an error.
-func ParsePrivateKey(key *memguard.Enclave) (privatekey any, err error) {
+func ParsePrivateKey(key PrivateKey) (privatekey any, keytype KeyType, err error) {
 	if key == nil {
 		err = fmt.Errorf("no key provided")
 		return
 	}
-	k, err := key.Open()
-	if err != nil {
-		return
-	}
-	defer k.Destroy()
-
-	der := k.Bytes()
-	if privatekey, err = x509.ParsePKCS8PrivateKey(der); err != nil {
-		if privatekey, err = x509.ParsePKCS1PrivateKey(der); err != nil {
-			if privatekey, err = x509.ParseECPrivateKey(der); err != nil {
+	if privatekey, err = x509.ParsePKCS8PrivateKey(key); err != nil {
+		if privatekey, err = x509.ParsePKCS1PrivateKey(key); err != nil {
+			if privatekey, err = x509.ParseECPrivateKey(key); err != nil {
 				return
 			}
 		}
+	}
+
+	switch privatekey.(type) {
+	case *rsa.PrivateKey:
+		keytype = RSA
+	case *ecdsa.PrivateKey:
+		keytype = ECDSA
+	case *ecdh.PrivateKey:
+		keytype = ECDH
+	case ed25519.PrivateKey: // not a pointer
+		keytype = ED25519
 	}
 	return
 }
@@ -149,12 +127,12 @@ func ParsePrivateKey(key *memguard.Enclave) (privatekey any, err error) {
 // public key if successful. It will first try as PKCS#8 and then PKCS#1
 // if that fails and finally as SEC1 (EC). Returns an error if parsing
 // fails.
-func PublicKey(key *memguard.Enclave) (publicKey crypto.PublicKey, err error) {
+func PublicKey(key PrivateKey) (publicKey crypto.PublicKey, err error) {
 	if key == nil {
 		err = fmt.Errorf("no key provided")
 		return
 	}
-	privateKey, err := ParsePrivateKey(key)
+	privateKey, _, err := ParsePrivateKey(key)
 	if err != nil {
 		return
 	}
@@ -169,7 +147,7 @@ func PublicKey(key *memguard.Enclave) (publicKey crypto.PublicKey, err error) {
 // IndexPrivateKey tests the slice DER encoded private keys against the x509
 // cert and returns the index of the first match, or -1 if none of the
 // keys match.
-func IndexPrivateKey(keys []*memguard.Enclave, cert *x509.Certificate) int {
+func IndexPrivateKey(keys []PrivateKey, cert *x509.Certificate) int {
 	if cert == nil {
 		return -1
 	}
@@ -189,7 +167,7 @@ func IndexPrivateKey(keys []*memguard.Enclave, cert *x509.Certificate) int {
 
 // CheckKeyMatch returns true if the DER encoded private key matches
 // the public key in the provided x509 certificate.
-func CheckKeyMatch(key *memguard.Enclave, cert *x509.Certificate) bool {
+func CheckKeyMatch(key PrivateKey, cert *x509.Certificate) bool {
 	pubkey, err := PublicKey(key)
 	if err != nil {
 		return false

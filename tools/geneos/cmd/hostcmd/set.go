@@ -31,17 +31,17 @@ import (
 )
 
 var setCmdPrompt bool
-var setCmdPassword *config.Secret
+var setCmdPassword config.Secret
 var setCmdKeyfile config.KeyFile
 var setCmdPrivateKeyfiles PrivateKeyFiles
 
 func init() {
 	hostCmd.AddCommand(setCmd)
 
-	setCmdPassword = &config.Secret{}
+	setCmdPassword = config.Secret{}
 
 	setCmd.Flags().BoolVarP(&setCmdPrompt, "prompt", "p", false, "Prompt for password")
-	setCmd.Flags().VarP(setCmdPassword, "password", "P", "password")
+	setCmd.Flags().VarP(&setCmdPassword, "password", "P", "password")
 	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "Keyfile")
 	setCmd.Flags().VarP(&setCmdPrivateKeyfiles, "privatekey", "i", "Private key file")
 
@@ -98,7 +98,7 @@ var setCmd = &cobra.Command{
 			if password, err = setCmdKeyfile.EncodePasswordInput(host.Localhost, true); err != nil {
 				return
 			}
-		} else if !setCmdPassword.IsNil() {
+		} else if len(setCmdPassword) > 0 {
 			if password, err = setCmdKeyfile.Encode(host.Localhost, setCmdPassword, true); err != nil {
 				return
 			}

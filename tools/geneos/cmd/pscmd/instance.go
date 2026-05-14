@@ -113,12 +113,15 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	return psData, nil
 }
 
-func checkCA(h *geneos.Host, ct *geneos.Component, chidren []int) (pi *process.ProcessInfo, ok bool, err error) {
-	if !ct.IsA("netprobe") || len(chidren) == 0 {
+func checkCA(i geneos.Instance, children []int) (pi *process.ProcessInfo, ok bool, err error) {
+	ct := i.Type()
+	h := i.Host()
+
+	if !ct.IsA("netprobe") || len(children) == 0 {
 		return
 	}
 
-	for _, pid := range chidren {
+	for _, pid := range children {
 		pi, err = process.GetProcessInfo(h, pid, false)
 		if err != nil {
 			continue

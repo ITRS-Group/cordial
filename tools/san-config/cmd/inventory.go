@@ -87,7 +87,7 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 	if fo.ifmodified != nil && !fo.ifmodified.lastModified.IsZero() {
 		req.Header["if-modified-since"] = []string{fo.ifmodified.lastModified.Format(http.TimeFormat)}
 	}
-	if fo.username != "" && !fo.password.IsNil() {
+	if fo.username != "" && len(fo.password) > 0 {
 		req.SetBasicAuth(fo.username, fo.password.String())
 	}
 	req.Header["accept"] = []string{"application/json"}
@@ -171,7 +171,7 @@ type fetchOptions struct {
 	header        http.Header
 	ifmodified    *Inventory
 	username      string
-	password      *config.Secret
+	password      config.Secret
 }
 
 func evalFetchOptions(options ...FetchOption) (f *fetchOptions) {
@@ -236,7 +236,7 @@ func IfModified(inv *Inventory) FetchOption {
 }
 
 // BasicAuth sets up the request to use Basic Authentication
-func BasicAuth(username string, password *config.Secret) FetchOption {
+func BasicAuth(username string, password config.Secret) FetchOption {
 	return func(fo *fetchOptions) {
 		fo.username = username
 		fo.password = password

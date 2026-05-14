@@ -35,7 +35,7 @@ func evalOptions(c *Connection, options ...Option) {
 
 // SetBasicAuth configures basic authentication on the connection, given
 // a username and password (both as plain strings)
-func SetBasicAuth(username string, password *config.Secret) Option {
+func SetBasicAuth(username string, password config.Secret) Option {
 	return func(c *Connection) {
 		if username != "" {
 			c.AuthType = Basic

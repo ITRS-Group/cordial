@@ -270,7 +270,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
-	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
 		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
 
@@ -378,7 +378,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
-	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		row := []string{}
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
 		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
@@ -426,7 +426,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
-	pid, err := instance.GetPID(i)
+	pid, err := instance.GetLivePID(i)
 	if err != nil {
 		resp.Err = err
 		return

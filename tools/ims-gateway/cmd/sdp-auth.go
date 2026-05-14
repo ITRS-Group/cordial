@@ -26,7 +26,7 @@ import (
 	"github.com/itrs-group/cordial/tools/ims-gateway/internal/sdp"
 )
 
-var sdpAuthCmdCode = &config.Secret{}
+var sdpAuthCmdCode config.Secret
 
 func init() {
 	Cmd.AddCommand(sdpAuthCmd)
@@ -44,7 +44,7 @@ var sdpAuthCmd = &cobra.Command{
 		// load user config
 		cf := LoadConfigFile()
 
-		if sdpAuthCmdCode == nil || sdpAuthCmdCode.IsNil() {
+		if len(sdpAuthCmdCode) == 0 {
 			sdpAuthCmdCode, err = config.ReadPasswordInput(false, 0, "Grant Code")
 			if err != nil {
 				return

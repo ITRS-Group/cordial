@@ -225,19 +225,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 		hs.ModTime().Local().Format(time.RFC3339),
 		homedir,
 	})
-	// resp.Details = append(resp.Details,
-	// 	fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
-	// 		ct,
-	// 		name,
-	// 		h,
-	// 		pid,
-	// 		hs.Mode().Perm().String(),
-	// 		process.GetUsername(uid),
-	// 		process.GetGroupname(gid),
-	// 		hs.Size(),
-	// 		hs.ModTime().Local().Format(time.RFC3339),
-	// 		homedir,
-	// 	))
+
 	for _, fd := range process.OpenFiles(h, pid) {
 		if !path.IsAbs(fd.Path) {
 			continue
@@ -266,24 +254,9 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 			fd.Stat.ModTime().Local().Format(time.RFC3339),
 			path,
 		})
-		// resp.Details = append(resp.Details,
-		// 	fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
-		// 		ct,
-		// 		name,
-		// 		h,
-		// 		pid,
-		// 		fd.FD,
-		// 		fdPerm,
-		// 		fd.Stat.Mode().Perm(),
-		// 		process.GetUsername(uid),
-		// 		process.GetGroupname(gid),
-		// 		fd.Stat.Size(),
-		// 		fd.Stat.ModTime().Local().Format(time.RFC3339),
-		// 		path,
-		// 	))
 	}
 
-	if capi, ok, err := checkCA(h, ct, pi.Children); err == nil && ok {
+	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
 		homedir := capi.Cwd
 		hs, err := h.Stat(homedir)
@@ -305,19 +278,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 			hs.ModTime().Local().Format(time.RFC3339),
 			homedir,
 		})
-		// resp.Details = append(resp.Details,
-		// 	fmt.Sprintf("%s\t%s\t%s\t%d\tcwd\t%s\t%s\t%s\t%d\t%s\t%s",
-		// 		ct.String()+"/ca",
-		// 		name,
-		// 		h,
-		// 		capi.PID,
-		// 		hs.Mode().Perm().String(),
-		// 		process.GetUsername(uid),
-		// 		process.GetGroupname(gid),
-		// 		hs.Size(),
-		// 		hs.ModTime().Local().Format(time.RFC3339),
-		// 		homedir,
-		// 	))
+
 		for _, fd := range capi.OpenFiles {
 			if !path.IsAbs(fd.Path) {
 				continue
@@ -346,22 +307,6 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 				fd.Stat.ModTime().Local().Format(time.RFC3339),
 				path,
 			})
-
-			// resp.Details = append(resp.Details,
-			// 	fmt.Sprintf("%s\t%s\t%s\t%d\t%d:%s\t%s\t%s\t%s\t%d\t%s\t%s",
-			// 		ct.String()+"/ca",
-			// 		name,
-			// 		h,
-			// 		capi.PID,
-			// 		fd.FD,
-			// 		fdPerm,
-			// 		fd.Stat.Mode().Perm(),
-			// 		process.GetUsername(uid),
-			// 		process.GetGroupname(gid),
-			// 		fd.Stat.Size(),
-			// 		fd.Stat.ModTime().Local().Format(time.RFC3339),
-			// 		path,
-			// 	))
 		}
 	}
 

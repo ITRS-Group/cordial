@@ -126,9 +126,8 @@ func openSource(source string, options ...PackageOption) (from io.ReadCloser, fi
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			if opts.username != "" {
 				req2 := req.Clone(req.Context())
-				pw, _ := opts.password.Open()
+				pw := opts.password
 				req2.SetBasicAuth(opts.username, pw.String())
-				pw.Destroy()
 				if resp, err = client.Do(req2); err != nil {
 					return
 				}

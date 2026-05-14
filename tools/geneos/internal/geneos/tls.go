@@ -25,7 +25,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/awnumar/memguard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
@@ -90,7 +89,7 @@ func RootCertificatePath() (string, error) {
 // ReadRootCertificateAndKey reads the root certificate and private key
 // from the user's app config directory. If the private key cannot be
 // found then nil is returned but no error.
-func ReadRootCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+func ReadRootCertificateAndKey() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	file, err := RootCertificatePath()
 	if err != nil {
 		return
@@ -146,7 +145,7 @@ func SigningPrivateKeyPath() (string, error) {
 
 // ReadSigningCertificateAndKey reads the signing certificate and private
 // key from the user's app config directory.
-func ReadSigningCertificateAndKey() (cert *x509.Certificate, key *memguard.Enclave, err error) {
+func ReadSigningCertificateAndKey() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	cert, err = readSigningCertificate()
 	if err != nil {
 		return
@@ -194,7 +193,7 @@ func readSigningCertificate() (signing *x509.Certificate, err error) {
 
 // readSigningPrivateKey reads the signing certificate private key from the
 // user's app config directory.
-func readSigningPrivateKey() (key *memguard.Enclave, err error) {
+func readSigningPrivateKey() (key certs.PrivateKey, err error) {
 	file, err := SigningPrivateKeyPath()
 	if err != nil {
 		return
@@ -339,6 +338,7 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	if err != nil {
 		return err
 	}
+	defer clear(rootKey)
 	if rootKey == nil {
 		return fmt.Errorf("no root private key found")
 	}

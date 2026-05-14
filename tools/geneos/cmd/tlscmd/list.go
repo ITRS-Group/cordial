@@ -32,7 +32,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -93,7 +92,7 @@ func init() {
 var listCmdDescription string
 
 var rootCert, signingCert *x509.Certificate
-var rootKey, signingKey *memguard.Enclave
+var rootKey, signingKey certs.PrivateKey
 var rootCertFile, signingCertFile string
 
 var listCmd = &cobra.Command{
@@ -804,8 +803,8 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Gener
 // bundle and checks if the private key provided matches the leaf
 // certificate and returns a string that represents the result. "OK" if
 // all is well.
-func verifyCertWithKey(key *memguard.Enclave, certChain ...*x509.Certificate) string {
-	if key == nil || key.Size() == 0 {
+func verifyCertWithKey(key certs.PrivateKey, certChain ...*x509.Certificate) string {
+	if key == nil || len(key) == 0 {
 		return "NoKey"
 	}
 	if len(certChain) == 0 {

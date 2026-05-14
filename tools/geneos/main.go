@@ -23,8 +23,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/awnumar/memguard"
-
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -66,9 +64,6 @@ func init() {
 }
 
 func main() {
-	memguard.CatchInterrupt()
-	defer memguard.Purge()
-
 	// cordial.ExecutableName() returns a full resolved name, including
 	// following symlinks, and we want to know if the are being called
 	// through a symlink, so roll our own here
@@ -78,7 +73,7 @@ func main() {
 	// underlying code directly
 	if !strings.HasSuffix(execname, "ctl") {
 		cmd.Execute()
-		memguard.SafeExit(0)
+		os.Exit(0)
 	}
 
 	// otherwise emulate legacy ctl commands

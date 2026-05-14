@@ -46,7 +46,7 @@ var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bo
 var initCmdRestore, initCmdArchive string
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
-var initCmdDLPassword *config.Secret
+var initCmdDLPassword config.Secret
 var initCmdNoInstall, initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
@@ -55,8 +55,6 @@ var initCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	cmd.Cmd.AddCommand(initCmd)
-
-	initCmdDLPassword = &config.Secret{}
 
 	// alias placeholder for `init tls` to `tls init`
 	initCmd.AddCommand(initTLSCmd)
@@ -292,9 +290,9 @@ func initProcessArgs(command *cobra.Command, args []string, extras ...instance.S
 	}
 
 	if initCmdDLUsername != "" {
-		initCmdDLPassword = config.Get[*config.Secret](cf, cf.Join("download", "password"))
+		initCmdDLPassword = config.Get[config.Secret](cf, cf.Join("download", "password"))
 
-		if initCmdDLUsername != "" && (initCmdDLPassword.IsNil() || initCmdDLPassword.Size() == 0) {
+		if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
 			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)
 			if err == config.ErrNotInteractive {
 				err = fmt.Errorf("%w and password required", err)

@@ -41,11 +41,13 @@ var addCmdPort uint16
 var addCmdImportFiles instance.Filename
 var addCmdKeyfile, addCmdInstanceBundle string
 var addCmdInsecure bool
-var addCmdBundlePassword = &config.Secret{}
+var addCmdBundlePassword config.Secret
 var addCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	Cmd.AddCommand(addCmd)
+
+	addCmdBundlePassword = config.Secret{}
 
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
@@ -54,7 +56,7 @@ func init() {
 	addCmd.Flags().StringVarP(&addCmdBase, "version", "V", "active_prod", "Select the version for the instance. Defaults to 'active_prod'\nwhich is the default symlink to the installed release.")
 
 	addCmd.Flags().StringVarP(&addCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for data via stdin.")
-	addCmd.Flags().Var(addCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+	addCmd.Flags().Var(&addCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
 	addCmd.PersistentFlags().BoolVarP(&addCmdInsecure, "insecure", "", false, "Do not create certificates for TLS support.\nIgnored if --instance-bundle is given.")
 
 	addCmd.Flags().StringVar(&addCmdKeyfile, "keyfile", "", "Keyfile `PATH`")

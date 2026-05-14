@@ -26,7 +26,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/awnumar/memguard"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -98,7 +97,7 @@ var migrateCmd = &cobra.Command{
 // parameters and old parameters are cleared.
 func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	var truststorePath, keystorePath string
-	var truststorePassword, keystorePassword *config.Secret
+	var truststorePassword, keystorePassword config.Secret
 
 	resp = responses.NewResponse(i)
 
@@ -127,9 +126,9 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 		}
 
 		truststorePath = config.Get[string](ssoConf, ssoConf.Join("server", "trust_store", "location"))
-		truststorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
+		truststorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
 		keystorePath = config.Get[string](ssoConf, ssoConf.Join("server", "key_store", "location"))
-		keystorePassword = config.Get[*config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
+		keystorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
 	case i.Type().IsA("webserver"):
 		spPath := instance.Abs(i, "config/security.properties")
 
@@ -179,7 +178,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 					continue
 				}
 
-				key, err := k.GetPrivateKeyEntry(alias, keystorePassword.Bytes())
+				key, err := k.GetPrivateKeyEntry(alias, keystorePassword)
 				if err != nil {
 					continue
 				}
@@ -196,7 +195,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 					continue
 				}
 
-				if err = instance.WriteCertificateAndKey(i, memguard.NewEnclave(key.PrivateKey), certChain...); err != nil {
+				if err = instance.WriteCertificateAndKey(i, key.PrivateKey, certChain...); err != nil {
 					resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
 					break
 				}

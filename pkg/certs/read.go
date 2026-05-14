@@ -26,8 +26,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/awnumar/memguard"
-
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -121,9 +119,8 @@ func ReadCACertPool(h host.Host, path string) (pool *x509.CertPool, ok bool) {
 }
 
 // ReadPrivateKey reads file on host h as an unencrypted,
-// PEM-encoded private key and saves the der format key in a
-// memguard.Enclave
-func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error) {
+// PEM-encoded private key and saves the der format key
+func ReadPrivateKey(h host.Host, file string) (key PrivateKey, err error) {
 	b, err := h.ReadFile(file)
 	if err != nil {
 		return
@@ -135,7 +132,7 @@ func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error)
 			return nil, fmt.Errorf("cannot locate private key")
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = memguard.NewEnclave(p.Bytes)
+			key = PrivateKey(p.Bytes)
 			return
 		}
 		b = rest
@@ -143,17 +140,17 @@ func ReadPrivateKey(h host.Host, file string) (key *memguard.Enclave, err error)
 }
 
 // ReadPrivateKeyFromPEM reads a PEM-encoded private key from the given
-// byte slice and returns it as a memguard.Enclave. The input data
+// byte slice and returns it as a PrivateKey. The input data
 // should contain an unencrypted private key in PEM format. If the key
 // cannot be found or parsed, an error is returned.
-func ReadPrivateKeyFromPEM(pemData []byte) (key *memguard.Enclave, err error) {
+func ReadPrivateKeyFromPEM(pemData []byte) (key PrivateKey, err error) {
 	for {
 		p, rest := pem.Decode(pemData)
 		if p == nil {
 			return nil, fmt.Errorf("cannot locate private key")
 		}
 		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = memguard.NewEnclave(p.Bytes)
+			key = PrivateKey(p.Bytes)
 			return
 		}
 		pemData = rest

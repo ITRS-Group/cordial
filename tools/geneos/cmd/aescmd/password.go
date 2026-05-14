@@ -29,13 +29,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-var passwordCmdString = &config.Secret{}
+var passwordCmdString config.Secret
 var passwordCmdSource string
 
 func init() {
 	aesCmd.AddCommand(passwordCmd)
 
-	passwordCmd.Flags().VarP(passwordCmdString, "password", "p", "Password")
+	passwordCmdString = config.Secret{}
+	passwordCmd.Flags().VarP(&passwordCmdString, "password", "p", "Password")
 	passwordCmd.Flags().StringVarP(&passwordCmdSource, "source", "s", "", "External source for password `PATH|URL|-`")
 }
 
@@ -53,7 +54,7 @@ var passwordCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		var secret *config.Secret
+		var secret config.Secret
 
 		crc, created, err := geneos.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
 		if err != nil {
@@ -64,7 +65,7 @@ var passwordCmd = &cobra.Command{
 			fmt.Printf("%s created, checksum %08X\n", geneos.DefaultUserKeyfile, crc)
 		}
 
-		if !passwordCmdString.IsNil() {
+		if len(passwordCmdString) > 0 {
 			secret = passwordCmdString
 		} else if passwordCmdSource != "" {
 			var pt []byte
@@ -72,7 +73,7 @@ var passwordCmd = &cobra.Command{
 			if err != nil {
 				return
 			}
-			secret = config.NewSecret(pt)
+			secret = config.Secret(pt)
 		} else {
 			secret, err = config.ReadPasswordInput(true, 3)
 			if err != nil {

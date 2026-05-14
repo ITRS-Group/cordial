@@ -37,7 +37,7 @@ import (
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername string
-var snapshotCmdPassword *config.Secret
+var snapshotCmdPassword config.Secret
 
 func init() {
 	Cmd.AddCommand(snapshotCmd)
@@ -99,9 +99,9 @@ var snapshotCmd = &cobra.Command{
 			snapshotCmdUsername = config.Get[string](cf, cf.Join("snapshot", "username"))
 		}
 
-		snapshotCmdPassword = config.Get[*config.Secret](cf, cf.Join("snapshot", "password"))
+		snapshotCmdPassword = config.Get[config.Secret](cf, cf.Join("snapshot", "password"))
 
-		if snapshotCmdUsername != "" && (snapshotCmdPassword.IsNil() || snapshotCmdPassword.Size() == 0) {
+		if snapshotCmdUsername != "" && snapshotCmdPassword == nil {
 			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
 			if err == config.ErrNotInteractive {
 				fmt.Printf("not running interactive and password required")
@@ -144,13 +144,13 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 		// from the command line or user/global config or credentials
 		// file
 		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
-		password := config.Get[*config.Secret](i.Config(), config.Join("snapshot", "password"))
+		password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
 
 		if username == "" {
 			username = snapshotCmdUsername
 		}
 
-		if password.IsNil() {
+		if password == nil {
 			password = snapshotCmdPassword
 		}
 
@@ -161,11 +161,11 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.AppName(cordial.ExecutableName()))
 			if creds != nil {
 				username = config.Get[string](creds, "username")
-				password = config.Get[*config.Secret](creds, "password")
+				password = config.Get[config.Secret](creds, "password")
 			} else {
 				if creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName())); creds != nil {
 					username = config.Get[string](creds, "username")
-					password = config.Get[*config.Secret](creds, "password")
+					password = config.Get[config.Secret](creds, "password")
 				}
 			}
 		}

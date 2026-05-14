@@ -43,14 +43,16 @@ var deployCmdTLS, deployCmdInsecure bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
-var deployCmdPassword = &config.Secret{}
-var deployCmdBundlePassword = &config.Secret{}
+var deployCmdPassword, deployCmdBundlePassword config.Secret
 var deployCmdImportFiles instance.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = instance.SetConfigValues{}
 
 func init() {
 	Cmd.AddCommand(deployCmd)
+
+	deployCmdPassword = config.Secret{}
+	deployCmdBundlePassword = config.Secret{}
 
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
@@ -67,7 +69,7 @@ func init() {
 
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
 	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for PEM from console")
-	deployCmd.Flags().Var(deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+	deployCmd.Flags().Var(&deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
 
 	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem.\nIgnored if --instance-bundle is given.")
 
@@ -75,7 +77,7 @@ func init() {
 	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
 
 	deployCmd.Flags().StringVarP(&deployCmdUsername, "username", "u", "", "Username for downloads\nCredentials used if not given.")
-	deployCmd.Flags().VarP(deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
+	deployCmd.Flags().VarP(&deployCmdPassword, "password", "P", "Password for downloads\nPrompted if required and not given")
 
 	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version name for the instance.\nDefaults to 'active_prod' which is the default\nsymlink to the installed release.")
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION` of package\nDoesn't work for EL8/9/10 archives.")
@@ -241,7 +243,7 @@ var deployCmd = &cobra.Command{
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug().Msgf("version: %s", version)
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
-			if !deployCmdLocal && deployCmdUsername != "" && (deployCmdPassword.IsNil() || deployCmdPassword.Size() == 0) {
+			if !deployCmdLocal && deployCmdUsername != "" && deployCmdPassword == nil {
 				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
 				if err == config.ErrNotInteractive {
 					err = fmt.Errorf("%w and password required", err)
