@@ -168,7 +168,10 @@ func GetLivePID(i geneos.Instance) (pid int, err error) {
 }
 
 // GetProcessInfo returns process information for the instance i. If the
-// process is not found then an err of os.ErrProcessDone is returned.
+// process is not found then an err of os.ErrProcessDone is returned. A
+// process cache is used to avoid repeated calls to the host to get the
+// process entries, which can be expensive. The cache is updated every 5
+// seconds, or when the cache is empty.
 func GetProcessInfo(i geneos.Instance) (pi *process.ProcessInfo, err error) {
 	pid, err := GetPID(i)
 	if err != nil {
@@ -176,4 +179,24 @@ func GetProcessInfo(i geneos.Instance) (pi *process.ProcessInfo, err error) {
 	}
 
 	return process.GetProcessInfo(i.Host(), pid, false)
+}
+
+// GetChildPIDs returns a list of child processes for the instance
+// i. If the process is not found then an err of os.ErrProcessDone is
+// returned. A process cache is used to avoid repeated calls to the host
+// to get the process entries, which can be expensive. The cache is
+// updated every 5 seconds, or when the cache is empty.
+func GetChildPIDs(i geneos.Instance) (children []int, err error) {
+	pid, err := GetPID(i)
+	if err != nil {
+		return
+	}
+
+	h := i.Host()
+
+	pi, err := process.GetProcessInfo(h, pid, false)
+	if err != nil {
+		return
+	}
+	return pi.Children, nil
 }

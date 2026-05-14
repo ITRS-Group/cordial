@@ -29,6 +29,8 @@ import (
 )
 
 // Stop an instance
+//
+// TODO: check for managed CAs and wait for those too
 func Stop(i geneos.Instance, force, kill bool) (err error) {
 	if !force && IsProtected(i) {
 		return geneos.ErrProtected
@@ -38,8 +40,6 @@ func Stop(i geneos.Instance, force, kill bool) (err error) {
 		log.Debug().Msgf("%s not running", i)
 		return os.ErrProcessDone
 	}
-
-	// start := time.Now()
 
 	if !kill {
 		if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
