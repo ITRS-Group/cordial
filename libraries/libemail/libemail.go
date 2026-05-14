@@ -65,6 +65,8 @@ const DefaultMsTeamsTimeout = 2000
 var webhookValidators []string = []string{
 	`^https:\/\/(.+\.webhook|outlook)\.office(365)?\.com`,
 	`^https:\/\/.+\.azure\.com`,
+	// New Power Platform / Power Automate Workflow
+	`^https:\/\/.+\.environment\.api\.powerplatform\.com(:443)?`,
 }
 
 type msTeamsBasicTextNotifPostData struct {
@@ -573,3 +575,231 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	log.Println("INFO: GoSendToMsTeamsChannel() completed.")
 	return 0
 } // End of GoSendToMsTeamsChannel()
+
+type cardElement struct {
+	Type   string `json:"type"`
+	Text   string `json:"text,omitempty"`
+	Weight string `json:"weight,omitempty"`
+	Size   string `json:"size,omitempty"`
+	Wrap   bool   `json:"wrap,omitempty"`
+}
+
+//export GoSendToMsTeamsWorkflow
+func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
+	var msTeamsWebhooksValidity = make(map[string]bool)
+	var clientTimeout time.Duration
+
+	conf := parseArgs(n, args)
+
+	if _, ok := conf["_TO"]; !ok || len(conf["_TO"]) == 0 {
+		log.Println("ERR: No MsTeams Workflow URLs defined.")
+		return 1
+	}
+
+	msTeamsWebhooks := strings.Split(conf["_TO"], "|")
+	validityCount := 0
+
+	var regexes []*regexp.Regexp
+	for _, r := range webhookValidators {
+		regexes = append(regexes, regexp.MustCompile(r))
+	}
+
+	for _, s := range msTeamsWebhooks {
+		trimmedAddr := strings.TrimSpace(s)
+		isValid := false
+		for _, r := range regexes {
+			if r.MatchString(trimmedAddr) {
+				isValid = true
+				break
+			}
+		}
+		msTeamsWebhooksValidity[trimmedAddr] = isValid
+		if isValid {
+			validityCount++
+		}
+	}
+
+	if validityCount == 0 {
+		log.Println("ERR: No valid msTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel()")
+		return 1
+	}
+
+	var subject string
+	subject = defaultMsTeamsSubject[_SUBJECT]
+	if _, ok := conf["_SUBJECT"]; ok && len(conf["_SUBJECT"]) != 0 {
+		subject = getWithDefault("_SUBJECT", conf, defaultMsTeamsSubject[_SUBJECT])
+	} else if _, ok = conf["_ALERT"]; ok {
+		switch conf["_ALERT_TYPE"] {
+		case "Alert":
+			subject = getWithDefault("_ALERT_SUBJECT", conf, defaultMsTeamsSubject[_ALERT_SUBJECT])
+		case "Clear":
+			subject = getWithDefault("_CLEAR_SUBJECT", conf, defaultMsTeamsSubject[_CLEAR_SUBJECT])
+		case "Suspend":
+			subject = getWithDefault("_SUSPEND_SUBJECT", conf, defaultMsTeamsSubject[_SUSPEND_SUBJECT])
+		case "Resume":
+			subject = getWithDefault("_RESUME_SUBJECT", conf, defaultMsTeamsSubject[_RESUME_SUBJECT])
+		case "ThrottleSummary":
+			subject = getWithDefault("_SUMMARY_SUBJECT", conf, defaultMsTeamsSubject[_SUMMARY_SUBJECT])
+		default:
+			subject = getWithDefault("_SUBJECT", conf, defaultMsTeamsSubject[_SUBJECT])
+		}
+	}
+
+	subjtmpl := template.New("subject")
+	if tmpl, err := subjtmpl.Parse(subject); err == nil {
+		var subjbuf bytes.Buffer
+		if err = tmpl.Execute(&subjbuf, conf); err == nil {
+			subject = subjbuf.String()
+		}
+	}
+	header := replArgs(subject, conf)
+
+	var htmltmpl *htmltemplate.Template
+	var texttmpl *template.Template
+	var textOnly, useHtmlTmpl bool
+	var htmlOutput, textOutput bytes.Buffer
+	var contents string
+	var body string
+	var err error
+
+	_, textOnly = conf["TEMPLATE_TEXT_ONLY"]
+
+	if val, ok := conf["_TEMPLATE_HTML_FILE"]; ok && len(val) != 0 {
+		useHtmlTmpl = true
+		contents, err = readFileString(val)
+		if err == nil {
+			htmltmpl, err = htmltemplate.New("html").Parse(contents)
+		}
+	} else if val, ok := conf["_TEMPLATE_HTML"]; ok && len(val) != 0 {
+		useHtmlTmpl = true
+		htmltmpl, err = htmltemplate.New("html").Parse(val)
+	} else if val, ok := conf["_TEMPLATE_TEXT_FILE"]; ok && len(val) != 0 {
+		useHtmlTmpl = false
+		texttmpl, err = template.ParseFiles(val)
+	} else if val, ok := conf["_TEMPLATE_TEXT"]; ok && len(val) != 0 {
+		useHtmlTmpl = false
+		texttmpl, err = template.New("text").Parse(val)
+	} else if val, ok := conf["_FORMAT"]; ok && len(val) != 0 {
+		if textOnly {
+			useHtmlTmpl = false
+			texttmpl, err = template.New("text").Parse(val)
+		} else {
+			useHtmlTmpl = true
+			htmltmpl, err = htmltemplate.New("html").Parse(val)
+		}
+	} else if textOnly {
+		useHtmlTmpl = false
+		texttmpl, err = template.New("text").Parse(defMsTeamsTextTemplate)
+	} else {
+		useHtmlTmpl = true
+		htmltmpl, err = htmltemplate.New("html").Parse(defMsTeamsHTMLTemplate)
+	}
+
+	if err != nil {
+		log.Println("ERR: Template parsing failed. Abort.", err)
+		return 1
+	}
+
+	if useHtmlTmpl {
+		err = htmltmpl.ExecuteTemplate(&htmlOutput, "html", conf)
+		body = replArgs(htmlOutput.String(), conf)
+	} else {
+		err = texttmpl.Execute(&textOutput, conf)
+		body = replArgs(textOutput.String(), conf)
+	}
+
+	if err != nil {
+		log.Println("ERR: Template execution failed. Abort.", err)
+		return 1
+	}
+
+	type adaptiveCardPayload struct {
+		Type        string `json:"type"`
+		Attachments []struct {
+			ContentType string `json:"contentType"`
+			Content     struct {
+				Schema  string                   `json:"$schema"`
+				Type    string                   `json:"type"`
+				Version string                   `json:"version"`
+				Body    []map[string]interface{} `json:"body"`
+			} `json:"content"`
+		} `json:"attachments"`
+	}
+
+	payload := adaptiveCardPayload{Type: "message"}
+	payload.Attachments = make([]struct {
+		ContentType string `json:"contentType"`
+		Content     struct {
+			Schema  string                   `json:"$schema"`
+			Type    string                   `json:"type"`
+			Version string                   `json:"version"`
+			Body    []map[string]interface{} `json:"body"`
+		} `json:"content"`
+	}, 1)
+
+	payload.Attachments[0].ContentType = "application/vnd.microsoft.card.adaptive"
+	payload.Attachments[0].Content.Schema = "http://adaptivecards.io/schemas/adaptive-card.json"
+	payload.Attachments[0].Content.Type = "AdaptiveCard"
+	payload.Attachments[0].Content.Version = "1.5"
+
+	headerBlock := map[string]interface{}{
+		"type":   "TextBlock",
+		"text":   header,
+		"weight": "Bolder",
+		"size":   "Medium",
+		"wrap":   true,
+	}
+
+	var bodyBlocks []map[string]interface{}
+	trimmedBody := strings.TrimSpace(body)
+
+	if strings.HasPrefix(trimmedBody, "[") && strings.HasSuffix(trimmedBody, "]") {
+		err := json.Unmarshal([]byte(trimmedBody), &bodyBlocks)
+		if err != nil {
+			log.Printf("WARN: Template looked like JSON but failed to parse: %v. Using as plain text.", err)
+			bodyBlocks = []map[string]interface{}{
+				{"type": "TextBlock", "text": body, "wrap": true},
+			}
+		}
+	} else {
+		bodyBlocks = []map[string]interface{}{
+			{"type": "TextBlock", "text": body, "wrap": true},
+		}
+	}
+
+	payload.Attachments[0].Content.Body = append([]map[string]interface{}{headerBlock}, bodyBlocks...)
+
+	jsonValue, err := json.Marshal(payload)
+	if err != nil {
+		log.Println("ERR: Cannot generate JSON data for Workflow API.", err)
+		return 1
+	}
+
+	timeoutStr := getWithDefault("_TIMEOUT", conf, fmt.Sprintf("%d", DefaultMsTeamsTimeout))
+	if timeout, err := strconv.Atoi(timeoutStr); err != nil {
+		clientTimeout = DefaultMsTeamsTimeout * time.Millisecond
+	} else {
+		clientTimeout = time.Duration(timeout) * time.Millisecond
+	}
+
+	client := &http.Client{Timeout: clientTimeout}
+	for url, isValid := range msTeamsWebhooksValidity {
+		if isValid {
+			request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+			if err != nil {
+				log.Printf("ERR: Request creation failed for %s: %v", url, err)
+				continue
+			}
+			request.Header.Set("Content-Type", "application/json")
+			resp, err := client.Do(request)
+			if err != nil {
+				log.Printf("ERR: HTTP POST to Workflow failed (target %s): %v", url, err)
+			} else {
+				log.Printf("INFO: Message sent to Workflow %s, status %d\n", url, resp.StatusCode)
+				resp.Body.Close()
+			}
+		}
+	}
+	log.Println("INFO: GoSendToMsTeamsChannel() (Workflow) completed.")
+	return 0
+}
