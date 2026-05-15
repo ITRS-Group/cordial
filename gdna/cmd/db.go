@@ -966,6 +966,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 	// otherwise try to read it as a file path.
 	if privateKey := config.Get[config.Secret](cf, cf.Join("gdna", "licd-private-key")); len(privateKey) > 0 {
 		var signingMethod jwt.SigningMethod
+		defer clear(privateKey)
 
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
 		if err != nil {
@@ -976,7 +977,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 				return sources, err
 			}
 		}
-		clear(privateKey)
+		defer clear(pk)
 
 		pkey, pkeyType, err := certs.ParsePrivateKey(pk)
 		if err != nil {

@@ -31,7 +31,7 @@ var sdpAuthCmdCode config.Secret
 func init() {
 	Cmd.AddCommand(sdpAuthCmd)
 
-	sdpAuthCmd.Flags().VarP(sdpAuthCmdCode, "code", "a", "Authorization code received from ServiceDesk Plus, prompted if not given")
+	sdpAuthCmd.Flags().VarP(&sdpAuthCmdCode, "code", "a", "Authorization code received from ServiceDesk Plus, prompted if not given")
 
 	sdpAuthCmd.Flags().SortFlags = false
 }
@@ -49,6 +49,7 @@ var sdpAuthCmd = &cobra.Command{
 			if err != nil {
 				return
 			}
+			defer clear(sdpAuthCmdCode)
 		}
 
 		if _, err = sdp.InitialAuth(cf.Sub("sdp"), sdpAuthCmdCode); err != nil {

@@ -245,6 +245,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		config.Join("server", "trust_store", "password"),
 		config.DefaultValue(config.Secret("changeit")),
 	)
+	defer clear(truststorePassword)
 
 	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
 
@@ -265,6 +266,7 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 			config.Join("server", "key_store", "password"),
 			config.DefaultValue(config.Secret("changeit")),
 		)
+		defer clear(keystorePassword)
 
 		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
 		if err != nil {
@@ -369,7 +371,7 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
 		if truststorePassword != nil {
 			// the truststore password is optional but has to be in plain text on the command line
-			args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword.String())
+			args = append(args, "-Djavax.net.ssl.trustStorePassword="+string(truststorePassword))
 		}
 	}
 

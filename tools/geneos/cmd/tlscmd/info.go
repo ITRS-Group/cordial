@@ -66,8 +66,6 @@ var infoCmdRoots infoCmdRootsType
 func init() {
 	tlsCmd.AddCommand(infoCmd)
 
-	infoCmdPassword = config.Secret{}
-
 	infoCmd.Flags().BoolVarP(&infoCmdLeafOnly, "leaf-only", "L", false,
 		"Only output leaf certificates (i.e. skip CA certificates and any\ncertificate without a matching private key in any file)")
 	infoCmd.Flags().BoolVarP(&infoCmdLong, "long", "l", false, "Output long format (more columns)")
@@ -542,6 +540,14 @@ func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo) {
 	return
 }
 
+// readFile reads the specified file and extracts certificate
+// information into the provided certInfo struct. The file can be a PEM
+// file containing certificates and/or private keys, a PKCS#12/PFX file,
+// or a Java keystore. Errors are stored in ci.Error and returned by the
+// function. The roots parameter is used for verifying certificate
+// chains when reading from a connection, but not for files since we
+// want to report the verification status of each certificate
+// separately.
 func readFile(p string, ci *certInfo) (err error) {
 	ci.Path, err = filepath.Abs(p)
 	if err != nil {
@@ -597,12 +603,13 @@ func readFile(p string, ci *certInfo) (err error) {
 
 	if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
 		log.Debug().Str("file", p).Msg("Java keystore magic number found")
-		if infoCmdPassword.String() == "" {
+		if len(infoCmdPassword) == 0 {
 			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed to read password")
 				// return err
 			}
+			defer clear(infoCmdPassword)
 		}
 		k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
 		if err != nil {
@@ -659,9 +666,10 @@ func readFile(p string, ci *certInfo) (err error) {
 			if err != nil {
 				return
 			}
+			defer clear(infoCmdPassword)
 		}
 
-		key, c, chain, err := pkcs12.DecodeChain(contents, infoCmdPassword.String())
+		key, c, chain, err := pkcs12.DecodeChain(contents, string(infoCmdPassword))
 		if err != nil {
 			log.Error().Err(err).Str("file", p).Msg("unable to decode PKCS#12 file - is the password correct?")
 			return err

@@ -771,7 +771,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		if opts.username != "" {
 			da := downloadauth{
 				Username: opts.username,
-				Password: opts.password.String(),
+				Password: string(opts.password),
 			}
 			authBody, err = json.Marshal(da)
 			if err != nil {
@@ -932,7 +932,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 		if opts.username != "" {
 			log.Debug().Msgf("setting creds for %s", opts.username)
-			req.SetBasicAuth(opts.username, opts.password.String())
+			req.SetBasicAuth(opts.username, string(opts.password))
 		}
 		if resp, err = client.Do(req); err != nil {
 			log.Debug().Err(err).Msg("req failed")

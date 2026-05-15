@@ -459,7 +459,7 @@ func P12ToCertBundle(pfxPath string, password config.Secret) (certBundle *Certif
 		err = fmt.Errorf("failed to read PFX file: %w", err)
 		return
 	}
-	key, c, caCerts, err := pkcs12.DecodeChain(pfxData, password.String())
+	key, c, caCerts, err := pkcs12.DecodeChain(pfxData, string(password))
 	if err != nil {
 		err = fmt.Errorf("failed to decode PFX file: %w", err)
 		return

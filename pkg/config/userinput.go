@@ -130,6 +130,10 @@ func ReadPEM(from, prompt string) (data []byte, err error) {
 // On error the pw is empty and does not need to be Destroy()ed.
 //
 // If STDIN is not a terminal then config.ErrNotInteractive is returned.
+//
+// The returned Secret should be cleared by the caller when it is no
+// longer needed, typically by calling clear() on the Secret which will
+// zero the memory used by the Secret.
 func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret Secret, err error) {
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		err = ErrNotInteractive

@@ -51,9 +51,6 @@ var deployCmdExtras = instance.SetConfigValues{}
 func init() {
 	Cmd.AddCommand(deployCmd)
 
-	deployCmdPassword = config.Secret{}
-	deployCmdBundlePassword = config.Secret{}
-
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
 	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Start created instance and follow logs.\n(Implies --start to start the instance)")
@@ -249,6 +246,7 @@ var deployCmd = &cobra.Command{
 					err = fmt.Errorf("%w and password required", err)
 					return
 				}
+				defer clear(deployCmdPassword)
 			}
 
 			options := []geneos.PackageOption{
@@ -320,12 +318,13 @@ var deployCmd = &cobra.Command{
 		if deployCmdInstanceBundle != "" {
 			var certBundle *certs.CertificateBundle
 			if path.Ext(deployCmdInstanceBundle) == ".pfx" || path.Ext(deployCmdInstanceBundle) == ".p12" {
-				if deployCmdBundlePassword.String() == "" {
+				if len(deployCmdBundlePassword) == 0 {
 					deployCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
 					if err != nil {
 						log.Fatal().Err(err).Msg("Failed to read password")
 						return err
 					}
+					defer clear(deployCmdBundlePassword)
 				}
 				certBundle, err = certs.P12ToCertBundle(deployCmdInstanceBundle, deployCmdBundlePassword)
 				if err != nil {

@@ -38,8 +38,6 @@ var loginCmdList bool
 func init() {
 	Cmd.AddCommand(loginCmd)
 
-	loginCmdPassword = config.Secret{}
-
 	loginCmd.Flags().StringVarP(&loginCmdUsername, "username", "u", "", "Username")
 	loginCmd.Flags().VarP(&loginCmdPassword, "password", "p", "Password")
 	loginCmd.Flags().VarP(&loginKeyfile, "keyfile", "k", "Key file to use")

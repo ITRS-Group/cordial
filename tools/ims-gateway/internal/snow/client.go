@@ -88,11 +88,11 @@ func newClient(cf *config.Config) (c client) {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
 		params.Set("username", username)
-		params.Set("password", password.String())
+		params.Set("password", string(password))
 
 		conf := &clientcredentials.Config{
 			ClientID:       clientID,
-			ClientSecret:   clientSecret.String(),
+			ClientSecret:   string(clientSecret),
 			EndpointParams: params,
 			TokenURL:       sn.JoinPath("/oauth_token.do").String(),
 		}
@@ -109,7 +109,7 @@ func newClient(cf *config.Config) (c client) {
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
-				req.SetBasicAuth(username, password.String())
+				req.SetBasicAuth(username, string(password))
 			}),
 			rest.Logger(logger),
 		)

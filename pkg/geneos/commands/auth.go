@@ -49,7 +49,7 @@ func AuthSSO() {
 // enclave
 func AuthBasic(c *http.Request, username string, password config.Secret) (err error) {
 	if c != nil {
-		c.SetBasicAuth(username, password.String())
+		c.SetBasicAuth(username, string(password))
 	}
 	return
 }

@@ -47,8 +47,6 @@ var addCmdExtras = instance.SetConfigValues{}
 func init() {
 	Cmd.AddCommand(addCmd)
 
-	addCmdBundlePassword = config.Secret{}
-
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
@@ -163,12 +161,13 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	if addCmdInstanceBundle != "" {
 		var certBundle *certs.CertificateBundle
 		if path.Ext(addCmdInstanceBundle) == ".pfx" || path.Ext(addCmdInstanceBundle) == ".p12" {
-			if addCmdBundlePassword.String() == "" {
+			if len(addCmdBundlePassword) == 0 {
 				addCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
 					log.Fatal().Err(err).Msg("Failed to read password")
 					return err
 				}
+				defer clear(addCmdBundlePassword)
 			}
 			certBundle, err = certs.P12ToCertBundle(addCmdInstanceBundle, addCmdBundlePassword)
 			if err != nil {

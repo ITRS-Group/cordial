@@ -46,7 +46,6 @@ var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bo
 var initCmdRestore, initCmdArchive string
 var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
 var initCmdDLUsername string
-var initCmdDLPassword config.Secret
 var initCmdNoInstall, initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
@@ -289,18 +288,21 @@ func initProcessArgs(command *cobra.Command, args []string, extras ...instance.S
 		initCmdDLUsername = config.Get[string](cf, cf.Join("download", "username"))
 	}
 
-	if initCmdDLUsername != "" {
-		initCmdDLPassword = config.Get[config.Secret](cf, cf.Join("download", "password"))
+	var password config.Secret
 
-		if initCmdDLUsername != "" && len(initCmdDLPassword) == 0 {
-			initCmdDLPassword, err = config.ReadPasswordInput(false, 0)
+	if initCmdDLUsername != "" {
+		password = config.Get[config.Secret](cf, cf.Join("download", "password"))
+
+		if len(password) == 0 {
+			password, err = config.ReadPasswordInput(false, 0)
 			if err == config.ErrNotInteractive {
 				err = fmt.Errorf("%w and password required", err)
 				return
 			}
 		}
+		defer clear(password)
 
-		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(initCmdDLPassword))
+		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(password))
 	}
 
 	return

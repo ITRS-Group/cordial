@@ -22,7 +22,7 @@ var icp *ICP
 func Login(username string, password config.Secret, options ...rest.Option) (icp *ICP, err error) {
 	creds := &LoginRequest{
 		Username: username,
-		Password: password.String(),
+		Password: string(password),
 	}
 	icp = New(options...)
 	var token string

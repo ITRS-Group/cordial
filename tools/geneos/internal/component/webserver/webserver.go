@@ -262,6 +262,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	// create truststore from ca-bundle
 	truststorePath := sp["trustStore"]
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
+	defer clear(truststorePassword)
 
 	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
 	if len(roots) > 0 && truststorePath != "" {
@@ -275,6 +276,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	// create keystore from certificate and private key
 	keyStore := sp["keyStore"]
 	keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
+	defer clear(keyStorePassword)
 	alias := geneos.ALL.Hostname()
 
 	certChain, err := instance.ReadCertificates(w)

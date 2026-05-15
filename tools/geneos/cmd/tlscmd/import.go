@@ -41,7 +41,6 @@ var importCmdPassword config.Secret
 func init() {
 	tlsCmd.AddCommand(importCmd)
 
-	importCmdPassword = config.Secret{}
 	importCmd.Flags().VarP(&importCmdPassword, "password", "p",
 		`Plaintext password for PFX/PKCS#12 file decryption.
 You will be prompted if not supplied as an argument.
@@ -111,11 +110,12 @@ geneos tls import /path/to/file.pem
 		}
 
 		if path.Ext(file) == ".pfx" || path.Ext(file) == ".p12" {
-			if importCmdPassword.String() == "" {
+			if len(importCmdPassword) == 0 {
 				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
 					return err
 				}
+				defer clear(importCmdPassword)
 			}
 			certBundle, err = certs.P12ToCertBundle(file, importCmdPassword)
 			if err != nil {

@@ -127,8 +127,10 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 		truststorePath = config.Get[string](ssoConf, ssoConf.Join("server", "trust_store", "location"))
 		truststorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
+		defer clear(truststorePassword)
 		keystorePath = config.Get[string](ssoConf, ssoConf.Join("server", "key_store", "location"))
 		keystorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
+		defer clear(keystorePassword)
 	case i.Type().IsA("webserver"):
 		spPath := instance.Abs(i, "config/security.properties")
 
@@ -140,9 +142,11 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 		truststorePath = sp["trustStore"]
 		truststorePassword = cf.ExpandToPassword(sp["trustStorePassword"])
+		defer clear(truststorePassword)
 
 		keystorePath = sp["keyStore"]
 		keystorePassword = cf.ExpandToPassword(sp["keyStorePassword"])
+		defer clear(keystorePassword)
 	default:
 		// for other instance types, we don't expect to find
 		// keystore/truststore parameters, do nothing

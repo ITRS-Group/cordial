@@ -139,10 +139,17 @@ func (k *KeyFile) ReadOrCreate(h host.Host) (crc32 uint32, created bool, err err
 			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
 			return
 		}
-		kv := NewRandomKeyValues()
-		if err = h.WriteFile(k.String(), []byte(kv.String()), 0600); err != nil {
+		kv := NewKeyValues()
+		defer kv.Destroy()
+		w, err := h.Create(k.String(), 0600)
+		if err != nil {
+			err = fmt.Errorf("failed to create keyfile %q: %w", k, err)
+			return 0, false, err
+		}
+		defer w.Close()
+		if err = kv.Write(w); err != nil {
 			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
-			return
+			return 0, false, err
 		}
 
 		created = true
@@ -249,6 +256,7 @@ func (k *KeyFile) EncodePasswordInput(h host.Host, expandable bool) (out string,
 	if err != nil {
 		return
 	}
+	defer clear(secret)
 	out, err = k.Encode(h, secret, expandable)
 	return
 }

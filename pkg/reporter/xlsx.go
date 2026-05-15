@@ -475,7 +475,7 @@ func (x *XLSXReporter) Render() {
 	x.setColumnWidths()
 	x.freezePanes()
 	x.x.Write(x.w, excelize.Options{
-		Password: x.password.String(),
+		Password: string(x.password),
 	})
 }
 

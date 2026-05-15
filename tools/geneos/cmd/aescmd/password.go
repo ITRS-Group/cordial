@@ -35,7 +35,6 @@ var passwordCmdSource string
 func init() {
 	aesCmd.AddCommand(passwordCmd)
 
-	passwordCmdString = config.Secret{}
 	passwordCmd.Flags().VarP(&passwordCmdString, "password", "p", "Password")
 	passwordCmd.Flags().StringVarP(&passwordCmdSource, "source", "s", "", "External source for password `PATH|URL|-`")
 }
@@ -73,12 +72,15 @@ var passwordCmd = &cobra.Command{
 			if err != nil {
 				return
 			}
+			defer clear(pt)
 			secret = config.Secret(pt)
+			defer clear(secret)
 		} else {
 			secret, err = config.ReadPasswordInput(true, 3)
 			if err != nil {
 				return
 			}
+			defer clear(secret)
 		}
 		e, err := geneos.DefaultUserKeyfile.Encode(host.Localhost, secret, true)
 		if err != nil {

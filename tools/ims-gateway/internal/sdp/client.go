@@ -82,7 +82,7 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	conf := &Config{
 		Config: oauth2.Config{
 			ClientID:     clientID,
-			ClientSecret: clientSecret.String(),
+			ClientSecret: string(clientSecret),
 			Endpoint: oauth2.Endpoint{
 				TokenURL: auth.JoinPath("/oauth/v2/token").String(),
 			},

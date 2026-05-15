@@ -224,7 +224,7 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	}
 
 	em.Default("_smtp_username", eusername)
-	em.Default("_smtp_password", epassword.String())
+	em.Default("_smtp_password", string(epassword))
 	em.Default("_smtp_server", smtpserver)
 	if cf != nil {
 		em.Default("_smtp_tls", config.Get[string](cf, cf.Join("email", "use-tls")))

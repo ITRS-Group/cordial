@@ -211,7 +211,7 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 	}
 	switch c.AuthType {
 	case Basic:
-		req.SetBasicAuth(c.Username, c.Password.String())
+		req.SetBasicAuth(c.Username, string(c.Password))
 	case SSO:
 		// XXX
 	default:

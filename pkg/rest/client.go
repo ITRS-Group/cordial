@@ -89,7 +89,7 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.
 	tokenauth := c.BaseURL.JoinPath("/oauth2/token")
 	conf := &clientcredentials.Config{
 		ClientID:       clientID,
-		ClientSecret:   clientSecret.String(),
+		ClientSecret:   string(clientSecret),
 		EndpointParams: params,
 		TokenURL:       tokenauth.String(),
 	}

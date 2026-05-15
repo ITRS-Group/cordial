@@ -88,7 +88,7 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 		req.Header["if-modified-since"] = []string{fo.ifmodified.lastModified.Format(http.TimeFormat)}
 	}
 	if fo.username != "" && len(fo.password) > 0 {
-		req.SetBasicAuth(fo.username, fo.password.String())
+		req.SetBasicAuth(fo.username, string(fo.password))
 	}
 	req.Header["accept"] = []string{"application/json"}
 	resp, err := fo.client.Do(req)

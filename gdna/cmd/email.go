@@ -326,6 +326,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	if username != "" {
 		password = config.Get[config.Secret](cf, "email.password")
+		defer clear(password)
 	}
 
 	if username == "" {
@@ -336,6 +337,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 		if creds != nil {
 			username = config.Get[string](creds, "username")
 			password = config.Get[config.Secret](creds, "password", config.UseKeyfile(config.Get[string](cf, "email.key-file")))
+			defer clear(password)
 		}
 	}
 
@@ -347,7 +349,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 	if username != "" {
 		mailOpts = append(mailOpts,
 			mail.WithUsername(username),
-			mail.WithPassword(password.String()),
+			mail.WithPassword(string(password)),
 			mail.WithSMTPAuth(mail.SMTPAuthLogin),
 		)
 	} else {

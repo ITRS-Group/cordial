@@ -38,8 +38,6 @@ var setCmdPrivateKeyfiles PrivateKeyFiles
 func init() {
 	hostCmd.AddCommand(setCmd)
 
-	setCmdPassword = config.Secret{}
-
 	setCmd.Flags().BoolVarP(&setCmdPrompt, "prompt", "p", false, "Prompt for password")
 	setCmd.Flags().VarP(&setCmdPassword, "password", "P", "password")
 	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "Keyfile")

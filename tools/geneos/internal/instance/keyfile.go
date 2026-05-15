@@ -12,7 +12,8 @@ import (
 // CreateAESKeyFile creates a new key file, for secure passwords as per
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
 func CreateAESKeyFile(i geneos.Instance) (err error) {
-	kv := config.NewRandomKeyValues()
+	kv := config.NewKeyValues()
+	defer kv.Destroy()
 
 	_, _, err = WriteAESKeyFile(i, kv)
 	return

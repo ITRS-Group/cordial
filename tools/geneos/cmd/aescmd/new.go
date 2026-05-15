@@ -74,7 +74,8 @@ geneos aes new -S gateway
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		// create new key values, may be overwritten later
-		kv := config.NewRandomKeyValues()
+		kv := config.NewKeyValues()
+		defer kv.Destroy() // slightly pointless as we print the contents, optionally, below
 
 		if newCmdSaveUser {
 			newCmdKeyfile = geneos.DefaultUserKeyfile

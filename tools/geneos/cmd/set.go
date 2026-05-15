@@ -86,8 +86,15 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		if err = promptForSecrets("Parameter", setCmdValues.SecureParams); err != nil {
 			return
 		}
+		for _, s := range setCmdValues.SecureParams {
+			defer clear(s.Secret)
+		}
+
 		if err = promptForSecrets("Environment Variable", setCmdValues.SecureEnvs); err != nil {
 			return
+		}
+		for _, s := range setCmdValues.SecureEnvs {
+			defer clear(s.Secret)
 		}
 
 		return Set(ct, names, params)

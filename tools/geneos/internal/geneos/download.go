@@ -127,7 +127,7 @@ func openSource(source string, options ...PackageOption) (from io.ReadCloser, fi
 			if opts.username != "" {
 				req2 := req.Clone(req.Context())
 				pw := opts.password
-				req2.SetBasicAuth(opts.username, pw.String())
+				req2.SetBasicAuth(opts.username, string(pw))
 				if resp, err = client.Do(req2); err != nil {
 					return
 				}

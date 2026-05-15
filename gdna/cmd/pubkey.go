@@ -72,6 +72,7 @@ var pubkeyCmd = &cobra.Command{
 
 func printPublicKey() error {
 	if privateKey, ok := config.Lookup[config.Secret](cf, cf.Join("gdna", "licd-private-key")); ok && len(privateKey) > 0 {
+		defer clear(privateKey)
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
 		if err != nil {
 			// try reading from file path if the value is not a valid
@@ -83,6 +84,7 @@ func printPublicKey() error {
 				return err
 			}
 		}
+		defer clear(pk)
 		pubKey, err := certs.PublicKey(pk)
 		if err != nil {
 			log.Error().Err(err).Msg("getting public key from private key")

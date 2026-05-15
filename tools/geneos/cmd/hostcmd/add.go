@@ -59,8 +59,6 @@ func (i *PrivateKeyFiles) Type() string {
 func init() {
 	hostCmd.AddCommand(addCmd)
 
-	addCmdPassword = config.Secret{}
-
 	addCmdKeyfile = geneos.DefaultUserKeyfile
 	addCmd.Flags().BoolVarP(&addCmdInit, "init", "I", false, "Initialise the remote host directories and component files")
 	addCmd.Flags().BoolVarP(&addCmdPrompt, "prompt", "p", false, "Prompt for password")
@@ -142,6 +140,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			if err != nil {
 				return
 			}
+			defer clear(pw)
 		} else if len(addCmdPassword) > 0 {
 			pw = addCmdPassword
 		}

@@ -171,7 +171,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 	conf := &Config{
 		Config: oauth2.Config{
 			ClientID:     clientID,
-			ClientSecret: clientSecret.String(),
+			ClientSecret: string(clientSecret),
 			Endpoint: oauth2.Endpoint{
 				TokenURL: auth.JoinPath("/oauth/v2/token").String(),
 			},
@@ -181,7 +181,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 	}
 
 	params := make(url.Values)
-	params.Set("code", conf.Code.String())
+	params.Set("code", string(conf.Code))
 	params.Set("client_id", conf.ClientID)
 	params.Set("client_secret", conf.ClientSecret)
 	params.Set("redirect_uri", conf.RedirectURL)

@@ -45,15 +45,12 @@ func init() {
 	encodeCmd.Flags().VarP(&encodeCmdKeyfile, "keyfile", "k", "Path to keyfile")
 	encodeCmd.Flags().StringVarP(&encodeCmdCRC, "crc", "c", "", "CRC of existing component shared keyfile to use (extension optional)")
 
-	encodeCmdString = config.Secret{}
 	encodeCmd.Flags().VarP(&encodeCmdString, "password", "p", "Password")
 	encodeCmd.Flags().StringVarP(&encodeCmdSource, "source", "s", "", "Alternative source for plaintext password")
 	encodeCmd.Flags().BoolVarP(&encodeCmdAskOnce, "once", "o", false, "Only prompt for password once, do not verify. Normally use '-s -' for stdin")
 
 	encodeCmd.Flags().StringVarP(&encodeCmdProvider, "app-key", "A", "", "SSO `PROVIDER`, one of ssoAgent, obcerv, gatewayHub")
 
-	encodeCmdClientID = config.Secret{}
-	encodeCmdClientSecret = config.Secret{}
 	encodeCmd.Flags().VarP(&encodeCmdClientID, "client-id", "C", "Client ID for --app-key, prompted if not set")
 	encodeCmd.Flags().VarP(&encodeCmdClientSecret, "client-secret", "S", "Client Secret for --app-key, prompted if not set")
 
@@ -123,6 +120,7 @@ var encodeCmd = &cobra.Command{
 					if err != nil {
 						return
 					}
+					defer clear(encodeCmdClientID)
 				}
 
 				if len(encodeCmdClientSecret) == 0 {
@@ -130,6 +128,7 @@ var encodeCmd = &cobra.Command{
 					if err != nil {
 						return
 					}
+					defer clear(encodeCmdClientSecret)
 				}
 				e, err := keyfile.Encode(host.Localhost, encodeCmdClientSecret, false)
 				if err != nil {
@@ -147,6 +146,7 @@ var encodeCmd = &cobra.Command{
 				if err != nil {
 					return
 				}
+				defer clear(encodeCmdClientID)
 			}
 
 			if len(encodeCmdClientSecret) == 0 {
@@ -154,6 +154,7 @@ var encodeCmd = &cobra.Command{
 				if err != nil {
 					return
 				}
+				defer clear(encodeCmdClientSecret)
 			}
 
 			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
@@ -212,12 +213,15 @@ var encodeCmd = &cobra.Command{
 			if err != nil {
 				return err
 			}
+			defer clear(pt)
 			secret = config.Secret(pt)
+			defer clear(secret)
 		} else {
 			secret, err = config.ReadPasswordInput(!encodeCmdAskOnce, 0)
 			if err != nil {
 				return
 			}
+			defer clear(secret)
 		}
 
 		ct, args, _, err := cmd.FetchArgs(command)

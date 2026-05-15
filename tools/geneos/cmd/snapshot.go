@@ -107,6 +107,7 @@ var snapshotCmd = &cobra.Command{
 				fmt.Printf("not running interactive and password required")
 				return
 			}
+			defer clear(snapshotCmdPassword)
 		}
 
 		instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params).Report(os.Stdout, responses.IndentJSON(true))

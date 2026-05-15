@@ -611,8 +611,7 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	// 	s := Secret(expand[[]byte](c, c.config.GetString(key), options...))
 	// 	return any(&s).(T)
 	case Secret:
-		s := Secret(expand[[]byte](c, c.config.GetString(key), options...))
-		return any(s).(T)
+		return any(Secret(expand[[]byte](c, c.config.GetString(key), options...))).(T)
 	default:
 		return any(c.config.Get(key)).(T)
 	}

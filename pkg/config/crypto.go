@@ -37,7 +37,8 @@ import (
 // can be clear()-ed after use, whereas a string cannot.
 type Secret []byte
 
-// String returns the secret as a string.
+// String returns the secret as a string. This is only to satisfy the
+// pflags VerP() interface.
 func (secret *Secret) String() string {
 	return string(*secret)
 }
@@ -60,9 +61,9 @@ type KeyValues struct {
 	iv  [aes.BlockSize]byte
 }
 
-// NewRandomKeyValues returns a new KeyValues structure with a key and iv
+// NewKeyValues returns a new KeyValues structure with a key and iv
 // generated using the crypto/rand package.
-func NewRandomKeyValues() (kv *KeyValues) {
+func NewKeyValues() (kv *KeyValues) {
 	kv = &KeyValues{}
 	rand.Read(kv.key[:])
 	rand.Read(kv.iv[:])
@@ -82,11 +83,20 @@ func (kv *KeyValues) String() string {
 // Write writes the KeyValues structure to the io.Writer as an OpenSSL
 // formatted file.
 func (kv *KeyValues) Write(w io.Writer) error {
-	if _, err := io.WriteString(w, kv.String()); err != nil {
-		return err
-	}
+	_, err := fmt.Fprintf(w, "key=%X\niv =%X\n", kv.key, kv.iv)
+	return err
+}
 
-	return nil
+// Destroy zeroes the key and iv values in the KeyValues structure. This
+// should be called after use to clear the sensitive data from memory.
+// Note that this does not guarantee that the data is cleared from
+// memory, as the garbage collector may have made copies of the data,
+// but it is a best effort to reduce the risk of sensitive data being
+// left in memory. After calling Destroy, the KeyValues structure should
+// not be used again.
+func (kv *KeyValues) Destroy() {
+	clear(kv.key[:])
+	clear(kv.iv[:])
 }
 
 // ReadKeyValues from the io.Reader r
