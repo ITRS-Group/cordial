@@ -72,7 +72,7 @@ func Start(i geneos.Instance, opts ...any) error {
 	errfile := ComponentFilepath(i, "txt")
 
 	log.Debug().Msgf("starting '%s'", cmd.String())
-	if err := i.Host().Start(cmd, host.ProcessErrfile(errfile)); err != nil {
+	if err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps()); err != nil {
 		return err
 	}
 	// wait a bit for the process to start before checking

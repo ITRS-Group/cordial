@@ -20,9 +20,9 @@ package host
 type ProcessOption func(*processOptions)
 
 type processOptions struct {
-	errfile    string
-	detach     bool
-	createCore bool
+	errfile        string
+	detach         bool
+	allowCoreDumps bool
 }
 
 func evalProcessOptions(options ...ProcessOption) (d *processOptions) {
@@ -47,8 +47,8 @@ func ProcessDetach() ProcessOption {
 	}
 }
 
-func ProcessCreateCore() ProcessOption {
+func ProcessAllowCoreDumps() ProcessOption {
 	return func(po *processOptions) {
-		po.createCore = true
+		po.allowCoreDumps = true
 	}
 }

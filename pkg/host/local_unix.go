@@ -95,11 +95,7 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 
-	// this doesn't work as memguard lowers the hard limit to 0. There
-	// is a bug raised: https://github.com/awnumar/memguard/issues/166
-	// and hopefully it can change in the future, than we can have
-	// per-instance options to allow core-dumps for diagnostics.
-	if po.createCore {
+	if po.allowCoreDumps {
 		// wait a bit to ensure process has started
 		time.Sleep(100 * time.Millisecond)
 		// enable core dumps for the process
@@ -109,8 +105,6 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 		if err = unix.Getrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
 			log.Debug().Err(err).Msg("Failed to get core dump limit")
 			err = nil
-		} else {
-			log.Debug().Uint64("cur", rlim.Cur).Uint64("max", rlim.Max).Msg("Current core dump limits for parent")
 		}
 
 		if rlim.Cur == 0 {
@@ -119,8 +113,6 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 			if err = unix.Setrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
 				log.Debug().Err(err).Msg("Failed to set core dump limit for parent")
 				err = nil
-			} else {
-				log.Debug().Uint64("cur", rlim.Cur).Uint64("max", rlim.Max).Msg("Core dumps enabled for parent")
 			}
 		}
 
@@ -129,8 +121,6 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 			log.Debug().Err(err).Int("pid", cmd.Process.Pid).Msg("Failed to get core dump limit")
 			err = nil
 		}
-
-		log.Debug().Uint64("cur", rlim.Cur).Uint64("max", rlim.Max).Int("pid", cmd.Process.Pid).Msg("Current core dump limits")
 
 		switch rlim.Max {
 		case 0:
@@ -142,7 +132,7 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 				log.Debug().Err(err).Int("pid", cmd.Process.Pid).Msg("Failed to set core dump limit")
 				err = nil
 			} else {
-				log.Debug().Int("pid", cmd.Process.Pid).Uint64("limit", rlim.Cur).Msg("Core dumps enabled for process")
+				log.Debug().Int("pid", cmd.Process.Pid).Msg("Core dumps enabled for process")
 			}
 		}
 	}
