@@ -179,6 +179,11 @@ type CertificateBundle struct {
 	Root      *x509.Certificate
 	Key       PrivateKey
 	Valid     bool
+
+	// RootIsSystem is true if the root certificate is from the system
+	// pool. We still add certs to the ca-bundle as the core Geneos
+	// components can only use one chain file.
+	RootIsSystem bool
 }
 
 // Verify verifies the provided certificates as a chain. It
@@ -396,7 +401,6 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 		return
 	}
 	log.Debug().Msgf("decoded %d certificates and %d private keys", len(bundle.FullChain), len(keys))
-	log.Debug().Msgf("bundle contents: %+v", bundle)
 	if len(roots) > 0 {
 		bundle.Root = roots[0]
 	}
@@ -427,7 +431,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	for _, c := range bundle.FullChain {
 		ip.AddCert(c)
 	}
-	rp := x509.NewCertPool()
+	rp, _ := x509.SystemCertPool()
 	for _, c := range roots {
 		rp.AddCert(c)
 	}
@@ -444,11 +448,34 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 		return
 	}
 
+	log.Debug().Msgf("certificate verification for %q succeeded", bundle.Leaf.Subject.String())
+
+	bundle.Root = chains[0][len(chains[0])-1]
 	bundle.Valid = true
 	bundle.Leaf = chains[0][0]
 	// FullChain does not include root
 	bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
-	bundle.Root = chains[0][len(chains[0])-1]
+
+	log.Debug().Msgf("checking if root certificate is from system pool")
+	if bundle.Root != nil {
+		rp, _ := x509.SystemCertPool()
+		verifyOpts := x509.VerifyOptions{
+			Roots: rp,
+		}
+		if chain, err := bundle.Root.Verify(verifyOpts); err == nil {
+			for _, c := range chain {
+				if len(c) == 0 {
+					continue
+				}
+				log.Debug().Msgf("checking if root certificate %q is in system pool", c[0].Subject.String())
+				if c[0].Equal(bundle.Root) {
+					log.Debug().Msgf("root certificate %q is in system pool", bundle.Root.Subject.String())
+					bundle.RootIsSystem = true
+					break
+				}
+			}
+		}
+	}
 
 	return
 }

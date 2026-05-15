@@ -160,13 +160,13 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General
 		return
 	}
 
-	tlsParam, ok := params[0].(*certs.CertificateBundle)
+	certBundle, ok := params[0].(*certs.CertificateBundle)
 	if !ok {
 		resp.Err = fmt.Errorf("%w: params[0] not a certs.CertificateBundle", geneos.ErrInvalidArgs)
 		return
 	}
 
-	if resp.Err = instance.WriteCertificateAndKey(i, tlsParam.Key, tlsParam.FullChain...); resp.Err != nil {
+	if resp.Err = instance.WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); resp.Err != nil {
 		return
 	}
 	resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s certificate, trust chain and key written", i))
@@ -176,7 +176,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General
 	}
 
 	var updated bool
-	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), tlsParam.Root)
+	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), certBundle.Root)
 	if resp.Err != nil {
 		return
 	}

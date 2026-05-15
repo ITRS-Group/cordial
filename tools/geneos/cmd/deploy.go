@@ -368,6 +368,10 @@ var deployCmd = &cobra.Command{
 				fmt.Printf("%s ca-bundle updated\n", i)
 			}
 
+			// always set the ca-bundle path, updated or not
+			log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
+			config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+
 			if err = instance.Write(i); err != nil {
 				return
 			}
