@@ -29,11 +29,17 @@
 
   * The `add` and `deploy` commands will now ensure that a base link to an installed package is created if it does not already exist
 
+  * When importing an instance certificate (`add`, `deploy` etc.), then also validate against system certificates and if verified add the root to the `ca-buundle` file. This is because most Geneos components can only use one external chain file, so cannot validate remote connections against both the `ca-bundle` and system certificates.
+
+  * The `deploy` command did not correctly set the `tls::ca-bundle` parameter.
+
 * `tools/dv2email`
 
   * Add clarifications to documentation and fix links to ITRS docs
 
 ### Version v1.27.0 Changes
+
+* Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory blocks that carry passord and other secrets, as much as possible.
 
 * `tools/geneos`
 
