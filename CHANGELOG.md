@@ -41,6 +41,14 @@
 
 * Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory blocks that carry passord and other secrets, as much as possible.
 
+* Put `cordial` and especially `tools/geneos` on a diet.
+
+  * Replaced the Markdown rendering package `github.com/charmbracelet/glamour` with the much smaller `src.elv.sh/pkg/md` package, which is used for rendering help text and other Markdown content in the terminal. This has reduced the size of the `geneos` binary by about 10MB. The output is much plainer, with no ANSI colour support, but is readable and with the added benefit of word-wrapping working better.
+
+  * Refactored the `pkg/reporter` package to support a `noxlsx` build tag, which excludes support for rendering reports as XLSX using `excelize`. This has reduced the size of the `geneos` binary by about 5MB. The XLSX rendering code is still built and available in the `reporter` package, but it is not included in the `geneos` binary when built with the `noxlsx` tag.
+
+  * Leaving the binary compression using UPX in place, the `geneos` binary has been reduced from about 11MB to 7.5MB. If build without UPX the binary is about 24MB, which is still a significant reduction from the previous version.
+
 * `tools/geneos`
 
   * Add a `reset` command which is the same as `clean --full` but will not match any instance by default, to protect against unintended restarts. Use `geneos reset all` to act on all instances (that are not protected).
