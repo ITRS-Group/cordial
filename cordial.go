@@ -21,15 +21,13 @@ package cordial
 
 import (
 	_ "embed" // embed the VERSION in the top-level package
-	"html"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/charmbracelet/glamour"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
+	"src.elv.sh/pkg/md"
 )
 
 // VERSION is a semi-global string variable
@@ -37,11 +35,10 @@ import (
 //go:embed VERSION
 var VERSION string
 
-// RenderHelpAsMD updated the given command to use glamour to render the
-// command's Long description as markdown formatted text to an ANSI
-// terminal.
+// RenderHelpAsMD sets the help template of the given cobra.Command to
+// render the long description and short description as Markdown, using
+// the src.elv.sh/pkg/md package.
 func RenderHelpAsMD(command *cobra.Command) {
-	// render help with glamour
 	cobra.AddTemplateFunc("md", renderMD)
 	// start on first line, one line gap, usage without leading spaces
 	command.SetHelpTemplate(`{{with (or .Long .Short)}}{{. | md}}{{end}}
@@ -93,36 +90,6 @@ func ExecutableName(version ...string) (execname string) {
 }
 
 func renderMD(in string) (out string) {
-	var width int = 72
-	var err error
-
-	style := glamour.WithAutoStyle()
-	if !term.IsTerminal(int(os.Stdout.Fd())) {
-		style = glamour.WithStandardStyle("ascii")
-	} else {
-		width, _, err = term.GetSize(int(os.Stdout.Fd()))
-		if err != nil {
-			width = 72
-		}
-		if width > 96 {
-			width = 96
-		}
-	}
-
-	// Bug https://github.com/charmbracelet/glamour/issues/407 with word-wrapping, awaiting fix
-	tr, err := glamour.NewTermRenderer(
-		style,
-		glamour.WithStylesFromJSONBytes([]byte(`{ "document": { "margin": 2 } }`)),
-		glamour.WithWordWrap(width),
-		glamour.WithEmoji(),
-	)
-	if err != nil {
-		return in
-	}
-	out, err = tr.Render(in)
-	if err != nil {
-		return in
-	}
-	out = html.UnescapeString(out)
+	out = md.RenderString(in, &md.TTYCodec{Width: 72})
 	return
 }
