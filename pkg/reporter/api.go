@@ -19,6 +19,7 @@ package reporter
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 	"slices"
 	"strings"
@@ -45,6 +46,11 @@ type APIReporter struct {
 // ensure that *APIReporter conforms to the Reporter interface
 var _ Reporter = (*APIReporter)(nil)
 
+func init() {
+	registerReporter("api", newAPIReporter)
+	registerReporter("dataview", newAPIReporter)
+}
+
 // newAPIReporter returns a new APIReporter using the following
 // configuration settings from cf:
 //
@@ -62,10 +68,11 @@ var _ Reporter = (*APIReporter)(nil)
 //
 // If reset is true then Dataviews are reset on the first use from
 // SetReport()
-func newAPIReporter(ropts *reporterOptions, options ...APIReporterOption) (a *APIReporter, err error) {
-	opts := evalAPIOptions(options...)
+func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err error) {
+	ropts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
+	opts := evalAPIOptions(CollectOptions[APIReporterOption](options...)...)
 
-	a = &APIReporter{
+	a := &APIReporter{
 		reporterCommon: reporterCommon{
 			format:        "api",
 			scrambleNames: ropts.scrambleNames,
@@ -103,7 +110,7 @@ func newAPIReporter(ropts *reporterOptions, options ...APIReporterOption) (a *AP
 		)
 	}
 
-	return
+	return a, nil
 }
 
 // Prepare sets the Dataview group and title from the report structure

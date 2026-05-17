@@ -35,11 +35,15 @@ type TabWriterReporter struct {
 	quoteFieldsWithSpace bool
 }
 
-func newTabWriterReporter(w io.Writer, opts *reporterOptions) *TabWriterReporter {
-	_ = opts
+func init() {
+	registerReporter("tabwriter", newTabWriterReporter)
+	registerReporter("column", newTabWriterReporter)
+}
+
+func newTabWriterReporter(_ string, w io.Writer, _ ...any) (Reporter, error) {
 	return &TabWriterReporter{
 		writer: tabwriter.NewWriter(w, 3, 8, 2, ' ', 0),
-	}
+	}, nil
 }
 
 // Prepare initialises the TabWriterReporter.

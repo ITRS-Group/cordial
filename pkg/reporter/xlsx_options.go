@@ -1,3 +1,5 @@
+//go:build !noxlsx
+
 /*
 Copyright © 2024 ITRS Group
 

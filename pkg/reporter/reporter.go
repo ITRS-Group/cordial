@@ -24,7 +24,6 @@ package reporter
 import (
 	"fmt"
 	"io"
-	"slices"
 )
 
 type Reporter interface {
@@ -101,6 +100,12 @@ type reporterCommon struct {
 	scrambleNames bool
 }
 
+var reporterFactories = make(map[string]func(string, io.Writer, ...any) (Reporter, error))
+
+func registerReporter(format string, factory func(string, io.Writer, ...any) (Reporter, error)) {
+	reporterFactories[format] = factory
+}
+
 // NewReporter returns a reporter for type format, which must be one of
 // "toolkit", "csv", "tsv", "api", "dataview", "xlsx", "table" or
 // "html". If a destination writer is required for the reporter type,
@@ -110,63 +115,20 @@ type reporterCommon struct {
 //
 // TODO: add "column" output format, based on tabwriter.
 func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err error) {
-	// pull out general reporter options, which are passed to each
-	// reporter factory method
-	var ro []ReporterOption
-	options = slices.DeleteFunc(options, func(o any) bool {
-		if a, ok := o.(ReporterOption); ok {
-			ro = append(ro, a)
-			return true
-		}
-		return false
-	})
-	opts := evalReporterOptions(ro...)
-
-	switch format {
-	case "column", "tabwriter":
-		r = newTabWriterReporter(w, opts)
-	case "api", "dataview":
-		var apioptions []APIReporterOption
-		for _, o := range options {
-			if a, ok := o.(APIReporterOption); ok {
-				apioptions = append(apioptions, a)
-			} else {
-				panic(fmt.Sprintf("wrong option type: %T", o))
-			}
-		}
-		r, err = newAPIReporter(opts, apioptions...)
-	case "xlsx":
-		var xlsxoptions []XLSXReporterOption
-		for _, o := range options {
-			if x, ok := o.(XLSXReporterOption); ok {
-				xlsxoptions = append(xlsxoptions, x)
-			} else {
-				panic(fmt.Sprintf("wrong option type: %T", o))
-			}
-		}
-		r = newXLSXReporter(w, opts, xlsxoptions...)
-	case "table", "html", "markdown", "md", "tsv", "csv":
-		var fmtoptions = []FormattedReporterOption{
-			Writer(w),
-			RenderAs(format),
-		}
-		for _, o := range options {
-			if f, ok := o.(FormattedReporterOption); ok {
-				fmtoptions = append(fmtoptions, f)
-			} else {
-				panic(fmt.Sprintf("wrong option type: %T", o))
-			}
-		}
-		r = newFormattedReporter(opts, fmtoptions...)
-
-	case "toolkit":
-		// don't use formatted reporter, as Toolkit CSV format is different to normal CSV, keep it simple
-		r = newToolkitReporter(w, opts)
-
-	default:
+	fn, ok := reporterFactories[format]
+	if !ok {
 		err = fmt.Errorf("unknown report type %q", format)
 		return
 	}
+	r, err = fn(format, w, options...)
+	return
+}
 
+func CollectOptions[T any](options ...any) (opts []T) {
+	for _, o := range options {
+		if opt, ok := o.(T); ok {
+			opts = append(opts, opt)
+		}
+	}
 	return
 }

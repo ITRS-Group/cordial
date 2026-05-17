@@ -25,7 +25,6 @@ import (
 type formattedReporterOptions struct {
 	writer           io.Writer
 	zipWriter        *zip.Writer
-	renderas         string
 	dvcssclass       string
 	headlinecssclass string
 	htmlpreamble     string
@@ -35,7 +34,6 @@ type formattedReporterOptions struct {
 
 func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedReporterOptions) {
 	fro = &formattedReporterOptions{
-		renderas:         "table",
 		dvcssclass:       "table",
 		headlinecssclass: "headlines",
 		// orderbycolumns:   []int{0},
@@ -57,12 +55,6 @@ func Writer(w io.Writer) FormattedReporterOption {
 func ZipWriter(z *zip.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.zipWriter = z
-	}
-}
-
-func RenderAs(renderas string) FormattedReporterOption {
-	return func(fro *formattedReporterOptions) {
-		fro.renderas = renderas
 	}
 }
 

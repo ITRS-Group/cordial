@@ -370,7 +370,10 @@ var listGroupCmd = &cobra.Command{
 			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
 		))
 
-		r, _ := reporter.NewReporter("table", os.Stdout, reporter.RenderAs(listFormat))
+		if listFormat == "" {
+			listFormat = "table"
+		}
+		r, _ := reporter.NewReporter(listFormat, os.Stdout)
 
 		var rows [][]string
 		for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {

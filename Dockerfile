@@ -37,11 +37,11 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     set -eux; \
     # build geneos (in Windows version)
     cd /app/cordial/tools/geneos; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w'; \
+    go build -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build -tags noxlsx --ldflags '-s -w'; \
     cd /app/cordial/tools/ims-gateway; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w'; \
+    go build -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build -tags noxlsx --ldflags '-s -w'; \
     # gateway-reporter (in Windows version)
     cd /app/cordial/tools/gateway-reporter; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \

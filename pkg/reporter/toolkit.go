@@ -37,8 +37,12 @@ type ToolkitReporter struct {
 // ensure that *ToolkitReporter conforms to the Reporter interface
 var _ Reporter = (*ToolkitReporter)(nil)
 
-func newToolkitReporter(w io.Writer, opts *reporterOptions) *ToolkitReporter {
-	_ = opts
+func init() {
+	registerReporter("toolkit", newToolkitReporter)
+}
+
+func newToolkitReporter(format string, w io.Writer, options ...any) (Reporter, error) {
+	opts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
 	return &ToolkitReporter{
 		reporterCommon: reporterCommon{
 			format:        "toolkit",
@@ -47,7 +51,7 @@ func newToolkitReporter(w io.Writer, opts *reporterOptions) *ToolkitReporter {
 		w:         w,
 		c:         csv.NewWriter(w),
 		headlines: make(map[string]string),
-	}
+	}, nil
 }
 
 func (t *ToolkitReporter) Prepare(report Report) error {

@@ -1,3 +1,5 @@
+//go:build !noxlsx
+
 /*
 Copyright © 2024 ITRS Group
 
@@ -91,11 +93,16 @@ type sheet struct {
 // ensure that *Table is a Reporter
 var _ Reporter = (*XLSXReporter)(nil)
 
-// NewTableReporter returns a new Table reporter
-func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporterOption) (x *XLSXReporter) {
-	opts := evalXLSXReportOptions(options...)
+func init() {
+	registerReporter("xlsx", newXLSXReporter)
+}
 
-	x = &XLSXReporter{
+// NewTableReporter returns a new Table reporter
+func newXLSXReporter(_ string, w io.Writer, options ...any) (Reporter, error) {
+	ropts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
+	opts := evalXLSXReportOptions(CollectOptions[XLSXReporterOption](options...)...)
+
+	x := &XLSXReporter{
 		reporterCommon: reporterCommon{
 			format:        "xlsx",
 			scrambleNames: ropts.scrambleNames,
@@ -207,7 +214,7 @@ func newXLSXReporter(w io.Writer, ropts *reporterOptions, options ...XLSXReporte
 	x.minColWidth = opts.minColWidth
 	x.maxColWidth = opts.maxColWidth
 
-	return
+	return x, nil
 }
 
 func (x *XLSXReporter) Prepare(report Report) (err error) {

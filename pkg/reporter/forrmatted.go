@@ -36,10 +36,9 @@ import (
 // text formats, including plain text tables, Markdown and HTML.
 type FormattedReporter struct {
 	reporterCommon
-	w      io.Writer
-	t      table.Writer
-	z      *zip.Writer
-	format string
+	w io.Writer
+	t table.Writer
+	z *zip.Writer
 
 	// render is the function used to render the table in the selected format
 	renderFunc func() string
@@ -65,26 +64,39 @@ type FormattedReporter struct {
 // ensure that *FormattedReporter is a Reporter
 var _ Reporter = (*FormattedReporter)(nil)
 
+func init() {
+	registerReporter("table", newFormattedReporter)
+	registerReporter("html", newFormattedReporter)
+	registerReporter("markdown", newFormattedReporter)
+	registerReporter("md", newFormattedReporter)
+	registerReporter("tsv", newFormattedReporter)
+	registerReporter("csv", newFormattedReporter)
+}
+
 // newFormattedReporter returns a new FormattedReporter reporter
-func newFormattedReporter(ropts *reporterOptions, options ...FormattedReporterOption) (t *FormattedReporter) {
-	opts := evalFormattedOptions(options...)
-	t = &FormattedReporter{
+func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter, error) {
+	ropts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
+	foptions := CollectOptions[FormattedReporterOption](options...)
+	opts := evalFormattedOptions(foptions...)
+
+	fr := &FormattedReporter{
 		reporterCommon: reporterCommon{
+			format:        format,
 			scrambleNames: ropts.scrambleNames,
 		},
-		w:              opts.writer,
+		w:              w,
 		z:              opts.zipWriter,
 		t:              table.NewWriter(),
 		columns:        []string{},
-		options:        options,
+		options:        foptions,
 		orderbycolumns: opts.orderbycolumns,
 	}
 
-	t.updateReporter(options...)
-	if t.format == "html" {
-		t.w.Write([]byte(t.htmlpreamble))
+	fr.updateReporter(foptions...)
+	if fr.format == "html" {
+		fr.w.Write([]byte(fr.htmlpreamble))
 	}
-	return
+	return fr, nil
 }
 
 func (fr *FormattedReporter) Prepare(report Report) (err error) {
@@ -313,11 +325,6 @@ func (fr *FormattedReporter) updateReporter(options ...FormattedReporterOption) 
 	fr.options = options
 
 	opts := evalFormattedOptions(options...)
-	// if opts.writer != nil {
-	// 	fr.writer = opts.writer
-	// 	fr.tableWriter.SetOutputMirror(opts.writer)
-	// }
-	fr.format = opts.renderas
 
 	switch fr.format {
 	case "html":
