@@ -45,6 +45,10 @@ const (
 	DetailsPath = "licensing/all_licences.csv"
 )
 
+const (
+	packageName = "cordial"
+)
+
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	Cmd.PersistentFlags().MarkHidden("debug")
@@ -115,6 +119,17 @@ func initConfig(cmd *cobra.Command) {
 	var err error
 	var deferredlog string
 
+	switch {
+	case quiet:
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+	case trace:
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	case debug:
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	}
+
 	if cf == nil {
 		opts := []config.FileOption{
 			config.AppName("geneos"),
@@ -146,6 +161,7 @@ func initConfig(cmd *cobra.Command) {
 			}
 		}
 	}
+
 	cordial.LogInit(execname,
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
@@ -157,17 +173,6 @@ func initConfig(cmd *cobra.Command) {
 		}),
 		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
 	)
-
-	switch {
-	case quiet:
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	case trace:
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case debug:
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
 
 	info, _ := dbg.ReadBuildInfo()
 	log.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
