@@ -20,6 +20,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	dbg "runtime/debug"
 
@@ -35,7 +36,7 @@ import (
 
 var cfgFile string
 var execname = cordial.ExecutableName()
-var debug, trace, quiet bool
+var debug, trace bool
 var logFile string
 
 var daemon bool
@@ -43,10 +44,6 @@ var daemon bool
 const (
 	SummaryPath = "licensing/licences.csv"
 	DetailsPath = "licensing/all_licences.csv"
-)
-
-const (
-	packageName = "cordial"
 )
 
 func init() {
@@ -118,15 +115,19 @@ func Execute() {
 func initConfig(cmd *cobra.Command) {
 	var err error
 	var deferredlog string
+	var loglevel slog.Level
 
+	// set both a log level for zerolog but also a slog level - for use
+	// in LogInit further below.
 	switch {
-	case quiet:
-		zerolog.SetGlobalLevel(zerolog.Disabled)
 	case trace:
+		loglevel = -8
 		zerolog.SetGlobalLevel(zerolog.TraceLevel)
 	case debug:
+		loglevel = slog.LevelDebug
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	default:
+		loglevel = slog.LevelInfo
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
@@ -172,6 +173,7 @@ func initConfig(cmd *cobra.Command) {
 			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress")),
 		}),
 		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
+		cordial.LogLevel(loglevel),
 	)
 
 	info, _ := dbg.ReadBuildInfo()

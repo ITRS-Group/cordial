@@ -167,6 +167,8 @@ func RotateOnStart(rotate bool) LogOption {
 func LogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		switch level {
+		case -8:
+			lo.level = zerolog.TraceLevel
 		case slog.LevelDebug:
 			lo.level = zerolog.DebugLevel
 		case slog.LevelInfo:
