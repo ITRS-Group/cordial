@@ -133,8 +133,6 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 }
 
 // CopyAll copies a directory between any combination of local or remote locations
-//
-// TODO: Redo to use WalkDir
 func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
 	if srcHost.IsLocal() {
 		filesystem := os.DirFS(srcDir)

@@ -55,13 +55,15 @@ type ProcessInfo struct {
 	// special fields that are not from /proc/PID/stat or
 	// /proc/PID/status but are calculated from other information, such
 	// as the number of open files and sockets
+	//
+	// filling in these fields for all processes can be expensive, so
+	// they are marked with `cache:"lazy"` to indicate that they should
+	// be filled on demand when requested, rather than when the process
+	// information is first retrieved.
 	OpenFiles      []ProcessFDs `cache:"lazy" json:"-"` // calculated from /proc/PID/fd
 	OpenSockets    int64        `cache:"lazy" json:"-"` // calculated from /proc/PID/fd and /proc/PID/net/tcp and /proc/PID/net/udp
 	ListeningPorts string       `cache:"lazy" json:"-"` // calculated from /proc/PID/net/tcp and /proc/PID/net/udp
 
-	// these fields are not filled by ProcessStatus but are included in ProcessInfo for convenience
-	// TCPPorts  []int     `json:"-"` // calculated from /proc/PID/net/tcp
-	// UDPPorts  []int     `json:"-"` // calculated from /proc/PID/net/udp
 	Cwd       string    `json:"-"` // calculated from /proc/PID/cwd
 	Exe       string    `json:"-"`
 	Cmdline   []string  `json:"-"`
@@ -106,7 +108,7 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 	}
 
 	opts := evalProcessOptions(options...)
-	c, ok := getProcesses[*ProcessInfoMinimal](h, opts.refreshCache)
+	c, ok := getProcesses[*ProcessInfoMinimal](h, options...)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
 	}
@@ -150,15 +152,14 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 }
 
 // GetProcessInfo returns information about the process pid on host h.
-func GetProcessInfo(h host.Host, pid int, resetcache bool) (pi *ProcessInfo, err error) {
-	// c, ok := getProcCache(h, resetcache)
-	c, ok := getProcesses[*ProcessInfo](h, resetcache)
+func GetProcessInfo(h host.Host, pid int, options ...ProcessOption) (pi *ProcessInfo, err error) {
+	c, ok := getProcesses[*ProcessInfo](h, options...)
 	if !ok {
 		return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
 	}
 
 	if pc, ok := c[pid]; ok {
-		// check and fill cache for lazy fields
+		// check and fill cache for lazy (expensive) fields
 		checkAndFillCache(h, pid, pc)
 		return pc, nil
 	}

@@ -160,7 +160,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if instance.IsProtected(i) {
 		flags += "P"
 	}
-	if instance.IsRunning(i) {
+	if p, err := instance.GetPID(i); err == nil && p != 0 {
 		flags += "R"
 	}
 	secureArgs, _, _, _ := instance.SecureArgs(i)
@@ -196,7 +196,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	autostart := "N"
 	tls := "N"
 
-	if instance.IsRunning(i) {
+	if p, err := instance.GetPID(i); err == nil && p != 0 {
 		running = "Y"
 	}
 	if instance.IsDisabled(i) {
@@ -237,13 +237,17 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
+	var running bool
+	if p, err := instance.GetPID(i); err == nil && p != 0 {
+		running = true
+	}
 	base, underlying, _ := instance.Version(i)
 	secureArgs, _, _, _ := instance.SecureArgs(i)
 	resp.Value = listCmdType{
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),
-		Running:   instance.IsRunning(i),
+		Running:   running,
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),

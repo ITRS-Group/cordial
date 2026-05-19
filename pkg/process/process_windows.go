@@ -32,7 +32,7 @@ import (
 
 // ProcessStatus for Windows fills in the pstats struct based on tags
 // and field names.
-func ProcessStatus[T any](h host.Host, pid int) (pstats T, err error) {
+func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats T, err error) {
 	if h == nil {
 		err = errors.New("host is nil")
 		return

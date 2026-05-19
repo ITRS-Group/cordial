@@ -3,13 +3,16 @@
 package process
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/pkg/sftp"
 	"github.com/rs/zerolog/log"
+	"golang.org/x/sys/unix"
 )
 
 type procCache struct {
@@ -24,12 +27,12 @@ type procCache struct {
 // process entries for each host. It is used to avoid repeated calls to
 // the host to get the process entries, which can be expensive.
 //
-// The cache is marked stale after 5 seconds, or when the cache is
+// The cache is marked stale after 30 seconds, or when the cache is
 // empty.
-var procCacheTTL = 5 * time.Second
+var procCacheTTL = 30 * time.Second
 var procCacheMutex sync.Mutex
 var procCacheLastUpdate = make(map[host.Host]time.Time)
-var procCacheMap = make(map[host.Host]any)
+var procCacheMap = make(map[host.Host]map[string]any) // host / type / cache
 
 // getProcesses returns the process entries for host h from the cache, if
 // the cache is not stale. If the cache is stale or empty, it updates the
@@ -45,12 +48,17 @@ var procCacheMap = make(map[host.Host]any)
 // The function returns the process entries and a boolean indicating whether
 // the cache was successfully updated or not. If the host does not support
 // process lookups, it returns false.
-func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) {
+func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
+	opts := evalProcessOptions(options...)
+	refreshCache := opts.refreshCache
+
+	tn := fmt.Sprintf("%T", (*T)(nil))
+
 	if !refreshCache {
-		if c, ok = procCacheMap[h].(map[int]T); ok {
+		if c, ok = procCacheMap[h][tn].(map[int]T); ok {
 			if time.Since(procCacheLastUpdate[h]) < procCacheTTL {
 				return
 			}
@@ -64,6 +72,41 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 	}
 	c = make(map[int]T, len(dirs))
 
+	// if the type T has a PID, PPID and Children fields, build child
+	// lists based on linked PID and PPID fields. This is a bit hacky
+	// but it avoids having to define a separate struct for the cache
+	// that includes these fields.
+	st := reflect.TypeFor[T]().Elem()
+
+	// check which proc files we need to read
+	var getStat, getStatus bool
+	for field := range st.Fields() {
+		if _, ok := field.Tag.Lookup("proc_pid_stat"); ok {
+			getStat = true
+		}
+		if _, ok := field.Tag.Lookup("proc_pid_status"); ok {
+			getStatus = true
+		}
+	}
+
+	var myUID, myGID uint32 = ^uint32(0), ^uint32(0)
+
+	if !h.IsLocal() {
+		info, err := h.Stat("/proc/self") // prime the connection to avoid timing out on the first real stat
+		if err == nil {
+			switch sys := info.Sys().(type) {
+			case *sftp.FileStat:
+				myUID = sys.UID
+				myGID = sys.GID
+			case *unix.Stat_t:
+				myUID = sys.Uid
+				myGID = sys.Gid
+			default:
+				log.Debug().Msgf("host %s uses unknown method for process lookups, stat of /proc/self: %+v", h.String(), sys)
+			}
+		}
+	}
+
 	for _, dir := range dirs {
 		st, err := h.Stat(dir)
 		if err != nil {
@@ -73,6 +116,21 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 		if !st.IsDir() {
 			continue
 		}
+		if !h.IsLocal() {
+			switch sys := st.Sys().(type) {
+			case *sftp.FileStat:
+				if sys.UID != myUID || sys.GID != myGID {
+					continue
+				}
+			case *unix.Stat_t:
+				if sys.Uid != myUID || sys.Gid != myGID {
+					continue
+				}
+			default:
+				log.Debug().Msgf("host %s uses unknown method for process lookups, stat of %s: %+v", h.String(), dir, sys)
+			}
+		}
+
 		pid, err := strconv.Atoi(st.Name())
 		if err != nil {
 			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
@@ -80,7 +138,7 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 		}
 
 		var pstatus T
-		if pstatus, err = processStatus[T](h, pid); err != nil {
+		if pstatus, err = processStatus[T](h, pid, getStat, getStatus); err != nil {
 			log.Debug().Err(err).Msgf("failed to get process status for pid %d", pid)
 			continue
 		}
@@ -101,12 +159,6 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 
 		c[pid] = pstatus
 	}
-
-	// if the type T has a PID, PPID and Children fields, build child
-	// lists based on linked PID and PPID fields. This is a bit hacky
-	// but it avoids having to define a separate struct for the cache
-	// that includes these fields.
-	st := reflect.TypeFor[T]().Elem()
 
 	if _, ok := st.FieldByName("PID"); ok {
 		if _, ok := st.FieldByName("PPID"); ok {
@@ -142,24 +194,28 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 	}
 
 	procCacheLastUpdate[h] = time.Now()
-	procCacheMap[h] = c
+	if procCacheMap[h] == nil {
+		procCacheMap[h] = make(map[string]any)
+	}
+	procCacheMap[h][tn] = c
 
 	return c, true
 }
 
 func checkAndFillCache(h host.Host, pid int, pc *ProcessInfo) {
 	// check if OpenFiles is empty, if so fill it
-	if len(pc.OpenFiles) == 0 {
-		ProcessStatusOpenFiles(h, pid, reflect.ValueOf(pc).Elem().FieldByName("OpenFiles"))
+	sv := reflect.ValueOf(pc).Elem()
+	if len(pc.OpenFiles) == 0 && sv.FieldByName("OpenFiles").IsValid() {
+		ProcessStatusOpenFiles(h, pid, sv.FieldByName("OpenFiles"))
 	}
 
 	// check if OpenSockets is zero, if so fill it
-	if pc.OpenSockets == 0 {
-		ProcessStatusOpenSockets(h, pid, reflect.ValueOf(pc).Elem().FieldByName("OpenSockets"))
+	if pc.OpenSockets == 0 && sv.FieldByName("OpenSockets").IsValid() {
+		ProcessStatusOpenSockets(h, pid, sv.FieldByName("OpenSockets"))
 	}
 
 	// check if ListeningPorts is empty, if so fill it
-	if pc.ListeningPorts == "" {
-		ProcessStatusListeningPorts(h, pid, reflect.ValueOf(pc).Elem().FieldByName("ListeningPorts"))
+	if pc.ListeningPorts == "" && sv.FieldByName("ListeningPorts").IsValid() {
+		ProcessStatusListeningPorts(h, pid, sv.FieldByName("ListeningPorts"))
 	}
 }

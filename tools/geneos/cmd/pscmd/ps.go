@@ -358,7 +358,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if psCmdLong {
 		// p, _ := process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
-		p, _ := process.GetProcessInfo(h, pi.PID, false)
+		p, _ := process.GetProcessInfo(h, pi.PID)
 		if p != nil {
 			row = append(row,
 				p.State,
@@ -400,7 +400,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		)
 
 		if psCmdLong {
-			p, _ := process.GetProcessInfo(h, capi.PID, false)
+			p, _ := process.GetProcessInfo(h, capi.PID)
 			if p != nil {
 				row = append(row,
 					p.State,

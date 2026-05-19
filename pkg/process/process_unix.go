@@ -83,7 +83,7 @@ func GetGroupname(gid int) (groupname string) {
 	return
 }
 
-func processStatus[T any](h host.Host, pid int) (pstats T, err error) {
+func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats T, err error) {
 	var scClkTck int64
 
 	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
@@ -96,35 +96,43 @@ func processStatus[T any](h host.Host, pid int) (pstats T, err error) {
 		scClkTck = 100
 	}
 
-	// /proc/PID/stat contains utime and ctime, which are not in status.
-	stat, err := h.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
-	if err != nil {
-		return
-	}
+	var statFields []string
 
-	// field[1] is surrounds by parenthesis to protect embedded spaces,
-	// so this has to be split more carefully
-	pidStat, rest, _ := strings.Cut(string(stat), " (")
-	execStat, rest, _ := strings.Cut(rest, ") ")
-
-	statFields := []string{pidStat, execStat}
-	statFields = append(statFields, strings.Split(rest, " ")...)
-
-	status, err := h.Open(fmt.Sprintf("/proc/%d/status", pid))
-	if err != nil {
-		return
-	}
-	defer status.Close()
-
-	statusFields := map[string]string{}
-
-	statusLines := bufio.NewScanner(status)
-	for statusLines.Scan() {
-		name, value, found := strings.Cut(statusLines.Text(), ":")
-		if !found {
-			break
+	if getStat {
+		// /proc/PID/stat contains utime and ctime, which are not in status.
+		stat, err := h.ReadFile(fmt.Sprintf("/proc/%d/stat", pid))
+		if err != nil {
+			return pstats, err
 		}
-		statusFields[name] = strings.TrimSpace(value)
+
+		// field[1] is surrounds by parenthesis to protect embedded spaces,
+		// so this has to be split more carefully
+		pidStat, rest, _ := strings.Cut(string(stat), " (")
+		execStat, rest, _ := strings.Cut(rest, ") ")
+
+		statFields = []string{pidStat, execStat}
+		statFields = append(statFields, strings.Split(rest, " ")...)
+	}
+
+	var statusFields map[string]string
+
+	if getStatus {
+		status, err := h.Open(fmt.Sprintf("/proc/%d/status", pid))
+		if err != nil {
+			return pstats, err
+		}
+		defer status.Close()
+
+		statusFields := map[string]string{}
+
+		statusLines := bufio.NewScanner(status)
+		for statusLines.Scan() {
+			name, value, found := strings.Cut(statusLines.Text(), ":")
+			if !found {
+				break
+			}
+			statusFields[name] = strings.TrimSpace(value)
+		}
 	}
 
 	st := reflect.TypeOf(pstats).Elem()
@@ -161,9 +169,10 @@ func processStatus[T any](h host.Host, pid int) (pstats T, err error) {
 			if fv.CanSet() && fv.Type().Kind() == reflect.String {
 				exe := fmt.Sprintf("/proc/%d/exe", pid)
 				exeVal, err := h.Readlink(exe)
-				if err == nil {
-					fv.SetString(strings.TrimSuffix(exeVal, " (deleted)"))
+				if err != nil {
+					return pstats, nil
 				}
+				fv.SetString(strings.TrimSuffix(exeVal, " (deleted)"))
 			}
 
 		case "Cmdline":

@@ -31,10 +31,12 @@ var procCacheMutex sync.Mutex
 var procCacheLastUpdate = make(map[host.Host]time.Time)
 var procCacheMap = make(map[host.Host]any)
 
-func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) {
+func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
+	opts := evalProcessOptions(options...)
+	refreshCache := opts.refreshCache
 	if !refreshCache {
 		if c, ok = procCacheMap[h].(map[int]T); ok {
 			if time.Since(procCacheLastUpdate[h]) < procCacheTTL {
@@ -71,7 +73,7 @@ func getProcesses[T any](h host.Host, refreshCache bool) (c map[int]T, ok bool) 
 		pid := pe.ProcessID
 
 		var pstatus T
-		if pstatus, err = ProcessStatus[T](h, int(pid)); err != nil {
+		if pstatus, err = ProcessStatus[T](h, int(pid), false, false); err != nil {
 			if !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
 				log.Error().Err(err).Msgf("failed to get process status for pid %d", pid)
 			}
