@@ -51,25 +51,22 @@ func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (i
 }
 
 func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
+	var r resultDetail
 	var field, value string
 	var ok bool
 
 	s := InitializeConnection(vc)
 
-	s1 := strings.SplitN(search, ":", 2)
-	if len(s1) > 1 {
-		table = s1[0]
-		s1 = s1[1:]
+	t, rest, found := strings.Cut(search, ":")
+	if found {
+		table = t
+		search = rest
 	}
-	s2 := strings.SplitN(s1[0], "=", 2)
-	if len(s2) < 2 {
-		err = echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("invalid simple search %q - must be KEY=VALUE format", s1[0]))
+	field, value, found = strings.Cut(search, "=")
+	if !found {
+		err = echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("invalid simple search %q - must be KEY=VALUE format", search))
 		return
 	}
-	field = s2[0]
-	value = s2[1]
-
-	var r resultDetail
 
 	if r, err = s.GET(Fields("name,sys_id,sys_class_name"), Query(field+"="+value)).QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
@@ -89,17 +86,16 @@ func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string)
 }
 
 func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
+	var r resultDetail
 	var ok bool
 
 	s := InitializeConnection(vc)
 
-	s1 := strings.SplitN(search, ":", 2)
-	if len(s1) == 2 {
-		table = s1[0]
-		search = s1[1]
+	t, rest, found := strings.Cut(search, ":")
+	if found {
+		table = t
+		search = rest
 	}
-
-	var r resultDetail
 
 	if r, err = s.GET(Fields("name,sys_id,sys_class_name"), Query(search)).QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)

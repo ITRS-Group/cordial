@@ -675,11 +675,9 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		}
 	} else {
 		for _, param := range *ct.DownloadParams {
-			s := strings.SplitN(param, "=", 2)
-			if len(s) != 2 {
-				continue
+			if key, value, found := strings.Cut(param, "="); found {
+				v.Set(key, value)
 			}
-			v.Set(s[0], s[1])
 		}
 		if opts.version != "latest" {
 			v.Set("title", opts.version)
@@ -883,11 +881,9 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		}
 	} else {
 		for _, param := range *ct.DownloadParamsNexus {
-			s := strings.SplitN(param, "=", 2)
-			if len(s) != 2 {
-				continue
+			if key, value, found := strings.Cut(param, "="); found {
+				v.Set(key, value)
 			}
-			v.Set(s[0], s[1])
 		}
 	}
 
@@ -1005,19 +1001,19 @@ func matchVersion(v string) bool {
 }
 
 func OverrideToComponentVersion(override string) (ct *Component, version string, err error) {
-	s := strings.SplitN(override, ":", 2)
-	if len(s) != 2 {
+	t, v, found := strings.Cut(override, ":")
+	if !found {
 		err = fmt.Errorf("type/version override must be in the form TYPE:VERSION (%w)", ErrInvalidArgs)
 		return
 	}
-	ct = ParseComponent(s[0])
+	ct = ParseComponent(t)
 	if ct == nil {
-		err = fmt.Errorf("invalid component type %q (%w)", s[0], ErrInvalidArgs)
+		err = fmt.Errorf("invalid component type %q (%w)", t, ErrInvalidArgs)
 		return
 	}
-	version = s[1]
+	version = v
 	if !matchVersion(version) {
-		err = fmt.Errorf("invalid version %q (%w)", s[1], ErrInvalidArgs)
+		err = fmt.Errorf("invalid version %q (%w)", v, ErrInvalidArgs)
 		return
 	}
 	return

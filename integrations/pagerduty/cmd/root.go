@@ -142,8 +142,9 @@ func sendEvent(eventType eventType) (err error) {
 	details := config.Get[map[string]string](payload, "details")
 	if config.Get[bool](cf, "pagerduty.send-env") {
 		for _, e := range os.Environ() {
-			s := strings.SplitN(e, "=", 2)
-			details[s[0]] = s[1]
+			if k, v, found := strings.Cut(e, "="); found {
+				details[k] = v
+			}
 		}
 	}
 

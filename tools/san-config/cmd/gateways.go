@@ -226,10 +226,10 @@ func GatewayDetails(name string, gateways []map[string]string) (gateway GatewayS
 			gateway.Name = name
 			gateway.Secure, _ = strconv.ParseBool(g["secure"])
 
-			p := strings.SplitN(g["primary"], ":", 2)
-			gateway.Primary = p[0]
-			if len(p) > 1 {
-				gateway.PrimaryPort, _ = strconv.Atoi(p[1])
+			host, port, found := strings.Cut(g["primary"], ":")
+			gateway.Primary = host
+			if found {
+				gateway.PrimaryPort, _ = strconv.Atoi(port)
 			}
 			if gateway.PrimaryPort == 0 {
 				if gateway.Secure {
@@ -239,10 +239,10 @@ func GatewayDetails(name string, gateways []map[string]string) (gateway GatewayS
 				}
 			}
 
-			s := strings.SplitN(g["standby"], ":", 2)
-			gateway.Standby = s[0]
-			if len(s) > 1 {
-				gateway.StandbyPort, _ = strconv.Atoi(s[1])
+			host, port, found = strings.Cut(g["standby"], ":")
+			gateway.Standby = host
+			if found {
+				gateway.StandbyPort, _ = strconv.Atoi(port)
 			}
 			if gateway.StandbyPort == 0 {
 				if gateway.Secure {

@@ -52,9 +52,12 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	// and also the config structure (config.WithEnvs doesn't work
 	// for empty prefixes)
 	for _, e := range os.Environ() {
-		n := strings.SplitN(e, "=", 2)
-		data.Env[n[0]] = n[1]
-		config.Set(cf, n[0], n[1])
+		k, v, found := strings.Cut(e, "=")
+		if !found {
+			continue
+		}
+		data.Env[k] = v
+		config.Set(cf, k, v)
 	}
 
 	varpath := config.Get[string](cf, "_variablepath")

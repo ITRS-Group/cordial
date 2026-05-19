@@ -451,10 +451,15 @@ func watchLogs() (tails *sync.Map) {
 				if value == nil {
 					return true
 				}
-				l := strings.SplitN(key.(string), ":", 2)
-				logfile := l[1]
+				tail, ok := value.(*files)
+				if !ok {
+					return true
+				}
 
-				tail := value.(*files)
+				_, logfile, found := strings.Cut(key.(string), ":")
+				if !found {
+					return true
+				}
 
 				st, err := tail.instance.Host().Stat(logfile)
 				if err != nil {

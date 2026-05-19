@@ -112,15 +112,11 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 func matchPrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "match:")
 	// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
-	p := strings.SplitN(s, ":", 2)
-	if len(p) != 2 {
+	env, pattern, found := strings.Cut(s, ":")
+	if !found || len(env) == 0 || len(pattern) == 0 {
 		return "false", fmt.Errorf("invalid args")
 	}
-	env, pattern := p[0], p[1]
 
-	if len(env) == 0 || len(pattern) == 0 {
-		return "false", nil
-	}
 	val, ok := os.LookupEnv(env)
 	if !ok {
 		return "false", nil
@@ -135,15 +131,11 @@ func matchPrefix(_ map[string]any, s string, trim bool) (result string, err erro
 func noMatchPrefix(_ map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "nomatch:")
 	// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
-	p := strings.SplitN(s, ":", 2)
-	if len(p) != 2 {
+	env, pattern, found := strings.Cut(s, ":")
+	if !found || len(env) == 0 || len(pattern) == 0 {
 		return "false", fmt.Errorf("invalid args")
 	}
-	env, pattern := p[0], p[1]
 
-	if len(env) == 0 || len(pattern) == 0 {
-		return "false", nil
-	}
 	val, ok := os.LookupEnv(env)
 	if !ok {
 		return "false", nil

@@ -32,17 +32,14 @@ import (
 
 // return the KEY from "[TYPE:]KEY=VALUE"
 func nameOf(s string, sep string) string {
-	r := strings.SplitN(s, sep, 2)
-	return r[0]
+	key, _, _ := strings.Cut(s, sep)
+	return key
 }
 
 // return the VALUE from "[TYPE:]KEY=VALUE"
 func valueOf(s string, sep string) string {
-	r := strings.SplitN(s, sep, 2)
-	if len(r) > 0 {
-		return r[1]
-	}
-	return ""
+	_, value, _ := strings.Cut(s, sep)
+	return value
 }
 
 // first returns the first non-empty string argument

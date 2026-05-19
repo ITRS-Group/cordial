@@ -116,14 +116,12 @@ func incident(args []string) {
 	// for now ignore everything else
 	// no lookups (yet)
 	for _, arg := range args {
-		s := strings.SplitN(arg, "=", 2)
-		if len(s) != 2 {
-			continue
-		}
-		if s[1] == "" {
-			delete(incident, s[0])
-		} else {
-			incident[s[0]] = s[1]
+		if k, v, found := strings.Cut(arg, "="); found {
+			if v == "" {
+				delete(incident, k)
+			} else {
+				incident[k] = v
+			}
 		}
 	}
 
@@ -227,22 +225,22 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 	for field := range fields {
 		// strip spaces from each field
 		field = strings.TrimSpace(field)
-		s := strings.SplitN(field, "=", 2)
-		if len(s) != 2 {
-			log.Printf("invalid mapping %q", field)
+		k, v, found := strings.Cut(field, "=")
+		if !found {
+			log.Printf("invalid severity mapping %q", field)
 			continue
 		}
 
-		if s[1] == "" {
-			delete(incident, s[0])
+		if v == "" {
+			delete(incident, k)
 			continue
 		}
 
 		// remove any enclosing quotes and then "unquote" by forcing double quotes around value
-		str, err := strconv.Unquote(`"` + strings.Trim(s[1], `"`) + `"`)
+		str, err := strconv.Unquote(`"` + strings.Trim(v, `"`) + `"`)
 		if err == nil {
-			s[1] = str
+			v = str
 		}
-		incident[s[0]] = s[1]
+		incident[k] = v
 	}
 }

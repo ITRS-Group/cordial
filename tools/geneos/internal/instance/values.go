@@ -128,21 +128,15 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	}
 	cf.SetKeyValuePairs(secrets...)
 
-	setSlice(i, "attributes", set.Attributes, func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	})
+	setSlice(i, "attributes", set.Attributes, getKey)
 
-	setSlice(i, "env", set.Envs, func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	})
+	setSlice(i, "env", set.Envs, getKey)
 
 	secrets, err = setEncoded(i, set.SecureEnvs, k)
 	if err != nil {
 		return
 	}
-	setSlice(i, "env", secrets, func(a string) string {
-		return strings.SplitN(a, "=", 2)[0]
-	})
+	setSlice(i, "env", secrets, getKey)
 
 	setSlice(i, "types", set.Types, func(a string) string {
 		return a
@@ -153,6 +147,11 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 	setMap(i, "variables", set.Variables)
 
 	return
+}
+
+func getKey(s string) string {
+	key, _, _ := strings.Cut(s, "=")
+	return key
 }
 
 // setMap sets the values in items, which is a map of string to
@@ -268,15 +267,15 @@ func (p *SecureValues) Set(v string) error {
 	if p == nil {
 		return geneos.ErrInvalidArgs
 	}
-	s := strings.SplitN(v, "=", 2)
-	if len(s) == 1 {
+	value, secret, found := strings.Cut(v, "=")
+	if !found {
 		*p = append(*p, &SecureValue{
-			Value: s[0],
+			Value: value,
 		})
 	} else {
 		*p = append(*p, &SecureValue{
-			Value:  s[0],
-			Secret: config.Secret(s[1]),
+			Value:  value,
+			Secret: config.Secret(secret),
 		})
 	}
 	return nil
@@ -303,12 +302,13 @@ func (i *Includes) Set(value string) error {
 	if *i == nil {
 		*i = Includes{}
 	}
-	e := strings.SplitN(value, ":", 2)
+	a, b, found := strings.Cut(value, ":")
+
 	priority := "100"
-	path := e[0]
-	if len(e) > 1 {
-		priority = e[0]
-		path = e[1]
+	path := a
+	if found {
+		priority = a
+		path = b
 	} else {
 		// XXX check two values and first is a number
 		log.Debug().Msgf("second value missing after ':', using default %s", priority)
@@ -334,17 +334,11 @@ func (i *Gateways) Set(value string) error {
 	if *i == nil {
 		*i = Gateways{}
 	}
-	e := strings.SplitN(value, ":", 2)
-	val := "7039"
-	if len(e) > 1 {
-		val = e[1]
-	} else {
-		// XXX check two values and first is a number
-		// this debug happens before flags initialised, so it is always
-		// output. comment out for now.
-		// log.Debug().Msgf("second value missing after ':', using default %s", val)
+	host, port, found := strings.Cut(value, ":")
+	if !found {
+		port = "7039"
 	}
-	(*i)[e[0]] = val
+	(*i)[host] = port
 	return nil
 }
 
@@ -425,21 +419,12 @@ func (i *Vars) String() string {
 func getVarValue(in string) (key string, value VarValue) {
 	var t, k, v string
 
-	e := strings.SplitN(in, ":", 2)
-	if len(e) == 1 {
+	t, r, found := strings.Cut(in, ":")
+	if !found {
 		t = "string"
-		s := strings.SplitN(e[0], "=", 2)
-		k = s[0]
-		if len(s) > 1 {
-			v = s[1]
-		}
+		k, v, _ = strings.Cut(in, "=")
 	} else {
-		t = e[0]
-		s := strings.SplitN(e[1], "=", 2)
-		k = s[0]
-		if len(s) > 1 {
-			v = s[1]
-		}
+		k, v, _ = strings.Cut(r, "=")
 	}
 
 	// XXX check types here - e[0] options type, default string
@@ -598,7 +583,7 @@ func (i *UnsetValues) String() string {
 
 func (i *UnsetValues) Set(value string) error {
 	// discard any values accidentally passed with '=value'
-	value = strings.SplitN(value, "=", 2)[0]
+	value, _, _ = strings.Cut(value, "=")
 	*i = append(*i, value)
 	return nil
 }
@@ -615,7 +600,7 @@ func (i *UnsetVars) String() string {
 
 func (i *UnsetVars) Set(value string) error {
 	// trim any values accidentally passed with '=value'
-	value = strings.SplitN(value, "=", 2)[0]
+	value, _, _ = strings.Cut(value, "=")
 	value = hex.EncodeToString([]byte(value))
 	*i = append(*i, value)
 	return nil

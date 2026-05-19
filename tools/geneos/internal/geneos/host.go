@@ -233,12 +233,12 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 				if strings.HasPrefix(line, " ") {
 					continue
 				}
-				s := strings.SplitN(line, ":", 2)
-				if len(s) < 2 {
+				name, val, found := strings.Cut(line, ":")
+				if !found {
 					continue
 				}
-				name := strings.TrimSpace(s[0])
-				val := strings.TrimSpace(s[1])
+				name = strings.TrimSpace(name)
+				val = strings.TrimSpace(val)
 				switch name {
 				case "OS Name":
 					osinfo["name"] = val
@@ -277,11 +277,10 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			if len(line) == 0 || strings.HasPrefix(line, "#") {
 				continue
 			}
-			s := strings.SplitN(line, "=", 2)
-			if len(s) != 2 {
+			key, value, found := strings.Cut(line, "=")
+			if !found {
 				return ErrInvalidArgs
 			}
-			key, value := s[0], s[1]
 			value = strings.Trim(value, "\"")
 			osinfo[strings.ToLower(key)] = value
 		}

@@ -178,7 +178,7 @@ func GetProcessInfo(i geneos.Instance) (pi *process.ProcessInfo, err error) {
 		return
 	}
 
-	return process.GetProcessInfo(i.Host(), pid, false)
+	return process.GetProcessInfo(i.Host(), pid)
 }
 
 // GetChildPIDs returns a list of child processes for the instance
@@ -194,7 +194,7 @@ func GetChildPIDs(i geneos.Instance) (children []int, err error) {
 
 	h := i.Host()
 
-	pi, err := process.GetProcessInfo(h, pid, false)
+	pi, err := process.GetProcessInfo(h, pid)
 	if err != nil {
 		return
 	}

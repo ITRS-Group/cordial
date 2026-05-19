@@ -238,8 +238,9 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 	}
 
 	for _, e := range os.Environ() {
-		n := strings.SplitN(e, "=", 2)
-		config.Set(em, n[0], n[1])
+		if k, v, found := strings.Cut(e, "="); found {
+			config.Set(em, k, v)
+		}
 	}
 
 	// override with args

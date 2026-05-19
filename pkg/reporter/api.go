@@ -168,10 +168,10 @@ func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 	if !(len(existing) == 1 && existing[0] == "rowNames") && !slices.Equal(existing, columns) {
 		log.Debug().Msg("dataview columns changed, resetting dataview")
 		// recreate dataview
-		s := strings.SplitN(a.dv.String(), "-", 2)
+		groupName, viewName, _ := strings.Cut(a.dv.String(), "-")
 		a.dv.Remove()
 		time.Sleep(a.dvCreateDelay)
-		_, err = a.conn.NewDataview(s[0], s[1])
+		_, err = a.conn.NewDataview(groupName, viewName)
 		if err != nil {
 			log.Error().Err(err).Msg("")
 			return

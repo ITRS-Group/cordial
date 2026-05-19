@@ -395,11 +395,14 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 		// whole of the config string. there must be a ":" here, else
 		// the above test would have picked it up. it is up to the
 		// function called to trim whitespace, if required.
-		f := strings.SplitN(s, ":", 2)
+		fname, arg, found := strings.Cut(s, ":")
+		if !found {
+			return
+		}
 		ci := c.allSettings()
-		if fn, ok := opts.funcMaps[f[0]]; ok {
+		if fn, ok := opts.funcMaps[fname]; ok {
 			if opts.trimPrefix {
-				value, err = fn(ci, f[1], opts.trimSpace)
+				value, err = fn(ci, arg, opts.trimSpace)
 			} else {
 				value, err = fn(ci, s, opts.trimSpace)
 			}

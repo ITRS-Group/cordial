@@ -108,14 +108,14 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 	used := GetAllPorts(h)
 	for p := range strings.SplitSeq(from, ",") {
 		// split on dash or ".."
-		m := strings.SplitN(p, "-", 2)
-		if len(m) == 1 {
-			m = strings.SplitN(p, "..", 2)
+		start, end, found := strings.Cut(p, "-")
+		if !found {
+			start, end, found = strings.Cut(p, "..")
 		}
 
-		if len(m) > 1 {
+		if found {
 			var min uint16
-			mn, err := strconv.Atoi(m[0])
+			mn, err := strconv.Atoi(start)
 			if err != nil {
 				continue
 			}
@@ -124,10 +124,10 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 			} else {
 				min = uint16(mn)
 			}
-			if m[1] == "" {
-				m[1] = "49151"
+			if end == "" {
+				end = "49151"
 			}
-			max, err := strconv.Atoi(m[1])
+			max, err := strconv.Atoi(end)
 			if err != nil {
 				continue
 			}
@@ -142,7 +142,7 @@ func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
 			}
 		} else {
 			var p1 uint16
-			p, err := strconv.Atoi(m[0])
+			p, err := strconv.Atoi(start)
 			if err != nil {
 				continue
 			}

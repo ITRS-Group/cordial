@@ -104,12 +104,9 @@ var setCmd = &cobra.Command{
 
 		for _, h := range hosts {
 			for _, set := range params {
-				if !strings.Contains(set, "=") {
-					continue
+				if k, v, found := strings.Cut(set, "="); found {
+					config.Set(h.Config, k, v)
 				}
-				s := strings.SplitN(set, "=", 2)
-				k, v := s[0], s[1]
-				config.Set(h.Config, k, v)
 			}
 
 			if password != "" {

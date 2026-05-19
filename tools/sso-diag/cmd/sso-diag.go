@@ -36,16 +36,13 @@ import (
 // SplitUsername takes a name of the form 'domain\user' or 'user@domain'
 // and returns the two. realm will be empty of none found
 func SplitUsername(in string) (username, realm string) {
-	p := strings.SplitN(in, "\\", 2)
-	if len(p) == 2 {
-		return p[1], p[0]
+	var found bool
+	username, realm, found = strings.Cut(in, "\\")
+	if found {
+		return realm, username
 	}
-	p = strings.SplitN(in, "@", 2)
-	username = p[0]
-	if len(p) == 2 {
-		realm = p[1]
-	}
-	return
+	username, realm, _ = strings.Cut(in, "@")
+	return username, realm
 }
 
 var vc *config.Config

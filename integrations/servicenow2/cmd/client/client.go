@@ -108,15 +108,11 @@ var clientCmd = &cobra.Command{
 			config.Prefix("match", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "match:")
 				// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
-				p := strings.SplitN(s, ":", 2)
-				if len(p) != 2 {
+				env, pattern, found := strings.Cut(s, ":")
+				if !found || len(env) == 0 || len(pattern) == 0 {
 					return "false", fmt.Errorf("invalid args")
 				}
-				env, pattern := p[0], p[1]
 
-				if len(env) == 0 || len(pattern) == 0 {
-					return "false", nil
-				}
 				val, ok := os.LookupEnv(env)
 				if !ok {
 					return "false", nil
@@ -131,15 +127,11 @@ var clientCmd = &cobra.Command{
 			config.Prefix("nomatch", func(_ map[string]any, s string, trim bool) (result string, err error) {
 				s = strings.TrimPrefix(s, "nomatch:")
 				// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
-				p := strings.SplitN(s, ":", 2)
-				if len(p) != 2 {
+				env, pattern, found := strings.Cut(s, ":")
+				if !found || len(env) == 0 || len(pattern) == 0 {
 					return "false", fmt.Errorf("invalid args")
 				}
-				env, pattern := p[0], p[1]
 
-				if len(env) == 0 || len(pattern) == 0 {
-					return "false", nil
-				}
 				val, ok := os.LookupEnv(env)
 				if !ok {
 					return "false", nil
@@ -339,14 +331,15 @@ var clientCmd = &cobra.Command{
 		// parse key value pairs as fields for the request, and for now ignore
 		// everything else
 		for _, arg := range args {
-			s := strings.SplitN(arg, "=", 2)
-			if len(s) != 2 {
+			k, v, found := strings.Cut(arg, "=")
+			if !found {
+				// silently ignore
 				continue
 			}
-			if s[1] == "" {
-				delete(incident, s[0])
+			if v == "" {
+				delete(incident, k)
 			} else {
-				incident[s[0]] = s[1]
+				incident[k] = v
 			}
 		}
 

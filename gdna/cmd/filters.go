@@ -479,12 +479,11 @@ func buildFilterSQL(cf *config.Config) config.ExpandOption {
 	return config.Prefix("filters", func(_ map[string]any, s string, b bool) (r string, err error) {
 		var clauses []string
 		args := strings.TrimPrefix(s, "filters:")
-		a := strings.SplitN(args, ":", 2)
-		if len(a) != 2 {
+		table, s, found := strings.Cut(args, ":")
+		if !found {
 			return "", os.ErrInvalid
 		}
-		table := a[0]
-		fs := strings.FieldsFunc(a[1], func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
+		fs := strings.FieldsFunc(s, func(r rune) bool { return r == ',' || unicode.IsSpace(r) })
 
 		for _, f := range fs {
 			clauses = append(clauses, config.Expand[string](cf, fmt.Sprintf(

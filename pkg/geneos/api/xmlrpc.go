@@ -91,13 +91,7 @@ func (c *XMLRPCClient) Healthy() bool {
 }
 
 func (c *XMLRPCClient) CreateDataview(entity, sampler, name string) error {
-	var viewName, groupHeading string
-	n := strings.SplitN(name, "-", 2)
-	if len(n) == 2 {
-		groupHeading, viewName = n[0], n[1]
-	} else {
-		viewName = n[0]
-	}
+	viewName, groupHeading, _ := strings.Cut(name, "-")
 	return c.CreateView(entity, sampler, viewName, groupHeading)
 }
 
@@ -106,13 +100,7 @@ func (c *XMLRPCClient) UpdateDataview(entity, sampler, name string, values [][]s
 }
 
 func (c *XMLRPCClient) DeleteDataview(entity, sampler, name string) error {
-	var viewName, groupHeading string
-	n := strings.SplitN(name, "-", 2)
-	if len(n) == 2 {
-		groupHeading, viewName = n[0], n[1]
-	} else {
-		viewName = n[0]
-	}
+	viewName, groupHeading, _ := strings.Cut(name, "-")
 	return c.RemoveView(entity, sampler, viewName, groupHeading)
 }
 

@@ -548,13 +548,12 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 // parse the C args - "n" of them - and return a config map
 // - a value of empty string where there is no "=" or value
 func parseArgs(n C.int, args **C.char) (conf *config.Config) {
-	// unsafe.Slice() requires Go 1.17+
 	for _, s := range unsafe.Slice(args, n) {
-		t := strings.SplitN(C.GoString(s), "=", 2)
-		if len(t) > 1 {
-			config.Set(conf, t[0], t[1])
+		k, v, found := strings.Cut(C.GoString(s), "=")
+		if found {
+			config.Set(conf, k, v)
 		} else {
-			config.Set(conf, t[0], "")
+			config.Set(conf, k, "")
 		}
 	}
 	return conf

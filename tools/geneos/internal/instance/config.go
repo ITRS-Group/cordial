@@ -216,12 +216,11 @@ func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 		if len(line) == 0 || strings.HasPrefix(line, "#") {
 			continue
 		}
-		s := strings.SplitN(line, "=", 2)
-		if len(s) != 2 {
+		key, value, found := strings.Cut(line, "=")
+		if !found {
 			err = fmt.Errorf("invalid line (must be key=value) %q", line)
 			return
 		}
-		key, value := s[0], s[1]
 		// trim double and single quotes and tabs and spaces from value
 		value = strings.Trim(value, "\"' \t")
 		kvs[key] = value
@@ -515,8 +514,11 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 	// set bootstrap values used by templates
 	for _, s := range i.Type().Defaults {
 		var b bytes.Buffer
-		p := strings.SplitN(s, "=", 2)
-		k, v := p[0], p[1]
+		k, v, found := strings.Cut(s, "=")
+		if !found {
+			log.Error().Err(err).Msgf("invalid default (must be key=value) %q", s)
+			continue
+		}
 		t, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
 		if err != nil {
 			log.Error().Err(err).Msgf("%s parse error: %s", i, v)

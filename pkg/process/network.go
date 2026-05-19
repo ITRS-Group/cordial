@@ -179,11 +179,11 @@ func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
 				if len(fields) < 10 || fields[3] != "0A" { // TCP_LISTEN
 					break
 				}
-				s := strings.SplitN(fields[1], ":", 2)
-				if len(s) != 2 {
+				_, p, found := strings.Cut(fields[1], ":")
+				if !found {
 					continue
 				}
-				port, err := strconv.ParseInt(s[1], 16, 32)
+				port, err := strconv.ParseInt(p, 16, 32)
 				if err != nil {
 					continue
 				}

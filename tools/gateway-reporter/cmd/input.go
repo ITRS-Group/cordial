@@ -153,14 +153,18 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		for _, s := range names {
 			// s := entity.ResolvedSamplers[sampname]
 			// for s := range entity.ResolvedSamplers {
-			p := strings.SplitN(s, ":", 2)
-			plugin := geneos.GetPlugin(samplers[p[1]].Plugin)
+			t, p, found := strings.Cut(s, ":")
+			if !found {
+				log.Error().Msgf("invalid sampler name %q for entity %q\n", s, entity.Name)
+				continue
+			}
+			plugin := geneos.GetPlugin(samplers[p].Plugin)
 			if plugin == nil {
 				plugin = ""
 			}
 			sampler := &Sampler{
-				Name:   p[1],
-				Type:   p[0],
+				Name:   p,
+				Type:   t,
 				Plugin: fmt.Sprint(plugin),
 			}
 			pluginInfo(sampler, plugin, procdesc)
