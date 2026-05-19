@@ -110,7 +110,7 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 // on the configuration. It returns the resulting dataview or an error
 // if the fetch fails.
 func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headlineList, rowList, columnList, rowOrder string) (dataview *commands.Dataview, err error) {
-	dataview, err = gw.Snapshot(dv, "", commands.Scope{Value: true, Severity: true})
+	dataview, err = gw.Snapshot(dv, "", commands.Scope{Value: true, Severity: true, Snooze: true, UserAssignment: true})
 	if err != nil {
 		log.Error().Err(err).Msg("")
 		return

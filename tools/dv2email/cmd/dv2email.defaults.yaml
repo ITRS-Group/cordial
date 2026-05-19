@@ -143,9 +143,48 @@ first-column:
 # similar to the above, these settings let you filter rows from being
 # used. Each string is matched against the rowname (first column) and if
 # the rowname does not match any of the patterns it will be dropped from
-# the email. You cannot change the order of the rows.
+# the email. You cannot change the order of the rows, for that see
+# `row-order`.
+#
+# The `row-filter` is applied before the `row-property-filter` and if a
+# dataview does not match any of the patterns then no filtering is done
+# and all rows are included.
 row-filter:
   # '*': [ sys*, root ]
+
+# PROPOSED new feature. NOT YET IMPLEMENTED
+#
+# filter rows based on the properties of one or more columns (excluding
+# the row name). rows NOT matching the filter are dropped from the
+# email. If a dataview does not match any of the patterns then no
+# filtering is done and all rows are included.
+#
+# The key is a dataview name pattern match, typically `*` for all, as
+# for other filters, then a list of column filters. Each column filter
+# is applied and if any match the column is included. To "AND" multiple
+# filters put a new column name after the comma, e.g.
+#
+#   `percentUtilisation:severity=3,status:value=''`
+#
+# Each column filter is of the form "column:filter" where the filter is
+# a comma separated list of conditions of the form "propertyOPvalue",
+# where property can be `value`, `severity`, `snooze` or `assignment`,
+# the `OP` can be one of `=`, `!=`, `>`, `<`, `>=` or `<=` and the value
+# is a string or number. For example
+#
+#   `percentUtilisation:severity=3`
+#
+# would filter rows where the column "percentUtilisation" has a severity
+# of critical, and
+#
+#   `status:value=''`
+#
+# would filter rows where the column "status" has an empty value.
+#
+# Severity comparisons must be numeric based on Geneos standard severity
+# values.
+row-property-filter:
+  '*': [ "*:severity>0,snooze=false", "percentUtilisation:severity=3", "status:value=''" ]
 
 # Order rows by the values in a single named column, which can be
 # suffixed by '-' or '+ to indicate ascending or descending order, the
@@ -160,7 +199,8 @@ row-order:
   # toolkit: username+
 
 # similar to the above, these settings let you filter headlines from
-# being included in the email. No ordering is possible.
+# being included in the email. No ordering is possible as headlines are
+# always displayed in alphabetical order.
 headline-filter:
   # '*': samp*
 
