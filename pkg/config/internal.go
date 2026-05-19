@@ -897,12 +897,16 @@ func fetchFile(_ map[string]any, p string, trim bool) (s string, err error) {
 func expr(configItems map[string]any, expression string, trim bool) (s string, err error) {
 	vars := maps.Clone(configItems)
 	eval := goval.NewEvaluator()
-	env := make(map[string]string)
-	for _, e := range os.Environ() {
-		s := strings.SplitN(e, "=", 2)
-		env[s[0]] = s[1]
+
+	environ := os.Environ()
+	env := make(map[string]string, len(environ))
+	for _, e := range environ {
+		if k, v, found := strings.Cut(e, "="); found {
+			env[k] = v
+		}
 	}
 	vars["env"] = env
+
 	result, err := eval.Evaluate(expression, vars, nil)
 	if err != nil {
 		return
