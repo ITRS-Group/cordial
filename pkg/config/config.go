@@ -199,6 +199,7 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 //   - []byte
 //   - map[string]any
 //   - map[string]string
+//   - map[string][]string
 //   - []map[string]string
 //   - time.Duration
 //   - config.Secret

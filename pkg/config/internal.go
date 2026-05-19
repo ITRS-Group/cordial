@@ -604,12 +604,22 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 			}
 		}
 		return any(result).(T)
+	case map[string][]string:
+		var result map[string][]string
+		if err := c.unmarshalKey(key, &result); err != nil {
+			return
+		}
+		for k, v := range result {
+			var slice []string
+			for _, n := range v {
+				slice = append(slice, expand[string](c, n, options...))
+			}
+			result[k] = slice
+		}
+		return any(result).(T)
 	case time.Duration:
 		v, _ := time.ParseDuration(expand[string](c, c.config.GetString(key), options...))
 		return any(v).(T)
-	// case *Secret:
-	// 	s := Secret(expand[[]byte](c, c.config.GetString(key), options...))
-	// 	return any(&s).(T)
 	case Secret:
 		return any(Secret(expand[[]byte](c, c.config.GetString(key), options...))).(T)
 	default:
