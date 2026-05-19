@@ -6,6 +6,8 @@ The fetch command will normally work through the configured license usage source
 
 To override the configured license data sources, the `--source`/`-L` flag can be used one or more times to specify the source(s) to use. These sources can be any of the supported source types, including `licd` binary reporting summary files which are written to the `reporting/` subdirectory in the `licd` process working directory. The program will treat the given source path as a `licd` summary file if any of the following are true: The filename ends with `.dat` or the filename (not including any directory path) starts with `summary` or the path is prefixed with `summary:`. In all other cases the source will be treated as a CSV file, from either a URL or a local file path. Note that when specifying a local file path to a CSV detail report, the same path is used to locate a summary file, appending `_summary` to the filename before the extension, e.g. `all_licences.csv` would have a summary file of `all_licences_summary.csv`. You do not need to specify both the detail and summary files as sources.
 
+For diagnostics and testing, you can use the `--save-remote-sources`/`-S` flag to specify a directory to save data downloaded from remote sources. This is for testing only and should not be used in production as it may contain sensitive data.
+
 ## Usage
 
 ```text
@@ -15,12 +17,13 @@ gdna fetch
 ### Options
 
 ```text
-  -p, --post-process        post process data for reporting database
-  -T, --time                Override file times with the current time (for testing only)
-  -L, --source URL | PATH   Override configured licence source.
-                            (Repeat as required)
-  -f, --config FILE         Use configuration FILE
-  -l, --logfile file        Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -p, --post-process                 post process data for reporting database
+  -T, --time                         Override file times with the current time (for testing only)
+  -L, --source URL | PATH            Override configured licence source.
+                                     (Repeat as required)
+  -S, --save-remote-sources string   Save data downloaded from remote sources to this directory (for testing only)
+  -f, --config FILE                  Use configuration FILE
+  -l, --logfile file                 Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO
