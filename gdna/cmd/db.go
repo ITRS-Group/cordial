@@ -945,12 +945,21 @@ func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName
 	return
 }
 
-// readLicdReports called a function with a io.ReadCloser to read the
+// readLicdReports calls a function with a io.ReadCloser to read the
 // contents and process/load them. The caller must close the reader.
 // Support for http/https/file and plain paths as well as "~/" prefix to
 // mean home directory.
-func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source string) (sources []string, err error) {
+//
+// If savedRemoteSources is not empty, then any successfully read source
+// will be saved to a file in the directory with the hostname as the
+// primary filename, a timestamp and `_summary` or `_detail` suffix
+// before the extension, e.g. `hostname_20240601T150405_summary.csv`.
+func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source, saveRemoteSources string) (sources []string, err error) {
 	var signedToken string
+	var r io.Reader
+
+	// save a timestamp to the output files, if any, will be consistent
+	timestamp := time.Now().Format("20060102T150405")
 
 	source = config.ResolveHome(source)
 	u, err := url.Parse(source)
@@ -1079,7 +1088,21 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		}
 		defer resp.Body.Close()
 
-		c := csv.NewReader(resp.Body)
+		r = resp.Body
+
+		if saveRemoteSources != "" {
+			filename := fmt.Sprintf("%s_%s_summary.csv", u.Hostname(), timestamp)
+			path := filepath.Join(saveRemoteSources, filename)
+			w, err := os.Create(path)
+			if err != nil {
+				log.Error().Err(err).Msgf("creating file to save summary report for %s", source)
+			} else {
+				r = io.TeeReader(r, w)
+				defer w.Close()
+			}
+		}
+
+		c := csv.NewReader(r)
 		c.ReuseRecord = false
 		c.Comment = '#'
 
@@ -1113,7 +1136,22 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source 
 		}
 		defer resp.Body.Close()
 
-		c = csv.NewReader(resp.Body)
+		r = resp.Body
+		if saveRemoteSources != "" {
+			filename := fmt.Sprintf("%s_%s_detail.csv", u.Hostname(), timestamp)
+			path := filepath.Join(saveRemoteSources, filename)
+			w, err := os.Create(path)
+			if err != nil {
+				log.Error().Err(err).Msgf("creating file to save detail report for %s", source)
+			} else {
+				r = io.TeeReader(r, w)
+				defer w.Close()
+			}
+		}
+
+		// 2nd tee here - to save outputs
+
+		c = csv.NewReader(r)
 		c.ReuseRecord = true
 		c.Comment = '#'
 

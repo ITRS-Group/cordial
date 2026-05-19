@@ -46,14 +46,19 @@ type node struct {
 
 //go:embed _docs/explain.md
 var explainCmdDescription string
+var explainCmdExpandQuery bool
 
 func init() {
 	Cmd.AddCommand(explainCmd)
+
+	explainCmd.Flags().BoolVarP(&explainCmdExpandQuery, "expand-query", "q", false, "expand query with configuration variables, for diagnostics")
+
+	explainCmd.Flags().SortFlags = false
 }
 
 var explainCmd = &cobra.Command{
-	Use:   "explain REPORT",
-	Short: "Explain report",
+	Use:   "explain [flags] REPORT|CONFIG_KEY",
+	Short: "Explain report or expand query for diagnostics",
 	Long:  explainCmdDescription,
 	Args:  cobra.ExactArgs(1),
 	CompletionOptions: cobra.CompletionOptions{
@@ -65,6 +70,10 @@ var explainCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	Hidden:                true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		if len(args) == 0 {
+			return fmt.Errorf("report name or configuration key is required")
+		}
+
 		name := args[0]
 
 		// Handle SIGINT (CTRL+C) gracefully.
@@ -83,6 +92,13 @@ var explainCmd = &cobra.Command{
 			return
 		}
 		defer tx.Rollback()
+
+		if explainCmdExpandQuery {
+			query := config.Get[string](cf, name)
+			fmt.Printf("Expanded query for %s:\n\n", name)
+			fmt.Println(query)
+			return
+		}
 
 		if err = updateReportingDatabase(ctx, cf, tx, nil); err != nil {
 			return

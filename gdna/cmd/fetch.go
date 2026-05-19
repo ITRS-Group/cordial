@@ -39,6 +39,23 @@ var fetchCmdDescription string
 
 var overrideFiletime, postProcess bool
 
+var fetchCmdSources Sources
+var fetchCmdSaveRemoteSources string
+
+func init() {
+	Cmd.AddCommand(fetchCmd)
+
+	fetchCmd.Flags().BoolVarP(&postProcess, "post-process", "p", false, "post process data for reporting database")
+	fetchCmd.Flags().BoolVarP(&overrideFiletime, "time", "T", false, "Override file times with the current time (for testing only)")
+	// fetchCmd.Flags().StringVarP(&logFile, "logfile", "l", execname+"-fetch.log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+
+	fetchCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
+
+	fetchCmd.Flags().StringVarP(&fetchCmdSaveRemoteSources, "save-remote-sources", "S", "", "Save data downloaded from remote sources to this directory (for testing only)")
+
+	fetchCmd.Flags().SortFlags = false
+}
+
 // fetchCmd represents the fetch command
 var fetchCmd = &cobra.Command{
 	Use:   "fetch",
@@ -72,20 +89,6 @@ var fetchCmd = &cobra.Command{
 		_, err = db.ExecContext(ctx, "VACUUM")
 		return
 	},
-}
-
-var fetchCmdSources Sources
-
-func init() {
-	Cmd.AddCommand(fetchCmd)
-
-	fetchCmd.Flags().BoolVarP(&postProcess, "post-process", "p", false, "post process data for reporting database")
-	fetchCmd.Flags().BoolVarP(&overrideFiletime, "time", "T", false, "Override file times with the current time (for testing only)")
-	// fetchCmd.Flags().StringVarP(&logFile, "logfile", "l", execname+"-fetch.log", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
-
-	fetchCmd.Flags().VarP(&fetchCmdSources, "source", "L", SourcesOptionsText)
-
-	fetchCmd.Flags().SortFlags = false
 }
 
 // Sources is a slice of licence data sources
@@ -137,7 +140,7 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
 				return
 			}
-		} else if s, err = readLicdReports(ctx, cf, tx, source); err != nil {
+		} else if s, err = readLicdReports(ctx, cf, tx, source, fetchCmdSaveRemoteSources); err != nil {
 			log.Error().Err(err).Msgf("readLicenseReports for %s failed", source)
 			continue
 		}
