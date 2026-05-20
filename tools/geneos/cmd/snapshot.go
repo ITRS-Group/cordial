@@ -146,6 +146,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 		// file
 		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
 		password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
+		defer clear(password)
 
 		if username == "" {
 			username = snapshotCmdUsername
@@ -163,10 +164,12 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 			if creds != nil {
 				username = config.Get[string](creds, "username")
 				password = config.Get[config.Secret](creds, "password")
+				defer clear(password)
 			} else {
 				if creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName())); creds != nil {
 					username = config.Get[string](creds, "username")
 					password = config.Get[config.Secret](creds, "password")
+					defer clear(password)
 				}
 			}
 		}
