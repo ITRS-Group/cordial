@@ -330,17 +330,14 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 
 	startedJSON := false
 
+OUTER:
 	for _, k := range slices.Sorted(maps.Keys(responses)) {
 		resp := responses[k]
 		if resp.Err != nil && opts.skiponerr {
-			var ignored bool
 			for _, i := range opts.ignoreerr {
 				if errors.Is(resp.Err, i) {
-					ignored = true
+					continue OUTER
 				}
-			}
-			if !ignored {
-				continue
 			}
 		}
 
@@ -469,7 +466,7 @@ func (responses Responses) Report(writer any, options ...WriterOption) {
 			r := responses[k]
 			errored := false
 			ignored := false
-			if r.Err != nil {
+			if r.Err != nil && opts.skiponerr {
 				for _, i := range opts.ignoreerr {
 					if errors.Is(r.Err, i) {
 						ignored = true
