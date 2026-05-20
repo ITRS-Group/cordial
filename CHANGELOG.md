@@ -17,9 +17,9 @@
 
 * `tools/geneos`
 
-  = Fix handing of `sso-agent` config file (via `pkg/config`), so that the configuration can be built from the HOCON formatted file `conf/sso-agent.conf` and so started etc.
+  * Fix handing of `sso-agent` config file (via `pkg/config`), so that the configuration can be built from the HOCON formatted file `conf/sso-agent.conf`.
 
-  * Fix `geneos tls ls` to work when no user-level signing certificate or key exists. This allows import of external instance TLS bundles without needing to first create a signing certificate and key.
+  * Fix `geneos tls ls` to work when no user-level signing certificate or key exists. This allows import of external instance TLS bundles without needing to first create a signing certificate and key. A local private root CA ans signing certificate and keys are still created when initialising a new geneos installation.
 
   * Update `geneos restore` and `geneos init --restore` underlying function to handle the TLS CA bundle file specially.
 
@@ -33,13 +33,17 @@
 
   * The `deploy` command did not correctly set the `tls::ca-bundle` parameter.
 
+* `pkg/process`
+
+  * Work on improving performance, especially for remote hosts, is ongoing. A sigificant speed-up, compared to previous performance, has been completed but more needs to be done.
+
 * `tools/dv2email`
 
   * Add clarifications to documentation and fix links to ITRS docs
 
 ### Version v1.27.0 Changes
 
-* Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory blocks that carry passord and other secrets, as much as possible.
+* Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory, that hold passwords and other secrets, after use as much as possible.
 
 * Put `cordial` and especially `tools/geneos` on a diet.
 
@@ -51,11 +55,17 @@
 
 * `tools/geneos`
 
+  * Instances that crash and want to dump core can now do so, after the `memguard` removal above. This is enabled by default and can be controlled by your OS-level rlimits and core-dump settings. Core files will be written where your OS configuration is set to do so.
+
+  * The program sets the EUID and EGID values (on Linux) to the real UID and GID on start-up. This avoids issues with inherited privileges and, as a by-product, syslog `logger` tags.
+
   * Add a `reset` command which is the same as `clean --full` but will not match any instance by default, to protect against unintended restarts. Use `geneos reset all` to act on all instances (that are not protected).
 
   * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md). Note that columns, column names and ordering has changed.
 
   * Update `ps`/`status` command to add detection and listing of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
+
+  * As part of the `pkg/process` optimisations, the check for remote processes used in `status`/`ps` and elsewhere now only checks processes running as the configured user. This may result in remote processes not being listed in output and/or not being detected for commands like `start` and `stop`. But this is a safer default and should be more in line with user expectations, as well as avoiding issues with processes owned by other users being affected by `geneos` commands.
 
   * Add a `--raw`/`-r` option to `aes decode` to output just the decoded value without any prefix or newline if the decoded value is not part of the secret. This is useful for scripting and other automation where you just want the decoded value.
 
@@ -64,6 +74,14 @@
   * Update the self-monitoring include file to support recent changes and the take advantage of the new `--instances`/`-I` flag for package listing to show which packages are installed on each instance.
 
   * Add a `--base`/`-b` option to `package uninstall` (aliased to `geneos package remove` and more) to remove unused base links, e.g. `active_dev`
+
+  * Review and update the `logs` command output, adding a `--no-header`/`-X` option to disable the log metadata output, which is useful when using `--match`/`-g` to search for matches across many instances.
+
+* `gdna`
+
+  * Add an option to the `explain` command to output an "expanded" query from the running config, which can then be used to manually run, edit and test from a CLI
+
+  * Add an option to the `fetch` command to write the remote license data to local files, which is useful for debugging and testing
 
 ---
 
