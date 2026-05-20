@@ -82,12 +82,14 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	}
 	dv, err := xpath.Parse(varpath)
 	if err != nil {
+		log.Debug().Err(err).Msgf("invalid dataview path %q", varpath)
 		return
 	}
 	dv = dv.ResolveTo(&xpath.Dataview{})
 
 	dataviews, err := gw.Match(dv, 0)
 	if err != nil {
+		log.Debug().Err(err).Msgf("matching dataviews with path %q", varpath)
 		return
 	}
 

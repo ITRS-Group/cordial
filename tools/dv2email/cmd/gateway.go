@@ -26,6 +26,8 @@ import (
 )
 
 func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
+	var password config.Secret
+
 	u := &url.URL{
 		Scheme: "http",
 		Host:   fmt.Sprintf("%s:%d", config.Get[string](cf, "gateway.host"), config.Get[uint16](cf, cf.Join("gateway", "port"))),
@@ -37,8 +39,6 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 
 	username := config.Get[string](cf, cf.Join("gateway", "username"))
 	gateway := config.Get[string](cf, cf.Join("gateway", "name"))
-
-	var password config.Secret
 
 	if username != "" {
 		password = config.Get[config.Secret](cf, cf.Join("gateway", "password"))
