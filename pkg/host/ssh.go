@@ -217,10 +217,10 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 	return
 }
 
-// Dial connects to a remote host using ssh and returns an *ssh.Client
+// DialSSH connects to a remote host using ssh and returns an *ssh.Client
 // on success. Each connection is cached and returned if found without
 // checking if it is still valid. To remove a session call Close()
-func (h *SSHRemote) Dial() (sc *ssh.Client, err error) {
+func (h *SSHRemote) DialSSH() (sc *ssh.Client, err error) {
 	if h == nil {
 		err = ErrInvalidArgs
 		return
@@ -270,31 +270,32 @@ func (h *SSHRemote) Close() {
 }
 
 // DialSFTP connects to the remote host using SSH and returns an
-// *sftp.Client is successful
+// *sftp.Client is successful. The connection is cached and returned if
+// found, without checking if it is still valid.
 func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 	if h == nil {
 		err = ErrInvalidArgs
 		return
 	}
 
-	val, ok := sftpSessions.Load(h.name)
-	if ok {
+	if val, ok := sftpSessions.Load(h.name); ok {
 		f = val.(*sftp.Client)
-	} else {
-		var s *ssh.Client
-		if s, err = h.Dial(); err != nil {
-			h.failed = err
-			h.lastAttempt = time.Now()
-			return
-		}
-		// disable concurrent reads as they mess with file offsets when using io.Copy()
-		if f, err = sftp.NewClient(s, sftp.UseConcurrentReads(false)); err != nil {
-			h.failed = err
-			h.lastAttempt = time.Now()
-			return
-		}
-		sftpSessions.Store(h.name, f)
+		return
 	}
+
+	var s *ssh.Client
+	if s, err = h.DialSSH(); err != nil {
+		h.failed = err
+		h.lastAttempt = time.Now()
+		return
+	}
+	if f, err = sftp.NewClient(s); err != nil {
+		h.failed = err
+		h.lastAttempt = time.Now()
+		return
+	}
+	sftpSessions.Store(h.name, f)
+
 	return
 }
 
@@ -330,7 +331,7 @@ func (h *SSHRemote) IsAvailable() (ok bool, err error) {
 		}
 	}
 
-	_, err = h.Dial()
+	_, err = h.DialSSH()
 	return err == nil, err
 }
 
@@ -595,14 +596,14 @@ func (h *SSHRemote) TempDir() string {
 func (h *SSHRemote) LastError() error {
 	// if the failure was a while back, try again (XXX crude)
 	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
-		_, err := h.Dial()
+		_, err := h.DialSSH()
 		return err
 	}
 	return h.failed
 }
 
 func (h *SSHRemote) ServerVersion() string {
-	remote, err := h.Dial()
+	remote, err := h.DialSSH()
 	if err != nil {
 		return ""
 	}
@@ -630,7 +631,7 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 
 // NewSession wraps ssh.NewSession but does some retries
 func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
-	rem, err := h.Dial()
+	rem, err := h.DialSSH()
 	if err != nil {
 		err = fmt.Errorf("Start: %w during Dial()", err)
 		return
