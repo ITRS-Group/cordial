@@ -62,7 +62,7 @@ var exportCmd = &cobra.Command{
 			exportCmdDir = "."
 		}
 
-		gw, err := dialGateway(cf)
+		gw, err := dialGateway(globalCf)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
@@ -86,9 +86,9 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		return
 	}
 
-	if slices.Contains(config.Get[[]string](cf, "files"), "texttable") {
+	if slices.Contains(config.Get[[]string](globalCf, "files"), "texttable") {
 		var files []dataFile
-		files, err = buildTextTableFiles(cf, data, run)
+		files, err = buildTextTableFiles(globalCf, data, run)
 
 		if err != nil {
 			return err
@@ -107,10 +107,10 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, "files"), "html") {
+	if slices.Contains(config.Get[[]string](globalCf, "files"), "html") {
 		m := mail.NewMsg()
 
-		if err = buildHTMLAttachments(cf, m, data, run); err != nil {
+		if err = buildHTMLAttachments(globalCf, m, data, run); err != nil {
 			return err
 		}
 
@@ -131,9 +131,9 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, "files"), "xlsx") {
+	if slices.Contains(config.Get[[]string](globalCf, "files"), "xlsx") {
 		var files []dataFile
-		files, err = buildXLSXFiles(cf, data, run)
+		files, err = buildXLSXFiles(globalCf, data, run)
 		if err != nil {
 			return err
 		}

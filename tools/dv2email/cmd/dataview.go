@@ -57,10 +57,10 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 			continue
 		}
 		data.Env[k] = v
-		config.Set(cf, k, v)
+		config.Set(globalCf, k, v)
 	}
 
-	varpath := config.Get[string](cf, "_variablepath")
+	varpath := config.Get[string](globalCf, "_variablepath")
 	if varpath == "" {
 		varpath = "//managedEntity"
 		if entityArg != "" {

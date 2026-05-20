@@ -70,7 +70,7 @@ func init() {
 }
 
 // global config
-var cf *config.Config
+var globalCf *config.Config
 
 func initConfig() {
 	var err error
@@ -98,7 +98,7 @@ func initConfig() {
 		config.WithEnvs("DV2EMAIL", "_"),
 	}
 
-	cf, err = config.Read(execname, opts...)
+	globalCf, err = config.Read(execname, opts...)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 	}
@@ -139,13 +139,13 @@ var Cmd = &cobra.Command{
 		initConfig()
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		gw, err := dialGateway(cf)
+		gw, err := dialGateway(globalCf)
 		if err != nil {
 			log.Fatal().Err(err).Msg("")
 		}
 
 		// we need to pass filters etc. to fetchDataviews
-		em := email.NewEmailConfig(cf, toArg, ccArg, bccArg, subjectArg)
+		em := email.NewEmailConfig(globalCf, toArg, ccArg, bccArg, subjectArg)
 
 		data, err := fetchDataviews(cmd, gw,
 			config.Get[string](em, "_firstcolumn"),
@@ -159,7 +159,7 @@ var Cmd = &cobra.Command{
 			return
 		}
 
-		switch config.Get[string](cf, cf.Join("email", "split")) {
+		switch config.Get[string](globalCf, globalCf.Join("email", "split")) {
 		case "entity":
 			entities := map[string][]*commands.Dataview{}
 			for _, d := range data.Dataviews {
@@ -173,7 +173,7 @@ var Cmd = &cobra.Command{
 					Dataviews: e,
 					Env:       data.Env,
 				}
-				if err = sendEmail(cf, em, many, inlineCSS); err != nil {
+				if err = sendEmail(globalCf, em, many, inlineCSS); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
 			}
@@ -183,12 +183,12 @@ var Cmd = &cobra.Command{
 					Dataviews: []*commands.Dataview{d},
 					Env:       data.Env,
 				}
-				if err = sendEmail(cf, em, one, inlineCSS); err != nil {
+				if err = sendEmail(globalCf, em, one, inlineCSS); err != nil {
 					log.Fatal().Err(err).Msg("")
 				}
 			}
 		default:
-			if err = sendEmail(cf, em, data, inlineCSS); err != nil {
+			if err = sendEmail(globalCf, em, data, inlineCSS); err != nil {
 				log.Fatal().Err(err).Msg("sending failed")
 			}
 		}
@@ -230,7 +230,7 @@ func match(name, confkey, override string) (matches []string) {
 	}
 
 	name = strings.ToLower(name)
-	checks := config.Get[map[string][]string](cf, confkey)
+	checks := config.Get[map[string][]string](globalCf, confkey)
 	if len(checks) == 0 {
 		return
 	}
