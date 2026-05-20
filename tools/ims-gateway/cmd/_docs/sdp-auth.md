@@ -1,5 +1,3 @@
-# `ims-gateway sdp-auth`
-
 When using the `ims-gateway` program with ServiceDesk Plus you have to create a `Self Client` in the Zoho Developer Console and use the `Client ID` and `Client Secret` to authenticate and obtain an access token. This token is then stored persistently for future use. Use the `sdp-auth` command to perform this initial authentication step.
 
 The Zoho Developer Console Self-Client creation process involves the following steps:
@@ -11,20 +9,3 @@ The Zoho Developer Console Self-Client creation process involves the following s
 6. You will have a short period to use this token, depending on the selection made in the interface, up to a maximum of 10 minutes. Run the `ims-gateway sdp-auth` command within this time frame to authenticate and store the token persistently. This will allow the `ims-gateway` to access ServiceDesk Plus on your behalf without needing to re-authenticate each time.
 
 You can pass the token in using the `--code`/`-a` flag, or you can omit it and the command will prompt you to enter it interactively. If the authentication is successful, the token will be stored, encrypted, in the `${HOME}/.config/geneos/sdp.auth.json` file for future use. The token will be automatically refreshed by the `ims-gateway` when it expires, so you won't need to re-authenticate manually until the refresh token also expires or becomes invalid.
-
-## Usage
-
-```text
-ims-gateway sdp-auth [flags]
-```
-
-### Options
-
-```text
-  -a, --code SECRET   Authorization code received from ServiceDesk Plus, prompted if not given
-  -c, --conf string   override config file
-```
-
-## SEE ALSO
-
-* [ims-gateway](ims-gateway.md)	 - ITRS IMS Gateway

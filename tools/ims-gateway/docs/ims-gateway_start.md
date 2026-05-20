@@ -1,6 +1,6 @@
 # `ims-gateway start`
 
-
+Run an ims-gateway
 
 ## Usage
 

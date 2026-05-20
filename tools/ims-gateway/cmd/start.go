@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"io"
 	"log/slog"
@@ -46,20 +47,22 @@ import (
 var daemon bool
 
 func init() {
-	Cmd.AddCommand(routerCmd)
+	Cmd.AddCommand(startCmd)
 
-	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
-	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
+	startCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
+	startCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
-	routerCmd.Flags().SortFlags = false
+	startCmd.Flags().SortFlags = false
 }
 
-// routerCmd represents the proxy command
-var routerCmd = &cobra.Command{
-	Use:   "start",
-	Short: "Run an ims-gateway",
-	Long: strings.ReplaceAll(`
-`, "|", "`"),
+//go:embed _docs/start.md
+var startDescription string
+
+// startCmd represents the proxy command
+var startCmd = &cobra.Command{
+	Use:          "start",
+	Short:        "Run an ims-gateway",
+	Long:         startDescription,
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
 		if daemon {
@@ -69,7 +72,7 @@ var routerCmd = &cobra.Command{
 				logArgs = append(logArgs, "--logfile", cordial.ExecutableName()+".proxy.log")
 			}
 
-			if err := process.Daemon2(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
+			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
 				log.Fatal().Err(err).Msg("failed to daemonise process")
 			}
 		}

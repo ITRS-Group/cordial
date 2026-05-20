@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	_ "embed"
 	"log/slog"
 	"os"
 
@@ -53,10 +54,13 @@ func init() {
 	})
 }
 
+//go:embed _docs/ims-gateway.md
+var imsGatewayDescription string
+
 var Cmd = &cobra.Command{
 	Use:   "ims-gateway",
 	Short: "ITRS IMS Gateway",
-	Long:  ``,
+	Long:  imsGatewayDescription,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},

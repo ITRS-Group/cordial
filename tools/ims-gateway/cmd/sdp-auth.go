@@ -18,13 +18,17 @@ limitations under the License.
 package cmd
 
 import (
+	_ "embed"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
-
 	"github.com/itrs-group/cordial/tools/ims-gateway/internal/sdp"
 )
+
+//go:embed _docs/sdp-auth.md
+var sdpAuthDescription string
 
 var sdpAuthCmdCode config.Secret
 
@@ -39,7 +43,7 @@ func init() {
 var sdpAuthCmd = &cobra.Command{
 	Use:   "sdp-auth",
 	Short: "Authenticate against ServiceDesk Plus and store the token persistently",
-	Long:  ``,
+	Long:  sdpAuthDescription,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// load user config
 		cf := LoadConfigFile()
