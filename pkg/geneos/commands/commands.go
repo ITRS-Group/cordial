@@ -90,13 +90,13 @@ type CommandResponse struct {
 // A Connection defines the REST command connection details to a Geneos
 // Gateway.
 type Connection struct {
-	BaseURL            *url.URL
-	AuthType           int
-	Username           string
-	Password           config.Secret
-	SSO                SSOAuth
-	InsecureSkipVerify bool
-	Timeout            time.Duration
+	baseURL            *url.URL
+	authType           int
+	username           string
+	password           config.Secret
+	sso                SSOAuth
+	insecureSkipVerify bool
+	timeout            time.Duration
 	rrurls             []*url.URL
 	ping               *func(*Connection) error
 }
@@ -163,7 +163,7 @@ func (c *Connection) Redial() (err error) {
 	if c.ping != nil {
 		ping = *c.ping
 	}
-	if c.BaseURL != nil && ping(c) == nil {
+	if c.baseURL != nil && ping(c) == nil {
 		return nil
 	}
 
@@ -177,7 +177,7 @@ func (c *Connection) Redial() (err error) {
 	// save all the errors in case no gateway is valid
 	errs := []string{}
 	for _, u := range c.rrurls {
-		c.BaseURL = u
+		c.baseURL = u
 		if err = ping(c); err == nil {
 			return nil
 		}
@@ -190,15 +190,15 @@ func (c *Connection) Redial() (err error) {
 func (c *Connection) Do(endpoint string, command *Command) (response CommandResponse, err error) {
 	tr := &http.Transport{
 		Proxy:           http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify},
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.insecureSkipVerify},
 	}
-	client := &http.Client{Transport: tr, Timeout: c.Timeout}
+	client := &http.Client{Transport: tr, Timeout: c.timeout}
 
 	r, err := url.Parse(endpoint)
 	if err != nil {
 		return
 	}
-	u := c.BaseURL.ResolveReference(r)
+	u := c.baseURL.ResolveReference(r)
 
 	q, err := json.Marshal(command)
 	if err != nil {
@@ -209,9 +209,9 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 	if err != nil {
 		return
 	}
-	switch c.AuthType {
+	switch c.authType {
 	case Basic:
-		req.SetBasicAuth(c.Username, string(c.Password))
+		req.SetBasicAuth(c.username, string(c.password))
 	case SSO:
 		// XXX
 	default:
@@ -350,6 +350,7 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 	}
 	cr, err := c.Do(endpoint, command)
 	if err != nil {
+		log.Debug().Err(err).Msgf("matching failed with limit %d", limit)
 		if limit == 0 {
 			// try again with twice the limit in the error returned
 			lims := limitRE.FindStringSubmatch(cr.Stderr)
@@ -367,13 +368,16 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 			return
 		}
 	}
+
 	for _, p := range cr.XPaths {
 		x, err := xpath.Parse(p)
 		if err != nil {
+			log.Debug().Err(err).Msgf("invalid xpath in response: %q", p)
 			continue
 		}
 		matches = append(matches, x)
 	}
+
 	return
 }
 
