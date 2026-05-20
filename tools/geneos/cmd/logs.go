@@ -41,6 +41,7 @@ import (
 var logCmdLines int
 var logCmdStderr, logCmdNoNormal, logCmdCALog, logCmdFollow, logCmdCat bool
 var logCmdMatch, logCmdIgnore string
+var logCmdNoHeaders bool
 
 type files struct {
 	instance geneos.Instance
@@ -60,6 +61,7 @@ func init() {
 
 	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
 	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "no-stdout", "N", false, "Do not show STDOUT log files")
+	logsCmd.Flags().BoolVarP(&logCmdNoHeaders, "no-headers", "X", false, "Do not show log file headers, useful for --match/-g output")
 	logsCmd.Flags().BoolVarP(&logCmdCALog, "ca", "C", false, "Include Collection Agent log for Netprobe instances")
 
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
@@ -101,41 +103,46 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Report(os.Stdout)
+			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		case logCmdFollow:
-			// never returns
-			err = followLogs(ct, names, logCmdStderr)
+			followLogs(ct, names, logCmdStderr) // never returns
 		default:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance).Report(os.Stdout)
+			instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		}
 
 		return
 	},
 }
 
-func followLog(i geneos.Instance) (err error) {
+// followLog sets up a watcher for the logs of a single instance. It is
+// used by both the logs command and the start command when --follow is
+// set. It never returns.
+func followLog(i geneos.Instance) {
 	done := make(chan bool)
 	tails = watchLogs()
 	if resp := logFollowInstance(i); resp.Err != nil {
 		log.Error().Err(resp.Err).Msg("")
 	}
 	<-done
-	return
 }
 
-func followLogs(ct *geneos.Component, args []string, stderr bool) (err error) {
+// followLogs sets up watchers for logs and never returns. It is used by
+// both the logs command and the start command when --follow is set.
+func followLogs(ct *geneos.Component, args []string, stderr bool) {
 	logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
 	instance.Do(geneos.GetHost(Hostname), ct, args, logFollowInstance)
 	<-done
-	return
 }
 
 // last logfile written out
 var lastout string
 
 func outHeader(i geneos.Instance, path string) {
+	if logCmdNoHeaders {
+		return
+	}
 	if lastout == i.String()+":"+path {
 		return
 	}
@@ -147,6 +154,9 @@ func outHeader(i geneos.Instance, path string) {
 }
 
 func outHeaderString(i geneos.Instance, path string) (lines []string) {
+	if logCmdNoHeaders {
+		return
+	}
 	if lastout == i.String()+":"+path {
 		return
 	}
@@ -162,40 +172,25 @@ func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
-		lines, err := logTailInstanceFile(i, instance.ComponentFilepath(i, "txt"))
-		if err != nil {
-			resp.Err = err
-			return
-		}
-		resp.ResultText = lines
+		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
 	}
 
 	if !logCmdNoNormal {
-		lines, err := logTailInstanceFile(i, instance.LogFilePath(i))
-		if err != nil {
-			resp.Err = err
-			return
-		}
-		resp.ResultText = append(resp.ResultText, lines...)
+		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.LogFilePath(i), "instance")...)
 	}
 
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		lines, err := logTailInstanceFile(i, instance.PathTo(i, "calogfile"))
-		if err != nil {
-			resp.Err = err
-			return
-		}
-		resp.ResultText = append(resp.ResultText, lines...)
+		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.PathTo(i, "calogfile"), "CA")...)
 	}
 
 	return
 }
 
-func logTailInstanceFile(i geneos.Instance, logfile string) (lines []string, err error) {
-	_, err = i.Host().Stat(logfile)
+func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines []string) {
+	_, err := i.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{fmt.Sprintf("===> %s log file %s not found <===\n", i, logfile)}
+			lines = []string{fmt.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
 			return
 		}
 		return
@@ -344,34 +339,22 @@ func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
-		if resp.ResultText, resp.Err = logCatInstanceFile(i, instance.ComponentFilepath(i, "txt")); resp.Err != nil {
-			return
-		}
+		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
 	}
 	if !logCmdNoNormal {
-		lines, err := logCatInstanceFile(i, instance.LogFilePath(i))
-		if err != nil {
-			resp.Err = err
-			return
-		}
-		resp.ResultText = append(resp.ResultText, lines...)
+		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.LogFilePath(i), "instance")...)
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		lines, err := logCatInstanceFile(i, instance.PathTo(i, "calogfile"))
-		if err != nil {
-			resp.Err = err
-			return
-		}
-		resp.ResultText = append(resp.ResultText, lines...)
+		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.PathTo(i, "calogfile"), "CA")...)
 	}
 	return
 }
 
-func logCatInstanceFile(i geneos.Instance, logfile string) (lines []string, err error) {
+func logCatInstanceFile(i geneos.Instance, logfile string, kind string) (lines []string) {
 	r, err := i.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{fmt.Sprintf("===> %s log file not found <===\n", i)}
+			lines = []string{fmt.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
 			return
 		}
 		return
@@ -389,21 +372,36 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	if logCmdStderr {
-		if err := logFollowInstanceFile(i, instance.ComponentFilepath(i, "txt")); err != nil {
-			resp.Err = err
-			return
+		logfile := instance.ComponentFilepath(i, "txt")
+		if err := logFollowInstanceFile(i, logfile); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				resp.Err = nil
+				fmt.Printf("===> %s %s STDERR log file not found, watching <===\n", i, logfile)
+			} else {
+				resp.Err = err
+			}
 		}
 	}
 	if !logCmdNoNormal {
-		if err := logFollowInstanceFile(i, instance.LogFilePath(i)); err != nil {
-			resp.Err = err
-			return
+		logfile := instance.LogFilePath(i)
+		if err := logFollowInstanceFile(i, logfile); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				resp.Err = nil
+				fmt.Printf("===> %s %s instance log file not found, watching <===\n", i, logfile)
+			} else {
+				resp.Err = err
+			}
 		}
 	}
 	if logCmdCALog && i.Type().IsA("netprobe") {
-		if err := logFollowInstanceFile(i, instance.PathTo(i, "calogfile")); err != nil {
-			resp.Err = err
-			return
+		logfile := instance.PathTo(i, "calogfile")
+		if err := logFollowInstanceFile(i, logfile); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				resp.Err = nil
+				fmt.Printf("===> %s %s CA log file not found, watching <===\n", i, logfile)
+			} else {
+				resp.Err = err
+			}
 		}
 	}
 	return
@@ -417,11 +415,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 
 	f, err := i.Host().Open(logfile)
 	if err != nil {
-		if !errors.Is(err, fs.ErrNotExist) {
-			return
-		}
-		fmt.Printf("===> %s log-file %q not found, watching <===\n", i, logfile)
-		return nil
+		return
 	} else {
 		// output up to this point
 		text, _ := tailLines(f, logCmdLines)

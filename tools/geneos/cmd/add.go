@@ -285,7 +285,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 			return
 		}
 		if addCmdLogs {
-			return followLog(i)
+			followLog(i) // never returns
 		}
 	}
 

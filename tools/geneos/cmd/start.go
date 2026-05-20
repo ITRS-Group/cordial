@@ -117,8 +117,7 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string)
 
 	if watchlogs {
 		// also watch STDERR on start-up
-		// never returns
-		return followLogs(ct, names, true)
+		followLogs(ct, names, true) // never returns
 	}
 
 	return

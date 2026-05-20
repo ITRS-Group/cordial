@@ -430,7 +430,7 @@ var deployCmd = &cobra.Command{
 				}
 			}
 			if deployCmdLogs {
-				return followLog(i)
+				followLog(i) // never returns
 			}
 		}
 
