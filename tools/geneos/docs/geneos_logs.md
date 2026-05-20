@@ -30,6 +30,7 @@ geneos logs [flags] [TYPE] [NAME...]
   -c, --cat             Output whole file
   -E, --stderr          Show STDERR output files
   -N, --no-stdout       Do not show STDOUT log files
+  -X, --no-headers      Do not show log file headers, useful for --match/-g output
   -C, --ca              Include Collection Agent log for Netprobe instances
   -g, --match string    Match lines with STRING
   -v, --ignore string   Match lines without STRING
