@@ -57,7 +57,7 @@ var serverCmd = &cobra.Command{
 	Long:  ``,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if daemon {
-			process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
+			process.Daemon(os.Stdout, nil, process.RemoveArgs, "-D", "--daemon")
 		}
 
 		if logfile == "" {

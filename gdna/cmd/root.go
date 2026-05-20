@@ -88,7 +88,7 @@ var Cmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if daemon {
-			return process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
+			return process.Daemon(nil, nil, process.RemoveArgs, "-D", "--daemon")
 		}
 
 		initConfig(cmd)

@@ -87,7 +87,7 @@ func Timestamp() echo.MiddlewareFunc {
 
 func router() {
 	if daemon {
-		process.Daemon(nil, process.RemoveArgs, "-D", "--daemon")
+		process.Daemon(nil, nil, process.RemoveArgs, "-D", "--daemon")
 	}
 
 	// Initialization of go-echo server

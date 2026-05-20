@@ -84,7 +84,7 @@ map and submit incidents.
 				logArgs = append(logArgs, "--logfile", "servicenow2.proxy.log")
 			}
 
-			if err := process.Daemon2(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
+			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
 				log.Fatal().Err(err).Msg("failed to daemonise process")
 			}
 		}
