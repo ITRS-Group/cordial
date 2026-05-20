@@ -44,8 +44,7 @@ func IsProtected(i geneos.Instance) bool {
 
 // IsRunning returns true if the instance is running
 func IsRunning(i geneos.Instance) bool {
-	_, err := GetLivePID(i)
-	return err != os.ErrProcessDone
+	return Signal(i, 0) != os.ErrProcessDone
 }
 
 // IsAutoStart returns true is the instance is set to autostart

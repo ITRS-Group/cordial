@@ -18,6 +18,7 @@ limitations under the License.
 package instance
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -119,17 +120,16 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 
 // Signal sends the signal to the instance
 func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
-	pid, err := GetLivePID(i)
-	if err != nil {
-		return os.ErrProcessDone
+	pid, err := GetPID(i) // check cache first
+	if err != nil && errors.Is(err, os.ErrProcessDone) {
+		// only check live PID if no entry found
+		pid, err = GetLivePID(i)
+		if err != nil {
+			return os.ErrProcessDone
+		}
 	}
 
-	if err = i.Host().Signal(int(pid), signal); err != nil {
-		return
-	}
-
-	_, err = GetLivePID(i)
-	return
+	return i.Host().Signal(int(pid), signal)
 }
 
 // Do calls function f for each matching instance and gathers the return

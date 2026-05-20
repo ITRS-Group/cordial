@@ -618,6 +618,8 @@ func (h *SSHRemote) GetFs() afero.Fs {
 	return sftpfs.New(client)
 }
 
+// Signal sends a signal to the remote pid and returns nil on success or
+// os.ProcessDone if the process is not found.
 func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 	sess, err := h.NewSession()
 	if err != nil {
@@ -625,7 +627,19 @@ func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
 	}
 	defer sess.Close()
 
-	sess.CombinedOutput(fmt.Sprintf("kill -s %d %d", signal, pid))
+	err = sess.Run(fmt.Sprintf("kill -s %d %d", signal, pid))
+	if err != nil {
+		if exitErr, ok := errors.AsType[*ssh.ExitError](err); ok {
+			switch exitErr.Waitmsg.ExitStatus() {
+			case 0:
+				err = nil
+			case 1:
+				err = os.ErrProcessDone
+			default:
+				// leave as is for now, but could be a permission error or something else
+			}
+		}
+	}
 	return
 }
 
@@ -640,8 +654,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 	// the number of sessions is always limited by config on the remote
 	// server, but we don't know what that limit is, so retry a few
 	// times with a small delay
-	var i int
-	for i = 0; i < 10; i++ {
+	for range 10 {
 		sess, err = rem.NewSession()
 		if err == nil {
 			break

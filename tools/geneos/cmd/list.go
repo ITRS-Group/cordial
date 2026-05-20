@@ -160,7 +160,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if instance.IsProtected(i) {
 		flags += "P"
 	}
-	if p, err := instance.GetPID(i); err == nil && p != 0 {
+	if instance.IsRunning(i) {
 		flags += "R"
 	}
 	secureArgs, _, _, _ := instance.SecureArgs(i)
@@ -196,7 +196,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	autostart := "N"
 	tls := "N"
 
-	if p, err := instance.GetPID(i); err == nil && p != 0 {
+	if instance.IsRunning(i) {
 		running = "Y"
 	}
 	if instance.IsDisabled(i) {
@@ -238,7 +238,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	var running bool
-	if p, err := instance.GetPID(i); err == nil && p != 0 {
+	if instance.IsRunning(i) {
 		running = true
 	}
 	base, underlying, _ := instance.Version(i)
