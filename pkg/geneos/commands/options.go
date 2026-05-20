@@ -34,13 +34,14 @@ func evalOptions(c *Connection, options ...Option) {
 }
 
 // SetBasicAuth configures basic authentication on the connection, given
-// a username and password (both as plain strings)
+// a username and password (both as plain strings). The password is
+// copied as the caller may clear their copy after initial use.
 func SetBasicAuth(username string, password config.Secret) Option {
 	return func(c *Connection) {
 		if username != "" {
-			c.AuthType = Basic
-			c.Username = username
-			c.Password = password
+			c.authType = Basic
+			c.username = username
+			c.password = password.Clone()
 		}
 	}
 }
@@ -49,7 +50,7 @@ func SetBasicAuth(username string, password config.Secret) Option {
 // the gateway
 func AllowInsecureCertificates(opt bool) Option {
 	return func(c *Connection) {
-		c.InsecureSkipVerify = opt
+		c.insecureSkipVerify = opt
 	}
 }
 
@@ -65,7 +66,7 @@ func Ping(ping func(*Connection) error) Option {
 // Timeout sets the timeout of the REST connection as a time.Duration
 func Timeout(timeout time.Duration) Option {
 	return func(c *Connection) {
-		c.Timeout = timeout
+		c.timeout = timeout
 	}
 }
 

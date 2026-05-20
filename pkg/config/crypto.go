@@ -54,6 +54,17 @@ func (secret *Secret) Type() string {
 	return "SECRET"
 }
 
+// Clone returns a copy of the Secret that can be safely cleared without
+// affecting the original. If the Secret is nil then nil is returned.
+func (secret *Secret) Clone() Secret {
+	if secret == nil {
+		return nil
+	}
+	clone := make(Secret, len(*secret))
+	copy(clone, *secret)
+	return clone
+}
+
 // KeyValues contains the values required to create a Geneos Gateway AES key
 // file and then to encode and decode AES passwords in configurations.
 type KeyValues struct {
