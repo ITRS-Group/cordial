@@ -376,11 +376,11 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 
 	// minimum TLS version - from instance, global or 1.2 as a default
 	minTLS := config.Get[string](cf,
-		cf.Join("tls", "minimumversion"),
+		cf.Join(TLSBASE, MINVERSION),
 		config.DefaultValue(
 			config.Get[string](
 				config.Global(),
-				config.Join("tls", "minimumversion"),
+				config.Join(TLSBASE, MINVERSION),
 				config.DefaultValue("1.2"),
 			),
 		),

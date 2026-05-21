@@ -35,6 +35,7 @@ const (
 	TLSVERIFY   = "verify"
 	CABUNDLE    = "ca-bundle"
 	CERTCHAIN   = "certchain"
+	MINVERSION  = "minimumversion"
 )
 
 // NewCertificate creates a new certificate for an instance.
