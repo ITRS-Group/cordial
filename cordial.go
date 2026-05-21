@@ -90,6 +90,6 @@ func ExecutableName(version ...string) (execname string) {
 }
 
 func renderMD(in string) (out string) {
-	out = md.RenderString(in, &md.TTYCodec{Width: 72})
+	out = md.RenderString(in, &md.FmtCodec{Width: 76})
 	return
 }
