@@ -108,6 +108,7 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 	}
 
 	opts := evalProcessOptions(options...)
+
 	c, ok := getProcesses[*ProcessInfoMinimal](h, options...)
 	if !ok {
 		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
@@ -152,16 +153,38 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 }
 
 // GetProcessInfo returns information about the process pid on host h.
-func GetProcessInfo(h host.Host, pid int, options ...ProcessOption) (pi *ProcessInfo, err error) {
-	c, ok := getProcesses[*ProcessInfo](h, options...)
-	if !ok {
-		return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+func GetProcessInfo[T any](h host.Host, pid int, options ...ProcessOption) (pi T, err error) {
+	opts := evalProcessOptions(options...)
+
+	switch p := any(pi).(type) {
+	case *ProcessInfo:
+		// if the type is ProcessInfo, we need to fill in the extra
+		// fields that are not from /proc/PID/stat or /proc/PID/status
+		// but are calculated from other information, such as the number
+		// of open files and sockets. This is a bit hacky but it avoids
+		// having to define a separate struct for the cache that includes
+		// these fields.
+
+		cache, ok := getProcesses[*ProcessInfo](h, options...)
+		if !ok {
+			return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+		}
+		if p, ok = cache[pid]; ok {
+			if opts.fetchLazy {
+				// check and fill cache for lazy (expensive) fields
+				checkAndFillCache(h, pid, p)
+			}
+			return any(p).(T), nil
+		}
+	default:
+		cache, ok := getProcesses[T](h, options...)
+		if !ok {
+			return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+		}
+		if p, ok = cache[pid]; ok {
+			return any(p).(T), nil
+		}
 	}
 
-	if pc, ok := c[pid]; ok {
-		// check and fill cache for lazy (expensive) fields
-		checkAndFillCache(h, pid, pc)
-		return pc, nil
-	}
 	return pi, os.ErrProcessDone
 }

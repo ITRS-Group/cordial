@@ -169,7 +169,6 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	default:
 		var columns []string
 
-		// psTabWriter := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 		if psCmdShowNet {
 			columns = netCSVColumns
 		} else if psCmdShowFiles {
@@ -181,8 +180,6 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 		}
 
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
-
-		// Report(psTabWriter, responses.IgnoreErr(geneos.ErrDisabled))
 	}
 }
 
@@ -358,7 +355,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if psCmdLong {
 		// p, _ := process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
-		p, _ := process.GetProcessInfo(h, pi.PID)
+		p, _ := process.GetProcessInfo[*process.ProcessInfo](h, pi.PID, process.FetchLazyFields())
 		if p != nil {
 			row = append(row,
 				p.State,
@@ -400,7 +397,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		)
 
 		if psCmdLong {
-			p, _ := process.GetProcessInfo(h, capi.PID)
+			p, _ := process.GetProcessInfo[*process.ProcessInfo](h, capi.PID, process.FetchLazyFields())
 			if p != nil {
 				row = append(row,
 					p.State,

@@ -107,7 +107,7 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 
 	if psCmdLong {
 		// psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
-		psData.Extra, _ = process.GetProcessInfo(h, pi.PID)
+		psData.Extra, _ = process.GetProcessInfo[*process.ProcessInfo](h, pi.PID, process.FetchLazyFields())
 	}
 
 	return psData, nil
@@ -122,7 +122,7 @@ func checkCA(i geneos.Instance, children []int) (pi *process.ProcessInfo, ok boo
 	}
 
 	for _, pid := range children {
-		pi, err = process.GetProcessInfo(h, pid)
+		pi, err = process.GetProcessInfo[*process.ProcessInfo](h, pid, process.FetchLazyFields())
 		if err != nil {
 			continue
 		}

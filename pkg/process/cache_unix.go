@@ -203,6 +203,8 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 }
 
 func checkAndFillCache(h host.Host, pid int, pc *ProcessInfo) {
+	// this should walk the structure, but for now just hardwire it
+
 	// check if OpenFiles is empty, if so fill it
 	sv := reflect.ValueOf(pc).Elem()
 	if len(pc.OpenFiles) == 0 && sv.FieldByName("OpenFiles").IsValid() {
