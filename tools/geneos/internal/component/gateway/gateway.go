@@ -382,12 +382,8 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	home = i.Home()
 
 	// first, get the correct name, using the "gatewayname" parameter if
-	// it is different to the instance name. It may not be set, hence
-	// the test.
-	name := i.Name()
-	if config.Get[string](cf, "gatewayname") != i.Name() {
-		name = config.Get[string](cf, "gatewayname")
-	}
+	// it is different to the instance name.
+	name := config.Get[string](cf, "gatewayname", config.DefaultValue(i.Name()))
 
 	// if we have a valid version test for additional features
 	if instance.CompareVersion(i, "5.10.0") >= 0 {
