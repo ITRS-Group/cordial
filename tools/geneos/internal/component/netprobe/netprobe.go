@@ -36,10 +36,11 @@ import (
 const Name = "netprobe"
 
 var Netprobe = geneos.Component{
-	Name:          Name,
-	Aliases:       []string{"probe", "netprobes", "probes"},
-	LegacyPrefix:  "netp",
-	UsesKeyfiles:  true,
+	Name:         Name,
+	Aliases:      []string{"probe", "netprobes", "probes"},
+	LegacyPrefix: "netp",
+	UsesKeyfiles: true,
+	// PackageTypes:  []*geneos.Component{&Netprobe, &minimal.Minimal, &fa2.FA2}, - import cycle, check manually in code
 	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+-+Standard, Netprobe", Nexus: "geneos-netprobe-standard, geneos-netprobe"},
 	DownloadInfix: "netprobe-standard",
 
@@ -134,7 +135,13 @@ func factory(name string) (netprobe geneos.Instance) {
 
 	netprobe.Config().Default("pkgtype", "netprobe")
 	if ct != nil {
-		netprobe.Config().Default("pkgtype", ct.Name)
+		// check for valid pkgtypes by name, as the PackageType field is not set for Netprobe to avoid an import cycle with minimal and fa2
+		switch ct.Name {
+		case "netprobe", "minimal", "fa2":
+			config.Set(netprobe.Config(), "pkgtype", ct.Name)
+		default:
+			log.Warn().Str("pkgtype", ct.Name).Msg("invalid pkgtype for netprobe, using default")
+		}
 	}
 
 	if err := instance.SetDefaults(netprobe, local); err != nil {
@@ -251,12 +258,6 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	args = append(args, secureArgs...)
 	env = append(env, secureEnv...)
 	checks = append(checks, fileChecks...)
-
-	// for _, arg := range secureArgs {
-	// 	if !strings.HasPrefix(arg, "-") {
-	// 		checks = append(checks, arg)
-	// 	}
-	// }
 
 	env = append(env, "LOG_FILENAME="+logFile)
 
