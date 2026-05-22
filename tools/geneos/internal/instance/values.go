@@ -52,7 +52,7 @@ type SetConfigValues struct {
 	Headers NameValues
 
 	// Variables for SAN templates, keyed by variable name
-	Variables Vars
+	Variables Variables
 
 	// Types for SAN templates
 	Types Types
@@ -390,7 +390,7 @@ type VarValue struct {
 	Name  string
 	Value string
 }
-type Vars map[string]VarValue
+type Variables map[string]VarValue
 
 // convertVars updates old style variables items to the new style
 func convertVars(vars map[string]any) {
@@ -412,7 +412,7 @@ func convertVars(vars map[string]any) {
 
 const VarsOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
 
-func (i *Vars) String() string {
+func (i *Variables) String() string {
 	return ""
 }
 
@@ -449,11 +449,11 @@ func getVarValue(in string) (key string, value VarValue) {
 	return
 }
 
-func (i *Vars) Set(value string) error {
+func (i *Variables) Set(value string) error {
 	// var t, k, v string
 
 	if *i == nil {
-		*i = Vars{}
+		*i = Variables{}
 	}
 
 	k, v := getVarValue(value)
@@ -461,7 +461,7 @@ func (i *Vars) Set(value string) error {
 	return nil
 }
 
-func (i *Vars) Type() string {
+func (i *Variables) Type() string {
 	return "[TYPE:]NAME=VALUE"
 }
 
