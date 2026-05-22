@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package instance
+package values
 
 import (
 	"encoding/hex"
@@ -28,9 +28,10 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-// Value types for multiple flags
+// Value types for repeatable flags
 
 // SetConfigValues defined the set of non-simple configuration options
 // that can be accepted by various commands
@@ -38,10 +39,10 @@ type SetConfigValues struct {
 	// Includes are include files for Gateway templates, keyed by priority
 	Includes Includes
 
-	// Gateways are gateway connections for SAN templates
+	// Gateways are gateway connections for SAN / floating templates
 	Gateways Gateways
 
-	// Attributes are name=value pairs for attributes for Gateway templates
+	// Attributes are name=value pairs for attributes for SAN templates
 	Attributes NameValues
 
 	// Environment variables for all instances as name=value pairs
@@ -87,7 +88,7 @@ func SetInstanceValues(i geneos.Instance, set SetConfigValues, k config.KeyFile)
 
 		if k == "" {
 			if slices.Contains(geneos.UsesKeyFiles(), ct) {
-				if err = CreateAESKeyFile(i); err != nil {
+				if err = instance.CreateAESKeyFile(i); err != nil {
 					return
 				}
 				k = config.KeyFile(config.Get[string](cf, "keyfile"))
@@ -154,8 +155,7 @@ func getKey(s string) string {
 	return key
 }
 
-// setMap sets the values in items, which is a map of string to
-// anything, in instance i's setting value setting
+// setMap sets, for instance i, the values in items, which is a map[string]V
 func setMap[V any](i geneos.Instance, key string, items map[string]V) {
 	s := config.Get[map[string]any](i.Config(), key)
 	for k, v := range items {
@@ -168,7 +168,13 @@ func setMap[V any](i geneos.Instance, key string, items map[string]V) {
 	config.Set(i.Config(), key, s)
 }
 
-// setEncoded takes a slice of SecureValue.
+// setEncoded takes a slice of SecureValue and returns a slice of
+// name=values pairs, where the value is encoded using the keyfile k. If
+// the Ciphertext field is already set then this is used instead of
+// encoding the Secret field, which allows already encoded values to be
+// passed in. The name is taken from the Value field. The returned slice
+// can then be passed to config.SetKeyValuePairs to set the values in
+// the instance configuration.
 func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
@@ -196,8 +202,9 @@ func setEncoded(i geneos.Instance, values SecureValues, k config.KeyFile) (param
 }
 
 // setSlice sets items view merging in the instance configuration key
-// setting. Anything with the key returned by the key function is overwritten.
-func setSlice(i geneos.Instance, key string, items []string, kv func(string) string) (changed bool) {
+// setting. Anything with the key returned by the getKey function is
+// overwritten.
+func setSlice(i geneos.Instance, key string, items []string, getKey func(string) string) (changed bool) {
 	cf := i.Config()
 
 	if len(items) == 0 {
@@ -217,12 +224,12 @@ func setSlice(i geneos.Instance, key string, items []string, kv func(string) str
 	// map to store the identifier and the full value for later checks
 	keys := map[string]string{}
 	for _, v := range items {
-		keys[kv(v)] = v
+		keys[getKey(v)] = v
 		newvals = append(newvals, v)
 	}
 
 	for _, v := range vals {
-		if w, ok := keys[kv(v)]; ok {
+		if w, ok := keys[getKey(v)]; ok {
 			// exists
 			if v != w {
 				// only changed if different value
@@ -385,12 +392,12 @@ func (i *Types) Type() string {
 }
 
 // variables - [TYPE:]NAME=VALUE
-type VarValue struct {
+type Variable struct {
 	Type  string
 	Name  string
 	Value string
 }
-type Variables map[string]VarValue
+type Variables map[string]Variable
 
 // convertVars updates old style variables items to the new style
 func convertVars(vars map[string]any) {
@@ -416,7 +423,7 @@ func (i *Variables) String() string {
 	return ""
 }
 
-func getVarValue(in string) (key string, value VarValue) {
+func getVarValue(in string) (key string, value Variable) {
 	var t, k, v string
 
 	t, r, found := strings.Cut(in, ":")
@@ -440,8 +447,10 @@ func getVarValue(in string) (key string, value VarValue) {
 		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile'", t)
 		return
 	}
+	// the key is a kex string of the name to avoid case-sensitive
+	// issues with the name
 	key = hex.EncodeToString([]byte(k))
-	value = VarValue{
+	value = Variable{
 		Type:  t,
 		Name:  k,
 		Value: v,
@@ -490,7 +499,9 @@ func UnsetInstanceValues(i geneos.Instance, unset UnsetConfigValues) (changed bo
 	if len(unset.Variables) > 0 {
 		changed = true
 	}
-	unsetMapHex(i, "variables", unset.Variables)
+
+	log.Debug().Msgf("unsetInstanceValues with variables %v", unset.Variables)
+	unsetVariables(i, unset.Variables)
 
 	if len(unset.Attributes) > 0 {
 		changed = true
@@ -522,6 +533,16 @@ func UnsetInstanceValues(i geneos.Instance, unset UnsetConfigValues) (changed bo
 	return
 }
 
+// DeleteSettingFromMap removes key from the map from and if it is
+// registered as an alias it also removes the key that alias refers to.
+func DeleteSettingFromMap(i geneos.Instance, from map[string]any, key string) {
+	if a, ok := i.Type().LegacyParameters[key]; ok {
+		// delete any setting this is an alias for, as well as the alias
+		delete(from, a)
+	}
+	delete(from, key)
+}
+
 func unsetMap(i geneos.Instance, key string, items UnsetValues) {
 	cf := i.Config()
 
@@ -536,16 +557,25 @@ func unsetMap(i geneos.Instance, key string, items UnsetValues) {
 	config.Set(cf, key, x)
 }
 
-func unsetMapHex(i geneos.Instance, key string, items UnsetVars) {
+// unset a variable by the "name" field and not the key name
+func unsetVariables(i geneos.Instance, items UnsetVars) {
+	log.Debug().Msgf("unsetVariables with items %v", items)
+	key := "variables"
 	cf := i.Config()
 
 	x := config.Get[map[string]any](cf, key)
-	if key == "variables" {
-		convertVars(x)
+	convertVars(x)
+
+	for k, v := range x {
+		log.Debug().Msgf("checking var %s (%T) for unset", k, v)
+		v := v.(Variable)
+		log.Debug().Msgf("checking var %s with name %s for unset", k, v.Name)
+		if slices.Contains(items, v.Name) {
+			log.Debug().Msgf("unset var %s with name %s", k, v.Name)
+			delete(x, k)
+		}
 	}
-	for _, k := range items {
-		DeleteSettingFromMap(i, x, k)
-	}
+
 	if len(x) == 0 {
 		config.Delete(cf, key)
 		return
@@ -601,7 +631,7 @@ func (i *UnsetVars) String() string {
 func (i *UnsetVars) Set(value string) error {
 	// trim any values accidentally passed with '=value'
 	value, _, _ = strings.Cut(value, "=")
-	value = hex.EncodeToString([]byte(value))
+	// value = hex.EncodeToString([]byte(value))
 	*i = append(*i, value)
 	return nil
 }

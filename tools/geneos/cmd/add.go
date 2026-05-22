@@ -33,16 +33,17 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var addCmdTemplate, addCmdBase, addCmdKeyfileCRC string
 var addCmdStart, addCmdLogs bool
 var addCmdPort uint16
-var addCmdImportFiles instance.Filename
+var addCmdImportFiles values.Filename
 var addCmdKeyfile, addCmdInstanceBundle string
 var addCmdInsecure bool
 var addCmdBundlePassword config.Secret
-var addCmdExtras = instance.SetConfigValues{}
+var addCmdExtras = values.SetConfigValues{}
 
 func init() {
 	Cmd.AddCommand(addCmd)
@@ -50,7 +51,7 @@ func init() {
 	addCmd.Flags().BoolVarP(&addCmdStart, "start", "S", false, "Start new instance after creation")
 	addCmd.Flags().BoolVarP(&addCmdLogs, "log", "l", false, "Follow the logs after starting the instance.\nImplies -S to start the instance")
 	addCmd.Flags().Uint16VarP(&addCmdPort, "port", "p", 0, "Override the default port selection")
-	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
 	addCmd.Flags().StringVarP(&addCmdBase, "version", "V", "active_prod", "Select the version for the instance. Defaults to 'active_prod'\nwhich is the default symlink to the installed release.")
 
 	addCmd.Flags().StringVarP(&addCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for data via stdin.")
@@ -64,11 +65,11 @@ func init() {
 
 	addCmd.Flags().VarP(&addCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
-	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
-	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", instance.TypesOptionsText)
-	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Includes, "include", "i", values.IncludeValuesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Gateways, "gateway", "g", values.GatewaysOptionstext)
+	addCmd.Flags().VarP(&addCmdExtras.Attributes, "attribute", "a", values.AttributesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Types, "type", "t", values.TypesOptionsText)
+	addCmd.Flags().VarP(&addCmdExtras.Variables, "variable", "v", values.VarsOptionsText)
 
 	addCmd.Flags().SortFlags = false
 }
@@ -102,7 +103,7 @@ geneos add netprobe infraprobe12 --start --log
 
 // AddInstance add an instance of component type ct the the optional
 // extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, items []string, names ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras values.SetConfigValues, items []string, names ...string) (err error) {
 	if ct == nil {
 		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
@@ -256,7 +257,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras instance.SetConfigValues, it
 	}
 
 	log.Debug().Msgf("set extra instance values: %+v", addCmdExtras)
-	instance.SetInstanceValues(i, addCmdExtras, "")
+	values.SetInstanceValues(i, addCmdExtras, "")
 
 	log.Debug().Msgf("set instance config items: %+v", items)
 	cf.SetKeyValuePairs(items...)

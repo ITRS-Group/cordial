@@ -22,13 +22,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var demoCmdMinimal bool
@@ -37,7 +38,7 @@ func init() {
 	initCmd.AddCommand(demoCmd)
 
 	demoCmd.Flags().BoolVarP(&demoCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
-	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
+	demoCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", values.IncludeValuesOptionsText)
 
 	demoCmd.Flags().SortFlags = false
 }

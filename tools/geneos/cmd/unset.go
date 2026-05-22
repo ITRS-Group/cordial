@@ -27,12 +27,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 	"github.com/spf13/cobra"
 )
 
 var unsetCmdWarned bool
 
-var unsetCmdValues = instance.UnsetConfigValues{}
+var unsetCmdValues = values.UnsetConfigValues{}
 
 func init() {
 	Cmd.AddCommand(unsetCmd)
@@ -84,7 +85,7 @@ geneos unset san -g Gateway1
 
 			cf := i.Config()
 
-			changed := instance.UnsetInstanceValues(i, unsetCmdValues)
+			changed := values.UnsetInstanceValues(i, unsetCmdValues)
 
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {

@@ -192,9 +192,9 @@ func StartingExtras(extras string) StartOption {
 	}
 }
 
-// StartingEnvs takes a NameValues list of extra environment variables
-// to append to the standard list for the instance.
-func StartingEnvs(envs NameValues) StartOption {
+// StartingEnvs takes a list of extra environment variables (as
+// name=value pairs) to append to the standard list for the instance.
+func StartingEnvs(envs []string) StartOption {
 	return func(so *startOptions) {
 		so.envs = envs
 	}

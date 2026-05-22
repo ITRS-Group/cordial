@@ -38,6 +38,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 const archiveOptionsText = "Directory of releases for installation"
@@ -50,7 +51,7 @@ var initCmdNoInstall, initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
-var initCmdExtras = instance.SetConfigValues{}
+var initCmdExtras = values.SetConfigValues{}
 
 func init() {
 	cmd.Cmd.AddCommand(initCmd)
@@ -88,8 +89,8 @@ func init() {
 
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 
-	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
-	initCmd.PersistentFlags().Var(&initCmdExtras.Headers, "header", instance.HeadersOptionsText)
+	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
+	initCmd.PersistentFlags().Var(&initCmdExtras.Headers, "header", values.HeadersOptionsText)
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
@@ -214,7 +215,7 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(command *cobra.Command, args []string, extras ...instance.SetConfigValues) (options []geneos.PackageOption, err error) {
+func initProcessArgs(command *cobra.Command, args []string, extras ...values.SetConfigValues) (options []geneos.PackageOption, err error) {
 	var root string
 
 	options = []geneos.PackageOption{

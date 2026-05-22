@@ -34,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
@@ -44,9 +45,9 @@ var deployCmdSigningBundle, deployCmdInstanceBundle string
 var deployCmdPort uint16
 var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword, deployCmdBundlePassword config.Secret
-var deployCmdImportFiles instance.Filename
+var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
-var deployCmdExtras = instance.SetConfigValues{}
+var deployCmdExtras = values.SetConfigValues{}
 
 func init() {
 	Cmd.AddCommand(deployCmd)
@@ -89,14 +90,14 @@ func init() {
 
 	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
-	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", instance.EnvsOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Gateways, "gateway", "g", instance.GatewaysOptionstext)
-	deployCmd.Flags().VarP(&deployCmdExtras.Attributes, "attribute", "a", instance.AttributesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Types, "type", "t", instance.TypesOptionsText)
-	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", instance.VarsOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Includes, "include", "i", values.IncludeValuesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Gateways, "gateway", "g", values.GatewaysOptionstext)
+	deployCmd.Flags().VarP(&deployCmdExtras.Attributes, "attribute", "a", values.AttributesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Types, "type", "t", values.TypesOptionsText)
+	deployCmd.Flags().VarP(&deployCmdExtras.Variables, "variable", "v", values.VarsOptionsText)
 
-	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", instance.HeadersOptionsText)
+	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", values.HeadersOptionsText)
 
 	deployCmd.Flags().SortFlags = false
 }
@@ -402,7 +403,7 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		instance.SetInstanceValues(i, deployCmdExtras, "")
+		values.SetInstanceValues(i, deployCmdExtras, "")
 		cf.SetKeyValuePairs(params...)
 		// update home so save is correct
 		config.Set(cf, "home", instance.Home(i))

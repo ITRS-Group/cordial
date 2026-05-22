@@ -26,13 +26,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 
 	"github.com/spf13/cobra"
 )
 
 var commandCmdJSON bool
 var commandCmdExtras string
-var commandCmdEnvs instance.NameValues
+var commandCmdEnvs values.NameValues
 
 func init() {
 	Cmd.AddCommand(commandCmd)

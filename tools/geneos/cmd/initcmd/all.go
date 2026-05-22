@@ -28,7 +28,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var allCmdLicenseFile string
@@ -41,7 +41,7 @@ func init() {
 	allCmd.MarkFlagRequired("licence")
 
 	allCmd.Flags().BoolVarP(&allCmdMinimal, "minimal", "M", false, "use a minimal Netprobe release")
-	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", instance.GatewaysOptionstext)
+	allCmd.Flags().VarP(&initCmdExtras.Includes, "include", "i", values.GatewaysOptionstext)
 
 	allCmd.Flags().SortFlags = false
 }

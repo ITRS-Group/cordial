@@ -28,10 +28,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var setCmdKeyfile config.KeyFile
-var setCmdValues = instance.SetConfigValues{}
+var setCmdValues = values.SetConfigValues{}
 
 //go:embed _docs/set.md
 var setCmdDescription string
@@ -43,13 +44,13 @@ func init() {
 
 	setCmd.Flags().VarP(&setCmdValues.SecureParams, "secure", "s", "encode a secret for NAME, prompt if VALUE not supplied, using a keyfile")
 
-	setCmd.Flags().VarP(&setCmdValues.Envs, "env", "e", instance.EnvsOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Envs, "env", "e", values.EnvsOptionsText)
 	setCmd.Flags().VarP(&setCmdValues.SecureEnvs, "secureenv", "E", "encode a secret for env var NAME, prompt if VALUE not supplied, using a keyfile")
-	setCmd.Flags().VarP(&setCmdValues.Includes, "include", "i", instance.IncludeValuesOptionsText)
-	setCmd.Flags().VarP(&setCmdValues.Gateways, "gateway", "g", instance.GatewaysOptionstext)
-	setCmd.Flags().VarP(&setCmdValues.Attributes, "attribute", "a", instance.AttributesOptionsText)
-	setCmd.Flags().VarP(&setCmdValues.Types, "type", "t", instance.TypesOptionsText)
-	setCmd.Flags().VarP(&setCmdValues.Variables, "variable", "v", instance.VarsOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Includes, "include", "i", values.IncludeValuesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Gateways, "gateway", "g", values.GatewaysOptionstext)
+	setCmd.Flags().VarP(&setCmdValues.Attributes, "attribute", "a", values.AttributesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Types, "type", "t", values.TypesOptionsText)
+	setCmd.Flags().VarP(&setCmdValues.Variables, "variable", "v", values.VarsOptionsText)
 
 	setCmd.Flags().SortFlags = false
 }
@@ -110,7 +111,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 
 		cf := i.Config()
 
-		if resp.Err = instance.SetInstanceValues(i, setCmdValues, setCmdKeyfile); resp.Err != nil {
+		if resp.Err = values.SetInstanceValues(i, setCmdValues, setCmdKeyfile); resp.Err != nil {
 			return
 		}
 
@@ -126,7 +127,7 @@ func Set(ct *geneos.Component, args, params []string) (err error) {
 	return
 }
 
-func promptForSecrets(prompt string, v instance.SecureValues) (err error) {
+func promptForSecrets(prompt string, v values.SecureValues) (err error) {
 	for _, s := range v {
 		if len(s.Secret) == 0 {
 			// prompt

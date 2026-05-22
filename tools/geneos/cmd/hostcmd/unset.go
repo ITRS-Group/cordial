@@ -23,16 +23,17 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var unsetCmdWarned bool
-var unsetCmdKeys instance.UnsetValues
+var unsetCmdKeys values.UnsetValues
 var unsetCmdPrivateKeyfiles PrivateKeyFiles
 
 func init() {

@@ -27,11 +27,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var startCmdLogs bool
 var startCmdExtras string
-var startCmdEnvs instance.NameValues
+var startCmdEnvs values.NameValues
 var startCmdPort uint16
 
 func init() {

@@ -25,13 +25,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 
 	"github.com/spf13/cobra"
 )
 
 var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool
 var restartCmdExtras string
-var restartCmdEnvs instance.NameValues
+var restartCmdEnvs values.NameValues
 var restartCmdPort uint16
 
 func init() {

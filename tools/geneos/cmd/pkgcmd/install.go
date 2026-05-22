@@ -34,13 +34,14 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 var installCmdLocal, installCmdNoSave, installCmdUpdate, installCmdForce, installCmdNexus, installCmdSnapshot bool
 var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername string
 var installCmdDownloadOnly, installCmdAllTypes bool
 var installCmdPassword config.Secret
-var installCmdHeaders instance.NameValues
+var installCmdHeaders values.NameValues
 
 func init() {
 	packageCmd.AddCommand(installCmd)
@@ -69,7 +70,7 @@ func init() {
 
 	installCmd.Flags().BoolVarP(&installCmdAllTypes, "all", "A", false, "Install all types available, not just those types already installed")
 
-	installCmd.Flags().Var(&installCmdHeaders, "header", instance.HeadersOptionsText)
+	installCmd.Flags().Var(&installCmdHeaders, "header", values.HeadersOptionsText)
 
 	installCmd.Flags().SortFlags = false
 }

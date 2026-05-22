@@ -542,16 +542,6 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 	return
 }
 
-// DeleteSettingFromMap removes key from the map from and if it is
-// registered as an alias it also removes the key that alias refers to.
-func DeleteSettingFromMap(i geneos.Instance, from map[string]any, key string) {
-	if a, ok := i.Type().LegacyParameters[key]; ok {
-		// delete any setting this is an alias for, as well as the alias
-		delete(from, a)
-	}
-	delete(from, key)
-}
-
 // RefactorConfig updates the instance config cf for the new instance
 // name and directory, based on the old home value in the config file
 // and the new home value based on the destination instance directory.
