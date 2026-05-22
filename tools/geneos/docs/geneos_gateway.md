@@ -18,7 +18,7 @@ Standard parameters always have values, using the defaults if not set in the con
 
 * `home` (Read Only: `${GENEOS_HOME}/gateway/gateways/${config:name}`)
 
-  This parameter is special in that it is set based on the instance's directory. `${config:name}` is the instance name, not the Gateway name. This allows you to move the instance directory and have the `home` parameter update accordingly. It is used as the base directory for the Gateway instance, and is where the log file and setup file are created by default.
+  This parameter is read-only and is set based on the instance's directory. `${config:name}` is the instance name, not the Gateway name. This allows you to move the instance directory and have the `home` parameter update accordingly. It is used as the working directory for the Gateway process.
 
 * `gatewayname` (Default: Instance Name)
 
@@ -66,7 +66,7 @@ Standard parameters always have values, using the defaults if not set in the con
 
 * `logdir` (Default: Unset)
 
-  If set, it is used as the directory for the log file below. If not set (the default) then the `home` directory of the instance is used.
+  If set, it is used as the directory for the log file above. If not set (the default) then the `home` directory of the instance is used.
 
 * `usekeyfile` (Default: Depends on the version of the Gateway)
 
@@ -81,9 +81,9 @@ Standard parameters always have values, using the defaults if not set in the con
 
    The `prevkeyfile` is used when rotating keys. When a new key file is generated the old key file should be moved to a safe location and its path set in `prevkeyfile`. This allows the Gateway to decrypt secrets encrypted with the old key file while it is being rotated.
 
-* `port` (Default: First available from `7038-7039,7100+`)
+* `port` (Default: First available from `7038-7039,7100-`)
 
-  The default port to listen on. The actual default is selected from the first available port in the range defined in `GatewayPortRange` in the program settings. If TLS is enabled, which is the default, then the base port is 7038 and 7039 is not selected. If TLS is not enabled then the base port is 7039. If you have multiple Gateways running on the same server then the `geneos add` and `geneos deploy` commands, amongst others, will automatically select the next available port in the range.
+  The default port to listen on. The actual default is selected from the first available port in the range defined in `gateway::ports` in the program settings. If TLS is enabled, which is the default, then the base port is 7038 and 7039 is not selected. If TLS is not enabled then the base port is 7039. If you have multiple Gateways running on the same server then the `geneos add` and `geneos deploy` commands, amongst others, will automatically select the next available port in the range.
 
   The port range is defined in the top-level configuration as `gateway::ports` and defaults to `7038-7039,7100-`. You can change this using `geneos config set gateway::ports="..."`. See the `geneos config` command for more details.
 
@@ -93,7 +93,9 @@ Standard parameters always have values, using the defaults if not set in the con
 * `tls::ca-bundle` (Default: `${GENEOS_HOME}/tls/ca-bundle.pem`)
 * `tls::minimumversion` (Default: `1.2`)
 
-  These parameters control the use of TLS for the Gateway. If `tls::certificate` and `tls::privatekey` are set then TLS is enabled and the Gateway is started with the appropriate options. The default is to have TLS enabled with the certificate and private key files in the instance home directory. If `tls::verify` is set to `true` then the Gateway will verify the remote certificate it connects to, using the trusted roots in `tls::ca-bundle`.
+  These parameters control the use of TLS for the Gateway. If `tls::certificate` and `tls::privatekey` are set then TLS is enabled and the Gateway is started with the appropriate options. The default is to have TLS enabled with the certificate and private key files in the instance home directory. If `tls::verify` is set to `true` then the Gateway will verify the remote endpoints it connects to, using the trusted roots in `tls::ca-bundle`.
+
+  If `verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
 
   Deprecated parameters for TLS are also supported for backwards compatibility but should not be used in new configurations. If you are upgrading from an older version of `cordial` there is a `geneos tls migrate` command to help you. These deprecated parameters are:
 
