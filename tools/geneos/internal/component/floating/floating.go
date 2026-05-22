@@ -31,6 +31,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -45,7 +46,7 @@ var Floating = geneos.Component{
 	Aliases:      []string{"float"},
 	LegacyPrefix: "flt",
 	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &fa2.FA2},
+	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &minimal.Minimal, &fa2.FA2},
 	UsesKeyfiles: true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
