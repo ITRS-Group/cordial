@@ -519,16 +519,70 @@ func lookup[T any](c *Config, key string, options ...ExpandOption) (value T, fou
 	return get[T](c, key, options...), true
 }
 
+// get is the internal function that returns the value associated with
+// the key in the configuration structure c, applying the options given.
+// The type T is the expected type of the value, which can be one of:
+//
+//   - bool
+//   - int
+//   - int64
+//   - uint
+//   - uint16
+//   - float64
+//   - string
+//   - []string
+//   - []byte
+//   - map[string]any
+//   - map[string]string
+//   - map[string][]string
+//   - []map[string]string
+//   - time.Duration
+//   - config.Secret
+//
+// If the key is not set then the zero value for the type is returned,
+// with maps and slices initialised to an empty value to avoid nil
+// pointer panics in callers that expect a map or slice. If the option
+// [`config.DefaultValue`] is used, then the type must be identical to
+// T. If it is not, then the default value is the zero value for the
+// type T.
 func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	if !c.isSet(key) {
 		opts := evalExpandOptions(c, options...)
+		if !isZero(opts.initialValue) {
+			if v, ok := opts.initialValue.(T); ok {
+				return v
+			}
+			log.Debug().Msgf("initial value for key %q is not of type %T, returning zero value", key, value)
+			return
+		}
+
 		if !isZero(opts.defaultValue) {
 			if v, ok := opts.defaultValue.(T); ok {
 				return v
 			}
 			log.Debug().Msgf("default value for key %q is not of type %T, returning zero value", key, value)
+			return
 		}
-		return
+
+		// otherwise return zero value for type T, but checking for
+		// supported map types and slices and returning empty ones of
+		// those types rather than nil, to avoid nil pointer panics in
+		// callers that expect a map or slice.
+		var zero T
+		switch any(zero).(type) {
+		case map[string]any:
+			return any(make(map[string]any)).(T)
+		case map[string]string:
+			return any(make(map[string]string)).(T)
+		case map[string][]string:
+			return any(make(map[string][]string)).(T)
+		case []map[string]string:
+			return any(make([]map[string]string, 0)).(T)
+		case []string:
+			return any(make([]string, 0)).(T)
+		default:
+			return zero
+		}
 	}
 
 	switch any(*new(T)).(type) {
@@ -555,37 +609,20 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	case []byte:
 		return any(expand[[]byte](c, c.config.GetString(key), options...)).(T)
 	case []string:
-		var result []string
-		opts := evalExpandOptions(c, options...)
-
-		// if the key is set then use the value from the config,
-		// otherwise use the initial value or default value if they are
-		// set and of the correct type - leaving the decision to
-		// expand() is too late as it needs to test and use the
-		// correct type
-		if c.isSet(key) {
-			result = c.config.GetStringSlice(key)
-		} else if init, ok := opts.initialValue.([]string); ok {
-			result = init
-		} else if def, ok := opts.defaultValue.([]string); ok {
-			result = def
-		}
-
+		v := c.config.GetStringSlice(key)
 		var slice []string
-		for _, n := range result {
+		for _, n := range v {
 			slice = append(slice, expand[string](c, n, options...))
 		}
 		return any(slice).(T)
 	case map[string]any:
-		v := c.config.GetStringMap(key)
-		if v == nil {
-			v = make(map[string]any)
-		}
+		v := c.config.GetStringMap(key) // isSet() check above ensures this is not nil
 		for k, v2 := range v {
 			if s, ok := v2.(string); ok {
 				v[k] = expand[string](c, s, options...)
 			}
 		}
+		log.Debug().Msgf("returning map for key %q: %v", key, v)
 		return any(v).(T)
 	case map[string]string:
 		var result map[string]string
