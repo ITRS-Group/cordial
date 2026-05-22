@@ -242,10 +242,29 @@ var ExpandFieldsHook = func(options ...ExpandOption) mapstructure.DecodeHookFunc
 
 		str := data.(string)
 
-		return expand[string](global, str, options...), nil
+		opts := evalExpandOptions(global, options...)
+		if opts.cf != nil {
+			str = expand[string](opts.cf, str, options...)
+		} else {
+			str = expand[string](global, str, options...)
+		}
+		return str, nil
 	}
 }
 
+// UnmarshalKey unmarshals the value associated with the key in the
+// configuration structure c into the variable pointed to by rawVal,
+// applying the options given. The type of rawVal must be a pointer to
+// one of the supported types for Get, or a struct or slice of structs
+// that can be unmarshalled by mapstructure with the DecodeHook of
+// ExpandFieldsHook. If the type is not supported, then an error is
+// returned.
+//
+// Unless the option `config.NoExpand` is used, then any string fields
+// in the value will be expanded using the config.ExpandString function
+// with the options given. This allows for dynamic values in the
+// configuration file when unmarshalling into a struct or slice of
+// structs.
 func (c *Config) UnmarshalKey(key string, rawVal any, options ...ExpandOption) error {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()

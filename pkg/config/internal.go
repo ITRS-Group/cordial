@@ -616,45 +616,27 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 		}
 		return any(slice).(T)
 	case map[string]any:
-		v := c.config.GetStringMap(key) // isSet() check above ensures this is not nil
-		for k, v2 := range v {
-			if s, ok := v2.(string); ok {
-				v[k] = expand[string](c, s, options...)
-			}
-		}
-		log.Debug().Msgf("returning map for key %q: %v", key, v)
-		return any(v).(T)
-	case map[string]string:
-		var result map[string]string
-		if err := c.unmarshalKey(key, &result); err != nil {
+		var result map[string]any
+		if err := c.unmarshalKey(key, &result, options...); err != nil {
 			return
 		}
-		for k, v := range result {
-			result[k] = expand[string](c, v, options...)
+		return any(result).(T)
+	case map[string]string:
+		var result map[string]string
+		if err := c.unmarshalKey(key, &result, options...); err != nil {
+			return
 		}
 		return any(result).(T)
 	case []map[string]string:
 		var result []map[string]string
-		if err := c.unmarshalKey(key, &result); err != nil {
+		if err := c.unmarshalKey(key, &result, options...); err != nil {
 			return
-		}
-		for _, m := range result {
-			for k, v := range m {
-				m[k] = expand[string](c, v, options...)
-			}
 		}
 		return any(result).(T)
 	case map[string][]string:
 		var result map[string][]string
-		if err := c.unmarshalKey(key, &result); err != nil {
+		if err := c.unmarshalKey(key, &result, options...); err != nil {
 			return
-		}
-		for k, v := range result {
-			var slice []string
-			for _, n := range v {
-				slice = append(slice, expand[string](c, n, options...))
-			}
-			result[k] = slice
 		}
 		return any(result).(T)
 	case time.Duration:
@@ -663,7 +645,11 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	case Secret:
 		return any(Secret(expand[[]byte](c, c.config.GetString(key), options...))).(T)
 	default:
-		return any(c.config.Get(key)).(T)
+		var result T
+		if err := c.unmarshalKey(key, &result, options...); err != nil {
+			return
+		}
+		return any(result).(T)
 	}
 }
 
@@ -796,11 +782,16 @@ func (c *Config) sub(key string) *Config {
 	}
 }
 
-// unmarshalKey is a wrapper around Viper's UnmarshalKey that uses the same
-// default decoder configuration as our decode function, ensuring that
-// time.Duration values and string slices are properly handled when unmarshalling
-// into a struct. A key not being set is not an error.
+// unmarshalKey is a wrapper around Viper's UnmarshalKey that uses the
+// same default decoder configuration as our decode function, ensuring
+// that time.Duration values and string slices are properly handled when
+// unmarshalling into a struct. A key not being set is not an error.
+//
+// All string values are still subject to expansion, so the same options
+// can be passed to control that, e.g. NoExpand() to disable expansion
+// of string values when unmarshalling.
 func (c *Config) unmarshalKey(key string, rawVal any, options ...ExpandOption) error {
+	options = append(options, IncludeConfig(c))
 	return decode(c.config.Get(key), defaultDecoderConfig(rawVal, options...))
 }
 

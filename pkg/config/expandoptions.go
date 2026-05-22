@@ -23,6 +23,7 @@ import (
 )
 
 type expandOptions struct {
+	cf                 *Config // the Config object is included in the options to allow for options that need to access configuration settings, such as decoder configs
 	defaultValue       any
 	expandNonString    bool
 	expandNonStringCSV bool
@@ -60,6 +61,7 @@ var defaultFuncMapsMutex sync.Mutex
 
 func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	e = &expandOptions{
+		cf:               c, // default to config c if not included in options
 		externalFuncMaps: true,
 		funcMaps:         map[string]func(configItems map[string]any, name string, trim bool) (string, error){},
 		replacements:     []string{},
@@ -97,6 +99,17 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 // reset by calling SetDefaultExpandOptions with no arguments.
 func (c *Config) SetDefaultExpandOptions(options ...ExpandOption) {
 	c.defaultExpandOptions = options
+}
+
+// IncludeConfig copies a point to the Config object cf into the
+// options. This should not be used normally, but is required to
+// bootstrap some expand options which do not have access to the
+// original Config object, such as the built-in expression evaluation
+// option. The default config object is set to the global configuration.
+func IncludeConfig(cf *Config) ExpandOption {
+	return func(e *expandOptions) {
+		e.cf = cf
+	}
 }
 
 // NoExpand overrides all other options except DefaultValue() and
