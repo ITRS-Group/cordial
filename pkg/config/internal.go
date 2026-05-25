@@ -762,10 +762,8 @@ func (c *Config) setKeyValuePairs(items ...string) (err error) {
 }
 
 // sub is the internal version of Sub that doesn't acquire the read
-// lock. This is used by Sub itself and also by Save to avoid acquiring
-// the lock multiple times when iterating over keys and creating
-// sub-configs for saving. It assumes that the caller has already
-// acquired the read lock if needed.
+// lock. It assumes that the caller has already acquired the read lock
+// if needed.
 func (c *Config) sub(key string) *Config {
 	vcf := &config{Viper: c.config.Sub(key)}
 
@@ -909,6 +907,10 @@ func (c *Config) replaceStringParam(value string, options ...ExpandOption) strin
 func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
 	resp, err := http.Get(url) // url includes the prefix
 	if err != nil {
+		return
+	}
+	if resp.StatusCode > 299 {
+		err = fmt.Errorf("error fetching URL %q: status code %d", url, resp.StatusCode)
 		return
 	}
 	defer resp.Body.Close()
