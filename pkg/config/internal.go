@@ -804,6 +804,29 @@ func decode(input any, config *mapstructure.DecoderConfig) error {
 	return decoder.Decode(input)
 }
 
+// expandFieldsHook returns a mapstructure.DecodeHookFunc that expands
+// string fields using the config.ExpandString function with the options
+// given. This is intended to be used in Unmarshal calls to allow for
+// dynamic values in the configuration file. The hook will only expand
+// string fields, and will leave other types unchanged.
+var expandFieldsHook = func(options ...ExpandOption) mapstructure.DecodeHookFunc {
+	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
+		if f.Kind() != reflect.String {
+			return data, nil
+		}
+
+		str := data.(string)
+
+		opts := evalExpandOptions(global, options...)
+		if opts.cf != nil {
+			str = expand[string](opts.cf, str, options...)
+		} else {
+			str = expand[string](global, str, options...)
+		}
+		return str, nil
+	}
+}
+
 // defaultDecoderConfig returns default mapstructure.DecoderConfig with support
 // of time.Duration values & string slices
 func defaultDecoderConfig(output any, options ...ExpandOption) *mapstructure.DecoderConfig {
@@ -822,7 +845,7 @@ func defaultDecoderConfig(output any, options ...ExpandOption) *mapstructure.Dec
 	opts := evalExpandOptions(global, options...)
 	if !opts.noExpand {
 		c.DecodeHook = mapstructure.ComposeDecodeHookFunc(
-			ExpandFieldsHook(options...),
+			expandFieldsHook(options...),
 			mapstructure.StringToTimeHookFunc(time.RFC3339),
 			mapstructure.StringToTimeDurationHookFunc(),
 			mapstructure.StringToSliceHookFunc(","),

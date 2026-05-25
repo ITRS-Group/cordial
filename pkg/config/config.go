@@ -23,11 +23,9 @@ import (
 	"bytes"
 	"errors"
 	"path"
-	"reflect"
 	"strings"
 	"sync"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -49,23 +47,6 @@ var globalMutex sync.Mutex
 
 func init() {
 	global = New()
-}
-
-// Global returns the global Config instance
-func Global() *Config {
-	return global
-}
-
-// ResetConfig reinitialises the global configuration object. Existing
-// settings will be copied over. This is primarily to be able to change
-// the default delimiter after start-up.
-func ResetConfig(options ...FileOption) {
-	globalMutex.Lock()
-	defer globalMutex.Unlock()
-
-	tmp := global.AllSettings()
-	global = New(options...)
-	global.MergeConfigMap(tmp)
 }
 
 // New returns a Config instance initialised with a new viper instance.
@@ -110,17 +91,29 @@ func New(options ...FileOption) *Config {
 	return cf
 }
 
+// Global returns the global Config instance
+func Global() *Config {
+	return global
+}
+
+// ResetConfig reinitialises the global configuration object. Existing
+// settings will be copied over. This is primarily to be able to change
+// the default delimiter after start-up.
+func ResetConfig(options ...FileOption) {
+	globalMutex.Lock()
+	defer globalMutex.Unlock()
+
+	tmp := global.AllSettings()
+	global = New(options...)
+	global.MergeConfigMap(tmp)
+}
+
 var ErrNoUserConfigDir = errors.New("cannot resolve user config directory, check $USER and $HOME exist")
 
 // AppConfigDir returns the application configuration directory for the
 // global configuration
 func AppConfigDir() string {
 	return global.appUserConfDir
-}
-
-// AppConfigDir returns the application configuration directory for c
-func (c *Config) AppConfigDir() string {
-	return c.appUserConfDir
 }
 
 // Join returns a configuration key made up of parts joined with the
@@ -133,16 +126,6 @@ func Join(parts ...string) string {
 // for the c config object.
 func (c *Config) Join(parts ...string) string {
 	return strings.Join(append([]string{}, parts...), c.delimiter)
-}
-
-// Delimiter returns the global config key delimiter
-func Delimiter() string {
-	return global.delimiter
-}
-
-// Delimiter returns the config c key delimiter
-func (c *Config) Delimiter() string {
-	return c.delimiter
 }
 
 func (c *Config) ConfigType() string {
@@ -227,29 +210,6 @@ func Delete(c *Config, key string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	deleteKey(c, key)
-}
-
-// ExpandFieldsHook returns a mapstructure.DecodeHookFunc that expands
-// string fields using the config.ExpandString function with the options
-// given. This is intended to be used in Unmarshal calls to allow for
-// dynamic values in the configuration file. The hook will only expand
-// string fields, and will leave other types unchanged.
-var ExpandFieldsHook = func(options ...ExpandOption) mapstructure.DecodeHookFunc {
-	return func(f reflect.Type, t reflect.Type, data any) (any, error) {
-		if f.Kind() != reflect.String {
-			return data, nil
-		}
-
-		str := data.(string)
-
-		opts := evalExpandOptions(global, options...)
-		if opts.cf != nil {
-			str = expand[string](opts.cf, str, options...)
-		} else {
-			str = expand[string](global, str, options...)
-		}
-		return str, nil
-	}
 }
 
 // UnmarshalKey unmarshals the value associated with the key in the
