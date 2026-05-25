@@ -403,11 +403,12 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
+		deployCmdExtras.Params = params
 		if ncf, err := values.Set(i, deployCmdExtras, ""); err == nil {
 			i.SetConfig(ncf)
 			cf = ncf
 		}
-		cf.SetKeyValuePairs(params...)
+
 		// update home so save is correct
 		config.Set(cf, "home", instance.Home(i))
 

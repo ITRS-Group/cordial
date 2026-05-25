@@ -127,13 +127,13 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		return
 	}
 
-	if err = cmd.AddInstance(licdCT, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(licdCT, initCmdExtras, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.ImportFiles(licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(gatewayCT, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(gatewayCT, initCmdExtras, initCmdName); err != nil {
 		return
 	}
 
@@ -141,10 +141,10 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if allCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if err = cmd.AddInstance(netprobeCT, initCmdExtras, []string{}, probename+"@"+h.String()); err != nil {
+	if err = cmd.AddInstance(netprobeCT, initCmdExtras, probename+"@"+h.String()); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(webserverCT, initCmdExtras, []string{}, initCmdName); err != nil {
+	if err = cmd.AddInstance(webserverCT, initCmdExtras, initCmdName); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, true, e); err != nil {

@@ -97,13 +97,14 @@ geneos add netprobe infraprobe12 --start --log
 		if err != nil {
 			return
 		}
-		return AddInstance(ct, addCmdExtras, params, names...)
+		addCmdExtras.Params = params
+		return AddInstance(ct, addCmdExtras, names...)
 	},
 }
 
 // AddInstance add an instance of component type ct the the optional
 // extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras values.Values, items []string, names ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...string) (err error) {
 	if ct == nil {
 		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
@@ -256,15 +257,11 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, items []strin
 		}
 	}
 
-	log.Debug().Msgf("set extra instance values: %+v", addCmdExtras)
 	if ncf, err := values.Set(i, addCmdExtras, ""); err == nil {
 		i.SetConfig(ncf)
 		cf = ncf
 	}
 
-	log.Debug().Msgf("set instance config items: %+v", items)
-	cf.SetKeyValuePairs(items...)
-	log.Debug().Msgf("instance config after setting items: %+v", cf.AllSettings())
 	if err = instance.Write(i); err != nil {
 		return
 	}
