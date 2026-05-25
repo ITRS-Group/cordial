@@ -38,11 +38,20 @@ import (
 
 // The Instance type is the common data shared by all instances
 type Instance struct {
-	geneos.Instance `json:"-"`
-	Conf            *config.Config    `json:"-"`
-	InstanceHost    *geneos.Host      `json:"-"`
-	Component       *geneos.Component `json:"-"`
-	ConfigLoaded    time.Time         `json:"-"`
+	Conf         *config.Config    `json:"-"`
+	InstanceHost *geneos.Host      `json:"-"`
+	Component    *geneos.Component `json:"-"`
+	ConfigLoaded time.Time         `json:"-"`
+}
+
+var instanceMutex sync.Mutex
+
+func CloneConfig(i geneos.Instance) (cf *config.Config) {
+	instanceMutex.Lock()
+	defer instanceMutex.Unlock()
+	cf = config.New()
+	cf.MergeConfigMap(i.Config().AllSettings())
+	return
 }
 
 // IsA returns true if instance i has a type that is component of one of
@@ -60,6 +69,9 @@ func IsA(i geneos.Instance, names ...string) bool {
 // DisplayName returns the type, name and non-local host as a string
 // suitable for display.
 func DisplayName(i geneos.Instance) string {
+	if i == nil {
+		return "<nil>"
+	}
 	if i.Host().IsLocal() {
 		return fmt.Sprintf("%s %q", i.Type(), i.Name())
 	}
@@ -69,6 +81,9 @@ func DisplayName(i geneos.Instance) string {
 // ShortName returns the instance name with the "@HOST" suffix as a
 // string
 func ShortName(i geneos.Instance) string {
+	if i == nil {
+		return "<nil>"
+	}
 	return i.Name() + "@" + i.Host().String()
 }
 
@@ -76,6 +91,9 @@ func ShortName(i geneos.Instance) string {
 // output and other places. For local instance it return `TYPE:NAME` and
 // for remote instances it returns `TYPE:NAME@HOST`
 func IDString(i geneos.Instance) string {
+	if i == nil {
+		return "<nil>"
+	}
 	if i.Host().IsLocal() {
 		return i.Type().String() + ":" + i.Name()
 	}
@@ -105,6 +123,9 @@ func ReservedName(name string) (ok bool) {
 
 // LogFilePath returns the full path to the log file for the instance.
 func LogFilePath(i geneos.Instance) (logfile string) {
+	if i == nil {
+		return ""
+	}
 	logdir := path.Clean(config.Get[string](i.Config(), "logdir"))
 	switch {
 	case logdir == "":
@@ -120,9 +141,15 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 
 // Signal sends the signal to the instance
 func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	pid, err := GetPID(i) // check cache first
 	if err != nil && errors.Is(err, os.ErrProcessDone) {
-		// only check live PID if no entry found
+		// only check live PID if no entry found in cache. If a PID is
+		// found in the cache but the process has terminated, signal
+		// will just return os.ErrProcessDone, so we don't want to check
+		// live PID in that case.
 		pid, err = GetLivePID(i)
 		if err != nil {
 			return os.ErrProcessDone
@@ -197,6 +224,9 @@ func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *r
 	ch := make(chan *responses.General, len(instances))
 
 	for _, c := range instances {
+		if c == nil {
+			continue
+		}
 		wg.Add(1)
 		go func(c geneos.Instance) {
 			defer wg.Done()
@@ -219,6 +249,9 @@ func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *r
 // Disable the instance i. Does not try to stop a running instance and
 // returns an error if it is running.
 func Disable(i geneos.Instance) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	if IsRunning(i) {
 		return fmt.Errorf("instance %s running", i)
 	}
@@ -237,6 +270,9 @@ func Disable(i geneos.Instance) (err error) {
 
 // Enable removes the disabled flag, if any,m from instance i.
 func Enable(i geneos.Instance) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	disableFile := ComponentFilepath(i, geneos.DisableExtension)
 	if _, err = i.Host().Stat(disableFile); err != nil {
 		// not disabled, return with no error
@@ -269,9 +305,10 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 	return
 }
 
-// GetWithHost return instance of component type ct from host h and
-// loads the config. It is an error if the config cannot be loaded. If
-// name has an embedded "@HOST" it must match h, else that is an error.
+// GetWithHost return instance of component name of type ct from host h
+// and loads the config. It is an error if the config cannot be loaded.
+// If name has an embedded "@HOST" it must match h, else that is an
+// error.
 func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance geneos.Instance, err error) {
 	if ct == nil || h == nil || h == geneos.ALL || name == "" {
 		return nil, geneos.ErrInvalidArgs

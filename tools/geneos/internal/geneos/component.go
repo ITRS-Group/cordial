@@ -203,7 +203,11 @@ type Component struct {
 // Instance interfaces contains the method set for an instance of a
 // registered Component
 type Instance interface {
+	// Config returns the configuration for the instance.
 	Config() *config.Config
+
+	// SetConfig sets the configuration object for the instance.
+	SetConfig(*config.Config)
 
 	// Name returns the base instance name
 	Name() string

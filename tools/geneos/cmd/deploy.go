@@ -47,7 +47,7 @@ var deployCmdArchive, deployCmdVersion, deployCmdOverride string
 var deployCmdPassword, deployCmdBundlePassword config.Secret
 var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
-var deployCmdExtras = values.SetConfigValues{}
+var deployCmdExtras = values.Values{}
 
 func init() {
 	Cmd.AddCommand(deployCmd)
@@ -403,7 +403,10 @@ var deployCmd = &cobra.Command{
 			}
 		}
 
-		values.SetInstanceValues(i, deployCmdExtras, "")
+		if ncf, err := values.Set(i, deployCmdExtras, ""); err == nil {
+			i.SetConfig(ncf)
+			cf = ncf
+		}
 		cf.SetKeyValuePairs(params...)
 		// update home so save is correct
 		config.Set(cf, "home", instance.Home(i))

@@ -51,7 +51,7 @@ var initCmdNoInstall, initCmdTLS bool
 
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
-var initCmdExtras = values.SetConfigValues{}
+var initCmdExtras = values.Values{}
 
 func init() {
 	cmd.Cmd.AddCommand(initCmd)
@@ -215,7 +215,7 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(command *cobra.Command, args []string, extras ...values.SetConfigValues) (options []geneos.PackageOption, err error) {
+func initProcessArgs(command *cobra.Command, args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
 	var root string
 
 	options = []geneos.PackageOption{

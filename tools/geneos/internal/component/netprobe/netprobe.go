@@ -115,6 +115,10 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (netprobe geneos.Instance) {
+	if name == "" {
+		return nil
+	}
+
 	h, ct, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -158,89 +162,120 @@ func factory(name string) (netprobe geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (n *Netprobes) Type() *geneos.Component {
-	return n.Component
+func (i *Netprobes) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (n *Netprobes) Name() string {
-	if n.Config() == nil {
+func (i *Netprobes) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](n.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (n *Netprobes) Home() string {
-	return instance.Home(n)
+func (i *Netprobes) Home() string {
+	return instance.Home(i)
 }
 
-func (n *Netprobes) Host() *geneos.Host {
-	return n.InstanceHost
+func (i *Netprobes) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (n *Netprobes) String() string {
-	return instance.DisplayName(n)
+func (i *Netprobes) String() string {
+	return instance.DisplayName(i)
 }
 
-func (n *Netprobes) Load() (err error) {
-	return instance.Read(n)
+func (i *Netprobes) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (n *Netprobes) Unload() (err error) {
-	instances.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = time.Time{}
+func (i *Netprobes) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *Netprobes) Loaded() time.Time {
-	return n.ConfigLoaded
+func (i *Netprobes) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (n *Netprobes) SetLoaded(t time.Time) {
-	n.ConfigLoaded = t
-}
-func (n *Netprobes) Config() *config.Config {
-	return n.Conf
+func (i *Netprobes) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (n *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Netprobes) Config() *config.Config {
+	return i.Conf
+}
+
+func (i *Netprobes) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	if port == 0 {
-		port = instance.NextFreePort(n.Host(), &Netprobe)
+		port = instance.NextFreePort(i.Host(), &Netprobe)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(n.Config(), "port", port)
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(n); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(os.Stderr))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// default config XML etc.
 	return nil
 }
 
-func (n *Netprobes) Rebuild(initial bool) error {
+func (i *Netprobes) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Netprobes) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := n.Config()
-	home = n.Home()
-	h := n.Host()
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
-	logFile := instance.LogFilePath(n)
+	cf := i.Config()
+	home = i.Home()
+	h := i.Host()
+
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 
 	args = []string{
-		n.Name(),
-		"-port", config.Get[string](n.Config(), "port"),
+		i.Name(),
+		"-port", config.Get[string](i.Config(), "port"),
 	}
 
 	if strings.Contains(h.ServerVersion(), "windows") {
@@ -250,8 +285,8 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	if listenip, ok := config.Lookup[string](cf, "listenip"); ok {
 		args = append(args, "-listenip", listenip)
 	}
-	// secureArgs := instance.SetSecureArgs(n)
-	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
+
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
 	if err != nil {
 		return
 	}
@@ -266,13 +301,13 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	if hostname == "" {
 		hostname = "localhost"
 	}
-	env = append(env, "HOSTNAME="+config.Get[string](n.Config(), ("hostname"), config.DefaultValue(hostname)))
+	env = append(env, "HOSTNAME="+config.Get[string](i.Config(), ("hostname"), config.DefaultValue(hostname)))
 
 	if skipFileCheck {
 		return
 	}
 
-	missing := instance.CheckPaths(n, checks)
+	missing := instance.CheckPaths(i, checks)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
@@ -280,6 +315,6 @@ func (n *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
-func (n *Netprobes) Reload() (err error) {
+func (i *Netprobes) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

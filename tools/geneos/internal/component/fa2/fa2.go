@@ -113,6 +113,10 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (fa2 geneos.Instance) {
+	if name == "" {
+		return nil
+	}
+
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -143,85 +147,118 @@ func factory(name string) (fa2 geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (n *FA2s) Type() *geneos.Component {
-	return n.Component
+func (i *FA2s) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (n *FA2s) Name() string {
-	if n.Config() == nil {
+func (i *FA2s) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](n.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (n *FA2s) Home() string {
-	return instance.Home(n)
+func (i *FA2s) Home() string {
+	return instance.Home(i)
 }
 
-func (n *FA2s) Host() *geneos.Host {
-	return n.InstanceHost
+func (i *FA2s) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (n *FA2s) String() string {
-	return instance.DisplayName(n)
+func (i *FA2s) String() string {
+	return instance.DisplayName(i)
 }
 
-func (n *FA2s) Load() (err error) {
-	return instance.Read(n)
+func (i *FA2s) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (n *FA2s) Unload() (err error) {
-	instances.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = time.Time{}
+func (i *FA2s) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *FA2s) Loaded() time.Time {
-	return n.ConfigLoaded
+func (i *FA2s) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (n *FA2s) SetLoaded(t time.Time) {
-	n.ConfigLoaded = t
+func (i *FA2s) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (n *FA2s) Config() *config.Config {
-	return n.Conf
+func (i *FA2s) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (n *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *FA2s) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	if port == 0 {
-		port = instance.NextFreePort(n.InstanceHost, &FA2)
+		port = instance.NextFreePort(i.InstanceHost, &FA2)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(n.Config(), "port", port)
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(n); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
 	return nil
 }
 
-func (n *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	home = n.Home()
-	logFile := instance.LogFilePath(n)
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
+
+	home = i.Home()
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 	args = []string{
-		n.Name(),
-		"-port", config.Get[string](n.Config(), "port"),
+		i.Name(),
+		"-port", config.Get[string](i.Config(), "port"),
 	}
-	// secureArgs := instance.SetSecureArgs(n)
-	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
+
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
 	if err != nil {
 		return
 	}
@@ -229,29 +266,23 @@ func (n *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err
 	env = append(env, secureEnv...)
 	checks = append(checks, fileChecks...)
 
-	// for _, arg := range secureArgs {
-	// 	if !strings.HasPrefix(arg, "-") {
-	// 		checks = append(checks, arg)
-	// 	}
-	// }
-
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	if skipFileCheck {
 		return
 	}
 
-	missing := instance.CheckPaths(n, checks)
+	missing := instance.CheckPaths(i, checks)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
 	return
 }
 
-func (n *FA2s) Reload() (err error) {
+func (i *FA2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (n *FA2s) Rebuild(initial bool) error {
+func (i *FA2s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }

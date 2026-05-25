@@ -21,10 +21,13 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"slices"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
@@ -32,7 +35,7 @@ import (
 )
 
 var setCmdKeyfile config.KeyFile
-var setCmdValues = values.SetConfigValues{}
+var setCmdValues = values.Values{}
 
 //go:embed _docs/set.md
 var setCmdDescription string
@@ -40,7 +43,7 @@ var setCmdDescription string
 func init() {
 	Cmd.AddCommand(setCmd)
 
-	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "keyfile to use for encoding secrets\ndefault is instance configured keyfile")
+	setCmd.Flags().VarP(&setCmdKeyfile, "keyfile", "k", "keyfile to use for encoding secrets\ndefault is instance configured keyfile,\nor user keyfile if not used by the instance type")
 
 	setCmd.Flags().VarP(&setCmdValues.SecureParams, "secure", "s", "encode a secret for NAME, prompt if VALUE not supplied, using a keyfile")
 
@@ -98,32 +101,45 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 			defer clear(s.Secret)
 		}
 
-		return Set(ct, names, params)
+		setCmdValues.Params = params
+		instance.Do(geneos.GetHost(Hostname), ct, names, setValues, params).Report(os.Stdout)
+		return
 	},
 }
 
-func Set(ct *geneos.Component, args, params []string) (err error) {
-	// set params only once
-	setCmdValues.Params = params
+func setValues(i geneos.Instance, params ...any) (resp *responses.General) {
+	resp = responses.NewResponse(i)
 
-	instance.Do(geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
-		resp = responses.NewResponse(i)
+	cf := i.Config()
 
-		cf := i.Config()
+	keyfile := setCmdKeyfile
 
-		if resp.Err = values.SetInstanceValues(i, setCmdValues, setCmdKeyfile); resp.Err != nil {
-			return
+	if len(setCmdValues.SecureParams) > 0 || len(setCmdValues.SecureEnvs) > 0 {
+		if keyfile == "" {
+			var created bool
+			var err error
+			keyfile, created, err = getKeyfile(i)
+			if err != nil {
+				resp.Err = fmt.Errorf("keyfile is required to set secure parameters or environment variables: %w", err)
+				return
+			}
+			if created {
+				crc, err := keyfile.ReadCRC(geneos.GetHost(Hostname))
+				if err != nil {
+					log.Warn().Err(err).Msgf("created keyfile %s but failed to read CRC", keyfile)
+				}
+				fmt.Printf("%s user keyfile created %X\n", keyfile, crc)
+			}
 		}
+	}
 
-		if cf.ConfigType() == "rc" {
-			respM := instance.Migrate(i)
-			resp.Err = respM.Err
-		} else {
-			resp.Err = instance.Write(i)
-		}
-
+	if cf, resp.Err = values.Set(i, setCmdValues, keyfile); resp.Err != nil {
 		return
-	}, params).Report(os.Stdout)
+	}
+	// only overwrite instance config on success
+	i.SetConfig(cf)
+
+	resp.Err = instance.Write(i)
 	return
 }
 
@@ -141,5 +157,39 @@ func promptForSecrets(prompt string, v values.SecureValues) (err error) {
 		}
 		// v[i] = s
 	}
+	return
+}
+
+// getKeyValue returns the keyfile for instance i, or if not configured
+// then checks if the instance type uses keyfiles and creates one if so.
+// If the instance does not use keyfiles then it tries to read or create
+// a user keyfile. If no keyfile can be found or created then an error
+// is returned.
+//
+// TODO: remove printf
+func getKeyfile(i geneos.Instance) (keyFile config.KeyFile, created bool, err error) {
+	cf := i.Config()
+	ct := i.Type()
+
+	if keyFile = config.KeyFile(config.Get[string](cf, "keyfile")); keyFile != "" {
+		return
+	}
+
+	if slices.Contains(geneos.UsesKeyFiles(), ct) {
+		if err = instance.CreateAESKeyFile(i); err != nil {
+			return
+		}
+		keyFile = config.KeyFile(config.Get[string](cf, "keyfile"))
+		return
+	}
+
+	// try user keyfile or create for components that don't use key files
+	_, created, err = geneos.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
+	if err != nil {
+		return keyFile, created, err
+	}
+
+	keyFile = geneos.DefaultUserKeyfile
+
 	return
 }

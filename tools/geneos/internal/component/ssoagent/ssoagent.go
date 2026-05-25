@@ -112,6 +112,9 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ssoagent geneos.Instance) {
+	if name == "" {
+		return nil
+	}
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -155,60 +158,89 @@ var initialFiles = []string{
 // interface method set
 
 // Return the Component for an Instance
-func (w *SSOAgents) Type() *geneos.Component {
-	return w.Component
+func (i *SSOAgents) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (w *SSOAgents) Name() string {
-	if w.Config() == nil {
+func (i *SSOAgents) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](w.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (w *SSOAgents) Home() string {
-	return instance.Home(w)
+func (i *SSOAgents) Home() string {
+	return instance.Home(i)
 }
 
-func (w *SSOAgents) Host() *geneos.Host {
-	return w.InstanceHost
+func (i *SSOAgents) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (w *SSOAgents) String() string {
-	return instance.DisplayName(w)
+func (i *SSOAgents) String() string {
+	return instance.DisplayName(i)
 }
 
-func (w *SSOAgents) Load() (err error) {
-	return instance.Read(w)
+func (i *SSOAgents) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (w *SSOAgents) Unload() (err error) {
-	instances.Delete(w.Name() + "@" + w.Host().String())
-	w.ConfigLoaded = time.Time{}
+func (i *SSOAgents) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (w *SSOAgents) Loaded() time.Time {
-	return w.ConfigLoaded
+func (i *SSOAgents) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (w *SSOAgents) SetLoaded(t time.Time) {
-	w.ConfigLoaded = t
+func (i *SSOAgents) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (w *SSOAgents) Config() *config.Config {
-	return w.Conf
+func (i *SSOAgents) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *SSOAgents) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
 	if port == 0 {
-		port = instance.NextFreePort(s.InstanceHost, &SSOAgent)
+		port = instance.NextFreePort(i.InstanceHost, &SSOAgent)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(s.Config(), "port", port)
-	if err = instance.Write(s); err != nil {
+	config.Set(i.Config(), "port", port)
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
@@ -216,42 +248,45 @@ func (s *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 
-	importFrom := instance.BaseVersion(s)
+	importFrom := instance.BaseVersion(i)
 	if err = os.Chdir(importFrom); err != nil {
 		return
 	}
 
-	instance.ImportFiles(s, initialFiles...)
+	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	return
 }
 
-func (s *SSOAgents) Rebuild(initial bool) (err error) {
+func (i *SSOAgents) Rebuild(initial bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	ssoconf := config.New()
-	if err = ssoconf.MergeHOCONFile(path.Join(s.Home(), "conf/sso-agent.conf")); err != nil {
+	if err = ssoconf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil
 		}
 		return err
 	}
 
-	truststorePath := instance.Abs(s, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
+	truststorePath := instance.Abs(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
 	truststorePassword := config.Get[config.Secret](ssoconf,
 		config.Join("server", "trust_store", "password"),
 		config.DefaultValue(config.Secret("changeit")),
 	)
 	defer clear(truststorePassword)
 
-	roots, err := certs.ReadCertificates(s.Host(), geneos.PathToCABundlePEM(s.Host()))
+	roots, err := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
 
 	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
-	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(s.Host(), certs.KeystoreExtension) {
-		if err = certs.AddRootsToTrustStore(s.Host(), truststorePath, truststorePassword, roots...); err != nil {
+	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(i.Host(), certs.KeystoreExtension) {
+		if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, roots...); err != nil {
 			return err
 		}
 	}
@@ -261,14 +296,14 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 	if ksl, ok := config.Lookup[string](ssoconf, config.Join("server", "key_store", "location")); ok {
 		var changed bool
 
-		keystorePath := instance.Abs(s, ksl)
+		keystorePath := instance.Abs(i, ksl)
 		keystorePassword := config.Get[config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
 			config.DefaultValue(config.Secret("changeit")),
 		)
 		defer clear(keystorePassword)
 
-		ks, err := certs.ReadKeystore(s.Host(), keystorePath, keystorePassword)
+		ks, err := certs.ReadKeystore(i.Host(), keystorePath, keystorePassword)
 		if err != nil {
 			// new, empty keystore
 			ks = &certs.KeyStore{
@@ -289,24 +324,24 @@ func (s *SSOAgents) Rebuild(initial bool) (err error) {
 		}
 
 		if changed {
-			err = ks.WriteKeystore(s.Host(), keystorePath, keystorePassword)
+			err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword)
 		}
 
 		alias := config.Get[string](ssoconf, ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
 
-		certChain, err := instance.ReadCertificates(s)
+		certChain, err := instance.ReadCertificates(i)
 		if err != nil {
 			return err
 		}
 		if len(certChain) == 0 {
 			return err
 		}
-		key, err := instance.ReadPrivateKey(s)
+		key, err := instance.ReadPrivateKey(i)
 		if err != nil {
 			return err
 		}
-		keystorePath = instance.Abs(s, keystorePath)
-		return certs.AddCertChainToKeyStore(s.Host(), keystorePath, keystorePassword, alias, key, certChain...)
+		keystorePath = instance.Abs(i, keystorePath)
+		return certs.AddCertChainToKeyStore(i.Host(), keystorePath, keystorePassword, alias, key, certChain...)
 	}
 	return
 }
@@ -340,6 +375,12 @@ func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 
 func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
+
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
+
 	cf := i.Config()
 	home = i.Home()
 
@@ -393,7 +434,7 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
-func (w *SSOAgents) Reload() (err error) {
+func (i *SSOAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

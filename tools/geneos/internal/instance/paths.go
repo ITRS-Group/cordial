@@ -150,7 +150,7 @@ func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 //
 // If no directory is found then a default built using PathTo() is returned
 func Home(i geneos.Instance) (home string) {
-	if i.Config() == nil {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
 

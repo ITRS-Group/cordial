@@ -43,7 +43,7 @@ var addCmdImportFiles values.Filename
 var addCmdKeyfile, addCmdInstanceBundle string
 var addCmdInsecure bool
 var addCmdBundlePassword config.Secret
-var addCmdExtras = values.SetConfigValues{}
+var addCmdExtras = values.Values{}
 
 func init() {
 	Cmd.AddCommand(addCmd)
@@ -103,7 +103,7 @@ geneos add netprobe infraprobe12 --start --log
 
 // AddInstance add an instance of component type ct the the optional
 // extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras values.SetConfigValues, items []string, names ...string) (err error) {
+func AddInstance(ct *geneos.Component, addCmdExtras values.Values, items []string, names ...string) (err error) {
 	if ct == nil {
 		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
@@ -257,7 +257,10 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.SetConfigValues, item
 	}
 
 	log.Debug().Msgf("set extra instance values: %+v", addCmdExtras)
-	values.SetInstanceValues(i, addCmdExtras, "")
+	if ncf, err := values.Set(i, addCmdExtras, ""); err == nil {
+		i.SetConfig(ncf)
+		cf = ncf
+	}
 
 	log.Debug().Msgf("set instance config items: %+v", items)
 	cf.SetKeyValuePairs(items...)

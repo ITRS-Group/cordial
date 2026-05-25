@@ -142,6 +142,9 @@ var instances sync.Map
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
 func factory(name string) (san geneos.Instance) {
+	if name == "" {
+		return nil
+	}
 	h, ct, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -177,56 +180,85 @@ func factory(name string) (san geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (s *Sans) Type() *geneos.Component {
-	return s.Component
+func (i *Sans) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (s *Sans) Name() string {
-	if s.Config() == nil {
+func (i *Sans) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](s.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (s *Sans) Home() string {
-	return instance.Home(s)
+func (i *Sans) Home() string {
+	return instance.Home(i)
 }
 
-func (s *Sans) Host() *geneos.Host {
-	return s.InstanceHost
+func (i *Sans) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (s *Sans) String() string {
-	return instance.DisplayName(s)
+func (i *Sans) String() string {
+	return instance.DisplayName(i)
 }
 
-func (s *Sans) Load() (err error) {
-	return instance.Read(s)
+func (i *Sans) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (s *Sans) Unload() (err error) {
-	instances.Delete(s.Name() + "@" + s.Host().String())
-	s.ConfigLoaded = time.Time{}
+func (i *Sans) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (s *Sans) Loaded() time.Time {
-	return s.ConfigLoaded
+func (i *Sans) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (s *Sans) SetLoaded(t time.Time) {
-	s.ConfigLoaded = t
+func (i *Sans) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (s *Sans) Config() *config.Config {
-	return s.Conf
+func (i *Sans) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
-	cf := s.Config()
+func (i *Sans) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Sans) Add(template string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
+	cf := i.Config()
 
 	if port == 0 {
-		port = instance.NextFreePort(s.InstanceHost, &San)
+		port = instance.NextFreePort(i.InstanceHost, &San)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -234,10 +266,10 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 
 	config.Set(cf, "port", port)
 	config.Set(cf, cf.Join("config", "rebuild"), "always")
-	config.Set(cf, cf.Join("config", "template"), s.Host().PathTo(s.Type(), "templates", templateName))
+	config.Set(cf, cf.Join("config", "template"), i.Host().PathTo(i.Type(), "templates", templateName))
 
 	if template != "" {
-		filenames, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
@@ -246,13 +278,13 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
-	if err = instance.Write(s); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(os.Stderr))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// s.Rebuild(true)
@@ -263,8 +295,12 @@ func (s *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 // Rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (s *Sans) Rebuild(initial bool) (err error) {
-	cf := s.Config()
+func (i *Sans) Rebuild(initial bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
+	cf := i.Config()
 
 	configrebuild := config.Get[string](cf, "config::rebuild")
 	if configrebuild == "never" {
@@ -283,8 +319,8 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := (instance.FileOf(s, cf.Join("tls", "certificate")) != "" && instance.FileOf(s, cf.Join("tls", "privatekey")) != "") ||
-		(instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != "")
+	secure := (instance.FileOf(i, cf.Join("tls", "certificate")) != "" && instance.FileOf(i, cf.Join("tls", "privatekey")) != "") ||
+		(instance.FileOf(i, "certificate") != "" && instance.FileOf(i, "privatekey") != "")
 	gws := config.Get[map[string]string](cf, "gateways")
 	for gw := range gws {
 		port := gws[gw]
@@ -299,13 +335,13 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		config.Set(cf, "gateways", gws)
-		if err = instance.Write(s); err != nil {
+		if err = instance.Write(i); err != nil {
 			return err
 		}
 	}
-	return instance.ExecuteTemplate(s,
+	return instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(s, "config::template"),
+		instance.FileOf(i, "config::template"),
 		template,
 		0664,
 	)
@@ -313,6 +349,11 @@ func (s *Sans) Rebuild(initial bool) (err error) {
 
 func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
+
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
 	cf := i.Config()
 	home = i.Home()

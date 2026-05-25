@@ -85,7 +85,7 @@ geneos unset san -g Gateway1
 
 			cf := i.Config()
 
-			changed := values.UnsetInstanceValues(i, unsetCmdValues)
+			changed := values.Unset(i, unsetCmdValues)
 
 			if len(unsetCmdValues.Keys) > 0 {
 				for _, k := range unsetCmdValues.Keys {

@@ -165,6 +165,10 @@ var instances sync.Map
 
 // factory is the factory method for Gateways
 func factory(name string) (gateway geneos.Instance) {
+	if name == "" {
+		return nil
+	}
+
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -197,56 +201,81 @@ func factory(name string) (gateway geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (g *Gateways) Type() *geneos.Component {
-	return g.Component
+func (i *Gateways) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (g *Gateways) Name() string {
-	if g.Config() == nil {
+func (i *Gateways) Name() string {
+	if i == nil || i.Conf == nil {
 		return ""
 	}
-	return config.Get[string](g.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (g *Gateways) Home() string {
-	return instance.Home(g)
+func (i *Gateways) Home() string {
+	return instance.Home(i)
 }
 
-func (g *Gateways) Host() *geneos.Host {
-	return g.InstanceHost
+func (i *Gateways) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (g *Gateways) String() string {
-	return instance.DisplayName(g)
+func (i *Gateways) String() string {
+	return instance.DisplayName(i)
 }
 
-func (g *Gateways) Load() (err error) {
-	return instance.Read(g)
+func (i *Gateways) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (g *Gateways) Unload() (err error) {
-	instances.Delete(g.Name() + "@" + g.Host().String())
-	g.ConfigLoaded = time.Time{}
+func (i *Gateways) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (g *Gateways) Loaded() time.Time {
-	return g.ConfigLoaded
+func (i *Gateways) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (g *Gateways) SetLoaded(t time.Time) {
-	g.ConfigLoaded = t
+func (i *Gateways) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (g *Gateways) Config() *config.Config {
-	return g.Conf
+func (i *Gateways) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
-	cf := g.Config()
+func (i *Gateways) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
+	cf := i.Config()
 
 	if port == 0 {
-		port = instance.NextFreePort(g.InstanceHost, &Gateway)
+		port = instance.NextFreePort(i.InstanceHost, &Gateway)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -256,29 +285,29 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 
 	cf.Default(cf.Join("config", "template"), templateName)
 	if template != "" {
-		filenames, _ := geneos.ImportCommons(g.Host(), g.Type(), "templates", []string{template})
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
 	config.Set(cf, "includes", make(map[int]string))
 
 	// try to save config early
-	if err = instance.Write(g); err != nil {
+	if err = instance.Write(i); err != nil {
 		log.Fatal().Err(err).Msg("")
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(g).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// always create a keyfile ?
-	if err = instance.CreateAESKeyFile(g); err != nil {
+	if err = instance.CreateAESKeyFile(i); err != nil {
 		return
 	}
 
-	if instance.CompareVersion(g, "5.14.0") >= 0 {
+	if instance.CompareVersion(i, "5.14.0") >= 0 {
 		// use keyfiles
 		log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
 		config.Set(cf, "usekeyfile", "true")
@@ -287,16 +316,19 @@ func (g *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (g *Gateways) Rebuild(initial bool) (err error) {
-	cf := g.Config()
+func (i *Gateways) Rebuild(initial bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+	cf := i.Config()
 
 	// always rebuild an instance template
-	log.Debug().Msgf("rebuilding %s instance template %q with config %#v", g, instanceTemplateName, cf.AllSettings())
-	err = instance.ExecuteTemplate(g, instance.Abs(g, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444)
+	log.Debug().Msgf("rebuilding %s instance template %q with config %#v", i, instanceTemplateName, cf.AllSettings())
+	err = instance.ExecuteTemplate(i, instance.Abs(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444)
 	if err != nil {
 		return
 	}
-	log.Debug().Msgf("%s instance template %q rebuilt", g, INSTANCEXML)
+	log.Debug().Msgf("%s instance template %q rebuilt", i, INSTANCEXML)
 
 	configrebuild := config.Get[string](cf, "config::rebuild")
 
@@ -317,13 +349,13 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	// recheck check certs/keys
 	var changed bool
 
-	certPath := instance.PathTo(g, cf.Join("tls", "certificate"))
+	certPath := instance.PathTo(i, cf.Join("tls", "certificate"))
 	if certPath == "" {
-		certPath = instance.PathTo(g, "certificate")
+		certPath = instance.PathTo(i, "certificate")
 	}
-	keyPath := instance.PathTo(g, cf.Join("tls", "privatekey"))
+	keyPath := instance.PathTo(i, cf.Join("tls", "privatekey"))
 	if keyPath == "" {
-		keyPath = instance.PathTo(g, "privatekey")
+		keyPath = instance.PathTo(i, "privatekey")
 	}
 
 	secure := certPath != "" && keyPath != ""
@@ -339,8 +371,8 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	// use getPorts() to check valid change, else go up one
-	ports := instance.GetAllPorts(g.Host())
-	nextport := instance.NextFreePort(g.Host(), &Gateway)
+	ports := instance.GetAllPorts(i.Host())
+	nextport := instance.NextFreePort(i.Host(), &Gateway)
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
@@ -361,15 +393,15 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if changed {
-		if err = instance.Write(g); err != nil {
+		if err = instance.Write(i); err != nil {
 			log.Error().Err(err).Msg("Cannot save configuration")
 			return
 		}
 	}
 
-	return instance.ExecuteTemplate(g,
+	return instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(g, "config::template"),
+		instance.FileOf(i, "config::template"),
 		template,
 		0664,
 	)
@@ -377,6 +409,11 @@ func (g *Gateways) Rebuild(initial bool) (err error) {
 
 func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
+
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
 	cf := i.Config()
 	home = i.Home()

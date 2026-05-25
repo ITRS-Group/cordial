@@ -139,67 +139,71 @@ func factory(name string) (fileagent geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (n *FileAgents) Type() *geneos.Component {
-	return n.Component
+func (i *FileAgents) Type() *geneos.Component {
+	return i.Component
 }
 
-func (n *FileAgents) Name() string {
-	if n.Config() == nil {
+func (i *FileAgents) Name() string {
+	if i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](n.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (n *FileAgents) Home() string {
-	return instance.Home(n)
+func (i *FileAgents) Home() string {
+	return instance.Home(i)
 }
 
-func (n *FileAgents) Host() *geneos.Host {
-	return n.InstanceHost
+func (i *FileAgents) Host() *geneos.Host {
+	return i.InstanceHost
 }
 
-func (n *FileAgents) String() string {
-	return instance.DisplayName(n)
+func (i *FileAgents) String() string {
+	return instance.DisplayName(i)
 }
 
-func (n *FileAgents) Load() (err error) {
-	return instance.Read(n)
+func (i *FileAgents) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (n *FileAgents) Unload() (err error) {
-	instances.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = time.Time{}
+func (i *FileAgents) Unload() (err error) {
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *FileAgents) Loaded() time.Time {
-	return n.ConfigLoaded
+func (i *FileAgents) Loaded() time.Time {
+	return i.ConfigLoaded
 }
 
-func (n *FileAgents) SetLoaded(t time.Time) {
-	n.ConfigLoaded = t
+func (i *FileAgents) SetLoaded(t time.Time) {
+	i.ConfigLoaded = t
 }
 
-func (n *FileAgents) Config() *config.Config {
-	return n.Conf
+func (i *FileAgents) Config() *config.Config {
+	return i.Conf
 }
 
-func (n *FileAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *FileAgents) SetConfig(cf *config.Config) {
+	i.Conf = cf
+}
+
+func (i *FileAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
-		port = instance.NextFreePort(n.Host(), &FileAgent)
+		port = instance.NextFreePort(i.Host(), &FileAgent)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(n.Config(), "port", port)
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(n); err != nil {
+	if err = instance.Write(i); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
@@ -245,10 +249,10 @@ func (i *FileAgents) Command(skipFileCheck bool) (args, env []string, home strin
 	return
 }
 
-func (c *FileAgents) Reload() (err error) {
+func (i *FileAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (c *FileAgents) Rebuild(initial bool) error {
+func (i *FileAgents) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }

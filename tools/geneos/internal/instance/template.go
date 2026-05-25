@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 // return the KEY from "[TYPE:]KEY=VALUE"
@@ -113,6 +114,46 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		if _, ok := i.Type().LegacyParameters[k]; ok {
 			delete(m, k)
 		}
+	}
+
+	// convert "variables" (if any) from slice of structs to slice of maps for lower case keys in templates
+	if variables, found := m["variables"]; found {
+		newVals := []map[string]string{}
+		switch vx := variables.(type) {
+		case []map[string]string:
+			newVals = vx
+		case []any:
+			for _, v := range vx {
+				vMap, ok := v.(map[string]any)
+				if !ok {
+					log.Warn().Msgf("variable is not a map, got %T", v)
+					return
+					// continue
+				}
+				// the key is a kex string of the name to avoid case-sensitive
+				// issues with the name
+				nv := map[string]string{
+					"type":  vMap["type"].(string),
+					"name":  vMap["name"].(string),
+					"value": vMap["value"].(string),
+				}
+				newVals = append(newVals, nv)
+			}
+		case []values.Variable:
+			for _, v := range vx {
+				nv := map[string]string{
+					"type":  v.Type,
+					"name":  v.Name,
+					"value": v.Value,
+				}
+				newVals = append(newVals, nv)
+			}
+		default:
+			log.Warn().Msgf("variables is in an unexpected format, got %T", variables)
+			// drop through
+		}
+
+		m["variables"] = newVals
 	}
 
 	// tls migration, for now lift new settings up to old names

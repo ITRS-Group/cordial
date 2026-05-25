@@ -18,11 +18,16 @@ limitations under the License.
 package gateway
 
 import (
+	"os"
 	"syscall"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func (g *Gateways) Reload() (err error) {
-	return instance.Signal(g, syscall.SIGUSR1)
+func (i *Gateways) Reload() (err error) {
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
+	return instance.Signal(i, syscall.SIGUSR1)
 }

@@ -40,7 +40,8 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
 
 ```text
   -k, --keyfile KEYFILE               keyfile to use for encoding secrets
-                                      default is instance configured keyfile
+                                      default is instance configured keyfile,
+                                      or user keyfile if not used by the instance type
   -s, --secure NAME[=VALUE]           encode a secret for NAME, prompt if VALUE not supplied, using a keyfile
   -e, --env NAME=VALUE                Environment variable for instance start-up
                                       (Repeat as required)

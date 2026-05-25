@@ -17,6 +17,6 @@ limitations under the License.
 
 package san
 
-func (s *Sans) Reload() (err error) {
+func (i *Sans) Reload() (err error) {
 	return
 }

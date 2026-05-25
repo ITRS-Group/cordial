@@ -89,7 +89,6 @@ var demoCmd = &cobra.Command{
 
 func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	empty := []string{}
-	g := []string{"Demo Gateway@" + h.String()}
 
 	ct := geneos.ParseComponent("gateway")
 	if err = pkgcmd.Install(h, ct, options...); err != nil {
@@ -99,10 +98,8 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if initCmdInsecure {
 		port = "7039"
 	}
+	initCmdExtras.Params = []string{"options=-demo"}
 	if err = cmd.AddInstance(ct, initCmdExtras, []string{"port=" + port}, "Demo Gateway@"+h.String()); err != nil {
-		return
-	}
-	if err = cmd.Set(ct, g, []string{"options=-demo"}); err != nil {
 		return
 	}
 

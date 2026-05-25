@@ -103,6 +103,9 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (licd geneos.Instance) {
+	if name == "" {
+		return nil
+	}
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -134,67 +137,95 @@ func factory(name string) (licd geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (l *Licds) Type() *geneos.Component {
-	return l.Component
+func (i *Licds) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (l *Licds) Name() string {
-	if l.Config() == nil {
+func (i *Licds) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](l.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (l *Licds) Home() string {
-	return instance.Home(l)
+func (i *Licds) Home() string {
+	if i == nil {
+		return ""
+	}
+	return instance.Home(i)
 }
 
-func (l *Licds) Host() *geneos.Host {
-	return l.InstanceHost
+func (i *Licds) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (l *Licds) String() string {
-	return instance.DisplayName(l)
+func (i *Licds) String() string {
+	return instance.DisplayName(i)
 }
 
-func (l *Licds) Load() (err error) {
-	return instance.Read(l)
+func (i *Licds) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (l *Licds) Unload() (err error) {
-	instances.Delete(l.Name() + "@" + l.Host().String())
-	l.ConfigLoaded = time.Time{}
+func (i *Licds) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (l *Licds) Loaded() time.Time {
-	return l.ConfigLoaded
+func (i *Licds) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (l *Licds) SetLoaded(t time.Time) {
-	l.ConfigLoaded = t
+func (i *Licds) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (l *Licds) Config() *config.Config {
-	return l.Conf
+func (i *Licds) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Licds) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
-		port = instance.NextFreePort(l.InstanceHost, &Licd)
+		port = instance.NextFreePort(i.InstanceHost, &Licd)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(l.Config(), "port", port)
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(l); err != nil {
+	if err = instance.Write(i); err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(l).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
@@ -203,6 +234,11 @@ func (l *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
+
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
 	home = i.Home()
 
@@ -238,10 +274,10 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 	return
 }
 
-func (l *Licds) Reload() (err error) {
+func (i *Licds) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (l *Licds) Rebuild(initial bool) error {
+func (i *Licds) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }

@@ -161,58 +161,62 @@ func factory(name string) (floating geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (s *Floatings) Type() *geneos.Component {
-	return s.Component
+func (i *Floatings) Type() *geneos.Component {
+	return i.Component
 }
 
-func (s *Floatings) Name() string {
-	if s.Config() == nil {
+func (i *Floatings) Name() string {
+	if i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](s.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (s *Floatings) Home() string {
-	return instance.Home(s)
+func (i *Floatings) Home() string {
+	return instance.Home(i)
 }
 
-func (s *Floatings) Host() *geneos.Host {
-	return s.InstanceHost
+func (i *Floatings) Host() *geneos.Host {
+	return i.InstanceHost
 }
 
-func (s *Floatings) String() string {
-	return instance.DisplayName(s)
+func (i *Floatings) String() string {
+	return instance.DisplayName(i)
 }
 
-func (s *Floatings) Load() (err error) {
-	return instance.Read(s)
+func (i *Floatings) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (s *Floatings) Unload() (err error) {
-	instances.Delete(s.Name() + "@" + s.Host().String())
-	s.ConfigLoaded = time.Time{}
+func (i *Floatings) Unload() (err error) {
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (s *Floatings) Loaded() time.Time {
-	return s.ConfigLoaded
+func (i *Floatings) Loaded() time.Time {
+	return i.ConfigLoaded
 }
 
-func (s *Floatings) SetLoaded(t time.Time) {
-	s.ConfigLoaded = t
+func (i *Floatings) SetLoaded(t time.Time) {
+	i.ConfigLoaded = t
 }
 
-func (s *Floatings) Config() *config.Config {
-	return s.Conf
+func (i *Floatings) Config() *config.Config {
+	return i.Conf
 }
 
-func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) {
-	cf := s.Config()
+func (i *Floatings) SetConfig(cf *config.Config) {
+	i.Conf = cf
+}
+
+func (i *Floatings) Add(template string, port uint16, noCerts bool) (err error) {
+	cf := i.Config()
 
 	cf.Default(cf.Join("config", "template"), templateName)
 
 	if port == 0 {
-		port = instance.NextFreePort(s.InstanceHost, &Floating)
+		port = instance.NextFreePort(i.InstanceHost, &Floating)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -222,7 +226,7 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 	config.Set(cf, cf.Join("config", "template"), templateName)
 
 	if template != "" {
-		filenames, _ := geneos.ImportCommons(s.Host(), s.Type(), "templates", []string{template})
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
@@ -231,13 +235,13 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
-	if err = instance.Write(s); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(s).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// s.Rebuild(true)
@@ -248,8 +252,8 @@ func (s *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 // rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (s *Floatings) Rebuild(initial bool) (err error) {
-	cf := s.Config()
+func (i *Floatings) Rebuild(initial bool) (err error) {
+	cf := i.Config()
 	configrebuild := config.Get[string](cf, "config::rebuild")
 	if configrebuild == "never" {
 		return
@@ -267,8 +271,8 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := (instance.FileOf(s, cf.Join("tls", "certificate")) != "" && instance.FileOf(s, cf.Join("tls", "privatekey")) != "") ||
-		(instance.FileOf(s, "certificate") != "" && instance.FileOf(s, "privatekey") != "")
+	secure := (instance.FileOf(i, cf.Join("tls", "certificate")) != "" && instance.FileOf(i, cf.Join("tls", "privatekey")) != "") ||
+		(instance.FileOf(i, "certificate") != "" && instance.FileOf(i, "privatekey") != "")
 	gws := config.Get[map[string]string](cf, "gateways")
 	for gw := range gws {
 		port := gws[gw]
@@ -283,13 +287,13 @@ func (s *Floatings) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		config.Set(cf, "gateways", gws)
-		if err = instance.Write(s); err != nil {
+		if err = instance.Write(i); err != nil {
 			return err
 		}
 	}
-	return instance.ExecuteTemplate(s,
+	return instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(s, "config::template"),
+		instance.FileOf(i, "config::template"),
 		template,
 		0664,
 	)

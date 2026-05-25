@@ -113,6 +113,10 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (minimal geneos.Instance) {
+	if name == "" {
+		return nil
+	}
+
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -144,86 +148,116 @@ func factory(name string) (minimal geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (n *Minimals) Type() *geneos.Component {
-	return n.Component
+func (i *Minimals) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (n *Minimals) Name() string {
-	if n.Config() == nil {
+func (i *Minimals) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](n.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (n *Minimals) Home() string {
-	return instance.Home(n)
+func (i *Minimals) Home() string {
+	return instance.Home(i)
 }
 
-func (n *Minimals) Host() *geneos.Host {
-	return n.InstanceHost
+func (i *Minimals) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (n *Minimals) String() string {
-	return instance.DisplayName(n)
+func (i *Minimals) String() string {
+	return instance.DisplayName(i)
 }
 
-func (n *Minimals) Load() (err error) {
-	return instance.Read(n)
+func (i *Minimals) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (n *Minimals) Unload() (err error) {
-	instances.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = time.Time{}
+func (i *Minimals) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *Minimals) Loaded() time.Time {
-	return n.ConfigLoaded
+func (i *Minimals) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (n *Minimals) SetLoaded(t time.Time) {
-	n.ConfigLoaded = t
+func (i *Minimals) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (n *Minimals) Config() *config.Config {
-	return n.Conf
+func (i *Minimals) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (n *Minimals) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Minimals) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Minimals) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
-		port = instance.NextFreePort(n.InstanceHost, &Minimal)
+		port = instance.NextFreePort(i.InstanceHost, &Minimal)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(n.Config(), "port", port)
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(n); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 
 	// default config XML etc.
 	return nil
 }
 
-func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Minimals) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := n.Config()
-	home = n.Home()
-	h := n.Host()
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
-	logFile := instance.LogFilePath(n)
+	cf := i.Config()
+	home = i.Home()
+	h := i.Host()
+
+	logFile := instance.LogFilePath(i)
 	checks = append(checks, filepath.Dir(logFile))
 
 	args = []string{
-		n.Name(),
-		"-port", config.Get[string](n.Config(), "port"),
+		i.Name(),
+		"-port", config.Get[string](i.Config(), "port"),
 	}
 
 	if strings.Contains(h.ServerVersion(), "windows") {
@@ -234,8 +268,7 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 		args = append(args, "-listenip", listenip)
 	}
 
-	// secureArgs := instance.SetSecureArgs(n)
-	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(n)
+	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)
 	if err != nil {
 		return
 	}
@@ -243,19 +276,13 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 	env = append(env, secureEnv...)
 	checks = append(checks, fileChecks...)
 
-	// for _, arg := range secureArgs {
-	// 	if !strings.HasPrefix(arg, "-") {
-	// 		checks = append(checks, arg)
-	// 	}
-	// }
-
 	env = append(env, "LOG_FILENAME="+logFile)
 
 	if skipFileCheck {
 		return
 	}
 
-	missing := instance.CheckPaths(n, checks)
+	missing := instance.CheckPaths(i, checks)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
@@ -263,10 +290,10 @@ func (n *Minimals) Command(skipFileCheck bool) (args, env []string, home string,
 	return
 }
 
-func (n *Minimals) Reload() (err error) {
+func (i *Minimals) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (n *Minimals) Rebuild(initial bool) error {
+func (i *Minimals) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }

@@ -117,6 +117,9 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (ca3 geneos.Instance) {
+	if name == "" {
+		return nil
+	}
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -148,63 +151,91 @@ func factory(name string) (ca3 geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (n *CA3s) Type() *geneos.Component {
-	return n.Component
+func (i *CA3s) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (n *CA3s) Name() string {
-	if n.Config() == nil {
+func (i *CA3s) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](n.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (n *CA3s) Home() string {
-	return instance.Home(n)
+func (i *CA3s) Home() string {
+	return instance.Home(i)
 }
 
-func (n *CA3s) Host() *geneos.Host {
-	return n.InstanceHost
+func (i *CA3s) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (n *CA3s) String() string {
-	return instance.DisplayName(n)
+func (i *CA3s) String() string {
+	return instance.DisplayName(i)
 }
 
-func (n *CA3s) Load() (err error) {
-	return instance.Read(n)
+func (i *CA3s) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (n *CA3s) Unload() (err error) {
-	instances.Delete(n.Name() + "@" + n.Host().String())
-	n.ConfigLoaded = time.Time{}
+func (i *CA3s) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (n *CA3s) Loaded() time.Time {
-	return n.ConfigLoaded
+func (i *CA3s) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (n *CA3s) SetLoaded(t time.Time) {
-	n.ConfigLoaded = t
+func (i *CA3s) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (n *CA3s) Config() *config.Config {
-	return n.Conf
+func (i *CA3s) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *CA3s) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 	if port == 0 {
-		port = instance.NextFreePort(n.Host(), &CA3)
+		port = instance.NextFreePort(i.Host(), &CA3)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	baseDir := path.Join(instance.BaseVersion(n), "collection_agent")
-	config.Set(n.Config(), "port", port)
+	baseDir := path.Join(instance.BaseVersion(i), "collection_agent")
+	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(n); err != nil {
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
@@ -215,27 +246,32 @@ func (n *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return
 	}
 
-	instance.ImportFiles(n, initialFiles...)
+	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(n).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 	return
 }
 
-func (n *CA3s) Rebuild(initial bool) error {
+func (i *CA3s) Rebuild(initial bool) error {
 	return geneos.ErrNotSupported
 }
 
-func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
-	cf := n.Config()
-	home = n.Home()
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
-	classPath := path.Join(instance.BaseVersion(n), "collection_agent")
-	logback := path.Join(n.Home(), "logback.xml")
+	cf := i.Config()
+	home = i.Home()
+
+	classPath := path.Join(instance.BaseVersion(i), "collection_agent")
+	logback := path.Join(i.Home(), "logback.xml")
 
 	checks = append(checks, classPath)
 	checks = append(checks, logback)
@@ -246,7 +282,7 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 		"-Xmx" + config.Get[string](cf, "maxheap", config.DefaultValue("512M")),
 		"-Dlogback.configurationFile=" + logback,
 		"-cp", path.Join(classPath, "*"),
-		"-DCOLLECTION_AGENT_DIR=" + n.Home(),
+		"-DCOLLECTION_AGENT_DIR=" + i.Home(),
 		"com.itrsgroup.collection.ca.Main",
 		config.Get[string](cf, "config"),
 	}
@@ -268,7 +304,7 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 		return
 	}
 
-	missing := instance.CheckPaths(n, checks)
+	missing := instance.CheckPaths(i, checks)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}
@@ -276,7 +312,7 @@ func (n *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 	return
 }
 
-func (n *CA3s) Reload() (err error) {
+func (i *CA3s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

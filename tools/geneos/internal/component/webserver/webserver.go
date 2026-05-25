@@ -111,6 +111,9 @@ func init() {
 var instances sync.Map
 
 func factory(name string) (webserver geneos.Instance) {
+	if name == "" {
+		return nil
+	}
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
@@ -154,92 +157,125 @@ var initialFiles = []string{
 // interface method set
 
 // Return the Component for an Instance
-func (w *Webservers) Type() *geneos.Component {
-	return w.Component
+func (i *Webservers) Type() *geneos.Component {
+	if i == nil {
+		return nil
+	}
+	return i.Component
 }
 
-func (w *Webservers) Name() string {
-	if w.Config() == nil {
+func (i *Webservers) Name() string {
+	if i == nil || i.Config() == nil {
 		return ""
 	}
-	return config.Get[string](w.Config(), "name")
+	return config.Get[string](i.Config(), "name")
 }
 
-func (w *Webservers) Home() string {
-	return instance.Home(w)
+func (i *Webservers) Home() string {
+	return instance.Home(i)
 }
 
-func (w *Webservers) Host() *geneos.Host {
-	return w.InstanceHost
+func (i *Webservers) Host() *geneos.Host {
+	if i == nil {
+		return nil
+	}
+	return i.InstanceHost
 }
 
-func (w *Webservers) String() string {
-	return instance.DisplayName(w)
+func (i *Webservers) String() string {
+	return instance.DisplayName(i)
 }
 
-func (w *Webservers) Load() (err error) {
-	return instance.Read(w)
+func (i *Webservers) Load() (err error) {
+	return instance.Read(i)
 }
 
-func (w *Webservers) Unload() (err error) {
-	instances.Delete(w.Name() + "@" + w.Host().String())
-	w.ConfigLoaded = time.Time{}
+func (i *Webservers) Unload() (err error) {
+	if i == nil {
+		return
+	}
+	instances.Delete(i.Name() + "@" + i.Host().String())
+	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (w *Webservers) Loaded() time.Time {
-	return w.ConfigLoaded
+func (i *Webservers) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	return i.ConfigLoaded
 }
 
-func (w *Webservers) SetLoaded(t time.Time) {
-	w.ConfigLoaded = t
+func (i *Webservers) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.ConfigLoaded = t
 }
 
-func (w *Webservers) Config() *config.Config {
-	return w.Conf
+func (i *Webservers) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	return i.Conf
 }
 
-func (w *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Webservers) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.Conf = cf
+}
+
+func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
 	if port == 0 {
-		port = instance.NextFreePort(w.InstanceHost, &Webserver)
+		port = instance.NextFreePort(i.InstanceHost, &Webserver)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(w.Config(), "port", port)
-	if err = instance.Write(w); err != nil {
+	config.Set(i.Config(), "port", port)
+	if err = instance.Write(i); err != nil {
 		return
 	}
 
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
 
-	importFrom := instance.BaseVersion(w)
+	importFrom := instance.BaseVersion(i)
 	if err = os.Chdir(importFrom); err != nil {
-		log.Debug().Err(err).Msgf("instance config %#v", w.Config().AllSettings())
+		log.Debug().Err(err).Msgf("instance config %#v", i.Config().AllSettings())
 		return
 	}
 
-	webappsdir := path.Join(w.Home(), "webapps")
-	if err = w.Host().MkdirAll(webappsdir, 0775); err != nil {
+	webappsdir := path.Join(i.Home(), "webapps")
+	if err = i.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}
 
-	instance.ImportFiles(w, initialFiles...)
+	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !noCerts {
-		instance.NewCertificate(w).Report(os.Stdout, responses.StderrWriter(os.Stderr))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	return
 }
 
-func (w *Webservers) Rebuild(initial bool) (err error) {
-	cf := w.Config()
-	h := w.Host()
+func (i *Webservers) Rebuild(initial bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
 
-	spPath := instance.Abs(w, "config/security.properties")
+	cf := i.Config()
+	h := i.Host()
+
+	spPath := instance.Abs(i, "config/security.properties")
 
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
@@ -266,7 +302,7 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 
 	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
 	if len(roots) > 0 && truststorePath != "" {
-		truststorePath = instance.Abs(w, truststorePath)
+		truststorePath = instance.Abs(i, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
 			log.Error().Err(err).Msgf("updating truststore %q", truststorePath)
 			return err
@@ -279,25 +315,30 @@ func (w *Webservers) Rebuild(initial bool) (err error) {
 	defer clear(keyStorePassword)
 	alias := geneos.ALL.Hostname()
 
-	certChain, err := instance.ReadCertificates(w)
+	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
-		log.Error().Err(err).Msgf("reading certificate chain for %s", w.String())
+		log.Error().Err(err).Msgf("reading certificate chain for %s", i.String())
 		return
 	}
 	if len(certChain) == 0 {
 		return
 	}
-	key, err := instance.ReadPrivateKey(w)
+	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
-		log.Error().Err(err).Msgf("reading private key for %s", w.String())
+		log.Error().Err(err).Msgf("reading private key for %s", i.String())
 		return
 	}
-	keyStore = instance.Abs(w, keyStore)
+	keyStore = instance.Abs(i, keyStore)
 	return certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
 }
 
 func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
+
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
 
 	cf := i.Config()
 	base := instance.BaseVersion(i)
@@ -397,7 +438,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	return
 }
 
-func (w *Webservers) Reload() (err error) {
+func (i *Webservers) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 

@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io/fs"
 	"maps"
+	"os"
 	"path"
 	"path/filepath"
 	"slices"
@@ -66,6 +67,10 @@ func ConfigFileTypes() []string {
 //
 // error check core values - e.g. Name
 func Read(i geneos.Instance) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
 	start := time.Now()
 	h := i.Host()
 	home := Home(i)

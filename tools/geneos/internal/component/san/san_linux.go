@@ -18,11 +18,16 @@ limitations under the License.
 package san
 
 import (
+	"os"
 	"syscall"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func (s *Sans) Reload() (err error) {
-	return instance.Signal(s, syscall.SIGUSR1)
+func (i *Sans) Reload() (err error) {
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
+	return instance.Signal(i, syscall.SIGUSR1)
 }
