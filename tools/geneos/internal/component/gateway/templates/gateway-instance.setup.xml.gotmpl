@@ -83,6 +83,11 @@
 		<var name="_gatewayLogFile">
 			<string>{{join .home .logfile}}</string>
 		</var>
+		{{range $value := .variables -}}
+		<var name="{{$value.name}}">
+			<{{$value.type}}>{{$value.value}}</{{$value.type}}>
+		</var>
+		{{end}}
 		{{range $key, $value := .env -}}
 		<var name="_{{nameOf $value "="}}">
 			<string>{{valueOf $value "="}}</string>

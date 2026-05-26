@@ -79,6 +79,10 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 		updateSlice(cf, "attributes", values.Attributes, nil)
 
+	}
+
+	// vars can be used in the gateway instance.setup.xml
+	if ct.IsA("gateway", "san") {
 		updateVars(cf, "variables", values.Variables)
 	}
 
