@@ -88,6 +88,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
 	if t, err = t.ParseGlob(h.PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
+		log.Warn().Msgf("Cannot parse template(s) for %s: %v", i, err)
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
 		log.Warn().Msgf("No templates found in %s, using internal defaults", h.PathTo(i.Type(), "templates"))

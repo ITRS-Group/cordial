@@ -10,15 +10,16 @@
 		<probeName>{{.floatingname}}</probeName>
 		<gateways>
 			{{- with $data := . }}
+			{{ $secure := or $data.tls.secure (index $data.tls "ca-bundle") $data.tls.verify $data.certchain -}}
 			{{range $key, $value := $data.gateways -}}<gateway>
 				<hostname>{{$key}}</hostname>
 				<port>{{$value}}</port>
-				<secure>{{if or $data.certificate $data.certchain $data.secure}}true{{else}}false{{end}}</secure>
+				<secure>{{if $secure}}true{{else}}false{{end}}</secure>
 			</gateway>
 			{{else -}}<gateway>
 				<hostname>localhost</hostname>
-				<port>{{if or $data.certificate $data.certchain $data.secure}}7038{{else}}7039{{end}}</port>
-				<secure>{{if or $data.certificate $data.certchain $data.secure}}true{{else}}false{{end}}</secure>
+				<port>{{if $secure}}7038{{else}}7039{{end}}</port>
+				<secure>{{if $secure}}true{{else}}false{{end}}</secure>
 			</gateway>
 		{{end -}}{{end -}}</gateways>
 	</floatingProbe>

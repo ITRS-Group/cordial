@@ -4,8 +4,9 @@
 	<operatingEnvironment>
 		<gatewayName>{{.gatewayname}}</gatewayName>
 		<listenPorts>
-		{{- if and .certificate .privatekey}}
-			{{if eq .port 7039 -}}
+		{{ $secure := or (and .tls.certificate .tls.privatekey) (.certificate .privatekey) -}}
+		{{- if $secure -}}
+			{{- if eq .port 7039 -}}
 			<secure>
 				<listenPort>7038</listenPort>
 			</secure>
@@ -16,17 +17,17 @@
 			<secure>
 				<listenPort>{{.port}}</listenPort>
 			</secure>
-			{{- if .insecureport}}
+			{{- if .insecureport }}
 			<insecure>
 				<listenPort>{{.insecureport}}</listenPort>
 			</insecure>
-			{{- end}}
-			{{- end}}
-		{{- else}}
+			{{- end }}
+			{{- end }}
+		{{- else -}}
 			<insecure>
 				<listenPort>{{.port}}</listenPort>
 			</insecure>
-		{{- end}}
+		{{- end -}}
 		</listenPorts>
 		<var name="gatewayName">
 			<macro>
