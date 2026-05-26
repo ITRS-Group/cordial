@@ -4,7 +4,8 @@
 	<operatingEnvironment>
 		<gatewayName>{{.gatewayname}}</gatewayName>
 		<listenPorts>
-		{{ $secure := or (and .tls.certificate .tls.privatekey) (.certificate .privatekey) -}}
+		{{ $tls := .tls }}
+		{{ $secure := or (and $tls.certificate $tls.privatekey) (and .certificate .privatekey) -}}
 		{{- if $secure -}}
 			{{- if eq .port 7039 -}}
 			<secure>
