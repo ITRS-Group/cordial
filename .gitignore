@@ -37,7 +37,7 @@ examples/dockerlogs/dockerlogs
 gdna/docker-compose.yml
 gdna/docs/docs
 gdna/gdna
-gdna/gdna.sqlite*
+**/gdna.sqlite*
 
 integrations/pagerduty/pagerduty
 
