@@ -323,26 +323,25 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	cf := i.Config()
 
 	// always rebuild an instance template
-	log.Debug().Msgf("rebuilding %s instance template %q with config %#v", i, instanceTemplateName, cf.AllSettings())
-	err = instance.ExecuteTemplate(i, instance.Abs(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444)
-	if err != nil {
+	log.Debug().Msgf("rebuilding %s instance template %q", i, instanceTemplateName)
+	if err = instance.ExecuteTemplate(i, instance.Abs(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
 		return
 	}
 	log.Debug().Msgf("%s instance template %q rebuilt", i, INSTANCEXML)
 
-	configrebuild := config.Get[string](cf, "config::rebuild")
-
+	configRebuild := config.Get[string](cf, "config::rebuild")
 	setup := config.Get[string](cf, "setup")
-	if configrebuild == "never" || setup == "" || setup == "none" {
+
+	if configRebuild == "never" || setup == "" || setup == "none" {
 		return
 	}
 
-	if !(configrebuild == "always" || (initial && configrebuild == "initial")) {
+	if !(configRebuild == "always" || (initial && configRebuild == "initial")) {
 		return
 	}
 
-	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
-		log.Debug().Msg("not rebuilding URL bases setup")
+	if strings.HasPrefix(setup, "http://") || strings.HasPrefix(setup, "https://") {
+		log.Debug().Msg("not rebuilding URL based setup")
 		return
 	}
 
@@ -361,13 +360,17 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	secure := certPath != "" && keyPath != ""
 	log.Debug().Msgf("gateway cert: %q key: %q secure: %v", certPath, keyPath, secure)
 
-	// if we have certs then connect to Licd securely
-	if secure && config.Get[string](cf, "licdsecure") != "true" {
-		config.Set(cf, "licdsecure", "true")
-		changed = true
-	} else if !secure && config.Get[string](cf, "licdsecure") == "true" {
-		config.Set(cf, "licdsecure", "false")
-		changed = true
+	if initial {
+		// if we have certs then connect to Licd securely, but only on
+		// initial build, as the user may change the parameter later and
+		// we don't want to override that.
+		if secure && config.Get[string](cf, "licdsecure") != "true" {
+			config.Set(cf, "licdsecure", "true")
+			changed = true
+		} else if !secure && config.Get[string](cf, "licdsecure") == "true" {
+			config.Set(cf, "licdsecure", "false")
+			changed = true
+		}
 	}
 
 	// use getPorts() to check valid change, else go up one
@@ -376,17 +379,22 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
+
 	if secure && config.Get[uint16](cf, "port") == 7039 {
 		if _, ok := ports[7038]; !ok {
+			log.Debug().Msg("found port 7038 free, switching to it for secure gateway")
 			config.Set[uint16](cf, "port", 7038)
 		} else {
+			log.Debug().Msg("found port 7038 in use, switching to next free port for secure gateway")
 			config.Set(cf, "port", nextport)
 		}
 		changed = true
 	} else if !secure && config.Get[uint16](cf, "port") == 7038 {
 		if _, ok := ports[7039]; !ok {
+			log.Debug().Msg("found port 7039 free, switching to it for non-secure gateway")
 			config.Set[uint16](cf, "port", 7039)
 		} else {
+			log.Debug().Msg("found port 7039 in use, switching to next free port for non-secure gateway")
 			config.Set(cf, "port", nextport)
 		}
 		changed = true
