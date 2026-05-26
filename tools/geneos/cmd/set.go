@@ -140,6 +140,15 @@ func setValues(i geneos.Instance, params ...any) (resp *responses.General) {
 	i.SetConfig(cf)
 
 	resp.Err = instance.Write(i)
+	if resp.Err == nil {
+		resp.Completed = []string{"values set successfully"}
+		if i.Type().IsA("gateway") {
+			resp.Completed = append(resp.Completed, "instance.setup.xml updated")
+		}
+		if config.Get[string](cf, cf.Join("config", "rebuild")) == "always" {
+			resp.Completed = append(resp.Completed, "configuration file(s) updated from templates")
+		}
+	}
 	return
 }
 
