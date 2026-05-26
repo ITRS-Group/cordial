@@ -115,12 +115,6 @@ func PathTo(i geneos.Instance, name string) string {
 	}
 
 	return Abs(i, filename)
-
-	// if i.Host().IsAbs(filename) {
-	// 	return filename
-	// }
-
-	// return filepath.Join(i.Home(), filename)
 }
 
 // PathsTo returns the full paths to the files identified by names.
