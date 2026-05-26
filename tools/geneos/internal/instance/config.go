@@ -295,6 +295,12 @@ func Write(i geneos.Instance) (err error) {
 	// rebuild on every save, but skip errors from any components that do not support rebuilds
 	if err := i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
 		log.Debug().Msgf("%s: rebuild not supported", i.String())
+	} else {
+		// if rebuild suceeds, reload the instance to pick up any
+		// changes to the config that are made by the rebuild
+		if err = i.Reload(); err != nil {
+			log.Debug().Err(err).Msgf("reloading config for %s failed", i)
+		}
 	}
 
 	log.Debug().Err(err).Msgf("config for %s saved", i)
@@ -612,7 +618,7 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 				continue
 			}
 			ports := GetAllPorts(h)
-			if ports[config.Get[uint16](cf, k)] {
+			if _, ok := ports[config.Get[uint16](cf, k)]; ok {
 				// port already in use, get the next one
 				config.Set(cf, k, NextFreePort(h, ct))
 			}
