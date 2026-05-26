@@ -31,19 +31,19 @@ import (
 
 // GetAllPorts gets all used ports in config files on a specific remote
 // and also all listening ports on the same host. Returns a map of port
-// to bool "true" for each lookup.
-func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
+// to struct{} for each lookup.
+func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 	if h == geneos.ALL {
 		log.Fatal().Msg("getports() called with all hosts")
 	}
-	ports = make(map[uint16]bool)
+	ports = make(map[uint16]struct{})
 	for _, c := range Instances(h, nil) {
 		if c.Loaded().IsZero() {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
 		if port := config.Get[int](c.Config(), c.Config().Join("port")); port != 0 {
-			ports[uint16(port)] = true
+			ports[uint16(port)] = struct{}{}
 		}
 	}
 
@@ -53,7 +53,7 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]bool) {
 		return
 	}
 	for _, v := range listening {
-		ports[uint16(v)] = true
+		ports[uint16(v)] = struct{}{}
 	}
 	return
 }
