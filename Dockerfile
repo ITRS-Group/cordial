@@ -249,9 +249,9 @@ COPY --from=build /app/cordial/gdna/gdna.example.yaml /cordial/etc/geneos/gdna.e
 COPY --from=build /app/cordial/gdna/geneos/* /cordial/etc/geneos/gdna/
 
 # build tar
+# upx -q /cordial/bin/*; \
 RUN set -eux; \
-    apk add upx tar; \
-    upx -q /cordial/bin/*; \
+    apk add tar; \
     cp -r /cordial /cordial-$(cat /VERSION); \
     tar --sort=name -czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
 
