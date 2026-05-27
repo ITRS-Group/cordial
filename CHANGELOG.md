@@ -90,6 +90,22 @@
 
   * Add an option to the `fetch` command to write the remote license data to local files, which is useful for debugging and testing
 
+### Post v1.27.0 Release Planned Changes
+
+After this release, planned work includes:
+
+* Further improvements to documentation. As with many software projects, documentation always seems to be behind the curve. Cordial, and particularly `tools/geneos` is getting far to complicated to use without comprehensive and correct documentation. We know this, and we are working on it, but it will take time to catch up.
+
+  As an initial step, please review and let us have your feedback on `geneos help gateway` as a starting point for component documentation.
+
+* Consolidation of logging around the Go `log/slog` standard library package. While this is largely internal work the results will be visible to users as the output of various command line and daemon process logging will change.
+
+* `tools/geneos`
+
+  * Enhancements to TLS private key handling including support for private keys in certificate files is planned. In general private keys should be stored in a separate file with more restrictive permissions that the public certificate, but some certificate bundles include the private key in the same file as the certificate, and this should be supported.
+
+  * Add a `binary` component type to support running non-core Geneos components, such as GDNA, the ServiceNow proxy and the new `ims-gateway` programs. This will allow, initially, process management with other features like package management later on.
+
 ---
 
 ## Version v1.26.1
