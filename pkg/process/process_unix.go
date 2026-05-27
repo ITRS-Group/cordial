@@ -123,7 +123,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		}
 		defer status.Close()
 
-		statusFields := map[string]string{}
+		statusFields = map[string]string{}
 
 		statusLines := bufio.NewScanner(status)
 		for statusLines.Scan() {
