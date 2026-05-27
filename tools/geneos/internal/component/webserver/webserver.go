@@ -239,9 +239,6 @@ func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 	config.Set(i.Config(), "port", port)
-	if err = instance.Write(i); err != nil {
-		return
-	}
 
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)

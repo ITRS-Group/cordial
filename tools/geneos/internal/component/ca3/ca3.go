@@ -235,10 +235,6 @@ func (i *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	baseDir := path.Join(instance.BaseVersion(i), "collection_agent")
 	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(i); err != nil {
-		return
-	}
-
 	// copy default configs
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)

@@ -221,10 +221,6 @@ func (i *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(i); err != nil {
-		return
-	}
-
 	baseDir := instance.BaseVersion(i)
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)

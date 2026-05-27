@@ -235,16 +235,10 @@ func (i *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
-	if err = instance.Write(i); err != nil {
-		return
-	}
-
 	// create certs, report success only
 	if !noCerts {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
-
-	// s.Rebuild(true)
 
 	return nil
 }

@@ -240,9 +240,6 @@ func (i *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 	config.Set(i.Config(), "port", port)
-	if err = instance.Write(i); err != nil {
-		return
-	}
 
 	// copy default configs
 	dir, err := os.Getwd()

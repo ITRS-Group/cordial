@@ -229,10 +229,6 @@ func (i *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	}
 	config.Set(i.Config(), "port", port)
 
-	if err = instance.Write(i); err != nil {
-		return
-	}
-
 	// create certs, report success only
 	if !noCerts {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))

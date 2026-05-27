@@ -291,12 +291,6 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 
 	config.Set(cf, "includes", make(map[int]string))
 
-	// try to save config early
-	if err = instance.Write(i); err != nil {
-		log.Fatal().Err(err).Msg("")
-		return
-	}
-
 	// create certs, report success only
 	if !noCerts {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
