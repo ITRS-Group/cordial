@@ -503,10 +503,6 @@ func (resp General) Report(writer any, options ...WriterOption) {
 		}
 	}
 
-	log.Debug().Msgf("reporting response: %+v", resp)
-	log.Debug().Msgf("writer type: %T", writer)
-	log.Debug().Msgf("writer options: %+v", opts)
-
 	switch w := writer.(type) {
 	case *reporter.TabWriterReporter:
 		w.UpdateTable(w.Columns, resp.Dataview.Table)
@@ -542,24 +538,14 @@ func (resp General) Report(writer any, options ...WriterOption) {
 			}
 		}
 
-		// string(s) - append a newline unless one is present
-		// if resp.Summary != "" && (opts.outputFields == 0 || opts.outputFields&outputFieldSummary != 0) {
-		// 	fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-		// 	fmt.Fprint(w, strings.TrimSuffix(resp.Summary, "\n"))
-		// 	fmt.Fprint(w, opts.suffix)
-		// }
-
 		if len(resp.Completed) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldCompleted != 0) {
-			log.Debug().Msgf("writing %d completed actions", len(resp.Completed))
 			fmt.Fprintf(w, opts.prefixformat, resp.Instance)
 			fmt.Fprint(w, joinNatural(resp.Completed...))
 			fmt.Fprint(w, opts.suffix)
 		}
 
 		if len(resp.ResultText) > 0 && (opts.outputFields == 0 || opts.outputFields&outputFieldDetails != 0) {
-			log.Debug().Msgf("writing %d detail lines", len(resp.ResultText))
 			for _, s := range resp.ResultText {
-				log.Debug().Msgf("writing detail line: %s", s)
 				fmt.Fprintln(w, strings.TrimSuffix(s, "\n"))
 			}
 		}

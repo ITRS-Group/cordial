@@ -144,8 +144,8 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 			resp.Err = err
 			return
 		}
-		config.Set(i.Config(), "keyfile", keyfile)
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %s written", keyfile))
+		resp = responses.MergeResponse(resp, instance.Write(i))
 	}
 	return
 
@@ -188,6 +188,6 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %s set", crc))
 	}
 
-	resp.Err = instance.Write(i)
+	resp = responses.MergeResponse(resp, instance.Write(i))
 	return
 }

@@ -288,11 +288,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	config.Delete(cf, "truststore")
 	config.Delete(cf, "truststore-password")
 
-	if err = instance.Write(i); err != nil {
-		resp.Err = err
-		return
-	}
-	resp.Completed = append(resp.Completed, "updated instance configuration")
+	resp = responses.MergeResponse(resp, instance.Write(i))
 
 	return
 }

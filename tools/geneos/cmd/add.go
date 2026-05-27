@@ -156,8 +156,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		return
 	}
 
-	if err = instance.Write(i); err != nil {
-		return
+	log.Debug().Msgf("writing config for new instance %s", i)
+	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+		return resp.Err
 	}
 
 	if addCmdInstanceBundle != "" {
@@ -216,8 +217,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
 		config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
 
-		if err = instance.Write(i); err != nil {
-			return
+		log.Debug().Msgf("writing config for instance %s with certificate bundle", i)
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			return resp.Err
 		}
 	}
 
@@ -262,8 +264,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		cf = ncf
 	}
 
-	if err = instance.Write(i); err != nil {
-		return
+	log.Debug().Msgf("writing config for new instance %s with extras", i)
+	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+		return resp.Err
 	}
 
 	// reload config as instance data is not updated by Add() as an interface value

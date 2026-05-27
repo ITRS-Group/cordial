@@ -297,7 +297,7 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	}
 
 	// always create a keyfile ?
-	if err = instance.CreateAESKeyFile(i); err != nil {
+	if _, _, err = instance.CreateAESKeyFile(i); err != nil {
 		return
 	}
 
@@ -395,9 +395,9 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if changed {
-		if err = instance.Write(i); err != nil {
-			log.Error().Err(err).Msg("Cannot save configuration")
-			return
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			log.Error().Err(resp.Err).Msg("Cannot save configuration")
+			return resp.Err
 		}
 	}
 

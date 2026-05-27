@@ -195,12 +195,10 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 			return
 		}
 
-		if resp.Err = instance.Write(i); resp.Err != nil {
-			return
-		}
-
 		resp.Completed = append(resp.Completed, "certificate renewed")
 		resp.ResultText = []string{string(certs.CertificateComments(cert))}
+
+		resp = responses.MergeResponse(resp, instance.Write(i))
 	}
 	return
 }

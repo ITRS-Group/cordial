@@ -64,5 +64,9 @@ var newCmd = &cobra.Command{
 }
 
 func newInstanceCert(i geneos.Instance, _ ...any) *responses.General {
-	return instance.NewCertificate(i, certs.Days(newCmdExpiry))
+	resp := instance.NewCertificate(i, certs.Days(newCmdExpiry))
+	if resp.Err == nil {
+		resp = responses.MergeResponse(resp, instance.Write(i))
+	}
+	return resp
 }

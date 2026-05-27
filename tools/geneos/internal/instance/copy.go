@@ -214,15 +214,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	// config changes don't matter until writing config succeeds
 	log.Debug().Msgf("writing: %v", ncf.AllSettings())
-	if err = Write(newdst); err != nil {
-		log.Debug().Err(err).Msg("")
-		return
-	}
-
-	// src.Unload()
-	if err := newdst.Rebuild(false); err != nil && err != geneos.ErrNotSupported {
-		log.Debug().Err(err).Msg("")
-		return err
+	if resp := Write(newdst); resp.Err != nil {
+		log.Debug().Err(resp.Err).Msg("")
+		return resp.Err
 	}
 
 	done = true

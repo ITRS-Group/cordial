@@ -102,7 +102,8 @@ geneos unset san -g Gateway1
 				return
 			}
 
-			resp.Err = instance.Write(i)
+			resp.Completed = []string{"values unset successfully"}
+			resp = responses.MergeResponse(resp, instance.Write(i))
 			return
 		}).Report(os.Stdout)
 	},

@@ -331,8 +331,8 @@ func (i *Sans) Rebuild(initial bool) (err error) {
 	}
 	if changed {
 		config.Set(cf, "gateways", gws)
-		if err = instance.Write(i); err != nil {
-			return err
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			return resp.Err
 		}
 	}
 	return instance.ExecuteTemplate(i,

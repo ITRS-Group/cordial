@@ -171,21 +171,18 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General
 	}
 	resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s certificate, trust chain and key written", i))
 
-	if err := instance.Write(i); err != nil {
-		return
-	}
-
 	var updated bool
 	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), certBundle.Root)
-	if resp.Err != nil {
-		return
+
+	if resp.Err == nil {
+		config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 	}
-	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
 
 	if updated {
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s ca-bundle updated", i))
 	}
 
-	resp.Err = instance.Write(i)
+	resp = responses.MergeResponse(resp, instance.Write(i))
+
 	return
 }

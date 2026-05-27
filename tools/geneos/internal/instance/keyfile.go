@@ -11,11 +11,11 @@ import (
 
 // CreateAESKeyFile creates a new key file, for secure passwords as per
 // https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm
-func CreateAESKeyFile(i geneos.Instance) (err error) {
+func CreateAESKeyFile(i geneos.Instance) (keyfile config.KeyFile, crc uint32, err error) {
 	kv := config.NewKeyValues()
 	defer kv.Destroy()
 
-	_, _, err = WriteAESKeyFile(i, kv)
+	keyfile, crc, err = WriteAESKeyFile(i, kv)
 	return
 }
 
@@ -68,7 +68,6 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 	k := strings.Replace(string(keyfile), Home(i), "${config:home}", 1)
 	config.Set(i.Config(), "keyfile", k)
 
-	err = Write(i)
 	return
 }
 
@@ -102,7 +101,6 @@ func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (ke
 			return "", 0, err
 		}
 		config.Set(i.Config(), "prevkeyfile", bkp)
-		// fallthrough
 	}
 
 	return WriteAESKeyFile(i, nkv)

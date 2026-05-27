@@ -253,11 +253,11 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 	return
 }
 
-// Write writes the instance configuration to the standard file for
-// that instance. All legacy parameter (aliases) are removed from the
-// set of values saved. Any empty configuration values are removed from
-// the saved configuration.
-func Write(i geneos.Instance) (err error) {
+// write is the internal function that writes the instance configuration
+// to the standard file for that instance. All legacy parameter
+// (aliases) are removed from the set of values saved. Any empty
+// configuration values are removed from the saved configuration.
+func write(i geneos.Instance) (err error) {
 	log.Debug().Msgf("writing config for %s", i)
 
 	// speculatively migrate the config, in case there is a legacy .rc
@@ -292,18 +292,70 @@ func Write(i geneos.Instance) (err error) {
 		i.SetLoaded(st.ModTime())
 	}
 
-	// rebuild on every save, but skip errors from any components that do not support rebuilds
-	if err := i.Rebuild(false); err != nil && errors.Is(err, geneos.ErrNotSupported) {
-		log.Debug().Msgf("%s: rebuild not supported", i.String())
-	} else {
-		// if rebuild suceeds, reload the instance to pick up any
-		// changes to the config that are made by the rebuild
-		if err = i.Reload(); err != nil {
-			log.Debug().Err(err).Msgf("reloading config for %s failed", i)
-		}
+	log.Debug().Err(err).Msgf("config for %s saved", i)
+	return
+}
+
+// Write will write and rebuild the instance, returning a response with
+// any errors and a list of completed steps. On success it also triggers
+// a reload of the instance to pick up any changes to the config that
+// are made by the rebuild.
+//
+// Options to not rebuild or reload the instance can be passed as
+// instance.NoRebuild() and instance.NoReload() respectively.
+func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General) {
+	var err error
+
+	opts := evalConfigOptions(options...)
+
+	resp = responses.NewResponse(i)
+
+	log.Debug().Msgf("committing config for %s with options: noRebuild=%t noReload=%t", i, opts.noRebuild, opts.noReload)
+
+	log.Debug().Msgf("writing config for %s", i)
+	if err := write(i); err != nil {
+		resp.Err = err
+		return
+	}
+	resp.Completed = append(resp.Completed, "config written")
+
+	if opts.noRebuild {
+		log.Debug().Msg("skipping rebuild")
+		return
 	}
 
-	log.Debug().Err(err).Msgf("config for %s saved", i)
+	log.Debug().Msgf("rebuilding instance %s", i)
+	if err := i.Rebuild(false); err != nil {
+		if errors.Is(err, geneos.ErrNotSupported) {
+			// not an error if not supported
+			log.Debug().Msgf("%s: rebuild not supported", i.String())
+			err = nil
+		}
+		resp.Err = err
+		return
+	}
+	resp.Completed = append(resp.Completed, "instance rebuilt")
+
+	if opts.noReload {
+		log.Debug().Msg("skipping reload")
+		return
+	}
+
+	// if rebuild succeeds, reload the instance to pick up any
+	// changes to the config that are made by the rebuild
+	log.Debug().Msgf("reloading instance %s", i)
+	if err = i.Reload(); err != nil {
+		if errors.Is(err, geneos.ErrNotSupported) || errors.Is(err, os.ErrProcessDone) {
+			log.Debug().Msgf("%s: reload not supported or not running, ignoring", i.String())
+			err = nil
+		} else {
+			log.Debug().Err(err).Msgf("reloading config for %s failed", i)
+		}
+		resp.Err = err
+		return
+	}
+	resp.Completed = append(resp.Completed, "instance reloaded")
+
 	return
 }
 
@@ -481,8 +533,10 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 	// remove type label before save
 	cf.SetConfigType("")
 
-	if resp.Err = Write(i); resp.Err != nil {
-		// restore label on error
+	resp = responses.MergeResponse(resp, Write(i))
+
+	if resp.Err != nil {
+		// restore type label on error
 		cf.SetConfigType("rc")
 		log.Error().Err(resp.Err).Msg("failed to write new configuration file")
 		return
@@ -674,9 +728,11 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 }
 
 type configOptions struct {
-	newName  string
-	newDir   string
-	keepPort bool
+	newName   string
+	newDir    string
+	keepPort  bool
+	noRebuild bool
+	noReload  bool
 }
 type ConfigOption func(*configOptions)
 
@@ -721,5 +777,22 @@ func NewName(name string) ConfigOption {
 func NewDir(dir string) ConfigOption {
 	return func(opts *configOptions) {
 		opts.newDir = dir
+	}
+}
+
+// NoRebuild controls whether to skip the rebuild step after writing the
+// configuration in instance.Commit()
+func NoRebuild() ConfigOption {
+	return func(opts *configOptions) {
+		opts.noRebuild = true
+	}
+}
+
+// NoReload controls whether to skip the reload step after writing the
+// configuration in instance.Commit() and after a successful rebuild if
+// supported. NoRebuild implies NoReload.
+func NoReload() ConfigOption {
+	return func(opts *configOptions) {
+		opts.noReload = true
 	}
 }

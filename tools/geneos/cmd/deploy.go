@@ -312,8 +312,8 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-		if err = instance.Write(i); err != nil {
-			return
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			return resp.Err
 		}
 
 		if deployCmdInstanceBundle != "" {
@@ -373,8 +373,8 @@ var deployCmd = &cobra.Command{
 			log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
 			config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
 
-			if err = instance.Write(i); err != nil {
-				return
+			if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+				return resp.Err
 			}
 		}
 
@@ -412,8 +412,8 @@ var deployCmd = &cobra.Command{
 		// update home so save is correct
 		config.Set(cf, "home", instance.Home(i))
 
-		if err = instance.Write(i); err != nil {
-			return
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			return resp.Err
 		}
 
 		// reload config as instance data is not updated by Add() as an interface value

@@ -74,11 +74,11 @@ var protectCmd = &cobra.Command{
 			config.Set(cf, "protected", protect)
 
 			if cf.ConfigType() == "rc" {
-				respM := instance.Migrate(i)
-				resp.Err = respM.Err
+				resp = responses.MergeResponse(resp, instance.Migrate(i))
 			} else {
-				resp.Err = instance.Write(i)
+				resp = responses.MergeResponse(resp, instance.Write(i))
 			}
+
 			if resp.Err != nil {
 				return
 			}

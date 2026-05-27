@@ -83,10 +83,6 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 	cf := i.Config()
 	config.Set(cf, cf.Join(TLSBASE, CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
-	if err = Write(i); err != nil {
-		return
-	}
-
 	resp.Completed = append(resp.Completed, "new certificate and private key created")
 	resp.ResultText = []string{string(certs.CertificateComments(cert))}
 	return
