@@ -29,13 +29,15 @@ import (
 )
 
 const (
-	TLSBASE     = "tls"
-	CERTIFICATE = "certificate"
-	PRIVATEKEY  = "privatekey"
-	TLSVERIFY   = "verify"
-	CABUNDLE    = "ca-bundle"
-	CERTCHAIN   = "certchain"
-	MINVERSION  = "minimumversion"
+	TLSBASE             = "tls"
+	CERTIFICATE         = "certificate"
+	PRIVATEKEY          = "privatekey"
+	TLSVERIFY           = "verify"
+	CABUNDLE            = "ca-bundle"
+	CERTCHAIN           = "certchain"
+	MINVERSION          = "minimumversion"
+	TRUSTSTORE          = "truststore"
+	TRUSTSTORE_PASSWORD = "truststore-password"
 )
 
 // NewCertificate creates a new certificate for an instance.
