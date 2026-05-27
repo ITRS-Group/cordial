@@ -13,6 +13,15 @@
 > [!NOTE]
 > **Released 2026-05-07** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
+### Version v1.27.0 Highlights
+
+> [!IMPORTANT]
+> This release includes changes to templates, which are used to build configuration files for Gateways, Self-Announcing and Floating Netprobes. For existing installations you should run `geneos init template` after updating `geneos`. If you have made changes to your templates then you should back these up and compare to the new version which make changes to better support the TLS changes in recent releases and also add support for "variables" in the Gateway `instance.setup.xml` file, which can be used to set configuration parameters on the Gateway instance without needing to edit the XML directly.
+
+* Release binaries are no longer compressed with UPX, now that dependencies have been refined and reduced and the resulting executables are smaller. This should improve performance and reduce issues with antivirus software, at the cost of larger binary sizes. The `geneos` binary is now about 7.5MB compressed with UPX and about 18MB without UPX, compared to about 11MB compressed with UPX in the previous version.
+
+* Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory, that hold passwords and other secrets, after use as much as possible.
+
 ### Version v1.27.0 Fixes
 
 * `tools/geneos`
@@ -42,8 +51,6 @@
   * Add clarifications to documentation and fix links to ITRS docs
 
 ### Version v1.27.0 Changes
-
-* Remove the `memguard` dependency. While an excellent risk mitigation package, a long standing issue prevents us from allowing child processes to dump core, which is useful for diagnostics. Instead, care has been taken to clear memory, that hold passwords and other secrets, after use as much as possible.
 
 * Put `cordial` and especially `tools/geneos` on a diet.
 
