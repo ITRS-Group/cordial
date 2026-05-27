@@ -264,6 +264,17 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		cf = ncf
 	}
 
+	// update home to ensure write is correct
+	config.Set(cf, "home", instance.Home(i))
+
+	// if the instance is TLS capable and there is no setting for
+	// licdsecure, then enable TLS for the licd connection by default
+	if instance.IsTLSCapable(i) {
+		if _, ok := config.Lookup[string](cf, "licdsecure"); !ok {
+			config.Set(cf, "licdsecure", "true")
+		}
+	}
+
 	log.Debug().Msgf("writing config for new instance %s with extras", i)
 	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 		return resp.Err

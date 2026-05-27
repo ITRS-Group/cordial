@@ -262,7 +262,7 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 		return
 	}
 
-	missing := instance.CheckPaths(i, checks)
+	missing := instance.CheckPaths(i, checks...)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}

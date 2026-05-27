@@ -342,37 +342,14 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	// recheck check certs/keys
 	var changed bool
 
-	certPath := instance.PathTo(i, cf.Join("tls", "certificate"))
-	if certPath == "" {
-		certPath = instance.PathTo(i, "certificate")
-	}
-	keyPath := instance.PathTo(i, cf.Join("tls", "privatekey"))
-	if keyPath == "" {
-		keyPath = instance.PathTo(i, "privatekey")
-	}
-
-	secure := certPath != "" && keyPath != ""
-	log.Debug().Msgf("gateway cert: %q key: %q secure: %v", certPath, keyPath, secure)
-
-	if initial {
-		// if we have certs then connect to Licd securely, but only on
-		// initial build, as the user may change the parameter later and
-		// we don't want to override that.
-		if secure && config.Get[string](cf, "licdsecure") != "true" {
-			config.Set(cf, "licdsecure", "true")
-			changed = true
-		} else if !secure && config.Get[string](cf, "licdsecure") == "true" {
-			config.Set(cf, "licdsecure", "false")
-			changed = true
-		}
-	}
-
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetAllPorts(i.Host())
 	nextport := instance.NextFreePort(i.Host(), &Gateway)
 	if nextport == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
+
+	secure := instance.IsTLSCapable(i)
 
 	if secure && config.Get[uint16](cf, "port") == 7039 {
 		if _, ok := ports[7038]; !ok {
@@ -504,7 +481,7 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 		return
 	}
 
-	missing := instance.CheckPaths(i, checks)
+	missing := instance.CheckPaths(i, checks...)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}

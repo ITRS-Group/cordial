@@ -409,8 +409,16 @@ var deployCmd = &cobra.Command{
 			cf = ncf
 		}
 
-		// update home so save is correct
+		// update home to ensure write is correct
 		config.Set(cf, "home", instance.Home(i))
+
+		// if the instance is TLS capable and there is no setting for
+		// licdsecure, then enable TLS for the licd connection by default
+		if instance.IsTLSCapable(i) {
+			if _, ok := config.Lookup[string](cf, "licdsecure"); !ok {
+				config.Set(cf, "licdsecure", "true")
+			}
+		}
 
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return resp.Err

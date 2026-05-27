@@ -397,7 +397,7 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 		return
 	}
 
-	missing := instance.CheckPaths(i, checks)
+	missing := instance.CheckPaths(i, checks...)
 	if len(missing) > 0 {
 		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
 	}

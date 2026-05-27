@@ -74,9 +74,7 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 
   These three parameters control the connection to the license daemon. If `licdsecure` is set to `true` then the Gateway uses TLS to connect to the license daemon.
 
-  When a new Gateway instance is created, `licdsecure` is set to `true` if TLS is enabled for the Gateway. If this is not correct for your environment then you should change it, either on the command like used to create the instance, i.e. `geneos add` or `geneos deploy`, or using `geneos set` later on.
-
-  Note: at the time of writing, overriding `licdsecure` when running `geneos add` or `geneos deploy` does not work as expected and the value is always set to `true` if TLS is enabled for the Gateway. This will be fixed in a future release.
+  When a new Gateway instance is created, `licdsecure` is set to `true` if TLS is enabled for the Gateway. If this is not correct for your environment then you should change it, either on the command like used to create the instance, i.e. `geneos add ... licdsecure=false` or `geneos deploy ... licdsecure=false`, or using `geneos set` later on.
 
 * `logfile` (Default: `gateway.log`)
 

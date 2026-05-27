@@ -275,3 +275,26 @@ func ReadPrivateKey(i geneos.Instance, ext ...string) (key certs.PrivateKey, err
 
 	return certs.ReadPrivateKey(i.Host(), strings.Join(append([]string{keyPath}, ext...), "."))
 }
+
+// IsTLSCapable checks if TLS is enabled for the instance by checking
+// for the presence of certificate and key paths in the configuration
+// and that the files exist.
+func IsTLSCapable(i geneos.Instance) bool {
+	cf := i.Config()
+
+	certPath, certOK := config.Lookup[string](cf, cf.Join(TLSBASE, CERTIFICATE))
+	keyPath, keyOK := config.Lookup[string](cf, cf.Join(TLSBASE, PRIVATEKEY))
+
+	if !certOK || !keyOK {
+		// check old style parameters for backwards compatibility
+		certPath, certOK = config.Lookup[string](cf, CERTIFICATE)
+		keyPath, keyOK = config.Lookup[string](cf, PRIVATEKEY)
+	}
+
+	if !certOK || !keyOK {
+		return false
+	}
+
+	missing := CheckPaths(i, certPath, keyPath)
+	return len(missing) == 0
+}
