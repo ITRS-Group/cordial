@@ -265,8 +265,7 @@ func (i *Floatings) Rebuild(initial bool) (err error) {
 
 	// recheck check certs/keys
 	var changed bool
-	secure := (instance.FileOf(i, cf.Join("tls", "certificate")) != "" && instance.FileOf(i, cf.Join("tls", "privatekey")) != "") ||
-		(instance.FileOf(i, "certificate") != "" && instance.FileOf(i, "privatekey") != "")
+	secure := instance.IsTLSCapable(i)
 	gws := config.Get[map[string]string](cf, "gateways")
 	for gw := range gws {
 		port := gws[gw]

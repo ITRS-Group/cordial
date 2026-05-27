@@ -369,9 +369,9 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 			"privatekey",
 			"certchain",
 			// new path parameters
-			cf.Join("tls", "certificate"),
-			cf.Join("tls", "privatekey"),
-			cf.Join("tls", "ca-bundle"),
+			cf.Join(instance.TLSBASE, instance.CERTIFICATE),
+			cf.Join(instance.TLSBASE, instance.PRIVATEKEY),
+			cf.Join(instance.TLSBASE, instance.CABUNDLE),
 		)
 	}
 	for _, ig := range ignoreSecure {

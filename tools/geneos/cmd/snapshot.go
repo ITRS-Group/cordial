@@ -225,7 +225,7 @@ func gatewayURL(i geneos.Instance) (u *url.URL) {
 	port := config.Get[uint16](i.Config(), "port")
 	u.Host = fmt.Sprintf("%s:%d", hostname, port)
 	u.Scheme = "http"
-	if instance.FileOf(i, i.Config().Join("tls", "certificate")) != "" || instance.FileOf(i, "certificate") != "" {
+	if instance.IsTLSCapable(i) {
 		u.Scheme = "https"
 	}
 	return

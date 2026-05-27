@@ -131,7 +131,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	switch {
 	case renewCmdRoll:
-		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
+		if err = instance.RollFiles(i, newFileSuffix, oldFileSuffix, cf.Join(instance.TLSBASE, instance.CERTIFICATE), cf.Join(instance.TLSBASE, instance.PRIVATEKEY)); err != nil {
 			resp.Err = err
 			return
 		}
@@ -140,7 +140,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 		return
 
 	case renewCmdUnroll:
-		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, cf.Join("tls", "certificate"), cf.Join("tls", "privatekey")); err != nil {
+		if err = instance.RollFiles(i, oldFileSuffix, newFileSuffix, cf.Join(instance.TLSBASE, instance.CERTIFICATE), cf.Join(instance.TLSBASE, instance.PRIVATEKEY)); err != nil {
 			resp.Err = err
 			return
 		}

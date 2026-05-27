@@ -283,8 +283,8 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 
 	sp["port"] = config.Get[string](cf, "port")
 
-	sp["trustStore"] = config.Get[string](cf, cf.Join("tls", "truststore"), config.DefaultValue(geneos.PathToCABundle(h, certs.KeystoreExtension)))
-	sp["trustStorePassword"] = config.Get[string](cf, cf.Join("tls", "truststore-password"), config.DefaultValue("changeit"))
+	sp["trustStore"] = config.Get[string](cf, cf.Join(instance.TLSBASE, instance.TRUSTSTORE), config.DefaultValue(geneos.PathToCABundle(h, certs.KeystoreExtension)))
+	sp["trustStorePassword"] = config.Get[string](cf, cf.Join(instance.TLSBASE, instance.TRUSTSTORE_PASSWORD), config.DefaultValue("changeit"))
 	sp["trustStoreType"] = "JKS"
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {

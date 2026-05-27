@@ -176,7 +176,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				sizes["TLS:!SHARED"] = -1
 				files["TLS:!SHARED"] = 0
 			}
-			if err = writeSharedTLSFile(path.Join("tls", rest), tr, hdr, opts); err != nil {
+			if err = writeSharedTLSFile(path.Join(instance.TLSBASE, rest), tr, hdr, opts); err != nil {
 				if errors.Is(err, os.ErrExist) && opts.list {
 					// up the count regardless of existence when listing
 					sizes["TLS:!SHARED"] += hdr.Size

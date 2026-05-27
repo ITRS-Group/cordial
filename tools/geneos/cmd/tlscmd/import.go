@@ -175,7 +175,7 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General
 	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), certBundle.Root)
 
 	if resp.Err == nil {
-		config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+		config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 	}
 
 	if updated {

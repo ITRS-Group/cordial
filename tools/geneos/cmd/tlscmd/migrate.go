@@ -106,7 +106,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	// first check if already the instance already appears to have been
 	// migrated
-	if cf.IsSet(cf.Join("tls", "certificate")) {
+	if cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) {
 		resp.Completed = append(resp.Completed, "already migrated ✔️")
 		return
 	}
@@ -273,14 +273,14 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if pk := config.Get[string](cf, "privatekey"); pk != "" {
 		// this may have already been done above in webserver/sso-agent
 		config.Delete(cf, "privatekey")
-		config.Set(cf, cf.Join("tls", "privatekey"), pk)
+		config.Set(cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), pk)
 	}
-	config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(i.Host()))
+	config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
 	// only set tls::verify to false if `use-chain` is not set or false.
 	// If tls::verify is not set, the default is `true`
 	if usechain, ok := config.Lookup[bool](cf, "use-chain"); !ok || !usechain {
-		config.Set(cf, cf.Join("tls", "verify"), false)
+		config.Set(cf, cf.Join(instance.TLSBASE, instance.TLSVERIFY), false)
 	}
 
 	config.Delete(cf, "certchain")

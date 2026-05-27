@@ -458,8 +458,7 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	env = append(env, secureEnvs...)
 	checks = append(checks, fileChecks...)
 
-	// 3 options: set, set to false, not set
-	if config.Get[bool](cf, "licdsecure") || (!cf.IsSet("licdsecure") && (instance.FileOf(i, cf.Join("tls", "certificate")) != "" || instance.FileOf(i, "certificate") != "")) {
+	if config.Get[bool](cf, "licdsecure", config.DefaultValue(instance.IsTLSCapable(i))) {
 		args = append(args, "-licd-secure")
 	}
 

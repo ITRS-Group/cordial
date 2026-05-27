@@ -363,7 +363,7 @@ var deployCmd = &cobra.Command{
 			if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
 				return err
 			}
-			config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+			config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
 
 			if updated {
 				fmt.Printf("%s ca-bundle updated\n", i)
@@ -371,7 +371,7 @@ var deployCmd = &cobra.Command{
 
 			// always set the ca-bundle path, updated or not
 			log.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
-			config.Set(cf, cf.Join("tls", "ca-bundle"), geneos.PathToCABundlePEM(h))
+			config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
 
 			if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 				return resp.Err
