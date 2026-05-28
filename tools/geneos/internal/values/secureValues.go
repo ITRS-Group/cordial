@@ -29,7 +29,7 @@ import (
 type SecureValues []*SecureValue
 
 type SecureValue struct {
-	Value      string
+	Name       string
 	Secret     config.Secret
 	Ciphertext string
 }
@@ -49,11 +49,11 @@ func (p *SecureValues) Set(v string) error {
 	value, secret, found := strings.Cut(v, "=")
 	if !found {
 		*p = append(*p, &SecureValue{
-			Value: value,
+			Name: value,
 		})
 	} else {
 		*p = append(*p, &SecureValue{
-			Value:  value,
+			Name:   value,
 			Secret: config.Secret(secret),
 		})
 	}

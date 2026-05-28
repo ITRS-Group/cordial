@@ -422,7 +422,6 @@ func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string,
 	)
 
 	if cf.IsSet("gateway-hub") && cf.IsSet("obcerv") {
-		// log.Debug().Msg("only one of 'obcerv' or 'gateway-hub' can be set")
 		err = fmt.Errorf("%w: only one of 'obcerv' or 'gateway-hub' can be set", geneos.ErrInvalidArgs)
 		return
 	}

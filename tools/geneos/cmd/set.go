@@ -102,12 +102,12 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		}
 
 		setCmdValues.Params = params
-		instance.Do(geneos.GetHost(Hostname), ct, names, setValues, params).Report(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, setValues, nil).Report(os.Stdout)
 		return
 	},
 }
 
-func setValues(i geneos.Instance, params ...any) (resp *responses.General) {
+func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.NewResponse(i)
 
 	cf := i.Config()
@@ -136,6 +136,7 @@ func setValues(i geneos.Instance, params ...any) (resp *responses.General) {
 	if cf, resp.Err = values.Set(i, setCmdValues, keyfile); resp.Err != nil {
 		return
 	}
+
 	// only overwrite instance config on success
 	i.SetConfig(cf)
 
@@ -148,8 +149,8 @@ func promptForSecrets(prompt string, v values.SecureValues) (err error) {
 		if len(s.Secret) == 0 {
 			// prompt
 			s.Secret, err = config.ReadPasswordInput(true, 3,
-				fmt.Sprintf("Enter Secret for %s %q", prompt, s.Value),
-				fmt.Sprintf("Re-enter Secret for %s %q", prompt, s.Value),
+				fmt.Sprintf("Enter Secret for %s %q", prompt, s.Name),
+				fmt.Sprintf("Re-enter Secret for %s %q", prompt, s.Name),
 			)
 			if err != nil {
 				return

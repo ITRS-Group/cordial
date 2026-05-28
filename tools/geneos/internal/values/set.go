@@ -7,6 +7,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 )
 
 // Set applies the settings in values to instance i and returns a new
@@ -34,7 +35,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 			err = fmt.Errorf("keyfile is required to set secure parameters")
 			return
 		}
-		secrets, err = updateEncoded(h, cf, values.SecureParams, keyfile)
+		secrets, err = updateEncoded(h, values.SecureParams, keyfile)
 		if err != nil {
 			return
 		}
@@ -51,7 +52,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 			err = fmt.Errorf("keyfile is required to set secure environment variables")
 			return
 		}
-		secrets, err = updateEncoded(h, cf, values.SecureEnvs, keyfile)
+		secrets, err = updateEncoded(h, values.SecureEnvs, keyfile)
 		if err != nil {
 			return
 		}
@@ -108,6 +109,11 @@ func updateMap[V any](cf *config.Config, confKey string, items map[string]V) {
 // updateVars updates the variables configuration for instance i, which
 // is now a slice of Variable, but previously was a map. Any old style
 // map is converted and then updated with the new items.
+//
+// variables of type "secret" are checked and if the value is empty then
+// the user is prompted for the value, which is then encrypted with
+// their keyfile. non empty values are checked for encoding, and if
+// plain text then they are encoded
 func updateVars(cf *config.Config, confKey string, items []Variable) {
 	s, found := config.Lookup[any](cf, confKey)
 	vars := []Variable{}
@@ -116,6 +122,33 @@ func updateVars(cf *config.Config, confKey string, items []Variable) {
 	}
 
 	for _, v := range items {
+		if v.Type == "secret" {
+			v.Type = "string"
+			k := geneos.DefaultUserKeyfile
+			if v.Value == "" {
+				// prompt for value and encode
+				secret, err := config.ReadPasswordInput(true, 3,
+					fmt.Sprintf("Enter Secret for variable %q", v.Name),
+					fmt.Sprintf("Re-enter Secret for variable %q", v.Name),
+				)
+				if err != nil {
+					return
+				}
+				v.Value, err = k.Encode(geneos.LOCAL, secret, true)
+				clear(secret)
+			} else if strings.HasPrefix(v.Value, "${enc:") {
+				// value is already encrypted, just use it as is
+			} else {
+				var err error
+				// encrypt value and store as special secret type
+				v.Value, err = k.EncodeString(geneos.LOCAL, v.Value, true)
+				if err != nil {
+					log.Error().Err(err).Msgf("failed to encrypt secret for variable %q", v.Name)
+					return
+				}
+			}
+		}
+
 		// check if variable already exists, update if so
 		n := slices.IndexFunc(vars, func(item Variable) bool {
 			return item.Name == v.Name
@@ -140,7 +173,10 @@ func updateVars(cf *config.Config, confKey string, items []Variable) {
 // passed in. The name is taken from the Value field. The returned slice
 // can then be passed to config.SetKeyValuePairs to set the values in
 // the instance configuration.
-func updateEncoded(h *geneos.Host, cf *config.Config, values SecureValues, keyFile config.KeyFile) (params []string, err error) {
+//
+// The Secret fields are cleared after encoding to remove the plaintext
+// value from memory as soon as possible.
+func updateEncoded(h *geneos.Host, values SecureValues, keyFile config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
 	}
@@ -157,11 +193,12 @@ func updateEncoded(h *geneos.Host, cf *config.Config, values SecureValues, keyFi
 			continue
 		}
 		s.Ciphertext, err = keyFile.Encode(h, s.Secret, true)
+		clear(s.Secret)
 		if err != nil {
 			return
 		}
 
-		params = append(params, s.Value+"="+s.Ciphertext)
+		params = append(params, s.Name+"="+s.Ciphertext)
 	}
 	return
 }

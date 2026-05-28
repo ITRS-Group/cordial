@@ -324,7 +324,6 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 		return
 	}
 
-	log.Debug().Msgf("rebuilding instance %s", i)
 	if err := i.Rebuild(false); err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) {
 			// not an error if not supported

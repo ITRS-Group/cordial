@@ -1,7 +1,6 @@
 package values
 
 import (
-	"encoding/hex"
 	"reflect"
 	"slices"
 	"strings"
@@ -35,9 +34,9 @@ func (v *Variables) Set(value string) error {
 		*v = Variables{}
 	}
 
-	key, val := getVarValue(value)
-	n := slices.IndexFunc[Variables, Variable](*v, func(item Variable) bool {
-		return item.Name == key
+	val := getVarValue(value)
+	n := slices.IndexFunc(*v, func(item Variable) bool {
+		return item.Name == val.Name
 	})
 	if n >= 0 {
 		(*v)[n] = val
@@ -51,15 +50,15 @@ func (v *Variables) Type() string {
 	return "[TYPE:]NAME=VALUE"
 }
 
-func getVarValue(in string) (key string, value Variable) {
-	var t, k, v string
+func getVarValue(in string) (variable Variable) {
+	var t, name, value string
 
 	t, r, found := strings.Cut(in, ":")
 	if !found {
 		t = "string"
-		k, v, _ = strings.Cut(in, "=")
+		name, value, _ = strings.Cut(in, "=")
 	} else {
-		k, v, _ = strings.Cut(r, "=")
+		name, value, _ = strings.Cut(r, "=")
 	}
 
 	// XXX check types here - e[0] options type, default string
@@ -70,18 +69,16 @@ func getVarValue(in string) (key string, value Variable) {
 		"boolean":            "",
 		"activeTime":         "",
 		"externalConfigFile": "",
+		"secret":             "", // custom type to indicate value should be encrypted with keyfile, stored as string type
 	}
 	if _, ok := validtypes[t]; !ok {
-		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile'", t)
+		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile', 'secret'", t)
 		return
 	}
-	// the key is a kex string of the name to avoid case-sensitive
-	// issues with the name
-	key = hex.EncodeToString([]byte(k))
-	value = Variable{
+	variable = Variable{
 		Type:  t,
-		Name:  k,
-		Value: v,
+		Name:  name,
+		Value: value,
 	}
 	return
 }

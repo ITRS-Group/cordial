@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -117,9 +118,10 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		}
 	}
 
-	// convert "variables" (if any) from slice of structs to slice of maps for lower case keys in templates
+	// convert "variables" (if any) from slice of structs to slice of
+	// maps for lower case keys in templates
+	newVals := []map[string]string{}
 	if variables, found := m["variables"]; found {
-		newVals := []map[string]string{}
 		switch vx := variables.(type) {
 		case []map[string]string:
 			newVals = vx
@@ -154,7 +156,6 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 			// drop through
 		}
 
-		m["variables"] = newVals
 	}
 
 	// tls migration, for now lift new settings up to old names
@@ -170,6 +171,90 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 			}
 		}
 	}
+
+	if i.Type().IsA("gateway") {
+		// finally, for gateways, go through environment variables and
+		// variables for encoded values, attempt to decode them using
+		// given keyfile and re-encode them using the instance keyfile
+		// (if any) and move them into a new list so they can be pulled
+		// out into Geneos AES256 encoded variable types and not plain
+		// strings.
+		//
+		// Self-announcing netprobes do not support password variables,
+		// but we leave them as strings for toolkits etc to potentially
+		// decode
+		if k, _, _, err := ReadAESKeyFile(i); err == nil {
+			if env, ok := m["env"]; ok {
+				var envsStr []string
+
+				switch ev := env.(type) {
+				case []string:
+					envsStr = ev
+				case []any:
+					for _, e := range ev {
+						if es, ok := e.(string); ok {
+							envsStr = append(envsStr, es)
+						} else {
+							log.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, e, e)
+						}
+					}
+				default:
+					log.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, env, env)
+				}
+				envsStr = slices.DeleteFunc(envsStr, func(e string) bool {
+					name, value, found := strings.Cut(e, "=")
+					if !found {
+						log.Warn().Msgf("invalid env variable %q, expected format KEY=VALUE", e)
+						return true
+					}
+					if strings.HasPrefix(value, "${enc:") {
+						secret := cf.ExpandToPassword(value)
+						defer clear(secret)
+						if len(secret) > 0 {
+							enc, err := k.Encode(h, secret, false)
+							if err != nil {
+								log.Warn().Msgf("Cannot re-encode environment variable %q for %s: %v", name, i, err)
+								// but remove it anyway to avoid leaving secrets in plain text
+								return true
+							}
+							newVals = append(newVals, map[string]string{
+								"type":  "stdAESPassword",
+								"name":  name,
+								"value": "<stdAES>" + enc + "</stdAES>",
+							})
+						}
+						// remove all encoded vars
+						return true
+					}
+
+					return false
+				})
+				m["env"] = envsStr
+			}
+
+			newVals = slices.DeleteFunc(newVals, func(v map[string]string) bool {
+				if v["type"] == "string" && strings.HasPrefix(v["value"], "${enc:") {
+					secret := cf.ExpandToPassword(v["value"])
+					defer clear(secret)
+					if len(secret) == 0 {
+						return true
+					}
+
+					enc, err := k.Encode(h, secret, false)
+					if err != nil {
+						log.Warn().Msgf("Cannot re-encode variable %q for %s: %v", v["name"], i, err)
+						return true
+					}
+					v["type"] = "stdAESPassword"
+					v["value"] = "<stdAES>" + enc + "</stdAES>"
+				}
+
+				return false
+			})
+		}
+	}
+
+	m["variables"] = newVals
 
 	log.Debug().Msgf("executing template %q to create %q with data %#v", name, outputPathTmp, m)
 
