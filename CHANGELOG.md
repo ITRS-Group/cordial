@@ -15,6 +15,8 @@
 
 ### Version v1.27.0 Highlights
 
+This release includes a significant number of changes and while testing has been done, there may be issues that have slipped through. Please report any issues you find via the usual channels. For the `tools/geneos` program, please use the `geneos backup --shared --aes --tls` command after first installing this release to ensure you have a rollback option if you encounter any issues.
+
 > [!IMPORTANT]
 > This release includes changes to templates, which are used to build configuration files for Gateways, Self-Announcing and Floating Netprobes. For existing installations you should run `geneos init template` after updating `geneos`. If you have made changes to your templates then you should back these up and compare to the new version which make changes to better support the TLS changes in recent releases and also add support for "variables" in the Gateway `instance.setup.xml` file, which can be used to set configuration parameters on the Gateway instance without needing to edit the XML directly.
 
@@ -62,15 +64,17 @@
 
 * `tools/geneos`
 
-  * Instances that crash and want to dump core can now do so, after the `memguard` removal above. This is enabled by default and can be controlled by your OS-level rlimits and core-dump settings. Core files will be written where your OS configuration is set to do so.
-
-  * The program sets the EUID and EGID values (on Linux) to the real UID and GID on start-up. This avoids issues with inherited privileges and, as a by-product, syslog `logger` tags.
-
   * Add a `reset` command which is the same as `clean --full` but will not match any instance by default, to protect against unintended restarts. Use `geneos reset all` to act on all instances (that are not protected).
 
   * Revisit `tls info` to add numerous features. Highlights include more verification options, a useful `toolkit` output mode and more. Please see the docs for details: [`geneos help tls info`](tools/geneos/docs/geneos_tls_info.md). Note that columns, column names and ordering has changed.
 
   * Update `ps`/`status` command to add detection and listing of managed Collection Agent processes running as a child process of Netprobes. These are shown in the output as `netprobe/ca`.
+
+  * When setting "secure" environment variables or a new `secret` variable type on a Gateway instance, these are written out to the `instance.setup.xml` file as Geneos `stdAESPassword` variables and are re-encoded using the Gateway's AES keyfile. See `geneos help set` for more details. This allows you to use these variables in your Gateway configuration. Secure environment variables continue to be available in the running environment of all component types.
+
+  * Instances that crash and want to dump core can now do so, after the `memguard` removal above. This is enabled by default and can be controlled by your OS-level rlimits and core-dump settings. Core files will be written where your OS configuration is set to do so.
+
+  * The program sets the EUID and EGID values (on Linux) to the real UID and GID on start-up. This avoids issues with inherited privileges and, as a by-product, syslog `logger` tags.
 
   * As part of the `pkg/process` optimisations, the check for remote processes used in `status`/`ps` and elsewhere now only checks processes running as the configured user. This may result in remote processes not being listed in output and/or not being detected for commands like `start` and `stop`. But this is a safer default and should be more in line with user expectations, as well as avoiding issues with processes owned by other users being affected by `geneos` commands.
 
@@ -89,6 +93,10 @@
   * Add an option to the `explain` command to output an "expanded" query from the running config, which can then be used to manually run, edit and test from a CLI
 
   * Add an option to the `fetch` command to write the remote license data to local files, which is useful for debugging and testing
+
+* `libraries/libemail.so`
+
+  * Add support for Microsoft Teams webhook URLs, which have a different format to the standard ones. This is in addition to the existing support for Slack and generic webhooks. Thanks to @amolp-itrs for the contribution.
 
 ### Post v1.27.0 Release Planned Changes
 
