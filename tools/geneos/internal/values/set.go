@@ -84,7 +84,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 	// vars can be used in the gateway instance.setup.xml
 	if ct.IsA("gateway", "san") {
-		updateVars(cf, "variables", values.Variables)
+		updateVars(cf, "variables", values.Variables, keyfile)
 	}
 
 	return
@@ -114,7 +114,7 @@ func updateMap[V any](cf *config.Config, confKey string, items map[string]V) {
 // the user is prompted for the value, which is then encrypted with
 // their keyfile. non empty values are checked for encoding, and if
 // plain text then they are encoded
-func updateVars(cf *config.Config, confKey string, items []Variable) {
+func updateVars(cf *config.Config, confKey string, items []Variable, keyfile config.KeyFile) {
 	s, found := config.Lookup[any](cf, confKey)
 	vars := []Variable{}
 	if found {
@@ -124,7 +124,6 @@ func updateVars(cf *config.Config, confKey string, items []Variable) {
 	for _, v := range items {
 		if v.Type == "secret" {
 			v.Type = "string"
-			k := geneos.DefaultUserKeyfile
 			if v.Value == "" {
 				// prompt for value and encode
 				secret, err := config.ReadPasswordInput(true, 3,
@@ -134,14 +133,14 @@ func updateVars(cf *config.Config, confKey string, items []Variable) {
 				if err != nil {
 					return
 				}
-				v.Value, err = k.Encode(geneos.LOCAL, secret, true)
+				v.Value, err = keyfile.Encode(geneos.LOCAL, secret, true)
 				clear(secret)
 			} else if strings.HasPrefix(v.Value, "${enc:") {
 				// value is already encrypted, just use it as is
 			} else {
 				var err error
 				// encrypt value and store as special secret type
-				v.Value, err = k.EncodeString(geneos.LOCAL, v.Value, true)
+				v.Value, err = keyfile.EncodeString(geneos.LOCAL, v.Value, true)
 				if err != nil {
 					log.Error().Err(err).Msgf("failed to encrypt secret for variable %q", v.Name)
 					return
