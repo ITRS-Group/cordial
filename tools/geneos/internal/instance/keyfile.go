@@ -80,6 +80,10 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 // string is appended to the base name before the extension and the key
 // file values nkv are written to a new file and the instance settings
 // updated.
+//
+// TODO: on update, check for encoded values in instance config and
+// re-encode with new key if necessary, or at least warn about it,
+// writing config back if changed which triggers rebuild and reload
 func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (keyfile config.KeyFile, crc uint32, err error) {
 	kp := config.Get[string](i.Config(), "keyfile")
 
