@@ -156,7 +156,7 @@ row-filter:
 #
 # filter rows based on the properties of one or more columns (excluding
 # the row name). rows NOT matching the filter are dropped from the
-# email. If a dataview does not match any of the patterns then no
+# output. If the dataview does not match any of the patterns then no
 # filtering is done and all rows are included.
 #
 # The key is a dataview name pattern match, typically `*` for all, as
@@ -183,6 +183,11 @@ row-filter:
 #
 # Severity comparisons must be numeric based on Geneos standard severity
 # values.
+#
+# Expressions are in the format allowed by `goval` with variables set to
+# ... and extra functions for match() (glob patterns, which must match
+# whole string, as per path.Match) and regexp() (using Go regexp/syntax)
+# for string matching. For example `status:value=match('PROB*')`
 row-property-filter:
   '*': [ "*:severity>0,snooze=false", "percentUtilisation:severity=3", "status:value=''" ]
 
@@ -203,6 +208,12 @@ row-order:
 # always displayed in alphabetical order.
 headline-filter:
   # '*': samp*
+
+# similar to the above proposed row-proerty-filter, these settings let
+# you filter headlines based on their properties. No ordering is
+# possible as headlines are always displayed in alphabetical order.
+headline-property-filter:
+  '*': [ "severity>0", "value=''" ]
 
 # embed these images and give them the (short) name on the left these
 # can then be referenced in the HTML as <img href="cid:logo.png"/> etc.
