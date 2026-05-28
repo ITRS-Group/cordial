@@ -139,19 +139,22 @@ There is one built in `_DEBUG` parameter but you can also add your own to the te
 
   This example parameter outputs a text and HTML table of all parameters, unsorted, which may or may not include the EMail meta-parameters, depending on `_DEBUG` above. In the built-in templates this has to be either `TRUE` or `true` and will not work for `True`, for example.
 
-## `GoSendToMsTeamsChannel` function
+## `GoSendToMsTeamsWorkflow` function
 
-This is a function that sends notification messages to one or multiple Microsoft Teams channels, using the incoming webhook API. A pre-requisite for using this function is to create an incoming webhook for each target channel in Microsoft Teams.  See following refs for details:
+This is a function that sends notification messages to one or multiple Microsoft Teams channels, using the **Teams Workflows** app framework. 
 
-* <https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook>
-* <https://techcommunity.microsoft.com/t5/microsoft-365-pnp-blog/how-to-configure-and-use-incoming-webhooks-in-microsoft-teams/ba-p/2051118>
-* <https://docs.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/connectors-using?tabs=cURL>
+### Pre-requisite
+A pre-requisite for using this function is to configure a Workflow ("Post to a channel when a Webhook request is received") for each target channel in Microsoft Teams to obtain a unique Workflow URL. 
 
-The following parameters are used to send messages to Microsoft Teams chanela with support for `Go` templates (both text & HTML):
+The function formats messages using Microsoft **Adaptive Cards (version 1.5)**.
+
+To know more about what you can do with adaptive cards - https://adaptivecards.microsoft.com/?topic=AdaptiveCard
+
+The following parameters are used to route, construct, and style messages with support for `Go` templates (both text & HTML) or raw Adaptive Card JSON structures:
 
 * `_TO`
 
-  List of Microsoft Teams incoming webhook URLs, separated by `|` (pipe) character.
+  List of Microsoft Teams Workflow URLs, separated by `|` (pipe) character.
 
 * `_SUBJECT`
 
@@ -175,3 +178,132 @@ The following parameters are used to send messages to Microsoft Teams chanela wi
 * `_FORMAT`
 
   Override the built-in template (default) with a single block of configurable text using either a `Go` template format or a Geneos legacy format.
+
+
+### Sample `_TEMPLATE_TEXT` Configuration
+
+Below is an example of passing a valid JSON array into `_TEMPLATE_TEXT` utilizing legacy Geneos formatting tokens.
+This generate a adaptive card message with some basic geneos info like Gateway, Netprobe, Managed Entity, Sampler and Dataview. It also contains an example table and URLs (to link to dashboard or IAX)
+
+```json
+[
+  {
+    "type": "TextBlock",
+    "text": "System Health Report",
+    "size": "ExtraLarge",
+    "weight": "Bolder",
+    "color": "Accent"
+  },
+  {
+    "type": "FactSet",
+    "facts": [
+      {
+        "title": "Hostname",
+        "value": "%(_PROBE)"
+      },
+      {
+        "title": "Gateway",
+        "value": "%(_GATEWAY)"
+      },
+      {
+        "title": "Managed Entity",
+        "value": "%(_MANAGED_ENTITY)"
+      },
+      {
+        "title": "Sampler",
+        "value": "%(_SAMPLER)"
+      },
+      {
+        "title": "Dataview",
+        "value": "%(_DATAVIEW)"
+      }
+    ]
+  },
+  {
+    "type": "Table",
+    "columns": [
+      {
+        "width": 1
+      },
+      {
+        "width": 3
+      }
+    ],
+    "rows": [
+      {
+        "type": "TableRow",
+        "cells": [
+          {
+            "type": "TableCell",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "Metric",
+                "weight": "Bolder"
+              }
+            ]
+          },
+          {
+            "type": "TableCell",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "Value",
+                "weight": "Bolder"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "TableRow",
+        "cells": [
+          {
+            "type": "TableCell",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "Memory"
+              }
+            ]
+          },
+          {
+            "type": "TableCell",
+            "style": "Good",
+            "items": [
+              {
+                "type": "TextBlock",
+                "text": "%(_VALUE)",
+                "weight": "Bolder"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "RichTextBlock",
+    "inlines": [
+      {
+        "type": "TextRun",
+        "text": "For more details, please visit the "
+      },
+      {
+        "type": "TextRun",
+        "text": "important link",
+        "color": "Emphasis",
+        "underline": true,
+        "selectAction": {
+          "type": "Action.OpenUrl",
+          "url": "[https://www.google.com](https://www.google.com)"
+        }
+      }
+    ]
+  }
+]
+```
+
+Output in MS Teams channel for above `_TEMPLATE_TEXT` Configuration-
+
+![Sample Teams Notification](assets/Sample_Teams_Notification.png)
