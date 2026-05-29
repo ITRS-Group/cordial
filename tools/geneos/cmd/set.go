@@ -114,7 +114,15 @@ func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	keyfile := setCmdKeyfile
 
-	if len(setCmdValues.SecureParams) > 0 || len(setCmdValues.SecureEnvs) > 0 {
+	needKeyfile := len(setCmdValues.SecureParams) > 0 || len(setCmdValues.SecureEnvs) > 0
+	for _, v := range setCmdValues.Variables {
+		if v.Type == "secret" {
+			needKeyfile = true
+			break
+		}
+	}
+
+	if needKeyfile {
 		if keyfile == "" {
 			var created bool
 			var err error
@@ -172,7 +180,8 @@ func getKeyfile(i geneos.Instance) (keyFile config.KeyFile, created bool, err er
 	cf := i.Config()
 	ct := i.Type()
 
-	if keyFile = config.KeyFile(config.Get[string](cf, "keyfile")); keyFile != "" {
+	var found bool
+	if keyFile, found = config.Lookup[config.KeyFile](cf, "keyfile"); found {
 		return
 	}
 

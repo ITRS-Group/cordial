@@ -404,7 +404,9 @@ var deployCmd = &cobra.Command{
 		}
 
 		deployCmdExtras.Params = params
-		if ncf, err := values.Set(i, deployCmdExtras, ""); err == nil {
+		keyfile := config.Get[config.KeyFile](cf, "keyfile")
+
+		if ncf, err := values.Set(i, deployCmdExtras, keyfile); err == nil {
 			i.SetConfig(ncf)
 			cf = ncf
 		}

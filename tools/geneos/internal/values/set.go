@@ -123,6 +123,10 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 
 	for _, v := range items {
 		if v.Type == "secret" {
+			if keyfile == "" {
+				log.Error().Msgf("keyfile is required to set secret variable %q", v.Name)
+				continue
+			}
 			v.Type = "string"
 			if v.Value == "" {
 				// prompt for value and encode

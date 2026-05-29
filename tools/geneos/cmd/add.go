@@ -259,7 +259,8 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		}
 	}
 
-	if ncf, err := values.Set(i, addCmdExtras, ""); err == nil {
+	keyfile := config.Get[config.KeyFile](cf, "keyfile")
+	if ncf, err := values.Set(i, addCmdExtras, keyfile); err == nil {
 		i.SetConfig(ncf)
 		cf = ncf
 	}
