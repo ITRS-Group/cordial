@@ -7,18 +7,11 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
-
-type procCache struct {
-	// LastUpdate is the time when the cache was last updated
-	LastUpdate time.Time
-
-	// Entries is the map of process entries, indexed by PID
-	Entries map[int]*ProcessInfo
-}
 
 // procCache is a map of host to procCache, which is used to cache
 // process entries for each host. It is used to avoid repeated calls to
@@ -89,19 +82,20 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	return c, true
 }
 
-func checkAndFillCache(h host.Host, pid int, pc *ProcessInfo) {
+func checkAndFillCache[T any](h host.Host, pid int, pc T) {
 	// check if OpenFiles is empty, if so fill it
-	if len(pc.OpenFiles) == 0 {
-		ProcessStatusOpenFiles(h, uint32(pid), reflect.ValueOf(pc).Elem().FieldByName("OpenFiles"))
+	sv := reflect.ValueOf(pc).Elem()
+	if sv.FieldByName("OpenFiles").IsValid() && sv.FieldByName("OpenFiles").IsZero() {
+		ProcessStatusOpenFiles(h, pid, sv.FieldByName("OpenFiles"))
 	}
 
 	// check if OpenSockets is zero, if so fill it
-	if pc.OpenSockets == 0 {
-		ProcessStatusOpenSockets(h, uint32(pid), reflect.ValueOf(pc).Elem().FieldByName("OpenSockets"))
+	if sv.FieldByName("OpenSockets").IsValid() && sv.FieldByName("OpenSockets").IsZero() {
+		ProcessStatusOpenSockets(h, pid, sv.FieldByName("OpenSockets"))
 	}
 
 	// check if ListeningPorts is empty, if so fill it
-	if pc.ListeningPorts == "" {
-		ProcessStatusListeningPorts(h, uint32(pid), reflect.ValueOf(pc).Elem().FieldByName("ListeningPorts"))
+	if sv.FieldByName("ListeningPorts").IsValid() && sv.FieldByName("ListeningPorts").IsZero() {
+		ProcessStatusListeningPorts(h, pid, sv.FieldByName("ListeningPorts"))
 	}
 }

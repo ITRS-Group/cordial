@@ -15,14 +15,6 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type procCache struct {
-	// LastUpdate is the time when the cache was last updated
-	LastUpdate time.Time
-
-	// Entries is the map of process entries, indexed by PID
-	Entries map[int]*ProcessInfo
-}
-
 // procCache is a map of host to procCache, which is used to cache
 // process entries for each host. It is used to avoid repeated calls to
 // the host to get the process entries, which can be expensive.
@@ -202,22 +194,20 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	return c, true
 }
 
-func checkAndFillCache(h host.Host, pid int, pc *ProcessInfo) {
-	// this should walk the structure, but for now just hardwire it
-
+func checkAndFillCache[T any](h host.Host, pid int, pc T) {
 	// check if OpenFiles is empty, if so fill it
 	sv := reflect.ValueOf(pc).Elem()
-	if len(pc.OpenFiles) == 0 && sv.FieldByName("OpenFiles").IsValid() {
+	if sv.FieldByName("OpenFiles").IsValid() && sv.FieldByName("OpenFiles").IsZero() {
 		ProcessStatusOpenFiles(h, pid, sv.FieldByName("OpenFiles"))
 	}
 
 	// check if OpenSockets is zero, if so fill it
-	if pc.OpenSockets == 0 && sv.FieldByName("OpenSockets").IsValid() {
+	if sv.FieldByName("OpenSockets").IsValid() && sv.FieldByName("OpenSockets").IsZero() {
 		ProcessStatusOpenSockets(h, pid, sv.FieldByName("OpenSockets"))
 	}
 
 	// check if ListeningPorts is empty, if so fill it
-	if pc.ListeningPorts == "" && sv.FieldByName("ListeningPorts").IsValid() {
+	if sv.FieldByName("ListeningPorts").IsValid() && sv.FieldByName("ListeningPorts").IsZero() {
 		ProcessStatusListeningPorts(h, pid, sv.FieldByName("ListeningPorts"))
 	}
 }

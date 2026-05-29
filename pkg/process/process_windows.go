@@ -69,13 +69,13 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 
 		switch ft.Name {
 		case "OpenFiles":
-			ProcessStatusOpenFiles(h, uint32(pid), fv)
+			ProcessStatusOpenFiles(h, pid, fv)
 
 		case "OpenSockets":
-			ProcessStatusOpenSockets(h, uint32(pid), fv)
+			ProcessStatusOpenSockets(h, pid, fv)
 
 		case "ListeningPorts":
-			ProcessStatusListeningPorts(h, uint32(pid), fv)
+			ProcessStatusListeningPorts(h, pid, fv)
 		}
 	}
 
@@ -266,15 +266,15 @@ func readNTUnicodeString(ph windows.Handle, us windows.NTUnicodeString) (s strin
 	return windows.UTF16ToString(buf[:numRead/2]), nil
 }
 
-func ProcessStatusOpenFiles(h host.Host, pid uint32, fv reflect.Value) {
+func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
-func ProcessStatusOpenSockets(h host.Host, pid uint32, fv reflect.Value) {
+func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
-func ProcessStatusListeningPorts(h host.Host, pid uint32, fv reflect.Value) {
+func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
@@ -295,85 +295,6 @@ func prepareCmd(cmd *exec.Cmd) {
 		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS
 	}
 }
-
-// func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
-// 	procCacheMutex.Lock()
-// 	defer procCacheMutex.Unlock()
-
-// 	if !resetcache {
-// 		if c, ok = procCacheMap[nil].(procCache); ok {
-// 			if time.Since(c.LastUpdate) < procCacheTTL {
-// 				return
-// 			}
-// 		}
-// 	}
-
-// 	c.Entries = map[int]*ProcessInfo{}
-
-// 	handle, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
-// 	if err != nil {
-// 		log.Error().Err(err).Msg("failed to create toolhelp32 snapshot")
-// 		return c, false
-// 	}
-// 	defer windows.CloseHandle(handle)
-
-// 	var pe windows.ProcessEntry32
-// 	pe.Size = uint32(unsafe.Sizeof(pe))
-// 	if err = windows.Process32First(handle, &pe); err != nil {
-// 		log.Error().Err(err).Msg("failed to get first process")
-// 		return c, false
-// 	}
-
-// 	for {
-// 		if err = windows.Process32Next(handle, &pe); err != nil {
-// 			// done
-// 			break
-// 		}
-// 		if pe.ProcessID == 0 {
-// 			continue
-// 		}
-
-// 		pid := pe.ProcessID
-
-// 		cmdLine, StartTime, err := getProcessInfo(pid)
-// 		if err != nil {
-// 			continue
-// 		}
-
-// 		uid, gid, err := getProcessUser(windows.Handle(pid))
-// 		if err != nil {
-// 			log.Debug().Err(err).Msgf("failed to get process user for pid %d", pid)
-// 			continue
-// 		}
-
-// 		c.Entries[int(pid)] = &ProcessInfo{
-// 			PID:       int(pid),
-// 			PPID:      int(pe.ParentProcessID),
-// 			Exe:       windows.UTF16ToString(pe.ExeFile[:]),
-// 			Cmdline:   cmdLine,
-// 			StartTime: StartTime,
-// 			UID:       uid,
-// 			GID:       gid,
-// 			Username:  GetUsername(uid),
-// 			Groupname: GetGroupname(gid),
-// 			Children:  []int{},
-// 			GIDs:      []string{},
-// 		}
-// 	}
-
-// 	// build child lists
-// 	for _, p := range c.Entries {
-// 		if parent, ok := c.Entries[p.PPID]; ok {
-// 			parent.Children = append(parent.Children, p.PID)
-// 			c.Entries[p.PPID] = parent
-// 		}
-// 	}
-
-// 	c.LastUpdate = time.Now()
-// 	procCacheMap[nil] = c
-
-// 	return c, true
-// }
 
 // getProcessIngo fills in the pstats struct for a given pid.
 func getProcessInfo[T any](pid uint32, pstats T) (err error) {

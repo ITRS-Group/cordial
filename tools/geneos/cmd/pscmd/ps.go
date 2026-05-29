@@ -183,7 +183,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 	}
 }
 
-func psInstanceCommon(i geneos.Instance) (pi *process.ProcessInfo, base, actual, uptodate string, err error) {
+func psInstanceCommon(i geneos.Instance) (pi *instance.ProcessInfo, base, actual, uptodate string, err error) {
 	if instance.IsDisabled(i) {
 		err = geneos.ErrDisabled
 		return
@@ -250,19 +250,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 	)
 
 	if psCmdLong {
-		row = append(row,
-			pi.State,
-			fmt.Sprint(pi.Threads),
-			fmt.Sprint(len(pi.OpenFiles)),
-			fmt.Sprint(pi.OpenSockets),
-			fmt.Sprintf("%.2f MiB", float64(pi.VmRSS)/(1024*1024)),
-			fmt.Sprintf("%.2f MiB", float64(pi.RssAnon)/(1024*1024)),
-			fmt.Sprintf("%.2f MiB", float64(pi.VmHWM)/(1024*1024)),
-			fmt.Sprintf("%.2f s", pi.Utime.Seconds()),
-			fmt.Sprintf("%.2f s", pi.Stime.Seconds()),
-			fmt.Sprintf("%.2f s", pi.CUtime.Seconds()),
-			fmt.Sprintf("%.2f s", pi.CStime.Seconds()),
-		)
+		row = append(row, psInstanceLongColumns(pi)...)
 	}
 
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
@@ -286,19 +274,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 		)
 
 		if psCmdLong {
-			row = append(row,
-				capi.State,
-				fmt.Sprint(capi.Threads),
-				fmt.Sprint(len(capi.OpenFiles)),
-				fmt.Sprint(capi.OpenSockets),
-				fmt.Sprintf("%.2f MiB", float64(capi.VmRSS)/(1024*1024)),
-				fmt.Sprintf("%.2f MiB", float64(capi.RssAnon)/(1024*1024)),
-				fmt.Sprintf("%.2f MiB", float64(capi.VmHWM)/(1024*1024)),
-				fmt.Sprintf("%.2f s", capi.Utime.Seconds()),
-				fmt.Sprintf("%.2f s", capi.Stime.Seconds()),
-				fmt.Sprintf("%.2f s", capi.CUtime.Seconds()),
-				fmt.Sprintf("%.2f s", capi.CStime.Seconds()),
-			)
+			row = append(row, psInstanceLongColumns(capi)...)
 		}
 		resp.Dataview.Table = append(resp.Dataview.Table, row)
 	}
@@ -355,21 +331,9 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if psCmdLong {
 		// p, _ := process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
-		p, _ := process.GetProcessInfo[*process.ProcessInfo](h, pi.PID, process.FetchLazyFields())
+		p, _ := process.GetProcessInfo[*instance.ProcessInfo](h, pi.PID, process.FetchLazyFields())
 		if p != nil {
-			row = append(row,
-				p.State,
-				fmt.Sprint(p.Threads),
-				fmt.Sprint(len(p.OpenFiles)),
-				fmt.Sprint(p.OpenSockets),
-				fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
-				fmt.Sprintf("%.2f MiB", float64(p.RssAnon)/(1024*1024)),
-				fmt.Sprintf("%.2f MiB", float64(p.VmHWM)/(1024*1024)),
-				fmt.Sprintf("%.2f s", p.Utime.Seconds()),
-				fmt.Sprintf("%.2f s", p.Stime.Seconds()),
-				fmt.Sprintf("%.2f s", p.CUtime.Seconds()),
-				fmt.Sprintf("%.2f s", p.CStime.Seconds()),
-			)
+			row = append(row, psInstanceLongColumns(p)...)
 		}
 	}
 
@@ -397,21 +361,9 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		)
 
 		if psCmdLong {
-			p, _ := process.GetProcessInfo[*process.ProcessInfo](h, capi.PID, process.FetchLazyFields())
+			p, _ := process.GetProcessInfo[*instance.ProcessInfo](h, capi.PID, process.FetchLazyFields())
 			if p != nil {
-				row = append(row,
-					p.State,
-					fmt.Sprint(p.Threads),
-					fmt.Sprint(len(p.OpenFiles)),
-					fmt.Sprint(p.OpenSockets),
-					fmt.Sprintf("%.2f MiB", float64(p.VmRSS)/(1024*1024)),
-					fmt.Sprintf("%.2f MiB", float64(p.RssAnon)/(1024*1024)),
-					fmt.Sprintf("%.2f MiB", float64(p.VmHWM)/(1024*1024)),
-					fmt.Sprintf("%.2f s", p.Utime.Seconds()),
-					fmt.Sprintf("%.2f s", p.Stime.Seconds()),
-					fmt.Sprintf("%.2f s", p.CUtime.Seconds()),
-					fmt.Sprintf("%.2f s", p.CStime.Seconds()),
-				)
+				row = append(row, psInstanceLongColumns(p)...)
 			}
 		}
 		resp.Dataview.Table = append(resp.Dataview.Table, row)

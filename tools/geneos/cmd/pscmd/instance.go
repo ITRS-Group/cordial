@@ -8,6 +8,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 type psInstance struct {
@@ -20,7 +21,7 @@ type psInstance struct {
 	Home      string    `json:"home,omitempty"`
 
 	// Extra fields, when `--long` is used
-	Extra *process.ProcessInfo `json:"extra,omitempty"`
+	Extra *instance.ProcessInfo `json:"extra,omitempty"`
 }
 
 var instanceToolkitColumns = []string{
@@ -50,35 +51,7 @@ var instanceCSVColumns = []string{
 	"Home",
 }
 
-var instanceToolkitExtraColumns = []string{
-	"state",
-	"threads",
-	"openfiles",
-	"opensockets",
-	"residentSetSize",
-	"residentSetSizeAnon",
-	"residentSetSizeMax",
-	"totalUserTime",
-	"totalKernelTime",
-	"totalChildUserTime",
-	"totalChildKernelTime",
-}
-
-var instanceCSVExtraColumns = []string{
-	"State",
-	"Threads",
-	"Open Files",
-	"Open Sockets",
-	"RSS",
-	"RSSAnon",
-	"RSSMax",
-	"TotalUserTime",
-	"TotalKernelTime",
-	"TotalChildUserTime",
-	"TotalChildKernelTime",
-}
 var instanceCSVHeader = strings.Join(instanceCSVColumns, "\t")
-var instanceCSVLongHeader = strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t")
 
 func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	ct := i.Type()
@@ -107,13 +80,13 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 
 	if psCmdLong {
 		// psData.Extra, _ = process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
-		psData.Extra, _ = process.GetProcessInfo[*process.ProcessInfo](h, pi.PID, process.FetchLazyFields())
+		psData.Extra, _ = process.GetProcessInfo[*instance.ProcessInfo](h, pi.PID, process.FetchLazyFields())
 	}
 
 	return psData, nil
 }
 
-func checkCA(i geneos.Instance, children []int) (pi *process.ProcessInfo, ok bool, err error) {
+func checkCA(i geneos.Instance, children []int) (pi *instance.ProcessInfo, ok bool, err error) {
 	ct := i.Type()
 	h := i.Host()
 
@@ -122,7 +95,7 @@ func checkCA(i geneos.Instance, children []int) (pi *process.ProcessInfo, ok boo
 	}
 
 	for _, pid := range children {
-		pi, err = process.GetProcessInfo[*process.ProcessInfo](h, pid, process.FetchLazyFields())
+		pi, err = process.GetProcessInfo[*instance.ProcessInfo](h, pid, process.FetchLazyFields())
 		if err != nil {
 			continue
 		}

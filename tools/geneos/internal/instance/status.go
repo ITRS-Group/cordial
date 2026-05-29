@@ -171,13 +171,13 @@ func GetLivePID(i geneos.Instance) (pid int, err error) {
 // process cache is used to avoid repeated calls to the host to get the
 // process entries, which can be expensive. The cache is updated every 5
 // seconds, or when the cache is empty.
-func GetProcessInfo(i geneos.Instance) (pi *process.ProcessInfo, err error) {
+func GetProcessInfo(i geneos.Instance) (pi *ProcessInfo, err error) {
 	pid, err := GetPID(i)
 	if err != nil {
 		return
 	}
 
-	return process.GetProcessInfo[*process.ProcessInfo](i.Host(), pid, process.FetchLazyFields())
+	return process.GetProcessInfo[*ProcessInfo](i.Host(), pid, process.FetchLazyFields())
 }
 
 // GetChildPIDs returns a list of child processes for the instance
@@ -193,7 +193,7 @@ func GetChildPIDs(i geneos.Instance) (children []int, err error) {
 
 	h := i.Host()
 
-	pi, err := process.GetProcessInfo[*process.ProcessInfo](h, pid, process.FetchLazyFields())
+	pi, err := process.GetProcessInfo[*ProcessInfo](h, pid, process.FetchLazyFields())
 	if err != nil {
 		return
 	}

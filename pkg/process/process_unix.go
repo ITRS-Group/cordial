@@ -368,8 +368,3 @@ func prepareCmd(cmd *exec.Cmd) {
 		cmd.SysProcAttr.Setsid = true
 	}
 }
-
-// stub
-func getWindowsProcCache(resetcache bool) (c procCache, ok bool) {
-	return
-}
