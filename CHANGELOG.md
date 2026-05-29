@@ -1,5 +1,19 @@
 # Change Log
 
+
+## Version v1.27.2
+
+> [!NOTE]
+> **Released 2026-05-29** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.27.2 Fixes
+
+* `tools/geneos`
+
+  * The instance keyfile was not being passed to the `values.Set` function when setting variables, which meant that secure variables were not being properly encoded and written to the `instance.setup.xml` file. This has been fixed by passing the keyfile to the `values.Set` function when setting variables.
+
+---
+
 >[!WARNING]
 >Release v1.26 and later - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
@@ -11,7 +25,7 @@
 ## Version v1.27.0
 
 > [!NOTE]
-> **Released 2026-05-07** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-05-28** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.27.0 Highlights
 
