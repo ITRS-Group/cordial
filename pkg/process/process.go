@@ -111,7 +111,7 @@ func PID(h host.Host, executable string, args []string, options ...ProcessOption
 
 	c, ok := getProcesses[*ProcessInfoMinimal](h, options...)
 	if !ok {
-		return 0, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+		return 0, fmt.Errorf("host %s does not support process lookups", h)
 	}
 
 	for _, pc := range c {
@@ -167,7 +167,7 @@ func GetProcessInfo[T any](h host.Host, pid int, options ...ProcessOption) (pi T
 
 		cache, ok := getProcesses[*ProcessInfo](h, options...)
 		if !ok {
-			return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+			return pi, fmt.Errorf("host %s does not support process lookups", h)
 		}
 		if p, ok = cache[pid]; ok {
 			if opts.fetchLazy {
@@ -179,7 +179,7 @@ func GetProcessInfo[T any](h host.Host, pid int, options ...ProcessOption) (pi T
 	default:
 		cache, ok := getProcesses[T](h, options...)
 		if !ok {
-			return pi, fmt.Errorf("host %s does not support process lookups", h.ServerVersion())
+			return pi, fmt.Errorf("host %s does not support process lookups", h)
 		}
 		if p, ok = cache[pid]; ok {
 			return any(p).(T), nil

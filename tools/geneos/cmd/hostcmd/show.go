@@ -81,7 +81,7 @@ var showCmd = &cobra.Command{
 			confs = append(confs, showCmdConfig{
 				Name:   config.Get[string](h.Config, "name"),
 				Hidden: h.Hidden(),
-				Config: h.AllSettings(),
+				Config: h.Config.AllSettings(),
 			})
 		}
 

@@ -274,7 +274,7 @@ func (i *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 		"-port", config.Get[string](i.Config(), "port"),
 	}
 
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		args = append(args, "-cmd")
 	}
 

@@ -32,7 +32,7 @@ import (
 
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
 	uid, gid = -1, -1
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		if stat, ok := info.Sys().(*windows.Win32FileAttributeData); ok {
 			// Windows doesn't have the concept of UID/GID, but we can return the file's owner SID as a string
 			uid = int(stat.FileAttributes)

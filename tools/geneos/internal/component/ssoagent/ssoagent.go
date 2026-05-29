@@ -272,7 +272,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 		return err
 	}
 
-	truststorePath := instance.Abs(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
+	truststorePath := instance.HomeRel(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
 	truststorePassword := config.Get[config.Secret](ssoconf,
 		config.Join("server", "trust_store", "password"),
 		config.DefaultValue(config.Secret("changeit")),
@@ -293,7 +293,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 	if ksl, ok := config.Lookup[string](ssoconf, config.Join("server", "key_store", "location")); ok {
 		var changed bool
 
-		keystorePath := instance.Abs(i, ksl)
+		keystorePath := instance.HomeRel(i, ksl)
 		keystorePassword := config.Get[config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
 			config.DefaultValue(config.Secret("changeit")),
@@ -337,7 +337,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 		if err != nil {
 			return err
 		}
-		keystorePath = instance.Abs(i, keystorePath)
+		keystorePath = instance.HomeRel(i, keystorePath)
 		return certs.AddCertChainToKeyStore(i.Host(), keystorePath, keystorePassword, alias, key, certChain...)
 	}
 	return
@@ -404,7 +404,7 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	truststorePassword := config.Get[config.Secret](ssoconf, config.Join("server", "trust_store", "password"))
 
 	if truststorePath != "" {
-		truststorePath = instance.Abs(i, truststorePath)
+		truststorePath = instance.HomeRel(i, truststorePath)
 		checks = append(checks, truststorePath)
 		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
 		if truststorePassword != nil {

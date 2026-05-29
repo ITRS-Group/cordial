@@ -99,6 +99,7 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *ex
 	var home string
 
 	cf := i.Config()
+	h := i.Host()
 
 	so := evalStartOptions(options...)
 
@@ -119,44 +120,49 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *ex
 		libs = append(libs, config.Get[string](cf, "libpaths"))
 	}
 
-	for _, e := range config.Get[[]string](cf, "env", config.NoDecode(noDecode)) {
-		switch {
-		case strings.HasPrefix(e, "LD_LIBRARY_PATH="):
-			libs = append(libs, strings.TrimPrefix(e, "LD_LIBRARY_PATH="))
-		default:
-			env = append(env, e)
+	if h.OS() != "windows" {
+		for _, e := range config.Get[[]string](cf, "env", config.NoDecode(noDecode)) {
+			switch {
+			case strings.HasPrefix(e, "LD_LIBRARY_PATH="):
+				libs = append(libs, strings.TrimPrefix(e, "LD_LIBRARY_PATH="))
+			default:
+				env = append(env, e)
+			}
 		}
-	}
 
-	if len(libs) > 0 {
-		env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
+		if len(libs) > 0 {
+			env = append(env, "LD_LIBRARY_PATH="+strings.Join(libs, ":"))
+		}
 	}
 
 	env = append(env, so.envs...)
 
-	// pass through the user's home directory unless there is one specifically defined
-	if !slices.ContainsFunc(env, func(e string) bool {
-		return strings.HasPrefix(e, "HOME=")
-	}) {
-		env = append(env, "HOME="+os.Getenv("HOME"))
-	}
+	var userprofile = os.Getenv("USERPROFILE")
 
-	// similarly, check for a PATH setting, else use a very plain one.
+	// check for a PATH setting, else use a very plain one.
 	// this can be overridden by the user using the `-e PATH=...` option
 	// to start and restart commands
-	if !slices.ContainsFunc(env, func(e string) bool {
-		return strings.HasPrefix(e, "PATH=")
-	}) {
-		if strings.Contains(i.Host().ServerVersion(), "windows") {
+	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "PATH=") }) {
+		if h.OS() == "windows" {
 			p := "C:\\Windows\\System32;C:\\Windows;C:\\Windows\\System32\\Wbem"
-			up, ok := os.LookupEnv("USERPROFILE")
-			if ok {
-				p = fmt.Sprintf("%s%s;%s", p, up+"\\bin", up+"\\AppData\\Local\\Microsoft\\WindowsApps")
+			if userprofile != "" {
+				env = append(env, "USERPROFILE="+userprofile)
+				p = fmt.Sprintf("%s%s;%s", p, userprofile+"\\bin", userprofile+"\\AppData\\Local\\Microsoft\\WindowsApps")
 			}
-			env = append(env, p)
+			env = append(env, "PATH="+p)
 		} else {
 			env = append(env, "PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin")
 		}
+	}
+
+	// pass through the user's home directory unless there is one specifically defined
+	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "HOME=") }) {
+		if home, ok := os.LookupEnv("HOME"); ok {
+			env = append(env, "HOME="+home)
+		} else {
+			env = append(env, "HOME="+userprofile)
+		}
+
 	}
 
 	cmd = exec.Command(binary, args...)

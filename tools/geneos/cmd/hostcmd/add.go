@@ -198,7 +198,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			host.PrivateKeyFiles(config.Get[[]string](cf, "privatekeys")...),
 		)
 
-		h.MergeConfigMap(cf.AllSettings())
+		h.Config.MergeConfigMap(cf.AllSettings())
 
 		if h.Exists() {
 			return fmt.Errorf("host %q already exists", name)

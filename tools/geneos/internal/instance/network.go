@@ -42,7 +42,7 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
-		if port := config.Get[int](c.Config(), c.Config().Join("port")); port != 0 {
+		if port := config.Get[int](c.Config(), "port"); port != 0 {
 			ports[uint16(port)] = struct{}{}
 		}
 	}
@@ -73,7 +73,7 @@ func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 			log.Error().Msgf("cannot load configuration for %s", c)
 			continue
 		}
-		if p := config.Get[uint16](c.Config(), c.Config().Join("port")); p != 0 {
+		if p := config.Get[uint16](c.Config(), "port"); p != 0 {
 			if p == port {
 				i = c
 				return

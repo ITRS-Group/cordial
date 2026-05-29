@@ -90,7 +90,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		panic("pstats must be a pointer to a struct")
 	}
 
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		scClkTck, _ = sysconf.Sysconf(sysconf.SC_CLK_TCK)
 	} else {
 		scClkTck = 100

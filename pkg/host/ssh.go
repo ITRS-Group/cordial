@@ -28,6 +28,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -312,8 +313,8 @@ func (h *SSHRemote) CloseSFTP() {
 	}
 }
 
-// IsLocal returns true if h is local, which for SSH is always false
-func (h *SSHRemote) IsLocal() bool {
+// IsLocalhost returns true if h is local, which for SSH is always false
+func (h *SSHRemote) IsLocalhost() bool {
 	return false
 }
 
@@ -345,6 +346,79 @@ func (h *SSHRemote) Abs(dir string) (string, error) {
 	} else {
 		return s.RealPath(dir)
 	}
+}
+
+func (h *SSHRemote) Base(file string) string {
+	if h.OS() == "windows" {
+		if runtime.GOOS == "windows" {
+			return filepath.Base(file)
+		}
+		// TODO: fix logic
+		return path.Base(file)
+	}
+	return path.Base(file)
+}
+
+func (h *SSHRemote) Dir(file string) string {
+	if h.OS() == "windows" {
+		if runtime.GOOS == "windows" {
+			return filepath.Dir(file)
+		}
+		// TODO: fix logic
+		return path.Dir(file)
+	}
+	return path.Dir(file)
+}
+
+func (h *SSHRemote) Ext(file string) string {
+	return path.Ext(file)
+}
+
+func (h *SSHRemote) Join(elem ...string) string {
+	sep, ok := Seperators[h.OS()]
+	if !ok {
+		sep = "/"
+	}
+	return strings.Join(elem, sep)
+}
+
+func (h *SSHRemote) ToSlash(path string) string {
+	if h.OS() == "windows" {
+		return strings.ReplaceAll(path, `\`, `/`)
+	}
+	return path
+}
+
+func (h *SSHRemote) VolumeName(path string) string {
+	if h.OS() == "windows" {
+		if runtime.GOOS == "windows" {
+			return filepath.VolumeName(path)
+		}
+		// return either `C:` or `\\host\share` depending on the path, or "" if not found
+		if idx := strings.Index(path, `:\`); idx != -1 {
+			return path[:idx+2]
+		}
+		if idx := strings.Index(path, `\\`); idx != -1 {
+			idx2 := strings.Index(path[idx+2:], `\`)
+			if idx2 != -1 {
+				return path[:idx+2+idx2]
+			}
+		}
+		return ""
+	}
+	return ""
+}
+
+func (h *SSHRemote) Split(file string) (dir, base string) {
+	if h.OS() == "windows" {
+		if runtime.GOOS == "windows" {
+			return filepath.Split(file)
+		}
+		base = h.Base(file)
+		dir = strings.TrimSuffix(file, base)
+		return
+	}
+	return path.Split(file)
 }
 
 func (h *SSHRemote) Getwd() (dir string, err error) {
@@ -587,7 +661,7 @@ func (h *SSHRemote) HostPath(p string) string {
 //
 // BUG This is currently broken - hardwired values for now
 func (h *SSHRemote) TempDir() string {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		return `C:\TEMP`
 	}
 	return "/tmp"
@@ -608,6 +682,13 @@ func (h *SSHRemote) ServerVersion() string {
 		return ""
 	}
 	return string(remote.ServerVersion())
+}
+
+func (h *SSHRemote) OS() string {
+	if strings.Contains(h.ServerVersion(), "windows") {
+		return "windows"
+	}
+	return "linux"
 }
 
 func (h *SSHRemote) GetFs() afero.Fs {
@@ -677,7 +758,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 // for all processes. errfile has stdout/stderr appended to it, use
 // '/dev/null' if no errfile is wanted.
 func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		err = errors.New("cannot run remote commands on windows")
 	}
 
@@ -721,7 +802,7 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 // the output and any error. errfile is an optional (remote) file for
 // stderr output
 func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err error) {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		err = errors.New("cannot run remote commands on windows")
 	}
 
@@ -770,7 +851,7 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte,
 }
 
 func (h *SSHRemote) Uname() (os, arch string, err error) {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		err = errors.New("cannot run remote commands on windows")
 	}
 

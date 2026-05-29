@@ -72,7 +72,7 @@ func DisplayName(i geneos.Instance) string {
 	if i == nil {
 		return "<nil>"
 	}
-	if i.Host().IsLocal() {
+	if i.Host().IsLocalhost() {
 		return fmt.Sprintf("%s %q", i.Type(), i.Name())
 	}
 	return fmt.Sprintf("%s \"%s@%s\"", i.Type(), i.Name(), i.Host())
@@ -94,7 +94,7 @@ func IDString(i geneos.Instance) string {
 	if i == nil {
 		return "<nil>"
 	}
-	if i.Host().IsLocal() {
+	if i.Host().IsLocalhost() {
 		return i.Type().String() + ":" + i.Name()
 	}
 	return i.Type().String() + ":" + i.Name() + "@" + i.Host().String()

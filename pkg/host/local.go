@@ -55,8 +55,8 @@ func (h *Local) Hostname() string {
 	return hostname
 }
 
-// IsLocal returns true if h is local, which for Local it is
-func (h *Local) IsLocal() bool {
+// IsLocalhost returns true if h is local, which for Local it is
+func (h *Local) IsLocalhost() bool {
 	return true
 }
 
@@ -76,6 +76,34 @@ func (h *Local) Abs(dir string) (abs string, err error) {
 	}
 	abs = filepath.ToSlash(abs)
 	return
+}
+
+func (h *Local) Base(path string) string {
+	return filepath.Base(path)
+}
+
+func (h *Local) Dir(path string) string {
+	return filepath.Dir(path)
+}
+
+func (h *Local) Ext(path string) string {
+	return filepath.Ext(path)
+}
+
+func (h *Local) Join(elem ...string) string {
+	return filepath.Join(elem...)
+}
+
+func (h *Local) ToSlash(path string) string {
+	return filepath.ToSlash(path)
+}
+
+func (h *Local) VolumeName(path string) string {
+	return filepath.VolumeName(path)
+}
+
+func (h *Local) Split(path string) (dir, file string) {
+	return filepath.Split(path)
 }
 
 func (h *Local) Getwd() (dir string, err error) {
@@ -180,6 +208,12 @@ func (h *Local) LastError() error {
 }
 
 func (h *Local) ServerVersion() string {
+	return runtime.GOOS
+}
+
+// OS returns the operating system of the host, which for Local is
+// whatever runtime.GOOS returns
+func (h *Local) OS() string {
 	return runtime.GOOS
 }
 

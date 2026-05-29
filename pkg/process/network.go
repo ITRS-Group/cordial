@@ -159,7 +159,7 @@ func SocketToConn(h host.Host, socket string) (sc *SocketConnection, err error) 
 // TCP ports from the source (typically /proc/net/tcp or /proc/net/tcp6)
 // on host h. Will only work on Linux hosts.
 func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		return errors.ErrUnsupported
 	}
 

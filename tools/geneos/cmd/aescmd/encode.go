@@ -185,7 +185,7 @@ var encodeCmd = &cobra.Command{
 					return
 				}
 
-				dest := instance.Abs(i, encodeCmdAppKeyFile)
+				dest := instance.HomeRel(i, encodeCmdAppKeyFile)
 				w, err := i.Host().Create(dest, 0640)
 				if err != nil {
 					resp.Err = fmt.Errorf("%w create(%s)", err, dest)

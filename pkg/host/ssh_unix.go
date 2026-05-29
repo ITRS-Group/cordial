@@ -42,7 +42,7 @@ func sshConnectAgent() (agentClient agent.ExtendedAgent) {
 // in which case it checks the volume name, stripping it and testing the
 // rest of the path
 func (h *SSHRemote) IsAbs(name string) bool {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		n := filepath.VolumeName(name)
 		if n == "" {
 			return false

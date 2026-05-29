@@ -121,7 +121,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	switch {
 	case i.Type().IsA("sso-agent"):
 		ssoConf := config.New()
-		if err := ssoConf.MergeHOCONFile(instance.Abs(i, "conf/sso-agent.conf")); err != nil {
+		if err := ssoConf.MergeHOCONFile(instance.HomeRel(i, "conf/sso-agent.conf")); err != nil {
 			return
 		}
 
@@ -132,7 +132,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 		keystorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
 		defer clear(keystorePassword)
 	case i.Type().IsA("webserver"):
-		spPath := instance.Abs(i, "config/security.properties")
+		spPath := instance.HomeRel(i, "config/security.properties")
 
 		// load the security.properties file, update the port and use the keystore values later
 		sp, err := instance.ReadKVConfig(h, spPath)
@@ -156,7 +156,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	// ca-bundle files. if this fails, continue with the migration
 	// as we may just need to rebuild the trust chain
 	if truststorePath != "" {
-		updated, err := certs.UpdateCACertsFileFromTrustStore(h, instance.Abs(i, truststorePath), truststorePassword, geneos.PathToCABundle(h))
+		updated, err := certs.UpdateCACertsFileFromTrustStore(h, instance.HomeRel(i, truststorePath), truststorePassword, geneos.PathToCABundle(h))
 		if err != nil {
 			resp.Err = fmt.Errorf("updating ca-bundle from truststore: %w", err)
 		} else if updated {
@@ -169,7 +169,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	// fails, continue with the migration as we may just need to
 	// rebuild the keystore later (in instance Rebuild())
 	if keystorePath != "" {
-		k, err := certs.ReadKeystore(h, instance.Abs(i, keystorePath), keystorePassword)
+		k, err := certs.ReadKeystore(h, instance.HomeRel(i, keystorePath), keystorePassword)
 		if err != nil {
 			resp.Err = fmt.Errorf("reading keystore: %w", err)
 			return

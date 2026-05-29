@@ -171,7 +171,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	filename = path.Base(dst)
 
 	// test for same source and dest, return err
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		item = config.ResolveHome(item)
 		sfi, err := h.Stat(item)
 		if err != nil {

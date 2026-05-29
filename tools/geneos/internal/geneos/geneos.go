@@ -90,7 +90,7 @@ func Initialise(h *Host, options ...PackageOption) (err error) {
 		}
 	}
 
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		log.Debug().Msgf("setting %q to %q", cordial.ExecutableName(), opts.geneosdir)
 		config.Set(config.Global(), cordial.ExecutableName(), opts.geneosdir)
 		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {

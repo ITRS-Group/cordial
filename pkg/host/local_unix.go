@@ -33,7 +33,7 @@ import (
 )
 
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		uid = int(info.Sys().(*syscall.Stat_t).Uid)
 		gid = int(info.Sys().(*syscall.Stat_t).Gid)
 	} else {

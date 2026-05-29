@@ -43,7 +43,7 @@ const OldUserHostFile = "geneos-hosts.json"
 // Host defines a host for seamless remote management
 type Host struct {
 	host.Host
-	*config.Config
+	Config *config.Config
 
 	// hidden from wildcard loops?
 	hidden bool
@@ -210,16 +210,15 @@ func (h *Host) Exists() bool {
 // simulates the values for Windows
 func (h *Host) SetOSReleaseEnv() (err error) {
 	osinfo := make(map[string]string)
-	serverVersion := h.ServerVersion()
-	if h.IsLocal() {
+	if h.IsLocalhost() {
 		home, _ := config.UserHomeDir()
 		config.Set(h.Config, "homedir", home)
 	}
 
-	if strings.Contains(strings.ToLower(serverVersion), "windows") {
+	if h.OS() == "windows" {
 		osinfo["id"] = "windows"
 
-		if h.IsLocal() {
+		if h.IsLocalhost() {
 			h.SetWindowsReleaseEnv(osinfo)
 		} else {
 			cmd := exec.Command("systeminfo")
@@ -284,7 +283,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			value = strings.Trim(value, "\"")
 			osinfo[strings.ToLower(key)] = value
 		}
-		if !h.IsLocal() {
+		if !h.IsLocalhost() {
 			dir, err := h.Getwd()
 			if err != nil {
 				return err
@@ -299,7 +298,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 
 // PlatformID returns the platform ID for the host h.
 func PlatformID(h *Host) (platformID string) {
-	p := config.Get[string](h.Config, h.Join("osinfo", "platform_id"))
+	p := config.Get[string](h.Config, h.Config.Join("osinfo", "platform_id"))
 	s := strings.Split(p, ":")
 	if len(s) > 1 {
 		platformID = s[1]
@@ -502,7 +501,7 @@ func SaveHostConfig() error {
 		name := k.(string)
 		switch v := v.(type) {
 		case *Host:
-			config.Set(n, n.Join("hosts", name), v.AllSettings())
+			config.Set(n, n.Join("hosts", name), v.Config.AllSettings())
 		}
 		return true
 	})

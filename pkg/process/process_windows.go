@@ -37,7 +37,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		err = errors.New("host is nil")
 		return
 	}
-	if !h.IsLocal() {
+	if !h.IsLocalhost() {
 		err = errors.New("host is not local")
 		return
 	}

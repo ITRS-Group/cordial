@@ -318,7 +318,7 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 
 	// always rebuild an instance template
 	log.Debug().Msgf("rebuilding %s instance template %q", i, instanceTemplateName)
-	if err = instance.ExecuteTemplate(i, instance.Abs(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
+	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
 		return
 	}
 	log.Debug().Msgf("%s instance template %q rebuilt", i, INSTANCEXML)

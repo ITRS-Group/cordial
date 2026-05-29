@@ -91,7 +91,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 
 	var myUID, myGID uint32 = ^uint32(0), ^uint32(0)
 
-	if !h.IsLocal() {
+	if !h.IsLocalhost() {
 		info, err := h.Stat("/proc/self") // prime the connection to avoid timing out on the first real stat
 		if err == nil {
 			switch sys := info.Sys().(type) {
@@ -116,7 +116,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 		if !st.IsDir() {
 			continue
 		}
-		if !h.IsLocal() {
+		if !h.IsLocalhost() {
 			switch sys := st.Sys().(type) {
 			case *sftp.FileStat:
 				if sys.UID != myUID || sys.GID != myGID {

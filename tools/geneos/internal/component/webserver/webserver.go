@@ -272,7 +272,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	cf := i.Config()
 	h := i.Host()
 
-	spPath := instance.Abs(i, "config/security.properties")
+	spPath := instance.HomeRel(i, "config/security.properties")
 
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
@@ -299,7 +299,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 
 	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
 	if len(roots) > 0 && truststorePath != "" {
-		truststorePath = instance.Abs(i, truststorePath)
+		truststorePath = instance.HomeRel(i, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
 			log.Error().Err(err).Msgf("updating truststore %q", truststorePath)
 			return err
@@ -325,7 +325,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 		log.Error().Err(err).Msgf("reading private key for %s", i.String())
 		return
 	}
-	keyStore = instance.Abs(i, keyStore)
+	keyStore = instance.HomeRel(i, keyStore)
 	return certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
 }
 
@@ -388,13 +388,13 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	// add ca-bundle if set
 
 	// truststore is in security.properties, use that and not instance params
-	sp, err := instance.ReadKVConfig(i.Host(), instance.Abs(i, "config/security.properties"))
+	sp, err := instance.ReadKVConfig(i.Host(), instance.HomeRel(i, "config/security.properties"))
 	if err != nil {
 		return
 	}
 
 	if truststorePath, ok := sp["trustStore"]; ok && truststorePath != "" {
-		truststorePath = instance.Abs(i, truststorePath)
+		truststorePath = instance.HomeRel(i, truststorePath)
 		// check for file, as defaults in security.properties may point to non-existent file
 		if _, err = i.Host().Stat(truststorePath); err == nil {
 			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
@@ -416,7 +416,7 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 
 	// if keystore exists, enable SSL
 	if keystorePath, ok := sp["keyStore"]; ok && keystorePath != "" {
-		keystorePath = instance.Abs(i, keystorePath)
+		keystorePath = instance.HomeRel(i, keystorePath)
 		if _, err = i.Host().Stat(keystorePath); err == nil {
 			args = append(args, "-ssl", "true")
 		}

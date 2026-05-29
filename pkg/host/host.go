@@ -33,6 +33,21 @@ import (
 	"github.com/spf13/afero"
 )
 
+// Separators for file paths and lists, by OS
+var Seperators = map[string]string{
+	"windows": `\`,
+	"linux":   "/",
+	"darwin":  "/",
+}
+
+// ListSeparators for separating lists of paths, e.g. in PATH
+// environment variables, by OS
+var ListSeparators = map[string]string{
+	"windows": `;`,
+	"linux":   ":",
+	"darwin":  ":",
+}
+
 // Host encapsulates all the methods required by callers to manage Geneos
 // installs on a host.
 //
@@ -45,16 +60,35 @@ type Host interface {
 	GetFs() afero.Fs
 	HostPath(p string) string // return the path as a string, prefixed with "host:" if not local
 	Hostname() string
-	ServerVersion() string
-	IsAbs(name string) bool
+	ServerVersion() string // return the SSH server version if remote, or the same as OS() if local
+	OS() string            // return whatever runtime.GOOS would return for the host
 	IsAvailable() (bool, error)
-	IsLocal() bool
+	IsLocalhost() bool
 	LastError() error
 	Uname() (string, string, error)
 	Username() string
 
-	// file operations
+	// filepath operations
 	Abs(name string) (string, error)
+	Base(string) string
+	// Clean()
+	Dir(string) string
+	// EvalSymlinks()
+	Ext(string) string
+	IsAbs(name string) bool
+	// IsLocal()
+	Join(...string) string
+	// Localize()
+	// Match()
+	// Rel()
+	Split(string) (dir, file string)
+	// SplitList()
+	ToSlash(string) string
+	VolumeName(string) string
+	// Walk()
+	WalkDir(dir string, fn fs.WalkDirFunc) error
+
+	// file operations
 	Getwd() (dir string, err error)
 	Chown(name string, uid, gid int) (err error)
 	Chtimes(path string, atime time.Time, mtime time.Time) (err error)
@@ -78,7 +112,6 @@ type Host interface {
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
 	Create(p string, perms fs.FileMode) (out io.WriteCloser, err error)
-	WalkDir(dir string, fn fs.WalkDirFunc) error
 
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)
@@ -134,7 +167,7 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 
 // CopyAll copies a directory between any combination of local or remote locations
 func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
-	if srcHost.IsLocal() {
+	if srcHost.IsLocalhost() {
 		filesystem := os.DirFS(srcDir)
 		fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
 			if err != nil {

@@ -364,7 +364,7 @@ func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err
 		"-setup", config.Get[string](cf, "setup"),
 	}
 
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if h.OS() == "windows" {
 		args = append(args, "-cmd")
 	}
 

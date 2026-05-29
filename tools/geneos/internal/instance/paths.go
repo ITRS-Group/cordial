@@ -19,6 +19,7 @@ package instance
 
 import (
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -61,7 +62,9 @@ func ComponentFilename(i geneos.Instance, extensions ...string) string {
 //
 // will return /path/to/netprobe/netprobe.json
 func ComponentFilepath(i geneos.Instance, extensions ...string) string {
-	return path.Join(i.Home(), ComponentFilename(i, extensions...))
+	h := i.Host()
+
+	return h.Join(i.Home(), ComponentFilename(i, extensions...))
 }
 
 // FileOf returns the basename of the file identified by the
@@ -70,25 +73,43 @@ func ComponentFilepath(i geneos.Instance, extensions ...string) string {
 // If the parameter is unset or empty then an empty path is returned.
 func FileOf(i geneos.Instance, name string) (filename string) {
 	cf := i.Config()
+	h := i.Host()
 
 	if cf == nil {
 		return
 	}
+	base := path.Base
+	if h.IsLocalhost() {
+		base = filepath.Base
+	}
+
 	// return empty and not a "."
-	filename = path.Base(config.Get[string](cf, name))
+	filename = base(config.Get[string](cf, name))
 	if filename == "." {
 		filename = ""
 	}
 	return
 }
 
-// Abs returns an absolute path to file prepended with the instance
+// HomeRel returns an absolute path to file prepended with the instance
 // working directory if file is not already an absolute path. If file is
 // empty then an empty result is returned.
-func Abs(i geneos.Instance, file string) (result string) {
+func HomeRel(i geneos.Instance, file string) (result string) {
+	h := i.Host()
+
 	if file == "" {
 		return
 	}
+
+	if h.IsLocalhost() {
+		// always use filepath for local paths
+		result = filepath.Clean(file)
+		if filepath.IsAbs(result) {
+			return
+		}
+		return filepath.Join(i.Home(), result)
+	}
+
 	result = path.Clean(file)
 	if path.IsAbs(result) {
 		return
@@ -114,7 +135,7 @@ func PathTo(i geneos.Instance, name string) string {
 		return ""
 	}
 
-	return Abs(i, filename)
+	return HomeRel(i, filename)
 }
 
 // PathsTo returns the full paths to the files identified by names.
@@ -130,7 +151,7 @@ func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 
 	for _, name := range names {
 		// note: Abs(i, "") returns ""
-		filenames = append(filenames, Abs(i, config.Get[string](cf, name)))
+		filenames = append(filenames, HomeRel(i, config.Get[string](cf, name)))
 	}
 	return
 }
@@ -163,7 +184,7 @@ func Home(i geneos.Instance) (home string) {
 	// second, does the instance exist in the default instances parentDir?
 	parentDir := i.Type().InstancesDir(h)
 	if parentDir != "" {
-		home = path.Join(parentDir, i.Name())
+		home = h.Join(parentDir, i.Name())
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
 			return
 		}
@@ -174,7 +195,7 @@ func Home(i geneos.Instance) (home string) {
 	if i.Type().ParentType != nil {
 		parentDir := h.PathTo(i.Type().String(), i.Type().String()+"s")
 		if parentDir != "" {
-			home = path.Join(parentDir, i.Name())
+			home = h.Join(parentDir, i.Name())
 			if d, err := h.Stat(home); err == nil && d.IsDir() {
 				return
 			}
