@@ -196,7 +196,7 @@ func psInstanceCommon(i geneos.Instance) (pi *instance.ProcessInfo, base, actual
 		return
 	}
 
-	base, underlying, actual, _ := instance.LiveVersion(i, pi.PID)
+	base, underlying, actual, _ := instance.LiveVersion(i, pi)
 	if pkgtype := config.Get[string](i.Config(), "pkgtype"); pkgtype != "" {
 		base = path.Join(pkgtype, base)
 	}
