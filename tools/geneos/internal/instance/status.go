@@ -18,10 +18,7 @@ limitations under the License.
 package instance
 
 import (
-	"fmt"
 	"os"
-	"path"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -103,42 +100,44 @@ func CompareVersion(i geneos.Instance, version string) int {
 // "loop-detected" and err set to syscall.ELOOP to prevent infinite
 // loops. If the instance is not running or the executable path cannot
 // be determined then actual will be returned as "unknown".
-func LiveVersion(i geneos.Instance, pid int) (base string, version string, actual string, err error) {
-	actual = "unknown"
+func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version string, actual string, err error) {
+	ct := i.Type()
 	cf := i.Config()
+	h := i.Host()
+
+	actual = "unknown"
+
 	base = config.Get[string](cf, "version")
 
-	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
-		t = i.Type().ParentType.String()
+	t := ct.String()
+	if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
+		t = ct.ParentType.String()
 	}
 	pkgtype := config.Get[string](cf, "pkgtype", config.DefaultValue(t))
-	ct := geneos.ParseComponent(pkgtype)
+	nct := geneos.ParseComponent(pkgtype)
 
-	version, err = geneos.CurrentVersion(i.Host(), ct, base)
+	version, err = geneos.CurrentVersion(h, nct, base)
 	if err != nil {
 		return
 	}
 
-	// This is the path on the target host, and only linux is supported anyway
-	actual, err = i.Host().Readlink(fmt.Sprintf("/proc/%d/exe", pid))
-	if err != nil {
-		actual = "unknown"
-		return
-	}
+	actual = pi.Exe
 
 	// account for java based components, like webserver, sso-agent and
 	// ca3. just return the version the base points to, which may not be
 	// true during an update but it's the best we can do.
-	if path.Base(actual) == "java" {
+	if h.Base(actual) == "java" {
 		actual = version
 		return
 	}
 
-	actual = strings.TrimPrefix(actual, i.Host().PathTo("packages", pkgtype)+"/")
-	if strings.Contains(actual, "/") {
-		actual = actual[:strings.Index(actual, "/")]
+	b, err := h.Readlink(h.Dir(actual))
+	if err != nil {
+		actual = "unknown"
+		return
 	}
+	actual = h.Base(b)
+
 	if actual == "" {
 		actual = "unknown"
 	}
