@@ -3,21 +3,27 @@
 ## Version v1.27.1
 
 > [!NOTE]
-> **Released 2026-06-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-06-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.27.1 Fixes
 
 * `tools/geneos`
 
-  * `geneos restore` - Fix a bug introduced with v1.26.0 where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance.
+  * `geneos restore` and `geneos init --restore` - Fix bugs introduced with v1.26.0, including one critical one where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This specific one was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance, while the others were a consequence of changes made while implementing `geneos init --restore` to reuse the same restore function.
 
   Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
 
   * The instance keyfile was not being passed to the `values.Set` function when setting variables, which meant that secure variables were not being properly encoded and written to the `instance.setup.xml` file. This has been fixed by passing the keyfile to the `values.Set` function when setting variables.
 
+  * Fix `geneos show -r` to not re-expand variables when showing the raw configuration.
+
 * `tools/dv2email`
 
   * Fix `README.md` to update references to text and html tenplate configuration names and also update the default HTML template to use the correct column and row names for the data view.
+
+* `pkg/config`
+
+  * Fix `config.Save` to correctly write values without re-expansion, introduced while refactoring package for v1.26.0
 
 ### Version v1.27.1 Changes
 
