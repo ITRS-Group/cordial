@@ -9,7 +9,7 @@
 
 * `tools/geneos`
 
-  * `geneos restore` - Fix a long standing bug, there snce the command was added in v1.22.0, where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance.
+  * `geneos restore` - Fix a bug introduced with v1.26.0 where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance.
 
   Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
 
