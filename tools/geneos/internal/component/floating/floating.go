@@ -248,7 +248,7 @@ func (i *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 // we do a dance if there is a change in TLS setup and we use default ports
 func (i *Floatings) Rebuild(initial bool) (err error) {
 	cf := i.Config()
-	configrebuild := config.Get[string](cf, "config::rebuild")
+	configrebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
 	if configrebuild == "never" {
 		return
 	}

@@ -203,13 +203,11 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	config.Set(ncf, "name", dName)
 
-	if keyfile := config.Get[string](ncf, "keyfile"); keyfile != "" {
-		k := strings.Replace(keyfile, src.Home(), "${config:home}", 1)
-		config.Set(ncf, "keyfile", k)
+	if keyfile, ok := config.Lookup[string](ncf, "keyfile", config.NoExpand()); ok {
+		config.Set(ncf, "keyfile", keyfile, config.Replace("home"))
 	}
-	if prevkeyfile := config.Get[string](ncf, "prevkeyfile"); prevkeyfile != "" {
-		k := strings.Replace(prevkeyfile, src.Home(), "${config:home}", 1)
-		config.Set(ncf, "prevkeyfile", k)
+	if prevkeyfile, ok := config.Lookup[string](ncf, "prevkeyfile", config.NoExpand()); ok {
+		config.Set(ncf, "prevkeyfile", prevkeyfile, config.Replace("home"))
 	}
 
 	// config changes don't matter until writing config succeeds

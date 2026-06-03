@@ -298,7 +298,7 @@ func (i *Sans) Rebuild(initial bool) (err error) {
 
 	cf := i.Config()
 
-	configrebuild := config.Get[string](cf, "config::rebuild")
+	configrebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
 	if configrebuild == "never" {
 		return
 	}

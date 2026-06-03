@@ -323,7 +323,7 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 	log.Debug().Msgf("%s instance template %q rebuilt", i, INSTANCEXML)
 
-	configRebuild := config.Get[string](cf, "config::rebuild")
+	configRebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
 	setup := config.Get[string](cf, "setup")
 
 	if configRebuild == "never" || setup == "" || setup == "none" {

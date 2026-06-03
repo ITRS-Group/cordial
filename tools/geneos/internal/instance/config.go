@@ -34,6 +34,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -566,7 +567,7 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 	}
 
 	aliases := i.Type().LegacyParameters
-	root := config.Get[string](i.Host().Config, "geneos")
+	root := config.Get[string](i.Host().Config, cordial.ExecutableName())
 	cf.Default("name", name)
 
 	// add a bootstrap for 'root'
@@ -652,7 +653,7 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
 	newShared := ct.Shared(h)
 
-	version := config.Get[string](cf, "version", config.NoExpand())
+	version := config.Get[string](cf, "version")
 
 	for _, k := range cf.AllKeys() {
 		v := config.Get[any](cf, k, config.NoExpand())

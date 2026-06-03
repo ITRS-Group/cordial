@@ -42,11 +42,13 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 
 	ct := i.Type()
 
+	// TODO: move from filepath.SplitList to strings.Split and use platform specific separator in config
 	cleanlist := filepath.SplitList(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])))
 	if geneos.RootComponent.CleanList != "" {
 		cleanlist = append(cleanlist, filepath.SplitList(geneos.RootComponent.CleanList)...)
 	}
 
+	// TODO: move from filepath.SplitList to strings.Split and use platform specific separator in config
 	purgelist := filepath.SplitList(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])))
 	if geneos.RootComponent.PurgeList != "" {
 		purgelist = append(purgelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)

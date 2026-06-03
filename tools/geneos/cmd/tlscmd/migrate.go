@@ -125,11 +125,11 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 			return
 		}
 
-		truststorePath = config.Get[string](ssoConf, ssoConf.Join("server", "trust_store", "location"))
-		truststorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"))
+		truststorePath = config.Get[string](ssoConf, ssoConf.Join("server", "trust_store", "location"), config.NoExpand())
+		truststorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "trust_store", "password"), config.NoExpand())
 		defer clear(truststorePassword)
-		keystorePath = config.Get[string](ssoConf, ssoConf.Join("server", "key_store", "location"))
-		keystorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"))
+		keystorePath = config.Get[string](ssoConf, ssoConf.Join("server", "key_store", "location"), config.NoExpand())
+		keystorePassword = config.Get[config.Secret](ssoConf, ssoConf.Join("server", "key_store", "password"), config.NoExpand())
 		defer clear(keystorePassword)
 	case i.Type().IsA("webserver"):
 		spPath := instance.HomeRel(i, "config/security.properties")
@@ -270,10 +270,10 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp.Completed = append(resp.Completed, "wrote fullchain to instance certificate file")
 
 	// update instance parameters to new layout
-	if pk := config.Get[string](cf, "privatekey"); pk != "" {
+	if pk, ok := config.Lookup[string](cf, "privatekey", config.NoExpand()); ok {
 		// this may have already been done above in webserver/sso-agent
 		config.Delete(cf, "privatekey")
-		config.Set(cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), pk)
+		config.Set(cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), pk, config.Replace("home"))
 	}
 	config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
