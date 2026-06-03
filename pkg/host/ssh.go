@@ -780,21 +780,28 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	for _, a := range cmd.Args {
 		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
 	}
-	pipe, err := sess.StdinPipe()
-	if err != nil {
-		return
-	}
 
-	if err = sess.Shell(); err != nil {
-		return
-	}
-	fmt.Fprintf(pipe, "cd %q\n", cmd.Dir)
+	// we can't use sess.Setenv() because openssh daemon blocks
+	// non-whitelisted envs from being set
+	envs := []string{}
 	for _, e := range cmd.Env {
-		fmt.Fprintln(pipe, "export", e)
+		if k, v, ok := strings.Cut(e, "="); ok {
+			envs = append(envs, fmt.Sprintf("%s=%q", k, v))
+		}
 	}
-	fmt.Fprintf(pipe, "%s >> %q 2>&1 &\n", cmdstr, errfile)
-	fmt.Fprintln(pipe, "exit")
-	return sess.Wait()
+	cmdstr = fmt.Sprintf(`cd %q; %s %s </dev/null >%q 2>&1 & echo $!`, cmd.Dir, strings.Join(envs, " "), cmdstr, errfile)
+
+	var output []byte
+	if output, err = sess.Output(cmdstr); err != nil {
+		return err
+	}
+	pidStr := strings.TrimSpace(string(output))
+	pid, err := strconv.Atoi(pidStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse PID from remote output: %w", err)
+	}
+	log.Debug().Msgf("%s started with PID %d\n", h, pid)
+	return nil
 }
 
 // Run starts a process on an SSH attached remote host h. It uses a
