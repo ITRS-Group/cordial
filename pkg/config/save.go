@@ -113,7 +113,7 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 		if slices.Contains(opts.ignoreKeys, k) {
 			continue
 		}
-		v := get[any](c, k)
+		v := get[any](c, k, NoExpand())
 
 		// if given the IgnoreEmptyValues option, skip aliases and keys
 		// with zero/empty values
@@ -121,7 +121,8 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 			continue
 		}
 		if opts.expandOnSave {
-			// test setting numbers
+			// re-get, but without noexpand
+			// TODO: test setting numbers
 			set(nv, k, get[string](c, k, opts.expandOptions...))
 		} else {
 			set(nv, k, v)
