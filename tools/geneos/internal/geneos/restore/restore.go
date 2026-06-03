@@ -171,21 +171,23 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		ctName, rest, _ := strings.Cut(filename, "/")
 
 		// restore top level tls is restoring shared files
-		if ctName == "tls" && opts.shared {
-			if _, ok := sizes["TLS:!SHARED"]; !ok {
-				sizes["TLS:!SHARED"] = -1
-				files["TLS:!SHARED"] = 0
-			}
-			if err = writeSharedTLSFile(path.Join(instance.TLSBASE, rest), tr, hdr, opts); err != nil {
-				if errors.Is(err, os.ErrExist) && opts.list {
-					// up the count regardless of existence when listing
-					sizes["TLS:!SHARED"] += hdr.Size
-					files["TLS:!SHARED"] += 1
+		if ctName == "tls" {
+			if opts.shared {
+				if _, ok := sizes["TLS:!SHARED"]; !ok {
+					sizes["TLS:!SHARED"] = -1
+					files["TLS:!SHARED"] = 0
 				}
-				continue
+				if err = writeSharedTLSFile(path.Join(instance.TLSBASE, rest), tr, hdr, opts); err != nil {
+					if errors.Is(err, os.ErrExist) && opts.list {
+						// up the count regardless of existence when listing
+						sizes["TLS:!SHARED"] += hdr.Size
+						files["TLS:!SHARED"] += 1
+					}
+					continue
+				}
+				sizes["TLS:!SHARED"] += hdr.Size
+				files["TLS:!SHARED"] += 1
 			}
-			sizes["TLS:!SHARED"] += hdr.Size
-			files["TLS:!SHARED"] += 1
 			continue
 		}
 
@@ -236,7 +238,6 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		packageCt := geneos.ParseComponent(ctSubdir)
 
 		if packageCt == nil || (nct != packageCt && nct != packageCt.ParentType) {
-			log.Debug().Msgf("top-level entry and home entry not matched: %s, skipping", filename)
 			continue
 		}
 
@@ -544,7 +545,8 @@ func rebuildConfig(instanceName, homeRelFilePath string, r io.Reader, opts *rest
 		return err
 	}
 
-	if err = instance.RefactorConfig(h, ct, cf, instance.NewName(instanceName)); err != nil {
+	instanceDir := h.PathTo(ct, ct.String()+"s", instanceName)
+	if err = instance.RefactorConfig(h, ct, cf, instance.NewName(instanceName), instance.NewDir(instanceDir)); err != nil {
 		return err
 	}
 
@@ -553,14 +555,10 @@ func rebuildConfig(instanceName, homeRelFilePath string, r io.Reader, opts *rest
 		config.Set(cf, "listenip", "none")
 	}
 
-	if err = cf.Write(ct.String(),
+	return cf.Write(ct.String(),
 		config.Host(h),
-		config.SearchDirs(h.PathTo(ct, ct.String()+"s", instanceName)),
+		config.SearchDirs(instanceDir),
 		config.AppName(instanceName),
 		config.OmitEmptyValues(),
-	); err != nil {
-		return err
-	}
-
-	return
+	)
 }

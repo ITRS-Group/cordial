@@ -637,21 +637,14 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	oldHome := config.Get[string](cf, "home")
 	if opts.newDir != "" {
 		config.Set(cf, "home", opts.newDir)
-		return
 	}
+	newHome := config.Get[string](cf, "home")
 
 	// the root component name, from pkgtype or the component type
 	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
 
 	newGeneosDir := config.Get[string](h.Config, "geneos")
-	var oldGeneosDir string
-	if opts.newDir != "" {
-		oldGeneosDir = strings.TrimSuffix(oldHome, "/"+filepath.Dir(opts.newDir))
-	} else {
-		oldGeneosDir = strings.TrimSuffix(oldHome, path.Join("/", nct, ct.String()+"s", name))
-	}
-
-	log.Debug().Msgf("refactor config for %s: oldHome=%q newHome=%q oldGeneosDir=%q newGeneosDir=%q", name, oldHome, config.Get[string](cf, "home"), oldGeneosDir, newGeneosDir)
+	oldGeneosDir := strings.TrimSuffix(oldHome, path.Join("/", nct, ct.String()+"s", name))
 
 	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", nct)
@@ -680,7 +673,7 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 			if vs, ok := v.(string); ok {
 				// replace home (unanchored)
 				if opts.newDir != "" {
-					vs = strings.Replace(vs, oldHome, opts.newDir, 1)
+					vs = strings.Replace(vs, oldHome, newHome, 1)
 				}
 
 				// replace install (unanchored)
