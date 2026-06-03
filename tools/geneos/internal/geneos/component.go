@@ -234,9 +234,9 @@ type Instance interface {
 
 	// actions
 	Add(template string, port uint16, noCerts bool) error
-	Command(bool) ([]string, []string, string, error)
+	Command(skipFileCheck bool) ([]string, []string, string, error)
 	Reload() (err error)
-	Rebuild(bool) error
+	Rebuild(initial bool) error
 }
 
 // Register adds the given Component ct to the internal list of
