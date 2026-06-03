@@ -595,8 +595,11 @@ type DV2EMailData struct {
   For both template types it is possible to include the contents of a file or a URL using "expandable" syntax, like this:
 
   ```yaml
-  text-template: ${https://myserver.example.com/files/txt.gotmpl}
-  html-template: ${file:/path/to/template.gotmpl}
+  text
+    template: ${https://myserver.example.com/files/txt.gotmpl}
+  
+  html
+    template: ${file:/path/to/template.gotmpl}
   ```
 
   The default, embedded HTML template is:
@@ -709,13 +712,13 @@ type DV2EMailData struct {
           <td>
             <table class="rows">
               <thead>
-                {{range .Columns}}<th>{{.}}</th>{{end}}
+                {{range .ColumnOrder}}<th>{{.}}</th>{{end}}
               </thead>
               <tbody>
-                {{range $row := .Rows}}
+                {{range $row := .RowOrder}}
                 <tr>
                   <th>{{$row}}</th>
-                  {{range $i, $column := $dataview.Columns}}
+                  {{range $i, $column := $dataview.ColumnOrder}}
                       {{if ne $i 0}}
                         {{with (index $dataview.Table $row $column)}}
                           <td class="cells {{.Severity}}{{if and (eq $.Env._ROWNAME $row) (eq $.Env._COLUMN $column)}} target{{end}}">{{.Value}}</td>
