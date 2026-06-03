@@ -1,16 +1,27 @@
 # Change Log
 
-
-## Version v1.27.2
+## Version v1.27.1
 
 > [!NOTE]
-> **Released 2026-05-29** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-06-03** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.27.2 Fixes
+### Version v1.27.1 Fixes
 
 * `tools/geneos`
 
+  * `geneos restore` - Fix a long standing bug, there snce the command was added in v1.22.0, where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance.
+
+  Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
+
   * The instance keyfile was not being passed to the `values.Set` function when setting variables, which meant that secure variables were not being properly encoded and written to the `instance.setup.xml` file. This has been fixed by passing the keyfile to the `values.Set` function when setting variables.
+
+* `tools/dv2email`
+
+  * Fix `README.md` to update references to text and html tenplate configuration names and also update the default HTML template to use the correct column and row names for the data view.
+
+### Version v1.27.1 Changes
+
+* Minor internal code changes and refactoriing to support upcoming work.
 
 ---
 
