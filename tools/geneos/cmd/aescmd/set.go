@@ -145,8 +145,8 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 			return
 		}
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %s written", keyfile))
-		resp = responses.MergeResponse(resp, instance.Write(i))
 	}
+	resp = responses.MergeResponse(resp, instance.Write(i))
 	return
 
 }
