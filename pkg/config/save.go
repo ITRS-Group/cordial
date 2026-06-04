@@ -24,8 +24,6 @@ import (
 	"path/filepath"
 	"slices"
 	"sync/atomic"
-
-	"github.com/rs/zerolog/log"
 )
 
 // counter is used to generate unique temporary file names when saving
@@ -65,8 +63,6 @@ var counter atomic.Int64
 // monitoring the directory for changes.
 func (c *Config) Write(module string, options ...FileOption) (err error) {
 	var p string
-
-	log.Debug().Msg("saving configuration")
 
 	opts := evalSaveOptions(module, options...)
 
