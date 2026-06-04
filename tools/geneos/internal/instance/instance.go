@@ -339,13 +339,13 @@ func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance ge
 func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) (instances []geneos.Instance) {
 	var instanceNames []string
 
+	opts := evalInstanceOptions(options...)
+
 	for ct := range ct.OrList() {
 		for _, name := range InstanceNames(h, ct) {
 			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
 	}
-
-	opts := evalInstanceOptions(options...)
 
 	if len(opts.names) > 0 {
 		instanceNames = slices.DeleteFunc(instanceNames, func(n string) bool {
@@ -362,11 +362,57 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 
 	for _, name := range instanceNames {
 		h, ct, name := ParseName(name, h)
-		instance, err := GetWithHost(h, ct, name)
+		i, err := GetWithHost(h, ct, name)
 		if err != nil {
 			continue
 		}
-		instances = append(instances, instance)
+		if opts.matchParentPackage {
+			if pkgtype, ok := config.Lookup[string](i.Config(), "pkgtype"); ok {
+				if pkgtype != ct.String() {
+					continue
+				}
+			}
+		}
+		instances = append(instances, i)
+	}
+
+	// now add parent type matches
+	if opts.matchParentPackage {
+		pt := ct.ParentType
+
+		var parentNames []string
+		for _, name := range InstanceNames(h, pt) {
+			parentNames = append(parentNames, pt.String()+":"+name)
+		}
+
+		if len(opts.names) > 0 {
+			parentNames = slices.DeleteFunc(parentNames, func(n string) bool {
+				ih, _, in := ParseName(n, h)
+				for _, v := range opts.names {
+					h, _, name := ParseName(v, h)
+					if name == in && (h == geneos.ALL || h == ih) {
+						return false
+					}
+				}
+				return true
+			})
+		}
+
+		for _, name := range parentNames {
+			h, nct, name := ParseName(name, h)
+			i, err := GetWithHost(h, nct, name)
+			if err != nil {
+				continue
+			}
+			if pkgtype, ok := config.Lookup[string](i.Config(), "pkgtype"); ok {
+				// check the ORIGINAL component here
+				if pkgtype != ct.String() {
+					continue
+				}
+			}
+
+			instances = append(instances, i)
+		}
 	}
 
 	if len(opts.parameters) > 0 {
@@ -396,8 +442,9 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 }
 
 type instanceOptions struct {
-	names      []string
-	parameters []string
+	names              []string
+	parameters         []string
+	matchParentPackage bool
 }
 type InstanceOption func(*instanceOptions)
 
@@ -428,14 +475,22 @@ func MatchParameters(parameters ...string) InstanceOption {
 	}
 }
 
+// MatchParentPackage returns an InstanceOption that filters instances
+// to those whose component could be a parent type for another component
+// *and* the package type matches. For example, a `netprobe` may use a
+// `pkgtype` of `minimal`, so when looking for `minimal` instances, also
+// include `netprobe` instances that have a `pkgtype` of `minimal`.
+func MatchParentPackage() InstanceOption {
+	return func(io *instanceOptions) {
+		io.matchParentPackage = true
+	}
+}
+
 // InstanceNames returns a slice of all the base names for instance
 // directories for a given component ct on host h. No checking is done
 // to validate that the directory contains a valid instance.
 // InstanceNames are qualified with the host name. Regular files are
 // ignored.
-//
-// To support the move to parent types we do a little more, looking for
-// legacy locations in here
 func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {

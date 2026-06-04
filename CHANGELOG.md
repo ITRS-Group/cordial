@@ -21,6 +21,10 @@
 
   * Avoid forcing an update of an installed package when a new instance is added or deployed and existing instances using the basename (typically `active_prod`) are not on the latest installed.
 
+  * `geneos package uninstall` (also aliased to `... delete` and `... remove`) will again remove unused (unlinked) packages after clearing the inadvertant default value for the recently added `--base`/`-b` flag, which is now empty by default. This allows you to remove old packages that are no longer referenced by any instances.
+
+  * `geneos package list` now correctly assign instance counts to the package type (`pkgtype`) for instances that use this, like `netprobe` to support different kinds of installed package.
+
 * `tools/dv2email`
 
   * Fix `README.md` to update references to text and html tenplate configuration names and also update the default HTML template to use the correct column and row names for the data view.

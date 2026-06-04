@@ -97,17 +97,17 @@ var listCmd = &cobra.Command{
 		case listCmdJSON, listCmdIndent:
 			var b []byte
 			for _, v := range versions {
+				ct := geneos.ParseComponent(v.Component)
+				h := geneos.GetHost(v.Host)
 				for _, l := range v.Links {
-					v.Instances += len(instance.Instances(
-						geneos.GetHost(v.Host),
-						geneos.ParseComponent(v.Component),
+					v.Instances += len(instance.Instances(h, ct,
 						instance.MatchParameters("version="+l),
+						instance.MatchParentPackage(),
 					))
 				}
-				v.Instances += len(instance.Instances(
-					geneos.GetHost(v.Host),
-					geneos.ParseComponent(v.Component),
+				v.Instances += len(instance.Instances(h, ct,
 					instance.MatchParameters("version="+v.Version),
+					instance.MatchParentPackage(),
 				))
 			}
 			if listCmdIndent {
@@ -132,15 +132,25 @@ var listCmd = &cobra.Command{
 				"lastModified",
 				"path"})
 			for _, d := range versions {
+				ct := geneos.ParseComponent(d.Component)
+				h := geneos.GetHost(d.Host)
+				version := d.Version
+
 				id := d.Component + "-" + d.Version
 				if d.Host != geneos.LOCALHOST {
 					id += "@" + d.Host
 				}
 				var instances int
 				for _, v := range d.Links {
-					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+v)))
+					instances += len(instance.Instances(h, ct,
+						instance.MatchParameters("version="+v),
+						instance.MatchParentPackage(),
+					))
+					instances += len(instance.Instances(h, ct,
+						instance.MatchParameters("version="+version),
+						instance.MatchParentPackage(),
+					))
 				}
-				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+d.Version)))
 				w.Write([]string{
 					id,
 					d.Component,
@@ -155,9 +165,15 @@ var listCmd = &cobra.Command{
 				if listCmdShowInstances {
 					instances := []geneos.Instance{}
 					for _, v := range d.Links {
-						instances = append(instances, instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+v))...)
+						instances = append(instances, instance.Instances(h, ct,
+							instance.MatchParameters("version="+v),
+							instance.MatchParentPackage(),
+						)...)
 					}
-					instances = append(instances, instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+d.Version))...)
+					instances = append(instances, instance.Instances(h, ct,
+						instance.MatchParameters("version="+version),
+						instance.MatchParentPackage(),
+					)...)
 					for _, i := range instances {
 						w.Write([]string{
 							id + " # " + i.Name(),
@@ -187,11 +203,19 @@ var listCmd = &cobra.Command{
 				"Path",
 			})
 			for _, d := range versions {
+				ct := geneos.ParseComponent(d.Component)
+				h := geneos.GetHost(d.Host)
 				var instances int
 				for _, v := range d.Links {
-					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+v)))
+					instances += len(instance.Instances(h, ct,
+						instance.MatchParameters("version="+v),
+						instance.MatchParentPackage(),
+					))
 				}
-				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+d.Version)))
+				instances += len(instance.Instances(h, ct,
+					instance.MatchParameters("version="+d.Version),
+					instance.MatchParentPackage(),
+				))
 				w.Write([]string{
 					d.Component,
 					d.Host,
@@ -209,10 +233,18 @@ var listCmd = &cobra.Command{
 			fmt.Fprintf(w, "Component\tHost\tVersion\tLinks\tInstances\tLastModified\tPath\n")
 			for _, d := range versions {
 				var instances int
+				ct := geneos.ParseComponent(d.Component)
+				h := geneos.GetHost(d.Host)
 				for _, v := range d.Links {
-					instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+v)))
+					instances += len(instance.Instances(h, ct,
+						instance.MatchParameters("version="+v),
+						instance.MatchParentPackage(),
+					))
 				}
-				instances += len(instance.Instances(geneos.GetHost(d.Host), geneos.ParseComponent(d.Component), instance.MatchParameters("version="+d.Version)))
+				instances += len(instance.Instances(h, ct,
+					instance.MatchParameters("version="+d.Version),
+					instance.MatchParentPackage(),
+				))
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
