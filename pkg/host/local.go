@@ -165,7 +165,6 @@ func (h *Local) Stat(name string) (f fs.FileInfo, err error) {
 	return os.Stat(name)
 }
 
-// Lstat wraps the os.Lstat and sftp.Lstat functions
 func (h *Local) Lstat(name string) (f fs.FileInfo, err error) {
 	return os.Lstat(name)
 }
