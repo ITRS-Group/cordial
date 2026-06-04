@@ -13,9 +13,13 @@
 
   Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
 
+  * Fix `geneos show -r` to not re-expand variables when showing the raw configuration.
+
+  * Other similar uses of internal functions were reviewed and fixed. None would have resulted in significant issues, largely limited to not compressing file paths in instance configs, but this does not result in misbehaviour.
+
   * The instance keyfile was not being passed to the `values.Set` function when setting variables, which meant that secure variables were not being properly encoded and written to the `instance.setup.xml` file. This has been fixed by passing the keyfile to the `values.Set` function when setting variables.
 
-  * Fix `geneos show -r` to not re-expand variables when showing the raw configuration.
+  * Avoid forcing an update of an installed package when a new instance is added or deployed and existing instances using the basename (typically `active_prod`) are not on the latest installed.
 
 * `tools/dv2email`
 
