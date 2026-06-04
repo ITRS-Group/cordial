@@ -190,6 +190,58 @@ func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
 	return
 }
 
+// CheckBasename checks if a base release exists and is either a
+// directory orlinked to a directory, returning true if it does. It does
+// not check for the result pointing to a valid package installation.
+//
+// The basename defaults to `active_prod` unless option
+// geneos.Basename() is passed. No other options are supported.
+func CheckBasename(h *Host, ct *Component, options ...PackageOption) (exists bool, err error) {
+	if h == ALL || ct == nil {
+		return false, ErrInvalidArgs
+	}
+
+	if len(ct.PackageTypes) > 0 {
+		for _, ct := range ct.PackageTypes {
+			exists, err = CheckBasename(h, ct, options...)
+			if err != nil {
+				log.Debug().Err(err).Msg("")
+				return
+			}
+			if exists {
+				return
+			}
+		}
+		return
+	}
+
+	opts := evalOptions(options...)
+
+	basedir := h.PathTo("packages", ct.String())
+	basepath := path.Join(basedir, opts.basename)
+
+	exists = false
+	if _, err = h.Stat(basepath); err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			err = nil
+		}
+		return
+	}
+
+	// follow any link to make sure the result is a directory
+	st, err := h.Stat(basepath)
+	if err != nil {
+		err = nil
+		return
+	}
+
+	if st.IsDir() {
+		exists = true
+	}
+
+	return
+}
+
 // Update will check and update the base link given in the options. If
 // the base link exists then the force option must be used to update it,
 // otherwise it is created as expected. When called from unarchive()

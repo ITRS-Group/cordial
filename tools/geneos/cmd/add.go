@@ -289,7 +289,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 	_ = instance.ImportFiles(i, addCmdImportFiles...)
 
 	// make sure base version link exists
-	geneos.Update(h, ct, geneos.Basename(config.Get[string](cf, "version")))
+	basemame := config.Get[string](cf, "version")
+	exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basemame))
+	if !exists {
+		log.Debug().Msgf("instance %s: base version %s does not exist, attempting to create with an update", i, basemame)
+		geneos.Update(h, ct, geneos.Basename(basemame))
+	}
 
 	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
