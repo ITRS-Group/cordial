@@ -494,9 +494,19 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 			}
 		}
 
-		if mustMatch && !matched {
-			err = fmt.Errorf("%q does not match any instance names", pattern)
-			return
+		if !matched {
+			if mustMatch {
+				err = fmt.Errorf("%q does not match any instance names", pattern)
+				return
+			}
+
+			// if it's a valid name just save it for the caller to check later, otherwise ignore it
+			if ValidName(pattern) {
+				log.Debug().Msgf("pattern %q does not match any instance names but is a valid name, returning it for caller to check", pattern)
+				names = append(names, pattern)
+			} else {
+				log.Debug().Msgf("pattern %q does not match any instance names and is not a valid name, ignoring", pattern)
+			}
 		}
 	}
 

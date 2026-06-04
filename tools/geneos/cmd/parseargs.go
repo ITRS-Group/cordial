@@ -161,8 +161,8 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		return
 	}
 
-	// now range over args, and as soon as any is not a valid name (inc
-	// glob patterns) put then rest into params
+	// now range over args, and as soon as any is not a valid name (this
+	// includes unexpanded glob patterns) put them into params
 	var names, params []string
 	for i, a := range args {
 		if cmdKeepHosts && strings.HasPrefix(a, "@") {
