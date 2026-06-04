@@ -44,7 +44,7 @@ var uninstallCmdAll, uninstallCmdForce, uninstallCmdKeep, uninstallCmdUpdate boo
 func init() {
 	packageCmd.AddCommand(uninstallCmd)
 
-	uninstallCmd.Flags().StringVarP(&uninstallCmdBase, "base", "b", "active_prod", "Remove the base link `BASE` for matching TYPEs if no instances reference it.\nThis overrides other options below.")
+	uninstallCmd.Flags().StringVarP(&uninstallCmdBase, "base", "b", "", "Remove the base link `BASE` for matching TYPEs if no instances reference it.\nThis overrides other options below.")
 
 	uninstallCmd.Flags().StringVarP(&uninstallCmdVersion, "version", "V", "", "Uninstall `VERSION`")
 	uninstallCmd.Flags().BoolVarP(&uninstallCmdAll, "all", "A", false, "Uninstall all releases, stopping and disabling running instances")
