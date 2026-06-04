@@ -63,10 +63,7 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 		return
 	}
 
-	// make the underlying keyfile path independent of the instance home
-	// path
-	k := strings.Replace(string(keyfile), Home(i), "${config:home}", 1)
-	config.Set(i.Config(), "keyfile", k)
+	config.Set(i.Config(), "keyfile", string(keyfile), config.Replace("home"))
 
 	return
 }
