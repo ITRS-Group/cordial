@@ -23,6 +23,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/rs/zerolog/log"
 )
 
 // IsDisabled returns true if the instance i is disabled.
@@ -131,11 +132,34 @@ func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version strin
 		return
 	}
 
-	b, err := h.Readlink(h.Dir(actual))
+	log.Debug().Msgf("instance %s: PID %d, base version %s, actual exe %s", i.Name(), pi.PID, version, actual)
+
+	// check if the exe is a link, and if so resolve it to get the
+	// actual version in use. If it's not a link then return the base
+	// version as the actual version.
+	dir := h.Dir(actual)
+	if dir == "" {
+		actual = "unknown"
+		return
+	}
+	ls, err := h.Lstat(dir)
 	if err != nil {
 		actual = "unknown"
 		return
 	}
+	if ls.Mode()&os.ModeSymlink == 0 {
+		actual = h.Base(dir)
+		return
+	}
+
+	// otherwise follow links to get the actual version.
+	b, err := h.Readlink(h.Dir(actual))
+	if err != nil {
+		log.Debug().Err(err).Msgf("instance %s: PID %d, base version %s, exe %s is not a link", i.Name(), pi.PID, version, h.Dir(actual))
+		actual = "unknown"
+		return
+	}
+	log.Debug().Msgf("instance %s: PID %d, base version %s, link target %s", i.Name(), pi.PID, version, b)
 	actual = h.Base(b)
 
 	if actual == "" {
