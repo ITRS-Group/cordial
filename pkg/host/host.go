@@ -109,13 +109,14 @@ type Host interface {
 	Symlink(oldname, newname string) (err error)
 	TempDir() string
 	WriteFile(name string, data []byte, perm os.FileMode) (err error)
+
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
 	Create(p string, perms fs.FileMode) (out io.WriteCloser, err error)
 
 	// process control
 	Signal(pid int, signal syscall.Signal) (err error)
-	Start(cmd *exec.Cmd, options ...ProcessOption) (err error)
+	Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error)
 	Run(cmd *exec.Cmd, options ...ProcessOption) (stdout []byte, err error)
 }
 

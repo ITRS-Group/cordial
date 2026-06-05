@@ -23,7 +23,6 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -72,15 +71,11 @@ func Start(i geneos.Instance, opts ...any) error {
 	errfile := ComponentFilepath(i, "txt")
 
 	log.Debug().Msgf("starting '%s'", cmd.String())
-	if err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps()); err != nil {
-		return err
-	}
-	// wait a bit for the process to start before checking
-	time.Sleep(250 * time.Millisecond)
-	pid, err := GetLivePID(i)
+	pid, err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps())
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	return nil
 }

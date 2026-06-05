@@ -232,7 +232,7 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	return nil
 }
 
-func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
+func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error) {
 	po := evalProcessOptions(options...)
 
 	errfile := po.errfile
@@ -265,9 +265,14 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	}
 
 	if cmd.Process != nil {
+		// get the PID before releasing control, otherwise
+		// cmd.Process.Pid will be zero
+		pid = cmd.Process.Pid
+
 		// detach from control
 		cmd.Process.Release()
 	}
+
 	return
 }
 

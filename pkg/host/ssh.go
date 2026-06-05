@@ -757,7 +757,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 // shell and backgrounds and redirects. May not work on all remotes and
 // for all processes. errfile has stdout/stderr appended to it, use
 // '/dev/null' if no errfile is wanted.
-func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
+func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error) {
 	if h.OS() == "windows" {
 		err = errors.New("cannot run remote commands on windows")
 	}
@@ -793,15 +793,15 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 
 	var output []byte
 	if output, err = sess.Output(cmdstr); err != nil {
-		return err
+		return 0, err
 	}
 	pidStr := strings.TrimSpace(string(output))
-	pid, err := strconv.Atoi(pidStr)
+	pid, err = strconv.Atoi(pidStr)
 	if err != nil {
-		return fmt.Errorf("failed to parse PID from remote output: %w", err)
+		return 0, fmt.Errorf("failed to parse PID from remote output: %w", err)
 	}
 	log.Debug().Msgf("%s started with PID %d\n", h, pid)
-	return nil
+	return pid, nil
 }
 
 // Run starts a process on an SSH attached remote host h. It uses a

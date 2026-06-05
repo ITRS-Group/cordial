@@ -145,7 +145,7 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		setCredentialsFromUsername(cmd, program.Username)
 		cmd.Env = program.Env
 		cmd.Dir = program.WorkingDir
-		if err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
+		if _, err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
 	}
