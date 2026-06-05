@@ -23,15 +23,16 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
 	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance/responses"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
