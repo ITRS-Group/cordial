@@ -5,13 +5,21 @@
 > [!NOTE]
 > **Released 2026-06-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
+>[!WARNING]
+>Release v1.26 and later - **BREAKING CHANGES**
+>* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
+>
+>   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+>
+>   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
+
 ### Version v1.27.1 Fixes
 
 * `tools/geneos`
 
   * `geneos restore` and `geneos init --restore` - Fix bugs introduced with v1.26.0, including one critical one where `gateway.setup.xml` files for all restored Gateways were recreated from templates resulting in empty configurations. This specific one was caused by an internal rebuild function being called with a flag indicating this was the initial creation of the instance, while the others were a consequence of changes made while implementing `geneos init --restore` to reuse the same restore function.
 
-  Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
+    Any backup files are safe and contain the correct setup files, only restore was affected. Testing is being updated to ensure this is not repeated in the future.
 
   * Fix `geneos show -r` to not re-expand variables when showing the raw configuration.
 
@@ -38,14 +46,6 @@
 * Minor internal code changes and refactoriing to support upcoming work.
 
 ---
-
->[!WARNING]
->Release v1.26 and later - **BREAKING CHANGES**
->* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
->
->   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
->
->   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 ## Version v1.27.0
 
