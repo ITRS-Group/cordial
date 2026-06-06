@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/unix"
 )
 
@@ -103,7 +102,6 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 
 		// first, my limits
 		if err = unix.Getrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
-			log.Debug().Err(err).Msg("Failed to get core dump limit")
 			err = nil
 		}
 
@@ -111,28 +109,23 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 			rlim.Cur = unix.RLIM_INFINITY
 			// rlim.Max = unix.RLIM_INFINITY
 			if err = unix.Setrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
-				log.Debug().Err(err).Msg("Failed to set core dump limit for parent")
 				err = nil
 			}
 		}
 
 		// first get current limits
 		if err = unix.Prlimit(cmd.Process.Pid, unix.RLIMIT_CORE, nil, &rlim); err != nil {
-			log.Debug().Err(err).Int("pid", cmd.Process.Pid).Msg("Failed to get core dump limit")
 			err = nil
 		}
 
 		switch rlim.Max {
 		case 0:
 			// core dumps disabled
-			log.Debug().Int("pid", cmd.Process.Pid).Msg("Core dumps are disabled for process")
 		default:
 			rlim.Cur = rlim.Max
 			if err = unix.Prlimit(cmd.Process.Pid, unix.RLIMIT_CORE, &rlim, nil); err != nil {
-				log.Debug().Err(err).Int("pid", cmd.Process.Pid).Msg("Failed to set core dump limit")
 				err = nil
 			} else {
-				log.Debug().Int("pid", cmd.Process.Pid).Msg("Core dumps enabled for process")
 			}
 		}
 	}

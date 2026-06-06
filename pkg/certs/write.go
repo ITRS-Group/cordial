@@ -32,8 +32,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -65,20 +63,18 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 	// provided certs
 	allCerts, err := ReadCertificates(h, basePath+PEMExtension)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
-		log.Error().Err(err).Msg("reading existing root certificates failed")
+		err = fmt.Errorf("reading existing root certificates failed: %w", err)
 		return false, err
 	}
 
 	// if no existing certs then just write the provided certs to a new
 	// file, noting we have removed invalid and expired certs from roots
 	// already
-	log.Debug().Msgf("found %d root certificates to sync", len(roots))
 	if allCerts == nil {
 		if err = WriteCertificates(h, basePath+PEMExtension, roots...); err != nil {
 			return false, err
 		}
 		if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
-			log.Debug().Err(err).Msg("writing new truststore failed")
 			return false, err
 		}
 		return true, nil
@@ -88,7 +84,6 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 	allCerts = slices.DeleteFunc(allCerts, func(c *x509.Certificate) bool {
 		return !IsValidRootCA(c)
 	})
-	log.Debug().Msgf("existing root certificates contains %d valid root CAs", len(allCerts))
 
 	added := false
 	for _, cert := range roots {
@@ -102,9 +97,7 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 		added = true
 	}
 
-	log.Debug().Msg("updating truststore with root certificates")
 	if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
-		log.Debug().Err(err).Msg("writing new truststore failed")
 		return false, err
 	}
 
@@ -378,18 +371,22 @@ func PrivateKeyComments(key PrivateKey, titles ...string) []byte {
 	output := &bytes.Buffer{}
 	_, keyType, err := ParsePrivateKey(key)
 	if err != nil {
-		log.Debug().Err(err).Msg("parsing private key for comments failed")
+		return nil
 	}
 
 	if len(titles) > 0 {
 		for _, title := range titles {
-			output.WriteString("# " + title + "\n")
+			output.WriteString("# ")
+			output.WriteString(title)
+			output.WriteString("\n")
 		}
 	} else {
 		output.WriteString("# Private Key\n")
 	}
 	output.WriteString("#\n")
-	output.WriteString("#   Key Type: " + string(keyType) + "\n#\n")
+	output.WriteString("#   Key Type: ")
+	output.WriteString(string(keyType))
+	output.WriteString("\n#\n")
 
 	return output.Bytes()
 }

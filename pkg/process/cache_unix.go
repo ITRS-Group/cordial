@@ -11,7 +11,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/pkg/sftp"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/unix"
 )
 
@@ -94,7 +93,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 				myUID = sys.Uid
 				myGID = sys.Gid
 			default:
-				log.Debug().Msgf("host %s uses unknown method for process lookups, stat of /proc/self: %+v", h.String(), sys)
+				// log.Debug().Msgf("host %s uses unknown method for process lookups, stat of /proc/self: %+v", h.String(), sys)
 			}
 		}
 	}
@@ -102,7 +101,6 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	for _, dir := range dirs {
 		st, err := h.Stat(dir)
 		if err != nil {
-			log.Debug().Err(err).Msgf("failed to stat %s", dir)
 			continue
 		}
 		if !st.IsDir() {
@@ -119,19 +117,17 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 					continue
 				}
 			default:
-				log.Debug().Msgf("host %s uses unknown method for process lookups, stat of %s: %+v", h.String(), dir, sys)
+				// log.Debug().Msgf("host %s uses unknown method for process lookups, stat of %s: %+v", h.String(), dir, sys)
 			}
 		}
 
 		pid, err := strconv.Atoi(st.Name())
 		if err != nil {
-			log.Debug().Err(err).Msgf("failed to parse pid from %s", dir)
 			continue
 		}
 
 		var pstatus T
 		if pstatus, err = processStatus[T](h, pid, getStat, getStatus); err != nil {
-			log.Debug().Err(err).Msgf("failed to get process status for pid %d", pid)
 			continue
 		}
 

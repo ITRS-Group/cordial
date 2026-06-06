@@ -38,7 +38,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos/xpath"
-	"github.com/rs/zerolog/log"
 )
 
 // Command is the wrapper for a Geneos REST Command
@@ -150,11 +149,10 @@ func (c *Connection) Redial() (err error) {
 	ping := func(*Connection) error {
 		cr, err := c.Do("/rest/gatewayinfo/timezone", &Command{})
 		if err != nil {
-			log.Debug().Msgf("ping failed: %s", err)
+			err = fmt.Errorf("ping failed: %s", err)
 			return err
 		}
 		if cr.Status == "error" {
-			log.Debug().Msgf("ping failed: %s", cr.Stderr)
 			return fmt.Errorf("%s: %v", cr.Status, cr.Stderr)
 		}
 		return nil
@@ -350,7 +348,6 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 	}
 	cr, err := c.Do(endpoint, command)
 	if err != nil {
-		log.Debug().Err(err).Msgf("matching failed with limit %d", limit)
 		if limit == 0 {
 			// try again with twice the limit in the error returned
 			lims := limitRE.FindStringSubmatch(cr.Stderr)
@@ -372,7 +369,6 @@ func (c *Connection) Match(target *xpath.XPath, limit int) (matches []*xpath.XPa
 	for _, p := range cr.XPaths {
 		x, err := xpath.Parse(p)
 		if err != nil {
-			log.Debug().Err(err).Msgf("invalid xpath in response: %q", p)
 			continue
 		}
 		matches = append(matches, x)

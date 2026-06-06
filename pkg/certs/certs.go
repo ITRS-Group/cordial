@@ -32,7 +32,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 	"software.sslmate.com/src/go-pkcs12"
 )
 
@@ -198,8 +197,6 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	var roots []*x509.Certificate
 	var err error
 
-	log.Debug().Msgf("verifying %d certificates", len(certs))
-
 	if len(certs) == 0 {
 		return
 	}
@@ -207,10 +204,8 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	for _, c := range certs {
 		switch {
 		case IsValidLeafCert(c):
-			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
 			if leaf != nil && !leaf.Equal(c) {
 				err = errors.New("multiple leaf certificates found")
-				log.Debug().Err(err).Msg("")
 				return
 			}
 			leaf = c
@@ -229,7 +224,6 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 			leaf = intermediates[0]
 			intermediates = intermediates[1:]
 		} else if len(roots) > 0 {
-			log.Debug().Msg("only root certificate found, verifying self-signed root")
 			return true
 		}
 	}
@@ -238,7 +232,6 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	if len(roots) > 0 {
 		opts.Roots = x509.NewCertPool()
 		for _, rc := range roots {
-			log.Debug().Msgf("adding root CA certificate %s to pool", rc.Subject.CommonName)
 			opts.Roots.AddCert(rc)
 		}
 	}
@@ -251,11 +244,9 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 
 	_, err = leaf.Verify(opts)
 	if err != nil {
-		log.Debug().Msgf("certificate verification failed: %v", err)
 		return
 	}
 
-	log.Debug().Msg("certificate verification succeeded")
 	return true
 }
 
@@ -266,19 +257,15 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 // the leaf certificate. The order of the remaining certificates does
 // not matter.
 func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
-	log.Debug().Msgf("parsing %d certificates", len(cert))
-
 	for _, c := range cert {
 		switch {
 		case IsValidLeafCert(c):
-			log.Debug().Msgf("found valid leaf certificate: %s", c.Subject.CommonName)
 			if leaf != nil && !leaf.Equal(c) {
 				err = errors.New("multiple leaf certificates found")
 				return
 			}
 			leaf = c
 		case IsValidRootCA(c):
-			log.Debug().Msgf("found root CA certificate: %s", c.Subject.CommonName)
 			if root != nil && !root.Equal(c) {
 				err = errors.New("multiple root certificates found")
 				return
@@ -311,7 +298,6 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 
 	chains, err := leaf.Verify(opts)
 	if err != nil {
-		log.Debug().Msgf("certificate verification failed: %v", err)
 		return
 	}
 	if len(chains) == 0 || len(chains[0]) == 0 {
@@ -337,6 +323,8 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 // private keys found. Encrypted private keys and other types of blocks
 // are not supported and will be skipped. If there are no certificates
 // or private keys found then empty clients are returned without error.
+//
+// Unknown blocks are skipped.
 func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []PrivateKey, err error) {
 	var block *pem.Block
 
@@ -364,12 +352,12 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 						leaf = c
 					}
 				} else {
-					log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
+					// log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
 				}
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
 				keys = append(keys, PrivateKey(block.Bytes))
 			default:
-				log.Warn().Msgf("unsupported PEM type found: %s, skipping", block.Type)
+				// log.Warn().Msgf("unsupported PEM type found: %s, skipping", block.Type)
 			}
 		}
 	}
@@ -400,7 +388,6 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	if err != nil {
 		return
 	}
-	log.Debug().Msgf("decoded %d certificates and %d private keys", len(bundle.FullChain), len(keys))
 	if len(roots) > 0 {
 		bundle.Root = roots[0]
 	}
@@ -443,12 +430,9 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 
 	if chains, err = bundle.Leaf.Verify(verifyOpts); err != nil || len(chains) == 0 || len(chains[0]) == 0 || bundle.Key == nil {
 		// return an unverified bundle
-		log.Debug().Msgf("certificate verification for %q failed: %v", bundle.Leaf.Subject.String(), err)
 		err = nil
 		return
 	}
-
-	log.Debug().Msgf("certificate verification for %q succeeded", bundle.Leaf.Subject.String())
 
 	bundle.Root = chains[0][len(chains[0])-1]
 	bundle.Valid = true
@@ -456,7 +440,6 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	// FullChain does not include root
 	bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
 
-	log.Debug().Msgf("checking if root certificate is from system pool")
 	if bundle.Root != nil {
 		rp, _ := x509.SystemCertPool()
 		verifyOpts := x509.VerifyOptions{
@@ -467,9 +450,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 				if len(c) == 0 {
 					continue
 				}
-				log.Debug().Msgf("checking if root certificate %q is in system pool", c[0].Subject.String())
 				if c[0].Equal(bundle.Root) {
-					log.Debug().Msgf("root certificate %q is in system pool", bundle.Root.Subject.String())
 					bundle.RootIsSystem = true
 					break
 				}

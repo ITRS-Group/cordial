@@ -32,7 +32,6 @@ import (
 
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/go-querystring/query"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -222,7 +221,7 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	}
 	resp, err = c.HTTPClient.Do(req)
 	if err != nil {
-		log.Debug().Err(err).Msgf("error making POST request to %s", dest.String())
+		err = fmt.Errorf("error making POST request to %s: %w", dest.String(), err)
 		return
 	}
 	defer resp.Body.Close()

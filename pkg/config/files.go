@@ -24,8 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
@@ -54,14 +52,12 @@ func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) 
 	// check is newPath already exists
 	if st, err := h.Stat(newPath); err == nil && st.Mode().IsRegular() {
 		// newPath is a existing regular file, just return it
-		log.Debug().Msgf("newPath %s already exists, returning", newPath)
 		return newPath
 	}
 
 	for i, oldPath := range oldPaths {
 		if oldPath == "" {
 			// skip empty paths
-			log.Debug().Msgf("skipping empty oldPath at %d", i)
 			continue
 		}
 
@@ -78,7 +74,6 @@ func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) 
 
 				// else rename the oldPath to the new destination
 				if err := h.Rename(oldPath, dest); err != nil {
-					log.Debug().Err(err).Msgf("failed to rename %s to %s", oldPath, path.Join(newPath, path.Base(oldPath)))
 					return ""
 				}
 

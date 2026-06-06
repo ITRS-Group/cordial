@@ -29,7 +29,6 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/rs/zerolog/log"
 )
 
 // FormattedReporter implements a Reporter that outputs in various formatted
@@ -161,12 +160,10 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	}
 	orderColumns := []int{}
 	if len(fr.orderbycolumns) == 0 {
-		log.Debug().Msgf("no orderbycolumns specified, defaulting to all columns in order")
 		for i := range columns {
 			orderColumns = append(orderColumns, i)
 		}
 	} else {
-		log.Debug().Msgf("orderbycolumns specified: %v", fr.orderbycolumns)
 		for _, c := range fr.orderbycolumns {
 			if c < len(columns) {
 				orderColumns = append(orderColumns, c)

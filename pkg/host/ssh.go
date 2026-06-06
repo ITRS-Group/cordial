@@ -800,7 +800,6 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err
 	if err != nil {
 		return 0, fmt.Errorf("failed to parse PID from remote output: %w", err)
 	}
-	log.Debug().Msgf("%s started with PID %d\n", h, pid)
 	return pid, nil
 }
 

@@ -21,7 +21,6 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/maja42/goval"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -552,7 +551,6 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 			if v, ok := opts.initialValue.(T); ok {
 				return v
 			}
-			log.Debug().Msgf("initial value for key %q is not of type %T, returning zero value", key, value)
 			return
 		}
 
@@ -560,7 +558,6 @@ func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 			if v, ok := opts.defaultValue.(T); ok {
 				return v
 			}
-			log.Debug().Msgf("default value for key %q is not of type %T, returning zero value", key, value)
 			return
 		}
 

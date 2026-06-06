@@ -19,6 +19,7 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"reflect"
 	"syscall"
@@ -26,7 +27,6 @@ import (
 	"unsafe"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows"
 )
 
@@ -141,7 +141,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 
 	err = windows.NtQueryInformationProcess(ph, windows.ProcessBasicInformation, unsafe.Pointer(&pbi), uint32(unsafe.Sizeof(pbi)), &retLen)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to query process information for pid %d, wanted %d got %d", pid, retLen, uint32(unsafe.Sizeof(pbi)))
+		err = fmt.Errorf("failed to query process information for pid %d, wanted %d got %d", pid, retLen, uint32(unsafe.Sizeof(pbi)))
 		return
 	}
 
@@ -168,15 +168,14 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 
 	err = windows.ReadProcessMemory(ph, uintptr(unsafe.Pointer(pbi.PebBaseAddress)), &pebBuf[0], pebSize, &numRead)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to read process memory for pid %d", pid)
+		err = fmt.Errorf("failed to read process memory for pid %d: %w", pid, err)
 		return
 	}
 	peb := (*windows.PEB)(unsafe.Pointer(&pebBuf[0]))
 
 	ppp := peb.ProcessParameters
 	if ppp == nil {
-		log.Debug().Msgf("no process parameters for pid %d", pid)
-		err = errors.New("no process parameters")
+		err = fmt.Errorf("no process parameters for pid %d", pid)
 		return
 	}
 
@@ -186,7 +185,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 
 	err = windows.ReadProcessMemory(ph, uintptr(unsafe.Pointer(ppp)), &ppBuf[0], ppSize, &numRead)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to read process parameters for pid %d	", pid)
+		err = fmt.Errorf("failed to read process parameters for pid %d: %w", pid, err)
 		return
 	}
 	pp = (*windows.RTL_USER_PROCESS_PARAMETERS)(unsafe.Pointer(&ppBuf[0]))
@@ -197,7 +196,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	if svExe.IsValid() && svExe.CanSet() && svExe.Kind() == reflect.String {
 		exePath, err := readNTUnicodeString(ph, pp.ImagePathName)
 		if err != nil {
-			log.Debug().Err(err).Msgf("failed to read executable path for pid %d", pid)
+			err = fmt.Errorf("failed to read executable path for pid %d: %w", pid, err)
 		} else {
 			svExe.SetString(exePath)
 		}
@@ -206,13 +205,13 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	cmdBuf := make([]byte, pp.CommandLine.Length)
 	err = windows.ReadProcessMemory(ph, uintptr(unsafe.Pointer(pp.CommandLine.Buffer)), &cmdBuf[0], uintptr(pp.CommandLine.Length), nil)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to read command line for pid %d", pid)
+		err = fmt.Errorf("failed to read command line for pid %d: %w", pid, err)
 		return
 	}
 
 	argvw, err := windows.CommandLineToArgv((*uint16)(unsafe.Pointer(&cmdBuf[0])), &argc)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to convert command line to argv for pid	%d", pid)
+		err = fmt.Errorf("failed to convert command line to argv for pid %d: %w", pid, err)
 		return
 	}
 	defer windows.LocalFree((windows.Handle)(unsafe.Pointer(argvw)))
@@ -230,7 +229,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	var createTime, exitTime, kernelTime, userTime windows.Filetime
 	err = windows.GetProcessTimes(ph, &createTime, &exitTime, &kernelTime, &userTime)
 	if err != nil {
-		log.Debug().Err(err).Msgf("failed to get process times for pid %d", pid)
+		err = fmt.Errorf("failed to get process times for pid %d: %w", pid, err)
 		return
 	}
 

@@ -166,7 +166,6 @@ func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 
 	// "rowNames" is the default first (and only) column name in an empty dataview
 	if !(len(existing) == 1 && existing[0] == "rowNames") && !slices.Equal(existing, columns) {
-		log.Debug().Msg("dataview columns changed, resetting dataview")
 		// recreate dataview
 		groupName, viewName, _ := strings.Cut(a.dv.String(), "-")
 		a.dv.Remove()

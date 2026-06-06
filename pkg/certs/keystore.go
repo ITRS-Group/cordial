@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
-	"github.com/rs/zerolog/log"
 	"github.com/square/certigo/jceks"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -65,7 +64,6 @@ func AddRootsToTrustStore(h host.Host, path string, password config.Secret, root
 		password,
 	)
 	if err != nil {
-		log.Debug().Err(err).Msg("")
 		k = &KeyStore{
 			KeyStore: keystore.New(),
 		}
