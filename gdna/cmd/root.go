@@ -173,7 +173,7 @@ func initConfig(cmd *cobra.Command) {
 			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress")),
 		}),
 		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
-		cordial.LogLevel(loglevel),
+		cordial.ToZeroLogLevel(loglevel),
 	)
 
 	info, _ := dbg.ReadBuildInfo()

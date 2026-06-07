@@ -85,7 +85,7 @@ var startCmd = &cobra.Command{
 		cf := LoadConfigFile()
 
 		cordial.LogInit(cordial.ExecutableName(),
-			cordial.LogLevel(l),
+			cordial.ToZeroLogLevel(l),
 			cordial.SetLogfile(logFile),
 			cordial.LumberjackOptions(&lumberjack.Logger{
 				Filename:   logFile,

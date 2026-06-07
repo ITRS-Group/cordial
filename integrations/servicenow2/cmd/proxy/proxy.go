@@ -98,7 +98,7 @@ map and submit incidents.
 		cf := cmd.LoadConfigFile("proxy")
 		// update logging for long running proxy
 		cordial.LogInit(cmd.Execname,
-			cordial.LogLevel(l),
+			cordial.ToZeroLogLevel(l),
 			cordial.SetLogfile(logFile),
 			cordial.LumberjackOptions(&lumberjack.Logger{
 				Filename:   logFile,

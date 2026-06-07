@@ -163,8 +163,8 @@ func RotateOnStart(rotate bool) LogOption {
 	}
 }
 
-// LogLevel takes a slog debug level to use as a default
-func LogLevel(level slog.Level) LogOption {
+// ToZeroLogLevel takes a slog debug level to use as a default
+func ToZeroLogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		switch level {
 		case -8:
