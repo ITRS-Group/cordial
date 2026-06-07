@@ -55,7 +55,7 @@ func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) 
 		return newPath
 	}
 
-	for i, oldPath := range oldPaths {
+	for _, oldPath := range oldPaths {
 		if oldPath == "" {
 			// skip empty paths
 			continue
