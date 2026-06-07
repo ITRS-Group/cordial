@@ -53,7 +53,7 @@ func init() {
 		if Debug {
 			l = slog.LevelDebug
 		}
-		cordial.LogInit(Execname, cordial.LogLevel(l))
+		cordial.LogInit(Execname, cordial.ToZeroLogLevel(l))
 		log.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
 	})
 }
