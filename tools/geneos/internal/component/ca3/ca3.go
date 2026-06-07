@@ -20,14 +20,13 @@ package ca3
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
@@ -139,10 +138,11 @@ func factory(name string) (ca3 geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(ca3, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", ca3)
+		panic(fmt.Sprintf("%s setDefaults(): %v", ca3, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(ca3.Config(), "home", instance.Home(ca3))
+	ca3.(*CA3s).Logger = instance.Logger(ca3)
 	instances.Store(h.FullName(local), ca3)
 
 	return
@@ -174,6 +174,13 @@ func (i *CA3s) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *CA3s) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *CA3s) String() string {

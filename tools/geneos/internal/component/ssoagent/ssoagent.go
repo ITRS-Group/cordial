@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"regexp"
@@ -34,7 +35,6 @@ import (
 	"time"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -134,10 +134,11 @@ func factory(name string) (ssoagent geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(ssoagent, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", ssoagent)
+		panic(fmt.Sprintf("%s setDefaults(): %v", ssoagent, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(ssoagent.Config(), "home", instance.Home(ssoagent))
+	ssoagent.(*SSOAgents).Logger = instance.Logger(ssoagent)
 	instances.Store(h.FullName(local), ssoagent)
 
 	return
@@ -181,6 +182,13 @@ func (i *SSOAgents) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *SSOAgents) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *SSOAgents) String() string {
@@ -312,10 +320,10 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 		if !slices.Contains(ks.Aliases(), "ssokey") {
 			cert, key, err := genkeypair()
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				panic(fmt.Sprintf("failed to generate keypair for ssoagent: %v", err))
 			}
 			if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
-				log.Fatal().Err(err).Msg("")
+				panic(fmt.Sprintf("failed to add keystore key for ssoagent: %v", err))
 			}
 			changed = true
 		}

@@ -20,13 +20,12 @@ package licd
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -125,10 +124,12 @@ func factory(name string) (licd geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(licd, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", licd)
+		panic(fmt.Sprintf("%s setDefaults(): %v", licd, err))
 	}
+
 	// set the home dir based on where it might be, default to one above
 	config.Set(licd.Config(), "home", instance.Home(licd))
+	licd.(*Licds).Logger = instance.Logger(licd)
 	instances.Store(h.FullName(local), licd)
 
 	return
@@ -163,6 +164,13 @@ func (i *Licds) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *Licds) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Licds) String() string {

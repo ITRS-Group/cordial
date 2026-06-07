@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -28,8 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -154,10 +154,10 @@ func init() {
 func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.PathTo("gateway", "templates", templateName), template, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
+		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 	if err := r.WriteFile(r.PathTo("gateway", "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
+		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }
 
@@ -188,11 +188,12 @@ func factory(name string) (gateway geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(gateway, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", gateway)
+		panic(fmt.Sprintf("%s setDefaults(): %v", gateway, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(gateway.Config(), "home", instance.Home(gateway))
+	gateway.(*Gateways).Logger = instance.Logger(gateway)
 	instances.Store(h.FullName(local), gateway)
 
 	return
@@ -224,6 +225,13 @@ func (i *Gateways) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *Gateways) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Gateways) String() string {
@@ -303,7 +311,7 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 
 	if instance.CompareVersion(i, "5.14.0") >= 0 {
 		// use keyfiles
-		log.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+		i.Log().Debug("gateway version 5.14.0 or above, using keyfiles on creation")
 		config.Set(cf, "usekeyfile", "true")
 	}
 
@@ -316,12 +324,13 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 	cf := i.Config()
 
+	cordial.LogLevel.Set(slog.LevelDebug)
 	// always rebuild an instance template
-	log.Debug().Msgf("rebuilding %s instance template %q", i, instanceTemplateName)
+	i.Log().Debug("rebuilding instance template", slog.String("template", instanceTemplateName))
 	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
 		return
 	}
-	log.Debug().Msgf("%s instance template %q rebuilt", i, INSTANCEXML)
+	i.Log().Debug("instance template rebuilt", slog.String("include", INSTANCEXML))
 
 	configRebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
 	setup := config.Get[string](cf, "setup")
@@ -335,7 +344,7 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 
 	if strings.HasPrefix(setup, "http://") || strings.HasPrefix(setup, "https://") {
-		log.Debug().Msg("not rebuilding URL based setup")
+		i.Log().Debug("setup is URL based, skipping rebuild")
 		return
 	}
 
@@ -353,19 +362,19 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 
 	if secure && config.Get[uint16](cf, "port") == 7039 {
 		if _, ok := ports[7038]; !ok {
-			log.Debug().Msg("found port 7038 free, switching to it for secure gateway")
+			i.Log().Debug("found port 7038 free, switching to it for secure gateway")
 			config.Set[uint16](cf, "port", 7038)
 		} else {
-			log.Debug().Msg("found port 7038 in use, switching to next free port for secure gateway")
+			i.Log().Debug("found port 7038 in use, switching to next free port for secure gateway")
 			config.Set(cf, "port", nextport)
 		}
 		changed = true
 	} else if !secure && config.Get[uint16](cf, "port") == 7038 {
 		if _, ok := ports[7039]; !ok {
-			log.Debug().Msg("found port 7039 free, switching to it for non-secure gateway")
+			i.Log().Debug("found port 7039 free, switching to it for non-secure gateway")
 			config.Set[uint16](cf, "port", 7039)
 		} else {
-			log.Debug().Msg("found port 7039 in use, switching to next free port for non-secure gateway")
+			i.Log().Debug("found port 7039 in use, switching to next free port for non-secure gateway")
 			config.Set(cf, "port", nextport)
 		}
 		changed = true
@@ -373,7 +382,7 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 
 	if changed {
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
-			log.Error().Err(resp.Err).Msg("Cannot save configuration")
+			i.Log().Error("Cannot save configuration", slog.String("error", resp.Err.Error()))
 			return resp.Err
 		}
 	}

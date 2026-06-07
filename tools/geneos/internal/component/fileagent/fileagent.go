@@ -20,13 +20,12 @@ package fileagent
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -127,10 +126,11 @@ func factory(name string) (fileagent geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(fileagent, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", fileagent)
+		panic(fmt.Sprintf("%s setDefaults(): %v", fileagent, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(fileagent.Config(), "home", instance.Home(fileagent))
+	fileagent.(*FileAgents).Logger = instance.Logger(fileagent)
 	instances.Store(h.FullName(local), fileagent)
 
 	return
@@ -156,6 +156,13 @@ func (i *FileAgents) Home() string {
 
 func (i *FileAgents) Host() *geneos.Host {
 	return i.InstanceHost
+}
+
+func (i *FileAgents) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *FileAgents) String() string {

@@ -20,6 +20,7 @@ package instance
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"regexp"
@@ -31,7 +32,10 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
@@ -42,9 +46,26 @@ type Instance struct {
 	InstanceHost *geneos.Host      `json:"-"`
 	Component    *geneos.Component `json:"-"`
 	ConfigLoaded time.Time         `json:"-"`
+	Logger       *slog.Logger      `json:"-"`
 }
 
 var instanceMutex sync.Mutex
+
+// Logger returns a logger with the instance name, host and type in the
+// context. The logger is configured with the "cordial" prefix and an
+// indent, and is set to the Info level.
+func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
+	h := logger.NewHandler(logger.WithLevelVar(&cordial.LogLevel), logger.SourceRoot("cordial"), logger.WithDelimiter("."))
+	l = slog.New(h)
+	for _, group := range groups {
+		l = l.WithGroup(group)
+	}
+	return l.With(
+		slog.String("name", i.Name()),
+		slog.String("host", i.Host().String()),
+		slog.String("type", i.Type().String()),
+	)
+}
 
 func CloneConfig(i geneos.Instance) (cf *config.Config) {
 	instanceMutex.Lock()
@@ -183,7 +204,7 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 			defer wg.Done()
 
 			resp := f(c, values...)
-			responses.SetFinish(resp)
+			responses.Finished(resp)
 			ch <- resp
 		}(c)
 	}
@@ -206,7 +227,7 @@ func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneo
 
 	for _, c := range instances {
 		resp := f(c, values...)
-		responses.SetFinish(resp)
+		responses.Finished(resp)
 		rs[resp.Instance.String()] = resp
 	}
 
@@ -232,7 +253,7 @@ func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *r
 			defer wg.Done()
 
 			resp := f(c, values...)
-			responses.SetFinish(resp)
+			responses.Finished(resp)
 			ch <- resp
 		}(c)
 	}

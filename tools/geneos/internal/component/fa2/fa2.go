@@ -20,13 +20,12 @@ package fa2
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
@@ -135,10 +134,11 @@ func factory(name string) (fa2 geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(fa2, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", fa2)
+		panic(fmt.Sprintf("%s setDefaults(): %v", fa2, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(fa2.Config(), "home", instance.Home(fa2))
+	fa2.(*FA2s).Logger = instance.Logger(fa2)
 	instances.Store(h.FullName(local), fa2)
 
 	return
@@ -170,6 +170,13 @@ func (i *FA2s) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *FA2s) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *FA2s) String() string {

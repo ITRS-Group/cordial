@@ -20,13 +20,12 @@ package minimal
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
@@ -136,10 +135,12 @@ func factory(name string) (minimal geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(minimal, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", minimal)
+		panic(fmt.Sprintf("%s setDefaults(): %v", minimal, err))
 	}
+
 	// set the home dir based on where it might be, default to one above
 	config.Set(minimal.Config(), "home", instance.Home(minimal))
+	minimal.(*Minimals).Logger = instance.Logger(minimal)
 	instances.Store(instance.ShortName(minimal), minimal)
 
 	return
@@ -163,6 +164,9 @@ func (i *Minimals) Name() string {
 }
 
 func (i *Minimals) Home() string {
+	if i == nil {
+		return ""
+	}
 	return instance.Home(i)
 }
 
@@ -171,6 +175,13 @@ func (i *Minimals) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *Minimals) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Minimals) String() string {

@@ -21,12 +21,11 @@ package ac2
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -124,11 +123,12 @@ func factory(name string) (ac2 geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(ac2, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", ac2)
+		panic(fmt.Sprintf("%s setDefaults(): %v", ac2, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(ac2.Config(), "home", instance.Home(ac2))
+	ac2.(*AC2s).Logger = instance.Logger(ac2)
 	instances.Store(h.FullName(local), ac2)
 
 	return
@@ -160,6 +160,13 @@ func (i *AC2s) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *AC2s) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *AC2s) String() string {

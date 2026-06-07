@@ -19,13 +19,12 @@ package webserver
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -132,10 +131,11 @@ func factory(name string) (webserver geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(webserver, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", webserver)
+		panic(fmt.Sprintf("%s setDefaults(): %v", webserver, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(webserver.Config(), "home", instance.Home(webserver))
+	webserver.(*Webservers).Logger = instance.Logger(webserver)
 	instances.Store(h.FullName(local), webserver)
 
 	return
@@ -180,6 +180,13 @@ func (i *Webservers) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *Webservers) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Webservers) String() string {
@@ -245,7 +252,7 @@ func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 	importFrom := instance.BaseVersion(i)
 	if err = os.Chdir(importFrom); err != nil {
-		log.Debug().Err(err).Msgf("instance config %#v", i.Config().AllSettings())
+		i.Log().Debug("instance config", slog.Any("settings", i.Config().AllSettings()))
 		return
 	}
 
@@ -277,7 +284,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
-		log.Debug().Err(err).Msgf("reading security.properties %q", spPath)
+		i.Log().Error("reading security.properties", slog.Any("path", spPath), slog.Any("error", err))
 		return nil
 	}
 
@@ -288,7 +295,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	sp["trustStoreType"] = "JKS"
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
-		log.Error().Err(err).Msgf("writing security.properties %q", spPath)
+		i.Log().Error("writing security.properties", slog.Any("path", spPath), slog.Any("error", err))
 		return
 	}
 
@@ -301,7 +308,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	if len(roots) > 0 && truststorePath != "" {
 		truststorePath = instance.HomeRel(i, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
-			log.Error().Err(err).Msgf("updating truststore %q", truststorePath)
+			i.Log().Error("updating truststore", slog.Any("path", truststorePath), slog.Any("error", err))
 			return err
 		}
 	}
@@ -314,7 +321,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
-		log.Error().Err(err).Msgf("reading certificate chain for %s", i.String())
+		i.Log().Error("reading certificate chain", slog.Any("error", err))
 		return
 	}
 	if len(certChain) == 0 {
@@ -322,7 +329,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	}
 	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
-		log.Error().Err(err).Msgf("reading private key for %s", i.String())
+		i.Log().Error("reading private key", slog.Any("error", err))
 		return
 	}
 	keyStore = instance.HomeRel(i, keyStore)

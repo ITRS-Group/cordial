@@ -21,13 +21,12 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
@@ -119,7 +118,7 @@ func init() {
 func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
 	if err := r.WriteFile(r.PathTo(ct.ParentType, "templates", templateName), template, 0664); err != nil {
-		log.Fatal().Err(err).Msg("")
+		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }
 
@@ -149,10 +148,11 @@ func factory(name string) (floating geneos.Instance) {
 		floating.Config().Default("pkgtype", ct.Name)
 	}
 	if err := instance.SetDefaults(floating, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", floating)
+		panic(fmt.Sprintf("%s setDefaults(): %v", floating, err))
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(floating.Config(), "home", instance.Home(floating))
+	floating.(*Floatings).Logger = instance.Logger(floating)
 	instances.Store(h.FullName(local), floating)
 
 	return
@@ -178,6 +178,13 @@ func (i *Floatings) Home() string {
 
 func (i *Floatings) Host() *geneos.Host {
 	return i.InstanceHost
+}
+
+func (i *Floatings) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Floatings) String() string {
@@ -259,7 +266,7 @@ func (i *Floatings) Rebuild(initial bool) (err error) {
 
 	setup := config.Get[string](cf, "setup")
 	if strings.HasPrefix(setup, "http:") || strings.HasPrefix(setup, "https:") {
-		log.Debug().Msg("not rebuilding URL bases setup")
+		i.Log().Debug("not rebuilding URL bases setup")
 		return
 	}
 

@@ -19,13 +19,12 @@ package netprobe
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -144,16 +143,17 @@ func factory(name string) (netprobe geneos.Instance) {
 		case "netprobe", "minimal", "fa2":
 			config.Set(netprobe.Config(), "pkgtype", ct.Name)
 		default:
-			log.Warn().Str("pkgtype", ct.Name).Msg("invalid pkgtype for netprobe, using default")
+			panic(fmt.Sprintf("invalid pkgtype for netprobe: %s", ct.Name))
 		}
 	}
 
 	if err := instance.SetDefaults(netprobe, local); err != nil {
-		log.Fatal().Err(err).Msgf("%s setDefaults()", netprobe)
+		panic(fmt.Sprintf("%s setDefaults(): %v", netprobe, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(netprobe.Config(), "home", instance.Home(netprobe))
+	netprobe.(*Netprobes).Logger = instance.Logger(netprobe)
 	instances.Store(h.FullName(local), netprobe)
 
 	return
@@ -185,6 +185,13 @@ func (i *Netprobes) Host() *geneos.Host {
 		return nil
 	}
 	return i.InstanceHost
+}
+
+func (i *Netprobes) Log() *slog.Logger {
+	if i == nil {
+		return slog.Default()
+	}
+	return i.Logger
 }
 
 func (i *Netprobes) String() string {
