@@ -29,12 +29,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
+
+var LogLevel slog.LevelVar
 
 type discardCloser struct {
 	io.Writer
