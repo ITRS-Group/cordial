@@ -36,8 +36,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
