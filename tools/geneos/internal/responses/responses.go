@@ -90,7 +90,7 @@ type Dataview struct {
 	Headlines map[string]string
 }
 
-func SetFinish[R Response](resp *R) {
+func Finished[R Response](resp *R) {
 	switch any(*resp).(type) {
 	case General:
 		r := any(*resp).(General)
