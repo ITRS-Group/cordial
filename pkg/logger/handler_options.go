@@ -7,7 +7,6 @@ import (
 )
 
 type handlerOpts struct {
-	indent    bool
 	delimiter string
 	prefix    string
 	level     *slog.LevelVar
@@ -15,12 +14,6 @@ type handlerOpts struct {
 }
 
 type Option func(*handlerOpts)
-
-func WithIndent() Option {
-	return func(opts *handlerOpts) {
-		opts.indent = true
-	}
-}
 
 func WithDelimiter(delimiter string) Option {
 	return func(opts *handlerOpts) {
