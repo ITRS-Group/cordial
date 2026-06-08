@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
@@ -39,7 +39,7 @@ type cpustat struct {
 
 // DoSample is the entry point for the example CPU sampler
 func (p *CPUSampler) DoSample() (err error) {
-	log.Debug().Msg("called")
+	zlog.Debug().Msg("called")
 	laststats := p.cpustats
 	if laststats.lastsample.IsZero() {
 		// first time through, store initial stats, don't update table and wait for next call

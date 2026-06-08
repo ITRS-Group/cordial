@@ -34,7 +34,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -80,7 +80,7 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 
 	for i, g := range config.Get[[]map[string]string](cf, "geneos.gateways") {
 		if g["name"] == "" && g["primary"] == "" {
-			log.Debug().Msgf("no name or primary defined for gateway %d, skipping", i)
+			zlog.Debug().Msgf("no name or primary defined for gateway %d, skipping", i)
 		}
 
 		primary := g["primary"]
@@ -98,11 +98,11 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 
 		secure, err := strconv.ParseBool(g["secure"])
 		if err != nil {
-			log.Debug().Msgf("gateway %q secure setting unknown, assuming false", name)
+			zlog.Debug().Msgf("gateway %q secure setting unknown, assuming false", name)
 			secure = false
 		}
 
-		log.Debug().Msgf("primary %s, standby %s, secure %v", primary, standby, secure)
+		zlog.Debug().Msgf("primary %s, standby %s, secure %v", primary, standby, secure)
 
 		if !strings.Contains(primary, ":") {
 			// append default port depending on secure flag
@@ -160,9 +160,9 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 	liveGateways = gateways.gateways
 
 	if len(liveGateways) == totalCount {
-		log.Info().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
+		zlog.Info().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
 	} else {
-		log.Warn().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
+		zlog.Warn().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
 
 	}
 
@@ -174,16 +174,16 @@ func checkGateway(client http.Client, wg *sync.WaitGroup, gateways *gatewayList,
 
 	resp, err := client.Get(livenessURL.String())
 	if err != nil {
-		log.Warn().Msgf("gateway %s %s %s not responding", name, role, livenessURL.Host)
+		zlog.Warn().Msgf("gateway %s %s %s not responding", name, role, livenessURL.Host)
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != 200 {
-		log.Warn().Msgf("gateway %s %s %s returned: %d %s", name, role, livenessURL.Host, resp.StatusCode, resp.Status)
+		zlog.Warn().Msgf("gateway %s %s %s returned: %d %s", name, role, livenessURL.Host, resp.StatusCode, resp.Status)
 		return
 	}
 	// add to list
-	log.Debug().Msgf("gateway %s %s %s responding to liveness check", name, role, livenessURL.Host)
+	zlog.Debug().Msgf("gateway %s %s %s responding to liveness check", name, role, livenessURL.Host)
 	gateways.Lock()
 	if !slices.Contains(gateways.gateways, name) {
 		gateways.gateways = append(gateways.gateways, name)
@@ -210,7 +210,7 @@ func OrderGateways(netprobe string, gateways []string) (selection []string) {
 		gwUUIDs = append(gwUUIDs, gwUUID)
 	}
 
-	log.Debug().Msgf("uuids: %v", gwUUIDs)
+	zlog.Debug().Msgf("uuids: %v", gwUUIDs)
 
 	for _, k := range slices.Sorted(maps.Keys(gws)) {
 		selection = append(selection, gws[k])
@@ -287,7 +287,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 	// try to open file
 	r, err := os.Open(source)
 	if err != nil {
-		log.Error().Err(err).Msgf("opening gateways file %q", source)
+		zlog.Error().Err(err).Msgf("opening gateways file %q", source)
 		return
 	}
 	defer r.Close()
@@ -298,7 +298,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 		columns, err := c.Read()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 			}
 			return
 		}
@@ -310,7 +310,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 			row, err := c.Read()
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
-					log.Error().Err(err).Msg("")
+					zlog.Error().Err(err).Msg("")
 				}
 				return
 			}
@@ -326,7 +326,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 			}
 			if gw["name"] == "" {
 				line, _ := c.FieldPos(1)
-				log.Error().Msgf("no gateway name in %s on line %d", source, line)
+				zlog.Error().Msgf("no gateway name in %s on line %d", source, line)
 			}
 			gateways = append(gateways, gw)
 		}

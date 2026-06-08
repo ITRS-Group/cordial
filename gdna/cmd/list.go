@@ -23,10 +23,11 @@ import (
 	"slices"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 //go:embed _docs/list.md
@@ -163,7 +164,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		}
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
-			log.Error().Err(err).Msg("reports configuration format incorrect")
+			zlog.Error().Err(err).Msg("reports configuration format incorrect")
 			return
 		}
 

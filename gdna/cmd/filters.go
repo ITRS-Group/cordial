@@ -47,7 +47,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -169,7 +169,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 		config.AppName("geneos"),
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
-	log.Debug().Msgf("loaded any existing filters from %q", igPath)
+	zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
 
 	// filters := ig.GetSliceStringMapString(config.Join("filters", filterType, category))
 	var filters []Filter
@@ -279,7 +279,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 		config.AppName("geneos"),
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
-	log.Debug().Msgf("loaded any existing filters from %q", igPath)
+	zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
 
 	var filters []*Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
@@ -387,10 +387,10 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	)
 
 	if err != nil {
-		log.Warn().Err(err).Msg("loading")
+		zlog.Warn().Err(err).Msg("loading")
 	}
 
-	log.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
+	zlog.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
 		config.AppName("geneos"),
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	))
@@ -401,14 +401,14 @@ OUTER:
 
 		// if we are called between reporting db rebuilds, delete existing contents
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			log.Info().Err(err).Msgf("delete from %s failed", table)
+			zlog.Info().Err(err).Msgf("delete from %s failed", table)
 			// NOT an error in itself
 			err = nil
 		}
 
 		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", filterType, f, "insert")))
 		if err != nil {
-			log.Error().Err(err).Msgf("prepare for %s failed", table)
+			zlog.Error().Err(err).Msgf("prepare for %s failed", table)
 			continue
 		}
 		defer insertStmt.Close()
@@ -427,7 +427,7 @@ OUTER:
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {
-					log.Fatal().Err(err).Msgf("insert for %s failed", table)
+					zlog.Fatal().Err(err).Msgf("insert for %s failed", table)
 				}
 			}
 			continue OUTER
@@ -453,11 +453,11 @@ OUTER:
 					Time:  *i.Timestamp,
 				}),
 			); err != nil {
-				log.Error().Err(err).Msgf("insert for %s failed", table)
+				zlog.Error().Err(err).Msgf("insert for %s failed", table)
 				break
 			}
 		}
-		log.Debug().Msgf("added %d entries to %ss for %s", len(x), filterType, f)
+		zlog.Debug().Msgf("added %d entries to %ss for %s", len(x), filterType, f)
 	}
 	return nil
 }

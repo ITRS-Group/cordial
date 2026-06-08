@@ -26,7 +26,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -85,7 +85,7 @@ map and submit incidents.
 			}
 
 			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
-				log.Fatal().Err(err).Msg("failed to daemonise process")
+				zlog.Fatal().Err(err).Msg("failed to daemonise process")
 			}
 		}
 
@@ -194,7 +194,7 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	starttime := c.Get("starttime").(time.Time)
 	latency := time.Since(starttime)
 
-	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
+	zlog.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
 		config.Get[string](cf, "servicenow.url"), // name of server (APP) with the environment
 		req.Proto,                                // protocol
 		resStatus,                                // response status

@@ -16,7 +16,7 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 
@@ -56,7 +56,7 @@ func start() {
 	ssoCfgFile := path.Join(confDir, "conf/sso-agent.conf")
 	err := vc.MergeHOCONFile(ssoCfgFile)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	username, realm := SplitUsername(config.Get[string](vc, "kerberos.user"))
@@ -70,7 +70,7 @@ func start() {
 	}
 	cf, err := krb5config.Load(krb5conf)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	password := config.Get[string](vc, "kerberos.password")
@@ -84,17 +84,17 @@ func start() {
 	c := client.NewWithPassword(username, realm, password, cf, client.DisablePAFXFAST(true))
 	err = c.Login()
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	// get the kvno from a tgt request
 	asreq, err := messages.NewASReqForTGT(c.Credentials.Domain(), c.Config, c.Credentials.CName())
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	asrep, err := c.ASExchange(c.Credentials.Domain(), asreq, 0)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	serviceKVNO := asrep.EncPart.KVNO
 
@@ -104,7 +104,7 @@ func start() {
 	for _, e := range cf.LibDefaults.DefaultTktEnctypes {
 		if eid := etypeID.EtypeSupported(e); eid != 0 {
 			if err := kt.AddEntry(username, realm, password, time.Now(), uint8(serviceKVNO), eid); err != nil {
-				log.Fatal().Err(err).Msg("")
+				zlog.Fatal().Err(err).Msg("")
 			}
 		}
 	}
@@ -119,7 +119,7 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			log.Info().
+			zlog.Info().
 				Str("URI", v.URI).
 				Int("status", v.Status).
 				Msg("request")
@@ -174,21 +174,21 @@ func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 
 	f, err := os.Open(ks)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	defer f.Close()
 	k := keystore.New()
 	if err := k.Load(f, pw); err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	pk, err := k.GetPrivateKeyEntry("ssokey", pw)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	key, err := x509.ParsePKCS8PrivateKey(pk.PrivateKey)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	if r, ok := key.(*rsa.PrivateKey); ok {
 		return r
@@ -251,7 +251,7 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if it indicates it is authenticated
 	if creds != nil && creds.Authenticated() {
-		log.Printf("cred: %+v\n", creds)
+		zlog.Printf("cred: %+v\n", creds)
 		// Check for Active Directory attributes
 		if ADCreds, ok := creds.Attributes()[credentials.AttributeKeyADCredentials]; ok {
 			b, _ := json.MarshalIndent(ADCreds, "", "    ")
@@ -272,12 +272,12 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	l, err := ldap.DialURL(config.Get[string](vc, "ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 
 	if err = l.Bind(config.Get[string](vc, "ldap.user"), config.Get[string](vc, "ldap.password")); err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 
@@ -288,13 +288,13 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf("(&%s(%s=%s))", qf, config.Get[string](vc, "ldap.fields.user"), user)
 	fmt.Fprintf(w, "LDAP Query: %s\n", query)
-	log.Printf("LDAP query: %s", query)
+	zlog.Printf("LDAP query: %s", query)
 	search := ldap.NewSearchRequest(config.Get[string](vc, "ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		query, config.Get[[]string](vc, "ldap.fields"), []ldap.Control{})
 
 	result, err := l.Search(search)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 

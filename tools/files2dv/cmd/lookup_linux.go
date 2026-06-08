@@ -28,8 +28,9 @@ import (
 	"syscall"
 	"time"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[string]string, skip bool) {
@@ -116,7 +117,7 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	if u, err := user.LookupId(uid); err == nil { // no error
 		lookup["user"] = u.Username
 	} else {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 	}
 	gid := strconv.Itoa(int(st.Sys().(*syscall.Stat_t).Gid))
 	lookup["gid"] = gid

@@ -23,7 +23,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -54,7 +54,7 @@ func init() {
 			l = slog.LevelDebug
 		}
 		cordial.LogInit(Execname, cordial.ToZeroLogLevel(l))
-		log.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
+		zlog.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
 	})
 }
 
@@ -94,9 +94,9 @@ func LoadConfigFile(cmdName string) (cf *config.Config) {
 		config.MustExist(),
 	)
 	if err != nil {
-		log.Fatal().Msgf("failed to load a configuration file %q from any expected location", configBasename+".yaml")
+		zlog.Fatal().Msgf("failed to load a configuration file %q from any expected location", configBasename+".yaml")
 	}
-	log.Debug().Msgf("loaded config file %s",
+	zlog.Debug().Msgf("loaded config file %s",
 		config.Path(configBasename,
 			config.AppName("geneos"),
 			config.UseGlobal(),

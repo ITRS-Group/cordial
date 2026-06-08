@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -26,22 +26,22 @@ func get(w http.ResponseWriter, r *http.Request) {
 	rv := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := rv.(*ims.Response)
 	if !ok {
-		log.Debug().Msgf("response not correct type in request context")
+		zlog.Debug().Msgf("response not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	log.Debug().Msgf("handling request for %s", r.URL.Path)
+	zlog.Debug().Msgf("handling request for %s", r.URL.Path)
 
 	v := r.Context().Value(ims.ContextKeyConfig)
 	if v == nil {
-		log.Debug().Msgf("config not found in request context")
+		zlog.Debug().Msgf("config not found in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	cf, ok := v.(*config.Config)
 	if !ok {
-		log.Debug().Msgf("config not correct type in request context")
+		zlog.Debug().Msgf("config not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -50,7 +50,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	table := r.PathValue("table")
 	if table == "" {
-		log.Debug().Msgf("table name missing from request path")
+		zlog.Debug().Msgf("table name missing from request path")
 		http.NotFound(w, r)
 		return
 	}
@@ -62,7 +62,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Debug().Msgf("table config %+v", tc)
+	zlog.Debug().Msgf("table config %+v", tc)
 
 	if !tc.Query.Enabled {
 		http.NotFound(w, r)

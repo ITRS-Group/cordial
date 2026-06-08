@@ -25,7 +25,7 @@ import (
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -179,7 +179,7 @@ func GetRecord(ctx *Context, table string, options ...Option) (results results, 
 	if len(result.Results) > 0 {
 		results = result.Results[0]
 	}
-	log.Debug().Msgf("GetRecord results: %+v", results)
+	zlog.Debug().Msgf("GetRecord results: %+v", results)
 	return
 }
 
@@ -192,9 +192,9 @@ func PostRecord(ctx *Context, table string, record Record, options ...Option) (r
 	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
-			log.Debug().Err(err).Msg("failed to marshal trace record for POST request")
+			zlog.Debug().Err(err).Msg("failed to marshal trace record for POST request")
 		} else {
-			log.Debug().Msgf("POST (Create) %s with record:\n%s", table, js)
+			zlog.Debug().Msgf("POST (Create) %s with record:\n%s", table, js)
 		}
 	}
 	_, err = rc.Post(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
@@ -217,9 +217,9 @@ func PutRecord(ctx *Context, table string, record Record, options ...Option) (re
 	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
-			log.Debug().Err(err).Msg("failed to marshal trace record for PUT request")
+			zlog.Debug().Err(err).Msg("failed to marshal trace record for PUT request")
 		} else {
-			log.Debug().Msgf("PUT (Update) %s with record:\n%s", table, js)
+			zlog.Debug().Msgf("PUT (Update) %s with record:\n%s", table, js)
 		}
 	}
 
@@ -272,7 +272,7 @@ func TableConfig(cf *config.Config, tableName string) (tableData TableData, err 
 	var tables []TableData
 
 	if err = cf.UnmarshalKey("servicenow.tables", &tables, config.NoExpand()); err != nil {
-		log.Debug().Err(err).Msg("")
+		zlog.Debug().Err(err).Msg("")
 		return
 	}
 	for _, t := range tables {

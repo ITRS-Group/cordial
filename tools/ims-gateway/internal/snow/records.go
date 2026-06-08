@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -239,13 +239,13 @@ func assembleURL(table string, options ...Option) *url.URL {
 
 	p, err := url.JoinPath("table", table, opts.sysID)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to join snow URL path")
+		zlog.Error().Err(err).Msg("failed to join snow URL path")
 		p = "/table/" + table
 	}
 
 	u, err := url.Parse(p)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to parse snow URL")
+		zlog.Error().Err(err).Msg("failed to parse snow URL")
 		u = &url.URL{Path: p}
 	}
 	u.RawQuery = v.Encode()
@@ -257,7 +257,7 @@ func tableConfig(cf *config.Config, tableName string) (tableData TableData, err 
 	var tables []TableData
 
 	if err = cf.UnmarshalKey(cf.Join("snow", "tables"), &tables, config.NoExpand()); err != nil {
-		log.Debug().Err(err).Msg("")
+		zlog.Debug().Err(err).Msg("")
 		return
 	}
 	for _, t := range tables {

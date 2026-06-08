@@ -28,7 +28,7 @@ import (
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -115,7 +115,7 @@ func start() (err error) {
 		return
 	}
 
-	log.Debug().Msg("starting scheduler")
+	zlog.Debug().Msg("starting scheduler")
 	sched.Start()
 
 	// save these as a global for config updates
@@ -154,12 +154,12 @@ func start() (err error) {
 		listeners,
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("scheduling main job")
+		zlog.Error().Err(err).Msg("scheduling main job")
 		return
 	}
 
 	rjt, _ := mainjob.NextRun()
-	log.Info().Msgf("next scheduled report job %v", rjt)
+	zlog.Info().Msgf("next scheduled report job %v", rjt)
 
 	if es := config.Get[string](cf, cf.Join("gdna", "email-schedule")); es != "" {
 		emailjob, err = sched.NewJob(
@@ -170,11 +170,11 @@ func start() (err error) {
 			listeners,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("scheduling email job")
+			zlog.Error().Err(err).Msg("scheduling email job")
 			return err
 		} else {
 			ejt, _ := emailjob.NextRun()
-			log.Info().Msgf("next scheduled email job %v", ejt)
+			zlog.Info().Msgf("next scheduled email job %v", ejt)
 		}
 	}
 
@@ -199,12 +199,12 @@ func updateJobs() {
 			listeners,
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("updating main job")
+			zlog.Error().Err(err).Msg("updating main job")
 			return
 		}
 
 		rjt, _ := mainjob.NextRun()
-		log.Info().Msgf("next report job %v", rjt)
+		zlog.Info().Msgf("next report job %v", rjt)
 	}
 
 	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
@@ -226,11 +226,11 @@ func updateJobs() {
 			)
 		}
 		if err != nil {
-			log.Error().Err(err).Msg("updating email job")
+			zlog.Error().Err(err).Msg("updating email job")
 			return
 		}
 		ejt, _ := emailjob.NextRun()
-		log.Info().Msgf("next email job %v", ejt)
+		zlog.Info().Msgf("next email job %v", ejt)
 	}
 
 }
@@ -242,15 +242,15 @@ var listeners = gocron.WithEventListeners(
 )
 
 func beforejob(_ uuid.UUID, jobName string) {
-	log.Info().Msgf("running %s", jobName)
+	zlog.Info().Msgf("running %s", jobName)
 }
 
 func afterjob(_ uuid.UUID, jobName string) {
-	log.Info().Msgf("finished %s", jobName)
+	zlog.Info().Msgf("finished %s", jobName)
 }
 
 func afterjoberr(_ uuid.UUID, jobName string, err error) {
-	log.Error().Err(err).Msgf("finished %s with error", jobName)
+	zlog.Error().Err(err).Msgf("finished %s with error", jobName)
 }
 
 func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
@@ -261,7 +261,7 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("cannot BEGIN transaction")
+		zlog.Error().Err(err).Msg("cannot BEGIN transaction")
 		return
 	}
 
@@ -278,7 +278,7 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 
 	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("cannot BEGIN transaction")
+		zlog.Error().Err(err).Msg("cannot BEGIN transaction")
 		return
 	}
 	defer tx.Rollback()

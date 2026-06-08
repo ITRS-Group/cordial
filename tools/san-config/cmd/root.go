@@ -28,7 +28,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -150,7 +150,7 @@ func initConfig(cmd *cobra.Command) {
 		if !nowatchconfig {
 			opts = append(opts,
 				config.WatchConfig(func(e fsnotify.Event) {
-					log.Info().Msgf("configuration changed, reloading %s and inventories", e.Name)
+					zlog.Info().Msgf("configuration changed, reloading %s and inventories", e.Name)
 					Inventories.Range(func(key, value any) bool {
 						// zero out modification check values
 						inv := value.(*Inventory)
@@ -166,7 +166,7 @@ func initConfig(cmd *cobra.Command) {
 
 		cf, err = config.Read(cordial.ExecutableName(), opts...)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("loading from %s", config.Path(cordial.ExecutableName(), opts...))
+			zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(cordial.ExecutableName(), opts...))
 		}
 
 		// use MustExists() to check for actual files
@@ -206,6 +206,6 @@ func initConfig(cmd *cobra.Command) {
 	}
 
 	info, _ := dbg.ReadBuildInfo()
-	log.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
-	log.Debug().Msg(deferredlog)
+	zlog.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
+	zlog.Debug().Msg(deferredlog)
 }

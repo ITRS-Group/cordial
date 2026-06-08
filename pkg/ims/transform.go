@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -68,19 +68,19 @@ func (s Transform) Apply(cf *config.Config, idp string, incidentIn map[string]st
 
 	for k, v := range s.Defaults {
 		if i, ok := incidentOut[k]; !ok || i == "" {
-			log.Debug().Msgf("setting default value for field %q to %q", k, config.Expand[string](cf, v))
+			zlog.Debug().Msgf("setting default value for field %q to %q", k, config.Expand[string](cf, v))
 			incidentOut[k] = config.Expand[string](cf, v)
 		}
 	}
 
 	for _, e := range s.Remove {
-		log.Debug().Msgf("removing field %q", e)
+		zlog.Debug().Msgf("removing field %q", e)
 		delete(incidentOut, e)
 	}
 
 	for k, v := range s.Rename {
 		if _, ok := incidentOut[k]; ok {
-			log.Debug().Msgf("renaming field %q to %q", k, v)
+			zlog.Debug().Msgf("renaming field %q to %q", k, v)
 			incidentOut[v] = incidentOut[k]
 			delete(incidentOut, k)
 		}
@@ -92,11 +92,11 @@ func (s Transform) Apply(cf *config.Config, idp string, incidentIn map[string]st
 			err = fmt.Errorf("missing required field %q", i)
 			return
 		}
-		log.Debug().Msgf("required field %q is present", i)
+		zlog.Debug().Msgf("required field %q is present", i)
 	}
 
 	if len(s.Filter) > 0 {
-		log.Debug().Msgf("filtering fields using %d regular expressions", len(s.Filter))
+		zlog.Debug().Msgf("filtering fields using %d regular expressions", len(s.Filter))
 		for key := range incidentOut {
 			if !slices.ContainsFunc(s.Filter, func(f string) bool {
 				match, _ := regexp.MatchString(f, key)
@@ -109,13 +109,13 @@ func (s Transform) Apply(cf *config.Config, idp string, incidentIn map[string]st
 
 	maps.DeleteFunc(incidentOut, func(e, _ string) bool {
 		if strings.HasPrefix(e, "__") {
-			log.Debug().Msgf("removing internal field %q", e)
+			zlog.Debug().Msgf("removing internal field %q", e)
 			return true
 		}
 		return false
 	})
 
-	log.Debug().Msgf("transformed incident fields: %v", incidentOut)
+	zlog.Debug().Msgf("transformed incident fields: %v", incidentOut)
 
 	return
 }

@@ -33,9 +33,9 @@ import (
 	"slices"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/config"
+	zlog "github.com/rs/zerolog/log"
 
-	"github.com/rs/zerolog/log"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
@@ -47,7 +47,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 
 	switch u.Scheme {
 	case "https":
-		log.Trace().Msgf("reading data from %s", source)
+		zlog.Trace().Msgf("reading data from %s", source)
 		tr := &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 			TLSClientConfig: &tls.Config{
@@ -73,7 +73,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		}
 		return resp.Body, nil
 	case "http":
-		log.Trace().Msgf("reading data from %s", source)
+		zlog.Trace().Msgf("reading data from %s", source)
 		tr := &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
 		}
@@ -98,7 +98,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 	default:
 		var s os.FileInfo
 
-		log.Trace().Msgf("reading data from file '%s'", source)
+		zlog.Trace().Msgf("reading data from file '%s'", source)
 
 		source = config.ResolveHome(source)
 		s, err = os.Stat(source)
@@ -108,7 +108,7 @@ func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
 		if s.IsDir() {
 			return nil, os.ErrInvalid // geneos.ErrIsADirectory
 		}
-		log.Trace().Msgf("reading from %s (modtime %s)", source, s.ModTime().UTC().Format(time.RFC3339))
+		zlog.Trace().Msgf("reading from %s (modtime %s)", source, s.ModTime().UTC().Format(time.RFC3339))
 		source, _ = filepath.Abs(source)
 		source = filepath.ToSlash(source)
 		return os.Open(source)
@@ -128,7 +128,7 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 	}
 
 	if len(matches) == 0 {
-		log.Info().Msgf("no matches found for %s", source)
+		zlog.Info().Msgf("no matches found for %s", source)
 		return
 	}
 
@@ -140,14 +140,14 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		var err error
 		st, err := os.Stat(source)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			// updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
 			continue
 		}
 		sourceTimestamp := st.ModTime()
 		s, _, c, err := readLicdReport(source)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			// updateSources(ctx, cf, tx, "licd:"+source, "licd", source, false, time.Now(), err)
 			continue
 		}
@@ -176,16 +176,16 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 		t, err := time.Parse("02 January 2006", expiry)
 		if err != nil {
-			log.Error().Err(err).Msgf("cannot parse %s", expiry)
+			zlog.Error().Err(err).Msgf("cannot parse %s", expiry)
 		}
 
 		sourceName = "licd:" + licenceName + "_" + t.Format(time.DateOnly)
 		sources = append(sources, sourceName)
 
-		log.Debug().Msgf("processing licd report file %s using label %s", source, sourceName)
+		zlog.Debug().Msgf("processing licd report file %s using label %s", source, sourceName)
 		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {
 			updateSources(ctx, cf, tx, sourceName, "licd", source, false, sourceTimestamp, err)
-			log.Error().Err(err).Msgf("cannot process licd report file %s", source)
+			zlog.Error().Err(err).Msgf("cannot process licd report file %s", source)
 		}
 	}
 	return

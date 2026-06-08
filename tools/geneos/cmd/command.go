@@ -91,9 +91,12 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 	var cmdLine strings.Builder
 	for _, a := range cmd.Args {
 		if strings.Contains(a, " ") {
-			cmdLine.WriteString(` "` + a + `"`)
+			cmdLine.WriteString(` "`)
+			cmdLine.WriteString(a)
+			cmdLine.WriteString(`"`)
 		} else {
-			cmdLine.WriteString(" " + a)
+			cmdLine.WriteString(" ")
+			cmdLine.WriteString(a)
 		}
 	}
 	lines = append(lines,

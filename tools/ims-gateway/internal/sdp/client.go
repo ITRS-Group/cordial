@@ -26,7 +26,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -141,9 +141,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request
 	reqDump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		log.Printf("Error dumping request: %v", err)
+		zlog.Printf("Error dumping request: %v", err)
 	} else {
-		log.Printf("REQUEST:\n%s", reqDump)
+		zlog.Printf("REQUEST:\n%s", reqDump)
 	}
 
 	// Perform the actual request
@@ -155,9 +155,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the response
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		log.Printf("Error dumping response: %v", err)
+		zlog.Printf("Error dumping response: %v", err)
 	} else {
-		log.Printf("RESPONSE:\n%s", respDump)
+		zlog.Printf("RESPONSE:\n%s", respDump)
 	}
 
 	return resp, nil

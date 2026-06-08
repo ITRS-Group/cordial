@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -82,17 +82,17 @@ var queryCmd = &cobra.Command{
 				break
 			}
 
-			log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
+			zlog.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
 		}
 
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 
 		if !strings.EqualFold(queryCmdFormat, "csv") {
 			b, err := json.MarshalIndent(result.Results, "", "    ")
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 				return
 			}
 			fmt.Println(string(b))

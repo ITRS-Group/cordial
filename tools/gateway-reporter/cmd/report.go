@@ -30,10 +30,11 @@ import (
 	"runtime"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var reportCmdOutDir, reportCmdPrefix, reportCmdInstallation string
@@ -141,7 +142,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 
 	gateway, entities, probes, err := processInputFile(input)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 	}
 	if gateway == "" {
 		if prefix == "" {
@@ -176,7 +177,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 				break
 			}
 			if config.Get[bool](cf, cf.Join("output", "toolkit-include", "enable")) {
-				log.Debug().Msg("building include")
+				zlog.Debug().Msg("building include")
 				err = outputToolkitInclude(cf, gateway, destdir, csvFiles)
 			}
 		case "xlsx":
@@ -204,7 +205,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 	if !filepath.IsAbs(includeFile) {
 		includeFile = filepath.Join(destdir, includeFile)
 	}
-	log.Debug().Msgf("include: %s", includeFile)
+	zlog.Debug().Msgf("include: %s", includeFile)
 
 	samplers := make([]geneos.Sampler, len(csvFiles))
 	for i, c := range csvFiles {

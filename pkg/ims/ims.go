@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/rest"
@@ -78,13 +78,13 @@ func NewClient(cf *ClientConfig) *rest.Client {
 		skip := cf.TLS.SkipVerify
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+			zlog.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
 		}
 
 		if !skip {
 			if chain := cf.TLS.Chain; len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					log.Warn().Msg("error reading cert chain")
+					zlog.Warn().Msg("error reading cert chain")
 				}
 			}
 		}
@@ -170,9 +170,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request
 	reqDump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		log.Printf("Error dumping request: %v", err)
+		zlog.Printf("Error dumping request: %v", err)
 	} else {
-		log.Printf("REQUEST:\n%s", reqDump)
+		zlog.Printf("REQUEST:\n%s", reqDump)
 	}
 
 	// Perform the actual request
@@ -184,9 +184,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the response
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		log.Printf("Error dumping response: %v", err)
+		zlog.Printf("Error dumping response: %v", err)
 	} else {
-		log.Printf("RESPONSE:\n%s", respDump)
+		zlog.Printf("RESPONSE:\n%s", respDump)
 	}
 
 	return resp, nil

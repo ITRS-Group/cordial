@@ -23,7 +23,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -35,17 +35,17 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	if report.SplitValues == "" {
-		log.Error().Msg("no split-values-query defined")
+		zlog.Error().Msg("no split-values-query defined")
 		return
 	}
 
 	if report.Subreport == "" {
 		// get list of split values (typically gateways)
 		splitquery := config.Expand[string](cf, report.SplitValues, lookup, config.ExpandNonStringToCSV())
-		log.Trace().Msgf("query:\n%s", splitquery)
+		zlog.Trace().Msgf("query:\n%s", splitquery)
 		rows, err := tx.QueryContext(ctx, splitquery)
 		if err != nil {
-			log.Error().Err(err).Msgf("query: %s", splitquery)
+			zlog.Error().Err(err).Msgf("query: %s", splitquery)
 			return err
 		}
 		defer rows.Close()
@@ -64,7 +64,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		slices.Sort(split)
 
 		if _, ok := r.(*reporter.XLSXReporter); ok && report.XLSX.Enable != nil && !*report.XLSX.Enable {
-			log.Debug().Msgf("report %s disabled for XLSX output, removing any old dataviews", report.Name)
+			zlog.Debug().Msgf("report %s disabled for XLSX output, removing any old dataviews", report.Name)
 			for _, p := range split {
 				group := report.Dataview.Group
 				title := config.Expand[string](cf, report.Title, config.LookupTable(map[string]string{
@@ -80,7 +80,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 
 		if _, ok := r.(*reporter.APIReporter); ok && report.Dataview.Enable != nil && !*report.Dataview.Enable {
-			log.Debug().Msgf("report %s disabled for dataview output, removing any old dataviews", report.Name)
+			zlog.Debug().Msgf("report %s disabled for dataview output, removing any old dataviews", report.Name)
 			for _, p := range split {
 				group := report.Dataview.Group
 				title := config.Expand[string](cf, report.Title, config.LookupTable(map[string]string{
@@ -99,10 +99,10 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		// new list
 		previouslist := config.Expand[string](cf, report.SplitValuesAll, lookup, config.ExpandNonStringToCSV())
 		if previouslist != "" {
-			log.Trace().Msgf("query:\n%s", previouslist)
+			zlog.Trace().Msgf("query:\n%s", previouslist)
 			rows, err := tx.QueryContext(ctx, previouslist)
 			if err != nil {
-				log.Error().Err(err).Msgf("query: %s", previouslist)
+				zlog.Error().Err(err).Msgf("query: %s", previouslist)
 				return err
 			}
 
@@ -158,7 +158,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 
 		if err = r.Prepare(rep.Report); err != nil {
-			log.Debug().Err(err).Msg("")
+			zlog.Debug().Err(err).Msg("")
 		}
 		if !outputZip {
 			r.AddHeadline("reportName", rep.Name)
@@ -171,7 +171,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		if query := config.Expand[string](cf, rep.Headlines, config.LookupTable(split), lookup, config.ExpandNonStringToCSV()); query != "" {
 			names, headlines, err := queryHeadlines(ctx, tx, query)
 			if err != nil {
-				log.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
+				zlog.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
 				return err
 			}
 			for _, h := range names {
@@ -180,7 +180,7 @@ func publishReportSplit(ctx context.Context, cf *config.Config, tx *sql.Tx, r re
 		}
 
 		query := config.Expand[string](cf, rep.Query, config.LookupTable(split), lookup, config.ExpandNonStringToCSV())
-		log.Trace().Msgf("query:\n%s ->\n%s", rep.Query, query)
+		zlog.Trace().Msgf("query:\n%s ->\n%s", rep.Query, query)
 		t, err := queryToTable(ctx, tx, rep.Columns, query)
 		if err != nil {
 			return err

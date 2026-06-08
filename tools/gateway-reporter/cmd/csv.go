@@ -29,10 +29,11 @@ import (
 	"strconv"
 	"time"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 // outputCSVZip writes the slice of Entity structs to a zip files
@@ -66,7 +67,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 	// output a summary file
 	w, err := createCSVZip(cf, z, config.Get[string](cf, "output.reports.summary.filename", conftable)+".csv")
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 	outputCSVSummary(w, cf, gateway, Entities, probes)
@@ -74,7 +75,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 	// entities.csv
 	w, err = createCSVZip(cf, z, config.Get[string](cf, "output.reports.entities.filename", conftable)+".csv")
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 	outputCVSEntities(w, Entities, cf, conftable)
@@ -94,7 +95,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			continue
 		}
 		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
@@ -115,7 +116,7 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			continue
 		}
 
@@ -154,7 +155,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 	summaryFile := config.Get[string](cf, "output.reports.summary.filename", conftable) + ".csv"
 	w, err := createCSVFile(cf, subdir, summaryFile)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 	outputCSVSummary(w, cf, gateway, Entities, probes)
@@ -170,7 +171,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 	entitiesFile := config.Get[string](cf, "output.reports.entities.filename", conftable) + ".csv"
 	w, err = createCSVFile(cf, subdir, entitiesFile)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 	outputCVSEntities(w, Entities, cf, conftable)
@@ -205,7 +206,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
 		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			continue
 		}
 		outputCSVSinglePluginWithRowname(w, Entities, cf, conftable, plugin)
@@ -238,7 +239,7 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
 		w, err = createCSVFile(cf, subdir, pluginFile)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			continue
 		}
 		outputCSVTwoColumnPluginWithRowname(w, Entities, cf, conftable, plugin)

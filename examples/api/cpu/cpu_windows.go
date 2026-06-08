@@ -5,7 +5,7 @@ package cpu
 import (
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/StackExchange/wmi"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
@@ -33,7 +33,7 @@ type cpustat struct {
 }
 
 func (p *CPUSampler) DoSample() (err error) {
-	log.Debug().Msg("called")
+	zlog.Debug().Msg("called")
 	laststats := p.cpustats
 	if laststats.lastsample == 0 {
 		// first time through, store initial stats, don't update table and wait for next call
@@ -67,7 +67,7 @@ func getstats(c *cpustat) (err error) {
 	q := wmi.CreateQuery(&dst, "")
 	err = wmi.Query(q, &dst)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	c.lastsample = float64(dst[0].Timestamp_PerfTime)

@@ -24,7 +24,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -71,7 +71,7 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 	i := bytes.Index(output, []byte("<?xml"))
 	if i == -1 {
 		err = err2
-		log.Fatal().Err(err).Msg(string(output))
+		zlog.Fatal().Err(err).Msg(string(output))
 	}
 	output = output[i:]
 	return

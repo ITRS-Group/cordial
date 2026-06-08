@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -117,7 +117,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		// only lookup user after all defaults applied
 		u, err := snow.GET(Limit("1"), Fields("sys_id"), Query("user_name="+user)).QueryTableDetail("sys_user")
 		if err != nil || len(u) == 0 {
-			log.Error().Err(err).Msgf("user not found")
+			zlog.Error().Err(err).Msgf("user not found")
 			return echo.NewHTTPError(http.StatusNotFound, "User not found")
 		}
 		incident[userfield] = u["sys_id"]

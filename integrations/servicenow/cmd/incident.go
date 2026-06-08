@@ -29,11 +29,11 @@ import (
 	"strconv"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
-
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var short, text, rawtext, search, severity, id, rawid string
@@ -86,7 +86,7 @@ func incident(args []string) {
 		incident["short_description"] = short
 	}
 	if id != "" && rawid != "" {
-		log.Fatal().Msg("only one of -id or -rawid can be given")
+		zlog.Fatal().Msg("only one of -id or -rawid can be given")
 	}
 
 	if id != "" {
@@ -133,7 +133,7 @@ func incident(args []string) {
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	var server string
@@ -146,14 +146,14 @@ func incident(args []string) {
 
 	u, err := url.Parse(server)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	u.Path = "/api/v1/incident"
 
 	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	bearer := fmt.Sprintf("Bearer %s", config.Get[string](cf, "api.apikey"))
@@ -164,32 +164,32 @@ func incident(args []string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	if resp.StatusCode > 299 {
-		log.Fatal().Msgf("%s %s", resp.Status, string(body))
+		zlog.Fatal().Msgf("%s %s", resp.Status, string(body))
 	}
 
 	var result map[string]string
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	if result["message"] != "" {
-		log.Fatal().Msg(result["message"])
+		zlog.Fatal().Msg(result["message"])
 	}
 
 	if result["action"] == "Failed" {
-		log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+		zlog.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 	}
 
 	fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
@@ -218,7 +218,7 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 	mapping, ok := severities[strings.ToLower(severity)]
 	if !ok {
 		// do nothing, but log
-		log.Printf("no mapping found for severity %q", severity)
+		zlog.Printf("no mapping found for severity %q", severity)
 		return
 	}
 	fields := strings.SplitSeq(mapping, ",")
@@ -227,7 +227,7 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 		field = strings.TrimSpace(field)
 		k, v, found := strings.Cut(field, "=")
 		if !found {
-			log.Printf("invalid severity mapping %q", field)
+			zlog.Printf("invalid severity mapping %q", field)
 			continue
 		}
 

@@ -8,7 +8,7 @@ import (
 	"slices"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -31,23 +31,23 @@ func send(w http.ResponseWriter, r *http.Request) {
 	rv := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := rv.(*ims.Response)
 	if !ok {
-		log.Debug().Msgf("response not correct type in request context")
+		zlog.Debug().Msgf("response not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	response.Action = "Failed" // default action, will be updated if processing is successful
 
-	log.Debug().Msgf("handling request for %s", r.URL.Path)
+	zlog.Debug().Msgf("handling request for %s", r.URL.Path)
 
 	v := r.Context().Value(ims.ContextKeyConfig)
 	if v == nil {
-		log.Debug().Msgf("config not found in request context")
+		zlog.Debug().Msgf("config not found in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	cf, ok := v.(*config.Config)
 	if !ok {
-		log.Debug().Msgf("config not correct type in request context")
+		zlog.Debug().Msgf("config not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -109,7 +109,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// find any existing request
-	log.Debug().Msgf("search: %s", config.Get[any](sdpCf, sdpCf.Join("requests", "search")))
+	zlog.Debug().Msgf("search: %s", config.Get[any](sdpCf, sdpCf.Join("requests", "search")))
 	resp, err := c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "search")), config.LookupTable(requestIn))
 	if err != nil {
 		response.Error = fmt.Sprintf("%v", err)
@@ -158,7 +158,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		// 	return
 		// }
 
-		log.Info().Msgf("no existing request found, creating new request")
+		zlog.Info().Msgf("no existing request found, creating new request")
 
 		createResponse, err := c.createRequest(r.Context(), cf.Sub(cf.Join("sdp", "requests", "create")), requestTransformed)
 		if err != nil {
@@ -166,7 +166,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 			return
 		}
-		log.Debug().Msgf("create response: %+v", createResponse)
+		zlog.Debug().Msgf("create response: %+v", createResponse)
 
 		response.StatusCode = http.StatusOK
 		response.Status = http.StatusText(http.StatusOK)
@@ -185,7 +185,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.ListInfo.RowCount > 1 {
-		log.Warn().Msgf("multiple existing requests found with the same correlation ID, updating the first request")
+		zlog.Warn().Msgf("multiple existing requests found with the same correlation ID, updating the first request")
 	}
 
 	// update existing request if found with the same correlation ID
@@ -193,13 +193,13 @@ func send(w http.ResponseWriter, r *http.Request) {
 	reqCf := config.New(config.WithDefaults(*resp.Requests[0], "json"))
 	requestID := config.Get[int64](reqCf, "id")
 
-	log.Debug().Msgf("existing request ID: %d", requestID)
+	zlog.Debug().Msgf("existing request ID: %d", requestID)
 
 	// we add a note first, then the edit the request with other changes
 
 	// if _, ok := request["__sdp_add_note"]; ok {
 
-	log.Info().Msgf("adding note to existing request")
+	zlog.Info().Msgf("adding note to existing request")
 
 	sdpUpdateCf := cf.Sub(cf.Join("sdp", "requests", "update"))
 
@@ -209,9 +209,9 @@ func send(w http.ResponseWriter, r *http.Request) {
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
-	log.Debug().Msgf("add note response: %+v", noteResponse)
+	zlog.Debug().Msgf("add note response: %+v", noteResponse)
 
-	log.Info().Msgf("existing request found, updating request")
+	zlog.Info().Msgf("existing request found, updating request")
 
 	updateResponse, err := c.editRequest(r.Context(), requestID, sdpUpdateCf, requestTransformed)
 	if err != nil {
@@ -219,7 +219,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
 		return
 	}
-	log.Debug().Msgf("update response: %+v", updateResponse)
+	zlog.Debug().Msgf("update response: %+v", updateResponse)
 
 	response.StatusCode = http.StatusOK
 	response.Status = http.StatusText(http.StatusOK)

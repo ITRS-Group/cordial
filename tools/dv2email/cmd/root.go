@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -87,7 +87,7 @@ func initConfig() {
 
 	// config.DefaultKeyDelimiter("::")
 	if config.AppConfigDir() == "" {
-		log.Warn().Err(config.ErrNoUserConfigDir)
+		zlog.Warn().Err(config.ErrNoUserConfigDir)
 	}
 	opts := []config.FileOption{
 		config.AppName("geneos"),
@@ -100,7 +100,7 @@ func initConfig() {
 
 	globalCf, err = config.Read(execname, opts...)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+		zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 	}
 }
 
@@ -141,7 +141,7 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 
 		// we need to pass filters etc. to fetchDataviews
@@ -155,7 +155,7 @@ var Cmd = &cobra.Command{
 			config.Get[string](em, "__roworder"),
 		)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			return
 		}
 
@@ -174,7 +174,7 @@ var Cmd = &cobra.Command{
 					Env:       data.Env,
 				}
 				if err = sendEmail(globalCf, em, many, inlineCSS); err != nil {
-					log.Fatal().Err(err).Msg("")
+					zlog.Fatal().Err(err).Msg("")
 				}
 			}
 		case "dataview":
@@ -184,12 +184,12 @@ var Cmd = &cobra.Command{
 					Env:       data.Env,
 				}
 				if err = sendEmail(globalCf, em, one, inlineCSS); err != nil {
-					log.Fatal().Err(err).Msg("")
+					zlog.Fatal().Err(err).Msg("")
 				}
 			}
 		default:
 			if err = sendEmail(globalCf, em, data, inlineCSS); err != nil {
-				log.Fatal().Err(err).Msg("sending failed")
+				zlog.Fatal().Err(err).Msg("sending failed")
 			}
 		}
 

@@ -31,7 +31,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // Inventory type stores the results of loading an Inventory, including a host to node_type mapping
@@ -51,12 +51,12 @@ func ReadInventory(cf *config.Config, file string, options ...FetchOption) (inv 
 	if fo.ifmodified != nil {
 		if st, err := os.Stat(file); err == nil { // stat succeeds
 			if st.Size() == fo.ifmodified.size && st.ModTime().Equal(fo.ifmodified.lastModified) {
-				log.Info().Msgf("inventory not modified: %s", file)
+				zlog.Info().Msgf("inventory not modified: %s", file)
 				return fo.ifmodified, nil
 			}
 		}
 	}
-	log.Info().Msgf("loading inventory: %s", file)
+	zlog.Info().Msgf("loading inventory: %s", file)
 
 	in, err := os.Open(file)
 	if err != nil {
@@ -97,14 +97,14 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotModified {
-		log.Info().Msgf("inventory not modified (header): %s", source)
+		zlog.Info().Msgf("inventory not modified (header): %s", source)
 		inv = fo.ifmodified
 		return
 	}
 	if fo.ifmodified != nil && fo.ifmodified.cksum != "" {
 		cksum := resp.Header.Get("x-gitlab-content-sha256")
 		if cksum != "" && cksum == fo.ifmodified.cksum {
-			log.Info().Msgf("inventory not modified (cksum): %s", source)
+			zlog.Info().Msgf("inventory not modified (cksum): %s", source)
 			return fo.ifmodified, nil
 		}
 	}
@@ -114,7 +114,7 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 		return
 	}
 
-	log.Info().Msgf("loading inventory: %s", source)
+	zlog.Info().Msgf("loading inventory: %s", source)
 
 	contentLength := resp.ContentLength
 	if contentLength == -1 {
@@ -140,23 +140,23 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 	if len(cache) > 0 && cacheFile != "" {
 		dir, file := filepath.Split(cacheFile)
 		if err = os.MkdirAll(dir, 0775); err != nil {
-			log.Warn().Err(err).Msg("making directories")
+			zlog.Warn().Err(err).Msg("making directories")
 			return inv, nil
 		}
 		f, err := os.CreateTemp(dir, file+"-*")
 		if err != nil {
-			log.Warn().Err(err).Msg("creating temp file")
+			zlog.Warn().Err(err).Msg("creating temp file")
 			return inv, nil
 		}
 		// defer clean-up (which fails once file is renamed)
 		defer f.Close()
 		defer os.Remove(f.Name())
 		if _, err = f.Write(cache); err != nil {
-			log.Warn().Err(err).Msg("writing inventory to temp file")
+			zlog.Warn().Err(err).Msg("writing inventory to temp file")
 			return inv, nil
 		}
 		if err = os.Rename(f.Name(), cacheFile); err != nil {
-			log.Warn().Err(err).Msg("renaming temp file")
+			zlog.Warn().Err(err).Msg("renaming temp file")
 			return inv, nil
 		}
 	}

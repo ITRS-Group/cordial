@@ -20,7 +20,7 @@ package cmd
 import (
 	_ "embed"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -57,11 +57,11 @@ var sdpAuthCmd = &cobra.Command{
 		}
 
 		if _, err = sdp.InitialAuth(cf.Sub("sdp"), sdpAuthCmdCode); err != nil {
-			log.Error().Msgf("failed to authenticate against ServiceDesk Plus: %v", err)
+			zlog.Error().Msgf("failed to authenticate against ServiceDesk Plus: %v", err)
 			return
 		}
 
-		log.Info().Msgf("successfully authenticated against ServiceDesk Plus, token saved")
+		zlog.Info().Msgf("successfully authenticated against ServiceDesk Plus, token saved")
 
 		return
 	},

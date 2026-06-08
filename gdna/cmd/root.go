@@ -25,7 +25,7 @@ import (
 	dbg "runtime/debug"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -145,7 +145,7 @@ func initConfig(cmd *cobra.Command) {
 
 		cf, err = config.Read(execname, opts...)
 		if err != nil {
-			log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+			zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 		}
 
 		// use MustExists() to check for actual files
@@ -177,6 +177,6 @@ func initConfig(cmd *cobra.Command) {
 	)
 
 	info, _ := dbg.ReadBuildInfo()
-	log.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
-	log.Info().Msg(deferredlog)
+	zlog.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
+	zlog.Info().Msg(deferredlog)
 }

@@ -7,18 +7,18 @@ import (
 	"reflect"
 
 	extmemory "github.com/mackerelio/go-osstat/memory"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 func (p *MemorySampler) DoSample() error {
-	log.Debug().Msg("called")
+	zlog.Debug().Msg("called")
 
 	table := [][]string{
 		{"counter", "bytes"},
 	}
 	m, err := extmemory.Get()
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	// use reflect to paint the structure into a table

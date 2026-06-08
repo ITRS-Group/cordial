@@ -26,10 +26,11 @@ import (
 	"slices"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/wneessen/go-mail"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 //go:embed _docs/root.md
@@ -64,7 +65,7 @@ var exportCmd = &cobra.Command{
 
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 		data, err := fetchDataviews(cmd, gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder)
 		if err != nil {

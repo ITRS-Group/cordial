@@ -25,10 +25,11 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/go-asciitree"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 type explainNode struct {
@@ -88,7 +89,7 @@ var explainCmd = &cobra.Command{
 
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
-			log.Error().Err(err).Msg("cannot BEGIN transaction")
+			zlog.Error().Err(err).Msg("cannot BEGIN transaction")
 			return
 		}
 		defer tx.Rollback()
@@ -107,7 +108,7 @@ var explainCmd = &cobra.Command{
 		var report Report
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &report, config.NoExpand()); err != nil {
-			log.Error().Err(err).Msg("reports configuration format incorrect")
+			zlog.Error().Err(err).Msg("reports configuration format incorrect")
 			return
 		}
 

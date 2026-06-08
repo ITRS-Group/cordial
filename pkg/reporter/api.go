@@ -25,8 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
@@ -95,7 +93,6 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 	a.conn, err = plugins.Open(u, opts.entity, opts.sampler)
 
 	if err != nil {
-		log.Error().Err(err).Msg("")
 		return
 	}
 
@@ -137,7 +134,6 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 
 		_, err = a.conn.NewDataview(group, title)
 		if err != nil {
-			log.Error().Err(err).Msgf("")
 			return
 		}
 	}
@@ -160,7 +156,6 @@ func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 	// check if columns have changed
 	existing, err := a.dv.ColumnNames()
 	if err != nil {
-		log.Error().Err(err).Msg("")
 		return
 	}
 
@@ -172,13 +167,10 @@ func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 		time.Sleep(a.dvCreateDelay)
 		_, err = a.conn.NewDataview(groupName, viewName)
 		if err != nil {
-			log.Error().Err(err).Msg("")
 			return
 		}
 	}
-	if err := a.dv.UpdateTable(columns, rows...); err != nil {
-		log.Error().Err(err).Msg("")
-	}
+	_ = a.dv.UpdateTable(columns, rows...)
 }
 
 func (a *APIReporter) AddHeadline(name, value string) {

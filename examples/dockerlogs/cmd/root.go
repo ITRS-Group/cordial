@@ -11,8 +11,7 @@ import (
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/geneos/api"
@@ -58,32 +57,32 @@ var rootCmd = &cobra.Command{
 				Tail:       "50",
 			})
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 				continue
 			}
 			defer r.Close()
-			log.Info().Msgf("container log for %s open", i.ID)
+			zlog.Info().Msgf("container log for %s open", i.ID)
 			wg.Add(1)
 			go func(i container.Summary) {
 				defer wg.Done()
 				sout, err := api.OpenStream(c, "localhost", "streams", i.Names[0]+".stdout")
 				if err != nil {
-					log.Error().Err(err).Msg("")
+					zlog.Error().Err(err).Msg("")
 					return
 				}
 				if !c.Healthy() {
-					log.Error().Msg("stdout not connected to probe")
+					zlog.Error().Msg("stdout not connected to probe")
 				}
 				serr, err := api.OpenStream(c, "localhost", "streams", i.Names[0]+".stderr")
 				if err != nil {
-					log.Error().Err(err).Msg("")
+					zlog.Error().Err(err).Msg("")
 					return
 				}
 				if !c.Healthy() {
-					log.Error().Msg("stderr not connected to probe")
+					zlog.Error().Msg("stderr not connected to probe")
 				}
 				if _, err = stdcopy.StdCopy(sout, serr, r); err != nil {
-					log.Error().Err(err).Msg("")
+					zlog.Error().Err(err).Msg("")
 				}
 			}(i)
 		}

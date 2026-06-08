@@ -2,12 +2,12 @@ package process
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"sync"
 	"time"
 	"unsafe"
 
-	"github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -40,7 +40,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 
 	handle, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to create toolhelp32 snapshot")
+		err = fmt.Errorf("failed to create toolhelp32 snapshot: %w", err)
 		return c, false
 	}
 	defer windows.CloseHandle(handle)
@@ -50,7 +50,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	var pe windows.ProcessEntry32
 	pe.Size = uint32(unsafe.Sizeof(pe))
 	if err = windows.Process32First(handle, &pe); err != nil {
-		log.Error().Err(err).Msg("failed to get first process")
+		err = fmt.Errorf("failed to get first process: %w", err)
 		return c, false
 	}
 
@@ -68,7 +68,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 		var pstatus T
 		if pstatus, err = ProcessStatus[T](h, int(pid), false, false); err != nil {
 			if !errors.Is(err, windows.ERROR_ACCESS_DENIED) {
-				log.Error().Err(err).Msgf("failed to get process status for pid %d", pid)
+				err = fmt.Errorf("failed to get process status for pid %d: %w", pid, err)
 			}
 			continue
 		}

@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/net/html/charset"
 	"gopkg.in/yaml.v3"
 
@@ -68,7 +68,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	}
 
 	if g.OperatingEnvironment == nil {
-		log.Fatal().Msg("no operating environment found")
+		zlog.Fatal().Msg("no operating environment found")
 	}
 
 	gateway = g.OperatingEnvironment.GatewayName
@@ -107,13 +107,13 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		} else if entity.VirtualProbe != nil {
 			probename = entity.VirtualProbe.Name
 		} else {
-			log.Error().Msgf("no probe set for %q\n", entity.Name)
+			zlog.Error().Msgf("no probe set for %q\n", entity.Name)
 			continue
 		}
 
 		probe, ok := probeMap[probename]
 		if !ok {
-			log.Error().Msgf("probe %q not found\n", probename)
+			zlog.Error().Msgf("probe %q not found\n", probename)
 		}
 		var hostname string
 		var port int
@@ -131,7 +131,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		case geneos.ProbeTypeVirtual:
 			probename = probe.Name
 		default:
-			log.Error().Msgf("%q probe %q not found\n", entity.Name, probename)
+			zlog.Error().Msgf("%q probe %q not found\n", entity.Name, probename)
 		}
 
 		ent.Name = entity.Name
@@ -155,7 +155,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 			// for s := range entity.ResolvedSamplers {
 			t, p, found := strings.Cut(s, ":")
 			if !found {
-				log.Error().Msgf("invalid sampler name %q for entity %q\n", s, entity.Name)
+				zlog.Error().Msgf("invalid sampler name %q for entity %q\n", s, entity.Name)
 				continue
 			}
 			plugin := geneos.GetPlugin(samplers[p].Plugin)
@@ -204,7 +204,7 @@ func pluginName(in any) (name string) {
 			return n
 		}
 	default:
-		log.Debug().Msgf("unknown type %T", t)
+		zlog.Debug().Msgf("unknown type %T", t)
 	}
 	return ""
 }
@@ -226,7 +226,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			} else if src.NTEventLog != "" {
 				sampler.Column1 = append(sampler.Column1, "NTEventLog:"+src.NTEventLog)
 			} else {
-				log.Error().Msg("unsupported FKM source tye")
+				zlog.Error().Msg("unsupported FKM source tye")
 			}
 		}
 		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
@@ -358,7 +358,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 	case *geneos.SQLToolkitPlugin:
 		sampler.Column1 = []string{plugin.Connection.String()}
 		for _, q := range plugin.Queries {
-			log.Debug().Msgf("name, query: %s = %s", q.Name, q.SQL)
+			zlog.Debug().Msgf("name, query: %s = %s", q.Name, q.SQL)
 			n, _ := strconv.Unquote(q.Name.String())
 			if n == "" || strings.TrimSpace(q.SQL.String()) == "" {
 				if config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
@@ -368,7 +368,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			}
 			sampler.Column2 = append(sampler.Column2, fmt.Sprintf("%q: [\n%.*s\n]", q.Name, 32000, strings.TrimSpace(q.SQL.String())))
 		}
-		log.Debug().Msgf("col1: %v, col2: %v", sampler.Column1, sampler.Column2)
+		zlog.Debug().Msgf("col1: %v, col2: %v", sampler.Column1, sampler.Column2)
 
 	case *geneos.ControlMPlugin:
 		for _, d := range plugin.Dataviews {
@@ -434,10 +434,10 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 
 	case string:
 		if plugin != "" {
-			log.Debug().Msgf("plugin %q not yet supported", plugin)
+			zlog.Debug().Msgf("plugin %q not yet supported", plugin)
 		}
 	default:
-		log.Debug().Msgf("unsupported plugin %q skipped", plugin)
+		zlog.Debug().Msgf("unsupported plugin %q skipped", plugin)
 
 	}
 

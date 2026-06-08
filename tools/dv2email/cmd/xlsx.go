@@ -26,7 +26,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -140,12 +140,12 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		sheetname = buildName(sheetname, lookup)
 
 		if len(sheetname) > 31 {
-			log.Debug().Msgf("truncating %s to %s", sheetname, sheetname[:31])
+			zlog.Debug().Msgf("truncating %s to %s", sheetname, sheetname[:31])
 			sheetname = sheetname[:31]
 		}
 
 		if _, err = x.NewSheet(sheetname); err != nil {
-			log.Error().Err(err).Msgf(`new sheet "%s"`, sheetname)
+			zlog.Error().Err(err).Msgf(`new sheet "%s"`, sheetname)
 			continue
 		}
 
@@ -156,7 +156,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		// default column width setting
 
 		if err = x.SetSheetRow(sheetname, infoTable, &infoNames); err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 		info := []string{
 			"Geneos dv2email",
@@ -173,7 +173,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		x.SetCellStyle(sheetname, infoTable, infoTableHeadingsEnd, headingStyle)
 
 		if err = x.SetSheetRow(sheetname, infoTableData, &info); err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 
 		colwidths := make([]float64, max(len(dv.Headlines), len(dv.ColumnOrder), len(info)))
@@ -187,7 +187,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		}
 		sort.Strings(headlines)
 		if err = x.SetSheetRow(sheetname, headlineTable, &headlines); err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 
 		for hi, hn := range headlines {
@@ -211,7 +211,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 
 		// set columns names as the first row
 		if err = x.SetSheetRow(sheetname, dataviewTable, &dv.ColumnOrder); err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 
 		for i, c := range dv.ColumnOrder {
@@ -220,7 +220,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 
 		// set rownames in first column, starting on second row (below headings)
 		if err = x.SetSheetCol(sheetname, rownamesStart, &dv.RowOrder); err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 
 		for ri, r := range dv.RowOrder {
@@ -247,7 +247,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 			ShowColumnStripes: config.Get[bool](cf, cf.Join("xlsx", "column-stripes")),
 		})
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 		}
 
 		for ri, r := range dv.RowOrder {

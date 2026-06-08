@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -86,7 +86,7 @@ func initConfig() {
 
 	cf, err = config.Read(execname, opts...)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	cf.AutomaticEnv()
 }
@@ -108,7 +108,7 @@ var Cmd = &cobra.Command{
 		// no logging - XML output only
 		initLogging(execname, "/tmp/reporter.log")
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Debug().Msg("logging")
+		zlog.Debug().Msg("logging")
 
 		// check we are in a validate hook
 		setupFile := os.Getenv("_SETUP")
@@ -249,7 +249,7 @@ func initLogging(execname string, logfile string) {
 		nocolor = true
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{
+	zlog.Logger = zlog.Output(zerolog.ConsoleWriter{
 		Out:        out,
 		TimeFormat: time.RFC3339,
 		NoColor:    nocolor,

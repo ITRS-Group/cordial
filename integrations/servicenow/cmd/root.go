@@ -21,12 +21,12 @@ import (
 	"os"
 	"path"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
-
-	"github.com/spf13/cobra"
 )
 
 var cf *config.Config
@@ -84,7 +84,7 @@ func initConfig() {
 		config.Format("yaml"),
 		config.FilePath(conffile))
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to load configuration")
+		zlog.Fatal().Err(err).Msg("failed to load configuration")
 	}
 
 }

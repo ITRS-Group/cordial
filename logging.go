@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -108,7 +108,7 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 		noColour = true
 	}
 
-	log.Logger = log.Output(zerolog.ConsoleWriter{
+	zlog.Logger = zlog.Output(zerolog.ConsoleWriter{
 		Out:        out,
 		TimeFormat: time.RFC3339,
 		NoColor:    noColour,

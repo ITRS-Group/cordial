@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -53,7 +53,7 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 		config.Format("yaml"),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("loading inventory")
+		zlog.Error().Err(err).Msg("loading inventory")
 		return
 	}
 	contents = buf.Bytes()
@@ -125,7 +125,7 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 		if config.Get[bool](cf, "inventory.check-modified") {
 			if pi, ok := Inventories.Load(source); ok {
 				if pinv, ok := pi.(*Inventory); ok {
-					log.Debug().Msgf("checking inventory %s - size %d, last mod %s", source, pinv.size, pinv.lastModified.Format(time.RFC3339))
+					zlog.Debug().Msgf("checking inventory %s - size %d, last mod %s", source, pinv.size, pinv.lastModified.Format(time.RFC3339))
 					fetchopts = append(fetchopts, IfModified(pinv))
 				}
 			}
@@ -148,12 +148,12 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 		}
 
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to read inventory from %s", source)
+			zlog.Error().Err(err).Msgf("failed to read inventory from %s", source)
 			continue
 		}
 
 		if config.Get[bool](cf, "inventory.check-modified") {
-			log.Debug().Msgf("storing inventory for %s - size %d, last mod %s", source, inv.size, inv.lastModified.Format(time.RFC3339))
+			zlog.Debug().Msgf("storing inventory for %s - size %d, last mod %s", source, inv.size, inv.lastModified.Format(time.RFC3339))
 			Inventories.Store(source, inv)
 		}
 

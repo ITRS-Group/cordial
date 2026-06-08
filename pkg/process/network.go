@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/fs"
 	"net"
 	"path"
 	"regexp"
@@ -14,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
-	"github.com/rs/zerolog/log"
 )
 
 var tcpfiles = []string{
@@ -126,7 +124,6 @@ func SocketToConn(h host.Host, socket string) (sc *SocketConnection, err error) 
 		}
 
 		if err2 != nil {
-			log.Error().Err(err2).Msg("")
 			return sc, err2
 		}
 		sc.LocalAddr = net.IP(lx)
@@ -138,7 +135,6 @@ func SocketToConn(h host.Host, socket string) (sc *SocketConnection, err error) 
 		}
 
 		if err2 != nil {
-			log.Error().Err(err2).Msg("")
 			return sc, err2
 		}
 		sc.RemoteAddr = net.IP(rx)
@@ -209,9 +205,7 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 	}
 
 	tcpports := make(map[int]int) // key = socket inode
-	if err := AllTCPListenPorts(h, tcpports); err != nil && !errors.Is(err, fs.ErrNotExist) {
-		log.Error().Err(err).Msg("continuing")
-	}
+	_ = AllTCPListenPorts(h, tcpports)
 
 	for _, s := range sockets {
 		if port, ok := tcpports[s]; ok {

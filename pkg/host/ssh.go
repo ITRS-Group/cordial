@@ -37,7 +37,6 @@ import (
 	"time"
 
 	"github.com/pkg/sftp"
-	"github.com/rs/zerolog/log"
 	"github.com/skeema/knownhosts"
 	"github.com/spf13/afero"
 	"github.com/spf13/afero/sftpfs"
@@ -189,7 +188,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 
 	keys := kh.HostKeys(dest)
 	if len(keys) == 0 {
-		log.Fatal().Msgf("no public key found for %s", dest)
+		panic(fmt.Sprintf("no public key found for %s", dest))
 	}
 
 	if agentClient := sshConnectAgent(); agentClient != nil {
@@ -213,7 +212,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 	}
 	client, err = ssh.Dial("tcp", dest, config)
 	if err != nil && knownhosts.IsHostKeyChanged(err) {
-		log.Fatal().Msgf("host key has changed for %s", dest)
+		panic(fmt.Sprintf("host key has changed for %s", dest))
 	}
 	return
 }

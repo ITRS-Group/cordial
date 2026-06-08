@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/geneos/api"
 )
@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	if interval < 1*time.Second {
-		log.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
+		zlog.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
 	}
 
 	// connect to netprobe
@@ -37,7 +37,7 @@ func main() {
 
 	p, err := api.NewXMLRPCClient(u.String(), api.InsecureSkipVerify())
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	s := api.NewSampler(p, "cpu", entityname, samplername)
@@ -45,7 +45,7 @@ func main() {
 	defer s.Close()
 	s.SetInterval(interval)
 	if err = s.Start(); err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	select {} // and wait
 }

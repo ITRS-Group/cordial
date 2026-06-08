@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -73,7 +73,7 @@ var startCmd = &cobra.Command{
 			}
 
 			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
-				log.Fatal().Err(err).Msg("failed to daemonise process")
+				zlog.Fatal().Err(err).Msg("failed to daemonise process")
 			}
 		}
 
@@ -108,7 +108,7 @@ func startGateway(cf *config.Config) {
 	listen := config.Get[string](cf, cf.Join("server", "listen"))
 	basePath := config.Get[string](cf, cf.Join("server", "path"))
 
-	log.Debug().Msgf("starting proxy with configuration: listen=%s, path=%s", listen, basePath)
+	zlog.Debug().Msgf("starting proxy with configuration: listen=%s, path=%s", listen, basePath)
 
 	// init connection or fail early
 	// snow.NewClient(cf.Sub("snow"))
@@ -119,7 +119,7 @@ func startGateway(cf *config.Config) {
 		mux.HandleFunc(endpoint.Method+" "+basePath+endpoint.Path, func(w http.ResponseWriter, r *http.Request) {
 			endpoint.Handler(w, r)
 		})
-		log.Debug().Msgf("registered %s %s endpoint", endpoint.Method, basePath+endpoint.Path)
+		zlog.Debug().Msgf("registered %s %s endpoint", endpoint.Method, basePath+endpoint.Path)
 	}
 
 	var handler http.Handler = mux
@@ -128,10 +128,10 @@ func startGateway(cf *config.Config) {
 	handler = withValues(cf, handler)
 	handler = withKeyAuth(cf, handler)
 
-	log.Debug().Msg("starting HTTP server")
+	zlog.Debug().Msg("starting HTTP server")
 
 	if err := startHTTPServer(cf, listen, handler); err != nil {
-		log.Fatal().Err(err).Msg("failed to start server")
+		zlog.Fatal().Err(err).Msg("failed to start server")
 	}
 }
 
@@ -214,11 +214,11 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 	respValue := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := respValue.(*ims.Response)
 	if !ok {
-		log.Info().Msgf("response not correct type in request context")
+		zlog.Info().Msgf("response not correct type in request context")
 		return
 	}
 
-	log.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
+	zlog.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
 		"URL", // config.Get[string](cf, cf.Join("snow", "url")),
 		r.Proto,
 		resStatus,
@@ -234,7 +234,7 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 
 func startHTTPServer(cf *config.Config, listen string, handler http.Handler) error {
 	if !config.Get[bool](cf, cf.Join("server", "tls", "enabled")) {
-		log.Debug().Msgf("starting server without TLS on %s", listen)
+		zlog.Debug().Msgf("starting server without TLS on %s", listen)
 		return http.ListenAndServe(listen, handler)
 	}
 
@@ -259,7 +259,7 @@ func startHTTPServer(cf *config.Config, listen string, handler http.Handler) err
 		return err
 	}
 
-	log.Debug().Msgf("starting server on %s", listen)
+	zlog.Debug().Msgf("starting server on %s", listen)
 	return srv.Serve(tls.NewListener(ln, srv.TLSConfig))
 }
 

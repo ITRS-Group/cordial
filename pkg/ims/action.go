@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -98,7 +98,7 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
 			os.Exit(int(code))
 		} else {
-			log.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
+			zlog.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
 			os.Exit(1)
 		}
 	}
@@ -179,7 +179,7 @@ func replacePrefix(_ map[string]any, s string, trim bool) (result string, err er
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 

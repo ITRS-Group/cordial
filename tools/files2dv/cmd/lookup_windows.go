@@ -29,9 +29,10 @@ import (
 	"time"
 
 	"github.com/hectane/go-acl/api"
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/sys/windows"
+
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[string]string, skip bool) {
@@ -132,13 +133,13 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 		lookup["sid"] = owner.String()
 		lookup["owner"] = owner.String()
 		if account, domain, accType, err := owner.LookupAccount(""); err == nil {
-			log.Debug().Msgf("account/domain/accType: %s/%s/%v", account, domain, accType)
+			zlog.Debug().Msgf("account/domain/accType: %s/%s/%v", account, domain, accType)
 			lookup["owner"] = domain + "\\" + account
 		}
 	}
 
 	info, err := fileinfoWindows(path)
-	log.Debug().Msgf("info: %#v", info)
+	zlog.Debug().Msgf("info: %#v", info)
 	lookup["device"] = fmt.Sprintf("0x%08X", info.VolumeSerialNumber)
 	lookup["index"] = fmt.Sprintf("0x%08X%08X", info.FileIndexHigh, info.FileIndexLow)
 

@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -175,7 +175,7 @@ var clientCmd = &cobra.Command{
 
 				re, err := regexp.Compile(pattern)
 				if err != nil {
-					log.Error().Err(err).Msg("")
+					zlog.Error().Err(err).Msg("")
 					return
 				}
 
@@ -296,7 +296,7 @@ var clientCmd = &cobra.Command{
 		)
 
 		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 		for _, g := range defaults {
 			if processActionGroup(cf, g, incident) {
@@ -305,7 +305,7 @@ var clientCmd = &cobra.Command{
 		}
 
 		b, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
+		zlog.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
 
 		if clientCmdProfile == "" {
 			var ok bool
@@ -315,17 +315,17 @@ var clientCmd = &cobra.Command{
 		}
 
 		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups, config.NoExpand()); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {
-			log.Debug().Msgf("processing profile %s: %#v", clientCmdProfile, g)
+			zlog.Debug().Msgf("processing profile %s: %#v", clientCmdProfile, g)
 			if processActionGroup(cf, g, incident) {
 				break
 			}
 		}
 
 		b, _ = json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing profile:\n%s", string(b))
+		zlog.Debug().Msgf("incident fields after processing profile:\n%s", string(b))
 
 		// command line args can replace defaults and config file settings.
 		// parse key value pairs as fields for the request, and for now ignore
@@ -364,12 +364,12 @@ var clientCmd = &cobra.Command{
 			}
 			_, err = rc.Post(context.Background(), clientCmdTable, incident, &result)
 			if err != nil {
-				log.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
+				zlog.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
 				continue
 			}
 
 			if result["action"] == "Failed" {
-				log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+				zlog.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 			}
 
 			if !clientCmdQuiet {
@@ -432,7 +432,7 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
 			os.Exit(int(code))
 		} else {
-			log.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
+			zlog.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
 			os.Exit(1)
 		}
 	}
@@ -450,13 +450,13 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		skip := config.Get[bool](cf, cf.Join("proxy", "tls", "skip-verify"))
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			log.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+			zlog.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
 		}
 
 		if !skip {
 			if chain := config.Get[[]byte](cf, cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					log.Warn().Msg("error reading cert chain")
+					zlog.Warn().Msg("error reading cert chain")
 				}
 			}
 		}

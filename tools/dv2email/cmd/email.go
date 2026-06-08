@@ -24,7 +24,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -36,7 +36,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 
 	m, err := email.UpdateEnvelope(em, inlineCSS)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	m.Subject(config.Get[string](em, "_subject"))
 
@@ -88,7 +88,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "images") {
 		for name, path := range config.Get[map[string]string](cf, "images") {
 			if _, err := os.Stat(path); err != nil {
-				log.Error().Err(err).Msg("skipping")
+				zlog.Error().Err(err).Msg("skipping")
 				continue
 			}
 			m.EmbedFile(path, mail.WithFileName(name))
@@ -99,7 +99,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	// send
 	d, err := email.Dial(em)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	return d.DialAndSend(m)

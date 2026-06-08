@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/streams"
@@ -35,7 +35,7 @@ func main() {
 	flag.Parse()
 
 	if interval < 1*time.Second {
-		log.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
+		zlog.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
 	}
 
 	// connect to netprobe
@@ -43,28 +43,28 @@ func main() {
 	u := &url.URL{Scheme: "https", Host: fmt.Sprintf("%s:%d", hostname, port), Path: "/xmlrpc"}
 	p, err := plugins.Open(u, entityname, samplername)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	p.InsecureSkipVerify()
 
 	m, err := memory.New(p, "memory", "SYSTEM")
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	defer m.Close()
 	m.SetInterval(interval)
 	if err = m.Start(&wg); err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	c, err := cpu.New(p, "cpu", "SYSTEM")
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	defer c.Close()
 	c.SetInterval(interval)
 	if err = c.Start(&wg); err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 
 	pr, err := process.New(p, "processes", "SYSTEM")
@@ -85,7 +85,7 @@ func main() {
 	streamssampler := "streams"
 	sp, err := streams.Open(u, entityname, streamssampler, "teststream")
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		zlog.Fatal().Err(err).Msg("")
 	}
 	sp.InsecureSkipVerify()
 
@@ -96,7 +96,7 @@ func main() {
 			<-tick.C
 			fmt.Fprintln(sp, time.Now().String(), "this is a test")
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				zlog.Fatal().Err(err).Msg("")
 				break
 			}
 		}

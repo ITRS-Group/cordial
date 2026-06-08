@@ -25,7 +25,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	slogzerolog "github.com/samber/slog-zerolog/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -82,7 +82,7 @@ func newClient(cf *config.Config) (c client) {
 
 	p := sn.JoinPath(config.Get[string](cf, "path", config.DefaultValue("/api/now/v2/table")))
 
-	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &log.Logger}.NewZerologHandler())
+	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &zlog.Logger}.NewZerologHandler())
 
 	if clientID != "" && len(clientSecret) > 0 {
 		params := make(url.Values)

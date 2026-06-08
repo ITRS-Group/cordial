@@ -26,11 +26,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var cfgFile string
@@ -148,7 +149,7 @@ func initConfig() {
 
 	cf, err = config.Read(execname, opts...)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+		zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
 	}
 }
 

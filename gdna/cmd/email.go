@@ -31,7 +31,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/wneessen/go-mail"
 
@@ -121,11 +121,11 @@ type emailData struct {
 // start command to send email reports as per the configuration in the
 // top-level `email` configuration section.
 func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string) (err error) {
-	log.Info().Msgf("running email report")
+	zlog.Info().Msgf("running email report")
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("cannot BEGIN transaction")
+		zlog.Error().Err(err).Msg("cannot BEGIN transaction")
 		return
 	}
 	defer tx.Rollback()
@@ -151,7 +151,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
 	r.Render()
 	r.Close()
-	log.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
+	zlog.Debug().Msgf("text+HTML report complete, %d bytes", data.HTMLBodyPart.Len())
 
 	data.TextBodyPart = &bytes.Buffer{}
 	r, _ = reporter.NewReporter("table", data.TextBodyPart,
@@ -160,7 +160,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
 	r.Render()
 	r.Close()
-	log.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
+	zlog.Debug().Msgf("TEXT+html report complete, %d bytes", data.TextBodyPart.Len())
 
 	var contents []string
 	c := config.Get[any](cf, cf.Join("email", "contents"))
@@ -172,13 +172,13 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	case string:
 		contents = strings.FieldsFunc(c2, func(r rune) bool { return unicode.IsSpace(r) || r == ',' })
 	default:
-		log.Fatal().Msgf("content type %T", c2)
+		zlog.Fatal().Msgf("content type %T", c2)
 	}
 	for _, c := range contents {
 		switch c {
 		case "html":
 			if data.HTMLAttachment != nil {
-				log.Debug().Msg("HTML content already initialised")
+				zlog.Debug().Msg("HTML content already initialised")
 				continue
 			}
 			data.HTMLAttachment = &bytes.Buffer{}
@@ -192,7 +192,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Render()
 			r.Close()
-			log.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
+			zlog.Debug().Msgf("HTML report complete, %d bytes", data.HTMLAttachment.Len())
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
 			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
@@ -215,7 +215,7 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 			runReports(ctx, cf, tx, r, reports, -1)
 			r.Render()
 			r.Close()
-			log.Debug().Msgf("XLSX report complete, %d bytes", data.XLSXAttachment.Len())
+			zlog.Debug().Msgf("XLSX report complete, %d bytes", data.XLSXAttachment.Len())
 		default:
 		}
 	}
@@ -225,16 +225,16 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	// updates the data to a more recent set anyway.
 	err = tx.Commit()
 	if err != nil {
-		log.Error().Err(err).Msg("email report failed")
+		zlog.Error().Err(err).Msg("email report failed")
 		return
 	}
 
 	err = sendMail(cf, data)
 	if err != nil {
-		log.Error().Err(err).Msg("email report failed")
+		zlog.Error().Err(err).Msg("email report failed")
 		return
 	}
-	log.Info().Msg("email report complete")
+	zlog.Info().Msg("email report complete")
 	return
 }
 
