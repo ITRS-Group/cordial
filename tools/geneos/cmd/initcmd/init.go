@@ -155,7 +155,7 @@ geneos init
 			if !initCmdNoInstall {
 				for ct := range ct.OrList() {
 					log.Debug().Msgf("checking for releases for %s", ct.String())
-					v := instance.InstanceNames(geneos.LOCAL, ct)
+					v := instance.AllInstanceNames(geneos.LOCAL, ct)
 
 					log.Debug().Msgf("found releases for %s: %v", ct.String(), v)
 					if len(v) == 0 {

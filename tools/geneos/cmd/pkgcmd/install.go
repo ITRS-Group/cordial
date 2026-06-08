@@ -352,7 +352,7 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 					return err
 				}
 
-				i := instance.InstanceNames(h, ct)
+				i := instance.AllInstanceNames(h, ct)
 				if len(i) == 0 {
 					continue
 				}

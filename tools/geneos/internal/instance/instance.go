@@ -363,7 +363,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 	opts := evalInstanceOptions(options...)
 
 	for ct := range ct.OrList() {
-		for _, name := range InstanceNames(h, ct) {
+		for _, name := range AllInstanceNames(h, ct) {
 			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
 	}
@@ -402,7 +402,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 		pt := ct.ParentType
 
 		var parentNames []string
-		for _, name := range InstanceNames(h, pt) {
+		for _, name := range AllInstanceNames(h, pt) {
 			parentNames = append(parentNames, pt.String()+":"+name)
 		}
 
@@ -507,12 +507,12 @@ func MatchParentPackage() InstanceOption {
 	}
 }
 
-// InstanceNames returns a slice of all the base names for instance
+// AllInstanceNames returns a slice of all the base names for instance
 // directories for a given component ct on host h. No checking is done
 // to validate that the directory contains a valid instance.
-// InstanceNames are qualified with the host name. Regular files are
+// AllInstanceNames are qualified with the host name. Regular files are
 // ignored.
-func InstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
+func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			for _, dir := range ct.InstancesBaseDirs(h) {
@@ -557,7 +557,7 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		h, _, p := ParseName(pattern, h) // override 'h' inside loop
 
 		var matched bool
-		for _, name := range InstanceNames(h, ct) {
+		for _, name := range AllInstanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
 				log.Debug().Msgf("pattern %q matches instance name %q", pattern, name)

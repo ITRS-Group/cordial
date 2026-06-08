@@ -71,7 +71,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			return fmt.Errorf("%w: destination host %q not found", host.ErrNotExist, dHostName)
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
-		for _, name := range InstanceNames(sHost, ct) {
+		for _, name := range AllInstanceNames(sHost, ct) {
 			if err = Copy(ct, name, destination, options...); err != nil {
 				fmt.Println("Error:", err)
 			}

@@ -150,7 +150,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		if cmdGlobal {
 			// return everything that matches, at this point any
 			// hostname h and component ct are set
-			names := instance.InstanceNames(h, ct)
+			names := instance.AllInstanceNames(h, ct)
 			if len(names) > 0 {
 				cd.Lock()
 				cd.names = names
