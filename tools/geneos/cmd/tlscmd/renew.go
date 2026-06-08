@@ -118,7 +118,7 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	cf := i.Config()
 
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	confDir := config.AppConfigDir()
 	if confDir == "" {

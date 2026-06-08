@@ -109,16 +109,6 @@ func Finished[R Response](resp *R) {
 	}
 }
 
-// NewResponse returns a new Response structure for instance i. The
-// Start time is set to time.Now().
-func NewResponse(i geneos.Instance) *General {
-	return &General{
-		Instance: i,
-		start:    time.Now(),
-		Dataview: &Dataview{},
-	}
-}
-
 func New[R Response](i geneos.Instance) *R {
 	var resp *R
 	switch any(resp).(type) {
@@ -159,7 +149,7 @@ func New[R Response](i geneos.Instance) *R {
 // performed and a single response per instance is expected. It should
 // not be used across different instances.
 func MergeResponse(r1, r2 *General) (resp *General) {
-	resp = NewResponse(r1.Instance)
+	resp = New[General](r1.Instance)
 	resp.Completed = append(r1.Completed, r2.Completed...)
 	resp.Dataview.Table = append(r1.Dataview.Table, r2.Dataview.Table...)
 	resp.Err = errors.Join(r1.Err, r2.Err)

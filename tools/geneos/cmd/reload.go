@@ -62,7 +62,7 @@ var reloadCmd = &cobra.Command{
 }
 
 func ReloadInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if err := i.Reload(); err == nil {
 		resp.Completed = append(resp.Completed, "reload signal sent")

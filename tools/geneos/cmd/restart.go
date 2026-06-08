@@ -82,7 +82,7 @@ var restartCmd = &cobra.Command{
 				return
 			}
 			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
-				resp = responses.NewResponse(i)
+				resp = responses.New[responses.General](i)
 				resp.Err = instance.Stop(i, restartCmdForce, false)
 				if resp.Err == nil || restartCmdAll {
 					resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))
@@ -97,7 +97,7 @@ var restartCmd = &cobra.Command{
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 			resp.Err = instance.Stop(i, restartCmdForce, false)
 			if resp.Err == nil || restartCmdAll {
 				resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))

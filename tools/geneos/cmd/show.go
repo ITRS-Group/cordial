@@ -128,7 +128,7 @@ var showCmd = &cobra.Command{
 }
 
 func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 	cf := i.Config()
 
 	setup := config.Get[string](cf, "setup")
@@ -199,7 +199,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Gen
 
 // showInstanceConfig returns a slice of showConfig structs per instance
 func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -267,7 +267,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Gener
 }
 
 func showInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	// remove aliases
 	nv := config.New()

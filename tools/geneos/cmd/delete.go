@@ -68,7 +68,7 @@ var deleteCmd = &cobra.Command{
 }
 
 func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if instance.IsProtected(i) && !deleteCmdForce {
 		resp.Err = geneos.ErrProtected

@@ -209,7 +209,7 @@ func psInstanceCommon(i geneos.Instance) (pi *instance.ProcessInfo, base, actual
 }
 
 func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	h := i.Host()
 	ct := i.Type()
@@ -283,7 +283,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 }
 
 func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	h := i.Host()
 	ct := i.Type()
@@ -373,7 +373,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 }
 
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	pid, err := instance.GetLivePID(i)
 	if err != nil {

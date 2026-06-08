@@ -125,7 +125,7 @@ func ImportFiles(ct *geneos.Component, args []string, params []string) (err erro
 //
 // local directories are created
 func importInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs

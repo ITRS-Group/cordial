@@ -111,7 +111,7 @@ var setCmd = &cobra.Command{
 }
 
 func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -152,7 +152,7 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 }
 
 func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	crc, ok := params[0].(string)
 	if !ok {

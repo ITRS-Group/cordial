@@ -143,7 +143,7 @@ geneos tls export gateway mygateway
 }
 
 func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	h := i.Host()
 

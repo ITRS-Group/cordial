@@ -158,7 +158,7 @@ var encodeCmd = &cobra.Command{
 			}
 
 			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
-				resp = responses.NewResponse(i)
+				resp = responses.New[responses.General](i)
 				if !i.Type().UsesKeyfiles {
 					return
 				}
@@ -249,7 +249,7 @@ var encodeCmd = &cobra.Command{
 		}
 
 		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {
 				resp.Err = geneos.ErrInvalidArgs

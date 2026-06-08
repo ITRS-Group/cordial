@@ -147,7 +147,7 @@ var listCmd = &cobra.Command{
 }
 
 func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	var flags string
 
@@ -188,7 +188,7 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 }
 
 func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	running := "N"
 	disabled := "N"
@@ -235,7 +235,7 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 }
 
 func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	var running bool
 	if instance.IsRunning(i) {

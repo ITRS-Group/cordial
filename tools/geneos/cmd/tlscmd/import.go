@@ -152,7 +152,7 @@ geneos tls import /path/to/file.pem
 // tlsWriteInstance writes the certificate, key and chain to the instance.
 // It returns a Response indicating success or failure.
 func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 	cf := i.Config()
 
 	if len(params) != 1 {

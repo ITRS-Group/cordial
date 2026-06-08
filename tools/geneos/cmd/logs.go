@@ -169,7 +169,7 @@ func outHeaderString(i geneos.Instance, path string) (lines []string) {
 }
 
 func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if logCmdStderr {
 		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
@@ -336,7 +336,7 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 }
 
 func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if logCmdStderr {
 		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
@@ -369,7 +369,7 @@ func logCatInstanceFile(i geneos.Instance, logfile string, kind string) (lines [
 // for remote logs, spawn a go routine for each log, watch using stat etc.
 // and output changes
 func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if logCmdStderr {
 		logfile := instance.ComponentFilepath(i, "txt")

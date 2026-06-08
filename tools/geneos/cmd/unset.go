@@ -81,7 +81,7 @@ geneos unset san -g Gateway1
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 
 			cf := i.Config()
 

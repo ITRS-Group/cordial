@@ -68,7 +68,7 @@ geneos clean gateway Gateway1
 			return err
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 			resp.Completed = append(resp.Completed, "configured files and directories removed")
 			resp.Err = instance.Clean(i, instance.FullClean(cleanCmdFull))
 			return
@@ -120,7 +120,7 @@ geneos reset netprobe
 			return fmt.Errorf("no matching instances")
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 			resp.Completed = append(resp.Completed, "transient files and directories removed")
 			resp.Err = instance.Clean(i, instance.FullClean(true), instance.ForceClean(resetCmdForce))
 			return

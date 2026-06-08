@@ -61,7 +61,7 @@ var disableCmd = &cobra.Command{
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 
 			if instance.IsDisabled(i) {
 				return

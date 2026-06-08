@@ -78,7 +78,7 @@ var commandCmd = &cobra.Command{
 }
 
 func commandInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	lines := []string{fmt.Sprintf("=== %s ===", i)}
 
@@ -125,7 +125,7 @@ type command struct {
 }
 
 func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	cmd, err := instance.BuildCmd(i, true, instance.StartingExtras(commandCmdExtras), instance.StartingEnvs(commandCmdEnvs))
 	if err != nil {

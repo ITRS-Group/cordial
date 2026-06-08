@@ -60,7 +60,7 @@ var rebuildCmd = &cobra.Command{
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 
 			if resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
 				return

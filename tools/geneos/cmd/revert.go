@@ -69,7 +69,7 @@ var revertCmd = &cobra.Command{
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 
 			if instance.IsProtected(i) {
 				resp.Err = geneos.ErrProtected

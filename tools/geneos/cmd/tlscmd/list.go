@@ -607,7 +607,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 
 func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -647,7 +647,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) 
 
 func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -689,7 +689,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Genera
 
 func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
@@ -748,7 +748,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Ge
 
 func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	cf := i.Config()
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {

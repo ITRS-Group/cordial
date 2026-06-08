@@ -46,7 +46,7 @@ const (
 //
 // skip if certificate exists and is valid
 func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if i == nil || i.Type() == nil {
 		resp.Err = geneos.ErrInvalidArgs

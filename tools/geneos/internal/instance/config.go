@@ -309,7 +309,7 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 
 	opts := evalConfigOptions(options...)
 
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	log.Debug().Msgf("committing config for %s with options: noRebuild=%t noReload=%t", i, opts.noRebuild, opts.noReload)
 
@@ -496,7 +496,7 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 //
 // Also now check if instance directory path has changed. If so move it.
 func Migrate(i geneos.Instance) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	cf := i.Config()
 

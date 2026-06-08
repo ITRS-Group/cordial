@@ -316,7 +316,7 @@ geneos backup all
 func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.General) {
 	var ignoreDirs, ignoreFiles []string
 
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	cf := i.Config()
 	ct := i.Type()

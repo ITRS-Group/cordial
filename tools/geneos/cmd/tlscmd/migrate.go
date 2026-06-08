@@ -99,7 +99,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	var truststorePath, keystorePath string
 	var truststorePassword, keystorePassword config.Secret
 
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	cf := i.Config()
 	h := i.Host()

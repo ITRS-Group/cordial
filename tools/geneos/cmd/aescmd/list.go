@@ -185,7 +185,7 @@ func aesListPath(ct *geneos.Component, h *geneos.Host, name string, keyfile conf
 }
 
 func aesListInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	path := config.KeyFile(instance.PathTo(i, "keyfile"))
 	if path != "" {
@@ -201,7 +201,7 @@ func aesListInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 func aesListShared(ct *geneos.Component, h *geneos.Host) (results responses.Responses, err error) {
 	results = make(responses.Responses)
-	results["shared"] = responses.NewResponse(nil)
+	results["shared"] = responses.New[responses.General](nil)
 	resp := results["shared"]
 	for h := range h.OrList() {
 		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
@@ -263,7 +263,7 @@ func aesListPathCSV(ct *geneos.Component, h *geneos.Host, name, suffix string, k
 }
 
 func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	path := config.KeyFile(instance.PathTo(i, "keyfile"))
 	if path != "" {
@@ -312,7 +312,7 @@ func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (rs responses.Respon
 // aesListPathJSON fills in a listCmdType struct. paths is either one or
 // two paths, the second being a previous keyfile.
 func aesListPathJSON(i geneos.Instance, paths ...config.KeyFile) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	// TODO: fixed shared list
 	if i == nil {

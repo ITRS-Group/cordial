@@ -72,7 +72,7 @@ var stopCmd = &cobra.Command{
 				return
 			}
 			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
-				resp = responses.NewResponse(i)
+				resp = responses.New[responses.General](i)
 				resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 				return
 			}).Report(os.Stdout,
@@ -87,7 +87,7 @@ var stopCmd = &cobra.Command{
 			return
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
-			resp = responses.NewResponse(i)
+			resp = responses.New[responses.General](i)
 			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 			return
 		}).Report(os.Stdout,

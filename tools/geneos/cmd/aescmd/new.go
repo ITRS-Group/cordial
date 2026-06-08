@@ -135,7 +135,7 @@ geneos aes new -S gateway
 }
 
 func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
 		return
@@ -157,7 +157,7 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 }
 
 func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.General) {
-	resp = responses.NewResponse(i)
+	resp = responses.New[responses.General](i)
 
 	if len(params) == 0 {
 		resp.Err = geneos.ErrInvalidArgs
