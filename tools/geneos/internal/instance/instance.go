@@ -34,7 +34,6 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -55,16 +54,11 @@ var instanceMutex sync.Mutex
 // the context. The logger is configured with the "cordial" prefix and
 // an indent, and is set to the Info level.
 func NewLogger(i geneos.Instance, groups ...string) (l *slog.Logger) {
-	h := logger.NewHandler(
-		logger.WithLevelVar(&cordial.LogLevel),
-		logger.SourceRoot("cordial"),
-		logger.WithDelimiter("."),
-	)
-	l = slog.New(h)
+	l = slog.New(cordial.LogHandler)
 	for _, group := range groups {
 		l = l.WithGroup(group)
 	}
-	return l.With(
+	return l.WithGroup("instance").With(
 		slog.String("name", i.Name()),
 		slog.String("host", i.Host().String()),
 		slog.String("type", i.Type().String()),

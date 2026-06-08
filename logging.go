@@ -56,7 +56,7 @@ func (discardCloser) Close() error { return nil }
 // that as the log file unless it is either "-" (which means use STDOUT
 // (not STDERR) or equal to the [os.DevNull] value, in which case is
 // [io.Discard].
-func LogInit(prefix string, options ...LogOption) {
+func LogInit(prefix string, options ...LogOption) *slog.Logger {
 	var noColour bool
 	var out io.WriteCloser
 	out = os.Stderr
@@ -125,17 +125,17 @@ func LogInit(prefix string, options ...LogOption) {
 
 	zerolog.SetGlobalLevel(opts.level)
 
-	fmt.Println("setting logger")
 	LogHandler = logger.NewHandler(
 		logger.WithLevelVar(&LogLevel),
 		logger.SourceRoot("cordial"),
 		logger.WithDelimiter("."),
 		logger.Writer(out),
 	)
-	fmt.Printf("setting log level to %d\n", opts.slogLevel)
+
+	// set up slog
 	LogLevel.Set(opts.slogLevel)
 	Logger = slog.New(LogHandler)
-	fmt.Println("done")
+	return Logger
 }
 
 type logOpts struct {

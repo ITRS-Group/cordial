@@ -67,8 +67,7 @@ var log *slog.Logger
 
 func init() {
 	cobra.OnInitialize(func() {
-		cordial.LogInit(packageName)
-		log = cordial.Logger
+		log = cordial.LogInit(packageName)
 		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
