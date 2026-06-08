@@ -27,7 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -111,7 +111,7 @@ geneos install netprobe -b active_dev -U
 			return
 		}
 
-		log.Debug().Msgf("args %v params: %v", args, params)
+		zlog.Debug().Msgf("args %v params: %v", args, params)
 		params = append(args, params...)
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
@@ -127,7 +127,7 @@ geneos install netprobe -b active_dev -U
 		// if params contains directories then filter contents using
 		// given ct, if version if given then filter on that
 		if len(params) > 0 {
-			log.Debug().Msg("parameters found, local install only")
+			zlog.Debug().Msg("parameters found, local install only")
 			if installCmdOverride != "" {
 				if len(params) > 1 {
 					return fmt.Errorf("`--override` is only valid with a single file parameter")
@@ -174,7 +174,7 @@ geneos install netprobe -b active_dev -U
 				case geneos.IsURL(source):
 					u, err := url.Parse(source)
 					if err != nil {
-						log.Debug().Err(err).Msg("skipping")
+						zlog.Debug().Err(err).Msg("skipping")
 						continue
 					}
 					// just take the last part of the path
@@ -183,7 +183,7 @@ geneos install netprobe -b active_dev -U
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							log.Debug().Err(err).Msg("skipping")
+							zlog.Debug().Err(err).Msg("skipping")
 							continue
 						}
 						if platform != "" {
@@ -196,14 +196,14 @@ geneos install netprobe -b active_dev -U
 				case geneos.IsFile(source):
 					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
-						log.Debug().Err(err).Msg("skipping")
+						zlog.Debug().Err(err).Msg("skipping")
 						continue
 					}
 					if installCmdOverride == "" {
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							log.Debug().Err(err).Msg("skipping")
+							zlog.Debug().Err(err).Msg("skipping")
 							continue
 						}
 						if platform != "" {
@@ -212,17 +212,17 @@ geneos install netprobe -b active_dev -U
 					}
 
 					if ct != nil && ct != nct {
-						log.Debug().Msgf("ct %s and file ct %s do not match, skipping", ct, nct)
+						zlog.Debug().Msgf("ct %s and file ct %s do not match, skipping", ct, nct)
 						continue
 					}
 				default:
 					// if none of the above, skip
-					log.Debug().Msg("skipping")
+					zlog.Debug().Msg("skipping")
 				}
 
 				options = append(options, geneos.Version(version))
 
-				log.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
+				zlog.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
 				if err = Install(h, nct, append(options, geneos.Source(source))...); err != nil {
 					return err
 				}
@@ -277,17 +277,17 @@ geneos install netprobe -b active_dev -U
 			if len(params) > 0 {
 				archive = params[0]
 			}
-			log.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
+			zlog.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
 			options = append(options,
 				geneos.Source(archive),
 			)
 			if installCmdSnapshot {
 				installCmdNexus = true
-				log.Debug().Msg("setting nexus snapshots")
+				zlog.Debug().Msg("setting nexus snapshots")
 				options = append(options, geneos.UseNexusSnapshots())
 			}
 			if installCmdNexus {
-				log.Debug().Msg("setting nexus")
+				zlog.Debug().Msg("setting nexus")
 				options = append(options, geneos.UseNexus())
 			}
 			return Install(h, ct, options...)
@@ -314,14 +314,14 @@ geneos install netprobe -b active_dev -U
 					instances = append(instances, i)
 				}
 			}
-			log.Debug().Msgf("instances to restart: %v", instances)
+			zlog.Debug().Msgf("instances to restart: %v", instances)
 			options = append(options,
 				geneos.Restart(instances...),
 				geneos.StartFunc(instance.Start),
 				geneos.StopFunc(instance.Stop))
 		}
 
-		log.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
+		zlog.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
 
 		if installCmdSnapshot {
 			installCmdNexus = true

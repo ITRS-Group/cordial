@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPrefix func(string) string) (err error) {
@@ -103,21 +103,21 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		}
 		bar.Add64(int64(f.CompressedSize64))
 		if n != int64(f.UncompressedSize64) {
-			log.Error().Msgf("lengths different: %d %d", f.UncompressedSize64, n)
+			zlog.Error().Msgf("lengths different: %d %d", f.UncompressedSize64, n)
 		}
 		out.Close()
 		c.Close()
 
 		if err := h.Chtimes(fullpath, time.Time{}, f.Modified); err != nil {
-			log.Debug().Err(err).Msg("cannot update mtime (symlink?)")
+			zlog.Debug().Err(err).Msg("cannot update mtime (symlink?)")
 		}
 	}
 
 	slices.Reverse(dirtimes)
 	for _, d := range dirtimes {
-		log.Debug().Msgf("updating %q to %v", d.Name, d.Modified)
+		zlog.Debug().Msgf("updating %q to %v", d.Name, d.Modified)
 		if err := h.Chtimes(d.Name, time.Time{}, d.Modified); err != nil {
-			log.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
+			zlog.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
 		}
 	}
 	return

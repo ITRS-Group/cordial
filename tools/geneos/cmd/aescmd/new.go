@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -92,7 +92,7 @@ geneos aes new -S gateway
 		}
 
 		if newCmdShared {
-			log.Debug().Msg("new shared keyfile")
+			zlog.Debug().Msg("new shared keyfile")
 			ct, names, _, err := cmd.FetchArgs(command)
 			if err != nil {
 				return err

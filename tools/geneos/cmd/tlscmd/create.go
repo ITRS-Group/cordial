@@ -27,7 +27,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -185,7 +185,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 
 	signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 		return
 	}
 

@@ -138,7 +138,7 @@ func factory(name string) (ssoagent geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(ssoagent.Config(), "home", instance.Home(ssoagent))
-	ssoagent.(*SSOAgents).Logger = instance.Logger(ssoagent)
+	ssoagent.(*SSOAgents).Logger = instance.NewLogger(ssoagent)
 	instances.Store(h.FullName(local), ssoagent)
 
 	return

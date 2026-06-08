@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -71,7 +71,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
 
@@ -84,7 +84,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		}
 
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 
 		if err = initCommon(); err != nil {

@@ -24,7 +24,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -71,7 +71,7 @@ func Start(i geneos.Instance, opts ...any) error {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(i, "txt")
 
-	log.Debug().Msgf("starting '%s'", cmd.String())
+	zlog.Debug().Msgf("starting '%s'", cmd.String())
 	pid, err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps())
 	if err != nil {
 		return err

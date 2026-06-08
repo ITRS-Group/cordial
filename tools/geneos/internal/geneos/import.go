@@ -28,8 +28,9 @@ import (
 	"strings"
 	"time"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 // ImportSource copies the contents from item to the destination
@@ -59,39 +60,39 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	// host must be valid and not `ALL`
 	if h == nil || h == ALL {
 		err = ErrInvalidArgs
-		log.Debug().Err(err).Msgf("host invalid, skipping")
+		zlog.Debug().Err(err).Msgf("host invalid, skipping")
 		return
 	}
 
 	// check item is not empty
 	if item == "" {
 		err = ErrInvalidArgs
-		log.Debug().Err(err).Msgf("no source defined, skipping")
+		zlog.Debug().Err(err).Msgf("no source defined, skipping")
 		return
 	}
 
 	// check dir is not empty and actually a directory
 	if dir == "" {
 		err = ErrInvalidArgs
-		log.Debug().Err(err).Msgf("dir is empty, skipping")
+		zlog.Debug().Err(err).Msgf("dir is empty, skipping")
 		return
 	}
 
 	if st, err := h.Stat(dir); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
-			log.Debug().Err(err).Msgf("dir check failed")
+			zlog.Debug().Err(err).Msgf("dir check failed")
 			return "", err
 		}
 
 		// try and create it
 		if err = h.MkdirAll(dir, 0775); err != nil {
-			log.Debug().Err(err).Msgf("failed to create dir %q, skipping", dir)
+			zlog.Debug().Err(err).Msgf("failed to create dir %q, skipping", dir)
 			return "", err
 		}
 	} else {
 		if !st.IsDir() {
 			err = ErrInvalidArgs
-			log.Debug().Err(err).Msgf("dir %q is not a directory, skipping", dir)
+			zlog.Debug().Err(err).Msgf("dir %q is not a directory, skipping", dir)
 			return "", err
 		}
 	}
@@ -103,7 +104,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 		// do some basic validation on user-supplied destination
 		if dst == "" {
 			err = ErrInvalidArgs
-			log.Debug().Err(err).Msg("dest path empty")
+			zlog.Debug().Err(err).Msg("dest path empty")
 			return
 		}
 		// if the dest contains "://" then it is probably part of
@@ -114,10 +115,10 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 			// create a directory
 			dstIsDir = true
 			if dst, err = CleanRelativePath(dst); err != nil {
-				log.Fatal().Msg("dest path must be relative")
+				zlog.Fatal().Msg("dest path must be relative")
 			}
 		} else if dst, err = CleanRelativePath(dst); err != nil {
-			log.Fatal().Msg("dest path must be relative")
+			zlog.Fatal().Msg("dest path must be relative")
 		}
 		item = src
 	} else {
@@ -138,7 +139,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 		dst = ""
 	}
 
-	log.Debug().Msgf("importing source %q to dir %q with dest %q", item, dir, dst)
+	zlog.Debug().Msgf("importing source %q to dir %q with dest %q", item, dir, dst)
 
 	// set the Source(item) option so that any optional credentials are loaded
 	from, filename, _, err := openSource(item, Source(item))
@@ -150,16 +151,16 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 			// import directory
 			err = importDirectory(h, dir, item)
 			if err != nil {
-				log.Fatal().Err(err).Msgf("failed to import directory %q", item)
+				zlog.Fatal().Err(err).Msgf("failed to import directory %q", item)
 			}
 
 			return
 		}
-		log.Fatal().Err(err).Msgf("cannot open source %q", item)
+		zlog.Fatal().Err(err).Msgf("cannot open source %q", item)
 	}
 	defer from.Close()
 
-	log.Debug().Msgf("opened source %q for filename %q", item, filename)
+	zlog.Debug().Msgf("opened source %q for filename %q", item, filename)
 
 	// only use the returned filename if no explicit destination is given
 	if dst == "" {
@@ -192,7 +193,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	if _, err := h.Stat(path.Dir(dst)); err != nil {
 		err = h.MkdirAll(path.Dir(dst), 0775)
 		if err != nil && !errors.Is(err, fs.ErrExist) {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 	}
 
@@ -201,7 +202,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	var backuppath string
 	if s, err := h.Stat(dst); err == nil {
 		if !s.Mode().IsRegular() {
-			log.Fatal().Msg("dest exists and is not a plain file")
+			zlog.Fatal().Msg("dest exists and is not a plain file")
 		}
 		backuppath = dst + "." + time.Now().UTC().Format("20060102150405") + ".old"
 		// datetime := time.Now().UTC().Format("20060102150405")
@@ -239,7 +240,7 @@ func importDirectory(h *Host, dir, source string) (err error) {
 	// check dest is a directory
 	if dir == "" {
 		err = ErrInvalidArgs
-		log.Debug().Err(err).Msgf("source %q is a directory, dir is empty , skipping", source)
+		zlog.Debug().Err(err).Msgf("source %q is a directory, dir is empty , skipping", source)
 		return
 	}
 
@@ -267,7 +268,7 @@ func importDirectory(h *Host, dir, source string) (err error) {
 
 		if s, err := h.Stat(destfile); err == nil {
 			if !s.Mode().IsRegular() {
-				log.Fatal().Msg("dest exists and is not a plain file")
+				zlog.Fatal().Msg("dest exists and is not a plain file")
 			}
 			datetime := time.Now().UTC().Format("20060102150405")
 			backuppath = destfile + "." + datetime + ".old"
@@ -299,7 +300,7 @@ func ImportCommons(h *Host, ct *Component, common string, params []string) (file
 	}
 
 	if len(params) == 0 {
-		log.Fatal().Msg("no file/url provided")
+		zlog.Fatal().Msg("no file/url provided")
 	}
 
 	dir := h.PathTo(ct, common)

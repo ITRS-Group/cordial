@@ -135,7 +135,7 @@ func factory(name string) (webserver geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(webserver.Config(), "home", instance.Home(webserver))
-	webserver.(*Webservers).Logger = instance.Logger(webserver)
+	webserver.(*Webservers).Logger = instance.NewLogger(webserver)
 	instances.Store(h.FullName(local), webserver)
 
 	return

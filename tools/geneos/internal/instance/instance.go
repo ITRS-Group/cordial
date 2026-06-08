@@ -30,7 +30,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -51,11 +51,15 @@ type Instance struct {
 
 var instanceMutex sync.Mutex
 
-// Logger returns a logger with the instance name, host and type in the
-// context. The logger is configured with the "cordial" prefix and an
-// indent, and is set to the Info level.
-func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
-	h := logger.NewHandler(logger.WithLevelVar(&cordial.LogLevel), logger.SourceRoot("cordial"), logger.WithDelimiter("."))
+// NewLogger returns a logger with the instance name, host and type in
+// the context. The logger is configured with the "cordial" prefix and
+// an indent, and is set to the Info level.
+func NewLogger(i geneos.Instance, groups ...string) (l *slog.Logger) {
+	h := logger.NewHandler(
+		logger.WithLevelVar(&cordial.LogLevel),
+		logger.SourceRoot("cordial"),
+		logger.WithDelimiter("."),
+	)
 	l = slog.New(h)
 	for _, group := range groups {
 		l = l.WithGroup(group)
@@ -125,16 +129,16 @@ func IDString(i geneos.Instance) string {
 // are checked against all the values registered by components at
 // start-up.
 func ReservedName(name string) (ok bool) {
-	log.Debug().Msgf("checking %q", name)
+	zlog.Debug().Msgf("checking %q", name)
 	if geneos.ParseComponent(name) != nil {
-		log.Debug().Msg("matches a reserved word")
+		zlog.Debug().Msg("matches a reserved word")
 		return true
 	}
 	if reserved := config.Get[string](config.Global(), "reservednames"); reserved != "" {
 		list := strings.SplitSeq(reserved, ",")
 		for n := range list {
 			if strings.EqualFold(name, strings.TrimSpace(n)) {
-				log.Debug().Msgf("%s matches a user defined reserved name %s", name, n)
+				zlog.Debug().Msgf("%s matches a user defined reserved name %s", name, n)
 				return true
 			}
 		}
@@ -560,7 +564,7 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		for _, name := range AllInstanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
-				log.Debug().Msgf("pattern %q matches instance name %q", pattern, name)
+				zlog.Debug().Msgf("pattern %q matches instance name %q", pattern, name)
 				matched = true
 				if h == geneos.ALL {
 					names = append(names, n)
@@ -578,10 +582,10 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 
 			// if it's a valid name just save it for the caller to check later, otherwise ignore it
 			if ValidName(pattern) {
-				log.Debug().Msgf("pattern %q does not match any instance names but is a valid name, returning it for caller to check", pattern)
+				zlog.Debug().Msgf("pattern %q does not match any instance names but is a valid name, returning it for caller to check", pattern)
 				names = append(names, pattern)
 			} else {
-				log.Debug().Msgf("pattern %q does not match any instance names and is not a valid name, ignoring", pattern)
+				zlog.Debug().Msgf("pattern %q does not match any instance names and is not a valid name, ignoring", pattern)
 			}
 		}
 	}

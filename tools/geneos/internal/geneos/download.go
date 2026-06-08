@@ -28,8 +28,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
@@ -147,10 +148,10 @@ func openSource(source string, options ...PackageOption) (from io.ReadCloser, fi
 	default:
 		var s os.FileInfo
 		source = config.ResolveHome(source)
-		log.Debug().Msgf("looking at %q", source)
+		zlog.Debug().Msgf("looking at %q", source)
 		s, err = os.Stat(source)
 		if err != nil {
-			log.Debug().Err(err).Msgf("source %q", source)
+			zlog.Debug().Err(err).Msgf("source %q", source)
 			return nil, "", -1, err
 		}
 		if s.IsDir() {

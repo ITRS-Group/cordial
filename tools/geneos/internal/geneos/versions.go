@@ -29,7 +29,7 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // CurrentVersion returns the version that base points to for the
@@ -68,20 +68,20 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 			// in the config file.
 			version, err = filepath.Rel(dir, version)
 			if err != nil {
-				log.Debug().Err(err).Msg("relative path")
+				zlog.Debug().Err(err).Msg("relative path")
 			}
 		}
 
 		if version == base {
 			err = syscall.ELOOP
-			log.Debug().Err(err).Msg("loop")
+			zlog.Debug().Err(err).Msg("loop")
 			version = "unknown"
 			return
 		}
 	}
 	if i == 10 {
 		err = fmt.Errorf("too many levels of symbolic link (>10)")
-		log.Debug().Err(err).Msg("levels")
+		zlog.Debug().Err(err).Msg("levels")
 		version = "unknown"
 	}
 
@@ -132,7 +132,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 
 	dir := opts.source
 
-	log.Debug().Msgf("opening local archive directory %q", dir)
+	zlog.Debug().Msgf("opening local archive directory %q", dir)
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
@@ -161,7 +161,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 		return !strings.Contains(n, check)
 	})
 
-	log.Debug().Msgf("archives before platform filter: %v", archives)
+	zlog.Debug().Msgf("archives before platform filter: %v", archives)
 
 	if opts.platformId == "" {
 		archives = slices.DeleteFunc(archives, func(n string) bool {
@@ -208,7 +208,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 		}
 	})
 
-	log.Debug().Msgf("archives after platform filter: %v", archives)
+	zlog.Debug().Msgf("archives after platform filter: %v", archives)
 
 	return
 }

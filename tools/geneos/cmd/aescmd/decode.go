@@ -23,7 +23,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -157,7 +157,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			if !ok {
 				panic("wrong type")
 			}
-			log.Debug().Msgf("trying to decode for instance %s", i)
+			zlog.Debug().Msgf("trying to decode for instance %s", i)
 			if !i.Type().UsesKeyfiles {
 				return
 			}

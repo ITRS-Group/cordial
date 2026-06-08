@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 type downloadauth struct {
@@ -73,14 +73,14 @@ func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 		// try to open the given source directly first, if it exists and
 		// is not a directory then return it
 
-		log.Debug().Msgf("source %q", opts.source)
+		zlog.Debug().Msgf("source %q", opts.source)
 		body, filename, filesize, err = openSource(opts.source, options...)
 		if err == nil {
-			log.Debug().Msgf("source opened, returning")
+			zlog.Debug().Msgf("source opened, returning")
 			return
 		}
 		if IsDir(opts.source) && opts.source != path.Join(LocalRoot(), "packages", "downloads") {
-			log.Debug().Msg("source is a directory, and not the download cache, so setting local directory search flag")
+			zlog.Debug().Msg("source is a directory, and not the download cache, so setting local directory search flag")
 			opts.localOnly = true
 		}
 	}
@@ -94,10 +94,10 @@ func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 		var archives []string
 		archives, err = LocalArchives(ct, options...)
 		if err != nil {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			return
 		}
-		log.Debug().Msgf("archives: %v", archives)
+		zlog.Debug().Msgf("archives: %v", archives)
 		// filter list of archives by version
 		archives = slices.DeleteFunc(archives, func(n string) bool {
 			var ctMatch bool
@@ -113,7 +113,7 @@ func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 
 			return !ctMatch
 		})
-		log.Debug().Msgf("archives (filtered by version %q): %v", opts.version, archives)
+		zlog.Debug().Msgf("archives (filtered by version %q): %v", opts.version, archives)
 		if len(archives) > 0 {
 			filename = archives[len(archives)-1]
 		}
@@ -149,7 +149,7 @@ func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {
-			log.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
+			zlog.Debug().Msgf("not downloading, file with same size already exists: %s", archivePath)
 			resp.Body.Close()
 			return f, filename, -1, nil
 		}
@@ -166,7 +166,7 @@ func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 
 	// ensure destination directory exists
 	if err = LOCAL.MkdirAll(opts.source, 0775); err != nil {
-		log.Debug().Err(err).Msgf("cannot create directory for archive: %q", opts.source)
+		zlog.Debug().Err(err).Msgf("cannot create directory for archive: %q", opts.source)
 		return
 	}
 
@@ -214,7 +214,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		if platform != "" {
 			version += "+" + platform
 		}
-		log.Debug().Msgf("ctFromFile %q, version %q, platform %q, suffix %q", ctFromFile, version, platform, suffix)
+		zlog.Debug().Msgf("ctFromFile %q, version %q, platform %q, suffix %q", ctFromFile, version, platform, suffix)
 		if ctFromFile == nil {
 			ctFromFile = &RootComponent
 		}
@@ -229,7 +229,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 			break
 		default:
 			// mismatch
-			log.Debug().Msgf("component type and archive mismatch: %q is not a %q", filename, ct)
+			zlog.Debug().Msgf("component type and archive mismatch: %q is not a %q", filename, ct)
 			return
 		}
 	} else {
@@ -244,7 +244,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 
 	// unarchive in non-parent package dir, e.g. fa2 not netprobe
 	basedir := h.PathTo("packages", ct.String(), version)
-	log.Debug().Msgf("basedir=%s ct=%s version=%s suffix=%s", basedir, ct, version, suffix)
+	zlog.Debug().Msgf("basedir=%s ct=%s version=%s suffix=%s", basedir, ct, version, suffix)
 	if _, err = h.Stat(basedir); err == nil {
 		return h.HostPath(basedir), fs.ErrExist
 	}
@@ -269,17 +269,17 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		if ok {
 			_, err = s.Seek(-4, io.SeekEnd)
 			if err != nil {
-				log.Debug().Err(err).Msg("")
+				zlog.Debug().Err(err).Msg("")
 			} else {
 				err = binary.Read(s, binary.LittleEndian, &gziplen)
 				if err != nil {
-					log.Debug().Err(err).Msg("")
+					zlog.Debug().Err(err).Msg("")
 				}
 			}
 			// reset
 			_, err = s.Seek(0, io.SeekStart)
 		}
-		log.Debug().Msgf("gziplen %d", gziplen)
+		zlog.Debug().Msgf("gziplen %d", gziplen)
 
 		var tin *gzip.Reader
 		tin, err = gzip.NewReader(archive)
@@ -310,14 +310,14 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 	basedir = h.PathTo("packages", ct.String())
 	basepath := path.Join(basedir, opts.basename)
 
-	log.Debug().Msgf("basepath: %s, version: %s", basepath, version)
+	zlog.Debug().Msgf("basepath: %s, version: %s", basepath, version)
 
 	if _, err = h.Stat(basepath); err == nil {
 		return h.HostPath(basedir), nil
 	}
 
 	if err = h.Symlink(version, basepath); err != nil {
-		log.Debug().Err(err).Msgf("version %s base %s", version, basepath)
+		zlog.Debug().Err(err).Msgf("version %s base %s", version, basepath)
 		return h.HostPath(basedir), err
 	}
 

@@ -41,7 +41,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"software.sslmate.com/src/go-pkcs12"
 
@@ -146,15 +146,15 @@ var infoCmd = &cobra.Command{
 
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			log.Error().Err(err).Msg("unable to load system root CAs, skipping system roots")
+			zlog.Error().Err(err).Msg("unable to load system root CAs, skipping system roots")
 			roots = x509.NewCertPool()
 		}
 
 		cabundle, err := os.ReadFile(geneos.PathToCABundlePEM(geneos.LOCAL))
 		if err == nil {
-			log.Debug().Msgf("loaded Geneos CA bundle from %s", geneos.PathToCABundlePEM(geneos.LOCAL))
+			zlog.Debug().Msgf("loaded Geneos CA bundle from %s", geneos.PathToCABundlePEM(geneos.LOCAL))
 			if ok := roots.AppendCertsFromPEM(cabundle); !ok {
-				log.Error().Msg("unable to parse any certificates from Geneos CA bundle")
+				zlog.Error().Msg("unable to parse any certificates from Geneos CA bundle")
 			}
 		}
 
@@ -162,11 +162,11 @@ var infoCmd = &cobra.Command{
 			for _, r := range infoCmdRoots {
 				contents, err := os.ReadFile(r)
 				if err != nil {
-					log.Error().Err(err).Str("file", r).Msg("unable to read roots file")
+					zlog.Error().Err(err).Str("file", r).Msg("unable to read roots file")
 					return err
 				}
 				if !roots.AppendCertsFromPEM(contents) {
-					log.Error().Str("file", r).Msg("unable to parse any certificates from roots file")
+					zlog.Error().Str("file", r).Msg("unable to parse any certificates from roots file")
 					return fmt.Errorf("unable to parse any certificates from roots file: %s", r)
 				}
 			}
@@ -200,7 +200,7 @@ var infoCmd = &cobra.Command{
 			} else {
 				r, err = os.Open(infoCmdConnectsFile)
 				if err != nil {
-					log.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("unable to open connects file")
+					zlog.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("unable to open connects file")
 					return err
 				}
 				defer r.Close()
@@ -224,7 +224,7 @@ var infoCmd = &cobra.Command{
 			for _, addr := range lines {
 				wg.Add(1)
 				if len(ch) == cap(ch) {
-					log.Warn().Msg("channel buffer full, waiting for some connections to finish before starting new ones")
+					zlog.Warn().Msg("channel buffer full, waiting for some connections to finish before starting new ones")
 				}
 				go func(ch chan certInfo, addr string) {
 					defer wg.Done()
@@ -242,7 +242,7 @@ var infoCmd = &cobra.Command{
 				certInfos = append(certInfos, ci)
 			}
 			if err := scanner.Err(); err != nil {
-				log.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("error reading connects file")
+				zlog.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("error reading connects file")
 				return err
 			}
 		}
@@ -423,7 +423,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 		InsecureSkipVerify: true,
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) (err error) {
 			// Parse the root/leaf certificates
-			log.Debug().Msgf("verifying peer certificate with %d rawcerts", len(rawCerts))
+			zlog.Debug().Msgf("verifying peer certificate with %d rawcerts", len(rawCerts))
 
 			certs := make([]*x509.Certificate, len(rawCerts))
 			for i, asn1Data := range rawCerts {
@@ -442,7 +442,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 
 			// Add intermediate certificates to the pool
 			for _, cert := range certs[1:] {
-				log.Debug().Msgf("adding intermediate certificate with Subject CN=%s to pool for verification", cert.Subject.CommonName)
+				zlog.Debug().Msgf("adding intermediate certificate with Subject CN=%s to pool for verification", cert.Subject.CommonName)
 				opts.Intermediates.AddCert(cert)
 			}
 
@@ -458,18 +458,18 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 		_, ok2 := errors.AsType[x509.UnknownAuthorityError](err)
 		if ok || ok2 {
 			start = time.Now() // reset start time to exclude time taken by failed verification attempt
-			log.Debug().Err(err).Str("address", addr).Msg("TLS certificate verification failed, retrying with InsecureSkipVerify to get certificates anyway")
+			zlog.Debug().Err(err).Str("address", addr).Msg("TLS certificate verification failed, retrying with InsecureSkipVerify to get certificates anyway")
 			// try again with skip verify
 			conn, err = tls.Dial("tcp", u.Host, &tls.Config{
 				InsecureSkipVerify: true,
 			})
 			if err != nil {
-				log.Debug().Err(err).Str("address", addr).Msg("unable to connect to address with TLS")
+				zlog.Debug().Err(err).Str("address", addr).Msg("unable to connect to address with TLS")
 				ci.Error = err
 				return
 			}
 		} else {
-			log.Debug().Err(err).Str("address", addr).Msgf("unable to connect to address with TLS (error type %T)", err)
+			zlog.Debug().Err(err).Str("address", addr).Msgf("unable to connect to address with TLS (error type %T)", err)
 			ci.Error = err
 			return
 		}
@@ -480,7 +480,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 
 	var verified bool
 	if len(verifiedChains) > 0 {
-		log.Debug().Str("address", addr).Msg("TLS certificate chain successfully verified")
+		zlog.Debug().Str("address", addr).Msg("TLS certificate chain successfully verified")
 		verified = true
 	}
 
@@ -551,14 +551,14 @@ func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo) {
 func readFile(p string, ci *certInfo) (err error) {
 	ci.Path, err = filepath.Abs(p)
 	if err != nil {
-		log.Error().Err(err).Str("file", p).Msg("unable to get absolute path")
+		zlog.Error().Err(err).Str("file", p).Msg("unable to get absolute path")
 		return
 	}
 	// ci.Contents = certContents{}
 
 	contents, err2 := os.ReadFile(p)
 	if err2 != nil {
-		log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+		zlog.Error().Err(err2).Str("file", p).Msg("unable to read file")
 		return
 	}
 
@@ -567,18 +567,18 @@ func readFile(p string, ci *certInfo) (err error) {
 	if path.Base(p) == "cacerts" {
 		k, err := certs.ReadKeystore(geneos.LOCAL, p, config.Secret("changeit"))
 		if err != nil {
-			log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+			zlog.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
 			return err
 		}
 		for _, alias := range k.Aliases() {
 			entry, err := k.GetTrustedCertificateEntry(alias)
 			if err != nil {
-				log.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java truststore", alias)
+				zlog.Error().Err(err).Str("alias", alias).Msgf("unable to get certificate entry %q from Java truststore", alias)
 				return err
 			}
 			cert, err := x509.ParseCertificate(entry.Certificate.Content)
 			if err != nil {
-				log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java truststore")
+				zlog.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java truststore")
 				return err
 			}
 			ci.Alias = append(ci.Alias, alias)
@@ -589,7 +589,7 @@ func readFile(p string, ci *certInfo) (err error) {
 
 	r, err2 := os.Open(p)
 	if err2 != nil {
-		log.Error().Err(err2).Str("file", p).Msg("unable to open file")
+		zlog.Error().Err(err2).Str("file", p).Msg("unable to open file")
 		return err2
 	}
 
@@ -597,23 +597,23 @@ func readFile(p string, ci *certInfo) (err error) {
 	_, err2 = r.Read(magic)
 	r.Close() // close regardless of read success
 	if err2 != nil && err2 != io.EOF {
-		log.Error().Err(err2).Str("file", p).Msg("unable to read file")
+		zlog.Error().Err(err2).Str("file", p).Msg("unable to read file")
 		return err2
 	}
 
 	if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
-		log.Debug().Str("file", p).Msg("Java keystore magic number found")
+		zlog.Debug().Str("file", p).Msg("Java keystore magic number found")
 		if len(infoCmdPassword) == 0 {
 			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to read password")
+				zlog.Fatal().Err(err).Msg("Failed to read password")
 				// return err
 			}
 			defer clear(infoCmdPassword)
 		}
 		k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
 		if err != nil {
-			log.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
+			zlog.Error().Err(err).Str("file", p).Msg("unable to read Java keystore")
 			return err
 		}
 		for _, alias := range k.Aliases() {
@@ -621,7 +621,7 @@ func readFile(p string, ci *certInfo) (err error) {
 			case k.IsPrivateKeyEntry(alias):
 				pke, err := k.GetPrivateKeyEntry(alias, infoCmdPassword)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msgf("unable to get private key entry %q from Java keystore", alias)
+					zlog.Error().Err(err).Str("alias", alias).Msgf("unable to get private key entry %q from Java keystore", alias)
 					return err
 				}
 				ci.PrivateKeys = append(ci.PrivateKeys, pke.PrivateKey)
@@ -630,7 +630,7 @@ func readFile(p string, ci *certInfo) (err error) {
 				for n, cert := range chain {
 					parsedCert, err := x509.ParseCertificate(cert.Content)
 					if err != nil {
-						log.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
+						zlog.Error().Err(err).Str("alias", alias).Int("cert", n).Msg("unable to parse certificate from Java keystore")
 						return err
 					}
 					ci.Alias = append(ci.Alias, alias+"["+strconv.FormatInt(int64(n+1), 10)+"]")
@@ -639,12 +639,12 @@ func readFile(p string, ci *certInfo) (err error) {
 			case k.IsTrustedCertificateEntry(alias):
 				entry, err := k.GetTrustedCertificateEntry(alias)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msgf("unable to get CA certificate entry %q from Java keystore", alias)
+					zlog.Error().Err(err).Str("alias", alias).Msgf("unable to get CA certificate entry %q from Java keystore", alias)
 					return err
 				}
 				cert, err := x509.ParseCertificate(entry.Certificate.Content)
 				if err != nil {
-					log.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
+					zlog.Error().Err(err).Str("alias", alias).Msg("unable to parse certificate from Java keystore")
 					return err
 				}
 				if slices.Contains(ci.Alias, alias) {
@@ -671,7 +671,7 @@ func readFile(p string, ci *certInfo) (err error) {
 
 		key, c, chain, err := pkcs12.DecodeChain(contents, string(infoCmdPassword))
 		if err != nil {
-			log.Error().Err(err).Str("file", p).Msg("unable to decode PKCS#12 file - is the password correct?")
+			zlog.Error().Err(err).Str("file", p).Msg("unable to decode PKCS#12 file - is the password correct?")
 			return err
 		}
 		ci.CertChain = append(ci.CertChain, c)
@@ -679,14 +679,14 @@ func readFile(p string, ci *certInfo) (err error) {
 
 		pk, err := x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
-			log.Error().Err(err).Str("file", p).Msg("unable to marshal private key from PKCS#12 file")
+			zlog.Error().Err(err).Str("file", p).Msg("unable to marshal private key from PKCS#12 file")
 			return err
 		}
 		mpk := certs.PrivateKey(pk)
 		if !certs.CheckKeyMatch(mpk, c) {
-			log.Warn().Str("file", p).Msg("private key does not match certificate in PKCS#12 file")
+			zlog.Warn().Str("file", p).Msg("private key does not match certificate in PKCS#12 file")
 		} else {
-			log.Debug().Str("file", p).Msg("added private key from PKCS#12 file to list for matching with certificates")
+			zlog.Debug().Str("file", p).Msg("added private key from PKCS#12 file to list for matching with certificates")
 		}
 		ci.PrivateKeys = append(ci.PrivateKeys, mpk)
 		return err

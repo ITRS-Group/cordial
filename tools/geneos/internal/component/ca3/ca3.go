@@ -142,7 +142,7 @@ func factory(name string) (ca3 geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(ca3.Config(), "home", instance.Home(ca3))
-	ca3.(*CA3s).Logger = instance.Logger(ca3)
+	ca3.(*CA3s).Logger = instance.NewLogger(ca3)
 	instances.Store(h.FullName(local), ca3)
 
 	return

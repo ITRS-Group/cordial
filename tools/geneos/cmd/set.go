@@ -23,7 +23,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -134,7 +134,7 @@ func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
 			if created {
 				crc, err := keyfile.ReadCRC(geneos.GetHost(Hostname))
 				if err != nil {
-					log.Warn().Err(err).Msgf("created keyfile %s but failed to read CRC", keyfile)
+					zlog.Warn().Err(err).Msgf("created keyfile %s but failed to read CRC", keyfile)
 				}
 				fmt.Printf("%s user keyfile created %X\n", keyfile, crc)
 			}

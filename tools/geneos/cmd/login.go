@@ -21,7 +21,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -91,7 +91,7 @@ var loginCmd = &cobra.Command{
 			loginKeyfile = geneos.DefaultUserKeyfile
 		}
 
-		log.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, geneos.DefaultUserKeyfile)
+		zlog.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, geneos.DefaultUserKeyfile)
 
 		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost); err != nil {
 			return err

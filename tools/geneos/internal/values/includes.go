@@ -20,7 +20,7 @@ package values
 import (
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // Includes is a map of include file priority to path
@@ -49,7 +49,7 @@ func (i *Includes) Set(value string) error {
 		path = b
 	} else {
 		// XXX check two values and first is a number
-		log.Debug().Msgf("second value missing after ':', using default %s", priority)
+		zlog.Debug().Msgf("second value missing after ':', using default %s", priority)
 	}
 	(*i)[priority] = path
 	return nil

@@ -29,7 +29,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -253,7 +253,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			cmd = exec.Command("cmd", "/c", "echo", "%USERPROFILE%")
 			output, err := h.Run(cmd)
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 			} else {
 				dir := strings.TrimSpace(string(output))
 				// tmp fix for ssh to windows
@@ -459,7 +459,7 @@ func LoadHostConfig() {
 		config.SkipWorkingDir(),
 	)
 	if err != nil {
-		log.Error().Err(err).Msg("")
+		zlog.Error().Err(err).Msg("")
 	}
 
 	hosts = sync.Map{}
@@ -477,7 +477,7 @@ func LoadHostConfig() {
 		case map[string]any:
 			v.MergeConfigMap(m)
 		default:
-			log.Debug().Msgf("hosts value not a map[string]interface{} but a %T", hostval)
+			zlog.Debug().Msgf("hosts value not a map[string]interface{} but a %T", hostval)
 			continue
 		}
 

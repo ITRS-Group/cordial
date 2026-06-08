@@ -24,7 +24,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -237,7 +237,7 @@ func (ct *Component) IsA(names ...string) bool {
 func (ct *Component) MakeDirs(h *Host) (err error) {
 	name := RootComponentName
 	if h == ALL {
-		log.Fatal().Msg("called with all hosts")
+		zlog.Fatal().Msg("called with all hosts")
 	}
 	if ct != nil {
 		name = ct.Name

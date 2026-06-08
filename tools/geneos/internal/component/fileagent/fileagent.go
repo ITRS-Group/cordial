@@ -130,7 +130,7 @@ func factory(name string) (fileagent geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(fileagent.Config(), "home", instance.Home(fileagent))
-	fileagent.(*FileAgents).Logger = instance.Logger(fileagent)
+	fileagent.(*FileAgents).Logger = instance.NewLogger(fileagent)
 	instances.Store(h.FullName(local), fileagent)
 
 	return

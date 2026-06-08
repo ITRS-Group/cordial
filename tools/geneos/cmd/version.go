@@ -23,9 +23,10 @@ import (
 	"os"
 	dbg "runtime/debug"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/spf13/cobra"
 )
 
 var versionCmdToolkit bool

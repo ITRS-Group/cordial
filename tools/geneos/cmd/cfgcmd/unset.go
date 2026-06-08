@@ -21,10 +21,11 @@ import (
 	_ "embed"
 	"strings"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/spf13/cobra"
 )
 
 func init() {

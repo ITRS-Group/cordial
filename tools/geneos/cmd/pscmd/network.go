@@ -5,11 +5,12 @@ import (
 	"net"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
-	"github.com/rs/zerolog/log"
 )
 
 type psInstanceNetwork struct {
@@ -219,7 +220,7 @@ func psNetworkTable(i geneos.Instance, pid int, resp *responses.General) (err er
 	}
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
-		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		zlog.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
 		for _, fd := range capi.OpenFiles {
 			if fd.Conn == nil {
 				continue

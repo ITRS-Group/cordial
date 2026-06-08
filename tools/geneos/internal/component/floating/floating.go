@@ -152,7 +152,7 @@ func factory(name string) (floating geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(floating.Config(), "home", instance.Home(floating))
-	floating.(*Floatings).Logger = instance.Logger(floating)
+	floating.(*Floatings).Logger = instance.NewLogger(floating)
 	instances.Store(h.FullName(local), floating)
 
 	return

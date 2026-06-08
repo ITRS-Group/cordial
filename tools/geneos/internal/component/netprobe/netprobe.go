@@ -153,7 +153,7 @@ func factory(name string) (netprobe geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(netprobe.Config(), "home", instance.Home(netprobe))
-	netprobe.(*Netprobes).Logger = instance.Logger(netprobe)
+	netprobe.(*Netprobes).Logger = instance.NewLogger(netprobe)
 	instances.Store(h.FullName(local), netprobe)
 
 	return

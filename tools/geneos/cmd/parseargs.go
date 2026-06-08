@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -118,7 +118,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
 	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
 
-	log.Debug().Msgf("cmdGlobal %v, cmdKeepHosts %v, cmdWildcardNames %v, cmdAllInstancesMustMatch %v", cmdGlobal, cmdKeepHosts, cmdWildcardNames, cmdAllInstancesMustMatch)
+	zlog.Debug().Msgf("cmdGlobal %v, cmdKeepHosts %v, cmdWildcardNames %v, cmdAllInstancesMustMatch %v", cmdGlobal, cmdKeepHosts, cmdWildcardNames, cmdAllInstancesMustMatch)
 
 	cd := cmddata(c)
 	if cd == nil {
@@ -131,7 +131,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		cd.Unlock()
 	}
 
-	log.Debug().Msgf("args (%d): %v", len(args), args)
+	zlog.Debug().Msgf("args (%d): %v", len(args), args)
 
 	// first, if there is at least one arg then try to consume the first
 	// as a component type, then drop through
@@ -171,7 +171,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		}
 		// if !validNameRE.MatchString(a) {
 		if !instance.ValidName(a) {
-			log.Debug().Msgf("not a valid instance name, moving %q to parameters", a)
+			zlog.Debug().Msgf("not a valid instance name, moving %q to parameters", a)
 			params = args[i:]
 			break
 		}
@@ -183,8 +183,8 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		names, err = instance.Match(h, ct, cmdKeepHosts, cmdAllInstancesMustMatch, names...)
 	}
 
-	log.Debug().Msgf("names %v", names)
-	log.Debug().Msgf("ct %q, args %v, params %v", ct, args, params)
+	zlog.Debug().Msgf("names %v", names)
+	zlog.Debug().Msgf("ct %q, args %v, params %v", ct, args, params)
 
 	cd.Lock()
 	cd.names = names

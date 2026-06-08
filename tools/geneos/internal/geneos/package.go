@@ -29,9 +29,10 @@ import (
 	"time"
 	"unicode"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/hashicorp/go-version"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/rs/zerolog/log"
 )
 
 // list of platform in release package names
@@ -99,7 +100,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 			info, err := ent.Info()
 			if err != nil {
 				// skip entries with errors
-				log.Debug().Err(err).Msg("skipping")
+				zlog.Debug().Err(err).Msg("skipping")
 				continue
 			}
 			// usedBy := len(instance.Instances(h, ct, instance.FilterParameters("protected=true", "version="+ent.Name())))
@@ -119,11 +120,11 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 	slices.SortFunc(releases, func(a, b *ReleaseDetails) int {
 		va, err := version.NewVersion(strings.TrimLeftFunc(a.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
 		if err != nil {
-			log.Debug().Err(err).Msg("")
+			zlog.Debug().Err(err).Msg("")
 		}
 		vb, err := version.NewVersion(strings.TrimLeftFunc(b.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
 		if err != nil {
-			log.Debug().Err(err).Msg("")
+			zlog.Debug().Err(err).Msg("")
 		}
 		return va.Compare(vb)
 	})
@@ -135,7 +136,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 // component type ct must be given. options controls behaviour like
 // local only and restarts of affected instances.
 func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
-	log.Debug().Msgf("host %s, component %s", h, ct)
+	zlog.Debug().Msgf("host %s, component %s", h, ct)
 	if h == ALL || ct == nil {
 		return ErrInvalidArgs
 	}
@@ -143,7 +144,7 @@ func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
 	if len(ct.PackageTypes) > 0 {
 		for _, ct := range ct.PackageTypes {
 			if err = Install(h, ct, options...); err != nil {
-				log.Debug().Err(err).Msg("")
+				zlog.Debug().Err(err).Msg("")
 			}
 		}
 		return nil
@@ -160,9 +161,9 @@ func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
 			if IsURL(opts.source) {
 				return
 			}
-			log.Debug().Msgf("%s not found at/in %s (isdir? %v)", ct, opts.source, IsDir(opts.source))
+			zlog.Debug().Msgf("%s not found at/in %s (isdir? %v)", ct, opts.source, IsDir(opts.source))
 			if opts.localOnly || (!opts.downloadonly && IsDir(opts.source)) {
-				log.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.source)
+				zlog.Debug().Msgf("%s not found at/in %s but local install only selected, skipping", ct, opts.source)
 				return nil
 			}
 		}
@@ -205,7 +206,7 @@ func CheckBasename(h *Host, ct *Component, options ...PackageOption) (exists boo
 		for _, ct := range ct.PackageTypes {
 			exists, err = CheckBasename(h, ct, options...)
 			if err != nil {
-				log.Debug().Err(err).Msg("")
+				zlog.Debug().Err(err).Msg("")
 				return
 			}
 			if exists {
@@ -276,7 +277,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 	if len(ct.PackageTypes) > 0 {
 		for _, ct := range ct.PackageTypes {
 			if err := Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 			}
 		}
 		return nil
@@ -292,7 +293,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 
 	originalVersion := opts.version
 
-	log.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
+	zlog.Debug().Msgf("checking and updating %s on %s %q to %q", ct, h, opts.basename, opts.version)
 
 	basedir := h.PathTo("packages", ct.String()) // use the actual ct not the parent, if there is one
 	basepath := path.Join(basedir, opts.basename)
@@ -322,7 +323,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 	// does the version directory exist?
 	existing, err := h.Readlink(basepath)
 	if err != nil {
-		log.Debug().Msgf("cannot read link for existing version %s", basepath)
+		zlog.Debug().Msgf("cannot read link for existing version %s", basepath)
 	}
 
 	// before removing existing link, check there is something to link to

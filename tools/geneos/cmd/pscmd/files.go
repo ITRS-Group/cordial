@@ -7,12 +7,13 @@ import (
 	"strings"
 	"time"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/pkg/process"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
-	"github.com/rs/zerolog/log"
 )
 
 type psInstanceFiles struct {
@@ -257,7 +258,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 	}
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
-		log.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		zlog.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
 		homedir := capi.Cwd
 		hs, err := h.Stat(homedir)
 		if err != nil {

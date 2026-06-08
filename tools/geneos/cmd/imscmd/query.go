@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -88,13 +88,13 @@ var queryCmd = &cobra.Command{
 			queryCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
 		}
 
-		log.Debug().Msgf("querying IMS type %s", queryCmdIMSType)
+		zlog.Debug().Msgf("querying IMS type %s", queryCmdIMSType)
 
 		query := queryParameters{}
 
 		switch queryCmdIMSType {
 		case "snow":
-			log.Debug().Msgf("using ServiceNow-specific query parameters: table=%s, raw=%t", queryCmdSource, queryCmdRaw)
+			zlog.Debug().Msgf("using ServiceNow-specific query parameters: table=%s, raw=%t", queryCmdSource, queryCmdRaw)
 			if queryCmdSource == "" {
 				queryCmdSource = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-table"))
 			}
@@ -109,15 +109,15 @@ var queryCmd = &cobra.Command{
 			}
 		case "sdp":
 			// queryCmdSource = "requests"
-			log.Debug().Msgf("using ServiceDesk Plus-specific query parameters: query=%s", queryCmdQuery)
+			zlog.Debug().Msgf("using ServiceDesk Plus-specific query parameters: query=%s", queryCmdQuery)
 			if queryCmdQuery == "" {
 				var b bytes.Buffer
 				sdpQuery := cf.Sub(config.Join("ims-gateway", "sdp", "default-query"))
 				if err = sdpQuery.Write("sdp", config.Writer(&b), config.Format("json")); err != nil {
-					log.Error().Err(err).Msgf("error saving SDP query parameters to buffer: %v", err)
+					zlog.Error().Err(err).Msgf("error saving SDP query parameters to buffer: %v", err)
 					return
 				}
-				log.Debug().Msgf("SDP query parameters: %s", b.String())
+				zlog.Debug().Msgf("SDP query parameters: %s", b.String())
 				queryCmdQuery = b.String()
 			}
 
@@ -125,37 +125,37 @@ var queryCmd = &cobra.Command{
 				Query: queryCmdQuery,
 			}
 		default:
-			log.Error().Msgf("unsupported IMS type %q", queryCmdIMSType)
+			zlog.Error().Msgf("unsupported IMS type %q", queryCmdIMSType)
 			return
 		}
 
 		for r := range ims.Connect(cf.Sub("ims-gateway"), queryCmdIMSType) {
-			log.Debug().Msgf("querying IMS at %s / %s", r.BaseURL, queryCmdSource)
+			zlog.Debug().Msgf("querying IMS at %s / %s", r.BaseURL, queryCmdSource)
 			if _, err = r.Get(context.Background(), queryCmdSource, query, &response); err == nil {
 				break
 			}
 
 			if err != nil {
 				if ue, ok := errors.AsType[*url.Error](err); ok {
-					log.Warn().Err(ue.Unwrap()).Msgf("connection error to %s, trying next endpoint (if any)", r.BaseURL)
+					zlog.Warn().Err(ue.Unwrap()).Msgf("connection error to %s, trying next endpoint (if any)", r.BaseURL)
 				} else {
-					log.Warn().Err(err).Msgf("error querying IMS at %s: %v", r.BaseURL, err)
+					zlog.Warn().Err(err).Msgf("error querying IMS at %s: %v", r.BaseURL, err)
 				}
 			}
 		}
 
 		if err != nil {
 			if ue, ok := errors.AsType[*url.Error](err); ok {
-				log.Fatal().Err(ue.Unwrap()).Msgf("connection error to all endpoints: %v", ue.Unwrap())
+				zlog.Fatal().Err(ue.Unwrap()).Msgf("connection error to all endpoints: %v", ue.Unwrap())
 			} else if err != nil {
-				log.Fatal().Err(err).Msgf("error querying IMS at all endpoints: %v", err)
+				zlog.Fatal().Err(err).Msgf("error querying IMS at all endpoints: %v", err)
 			}
 		}
 
 		if !strings.EqualFold(queryCmdFormat, "csv") {
 			b, err := json.MarshalIndent(response.DataTable, "", "    ")
 			if err != nil {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 				return
 			}
 			fmt.Println(string(b))
@@ -163,7 +163,7 @@ var queryCmd = &cobra.Command{
 		}
 
 		if len(response.DataTable) == 0 {
-			log.Info().Msg("no results")
+			zlog.Info().Msg("no results")
 			return
 		}
 

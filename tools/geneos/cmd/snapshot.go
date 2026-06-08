@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -133,12 +133,12 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 		return
 	}
 	values := []any{}
-	log.Debug().Msgf("snapshot on %s", i)
+	zlog.Debug().Msgf("snapshot on %s", i)
 	for _, path := range paths {
 		var x *xpath.XPath
 		x, resp.Err = xpath.Parse(path)
 		if resp.Err != nil {
-			log.Error().Msgf("%s: %q", resp.Err, path)
+			zlog.Error().Msgf("%s: %q", resp.Err, path)
 			continue
 		}
 
@@ -175,7 +175,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 			}
 		}
 
-		log.Debug().Msgf("dialling %s", gatewayURL(i))
+		zlog.Debug().Msgf("dialling %s", gatewayURL(i))
 		var gw *commands.Connection
 		gw, resp.Err = commands.DialGateway(gatewayURL(i),
 			commands.AllowInsecureCertificates(true),
@@ -184,7 +184,7 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 			return
 		}
 		d := x.ResolveTo(&xpath.Dataview{})
-		log.Debug().Msgf("matching xpath %s", d)
+		zlog.Debug().Msgf("matching xpath %s", d)
 		var views []*xpath.XPath
 		views, resp.Err = gw.Match(d, 0)
 		if resp.Err != nil {

@@ -28,7 +28,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -125,7 +125,7 @@ geneos init
 		}
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
 
@@ -138,7 +138,7 @@ geneos init
 		}
 
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 
 		if initCmdRestore != "" {
@@ -147,17 +147,17 @@ geneos init
 				restore.Shared(true),
 				restore.ProgressTo(os.Stdout),
 			); err != nil {
-				log.Fatal().Err(err).Msgf("failed to restore from backup file %q", initCmdRestore)
+				zlog.Fatal().Err(err).Msgf("failed to restore from backup file %q", initCmdRestore)
 			}
 
 			installed := 0
 
 			if !initCmdNoInstall {
 				for ct := range ct.OrList() {
-					log.Debug().Msgf("checking for releases for %s", ct.String())
+					zlog.Debug().Msgf("checking for releases for %s", ct.String())
 					v := instance.AllInstanceNames(geneos.LOCAL, ct)
 
-					log.Debug().Msgf("found releases for %s: %v", ct.String(), v)
+					zlog.Debug().Msgf("found releases for %s: %v", ct.String(), v)
 					if len(v) == 0 {
 						continue
 					}
@@ -266,21 +266,21 @@ func initProcessArgs(command *cobra.Command, args []string, extras ...values.Val
 		}
 		if input, err := config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 			if strings.TrimSpace(input) != "" {
-				log.Debug().Msgf("set root to %s", input)
+				zlog.Debug().Msgf("set root to %s", input)
 				root = input
 			}
 		}
 		err = nil
 	case 1: // home = abs path
 		if !path.IsAbs(args[0]) {
-			log.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
+			zlog.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
 		}
 		root = path.Clean(args[0])
 	default:
-		log.Fatal().Msgf("too many args: %v", args)
+		zlog.Fatal().Msgf("too many args: %v", args)
 	}
 
-	log.Debug().Msgf("using %q as root", root)
+	zlog.Debug().Msgf("using %q as root", root)
 	options = append(options, geneos.UseRoot(root))
 
 	cf := config.Global()

@@ -23,7 +23,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -36,7 +36,7 @@ import (
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
 	if path.IsAbs(clean) || strings.HasPrefix(clean, "../") {
-		log.Debug().Msgf("path %q must be relative and descending only", clean)
+		zlog.Debug().Msgf("path %q must be relative and descending only", clean)
 		return "", host.ErrInvalidArgs
 	}
 

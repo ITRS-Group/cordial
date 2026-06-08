@@ -34,9 +34,14 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
-var LogLevel slog.LevelVar
+var (
+	LogLevel   slog.LevelVar
+	Logger     *slog.Logger = slog.Default()
+	LogHandler slog.Handler
+)
 
 type discardCloser struct {
 	io.Writer
@@ -119,6 +124,18 @@ func LogInit(prefix string, options ...LogOption) {
 	}).With().Caller().Logger()
 
 	zerolog.SetGlobalLevel(opts.level)
+
+	fmt.Println("setting logger")
+	LogHandler = logger.NewHandler(
+		logger.WithLevelVar(&LogLevel),
+		logger.SourceRoot("cordial"),
+		logger.WithDelimiter("."),
+		logger.Writer(out),
+	)
+	fmt.Printf("setting log level to %d\n", opts.slogLevel)
+	LogLevel.Set(opts.slogLevel)
+	Logger = slog.New(LogHandler)
+	fmt.Println("done")
 }
 
 type logOpts struct {
@@ -126,6 +143,7 @@ type logOpts struct {
 	lj            *lumberjack.Logger
 	rotateOnStart bool
 	level         zerolog.Level
+	slogLevel     slog.Level
 }
 
 type LogOption func(*logOpts)
@@ -168,6 +186,7 @@ func RotateOnStart(rotate bool) LogOption {
 // ToZeroLogLevel takes a slog debug level to use as a default
 func ToZeroLogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
+		lo.slogLevel = level
 		switch level {
 		case -8:
 			lo.level = zerolog.TraceLevel

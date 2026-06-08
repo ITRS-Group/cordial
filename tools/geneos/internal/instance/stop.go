@@ -23,7 +23,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -37,7 +37,7 @@ func Stop(i geneos.Instance, force, kill bool) (err error) {
 	}
 
 	if !IsRunning(i) {
-		log.Debug().Msgf("%s not running", i)
+		zlog.Debug().Msgf("%s not running", i)
 		return os.ErrProcessDone
 	}
 

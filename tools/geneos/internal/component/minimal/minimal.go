@@ -140,7 +140,7 @@ func factory(name string) (minimal geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(minimal.Config(), "home", instance.Home(minimal))
-	minimal.(*Minimals).Logger = instance.Logger(minimal)
+	minimal.(*Minimals).Logger = instance.NewLogger(minimal)
 	instances.Store(instance.ShortName(minimal), minimal)
 
 	return

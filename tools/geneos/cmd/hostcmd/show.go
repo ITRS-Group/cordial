@@ -22,10 +22,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/spf13/cobra"
 )
 
 type showCmdConfig struct {

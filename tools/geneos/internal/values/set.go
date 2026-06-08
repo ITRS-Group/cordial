@@ -5,9 +5,10 @@ import (
 	"slices"
 	"strings"
 
+	zlog "github.com/rs/zerolog/log"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/rs/zerolog/log"
 )
 
 // Set applies the settings in values to instance i and returns a new
@@ -124,7 +125,7 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 	for _, v := range items {
 		if v.Type == "secret" {
 			if keyfile == "" {
-				log.Error().Msgf("keyfile is required to set secret variable %q", v.Name)
+				zlog.Error().Msgf("keyfile is required to set secret variable %q", v.Name)
 				continue
 			}
 			v.Type = "string"
@@ -146,7 +147,7 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 				// encrypt value and store as special secret type
 				v.Value, err = keyfile.EncodeString(h, v.Value, true)
 				if err != nil {
-					log.Error().Err(err).Msgf("failed to encrypt secret for variable %q", v.Name)
+					zlog.Error().Err(err).Msgf("failed to encrypt secret for variable %q", v.Name)
 					return
 				}
 			}

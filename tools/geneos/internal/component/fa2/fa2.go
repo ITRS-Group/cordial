@@ -138,7 +138,7 @@ func factory(name string) (fa2 geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(fa2.Config(), "home", instance.Home(fa2))
-	fa2.(*FA2s).Logger = instance.Logger(fa2)
+	fa2.(*FA2s).Logger = instance.NewLogger(fa2)
 	instances.Store(h.FullName(local), fa2)
 
 	return

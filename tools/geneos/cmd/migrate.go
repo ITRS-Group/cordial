@@ -23,11 +23,12 @@ import (
 	"os"
 	"os/exec"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var migrateCmdExecutables bool
@@ -62,7 +63,7 @@ var migrateCmd = &cobra.Command{
 		}
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
-				log.Error().Err(err).Msg("migrating old executables failed")
+				zlog.Error().Err(err).Msg("migrating old executables failed")
 			}
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)
@@ -96,7 +97,7 @@ func migrateCommands() (err error) {
 		}
 		if err = os.Symlink(geneosExec, path); err != nil {
 			if err = os.Rename(path+".orig", path); err != nil {
-				log.Fatal().Err(err).Msgf("cannot restore %s after backup (to .orig), please fix manually", path)
+				zlog.Fatal().Err(err).Msgf("cannot restore %s after backup (to .orig), please fix manually", path)
 			}
 			fmt.Printf("cannot link %s to %s (skipping): %s", path, geneosExec, err)
 			continue

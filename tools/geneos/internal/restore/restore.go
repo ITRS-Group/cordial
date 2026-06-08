@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/dsnet/compress/bzip2"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -132,7 +132,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			dest, src, found := strings.Cut(name, "=")
 			if found {
 				if !instance.ValidName(src) || !instance.ValidName(dest) {
-					log.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
+					zlog.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
 					return geneos.ErrInvalidArgs
 				}
 				mapping[dest] = src
@@ -194,13 +194,13 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		// check ctName is valid and if ct is not nil, filter for a match
 		nct := geneos.ParseComponent(ctName)
 		if nct == nil {
-			log.Debug().Msgf("unknown component type: %s, skipping", filename)
+			zlog.Debug().Msgf("unknown component type: %s, skipping", filename)
 			continue
 		}
 
 		// if a component type is wanted, reject others
 		if ct != nil && ct != nct {
-			log.Debug().Msgf("component type does not match: %s != %s, skipping", ct, nct)
+			zlog.Debug().Msgf("component type does not match: %s != %s, skipping", ct, nct)
 			continue
 		}
 
@@ -303,12 +303,12 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			if i, ok := instancesRestored[name]; ok && i == nil {
 				i, err = instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
 				if err != nil {
-					log.Debug().Err(err).Msgf("getting instance %s:%s for final rebuild", ctName, name)
+					zlog.Debug().Err(err).Msgf("getting instance %s:%s for final rebuild", ctName, name)
 				} else {
 					instancesRestored[name] = i
 					if err = i.Rebuild(false); err != nil {
 						if !errors.Is(err, geneos.ErrNotSupported) {
-							log.Debug().Err(err).Msgf("rebuild of instance %s:%s", ctName, name)
+							zlog.Debug().Err(err).Msgf("rebuild of instance %s:%s", ctName, name)
 						} else {
 							err = nil
 						}
@@ -415,7 +415,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 		}
 
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
-			log.Debug().Err(err).Msg("")
+			zlog.Debug().Err(err).Msg("")
 			return
 		}
 		defer w.Close()
@@ -501,7 +501,7 @@ func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restor
 					return err
 				}
 				if updated {
-					log.Debug().Msg("CA bundle updated")
+					zlog.Debug().Msg("CA bundle updated")
 				}
 				return nil
 			}

@@ -22,7 +22,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -61,7 +61,7 @@ var copyCmd = &cobra.Command{
 				return errors.New("when copying more than one instance the last argument must be of the form @HOST")
 			}
 			for _, n := range names[:len(names)-1] {
-				log.Debug().Msgf("copy %s to %s", n, names[len(names)-1])
+				zlog.Debug().Msgf("copy %s to %s", n, names[len(names)-1])
 				if err = instance.Copy(ct, n, names[len(names)-1]); err != nil {
 					return
 				}

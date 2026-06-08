@@ -26,11 +26,12 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var revertCmdExecutables bool
@@ -80,7 +81,7 @@ var revertCmd = &cobra.Command{
 			if _, err := i.Host().Stat(instance.ComponentFilepath(i, "rc")); err == nil { // found ?
 				// ignore errors
 				if i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig")) == nil || i.Host().Remove(instance.ComponentFilepath(i)) == nil {
-					log.Debug().Msgf("%s removed extra config file(s)", i)
+					zlog.Debug().Msgf("%s removed extra config file(s)", i)
 				}
 				return
 			}
@@ -127,15 +128,15 @@ func revertCommands() (err error) {
 		}
 		realpath = filepath.ToSlash(realpath)
 		if realpath != geneosExec {
-			log.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
+			zlog.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
 			continue
 		}
 
 		if err = os.Remove(path); err != nil {
-			log.Fatal().Err(err).Msgf("cannot remove symlink %s, please take action to resolve", path)
+			zlog.Fatal().Err(err).Msgf("cannot remove symlink %s, please take action to resolve", path)
 		}
 		if err = os.Rename(path+".orig", path); err != nil {
-			log.Fatal().Err(err).Msgf("cannot rename %s.orig, please take action to resolve", path)
+			zlog.Fatal().Err(err).Msgf("cannot rename %s.orig, please take action to resolve", path)
 		}
 		fmt.Printf("%s reverted\n", path)
 	}

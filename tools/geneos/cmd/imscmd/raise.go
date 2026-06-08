@@ -28,7 +28,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -110,12 +110,12 @@ var raiseCmd = &cobra.Command{
 		}
 		for _, p := range params {
 			if !envRE.MatchString(p) {
-				log.Debug().Msgf("ignoring non key=value parameter %s", p)
+				zlog.Debug().Msgf("ignoring non key=value parameter %s", p)
 				continue
 			}
 			if n, v, found := strings.Cut(p, "="); found {
 				if err = os.Setenv(n, v); err != nil {
-					log.Debug().Msgf("failed to set environment variable %s=%s: %v", n, v, err)
+					zlog.Debug().Msgf("failed to set environment variable %s=%s: %v", n, v, err)
 				}
 			}
 		}
@@ -124,7 +124,7 @@ var raiseCmd = &cobra.Command{
 
 		// load and process defaults
 		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 		for _, g := range defaults {
 			if ims.ProcessActionGroup(cf, g, incident) {
@@ -133,7 +133,7 @@ var raiseCmd = &cobra.Command{
 		}
 
 		defaultsJSON, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing defaults:\n%s", string(defaultsJSON))
+		zlog.Debug().Msgf("incident fields after processing defaults:\n%s", string(defaultsJSON))
 
 		if raiseCmdProfile == "" {
 			var ok bool
@@ -143,17 +143,17 @@ var raiseCmd = &cobra.Command{
 		}
 
 		if err = cf.UnmarshalKey(cf.Join("profiles", raiseCmdProfile), &profileGroups, config.NoExpand()); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 		for _, g := range profileGroups {
-			log.Debug().Msgf("processing profile %s: %#v", raiseCmdProfile, g)
+			zlog.Debug().Msgf("processing profile %s: %#v", raiseCmdProfile, g)
 			if ims.ProcessActionGroup(cf, g, incident) {
 				break
 			}
 		}
 
 		profileJSON, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug().Msgf("incident fields after processing profile (over defaults):\n%s", string(profileJSON))
+		zlog.Debug().Msgf("incident fields after processing profile (over defaults):\n%s", string(profileJSON))
 
 		if raiseCmdIMSType == "" {
 			raiseCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
@@ -168,7 +168,7 @@ var raiseCmd = &cobra.Command{
 		// drop internal string either way
 		delete(incident, ims.SNOW_CORRELATION)
 
-		log.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
+		zlog.Debug().Msgf("raising IMS type %s", raiseCmdIMSType)
 
 		if raiseCmdIMSType == "snow" {
 			if raiseCmdTable == "" {
@@ -180,13 +180,13 @@ var raiseCmd = &cobra.Command{
 		}
 
 		for r := range ims.Connect(cf.Sub("ims-gateway"), raiseCmdIMSType) {
-			log.Debug().Msgf("querying IMS at %s", r.BaseURL)
+			zlog.Debug().Msgf("querying IMS at %s", r.BaseURL)
 			_, err = r.Post(context.Background(), raiseCmdTable, incident, &result)
 			if err != nil {
 				if ue, ok := errors.AsType[*url.Error](err); ok {
-					log.Warn().Err(ue.Unwrap()).Msgf("connection error to %s, trying next endpoint (if any)", r.BaseURL)
+					zlog.Warn().Err(ue.Unwrap()).Msgf("connection error to %s, trying next endpoint (if any)", r.BaseURL)
 				} else {
-					log.Warn().Err(err).Msgf("error querying IMS at %s: %v", r.BaseURL, err)
+					zlog.Warn().Err(err).Msgf("error querying IMS at %s: %v", r.BaseURL, err)
 				}
 				continue
 			}
@@ -194,14 +194,14 @@ var raiseCmd = &cobra.Command{
 
 		if err != nil {
 			if ue, ok := errors.AsType[*url.Error](err); ok {
-				log.Fatal().Err(ue.Unwrap()).Msgf("connection error to all endpoints: %v", ue.Unwrap())
+				zlog.Fatal().Err(ue.Unwrap()).Msgf("connection error to all endpoints: %v", ue.Unwrap())
 			} else if err != nil {
-				log.Fatal().Err(err).Msgf("error querying IMS at all endpoints: %v", err)
+				zlog.Fatal().Err(err).Msgf("error querying IMS at all endpoints: %v", err)
 			}
 		}
 
 		if result["action"] == "Failed" {
-			log.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+			zlog.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
 		}
 
 		fmt.Println(result["result"])
@@ -232,9 +232,9 @@ func imsLoadConfigFile(name string) (cf *config.Config) {
 		config.MustExist(),
 	)
 	if err != nil {
-		log.Fatal().Msg("failed to load a configuration file from any expected location")
+		zlog.Fatal().Msg("failed to load a configuration file from any expected location")
 	}
-	log.Debug().Msgf("loaded config file %s",
+	zlog.Debug().Msgf("loaded config file %s",
 		config.Path(name,
 			config.AppName(cordial.ExecutableName()),
 			config.UseGlobal(),

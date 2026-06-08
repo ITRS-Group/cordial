@@ -31,7 +31,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -105,7 +105,7 @@ func Finished[R Response](resp *R) {
 		r.Duration = time.Since(r.start)
 		*resp = any(r).(R)
 	default:
-		log.Fatal().Msgf("unsupported response type %T", resp)
+		zlog.Fatal().Msgf("unsupported response type %T", resp)
 	}
 }
 
@@ -132,7 +132,7 @@ func New[R Response](i geneos.Instance) *R {
 			Completed:  []string{},
 		}).(*R)
 	default:
-		log.Fatal().Msgf("unsupported response type %T", resp)
+		zlog.Fatal().Msgf("unsupported response type %T", resp)
 	}
 	return any(resp).(*R)
 }
@@ -430,7 +430,7 @@ OUTER:
 			}
 
 		default:
-			log.Fatal().Msgf("unknown writer type %T", writer)
+			zlog.Fatal().Msgf("unknown writer type %T", writer)
 		}
 	}
 
@@ -517,7 +517,7 @@ func (resp General) Report(writer any, options ...WriterOption) {
 			if opts.asJSON {
 				b, err := json.MarshalIndent(resp.Value, "    ", "    ")
 				if err != nil {
-					log.Error().Err(err).Msg("failed to marshal value to JSON")
+					zlog.Error().Err(err).Msg("failed to marshal value to JSON")
 					return
 				}
 				fmt.Fprint(w, string(b))
@@ -541,7 +541,7 @@ func (resp General) Report(writer any, options ...WriterOption) {
 		}
 
 	default:
-		log.Fatal().Msgf("unknown writer type %T", writer)
+		zlog.Fatal().Msgf("unknown writer type %T", writer)
 	}
 
 	if opts.stderr != io.Discard {

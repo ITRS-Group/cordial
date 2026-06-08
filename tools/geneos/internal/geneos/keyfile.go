@@ -24,7 +24,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -192,19 +192,19 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 		return
 	}
 	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return
 	}
 	w, err := h.Create(p, 0600)
 	if err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
 		return
 	}
 	defer w.Close()
 
 	if err = kv.Write(w); err != nil {
-		log.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
 	}
-	log.Debug().Msgf("keyfile saved to %s on %s", p, h)
+	zlog.Debug().Msgf("keyfile saved to %s on %s", p, h)
 	return
 }

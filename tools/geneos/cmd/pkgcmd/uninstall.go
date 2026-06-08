@@ -28,7 +28,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -92,7 +92,7 @@ geneos uninstall --version 7.4.2
 					baseLink := h.PathTo("packages", ct.String(), uninstallCmdBase)
 
 					if err = h.Remove(baseLink); err != nil && !errors.Is(err, fs.ErrNotExist) {
-						log.Error().Err(err).Msgf("cannot remove base link %q", baseLink)
+						zlog.Error().Err(err).Msgf("cannot remove base link %q", baseLink)
 						continue
 					}
 					if err == nil {
@@ -135,7 +135,7 @@ geneos uninstall --version 7.4.2
 					}
 				}
 				if len(ct.PackageTypes) > 0 {
-					log.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
+					zlog.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
 					continue
 				}
 
@@ -168,7 +168,7 @@ geneos uninstall --version 7.4.2
 				restart := map[string][]geneos.Instance{}
 				for _, i := range instance.Instances(h, nil) {
 					if i.Type() != ct && config.Get[string](i.Config(), "pkgtype") != ct.String() {
-						log.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, config.Get[string](i.Config(), "pkgtype"))
+						zlog.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, config.Get[string](i.Config(), "pkgtype"))
 						continue
 					}
 					if instance.IsDisabled(i) {
@@ -178,7 +178,7 @@ geneos uninstall --version 7.4.2
 
 					_, version, err := instance.Version(i)
 					if err != nil {
-						log.Debug().Err(err).Msg("")
+						zlog.Debug().Err(err).Msg("")
 						continue
 					}
 
@@ -214,13 +214,13 @@ geneos uninstall --version 7.4.2
 
 				for _, release := range removeReleases {
 					for _, c := range restart[version] {
-						log.Debug().Msgf("stopping %s", c)
+						zlog.Debug().Msgf("stopping %s", c)
 						instance.Stop(c, true, false)
 						stopped = append(stopped, c)
 					}
 					// remove the release
 					if err = h.RemoveAll(path.Join(basedir, release.Version)); err != nil {
-						log.Error().Err(err).Msg("")
+						zlog.Error().Err(err).Msg("")
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
@@ -237,7 +237,7 @@ geneos uninstall --version 7.4.2
 							versions, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
 								if !errors.Is(err, fs.ErrNotExist) {
-									log.Error().Err(err).Msg("")
+									zlog.Error().Err(err).Msg("")
 								}
 								continue
 							}
@@ -277,11 +277,11 @@ func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, releas
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
 		if err := h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			log.Error().Err(err).Msg("")
+			zlog.Error().Err(err).Msg("")
 			continue
 		}
 		if err := h.Symlink(newVersion, link); err != nil {
-			log.Error().Err(err).Msgf("cannot link %s to %s", link, newVersion)
+			zlog.Error().Err(err).Msgf("cannot link %s to %s", link, newVersion)
 			continue
 		}
 		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)

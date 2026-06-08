@@ -24,7 +24,7 @@ import (
 	"path"
 	"slices"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -133,7 +133,7 @@ geneos tls import /path/to/file.pem
 			}
 			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed to decompose PEM")
+				zlog.Fatal().Err(err).Msg("Failed to decompose PEM")
 			}
 		}
 

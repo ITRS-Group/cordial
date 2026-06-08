@@ -22,12 +22,12 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
-
-	"github.com/spf13/cobra"
 )
 
 var restartCmdAll, restartCmdKill, restartCmdForce, restartCmdLogs bool

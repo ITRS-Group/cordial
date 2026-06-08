@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -57,7 +57,7 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 	if !opts.full {
 		if len(cleanlist) > 0 {
 			if err = RemovePaths(i, cleanlist...); err == nil {
-				log.Debug().Msgf("%s cleaned", i)
+				zlog.Debug().Msgf("%s cleaned", i)
 			}
 		}
 		return
@@ -82,7 +82,7 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 			return
 		}
 	}
-	log.Debug().Msgf("%s created files removed", i)
+	zlog.Debug().Msgf("%s created files removed", i)
 	if stopped {
 		err = Start(i)
 	}
@@ -100,16 +100,16 @@ func RemovePaths(i geneos.Instance, list ...string) (err error) {
 		if p, err = geneos.CleanRelativePath(p); err != nil {
 			return fmt.Errorf("%s %w", p, err)
 		}
-		log.Debug().Msgf("going to remove %s", h.Join(i.Home(), p))
+		zlog.Debug().Msgf("going to remove %s", h.Join(i.Home(), p))
 		// glob here
 		m, err := i.Host().Glob(h.Join(i.Home(), p))
 		if err != nil {
 			return err
 		}
 		for _, f := range m {
-			log.Debug().Msgf("trying to RemoveAll(%s)", f)
+			zlog.Debug().Msgf("trying to RemoveAll(%s)", f)
 			if err = i.Host().RemoveAll(f); err != nil {
-				log.Error().Err(err).Msg("")
+				zlog.Error().Err(err).Msg("")
 				continue
 			}
 			fmt.Printf("removed %s\n", i.Host().HostPath(f))

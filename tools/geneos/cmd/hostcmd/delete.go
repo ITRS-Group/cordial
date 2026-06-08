@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -72,7 +72,7 @@ var deleteCmd = &cobra.Command{
 		for _, hostname := range args {
 			h := geneos.GetHost(hostname)
 			if !h.Exists() {
-				log.Error().Msgf("%q is not a known host", hostname)
+				zlog.Error().Msgf("%q is not a known host", hostname)
 				return
 			}
 			hosts = append(hosts, h)

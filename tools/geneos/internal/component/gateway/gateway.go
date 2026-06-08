@@ -193,7 +193,7 @@ func factory(name string) (gateway geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(gateway.Config(), "home", instance.Home(gateway))
-	gateway.(*Gateways).Logger = instance.Logger(gateway)
+	gateway.(*Gateways).Logger = instance.NewLogger(gateway)
 	instances.Store(h.FullName(local), gateway)
 
 	return

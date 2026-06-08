@@ -23,7 +23,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -86,13 +86,13 @@ geneos host unset rem2 -i /path/to/id_rsa
 			return
 		}
 
-		log.Debug().Msgf("%d hosts: %v", len(hosts), hosts)
+		zlog.Debug().Msgf("%d hosts: %v", len(hosts), hosts)
 
 		for _, h := range hosts {
 			if len(unsetCmdKeys) > 0 {
 				for _, key := range unsetCmdKeys {
 					k, _, _ := strings.Cut(key, "=")
-					log.Debug().Msgf("will delete %s from host %s", k, h)
+					zlog.Debug().Msgf("will delete %s from host %s", k, h)
 					config.Delete(h.Config, k)
 				}
 			}

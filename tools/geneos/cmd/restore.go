@@ -26,7 +26,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -105,7 +105,7 @@ geneos restore gateway ABC x.tgz
 			return false
 		})
 
-		log.Debug().Msgf("files: %v", files)
+		zlog.Debug().Msgf("files: %v", files)
 
 		// remove host suffixes from args
 		// TODO rewrite as a slices in-place delete/replace

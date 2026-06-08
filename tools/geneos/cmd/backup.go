@@ -36,7 +36,7 @@ import (
 
 	"github.com/alecthomas/units"
 	"github.com/dsnet/compress/bzip2"
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -327,7 +327,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 	}
 	contents, ok := params[0].(*[]string)
 	if !ok {
-		log.Debug().Msgf("invalid contents parameter (%T and not `*[]string`)", contents)
+		zlog.Debug().Msgf("invalid contents parameter (%T and not `*[]string`)", contents)
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
@@ -390,14 +390,14 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 		ignoreFiles,
 	); err != nil {
 		// missing dirs and inaccessible files are probably not errors
-		log.Debug().Err(err).Msg("")
+		zlog.Debug().Err(err).Msg("")
 	}
 
 	resp.Completed = []string{"included in backup"}
 
 	// add global tls directory, in all cases
 	if err := walkDir(i.Host(), i.Host().PathTo("tls")+"/", "tls", contents, ignoreDirs, []string{}); err != nil {
-		log.Debug().Err(err).Msg("")
+		zlog.Debug().Err(err).Msg("")
 	}
 
 	if !backupCmdIncludeShared {
@@ -416,7 +416,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 			ignoreFiles,
 		); err != nil {
 			// missing dirs and inaccessible files are probably not errors
-			log.Debug().Err(err).Msg("")
+			zlog.Debug().Err(err).Msg("")
 		}
 	}
 
@@ -431,7 +431,7 @@ var contentsMutex sync.Mutex
 func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
-			log.Debug().Err(err).Msg(dir)
+			zlog.Debug().Err(err).Msg(dir)
 			return err
 		}
 		fi, err := di.Info()
@@ -452,7 +452,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 			*contents = append(*contents, filepath.Join(relative, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
-			log.Debug().Msgf("ignoring symlink %s", file)
+			zlog.Debug().Msgf("ignoring symlink %s", file)
 		default:
 			if !backupCmdIncludeAll {
 				for _, ig := range ignoreFiles {
@@ -461,7 +461,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					}
 				}
 				if maxsize != 0 && fi.Size() > maxsize {
-					log.Debug().Msgf("skipping large file %s", filepath.Join(relative, file))
+					zlog.Debug().Msgf("skipping large file %s", filepath.Join(relative, file))
 					return nil
 				}
 			}

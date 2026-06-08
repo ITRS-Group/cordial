@@ -128,7 +128,7 @@ func factory(name string) (ac2 geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(ac2.Config(), "home", instance.Home(ac2))
-	ac2.(*AC2s).Logger = instance.Logger(ac2)
+	ac2.(*AC2s).Logger = instance.NewLogger(ac2)
 	instances.Store(h.FullName(local), ac2)
 
 	return

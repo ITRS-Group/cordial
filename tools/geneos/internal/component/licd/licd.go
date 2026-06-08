@@ -129,7 +129,7 @@ func factory(name string) (licd geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(licd.Config(), "home", instance.Home(licd))
-	licd.(*Licds).Logger = instance.Logger(licd)
+	licd.(*Licds).Logger = instance.NewLogger(licd)
 	instances.Store(h.FullName(local), licd)
 
 	return

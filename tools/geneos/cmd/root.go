@@ -29,7 +29,6 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -64,10 +63,12 @@ You can do one of the following:
 `, "|", "`"))
 
 var AllowRoot bool
+var log *slog.Logger
 
 func init() {
 	cobra.OnInitialize(func() {
 		cordial.LogInit(packageName)
+		log = cordial.Logger
 		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
@@ -208,7 +209,8 @@ geneos restart
 			var newargs []string
 			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Error("error finding replacement command", slog.Any("error", err))
+				return err
 			}
 			if realcmd != nil {
 				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), realcmd.CommandPath())
@@ -225,7 +227,8 @@ geneos restart
 			var newargs []string
 			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
 			if err != nil {
-				log.Fatal().Err(err).Msg("")
+				log.Error("error finding replacement command", slog.Any("error", err))
+				return err
 			}
 			if realcmd != nil {
 				command.RunE = func(cmd *cobra.Command, args []string) error {
@@ -301,7 +304,7 @@ func initConfig() {
 	if quiet {
 		zerolog.SetGlobalLevel(zerolog.Disabled)
 	} else if debug {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
+		cordial.LogLevel.Set(slog.LevelDebug)
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -309,7 +312,7 @@ func initConfig() {
 
 	// Execname = cordial.ExecutableName()
 
-	log.Debug().Msgf("cordial 'geneos' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
+	log.Debug("cordial 'geneos' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))
 
 	// `oldConfDir` is the original path to the user configuration,
 	// typically directly in `~/geneos`. The LoadConfig() function
@@ -328,7 +331,7 @@ func initConfig() {
 		config.UseDefaults(false),
 	)
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		log.Error("error reading configuration", slog.Any("error", err))
 	}
 
 	configPath = config.Path(cordial.ExecutableName(),
@@ -343,9 +346,9 @@ func initConfig() {
 	)
 
 	if configPath != "" {
-		log.Debug().Msgf("configuration loaded from %s", configPath)
+		log.Debug("configuration loaded", slog.String("path", configPath))
 	} else {
-		log.Debug().Msg("no configuration file found, using defaults and environment variables")
+		log.Debug("no configuration file found, using defaults and environment variables")
 	}
 
 	// support old set-ups
@@ -361,7 +364,7 @@ func initConfig() {
 
 	// initialise after config loaded
 	geneos.InitHosts(cordial.ExecutableName())
-	log.Debug().Msg("hosts loaded")
+	log.Debug("hosts loaded")
 
 	// TODO ignore profiles for now
 	// _, err = profiles.Load()

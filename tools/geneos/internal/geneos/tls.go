@@ -25,7 +25,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -304,12 +304,12 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	if !overwrite {
 		if _, _, err := ReadRootCertificateAndKey(); err == nil {
 			// root cert already exists
-			log.Debug().Msg("root certificate already exists, skipping TLS initialisation")
+			zlog.Debug().Msg("root certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 		if _, err := readSigningCertificate(); err == nil {
 			// signing cert already exists
-			log.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
+			zlog.Debug().Msg("signing certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 	}
@@ -382,13 +382,13 @@ func TLSSync() (err error) {
 		}
 	}
 
-	log.Debug().Msgf("found %d root certificates to sync", len(allRoots))
+	zlog.Debug().Msgf("found %d root certificates to sync", len(allRoots))
 
 	for _, h := range allHosts {
 		hostname := h.Hostname()
 		updated, err := certs.UpdateCACertsFiles(h, PathToCABundle(h), allRoots...)
 		if err != nil {
-			log.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
+			zlog.Error().Err(err).Msgf("failed to update ca-bundle on host %s", hostname)
 			continue
 		}
 		if updated {

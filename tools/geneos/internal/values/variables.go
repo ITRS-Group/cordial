@@ -5,7 +5,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 )
 
 // variables - passed in as [TYPE:]NAME=VALUE
@@ -72,7 +72,7 @@ func getVarValue(in string) (variable Variable) {
 		"secret":             "", // custom type to indicate value should be encrypted with keyfile, stored as string type
 	}
 	if _, ok := validtypes[t]; !ok {
-		log.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile', 'secret'", t)
+		zlog.Error().Msgf("invalid type %q for variable. valid types are 'string', 'integer', 'double', 'boolean', 'activeTime', 'externalConfigFile', 'secret'", t)
 		return
 	}
 	variable = Variable{

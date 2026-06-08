@@ -25,7 +25,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -80,7 +80,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	var out io.WriteCloser
 	// var t *template.Template
 
-	log.Debug().Msgf("executing template %q for instance %s", name, i)
+	zlog.Debug().Msgf("executing template %q for instance %s", name, i)
 
 	cf := i.Config()
 	h := i.Host()
@@ -89,16 +89,16 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
 	if t, err = t.ParseGlob(h.PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
-		log.Warn().Msgf("Cannot parse template(s) for %s: %v", i, err)
+		zlog.Warn().Msgf("Cannot parse template(s) for %s: %v", i, err)
 		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
-		log.Warn().Msgf("No templates found in %s, using internal defaults", h.PathTo(i.Type(), "templates"))
+		zlog.Warn().Msgf("No templates found in %s, using internal defaults", h.PathTo(i.Type(), "templates"))
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	log.Debug().Msgf("creating configuration file %q with permissions %o", outputPathTmp, perms)
+	zlog.Debug().Msgf("creating configuration file %q with permissions %o", outputPathTmp, perms)
 	if out, err = h.Create(outputPathTmp, perms); err != nil {
-		log.Warn().Msgf("Cannot create configuration file for %s %s", i, outputPathTmp)
+		zlog.Warn().Msgf("Cannot create configuration file for %s %s", i, outputPathTmp)
 		return err
 	}
 
@@ -129,7 +129,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 			for _, v := range vx {
 				vMap, ok := v.(map[string]any)
 				if !ok {
-					log.Warn().Msgf("variable is not a map, got %T", v)
+					zlog.Warn().Msgf("variable is not a map, got %T", v)
 					return
 					// continue
 				}
@@ -152,7 +152,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 				newVals = append(newVals, nv)
 			}
 		default:
-			log.Warn().Msgf("variables is in an unexpected format, got %T", variables)
+			zlog.Warn().Msgf("variables is in an unexpected format, got %T", variables)
 			// drop through
 		}
 
@@ -195,16 +195,16 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 						if es, ok := e.(string); ok {
 							envsStr = append(envsStr, es)
 						} else {
-							log.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, e, e)
+							zlog.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, e, e)
 						}
 					}
 				default:
-					log.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, env, env)
+					zlog.Warn().Msgf("unexpected env variable format for %s: %v (type %T)", i, env, env)
 				}
 				envsStr = slices.DeleteFunc(envsStr, func(e string) bool {
 					name, value, found := strings.Cut(e, "=")
 					if !found {
-						log.Warn().Msgf("invalid env variable %q, expected format KEY=VALUE", e)
+						zlog.Warn().Msgf("invalid env variable %q, expected format KEY=VALUE", e)
 						return true
 					}
 					if strings.HasPrefix(value, "${enc:") {
@@ -213,7 +213,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 						if len(secret) > 0 {
 							enc, err := k.Encode(h, secret, false)
 							if err != nil {
-								log.Warn().Msgf("Cannot re-encode environment variable %q for %s: %v", name, i, err)
+								zlog.Warn().Msgf("Cannot re-encode environment variable %q for %s: %v", name, i, err)
 								// but remove it anyway to avoid leaving secrets in plain text
 								return true
 							}
@@ -242,7 +242,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 					enc, err := k.Encode(h, secret, false)
 					if err != nil {
-						log.Warn().Msgf("Cannot re-encode variable %q for %s: %v", v["name"], i, err)
+						zlog.Warn().Msgf("Cannot re-encode variable %q for %s: %v", v["name"], i, err)
 						return true
 					}
 					v["type"] = "stdAESPassword"
@@ -256,17 +256,17 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	m["variables"] = newVals
 
-	log.Debug().Msgf("executing template %q to create %q with data %#v", name, outputPathTmp, m)
+	zlog.Debug().Msgf("executing template %q to create %q with data %#v", name, outputPathTmp, m)
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
-		log.Error().Err(err).Msg("Cannot create configuration from template(s)")
+		zlog.Error().Err(err).Msg("Cannot create configuration from template(s)")
 		// close the file first so Windows systems do not break on Remove
 		out.Close()
 		h.Remove(outputPathTmp)
 		return
 	}
 
-	log.Debug().Msgf("renaming %q to %q", outputPathTmp, outputPath)
+	zlog.Debug().Msgf("renaming %q to %q", outputPathTmp, outputPath)
 	// close the file first before renaming, stops Windows systems breaking
 	out.Close()
 	if err = h.Rename(outputPathTmp, outputPath); err != nil {

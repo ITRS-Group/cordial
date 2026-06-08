@@ -21,11 +21,12 @@ import (
 	_ "embed"
 	"os"
 
+	zlog "github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/cobra"
 )
 
 var rebuildCmdForce, rebuildCmdReload bool
@@ -66,7 +67,7 @@ var rebuildCmd = &cobra.Command{
 				return
 			}
 			resp.Completed = append(resp.Completed, "configuration rebuilt")
-			log.Debug().Msgf("%s configuration rebuilt (if supported)", i)
+			zlog.Debug().Msgf("%s configuration rebuilt (if supported)", i)
 			if !rebuildCmdReload {
 				return
 			}

@@ -20,7 +20,7 @@ package cfgcmd
 import (
 	_ "embed"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -67,7 +67,7 @@ geneos config set geneos="/opt/geneos"
 		if err != nil {
 			return
 		}
-		log.Debug().Msgf("setting params: %v", params)
+		zlog.Debug().Msgf("setting params: %v", params)
 		cf.SetKeyValuePairs(params...)
 
 		if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
@@ -77,7 +77,7 @@ geneos config set geneos="/opt/geneos"
 			config.Delete(cf, "itrshome")
 		}
 
-		log.Debug().Msgf("save config %q", cordial.ExecutableName())
+		zlog.Debug().Msgf("save config %q", cordial.ExecutableName())
 		return cf.Write(cordial.ExecutableName())
 	},
 }

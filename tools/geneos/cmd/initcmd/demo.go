@@ -22,7 +22,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -63,7 +63,7 @@ var demoCmd = &cobra.Command{
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			log.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
 			return geneos.ErrInvalidArgs
 		}
 
@@ -76,7 +76,7 @@ var demoCmd = &cobra.Command{
 		}
 
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			log.Fatal().Err(err).Msg("")
+			zlog.Fatal().Err(err).Msg("")
 		}
 
 		if err = initCommon(); err != nil {
