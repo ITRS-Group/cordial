@@ -22,10 +22,10 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -172,7 +172,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Gen
 		_ = fileChecks
 		if len(params) > 0 && params[0] != "" {
 			hooksdir, _ := i.Host().Abs(params[0].(string))
-			zlog.Debug().Msgf("hooksdir: %s", hooksdir)
+			i.Log().Debug("hooksdir", slog.String("hooksdir", hooksdir))
 			if st, err := i.Host().Stat(hooksdir); err != nil || !st.IsDir() {
 				resp.Err = fmt.Errorf("resolved hooks dir %s:%s is not a directory", i.Host(), hooksdir)
 				return
@@ -184,7 +184,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Gen
 		// err is set for validation errors, they are not errors in running
 		_, err = i.Host().Run(cmd, host.ProcessErrfile("errors.txt"))
 		if err != nil {
-			zlog.Debug().Err(err).Msg("run")
+			i.Log().Debug("run", slog.Any("error", err), slog.Any("cmd", cmd))
 		}
 		output, resp.Err = i.Host().ReadFile(tempfile)
 		if resp.Err != nil {
@@ -247,7 +247,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Gener
 		// we don't care about errors, just the output
 		output, err = i.Host().Run(cmd, host.ProcessErrfile("errors.txt"))
 		if err != nil {
-			zlog.Debug().Msgf("error: %s", output)
+			i.Log().Debug("run", slog.Any("error", err), slog.Any("output", string(output)))
 		}
 		idx := bytes.Index(output, []byte("<?xml"))
 		if idx == -1 {

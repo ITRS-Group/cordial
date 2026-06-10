@@ -20,11 +20,12 @@ package cmd
 import (
 	_ "embed"
 	"errors"
+	"log/slog"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -52,6 +53,8 @@ var copyCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "copy")
+
 		ct, names, params, err := FetchArgs(cmd)
 		if err != nil {
 			return err
@@ -61,7 +64,7 @@ var copyCmd = &cobra.Command{
 				return errors.New("when copying more than one instance the last argument must be of the form @HOST")
 			}
 			for _, n := range names[:len(names)-1] {
-				zlog.Debug().Msgf("copy %s to %s", n, names[len(names)-1])
+				log.Debug("copying instance", slog.String("source", n), slog.String("destination", names[len(names)-1]))
 				if err = instance.Copy(ct, n, names[len(names)-1]); err != nil {
 					return
 				}

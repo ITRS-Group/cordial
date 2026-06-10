@@ -81,7 +81,7 @@ var revertCmd = &cobra.Command{
 			if _, err := i.Host().Stat(instance.ComponentFilepath(i, "rc")); err == nil { // found ?
 				// ignore errors
 				if i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig")) == nil || i.Host().Remove(instance.ComponentFilepath(i)) == nil {
-					zlog.Debug().Msgf("%s removed extra config file(s)", i)
+					i.Log().Debug("removed extra config file(s)")
 				}
 				return
 			}

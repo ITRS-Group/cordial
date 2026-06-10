@@ -19,9 +19,9 @@ package cmd
 
 import (
 	_ "embed"
+	"log/slog"
 	"os"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -67,7 +67,7 @@ var rebuildCmd = &cobra.Command{
 				return
 			}
 			resp.Completed = append(resp.Completed, "configuration rebuilt")
-			zlog.Debug().Msgf("%s configuration rebuilt (if supported)", i)
+			i.Log().Debug("configuration rebuilt (if supported)", slog.Bool("force", rebuildCmdForce))
 			if !rebuildCmdReload {
 				return
 			}

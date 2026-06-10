@@ -18,9 +18,8 @@ limitations under the License.
 package instance
 
 import (
+	"log/slog"
 	"os"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -133,7 +132,7 @@ func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version strin
 		return
 	}
 
-	zlog.Debug().Msgf("instance %s: PID %d, base version %s, actual exe %s", i.Name(), pi.PID, version, actual)
+	i.Log().Debug("instance details", slog.Int("PID", pi.PID), slog.String("base", version), slog.String("executable", actual))
 
 	// check if the exe is a link, and if so resolve it to get the
 	// actual version in use. If it's not a link then return the base
@@ -156,11 +155,11 @@ func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version strin
 	// otherwise follow links to get the actual version.
 	b, err := h.Readlink(h.Dir(actual))
 	if err != nil {
-		zlog.Debug().Err(err).Msgf("instance %s: PID %d, base version %s, exe %s is not a link", i.Name(), pi.PID, version, h.Dir(actual))
+		i.Log().Debug("instance details", slog.Any("error", err), slog.Int("PID", pi.PID), slog.String("base", version), slog.String("executable", h.Dir(actual)))
 		actual = "unknown"
 		return
 	}
-	zlog.Debug().Msgf("instance %s: PID %d, base version %s, link target %s", i.Name(), pi.PID, version, b)
+	i.Log().Debug("instance details", slog.Int("PID", pi.PID), slog.String("base", version), slog.String("link target", b))
 	actual = h.Base(b)
 
 	if actual == "" {

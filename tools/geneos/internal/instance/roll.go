@@ -20,9 +20,8 @@ package instance
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -46,7 +45,7 @@ func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string)
 	var done []string
 
 	for _, p := range params {
-		zlog.Debug().Str("instance", i.String()).Str("file", p).Msg("rolling file")
+		i.Log().Debug("rolling file", slog.String("file", p))
 		if err := rollOneFileParam(i, p, newSuffix, oldSuffix); err != nil {
 			break
 		}
@@ -83,7 +82,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 
 	// if there is no original file, then record that for later
 	if _, err = h.Stat(path); errors.Is(err, os.ErrNotExist) {
-		zlog.Debug().Str("instance", i.String()).Str("file", path).Msg("no original file to backup")
+		i.Log().Debug("no original file to backup", slog.String("file", path))
 		noOriginal = true
 	}
 
@@ -97,24 +96,24 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 		return fmt.Errorf("could not create lock for %s: %w", i, err)
 	}
 	defer h.Remove(lockPath)
-	zlog.Debug().Str("instance", i.String()).Str("lock", lockPath).Msg("acquired lock")
+	i.Log().Debug("acquired lock", slog.String("lock", lockPath))
 
 	// only backup original file if it exists
 	if !noOriginal {
 		// backup existing files. On UNIX Rename is atomic, but not on all systems
-		zlog.Debug().Str("instance", i.String()).Str("file", path).Str("backup", oldPath).Msg("backing up original file")
+		i.Log().Debug("backing up original file", slog.String("file", path), slog.String("backup", oldPath))
 		if err := h.Rename(path, oldPath); err != nil {
 			return err
 		}
 	}
 
 	// atomically link new files into place
-	zlog.Debug().Str("instance", i.String()).Str("file", newPath).Msg("linking new file into place")
+	i.Log().Debug("linking new file into place", slog.String("file", newPath))
 	if err := h.Link(newPath, path); err != nil {
-		zlog.Error().Err(err).Str("instance", i.String()).Str("file", newPath).Msg("failed to link new file into place")
+		i.Log().Error("failed to link new file into place", slog.Any("error", err), slog.String("file", newPath))
 		// try to restore the original file, if it existed
 		if !noOriginal {
-			zlog.Debug().Str("instance", i.String()).Str("file", oldPath).Msg("restoring original file")
+			i.Log().Debug("restoring original file", slog.String("file", oldPath))
 			err2 := h.Rename(oldPath, path)
 			if err2 != nil {
 				err = fmt.Errorf("%v; additionally failed to restore original file: %w", err, err2)
@@ -123,7 +122,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 		return err
 	}
 
-	zlog.Debug().Str("instance", i.String()).Str("file", path).Msg("rolled file successfully")
+	i.Log().Debug("rolled file successfully", slog.String("file", path))
 	// remove files with new suffix
 	return h.Remove(newPath)
 }

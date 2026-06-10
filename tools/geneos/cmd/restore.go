@@ -22,13 +22,14 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
@@ -76,6 +77,8 @@ geneos restore gateway ABC x.tgz
 		CmdWildcardNames: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
+		log := cordial.Logger.With("command", "restore")
+
 		ct, names, params, err := FetchArgs(command)
 		if err != nil {
 			return
@@ -105,7 +108,7 @@ geneos restore gateway ABC x.tgz
 			return false
 		})
 
-		zlog.Debug().Msgf("files: %v", files)
+		log.Debug("files to restore", slog.Any("files", files))
 
 		// remove host suffixes from args
 		// TODO rewrite as a slices in-place delete/replace

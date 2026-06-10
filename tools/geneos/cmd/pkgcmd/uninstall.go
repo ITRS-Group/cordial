@@ -29,7 +29,7 @@ import (
 	"strings"
 	"unicode"
 
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -281,11 +281,11 @@ func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, releas
 	for _, l := range release.Links {
 		link := path.Join(releaseDir, l)
 		if err := h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			zlog.Error().Err(err).Msg("")
+			log.Error("cannot remove link", slog.Any("error", err), slog.String("link", link))
 			continue
 		}
 		if err := h.Symlink(newVersion, link); err != nil {
-			zlog.Error().Err(err).Msgf("cannot link %s to %s", link, newVersion)
+			log.Error("cannot create symlink", slog.Any("error", err), slog.String("link", link), slog.String("newVersion", newVersion))
 			continue
 		}
 		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)

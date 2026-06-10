@@ -54,6 +54,8 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 )
 
+var log = cordial.Logger
+
 func init() {
 	// strip any whitespace from the embedded VERSION value as early as
 	// possible

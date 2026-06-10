@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
@@ -16,7 +17,6 @@ import (
 	"github.com/go-ldap/ldap/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 
@@ -30,8 +30,11 @@ import (
 	"github.com/jcmturner/gokrb5/v8/service"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
+
+var log = cordial.Logger
 
 // SplitUsername takes a name of the form 'domain\user' or 'user@domain'
 // and returns the two. realm will be empty of none found
@@ -56,7 +59,8 @@ func start() {
 	ssoCfgFile := path.Join(confDir, "conf/sso-agent.conf")
 	err := vc.MergeHOCONFile(ssoCfgFile)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to merge HOCON file", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	username, realm := SplitUsername(config.Get[string](vc, "kerberos.user"))
@@ -70,7 +74,8 @@ func start() {
 	}
 	cf, err := krb5config.Load(krb5conf)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to load krb5 configuration", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	password := config.Get[string](vc, "kerberos.password")
@@ -84,17 +89,20 @@ func start() {
 	c := client.NewWithPassword(username, realm, password, cf, client.DisablePAFXFAST(true))
 	err = c.Login()
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to login", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// get the kvno from a tgt request
 	asreq, err := messages.NewASReqForTGT(c.Credentials.Domain(), c.Config, c.Credentials.CName())
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to create AS request for TGT", slog.Any("error", err))
+		os.Exit(1)
 	}
 	asrep, err := c.ASExchange(c.Credentials.Domain(), asreq, 0)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to exchange AS request for TGT", slog.Any("error", err))
+		os.Exit(1)
 	}
 	serviceKVNO := asrep.EncPart.KVNO
 
@@ -104,7 +112,8 @@ func start() {
 	for _, e := range cf.LibDefaults.DefaultTktEnctypes {
 		if eid := etypeID.EtypeSupported(e); eid != 0 {
 			if err := kt.AddEntry(username, realm, password, time.Now(), uint8(serviceKVNO), eid); err != nil {
-				zlog.Fatal().Err(err).Msg("")
+				log.Error("Failed to add entry to keytab", slog.Any("error", err))
+				os.Exit(1)
 			}
 		}
 	}
@@ -119,11 +128,11 @@ func initServer(vc *config.Config, kt *keytab.Keytab, username string) {
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			zlog.Info().
-				Str("URI", v.URI).
-				Int("status", v.Status).
-				Msg("request")
-
+			log.Info(
+				"request",
+				slog.String("URI", v.URI),
+				slog.Int("status", v.Status),
+			)
 			return nil
 		},
 	}))
@@ -174,21 +183,25 @@ func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 
 	f, err := os.Open(ks)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to open key store", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer f.Close()
 	k := keystore.New()
 	if err := k.Load(f, pw); err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to load key store", slog.Any("error", err))
+		os.Exit(1)
 	}
 	pk, err := k.GetPrivateKeyEntry("ssokey", pw)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to get private key entry", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	key, err := x509.ParsePKCS8PrivateKey(pk.PrivateKey)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("Failed to parse PKCS8 private key", slog.Any("error", err))
+		os.Exit(1)
 	}
 	if r, ok := key.(*rsa.PrivateKey); ok {
 		return r
@@ -251,7 +264,7 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if it indicates it is authenticated
 	if creds != nil && creds.Authenticated() {
-		zlog.Printf("cred: %+v\n", creds)
+		log.Debug("cred", slog.Any("cred", creds))
 		// Check for Active Directory attributes
 		if ADCreds, ok := creds.Attributes()[credentials.AttributeKeyADCredentials]; ok {
 			b, _ := json.MarshalIndent(ADCreds, "", "    ")
@@ -272,12 +285,12 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	l, err := ldap.DialURL(config.Get[string](vc, "ldap.location"), ldap.DialWithTLSConfig(tlsConfig))
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("Failed to dial LDAP URL", slog.Any("error", err))
 		return
 	}
 
 	if err = l.Bind(config.Get[string](vc, "ldap.user"), config.Get[string](vc, "ldap.password")); err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("Failed to bind LDAP user", slog.Any("error", err))
 		return
 	}
 
@@ -288,13 +301,13 @@ func testuserPage(w http.ResponseWriter, r *http.Request) {
 
 	query := fmt.Sprintf("(&%s(%s=%s))", qf, config.Get[string](vc, "ldap.fields.user"), user)
 	fmt.Fprintf(w, "LDAP Query: %s\n", query)
-	zlog.Printf("LDAP query: %s", query)
+	log.Debug("LDAP query", slog.String("query", query))
 	search := ldap.NewSearchRequest(config.Get[string](vc, "ldap.base"), ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
 		query, config.Get[[]string](vc, "ldap.fields"), []ldap.Control{})
 
 	result, err := l.Search(search)
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("Failed to search LDAP", slog.Any("error", err))
 		return
 	}
 

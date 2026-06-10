@@ -18,7 +18,9 @@ limitations under the License.
 package cmd
 
 import (
+	"log/slog"
 	"maps"
+	"os"
 	"reflect"
 	"regexp"
 	"slices"
@@ -27,7 +29,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
@@ -81,7 +82,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 		component = conf.Sub("components." + mappings["hosttype"])
 	}
 	if i == 10 {
-		zlog.Warn().Msgf("component alias loop for %s, skipping", initialComponentType)
+		log.Warn("component alias loop for %s, skipping", slog.String("component", initialComponentType))
 		return
 	}
 	finalComponentType = mappings["hosttype"]
@@ -110,12 +111,13 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 
 	entities := config.Get[any](component, "entities")
 	if entities == nil {
-		zlog.Error().Msgf("skipping %s: no entities defined for component type %s", hostname, mappings["hosttype"])
+		log.Error("no entities defined for component, skipping", slog.String("hostname", hostname), slog.String("component", mappings["hosttype"]))
 		return
 	}
 	t := reflect.TypeOf(entities)
 	if t.Kind() != reflect.Slice {
-		zlog.Fatal().Msgf("entities is not a slice: %T -> %v", entities, entities)
+		log.Error("entities is not a slice", slog.String("hostname", hostname), slog.String("component", mappings["hosttype"]), slog.Any("entities", entities))
+		os.Exit(1)
 	}
 
 	// extract defaults for this component, if they exist
@@ -215,7 +217,7 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 	} else {
 		gatewayNames = []string{config.Get[string](conf, "geneos.fallback-gateway.name", config.DefaultValue(config.Get[string](conf, "geneos.fallback-gateway.primary")))}
 		if len(gatewayNames) == 0 {
-			zlog.Error().Msg("fallback gateway not configured correctly")
+			log.Error("fallback gateway not configured correctly")
 			return
 		}
 
@@ -223,7 +225,7 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 	}
 
 	maxGateways := config.Get[int](cf, "geneos.sans.gateways", config.DefaultValue(1))
-	zlog.Debug().Msgf("selecting up to %d gateways for host %s with prefix %s", maxGateways, hostname, netprobeID)
+	log.Debug("selecting gateways for host with prefix", slog.Int("maxGateways", maxGateways), slog.String("hostname", hostname), slog.String("netprobeID", netprobeID))
 
 	i := 0
 	for _, gateway := range gateways {
@@ -258,7 +260,7 @@ type varConf struct {
 func getVars(conf *config.Config, key string, options ...config.ExpandOption) (vars []geneos.Vars) {
 	var vs []varConf
 	if err := conf.UnmarshalKey(key, &vs, config.NoExpand()); err != nil {
-		zlog.Error().Err(err).Msgf("skipping %s", key)
+		log.Error("skipping key", slog.Any("error", err), slog.String("key", key))
 		return
 	}
 
@@ -339,7 +341,7 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOption) (v
 				}
 			}
 		default:
-			zlog.Warn().Msgf("variable type %s not supported, skipping", v.Type)
+			log.Warn("variable type not supported, skipping", slog.String("type", v.Type))
 		}
 		vars = append(vars, vr)
 	}
@@ -351,12 +353,12 @@ func netprobeID(conf *config.Config, hostname string) (id string) {
 	id = hostname
 	if g := config.Get[string](conf, "geneos.sans.grouping"); g != "" {
 		if r, err := regexp.Compile(g); err != nil {
-			zlog.Error().Err(err).Msg("ignoring grouping")
+			log.Error("ignoring grouping", slog.Any("error", err))
 		} else {
 			if m := r.FindStringSubmatch(hostname); len(m) > 0 {
 				id = m[1]
 			} else {
-				zlog.Warn().Msgf("grouping for %s did not match, using full hostname", hostname)
+				log.Warn("grouping did not match, using full hostname", slog.String("hostname", hostname))
 			}
 		}
 	}

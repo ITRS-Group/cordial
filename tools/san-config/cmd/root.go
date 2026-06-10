@@ -21,14 +21,13 @@ import (
 	_ "embed"
 	"encoding/xml"
 	"fmt"
+	"log/slog"
 	"os"
 	dbg "runtime/debug"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -88,7 +87,7 @@ var Cmd = &cobra.Command{
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		initConfig(cmd)
 
-		uuidNS = uuid.MustParse(config.Get[string](cf, "server.namespace-uuid"))
+		uuidNS = uuid.MustParse(config.Get[string](cf, cf.Join("server", "namespace-uuid")))
 	},
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
@@ -131,6 +130,8 @@ func Execute() {
 	}
 }
 
+var log = cordial.Logger
+
 // var cf *config.Config
 var logFile string
 
@@ -150,7 +151,7 @@ func initConfig(cmd *cobra.Command) {
 		if !nowatchconfig {
 			opts = append(opts,
 				config.WatchConfig(func(e fsnotify.Event) {
-					zlog.Info().Msgf("configuration changed, reloading %s and inventories", e.Name)
+					log.Info("configuration changed, reloading", slog.String("file", e.Name))
 					Inventories.Range(func(key, value any) bool {
 						// zero out modification check values
 						inv := value.(*Inventory)
@@ -166,7 +167,8 @@ func initConfig(cmd *cobra.Command) {
 
 		cf, err = config.Read(cordial.ExecutableName(), opts...)
 		if err != nil {
-			zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(cordial.ExecutableName(), opts...))
+			log.Error("Failed to load configuration", slog.Any("error", err), slog.String("path", config.Path(cordial.ExecutableName(), opts...)))
+			os.Exit(1)
 		}
 
 		// use MustExists() to check for actual files
@@ -182,7 +184,7 @@ func initConfig(cmd *cobra.Command) {
 		}
 	}
 
-	cordial.LogInit(cordial.ExecutableName(),
+	log = cordial.LogInit(cordial.ExecutableName(),
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,
@@ -196,16 +198,14 @@ func initConfig(cmd *cobra.Command) {
 
 	switch {
 	case quiet:
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	case trace:
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case debug:
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		cordial.LogLevel.Set(slog.LevelError)
+	case trace, debug:
+		cordial.LogLevel.Set(slog.LevelDebug)
 	default:
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		cordial.LogLevel.Set(slog.LevelInfo)
 	}
 
 	info, _ := dbg.ReadBuildInfo()
-	zlog.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
-	zlog.Debug().Msg(deferredlog)
+	log.Info("command version", slog.String("command", cmd.Name()), slog.String("version", cordial.VERSION), slog.String("go_version", info.GoVersion))
+	log.Debug(deferredlog)
 }

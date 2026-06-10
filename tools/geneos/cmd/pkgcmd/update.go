@@ -22,9 +22,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -123,7 +124,7 @@ geneos package update netprobe --version 5.13.2
 			for ct := range ct.OrList() {
 				for _, i := range instance.Instances(h, ct) {
 					if config.Get[string](i.Config(), "version") != updateCmdBase {
-						zlog.Debug().Msgf("%s base different", i)
+						i.Log().Debug("base different")
 						continue
 					}
 					pkg := config.Get[string](i.Config(), "pkgtype")
@@ -134,7 +135,7 @@ geneos package update netprobe --version 5.13.2
 					instances = append(instances, i)
 				}
 			}
-			zlog.Debug().Msgf("instances to restart: %v", instances)
+			log.Debug("instances to restart", slog.Any("instances", instances))
 		}
 
 		return geneos.Update(h, ct,

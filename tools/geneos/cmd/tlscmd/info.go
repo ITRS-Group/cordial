@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"net"
 	"net/url"
@@ -45,6 +46,7 @@ import (
 	"github.com/spf13/cobra"
 	"software.sslmate.com/src/go-pkcs12"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -141,20 +143,21 @@ var infoCmd = &cobra.Command{
 		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
+		log := cordial.Logger.With("command", "tls info")
 		// gather cert info
 		certInfos := make([]certInfo, len(paths))
 
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			zlog.Error().Err(err).Msg("unable to load system root CAs, skipping system roots")
+			log.Error("unable to load system root CAs, skipping system roots", slog.Any("error", err))
 			roots = x509.NewCertPool()
 		}
 
 		cabundle, err := os.ReadFile(geneos.PathToCABundlePEM(geneos.LOCAL))
 		if err == nil {
-			zlog.Debug().Msgf("loaded Geneos CA bundle from %s", geneos.PathToCABundlePEM(geneos.LOCAL))
+			log.Debug("loaded Geneos CA bundle", slog.String("file", geneos.PathToCABundlePEM(geneos.LOCAL)))
 			if ok := roots.AppendCertsFromPEM(cabundle); !ok {
-				zlog.Error().Msg("unable to parse any certificates from Geneos CA bundle")
+				log.Error("unable to parse any certificates from Geneos CA bundle")
 			}
 		}
 
@@ -162,11 +165,11 @@ var infoCmd = &cobra.Command{
 			for _, r := range infoCmdRoots {
 				contents, err := os.ReadFile(r)
 				if err != nil {
-					zlog.Error().Err(err).Str("file", r).Msg("unable to read roots file")
+					log.Error("unable to read roots file", slog.Any("error", err), slog.String("file", r))
 					return err
 				}
 				if !roots.AppendCertsFromPEM(contents) {
-					zlog.Error().Str("file", r).Msg("unable to parse any certificates from roots file")
+					log.Error("unable to parse any certificates from roots file", slog.String("file", r))
 					return fmt.Errorf("unable to parse any certificates from roots file: %s", r)
 				}
 			}
@@ -200,7 +203,7 @@ var infoCmd = &cobra.Command{
 			} else {
 				r, err = os.Open(infoCmdConnectsFile)
 				if err != nil {
-					zlog.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("unable to open connects file")
+					log.Error("unable to open connects file", slog.Any("error", err), slog.String("file", infoCmdConnectsFile))
 					return err
 				}
 				defer r.Close()
@@ -224,7 +227,7 @@ var infoCmd = &cobra.Command{
 			for _, addr := range lines {
 				wg.Add(1)
 				if len(ch) == cap(ch) {
-					zlog.Warn().Msg("channel buffer full, waiting for some connections to finish before starting new ones")
+					log.Warn("channel buffer full, waiting for some connections to finish before starting new ones")
 				}
 				go func(ch chan certInfo, addr string) {
 					defer wg.Done()
@@ -242,7 +245,7 @@ var infoCmd = &cobra.Command{
 				certInfos = append(certInfos, ci)
 			}
 			if err := scanner.Err(); err != nil {
-				zlog.Error().Err(err).Str("file", infoCmdConnectsFile).Msg("error reading connects file")
+				log.Error("error reading connects file", slog.Any("error", err), slog.String("file", infoCmdConnectsFile))
 				return err
 			}
 		}

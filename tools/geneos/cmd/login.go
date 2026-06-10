@@ -20,8 +20,8 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -61,6 +61,8 @@ var loginCmd = &cobra.Command{
 		CmdRequireHome: "false",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
+		log := cordial.Logger.With("command", "login")
+
 		urlMatch := "itrsgroup.com"
 
 		if loginCmdList {
@@ -91,7 +93,7 @@ var loginCmd = &cobra.Command{
 			loginKeyfile = geneos.DefaultUserKeyfile
 		}
 
-		zlog.Debug().Msgf("checking keyfile %q, default file %q", loginKeyfile, geneos.DefaultUserKeyfile)
+		log.Debug("checking keyfile", slog.Any("file", loginKeyfile), slog.Any("default", geneos.DefaultUserKeyfile))
 
 		if crc, created, err := loginKeyfile.ReadOrCreate(host.Localhost); err != nil {
 			return err

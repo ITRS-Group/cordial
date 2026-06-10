@@ -20,12 +20,14 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 
 	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -57,13 +59,15 @@ var migrateCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "migrate")
+
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
 		}
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
-				zlog.Error().Err(err).Msg("migrating old executables failed")
+				log.Error("migrating old executables failed", slog.Any("error", err))
 			}
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)

@@ -260,7 +260,7 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 // (aliases) are removed from the set of values saved. Any empty
 // configuration values are removed from the saved configuration.
 func write(i geneos.Instance) (err error) {
-	zlog.Debug().Msgf("writing config for %s", i)
+	i.Log().Debug("writing config")
 
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
@@ -285,16 +285,16 @@ func write(i geneos.Instance) (err error) {
 		config.OmitEmptyValues(),
 		config.IgnoreKeys(lpKeys...),
 	); err != nil {
-		zlog.Debug().Err(err).Msgf("saving config for %s", i)
+		i.Log().Debug("saving config failed", slog.Any("error", err))
 		return
 	}
 
 	if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
-		zlog.Debug().Msg("setting modtime")
+		i.Log().Debug("setting modtime")
 		i.SetLoaded(st.ModTime())
 	}
 
-	zlog.Debug().Err(err).Msgf("config for %s saved", i)
+	i.Log().Debug("config saved")
 	return
 }
 
@@ -312,9 +312,9 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 
 	resp = responses.New[responses.General](i)
 
-	zlog.Debug().Msgf("committing config for %s with options: noRebuild=%t noReload=%t", i, opts.noRebuild, opts.noReload)
+	i.Log().Debug("committing config", slog.Bool("noRebuild", opts.noRebuild), slog.Bool("noReload", opts.noReload))
 
-	zlog.Debug().Msgf("writing config for %s", i)
+	i.Log().Debug("writing config")
 	if err := write(i); err != nil {
 		resp.Err = err
 		return
@@ -322,14 +322,14 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	resp.Completed = append(resp.Completed, "config written")
 
 	if opts.noRebuild {
-		zlog.Debug().Msg("skipping rebuild")
+		i.Log().Debug("skipping rebuild")
 		return
 	}
 
 	if err := i.Rebuild(false); err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) {
 			// not an error if not supported
-			zlog.Debug().Msgf("%s: rebuild not supported", i.String())
+			i.Log().Debug("rebuild not supported")
 			err = nil
 		}
 		resp.Err = err
@@ -338,19 +338,19 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	resp.Completed = append(resp.Completed, "instance rebuilt")
 
 	if opts.noReload {
-		zlog.Debug().Msg("skipping reload")
+		i.Log().Debug("skipping reload")
 		return
 	}
 
 	// if rebuild succeeds, reload the instance to pick up any
 	// changes to the config that are made by the rebuild
-	zlog.Debug().Msgf("reloading instance %s", i)
+	i.Log().Debug("reloading instance")
 	if err = i.Reload(); err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) || errors.Is(err, os.ErrProcessDone) {
-			zlog.Debug().Msgf("%s: reload not supported or not running, ignoring", i.String())
+			i.Log().Debug("reload not supported or not running, ignoring")
 			err = nil
 		} else {
-			zlog.Debug().Err(err).Msgf("reloading config for %s failed", i)
+			i.Log().Debug("reloading config failed", slog.Any("error", err))
 		}
 		resp.Err = err
 		return
@@ -429,7 +429,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 			// use global roots, if one exists, starting with Geneos ca-bundle.pem
 			for _, rc := range certFiles {
 				if _, err := i.Host().Stat(rc); err == nil {
-					zlog.Debug().Msgf("using root certs %q for %s", rc, i)
+					i.Log().Debug("using root certs", slog.String("path", rc))
 					args = append(args, "-ssl-certificate-chain", rc)
 					fileChecks = append(fileChecks, rc)
 					break
@@ -539,16 +539,16 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 	if resp.Err != nil {
 		// restore type label on error
 		cf.SetConfigType("rc")
-		zlog.Error().Err(resp.Err).Msg("failed to write new configuration file")
+		i.Log().Error("failed to write new configuration file", slog.Any("error", resp.Err))
 		return
 	}
 
 	// back-up .rc
 	if resp.Err = i.Host().Rename(ComponentFilepath(i, "rc"), ComponentFilepath(i, "rc", "orig")); resp.Err != nil {
-		zlog.Error().Err(resp.Err).Msg("failed to rename old config")
+		i.Log().Error("failed to rename old config", slog.Any("error", resp.Err))
 	}
 
-	zlog.Debug().Msgf("migrated %s to JSON config", i)
+	i.Log().Debug("migrated to JSON config")
 	resp.Completed = append(resp.Completed, "migrated")
 	return
 }
@@ -563,7 +563,7 @@ var textJoinFuncs = template.FuncMap{"join": path.Join}
 func SetDefaults(i geneos.Instance, name string) (err error) {
 	cf := i.Config()
 	if cf == nil {
-		zlog.Error().Err(err).Msg("no config found")
+		i.Log().Error("no config found")
 		return fmt.Errorf("no configuration initialised")
 	}
 
@@ -582,16 +582,16 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 		var b bytes.Buffer
 		k, v, found := strings.Cut(s, "=")
 		if !found {
-			zlog.Error().Err(err).Msgf("invalid default (must be key=value) %q", s)
+			i.Log().Error("invalid default (must be key=value)", slog.String("default", s))
 			continue
 		}
 		t, err := template.New(k).Funcs(textJoinFuncs).Parse(v)
 		if err != nil {
-			zlog.Error().Err(err).Msgf("%s parse error: %s", i, v)
+			i.Log().Error("parse error", slog.Any("error", err), slog.String("template", v))
 			return err
 		}
 		if err = t.Execute(&b, settings); err != nil {
-			zlog.Error().Msgf("%s cannot set defaults: %s", i, v)
+			i.Log().Error("cannot set defaults", slog.Any("error", err), slog.String("template", v))
 			return err
 		}
 		// if default is an alias, resolve it here

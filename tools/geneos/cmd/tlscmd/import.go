@@ -20,13 +20,14 @@ package tlscmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"slices"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -76,6 +77,8 @@ geneos tls import /path/to/file.pem
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var certBundle *certs.CertificateBundle
+
+		log := cordial.Logger.With("command", "tls import")
 
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {
@@ -133,7 +136,8 @@ geneos tls import /path/to/file.pem
 			}
 			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
-				zlog.Fatal().Err(err).Msg("Failed to decompose PEM")
+				log.Error("Failed to decompose PEM", slog.Any("error", err))
+				os.Exit(1)
 			}
 		}
 

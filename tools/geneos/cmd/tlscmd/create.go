@@ -23,11 +23,12 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -185,7 +186,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 
 	signingCert, signingKey, err := geneos.ReadSigningCertificateAndKey()
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("cannot read signing certificate and key", slog.Any("error", err))
 		return
 	}
 

@@ -204,7 +204,7 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines 
 
 	text, err := tailLines(f, logCmdLines)
 	if err != nil && !errors.Is(err, io.EOF) {
-		zlog.Error().Err(err).Msg("")
+		i.Log().Error("error reading log file", slog.Any("error", err), slog.String("file", logfile))
 	}
 	lines = filterOutputStrings(i, logfile, strings.NewReader(text+"\n"))
 

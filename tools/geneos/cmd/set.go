@@ -20,10 +20,10 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -134,7 +134,7 @@ func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
 			if created {
 				crc, err := keyfile.ReadCRC(geneos.GetHost(Hostname))
 				if err != nil {
-					zlog.Warn().Err(err).Msgf("created keyfile %s but failed to read CRC", keyfile)
+					i.Log().Warn("created keyfile but failed to read CRC", slog.Any("error", err), slog.Any("keyfile", keyfile))
 				}
 				fmt.Printf("%s user keyfile created %X\n", keyfile, crc)
 			}
