@@ -23,6 +23,7 @@ type processOptions struct {
 	errfile        string
 	detach         bool
 	allowCoreDumps bool
+	cpuAffinity    []int
 }
 
 func evalProcessOptions(options ...ProcessOption) (d *processOptions) {
@@ -50,5 +51,11 @@ func ProcessDetach() ProcessOption {
 func ProcessAllowCoreDumps() ProcessOption {
 	return func(po *processOptions) {
 		po.allowCoreDumps = true
+	}
+}
+
+func ProcessCPUAffinity(cpus ...int) ProcessOption {
+	return func(po *processOptions) {
+		po.cpuAffinity = cpus
 	}
 }

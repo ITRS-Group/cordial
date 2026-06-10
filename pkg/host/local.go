@@ -249,7 +249,7 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err err
 	defer out.Close()
 
 	// TODO: check the logic for hardwiring detach
-	if err = procSetupOS(cmd, out, ProcessDetach()); err != nil {
+	if err = procSetupOS(cmd, out, append(options, ProcessDetach())...); err != nil {
 		return
 	}
 
@@ -293,7 +293,7 @@ func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err
 	}
 	defer out.Close()
 
-	if err = procSetupOS(cmd, out); err != nil {
+	if err = procSetupOS(cmd, out, options...); err != nil {
 		return
 	}
 

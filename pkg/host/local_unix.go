@@ -23,6 +23,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -41,6 +42,10 @@ func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
 	}
 	return
 }
+
+// originalMask is used to store the original CPU affinity mask of the
+// process, so that it can be restored after the process has started.
+var originalMask unix.CPUSet
 
 // procSetupOS is called before the process is started, and can be used
 // to perform any OS-specific setup, such as setting process attributes
@@ -83,6 +88,10 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 
 	for i := 0; i < maxfd-3; i++ {
 		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
+	}
+
+	if po.cpuAffinity != nil {
+		err = setProcAffinity(po.cpuAffinity...)
 	}
 
 	return
@@ -130,6 +139,36 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 		}
 	}
 
+	if po.cpuAffinity != nil {
+		err = restoreProcAffinity()
+	}
+
+	return
+}
+
+func setProcAffinity(cpus ...int) (err error) {
+	runtime.LockOSThread()
+
+	if err = unix.SchedGetaffinity(0, &originalMask); err != nil {
+		return
+	}
+
+	var newMask unix.CPUSet
+	for _, cpu := range cpus {
+		newMask.Set(cpu)
+	}
+
+	return unix.SchedSetaffinity(0, &newMask)
+}
+
+func restoreProcAffinity() (err error) {
+	if originalMask.Count() == 0 {
+		return
+	}
+	// reset affinity to original mask
+	defer runtime.UnlockOSThread()
+	err = unix.SchedSetaffinity(0, &originalMask)
+	originalMask.Fill()
 	return
 }
 

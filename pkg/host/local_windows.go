@@ -61,6 +61,10 @@ func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	return
 }
 
+func setProcAffinity(cpus ...int) {}
+
+func restoreProcAffinity() {}
+
 func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	return
 }
