@@ -29,7 +29,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -324,7 +323,6 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 	cf := i.Config()
 
-	cordial.LogLevel.Set(slog.LevelDebug)
 	// always rebuild an instance template
 	i.Log().Debug("rebuilding instance template", slog.String("template", instanceTemplateName))
 	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
