@@ -11,6 +11,7 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/coreos/go-oidc/v3 v3.18.0
 	github.com/dsnet/compress v0.0.1
+	github.com/fatih/color v1.18.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/go-ldap/ldap/v3 v3.4.13
