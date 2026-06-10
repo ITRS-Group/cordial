@@ -34,8 +34,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
@@ -56,7 +56,7 @@ type ActionGroup struct {
 var clientCmdProfile, clientCmdTable string
 var clientCmdQuiet bool
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(clientCmd)

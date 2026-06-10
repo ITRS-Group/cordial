@@ -27,7 +27,6 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // var cf *config.Config
@@ -35,7 +34,7 @@ import (
 var configFile, Execname, logFile string
 var Debug bool
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func init() {
 	Cmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "override config file")

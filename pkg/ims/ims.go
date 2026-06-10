@@ -31,8 +31,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
@@ -68,7 +68,7 @@ type ClientConfig struct {
 	Trace bool `json:"trace,omitempty"`
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 // NewClient creates a new rest.Client for the given URL and
 // configuration. The client is NOT cached as each execution is a single

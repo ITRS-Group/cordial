@@ -25,7 +25,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/itrs-group/cordial"
 )
 
 type Reporter interface {
@@ -102,7 +102,7 @@ type reporterCommon struct {
 	scrambleNames bool
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 var reporterFactories = make(map[string]func(string, io.Writer, ...any) (Reporter, error))
 

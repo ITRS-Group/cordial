@@ -19,12 +19,14 @@ package initcmd
 
 import (
 	_ "embed"
+	"log/slog"
+	"os"
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -64,6 +66,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "init all")
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
@@ -71,20 +74,21 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			log.Error(ct.String(), slog.Any("error", geneos.ErrInvalidArgs))
 			return geneos.ErrInvalidArgs
 		}
 
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(command, args, initCmdExtras)
+		options, err := initProcessArgs(command, log, args, initCmdExtras)
 		if err != nil {
 			return
 		}
 
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("initialise failed", slog.Any("error", err))
+			os.Exit(1)
 		}
 
 		if err = initCommon(); err != nil {

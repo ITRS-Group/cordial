@@ -22,14 +22,15 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -93,6 +94,7 @@ geneos install netprobe -b active_dev -U
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "package install")
 		if installCmdDownloadOnly {
 			if installCmdLocal || installCmdBase != "active_prod" || installCmdUpdate || installCmdNoSave || installCmdOverride != "" {
 				return errors.New("flag --download/-D set with other incompatible options")
@@ -111,7 +113,7 @@ geneos install netprobe -b active_dev -U
 			return
 		}
 
-		zlog.Debug().Msgf("args %v params: %v", args, params)
+		log.Debug("args and params", slog.Any("args", args), slog.Any("params", params))
 		params = append(args, params...)
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
@@ -127,7 +129,7 @@ geneos install netprobe -b active_dev -U
 		// if params contains directories then filter contents using
 		// given ct, if version if given then filter on that
 		if len(params) > 0 {
-			zlog.Debug().Msg("parameters found, local install only")
+			log.Debug("parameters found, local install only")
 			if installCmdOverride != "" {
 				if len(params) > 1 {
 					return fmt.Errorf("`--override` is only valid with a single file parameter")
@@ -174,7 +176,7 @@ geneos install netprobe -b active_dev -U
 				case geneos.IsURL(source):
 					u, err := url.Parse(source)
 					if err != nil {
-						zlog.Debug().Err(err).Msg("skipping")
+						log.Debug("skipping", slog.Any("error", err), slog.Any("src", source))
 						continue
 					}
 					// just take the last part of the path
@@ -183,7 +185,7 @@ geneos install netprobe -b active_dev -U
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							zlog.Debug().Err(err).Msg("skipping")
+							log.Debug("cannot parse filename, skipping", slog.Any("error", err), slog.String("filename", p))
 							continue
 						}
 						if platform != "" {
@@ -196,14 +198,14 @@ geneos install netprobe -b active_dev -U
 				case geneos.IsFile(source):
 					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
-						zlog.Debug().Err(err).Msg("skipping")
+						log.Debug("cannot resolve path,skipping", slog.Any("error", err), slog.String("src", source))
 						continue
 					}
 					if installCmdOverride == "" {
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							zlog.Debug().Err(err).Msg("skipping")
+							log.Debug("cannot parse filename, skipping", slog.Any("error", err), slog.String("filename", p))
 							continue
 						}
 						if platform != "" {
@@ -212,17 +214,17 @@ geneos install netprobe -b active_dev -U
 					}
 
 					if ct != nil && ct != nct {
-						zlog.Debug().Msgf("ct %s and file ct %s do not match, skipping", ct, nct)
+						log.Debug("ct and file ct do not match, skipping", slog.String("ct", ct.String()), slog.String("file_ct", nct.String()))
 						continue
 					}
 				default:
 					// if none of the above, skip
-					zlog.Debug().Msg("skipping")
+					log.Debug("skipping")
 				}
 
 				options = append(options, geneos.Version(version))
 
-				zlog.Debug().Msgf("installing from %s as %q version of %s to %s host(s)", source, version, ct, cmd.Hostname)
+				log.Debug("installing from source", slog.String("src", source), slog.String("version", version), slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname))
 				if err = Install(h, nct, append(options, geneos.Source(source))...); err != nil {
 					return err
 				}
@@ -277,17 +279,17 @@ geneos install netprobe -b active_dev -U
 			if len(params) > 0 {
 				archive = params[0]
 			}
-			zlog.Debug().Msgf("downloading %q version of %s to %s", installCmdVersion, ct, archive)
+			log.Debug("downloading", slog.String("version", installCmdVersion), slog.String("ct", ct.String()), slog.String("archive", archive))
 			options = append(options,
 				geneos.Source(archive),
 			)
 			if installCmdSnapshot {
 				installCmdNexus = true
-				zlog.Debug().Msg("setting nexus snapshots")
+				log.Debug("setting nexus snapshots")
 				options = append(options, geneos.UseNexusSnapshots())
 			}
 			if installCmdNexus {
-				zlog.Debug().Msg("setting nexus")
+				log.Debug("setting nexus")
 				options = append(options, geneos.UseNexus())
 			}
 			return Install(h, ct, options...)
@@ -314,14 +316,14 @@ geneos install netprobe -b active_dev -U
 					instances = append(instances, i)
 				}
 			}
-			zlog.Debug().Msgf("instances to restart: %v", instances)
+			log.Debug("instances to restart", slog.Any("instances", instances))
 			options = append(options,
 				geneos.Restart(instances...),
 				geneos.StartFunc(instance.Start),
 				geneos.StopFunc(instance.Stop))
 		}
 
-		zlog.Debug().Msgf("installing %q version of %s to %s host(s)", installCmdVersion, ct, cmd.Hostname)
+		log.Debug("installing", slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname), slog.String("version", installCmdVersion))
 
 		if installCmdSnapshot {
 			installCmdNexus = true

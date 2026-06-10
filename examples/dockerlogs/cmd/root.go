@@ -14,8 +14,8 @@ import (
 	"github.com/moby/moby/client"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/api"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var moby client.APIClient
@@ -24,7 +24,7 @@ func init() {
 
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{

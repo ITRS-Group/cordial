@@ -3,9 +3,9 @@ package generic
 import (
 	"log/slog"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 type GenericData struct {
@@ -19,7 +19,7 @@ type GenericSampler struct {
 	localdata string
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func New(s *plugins.Connection, name string, group string) (*GenericSampler, error) {
 	c := new(GenericSampler)

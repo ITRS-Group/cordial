@@ -33,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 //go:embed pagerduty.defaults.yaml
@@ -62,7 +61,7 @@ var cf *config.Config
 
 var configFile, execname string
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)

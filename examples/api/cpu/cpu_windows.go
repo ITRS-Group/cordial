@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/StackExchange/wmi"
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's
@@ -33,7 +33,7 @@ type cpustat struct {
 	frequency  float64
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func (p *CPUSampler) DoSample() (err error) {
 	log.Debug("called")

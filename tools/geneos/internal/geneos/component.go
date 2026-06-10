@@ -19,12 +19,11 @@ package geneos
 
 import (
 	"iter"
+	"os"
 	"path"
 	"regexp"
 	"slices"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -237,7 +236,8 @@ func (ct *Component) IsA(names ...string) bool {
 func (ct *Component) MakeDirs(h *Host) (err error) {
 	name := RootComponentName
 	if h == ALL {
-		zlog.Fatal().Msg("called with all hosts")
+		log.Error("called with all hosts")
+		os.Exit(1)
 	}
 	if ct != nil {
 		name = ct.Name

@@ -131,7 +131,7 @@ var queryCmd = &cobra.Command{
 		}
 
 		for r := range ims.Connect(cf.Sub("ims-gateway"), queryCmdIMSType) {
-			log.Debug("querying IMS", slog.Any("url", r.BaseURL), slog.String("source", queryCmdSource))
+			log.Debug("querying IMS", slog.Any("url", r.BaseURL), slog.String("src", queryCmdSource))
 			if _, err = r.Get(context.Background(), queryCmdSource, query, &response); err == nil {
 				break
 			}

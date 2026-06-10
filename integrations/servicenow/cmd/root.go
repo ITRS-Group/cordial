@@ -27,7 +27,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cf *config.Config
@@ -35,7 +34,7 @@ var cf *config.Config
 var conffile, execname string
 var debug bool
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)

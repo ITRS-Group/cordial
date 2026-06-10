@@ -20,6 +20,7 @@ package geneos
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"mime"
 	"net/http"
 	"net/url"
@@ -27,8 +28,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -148,10 +147,10 @@ func openSource(source string, options ...PackageOption) (from io.ReadCloser, fi
 	default:
 		var s os.FileInfo
 		source = config.ResolveHome(source)
-		zlog.Debug().Msgf("looking at %q", source)
+		log.Debug("looking at source", slog.String("src", source))
 		s, err = os.Stat(source)
 		if err != nil {
-			zlog.Debug().Err(err).Msgf("source %q", source)
+			log.Debug("error stat-ing source", slog.String("src", source), slog.Any("error", err))
 			return nil, "", -1, err
 		}
 		if s.IsDir() {

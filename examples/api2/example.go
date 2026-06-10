@@ -8,11 +8,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/api"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func main() {
 	// var wg sync.WaitGroup

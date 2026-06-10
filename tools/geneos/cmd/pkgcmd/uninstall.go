@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path"
 	"path/filepath"
 	"slices"
@@ -31,6 +32,7 @@ import (
 	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -73,6 +75,7 @@ geneos uninstall --version 7.4.2
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "package uninstall")
 		ct, args, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return err
@@ -92,7 +95,7 @@ geneos uninstall --version 7.4.2
 					baseLink := h.PathTo("packages", ct.String(), uninstallCmdBase)
 
 					if err = h.Remove(baseLink); err != nil && !errors.Is(err, fs.ErrNotExist) {
-						zlog.Error().Err(err).Msgf("cannot remove base link %q", baseLink)
+						log.Error("cannot remove base link", slog.Any("error", err), slog.String("baseLink", baseLink))
 						continue
 					}
 					if err == nil {
@@ -130,12 +133,12 @@ geneos uninstall --version 7.4.2
 						if err = h.Remove(f); err == nil {
 							fmt.Printf("removed %q\n", f)
 						} else {
-							fmt.Printf("cannot remove %q - %s", f, err)
+							log.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
 						}
 					}
 				}
 				if len(ct.PackageTypes) > 0 {
-					zlog.Debug().Msgf("skipping %s as has related types, remove those instead", ct)
+					log.Debug("skipping as has related types, remove those instead", slog.String("ct", ct.String()))
 					continue
 				}
 
@@ -167,8 +170,9 @@ geneos uninstall --version 7.4.2
 				// get all instances on host h and check type and pkgtype
 				restart := map[string][]geneos.Instance{}
 				for _, i := range instance.Instances(h, nil) {
-					if i.Type() != ct && config.Get[string](i.Config(), "pkgtype") != ct.String() {
-						zlog.Debug().Msgf("%q is neither %q or pkgtype %q, skipping", i, ct, config.Get[string](i.Config(), "pkgtype"))
+					pkgtype := config.Get[string](i.Config(), "pkgtype")
+					if i.Type() != ct && pkgtype != ct.String() {
+						i.Log().Debug("instance not same type or package type, skipping", slog.String("ct", ct.String()), slog.String("pkgtype", pkgtype))
 						continue
 					}
 					if instance.IsDisabled(i) {
@@ -178,7 +182,7 @@ geneos uninstall --version 7.4.2
 
 					_, version, err := instance.Version(i)
 					if err != nil {
-						zlog.Debug().Err(err).Msg("")
+						i.Log().Debug("cannot get instance version", slog.Any("error", err))
 						continue
 					}
 
@@ -214,13 +218,13 @@ geneos uninstall --version 7.4.2
 
 				for _, release := range removeReleases {
 					for _, c := range restart[version] {
-						zlog.Debug().Msgf("stopping %s", c)
+						c.Log().Debug("stopping")
 						instance.Stop(c, true, false)
 						stopped = append(stopped, c)
 					}
 					// remove the release
 					if err = h.RemoveAll(path.Join(basedir, release.Version)); err != nil {
-						zlog.Error().Err(err).Msg("")
+						log.Error("cannot remove release", slog.Any("error", err), slog.String("release", release.Version))
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
@@ -237,7 +241,7 @@ geneos uninstall --version 7.4.2
 							versions, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
 								if !errors.Is(err, fs.ErrNotExist) {
-									zlog.Error().Err(err).Msg("")
+									log.Error("cannot get installed releases", slog.Any("error", err))
 								}
 								continue
 							}

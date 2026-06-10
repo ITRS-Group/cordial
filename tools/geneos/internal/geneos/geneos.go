@@ -22,9 +22,9 @@ package geneos
 
 import (
 	"errors"
+	"log/slog"
+	"os"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -46,6 +46,8 @@ var (
 	ErrNotRunning   = errors.New("instance is not running")
 )
 
+var log = cordial.Logger
+
 // DisableExtension is the suffix added to instance config files to mark
 // them disabled
 const DisableExtension = "disabled"
@@ -59,7 +61,8 @@ const DisableExtension = "disabled"
 func Initialise(h *Host, options ...PackageOption) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
-		zlog.Fatal().Msg("homedir not set")
+		log.Error("homedir not set")
+		os.Exit(1)
 		// default or error
 	}
 
@@ -71,27 +74,30 @@ func Initialise(h *Host, options ...PackageOption) (err error) {
 	// are either directories or do not exist
 	if _, err := h.Stat(opts.geneosdir); err != nil {
 		if err = h.MkdirAll(opts.geneosdir, 0775); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("cannot create directory", slog.Any("error", err))
+			os.Exit(1)
 		}
 	} else if !opts.force {
 		// check empty
 		dirs, err := h.ReadDir(opts.geneosdir)
 		if err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("cannot read directory", slog.Any("error", err))
+			os.Exit(1)
 		}
 		for _, entry := range dirs {
 			if !strings.HasPrefix(entry.Name(), ".") {
 				if h != LOCAL {
-					zlog.Debug().Msg("remote directories exist, exiting init")
+					log.Debug("remote directories exist, exiting init")
 					return nil
 				}
-				zlog.Fatal().Msgf("target directory %q exists and is not empty", opts.geneosdir)
+				log.Error("target directory exists and is not empty", slog.String("directory", opts.geneosdir))
+				os.Exit(1)
 			}
 		}
 	}
 
 	if h.IsLocalhost() {
-		zlog.Debug().Msgf("setting %q to %q", cordial.ExecutableName(), opts.geneosdir)
+		log.Debug("setting geneos directory", slog.String("executable", cordial.ExecutableName()), slog.String("directory", opts.geneosdir))
 		config.Set(config.Global(), cordial.ExecutableName(), opts.geneosdir)
 		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {
 			return err
@@ -148,7 +154,6 @@ func SaveGlobalConfig(name string) error {
 	}
 
 	for k, v := range config.Global().AllSettings() {
-		zlog.Debug().Msgf("checking global config key %q", k)
 		if k == "" {
 			continue
 		}
@@ -161,15 +166,11 @@ func SaveGlobalConfig(name string) error {
 		}
 
 		if v == defaultSettings[k] {
-			zlog.Debug().Msgf("skipping global config key %q with default value %q", k, v)
 			continue
 		}
 
 		config.Set(cf, k, v)
 	}
 
-	zlog.Debug().Msgf("saving global config with %#v keys", cf.AllSettings())
-	return cf.Write(name) // config.SetAppName(cordial.ExecutableName()),
-	// config.IgnoreEmptyValues(),
-
+	return cf.Write(name)
 }

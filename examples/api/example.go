@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/streams"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/examples/api/cpu"
 	"github.com/itrs-group/cordial/examples/api/generic"
@@ -19,7 +19,7 @@ import (
 	"github.com/itrs-group/cordial/examples/api/process"
 )
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func main() {
 	var wg sync.WaitGroup

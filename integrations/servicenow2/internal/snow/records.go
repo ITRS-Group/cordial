@@ -27,8 +27,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 type results map[string]string
@@ -82,7 +82,7 @@ type TableData struct {
 	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
 
-var log = logger.Logger
+var log = cordial.Logger
 
 func LookupRecord(ctx *Context, options ...config.ExpandOption) (sys_id string, state int, err error) {
 	cf := ctx.Conf

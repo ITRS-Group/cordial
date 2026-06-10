@@ -23,12 +23,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/user"
 	"path"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -119,26 +119,28 @@ geneos init
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "init")
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
 		}
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			log.Error(ct.String(), slog.Any("error", geneos.ErrInvalidArgs))
 			return geneos.ErrInvalidArgs
 		}
 
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(command, args, initCmdExtras)
+		options, err := initProcessArgs(command, log, args, initCmdExtras)
 		if err != nil {
 			return err
 		}
 
 		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("initialise failed", slog.Any("error", err))
+			os.Exit(1)
 		}
 
 		if initCmdRestore != "" {
@@ -147,17 +149,18 @@ geneos init
 				restore.Shared(true),
 				restore.ProgressTo(os.Stdout),
 			); err != nil {
-				zlog.Fatal().Err(err).Msgf("failed to restore from backup file %q", initCmdRestore)
+				log.Error("failed to restore from backup file", slog.Any("error", err))
+				os.Exit(1)
 			}
 
 			installed := 0
 
 			if !initCmdNoInstall {
 				for ct := range ct.OrList() {
-					zlog.Debug().Msgf("checking for releases for %s", ct.String())
+					log.Debug("checking for releases for", slog.Any("component", ct.String()))
 					v := instance.AllInstanceNames(geneos.LOCAL, ct)
 
-					zlog.Debug().Msgf("found releases for %s: %v", ct.String(), v)
+					log.Debug("found releases for", slog.Any("component", ct.String()), slog.Any("releases", v))
 					if len(v) == 0 {
 						continue
 					}
@@ -215,7 +218,7 @@ var initTLSCmd = &cobra.Command{
 
 // initProcessArgs works through the parsed arguments and returns a
 // geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(command *cobra.Command, args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
+func initProcessArgs(_ *cobra.Command, log *slog.Logger, args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
 	var root string
 
 	options = []geneos.PackageOption{
@@ -266,21 +269,23 @@ func initProcessArgs(command *cobra.Command, args []string, extras ...values.Val
 		}
 		if input, err := config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 			if strings.TrimSpace(input) != "" {
-				zlog.Debug().Msgf("set root to %s", input)
+				log.Debug("set root to", slog.Any("root", input))
 				root = input
 			}
 		}
 		err = nil
 	case 1: // home = abs path
 		if !path.IsAbs(args[0]) {
-			zlog.Fatal().Msgf("Home directory must be absolute path: %s", args[0])
+			log.Error("Home directory must be absolute path", slog.Any("path", args[0]))
+			os.Exit(1)
 		}
 		root = path.Clean(args[0])
 	default:
-		zlog.Fatal().Msgf("too many args: %v", args)
+		log.Error("too many args", slog.Any("args", args))
+		os.Exit(1)
 	}
 
-	zlog.Debug().Msgf("using %q as root", root)
+	log.Debug("using root", slog.Any("root", root))
 	options = append(options, geneos.UseRoot(root))
 
 	cf := config.Global()

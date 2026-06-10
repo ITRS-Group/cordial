@@ -20,11 +20,12 @@ package initcmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"path"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -47,6 +48,7 @@ var templatesCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "init templates")
 		ct, _, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
@@ -54,7 +56,7 @@ var templatesCmd = &cobra.Command{
 
 		// none of the arguments can be a reserved type
 		if ct != nil {
-			zlog.Error().Err(geneos.ErrInvalidArgs).Msg(ct.String())
+			log.Error("invalid arguments", slog.Any("args", ct.String()))
 			return geneos.ErrInvalidArgs
 		}
 
