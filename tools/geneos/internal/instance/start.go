@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -70,8 +71,28 @@ func Start(i geneos.Instance, opts ...any) error {
 	// set underlying user for child proc
 	errfile := ComponentFilepath(i, "txt")
 
-	i.Log().Debug("starting", slog.String("command", cmd.String()))
-	pid, err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps())
+	var cpus []int
+	for c := range strings.SplitSeq(config.Get[string](i.Config(), "cpus"), ",") {
+		start, end, found := strings.Cut(c, "-")
+		if found {
+			s, err := strconv.Atoi(start)
+			if err != nil {
+				return fmt.Errorf("invalid CPU range %q: %w", c, err)
+			}
+			e, err := strconv.Atoi(end)
+			if err != nil {
+				return fmt.Errorf("invalid CPU range %q: %w", c, err)
+			}
+			for i := s; i <= e; i++ {
+				cpus = append(cpus, i)
+			}
+		} else if cpu, err := strconv.Atoi(c); err == nil {
+			cpus = append(cpus, cpu)
+		}
+	}
+
+	i.Log().Debug("starting", slog.String("command", cmd.String()), slog.Any("cpus", cpus))
+	pid, err := i.Host().Start(cmd, host.ProcessErrfile(errfile), host.ProcessAllowCoreDumps(), host.ProcessCPUAffinity(cpus...))
 	if err != nil {
 		return err
 	}
