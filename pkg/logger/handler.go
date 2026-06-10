@@ -13,11 +13,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"path"
 	"runtime"
 	"slices"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/fatih/color"
 )
 
 type Handler struct {
@@ -31,16 +33,25 @@ type Handler struct {
 	level          slog.Leveler
 }
 
-func NewHandler(options ...Option) *Handler {
+func NewHandler(options ...Option) (handler slog.Handler) {
 	var fp string
-	_, file, _, _ := runtime.Caller(0)
+
 	opts := evalOpts(options...)
+	if opts.json {
+		return slog.NewJSONHandler(opts.w, &slog.HandlerOptions{
+			AddSource: true,
+			Level:     opts.level,
+		})
+	}
+
+	_, file, _, _ := runtime.Caller(0)
 	if len(opts.prefix) > 0 {
 		if i := strings.Index(file, opts.prefix); i != -1 {
 			l := i + len(opts.prefix)
 			fp = file[:l+1]
 		}
 	}
+	timeFormat = opts.timeFormat
 	return &Handler{
 		mu:         &sync.Mutex{},
 		level:      opts.level,
@@ -64,7 +75,7 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		fp := strings.TrimPrefix(f.File, h.filePrefix)
-		buf = h.appendAttr(buf, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d", fp, f.Line)), []string{})
+		buf = h.appendAttr(buf, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d %s", fp, f.Line, green(path.Base(f.Function)))), []string{})
 	}
 	buf = h.appendAttr(buf, slog.String(slog.MessageKey, r.Message), []string{})
 	// Insert preformatted attributes just after built-in ones.
@@ -75,8 +86,14 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 			return true
 		})
 	}
-	buf = bytes.TrimSpace(buf)
+	// make these more efficient?
+	buf = bytes.TrimSuffix(buf, []byte(", "))
+	buf = append(buf, ' ', '}')
+
+	// remove empty attrs section
+	buf = bytes.TrimSuffix(buf, []byte(" {  }"))
 	buf = append(buf, '\n')
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	_, err := h.w.Write(buf)
@@ -113,6 +130,23 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
+var timeFormat = "2006-01-02T15:04:05.000Z07:00"
+var (
+	grey       = color.New(color.FgHiBlack).SprintFunc()
+	boldWhite  = color.New(color.FgWhite).Add(color.Bold).SprintFunc()
+	red        = color.New(color.FgRed).SprintFunc()
+	boldRed    = color.New(color.FgRed).Add(color.Bold).SprintFunc()
+	cyan       = color.New(color.FgCyan).SprintFunc()
+	boldCyan   = color.New(color.FgCyan).Add(color.Bold).SprintFunc()
+	magenta    = color.New(color.FgMagenta).SprintFunc()
+	yellow     = color.New(color.FgYellow).SprintFunc()
+	boldYellow = color.New(color.FgYellow).Add(color.Bold).SprintFunc()
+	green      = color.New(color.FgGreen).SprintFunc()
+	boldGreen  = color.New(color.FgGreen).Add(color.Bold).SprintFunc()
+	blue       = color.New(color.FgBlue).SprintFunc()
+	boldBlue   = color.New(color.FgBlue).Add(color.Bold).SprintFunc()
+)
+
 func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []byte {
 	// Resolve the Attr's value before doing anything else.
 	a.Value = a.Value.Resolve()
@@ -131,16 +165,22 @@ func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []by
 
 	switch a.Value.Kind() {
 	case slog.KindTime:
-		// Write times in a standard way, without the monotonic time.
-		buf = fmt.Appendf(buf, "%s ", a.Value.Time().Format(time.RFC3339))
+		switch key {
+		case slog.TimeKey:
+			buf = fmt.Appendf(buf, "%s ", grey(a.Value.Time().Format(timeFormat)))
+		default:
+			buf = fmt.Appendf(buf, "%s=%q, ", yellow(key), a.Value.Time().Format(timeFormat))
+		}
+	case slog.KindDuration:
+		buf = fmt.Appendf(buf, "%s=%.3fs, ", yellow(key), a.Value.Duration().Seconds())
 	case slog.KindString:
 		switch key {
 		case "msg":
-			buf = fmt.Appendf(buf, "%s -- ", a.Value.String())
+			buf = fmt.Appendf(buf, "%s { ", magenta(a.Value.String()))
 		case "source":
-			buf = fmt.Appendf(buf, "[%s] ", a.Value.String())
+			buf = fmt.Appendf(buf, "[%s] ", boldWhite(a.Value.String()))
 		default:
-			buf = fmt.Appendf(buf, "%s=%q ", key, a.Value.String())
+			buf = fmt.Appendf(buf, "%s=%q, ", yellow(key), a.Value.String())
 		}
 	case slog.KindGroup:
 		attrs := a.Value.Group()
@@ -154,9 +194,24 @@ func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []by
 	default:
 		switch key {
 		case "level":
-			buf = fmt.Appendf(buf, "%s: ", a.Value.String())
+			if l, ok := a.Value.Any().(slog.Level); ok {
+				switch l {
+				case slog.LevelDebug:
+					buf = fmt.Appendf(buf, "%s: ", cyan(a.Value.String()))
+				case slog.LevelInfo:
+					buf = fmt.Appendf(buf, "%s: ", boldGreen(a.Value.String()))
+				case slog.LevelWarn:
+					buf = fmt.Appendf(buf, "%s: ", boldYellow(a.Value.String()))
+				case slog.LevelError:
+					buf = fmt.Appendf(buf, "%s: ", boldRed(a.Value.String()))
+				default:
+					buf = fmt.Appendf(buf, "%s: ", a.Value.String())
+				}
+			}
+		case "error":
+			buf = fmt.Appendf(buf, "%s=\"%v\", ", yellow(key), boldRed(a.Value.Any()))
 		default:
-			buf = fmt.Appendf(buf, "%s=%s ", key, a.Value)
+			buf = fmt.Appendf(buf, "%s=%s, ", yellow(key), a.Value.String())
 		}
 	}
 	return buf
