@@ -18,21 +18,24 @@ limitations under the License.
 package cmd
 
 import (
+	"log/slog"
 	"os"
 	"path"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cf *config.Config
 
 var conffile, execname string
 var debug bool
+
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -49,7 +52,7 @@ func init() {
 	Cmd.Flags().SortFlags = false
 
 	execname = path.Base(os.Args[0])
-	cordial.LogInit(execname)
+	log = cordial.LogInit(execname)
 }
 
 var Cmd = &cobra.Command{
@@ -84,7 +87,7 @@ func initConfig() {
 		config.Format("yaml"),
 		config.FilePath(conffile))
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("failed to load configuration")
+		log.Error("failed to load configuration", slog.Any("error", err))
 	}
 
 }

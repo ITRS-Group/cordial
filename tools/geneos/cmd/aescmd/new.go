@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"os"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -56,6 +56,8 @@ func init() {
 
 //go:embed _docs/new.md
 var newCmdDescription string
+
+var log = cordial.Logger
 
 var newCmd = &cobra.Command{
 	Use:   "new [flags] [TYPE] [NAME...]",
@@ -92,7 +94,7 @@ geneos aes new -S gateway
 		}
 
 		if newCmdShared {
-			zlog.Debug().Msg("new shared keyfile")
+			log.Debug("new shared keyfile")
 			ct, names, _, err := cmd.FetchArgs(command)
 			if err != nil {
 				return err

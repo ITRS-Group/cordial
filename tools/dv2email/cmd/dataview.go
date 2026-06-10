@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"path"
@@ -28,7 +29,6 @@ import (
 	"sort"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -82,14 +82,14 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	}
 	dv, err := xpath.Parse(varpath)
 	if err != nil {
-		zlog.Debug().Err(err).Msgf("invalid dataview path %q", varpath)
+		log.Debug("invalid dataview path", slog.Any("error", err), slog.String("path", varpath))
 		return
 	}
 	dv = dv.ResolveTo(&xpath.Dataview{})
 
 	dataviews, err := gw.Match(dv, 0)
 	if err != nil {
-		zlog.Debug().Err(err).Msgf("matching dataviews with path %q", varpath)
+		log.Debug("matching dataviews failed", slog.Any("error", err), slog.String("path", varpath))
 		return
 	}
 
@@ -101,7 +101,7 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	for _, d := range dataviews {
 		dataview, err := getDataview(gw, d, firstcolumn, headlineList, rowList, columnList, rowOrder)
 		if err != nil {
-			zlog.Error().Err(err).Msg("")
+			log.Error("failed to get dataview", slog.Any("error", err))
 			continue
 		}
 
@@ -117,7 +117,7 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headlineList, rowList, columnList, rowOrder string) (dataview *commands.Dataview, err error) {
 	dataview, err = gw.Snapshot(dv, "", commands.Scope{Value: true, Severity: true, Snooze: true, UserAssignment: true})
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("failed to snapshot dataview", slog.Any("error", err))
 		return
 	}
 
@@ -131,7 +131,7 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 				h = strings.TrimSpace(h)
 				ok, err := path.Match(h, k)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("invalid headline filter %q", h)
+					log.Error("invalid headline filter", slog.Any("error", err), slog.String("filter", h))
 					// if the filter is invalid then do not filter out
 					// the headline based on that filter
 					return false
@@ -167,7 +167,7 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 			return slices.ContainsFunc(cols, func(col string) bool {
 				ok, err := path.Match(col, c)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("invalid column filter %q", col)
+					log.Error("invalid column filter", slog.Any("error", err), slog.String("filter", col))
 					// if the filter is invalid then do not filter out
 					// the column based on that filter
 					return false
@@ -202,7 +202,7 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 			for i, c := range oc {
 				ok, err := path.Match(m, c)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("invalid column order filter %q", m)
+					log.Error("invalid column order filter", slog.Any("error", err), slog.String("filter", m))
 					continue
 				}
 				if ok {
@@ -223,7 +223,7 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 				r = strings.TrimSpace(r)
 				ok, err := path.Match(r, k)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("invalid row filter %q", r)
+					log.Error("invalid row filter", slog.Any("error", err), slog.String("filter", r))
 					// if the filter is invalid then do not filter out
 					// the row based on that filter
 					return false

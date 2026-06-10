@@ -19,13 +19,12 @@ package cmd
 
 import (
 	_ "embed"
+	"log/slog"
 	"os"
 	"path"
 	"sort"
 	"strings"
 
-	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -41,6 +40,8 @@ var inlineCSS bool
 
 var entityArg, samplerArg, typeArg, dataviewArg string
 var toArg, ccArg, bccArg, subjectArg string
+
+var log = cordial.Logger
 
 func init() {
 	// cobra.OnInitialize(initConfig)
@@ -75,19 +76,19 @@ var globalCf *config.Config
 func initConfig() {
 	var err error
 
-	cordial.LogInit(execname)
+	log = cordial.LogInit(execname)
 
 	if quiet {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
+		cordial.LogLevel.Set(slog.LevelError)
 	} else if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		cordial.LogLevel.Set(slog.LevelDebug)
 	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		cordial.LogLevel.Set(slog.LevelInfo)
 	}
 
 	// config.DefaultKeyDelimiter("::")
 	if config.AppConfigDir() == "" {
-		zlog.Warn().Err(config.ErrNoUserConfigDir)
+		log.Warn("no user config dir found", slog.Any("error", config.ErrNoUserConfigDir))
 	}
 	opts := []config.FileOption{
 		config.AppName("geneos"),
@@ -100,7 +101,8 @@ func initConfig() {
 
 	globalCf, err = config.Read(execname, opts...)
 	if err != nil {
-		zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+		log.Error("loading config failed", slog.Any("error", err), slog.String("path", config.Path(execname, opts...)))
+		os.Exit(1)
 	}
 }
 
@@ -141,7 +143,8 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to dial gateway", slog.Any("error", err))
+			os.Exit(1)
 		}
 
 		// we need to pass filters etc. to fetchDataviews
@@ -155,7 +158,7 @@ var Cmd = &cobra.Command{
 			config.Get[string](em, "__roworder"),
 		)
 		if err != nil {
-			zlog.Error().Err(err).Msg("")
+			log.Error("failed to fetch dataviews", slog.Any("error", err))
 			return
 		}
 
@@ -174,7 +177,8 @@ var Cmd = &cobra.Command{
 					Env:       data.Env,
 				}
 				if err = sendEmail(globalCf, em, many, inlineCSS); err != nil {
-					zlog.Fatal().Err(err).Msg("")
+					log.Error("failed to send email", slog.Any("error", err))
+					os.Exit(1)
 				}
 			}
 		case "dataview":
@@ -184,12 +188,14 @@ var Cmd = &cobra.Command{
 					Env:       data.Env,
 				}
 				if err = sendEmail(globalCf, em, one, inlineCSS); err != nil {
-					zlog.Fatal().Err(err).Msg("")
+					log.Error("failed to send email", slog.Any("error", err))
+					os.Exit(1)
 				}
 			}
 		default:
 			if err = sendEmail(globalCf, em, data, inlineCSS); err != nil {
-				zlog.Fatal().Err(err).Msg("sending failed")
+				log.Error("failed to send email", slog.Any("error", err))
+				os.Exit(1)
 			}
 		}
 

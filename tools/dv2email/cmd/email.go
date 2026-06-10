@@ -19,12 +19,12 @@ package cmd
 
 import (
 	htemplate "html/template"
+	"log/slog"
 	"os"
 	"slices"
 	"text/template"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -36,7 +36,8 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 
 	m, err := email.UpdateEnvelope(em, inlineCSS)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("failed to update email envelope", slog.Any("error", err))
+		os.Exit(1)
 	}
 	m.Subject(config.Get[string](em, "_subject"))
 
@@ -88,7 +89,7 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "images") {
 		for name, path := range config.Get[map[string]string](cf, "images") {
 			if _, err := os.Stat(path); err != nil {
-				zlog.Error().Err(err).Msg("skipping")
+				log.Error("skipping image", slog.Any("error", err), slog.String("path", path))
 				continue
 			}
 			m.EmbedFile(path, mail.WithFileName(name))
@@ -99,7 +100,8 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 	// send
 	d, err := email.Dial(em)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("failed to dial email server", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	return d.DialAndSend(m)

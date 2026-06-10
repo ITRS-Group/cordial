@@ -20,6 +20,7 @@ package cmd
 import (
 	"errors"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -27,8 +28,6 @@ import (
 	"strconv"
 	"syscall"
 	"time"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -117,7 +116,7 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	if u, err := user.LookupId(uid); err == nil { // no error
 		lookup["user"] = u.Username
 	} else {
-		zlog.Error().Err(err).Msg("")
+		log.Error("failed to lookup user", slog.Any("error", err), slog.String("uid", uid))
 	}
 	gid := strconv.Itoa(int(st.Sys().(*syscall.Stat_t).Gid))
 	lookup["gid"] = gid

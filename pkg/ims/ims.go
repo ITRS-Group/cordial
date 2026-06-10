@@ -25,14 +25,14 @@ import (
 	"crypto/x509"
 	"fmt"
 	"iter"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
@@ -68,6 +68,8 @@ type ClientConfig struct {
 	Trace bool `json:"trace,omitempty"`
 }
 
+var log = logger.Logger
+
 // NewClient creates a new rest.Client for the given URL and
 // configuration. The client is NOT cached as each execution is a single
 // request to the first remote proxy that responds.
@@ -78,13 +80,13 @@ func NewClient(cf *ClientConfig) *rest.Client {
 		skip := cf.TLS.SkipVerify
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			zlog.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+			log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
 		}
 
 		if !skip {
 			if chain := cf.TLS.Chain; len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					zlog.Warn().Msg("error reading cert chain")
+					log.Warn("error reading cert chain")
 				}
 			}
 		}
@@ -170,9 +172,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request
 	reqDump, err := httputil.DumpRequestOut(req, true)
 	if err != nil {
-		zlog.Printf("Error dumping request: %v", err)
+		log.Error("Error dumping request", slog.Any("error", err))
 	} else {
-		zlog.Printf("REQUEST:\n%s", reqDump)
+		log.Debug("REQUEST:\n%s", slog.String("request", string(reqDump)))
 	}
 
 	// Perform the actual request
@@ -184,9 +186,9 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the response
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		zlog.Printf("Error dumping response: %v", err)
+		log.Error("Error dumping response", slog.Any("error", err))
 	} else {
-		zlog.Printf("RESPONSE:\n%s", respDump)
+		log.Debug("RESPONSE:\n%s", slog.String("response", string(respDump)))
 	}
 
 	return resp, nil

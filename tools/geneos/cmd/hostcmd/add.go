@@ -20,13 +20,14 @@ package hostcmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -115,17 +116,17 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		case 2:
 			name = args[0]
 			if sshurl, err = url.Parse(args[1]); err != nil {
-				zlog.Error().Msgf("invalid ssh url %q", args[1])
+				log.Error("invalid ssh url", slog.String("url", args[1]))
 				return
 			}
 		default:
-			zlog.Fatal().Msgf("wrong number of args: %d", len(args))
+			log.Error("wrong number of args", slog.Int64("args", int64(len(args))))
 		}
 
 		// validate name - almost anything but no double colons, which
 		// may be an issue with future IPv6 addresses
 		if strings.Contains(name, "::") {
-			zlog.Error().Msg("a remote hostname may not contain `::`")
+			log.Error("a remote hostname may not contain `::`")
 			return geneos.ErrInvalidArgs
 		}
 
@@ -206,7 +207,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
-			zlog.Debug().Err(err).Msgf("cannot connect to remote host %s port %d as %s, not adding", config.Get[string](cf, "hostname"), config.Get[uint16](cf, "port"), config.Get[string](cf, "username"))
+			log.Debug("cannot connect to remote host", slog.Any("error", err), slog.String("hostname", config.Get[string](cf, "hostname")), slog.Any("port", config.Get[uint16](cf, "port")), slog.String("username", config.Get[string](cf, "username")))
 			return
 		}
 

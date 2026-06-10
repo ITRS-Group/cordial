@@ -22,10 +22,10 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/thediveo/go-asciitree"
 
@@ -89,7 +89,7 @@ var explainCmd = &cobra.Command{
 
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
-			zlog.Error().Err(err).Msg("cannot BEGIN transaction")
+			log.Error("cannot BEGIN transaction", slog.Any("error", err))
 			return
 		}
 		defer tx.Rollback()
@@ -108,7 +108,7 @@ var explainCmd = &cobra.Command{
 		var report Report
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &report, config.NoExpand()); err != nil {
-			zlog.Error().Err(err).Msg("reports configuration format incorrect")
+			log.Error("reports configuration format incorrect", slog.Any("error", err))
 			return
 		}
 

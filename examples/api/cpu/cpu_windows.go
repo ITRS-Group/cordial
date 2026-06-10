@@ -3,12 +3,13 @@
 package cpu
 
 import (
+	"log/slog"
+	"os"
 	"time"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/StackExchange/wmi"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's
@@ -32,8 +33,10 @@ type cpustat struct {
 	frequency  float64
 }
 
+var log = logger.Logger
+
 func (p *CPUSampler) DoSample() (err error) {
-	zlog.Debug().Msg("called")
+	log.Debug("called")
 	laststats := p.cpustats
 	if laststats.lastsample == 0 {
 		// first time through, store initial stats, don't update table and wait for next call
@@ -67,7 +70,8 @@ func getstats(c *cpustat) (err error) {
 	q := wmi.CreateQuery(&dst, "")
 	err = wmi.Query(q, &dst)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("WMI query failed", slog.Err(err))
+		os.Exit(1)
 	}
 
 	c.lastsample = float64(dst[0].Timestamp_PerfTime)

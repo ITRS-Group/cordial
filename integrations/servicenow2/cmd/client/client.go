@@ -24,6 +24,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"regexp"
@@ -31,10 +32,10 @@ import (
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
@@ -54,6 +55,8 @@ type ActionGroup struct {
 // flags
 var clientCmdProfile, clientCmdTable string
 var clientCmdQuiet bool
+
+var log = logger.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(clientCmd)
@@ -175,7 +178,7 @@ var clientCmd = &cobra.Command{
 
 				re, err := regexp.Compile(pattern)
 				if err != nil {
-					zlog.Error().Err(err).Msg("")
+					log.Error("failed to compile regex", slog.Any("error", err))
 					return
 				}
 
@@ -296,7 +299,8 @@ var clientCmd = &cobra.Command{
 		)
 
 		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to unmarshal defaults", slog.Any("error", err))
+			os.Exit(1)
 		}
 		for _, g := range defaults {
 			if processActionGroup(cf, g, incident) {
@@ -305,7 +309,7 @@ var clientCmd = &cobra.Command{
 		}
 
 		b, _ := json.MarshalIndent(incident, "", "    ")
-		zlog.Debug().Msgf("incident fields after processing defaults:\n%s", string(b))
+		log.Debug("incident fields after processing defaults", slog.String("fields", string(b)))
 
 		if clientCmdProfile == "" {
 			var ok bool
@@ -315,17 +319,18 @@ var clientCmd = &cobra.Command{
 		}
 
 		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups, config.NoExpand()); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to unmarshal profile groups", slog.Any("error", err))
+			os.Exit(1)
 		}
 		for _, g := range profileGroups {
-			zlog.Debug().Msgf("processing profile %s: %#v", clientCmdProfile, g)
+			log.Debug("processing profile", slog.String("profile", clientCmdProfile), slog.Any("group", g))
 			if processActionGroup(cf, g, incident) {
 				break
 			}
 		}
 
 		b, _ = json.MarshalIndent(incident, "", "    ")
-		zlog.Debug().Msgf("incident fields after processing profile:\n%s", string(b))
+		log.Debug("incident fields after processing profile", slog.String("fields", string(b)))
 
 		// command line args can replace defaults and config file settings.
 		// parse key value pairs as fields for the request, and for now ignore
@@ -364,12 +369,13 @@ var clientCmd = &cobra.Command{
 			}
 			_, err = rc.Post(context.Background(), clientCmdTable, incident, &result)
 			if err != nil {
-				zlog.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
+				log.Debug("connection error, trying next proxy (if any)", slog.Any("error", err))
 				continue
 			}
 
 			if result["action"] == "Failed" {
-				zlog.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+				log.Error("failed to create event", slog.String("action", result["action"]), slog.String("host", result["host"]))
+				os.Exit(1)
 			}
 
 			if !clientCmdQuiet {
@@ -432,7 +438,7 @@ func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record)
 		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
 			os.Exit(int(code))
 		} else {
-			zlog.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
+			log.Error("invalid exit code, exiting with exit code 1", slog.String("code", i), slog.Any("error", err))
 			os.Exit(1)
 		}
 	}
@@ -450,13 +456,13 @@ func newRestClient(cf *config.Config, r string) *rest.Client {
 		skip := config.Get[bool](cf, cf.Join("proxy", "tls", "skip-verify"))
 		roots, err := x509.SystemCertPool()
 		if err != nil {
-			zlog.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+			log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
 		}
 
 		if !skip {
 			if chain := config.Get[[]byte](cf, cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					zlog.Warn().Msg("error reading cert chain")
+					log.Warn("error reading cert chain")
 				}
 			}
 		}

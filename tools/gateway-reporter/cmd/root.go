@@ -22,12 +22,11 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -49,13 +48,15 @@ var defaults []byte
 //go:embed _docs/root.md
 var rootCmdDescription string
 
+var log = cordial.Logger
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	startTime = time.Now()
 	startTimestamp = startTime.Format("20060102150405")
 
-	cordial.LogInit(execname)
+	log = cordial.LogInit(execname)
 
 	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
@@ -86,7 +87,8 @@ func initConfig() {
 
 	cf, err = config.Read(execname, opts...)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("failed to read config", slog.Any("error", err))
+		os.Exit(1)
 	}
 	cf.AutomaticEnv()
 }
@@ -106,9 +108,16 @@ var Cmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// no logging - XML output only
-		initLogging(execname, "/tmp/reporter.log")
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		zlog.Debug().Msg("logging")
+		log = cordial.LogInit(execname,
+			cordial.LumberjackOptions(&lumberjack.Logger{
+				Filename:   "/tmp/reporter.log",
+				MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
+				MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),
+				MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "age")),
+				Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
+			}),
+		)
+		log.Debug("logging")
 
 		// check we are in a validate hook
 		setupFile := os.Getenv("_SETUP")
@@ -228,36 +237,4 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
-}
-
-func initLogging(execname string, logfile string) {
-	var nocolor bool
-	var out io.WriteCloser
-	out = os.Stderr
-	if logfile != "" {
-		l := &lumberjack.Logger{
-			Filename:   logfile,
-			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
-			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),
-			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "age")),
-			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
-		}
-		if config.Get[bool](cf, cf.Join("server", "logs", "rotate-at-start")) {
-			l.Rotate()
-		}
-		out = l
-		nocolor = true
-	}
-
-	zlog.Logger = zlog.Output(zerolog.ConsoleWriter{
-		Out:        out,
-		TimeFormat: time.RFC3339,
-		NoColor:    nocolor,
-		FormatLevel: func(i any) string {
-			return strings.ToUpper(fmt.Sprintf("%s:", i))
-		},
-		FormatMessage: func(i any) string {
-			return fmt.Sprintf("%s: %s", execname, i)
-		},
-	})
 }

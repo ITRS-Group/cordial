@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path"
@@ -138,7 +139,7 @@ func Read(i geneos.Instance) (err error) {
 		i.SetLoaded(st.ModTime())
 	}
 
-	zlog.Debug().Msgf("config for %s from %s %q loaded in %.4fs", i, h.String(), used, time.Since(start).Seconds())
+	i.Log().Debug("config loaded", slog.String("file", used), slog.Duration("duration", time.Since(start)))
 	return nil
 }
 

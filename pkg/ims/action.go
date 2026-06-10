@@ -19,12 +19,11 @@ package ims
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -98,7 +97,7 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
 			os.Exit(int(code))
 		} else {
-			zlog.Error().Err(err).Msgf("invalid exit code: %s, exiting with exit code 1", i)
+			log.Error("invalid exit code, exiting with exit code 1", slog.Any("error", err), slog.String("code", i))
 			os.Exit(1)
 		}
 	}
@@ -179,7 +178,7 @@ func replacePrefix(_ map[string]any, s string, trim bool) (result string, err er
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("failed to compile regex pattern", slog.Any("error", err), slog.String("pattern", pattern))
 		return
 	}
 

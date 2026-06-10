@@ -25,7 +25,6 @@ import (
 	"path"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -114,7 +113,7 @@ var renewCmd = &cobra.Command{
 func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	var err error
 
-	zlog.Debug().Msgf("renewing certificate for instance %s", i.Name())
+	i.Log().Debug("renewing certificate for instance")
 
 	cf := i.Config()
 

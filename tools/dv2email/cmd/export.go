@@ -21,12 +21,12 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/wneessen/go-mail"
 
@@ -65,7 +65,8 @@ var exportCmd = &cobra.Command{
 
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to dial gateway", slog.Any("error", err))
+			os.Exit(1)
 		}
 		data, err := fetchDataviews(cmd, gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder)
 		if err != nil {

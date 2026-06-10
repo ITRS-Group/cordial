@@ -20,11 +20,11 @@ package cmd
 import (
 	_ "embed"
 	"errors"
+	"log/slog"
 	"os"
 	"syscall"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -63,17 +63,17 @@ func stop() (err error) {
 	pid, err := process.PID(host.Localhost, "gdna", []string{"start"}, process.RefreshCache())
 	if err != nil {
 		if err == os.ErrProcessDone {
-			zlog.Info().Msg("process not found")
+			log.Info("process not found")
 			return nil
 		}
-		zlog.Error().Err(err).Msg("failed to find process")
+		log.Error("failed to find process", slog.Any("error", err))
 		return
 	}
 
-	zlog.Info().Msgf("would kill pid %d", pid)
+	log.Info("terminating process", slog.Int("pid", pid))
 	h := host.Localhost
 	if err = h.Signal(pid, syscall.SIGTERM); err == os.ErrProcessDone {
-		zlog.Info().Msgf("terminated PID %d", pid)
+		log.Info("terminated", slog.Int("pid", pid))
 		return nil
 	}
 
@@ -84,13 +84,13 @@ func stop() (err error) {
 	for range 10 {
 		time.Sleep(250 * time.Millisecond)
 		if err = h.Signal(pid, syscall.SIGTERM); err == os.ErrProcessDone {
-			zlog.Info().Msgf("terminated PID %d", pid)
+			log.Info("terminated", slog.Int("pid", pid))
 			return nil
 		}
 	}
 
 	if err = h.Signal(pid, syscall.SIGKILL); err == os.ErrProcessDone {
-		zlog.Info().Msgf("killing PID %d", pid)
+		log.Info("killing", slog.Int("pid", pid))
 		return nil
 	}
 

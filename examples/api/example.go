@@ -3,20 +3,23 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/streams"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/examples/api/cpu"
 	"github.com/itrs-group/cordial/examples/api/generic"
 	"github.com/itrs-group/cordial/examples/api/memory"
 	"github.com/itrs-group/cordial/examples/api/process"
 )
+
+var log = logger.Logger
 
 func main() {
 	var wg sync.WaitGroup
@@ -35,7 +38,8 @@ func main() {
 	flag.Parse()
 
 	if interval < 1*time.Second {
-		zlog.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
+		log.Error("supplied sample interval too short, minimum 1 second", slog.Duration("interval", interval))
+		os.Exit(1)
 	}
 
 	// connect to netprobe
@@ -43,28 +47,33 @@ func main() {
 	u := &url.URL{Scheme: "https", Host: fmt.Sprintf("%s:%d", hostname, port), Path: "/xmlrpc"}
 	p, err := plugins.Open(u, entityname, samplername)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error opening plugin connection", slog.Any("error", err))
+		os.Exit(1)
 	}
 	p.InsecureSkipVerify()
 
 	m, err := memory.New(p, "memory", "SYSTEM")
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error creating memory sampler", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer m.Close()
 	m.SetInterval(interval)
 	if err = m.Start(&wg); err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error starting memory sampler", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	c, err := cpu.New(p, "cpu", "SYSTEM")
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error creating CPU sampler", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer c.Close()
 	c.SetInterval(interval)
 	if err = c.Start(&wg); err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error starting CPU sampler", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	pr, err := process.New(p, "processes", "SYSTEM")
@@ -85,7 +94,8 @@ func main() {
 	streamssampler := "streams"
 	sp, err := streams.Open(u, entityname, streamssampler, "teststream")
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error opening streams connection", slog.Any("error", err))
+		os.Exit(1)
 	}
 	sp.InsecureSkipVerify()
 
@@ -96,7 +106,7 @@ func main() {
 			<-tick.C
 			fmt.Fprintln(sp, time.Now().String(), "this is a test")
 			if err != nil {
-				zlog.Fatal().Err(err).Msg("")
+				log.Error("error writing to stream", slog.Any("error", err))
 				break
 			}
 		}

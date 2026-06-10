@@ -5,16 +5,17 @@ package cmd
 
 import (
 	"context"
+	"log/slog"
 	"os"
 	"sync"
 
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/geneos/api"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var moby client.APIClient
@@ -22,6 +23,8 @@ var moby client.APIClient
 func init() {
 
 }
+
+var log = logger.Logger
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -57,32 +60,33 @@ var rootCmd = &cobra.Command{
 				Tail:       "50",
 			})
 			if err != nil {
-				zlog.Error().Err(err).Msg("")
+				log.Error("error getting container logs", slog.Any("error", err))
 				continue
 			}
 			defer r.Close()
-			zlog.Info().Msgf("container log for %s open", i.ID)
+			log.Info("container log for %s open", slog.String("containerID", i.ID))
 			wg.Add(1)
 			go func(i container.Summary) {
 				defer wg.Done()
 				sout, err := api.OpenStream(c, "localhost", "streams", i.Names[0]+".stdout")
 				if err != nil {
-					zlog.Error().Err(err).Msg("")
+					log.Error("error opening stdout stream", slog.Any("error", err))
 					return
 				}
 				if !c.Healthy() {
-					zlog.Error().Msg("stdout not connected to probe")
+					log.Error("stdout not connected to probe")
+
 				}
 				serr, err := api.OpenStream(c, "localhost", "streams", i.Names[0]+".stderr")
 				if err != nil {
-					zlog.Error().Err(err).Msg("")
+					log.Error("error opening stderr stream", slog.Any("error", err))
 					return
 				}
 				if !c.Healthy() {
-					zlog.Error().Msg("stderr not connected to probe")
+					log.Error("stderr not connected to probe")
 				}
 				if _, err = stdcopy.StdCopy(sout, serr, r); err != nil {
-					zlog.Error().Err(err).Msg("")
+					log.Error("error copying container logs", slog.Any("error", err))
 				}
 			}(i)
 		}

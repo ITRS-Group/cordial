@@ -1,10 +1,11 @@
 package generic
 
 import (
-	zlog "github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 type GenericData struct {
@@ -18,6 +19,8 @@ type GenericSampler struct {
 	localdata string
 }
 
+var log = logger.Logger
+
 func New(s *plugins.Connection, name string, group string) (*GenericSampler, error) {
 	c := new(GenericSampler)
 	c.Plugins = c
@@ -25,12 +28,12 @@ func New(s *plugins.Connection, name string, group string) (*GenericSampler, err
 }
 
 func (g *GenericSampler) InitSampler() error {
-	zlog.Debug().Msg("called")
+	log.Debug("called")
 	example, err := g.Parameter("EXAMPLE")
 	longparameter, err := g.Parameter("DIRS")
-	zlog.Printf("long param len: %d\n%s", len(longparameter), longparameter)
+	log.Debug("long param len", slog.Int("len", len(longparameter)), slog.String("value", longparameter))
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("error retrieving parameter", slog.Any("error", err))
 		return nil
 	}
 	g.localdata = example
@@ -43,7 +46,7 @@ func (g *GenericSampler) InitSampler() error {
 }
 
 func (p *GenericSampler) DoSample() error {
-	zlog.Debug().Msg("called")
+	log.Debug("called")
 	var rowdata = []GenericData{
 		{"row4", "data1", "data2"},
 		{"row2", "data1", "data2"},

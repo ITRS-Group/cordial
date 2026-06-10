@@ -49,7 +49,7 @@ func init() {
 		if Debug {
 			l = slog.LevelDebug
 		}
-		cordial.LogInit(cordial.ExecutableName(), cordial.ToZeroLogLevel(l))
+		cordial.LogInit(cordial.ExecutableName(), cordial.SetLogLevel(l))
 		zlog.Debug().Msgf("cordial 'ims-gateway' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
 	})
 }

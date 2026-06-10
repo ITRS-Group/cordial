@@ -22,14 +22,15 @@ package reporter
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
+	"os"
 	"path"
 	"regexp"
 	"slices"
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/xuri/excelize/v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -221,12 +222,12 @@ func (x *XLSXReporter) Prepare(report Report) (err error) {
 	x.currentSheet = report.Title
 
 	if len(x.currentSheet) > 31 {
-		zlog.Error().Msgf("report title '%s' exceeds sheet name limit of 31 chars, truncating", x.currentSheet)
+		log.Error("report title exceeds sheet name limit of 31 chars, truncating", slog.String("title", x.currentSheet))
 		x.currentSheet = x.currentSheet[:31]
 	}
 	idx, _ := x.x.GetSheetIndex(x.currentSheet)
 	if idx != -1 && x.currentSheet != x.summarySheet {
-		zlog.Error().Msgf("a sheet with the same name already exists, data will clash: '%s'", x.currentSheet)
+		log.Error("a sheet with the same name already exists, data will clash", slog.String("sheet", x.currentSheet))
 	}
 
 	x.sheets[x.currentSheet] = &sheet{
@@ -404,12 +405,12 @@ func (x *XLSXReporter) freezePanes() {
 					{SQRef: cellname, ActiveCell: cellname, Pane: "bottomLeft"},
 				},
 			}); err != nil {
-				zlog.Error().Err(err).Msg("freeze top row")
+				log.Error("freeze top row", slog.Any("error", err))
 			}
 		} else {
 			i := slices.Index(sheet.columns, sheet.freezeColumn)
 			if i == -1 {
-				zlog.Warn().Msgf("unknown column name %q, skipping freeze left pane for sheet %s", sheet.freezeColumn, sheetname)
+				log.Warn("unknown column name, skipping freeze left pane for sheet", slog.String("column", sheet.freezeColumn), slog.String("sheet", sheetname))
 				return
 			}
 			// cellname is the first unlocked cell (so +2)
@@ -424,7 +425,7 @@ func (x *XLSXReporter) freezePanes() {
 					{SQRef: cellname, ActiveCell: cellname, Pane: "bottomRight"},
 				},
 			}); err != nil {
-				zlog.Error().Err(err).Msg("freeze table")
+				log.Error("freeze table", slog.Any("error", err))
 			}
 		}
 	}
@@ -540,7 +541,7 @@ func (x *XLSXReporter) applyConditionalFormat() {
 		for _, c := range sheet.conditionalFormat {
 			// validate conditions allowed
 			if !slices.Contains(validcond, c.Test.Condition) {
-				zlog.Error().Msgf("sheet %s: invalid condition %s, skipping test", sheetname, c.Test.Condition)
+				log.Error("invalid condition, skipping test", slog.String("sheet", sheetname), slog.String("condition", c.Test.Condition))
 				continue
 			}
 
@@ -596,7 +597,7 @@ func (x *XLSXReporter) applyConditionalFormat() {
 			for _, t := range c.Test.Columns {
 				i := slices.Index(sheet.columns, t)
 				if i == -1 {
-					zlog.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", t, sheetname)
+					log.Warn("unknown column name, skipping conditional formatting for sheet", slog.String("column", t), slog.String("sheet", sheetname))
 					return
 				}
 				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
@@ -622,7 +623,7 @@ func (x *XLSXReporter) applyConditionalFormat() {
 			for _, col := range cols {
 				i := slices.Index(sheet.columns, col)
 				if i == -1 {
-					zlog.Warn().Msgf("unknown column name %q, skipping conditional formatting for sheet %s", col, sheetname)
+					log.Warn("unknown column name, skipping conditional formatting for sheet", slog.String("column", col), slog.String("sheet", sheetname))
 					return
 				}
 				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
@@ -649,7 +650,8 @@ func (x *XLSXReporter) setConditionalFormat(sheetname, formula, format string, r
 			Format:   x.cond[format],
 		},
 	}); err != nil {
-		zlog.Fatal().Err(err).Msgf("formula %s on %s", formula, strings.Join(refs, ","))
+		log.Error("formula error", slog.Any("error", err), slog.String("formula", formula), slog.String("refs", strings.Join(refs, ",")))
+		os.Exit(1)
 	}
 }
 

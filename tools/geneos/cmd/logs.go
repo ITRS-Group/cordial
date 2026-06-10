@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -121,7 +122,7 @@ func followLog(i geneos.Instance) {
 	done := make(chan bool)
 	tails = watchLogs()
 	if resp := logFollowInstance(i); resp.Err != nil {
-		zlog.Error().Err(resp.Err).Msg("")
+		i.Log().Error("cannot follow logs", slog.Any("error", resp.Err))
 	}
 	<-done
 }

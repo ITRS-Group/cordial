@@ -9,9 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
@@ -73,16 +72,19 @@ func (p PowerwallSampler) DoSample() (err error) {
 	}
 	resp, err := http.Get(p.pwurl)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error fetching Powerwall data", slog.Any("error", err))
+		return
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error reading Powerwall data", slog.Any("error", err))
+		return
 	}
 	var data map[string]map[string]any
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error unmarshalling Powerwall data", slog.Any("error", err))
+		return
 	}
 	// all numbers are float64 at this point, don't forget to reconvert
 
@@ -110,7 +112,7 @@ func (p PowerwallSampler) DoSample() (err error) {
 	}
 	err = p.UpdateTable(pwcols, table...)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error updating Powerwall table", slog.Any("error", err))
 	}
 	return
 }

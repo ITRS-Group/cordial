@@ -24,6 +24,7 @@ import (
 	_ "embed"
 	"errors"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"os/user"
@@ -33,7 +34,6 @@ import (
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -161,7 +161,7 @@ var reportCmd = &cobra.Command{
 
 		tx, err := db.BeginTx(ctx, nil)
 		if err != nil {
-			zlog.Error().Err(err).Msg("cannot BEGIN transaction")
+			log.Error("cannot BEGIN transaction", slog.Any("error", err))
 			return
 		}
 		defer tx.Rollback()
@@ -174,7 +174,7 @@ var reportCmd = &cobra.Command{
 		if output != "-" {
 			w, err = os.Create(output)
 			if err != nil {
-				zlog.Error().Err(err).Msg("failed to open output file for writing")
+				log.Error("failed to open output file for writing", slog.Any("error", err))
 				return
 			}
 			defer w.Close()
@@ -186,7 +186,7 @@ var reportCmd = &cobra.Command{
 		tx.Commit()
 
 		if !reportFetch {
-			zlog.Debug().Msg("closing database")
+			log.Debug("closing database")
 			_, err = db.ExecContext(ctx, "VACUUM")
 		}
 		return
@@ -200,7 +200,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 
 	if outputZip {
 		z = zip.NewWriter(w)
-		zlog.Debug().Msgf("creating zipped report output: %p", z)
+		log.Debug("creating zipped report output")
 		// file is closed by reporter.Close()
 	}
 
@@ -220,7 +220,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			reporter.ZipWriter(z),
 		)
 		if err != nil {
-			zlog.Error().Err(err).Msg("failed to create CSV reporter")
+			log.Error("failed to create CSV reporter", slog.Any("error", err))
 			return
 		}
 	case "toolkit":
@@ -331,7 +331,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		}
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
-			zlog.Error().Err(err).Msgf("skipping report %s: configuration format incorrect", name)
+			log.Error("skipping report due to configuration format incorrect", slog.Any("error", err), slog.String("report", name))
 			continue
 		}
 
@@ -354,12 +354,12 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		case "summary":
 			// publish summary report(s) first, if enabled
 			if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
-				zlog.Debug().Msgf("report %s disabled for XLSX output", name)
+				log.Debug("report disabled for XLSX output", slog.String("report", name))
 				continue
 			}
 
 			if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
-				zlog.Debug().Msgf("report %s disabled for dataview output", name)
+				log.Debug("report disabled for dataview output", slog.String("report", name))
 				continue
 			}
 
@@ -391,16 +391,16 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 
 	for _, rep := range standardReports {
 		if _, ok := r.(*reporter.XLSXReporter); ok && rep.XLSX.Enable != nil && !*rep.XLSX.Enable {
-			zlog.Debug().Msgf("report %s disabled for XLSX output", rep.Name)
+			log.Debug("report disabled for XLSX output", slog.String("report", rep.Name))
 			continue
 		}
 
 		if _, ok := r.(*reporter.APIReporter); ok && rep.Dataview.Enable != nil && !*rep.Dataview.Enable {
-			zlog.Debug().Msgf("report %s disabled for dataview output", rep.Name)
+			log.Debug("report disabled for dataview output", slog.String("report", rep.Name))
 			continue
 		}
 
-		zlog.Debug().Msgf("running report %s", rep.Name)
+		log.Debug("running report", slog.String("report", rep.Name))
 
 		start := time.Now()
 
@@ -412,18 +412,18 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		default:
 			publishReport(ctx, cf, tx, r, rep)
 		}
-		zlog.Debug().Msgf("report %s completed in %.2f seconds", rep.Name, time.Since(start).Seconds())
+		log.Debug("report completed", slog.String("report", rep.Name), slog.Float64("duration", time.Since(start).Seconds()))
 	}
 
 	for _, rep := range groupedReports {
-		zlog.Debug().Msgf("running split report %s", rep.Name)
+		log.Debug("running split report", slog.String("report", rep.Name))
 
 		start := time.Now()
 
 		if err = publishReportSplit(ctx, cf, tx, r, rep); err != nil {
 			return
 		}
-		zlog.Debug().Msgf("report %s completed in %.2f seconds", rep.Name, time.Since(start).Seconds())
+		log.Debug("report completed", slog.String("report", rep.Name), slog.Float64("duration", time.Since(start).Seconds()))
 	}
 
 	return nil
@@ -482,10 +482,10 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
 
 	query := config.Expand[string](cf, report.Query, lookup, config.ExpandNonStringToCSV())
-	zlog.Trace().Msgf("query:\n%s", query)
+	log.Debug("query", slog.String("query", query))
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
-		zlog.Error().Msgf("failed to execute query: %s\n%s", err, query)
+		log.Error("failed to execute query", slog.Any("error", err), slog.String("query", query))
 		return
 	}
 	if len(table) > 0 {
@@ -495,7 +495,7 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
-			zlog.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
+			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
 			return
 		}
 		for _, h := range names {
@@ -531,18 +531,18 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	r := tx.QueryRowContext(ctx, prequery)
 	var query string
 	if err := r.Scan(&query); err != nil {
-		zlog.Error().Err(err).Msgf("failed to execute indirect report %s pre-query:\n%s", report.Title, prequery)
+		log.Error("failed to execute indirect report pre-query", slog.Any("error", err), slog.String("report", report.Title), slog.String("prequery", prequery))
 		return
 	}
 
 	if query == "" {
-		zlog.Error().Msgf("indirect report %s generated query is empty:\n%s", report.Title, prequery)
+		log.Error("indirect report generated query is empty", slog.String("report", report.Title), slog.String("prequery", prequery))
 		return
 	}
-	zlog.Trace().Msgf("query:\n%s", query)
+	log.Debug("generated query", slog.String("report", report.Title), slog.String("query", query))
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
-		zlog.Error().Msgf("failed to execute generated query: %s\n%s", err, query)
+		log.Error("failed to execute generated query", slog.Any("error", err), slog.String("query", query))
 		return
 	}
 	if len(table) == 1 {
@@ -554,7 +554,7 @@ func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r
 	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
-			zlog.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
+			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
 			return
 		}
 		for _, h := range names {
@@ -600,10 +600,10 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 			"group":  group,
 			"filter": groups[group],
 		}), config.ExpandNonStringToCSV())
-		zlog.Trace().Msgf("query:\n%s", query)
+		log.Debug("query trace", slog.String("query", query))
 		t, err := queryToTable(ctx, tx, report.Columns, query)
 		if err != nil {
-			zlog.Error().Msgf("failed to execute query: %s\n%s", err, query)
+			log.Error("failed to execute query", slog.Any("error", err), slog.String("query", query))
 			continue
 		}
 		t = t[1:] // discard columns names
@@ -619,7 +619,7 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
 		names, headlines, err := queryHeadlines(ctx, tx, query)
 		if err != nil {
-			zlog.Error().Msgf("failed to execute headline query: %s\n%s", err, query)
+			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
 			return
 		}
 		for _, h := range names {

@@ -25,7 +25,6 @@ import (
 	dbg "runtime/debug"
 
 	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -72,6 +71,8 @@ var defaults []byte
 
 //go:embed _docs/gdna.md
 var rootCmdDescription string
+
+var log *slog.Logger = slog.Default()
 
 // Cmd represents the base command when called without any subcommands
 var Cmd = &cobra.Command{
@@ -145,7 +146,8 @@ func initConfig(cmd *cobra.Command) {
 
 		cf, err = config.Read(execname, opts...)
 		if err != nil {
-			zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+			log.Error(fmt.Sprintf("loading from %s: %v", config.Path(execname, opts...), err))
+			os.Exit(1)
 		}
 
 		// use MustExists() to check for actual files
@@ -163,7 +165,7 @@ func initConfig(cmd *cobra.Command) {
 		}
 	}
 
-	cordial.LogInit(execname,
+	log = cordial.LogInit(execname,
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,
@@ -173,10 +175,10 @@ func initConfig(cmd *cobra.Command) {
 			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress")),
 		}),
 		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
-		cordial.ToZeroLogLevel(loglevel),
+		cordial.SetLogLevel(loglevel),
 	)
 
 	info, _ := dbg.ReadBuildInfo()
-	zlog.Info().Msgf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion)
-	zlog.Info().Msg(deferredlog)
+	log.Info(fmt.Sprintf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion))
+	log.Info(deferredlog)
 }

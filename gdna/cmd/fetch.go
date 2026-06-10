@@ -22,13 +22,13 @@ import (
 	"database/sql"
 	_ "embed"
 	"errors"
+	"log/slog"
 	"os"
 	"os/signal"
 	"path"
 	"slices"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -80,12 +80,12 @@ var fetchCmd = &cobra.Command{
 		}
 		defer db.Close()
 
-		zlog.Debug().Msg("fetching data")
+		log.Debug("fetching data")
 		if _, err = fetch(ctx, cf, db); err != nil {
 			return
 		}
 
-		zlog.Debug().Msg("closing database")
+		log.Debug("closing database")
 		_, err = db.ExecContext(ctx, "VACUUM")
 		return
 	},
@@ -112,7 +112,7 @@ func (i *Sources) Type() string {
 func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string, err error) {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		zlog.Error().Msgf("cannot BEGIN transaction: %s", err)
+		log.Error("cannot BEGIN transaction", slog.Any("error", err))
 		return
 	}
 	defer tx.Rollback()
@@ -124,24 +124,24 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 	if len(fetchCmdSources) == 0 {
 		fetchCmdSources = config.Get[[]string](cf, cf.Join("gdna", "licd-sources"))
 	}
-	zlog.Debug().Msgf("sources: %v", fetchCmdSources)
+	log.Debug("sources", slog.Any("srcs", fetchCmdSources))
 
 	for _, source := range fetchCmdSources {
 		var s []string
-		zlog.Debug().Msgf("reading from %s", source)
+		log.Debug("reading from source", slog.String("src", source))
 		if after, ok := strings.CutPrefix(source, "summary:"); ok {
 			source = after
-			zlog.Debug().Msgf("reading licd report file(s): %s", source)
+			log.Debug("reading licd report file(s)", slog.String("src", source))
 			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
 				return
 			}
 		} else if path.Ext(source) == ".dat" || strings.HasPrefix(path.Base(source), "summary") {
-			zlog.Debug().Msgf("reading licd report file(s): %s", source)
+			log.Debug("reading licd report file(s)", slog.String("src", source))
 			if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
 				return
 			}
 		} else if s, err = readLicdReports(ctx, cf, tx, source, fetchCmdSaveRemoteSources); err != nil {
-			zlog.Error().Err(err).Msgf("readLicenseReports for %s failed", source)
+			log.Error("readLicenseReports failed", slog.Any("error", err), slog.String("src", source))
 			continue
 		}
 		sources = append(sources, s...)
@@ -149,7 +149,7 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 
 	for _, source := range config.Get[[]string](cf, "gdna.licd-reports") {
 		var s []string
-		zlog.Debug().Msgf("reading licd report file(s): %s", source)
+		log.Debug("reading licd report file(s)", slog.String("src", source))
 		if s, err = readLicdReportFile(ctx, cf, tx, source); err != nil {
 			return
 		}

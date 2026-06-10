@@ -26,6 +26,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -37,7 +38,6 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -60,10 +60,10 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		// check and replace short form home in a file DSN
 		dsn = "file:" + config.ResolveHome(after)
 	}
-	zlog.Info().Msgf("opening database using DSN `%s`", dsn)
+	log.Info("opening database", slog.String("dsn", dsn))
 	db, err = sql.Open(dbtype, dsn)
 	if err != nil {
-		zlog.Error().Msgf("cannot connect to database `%s`: %s", dsn, err)
+		log.Error("cannot connect to database", slog.String("dsn", dsn), slog.Any("error", err))
 		return
 	}
 
@@ -99,7 +99,7 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		insertVersion := config.Get[string](cf, cf.Join("db", "gdna-version", "insert"))
 		_, err = db.ExecContext(ctx, insertVersion, sql.Named("version", cordial.VERSION))
 		if err != nil {
-			zlog.Error().Err(err).Msg("updating gdna_version")
+			log.Error("updating gdna_version", slog.Any("error", err))
 		}
 	}
 
@@ -117,7 +117,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 	if err = db.QueryRowContext(ctx, userVersionQuery).Scan(&userVersion); err != nil {
 		return
 	}
-	zlog.Debug().Msgf("user_version = %d", userVersion)
+	log.Debug("user_version", slog.Int64("user_version", userVersion))
 
 	// now look for larger values in config
 	for i := userVersion + 1; ; i++ {
@@ -125,7 +125,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 		if !cf.IsSet(updateBase) {
 			break
 		}
-		zlog.Debug().Msgf("found update %d", i)
+		log.Debug("found update", slog.Int64("version", i))
 		checkQuery := config.Get[string](cf, config.Join(updateBase, "check"))
 		updateQuery := config.Get[string](cf, config.Join(updateBase, "update"))
 
@@ -140,7 +140,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			if err = db.QueryRowContext(ctx, checkQuery).Scan(&required); err != nil {
 				return
 			}
-			zlog.Debug().Msgf("checked: %q -> %d", checkQuery, required)
+			log.Debug("checked", slog.String("query", checkQuery), slog.Int("required", required))
 		}
 
 		if required > 0 {
@@ -151,7 +151,7 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			}
 			defer tx.Rollback()
 
-			zlog.Trace().Msgf("updateQuery:\n%s", updateQuery)
+			log.Debug("updateQuery", slog.String("query", updateQuery))
 			if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
 				return
 			}
@@ -161,13 +161,13 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			}
 			// flag an update has happened, force reload of file sources later on, which then clears it
 			config.Set(cf, "db.updated", true)
-			zlog.Debug().Msgf("completed update to version %d", i)
+			log.Debug("completed update", slog.Int64("version", i))
 		} else {
-			zlog.Debug().Msgf("update %d not required", i)
+			log.Debug("update not required", slog.Int64("version", i))
 		}
 
 		// update user_version
-		zlog.Debug().Msgf("set user_version=%d", i)
+		log.Debug("set user_version", slog.Int64("user_version", i))
 		if _, err = db.ExecContext(ctx, fmt.Sprintf(userVersionUpdate, i)); err != nil {
 			return
 		}
@@ -308,49 +308,49 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 
 	gatewaysInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gateways.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s\n%s", err, config.Get[string](cf, "db.gateways.insert"))
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.gateways.insert")))
 		return
 	}
 	defer gatewaysInsertStmt.Close()
 
 	probesInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.probes.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.probes.insert")))
 		return
 	}
 	defer probesInsertStmt.Close()
 
 	osInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.os-versions.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.os-versions.insert")))
 		return
 	}
 	defer osInsertStmt.Close()
 
 	samplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.samplers.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.samplers.insert")))
 		return
 	}
 	defer samplersInsertStmt.Close()
 
 	caSamplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.ca-samplers.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.ca-samplers.insert")))
 		return
 	}
 	defer caSamplersInsertStmt.Close()
 
 	gwSamplersInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gw-samplers.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.gw-samplers.insert")))
 		return
 	}
 	defer gwSamplersInsertStmt.Close()
 
 	gwComponentsInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.gw-components.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s", err)
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.gw-components.insert")))
 		return
 	}
 	defer gwComponentsInsertStmt.Close()
@@ -365,7 +365,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 			break
 		}
 		if err != nil && !errors.Is(err, csv.ErrFieldCount) {
-			zlog.Error().Err(err).Msgf("error reading CSV line in %s", source)
+			log.Error("error reading CSV line", slog.Any("error", err), slog.String("src", source))
 			return err
 		}
 
@@ -484,7 +484,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 						sql.Named("build", build),
 					)
 					if err != nil {
-						zlog.Error().Err(err).Msgf("inserting os-version %q", osField.String)
+						log.Error("inserting os-version", slog.Any("error", err), slog.String("os", osField.String))
 					}
 				}
 			}
@@ -500,7 +500,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("version", colOrNull("version", columns, fields)),
 			)
 			if err != nil {
-				zlog.Error().Err(err).Msg("inserting probe")
+				log.Error("inserting probe", slog.Any("error", err))
 			}
 
 		case "plugin":
@@ -517,7 +517,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("source", source),
 			)
 			if err != nil {
-				zlog.Error().Err(err).Msg("inserting sampler")
+				log.Error("inserting sampler", slog.Any("error", err))
 			}
 
 		case "ca_plugin":
@@ -540,7 +540,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("source", source),
 			)
 			if err != nil {
-				zlog.Error().Err(err).Msg("inserting CA sampler")
+				log.Error("inserting CA sampler", slog.Any("error", err))
 			}
 
 		case "gateway_component":
@@ -553,7 +553,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("source", source),
 			)
 			if err != nil {
-				zlog.Error().Err(err).Msg("inserting gateway component")
+				log.Error("inserting gateway component", slog.Any("error", err))
 			}
 
 			// also add gateways directly to a gateways table
@@ -567,7 +567,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 					sql.Named("source", source),
 				)
 				if err != nil {
-					zlog.Error().Err(err).Msg("inserting gateway")
+					log.Error("inserting gateway", slog.Any("error", err))
 				}
 			}
 
@@ -581,13 +581,13 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				sql.Named("source", source),
 			)
 			if err != nil {
-				zlog.Error().Err(err).Msg("inserting gateway sampler")
+				log.Error("inserting gateway sampler", slog.Any("error", err))
 			}
 
 		default:
 			// error
 			line, col := c.FieldPos(1)
-			zlog.Error().Msgf("ignoring unknown entry %q on line %d column %d in %s", values["component"], line, col, source)
+			log.Error("ignoring unknown entry", slog.String("component", values["component"]), slog.Int("line", line), slog.Int("column", col), slog.String("src", source))
 		}
 
 		if err != nil {
@@ -633,7 +633,7 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		case "expiry":
 			expiry, err = time.Parse("02 January 2006", row[1])
 			if err != nil {
-				zlog.Error().Err(err).Msgf("license expiry date %q", row[1])
+				log.Error("license expiry date", slog.Any("error", err), slog.String("date", row[1]))
 			}
 		case "mode":
 			mode = strings.ToLower(row[1])
@@ -670,33 +670,33 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 	groupsIndex, ok := columns["group"]
 	if !ok {
-		zlog.Error().Msgf("cannot find `groups` columns in summary report for %s", source)
+		log.Error("cannot find `groups` columns in summary report", slog.String("src", source))
 		return
 	}
 	tokenIndex, ok := columns["token"]
 	if !ok {
-		zlog.Error().Msgf("cannot find `token` columns in summary report for %s", source)
+		log.Error("cannot find `token` columns in summary report", slog.String("src", source))
 		return
 	}
 	totalIndex, ok := columns["total"]
 	if !ok {
-		zlog.Error().Msgf("cannot find `total` columns in summary report for %s", source)
+		log.Error("cannot find `total` columns in summary report", slog.String("src", source))
 		return
 	}
 	usedIndex, ok := columns["used"]
 	if !ok {
-		zlog.Error().Msgf("cannot find `used` columns in summary report for %s", source)
+		log.Error("cannot find `used` columns in summary report", slog.String("src", source))
 		return
 	}
 	freeIndex, ok := columns["free"]
 	if !ok {
-		zlog.Error().Msgf("cannot find `free` columns in summary report for %s", source)
+		log.Error("cannot find `free` columns in summary report", slog.String("src", source))
 		return
 	}
 
 	tokensInsertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, "db.tokens.insert"))
 	if err != nil {
-		zlog.Error().Msgf("cannot prepare statement: %s\n%s", err, config.Get[string](cf, "db.tokens.insert"))
+		log.Error("cannot prepare statement", slog.Any("error", err), slog.String("query", config.Get[string](cf, "db.tokens.insert")))
 		return
 	}
 	defer tokensInsertStmt.Close()
@@ -708,7 +708,7 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		}
 		if len(row) != len(columns) {
 			line, _ := c.FieldPos(1)
-			zlog.Error().Msgf("incorrect column count for %q, line %d", source, line)
+			log.Error("incorrect column count", slog.String("src", source), slog.Int("line", line))
 		}
 		if row[groupsIndex] != "Overall" {
 			// we ignore all non "Overall" group lines
@@ -732,7 +732,7 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 			sql.Named("source", source),
 		)
 		if err != nil {
-			zlog.Error().Err(err).Msg("inserting token")
+			log.Error("inserting token", slog.Any("error", err), slog.String("src", source))
 		}
 	}
 
@@ -778,7 +778,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 	// earlier, so prefixFields is always at least one element long
 	prefixFields := strings.FieldsFunc(root, func(r rune) bool { return r == '.' })
 
-	zlog.Debug().Msgf("called with root %q and selector %q", root, createSelector)
+	log.Debug("called with root and selector", slog.String("root", root), slog.String("selector", createSelector))
 
 	// the `root` could be a config item which is either a slice of
 	// strings with named config items, which are self-contained table
@@ -809,14 +809,14 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 
 	for _, table := range createQueries {
 		if !cf.IsSet(table) {
-			zlog.Debug().Msgf("table %q not in config, skipping", table)
+			log.Debug("table not in config, skipping", slog.String("table", table))
 			continue
 		}
 
 		query := config.Get[string](cf, table, filters)
-		zlog.Trace().Msg(query)
+		log.Debug("query trace", slog.String("query", query))
 		if _, err = tx.ExecContext(ctx, query); err != nil {
-			zlog.Error().Err(err).Msgf("creating table %q with query %q", table, query)
+			log.Error("creating table", slog.String("table", table), slog.String("query", query), slog.Any("error", err))
 			return
 		}
 	}
@@ -828,13 +828,13 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 // as some of the clean-up is based on aggregate functions over all the
 // data.
 func runPostInsertHooks(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
-	zlog.Debug().Msg("running post-insert hooks")
+	log.Debug("running post-insert hooks")
 
 	for _, table := range config.Get[[]string](cf, cf.Join("db", "main-tables")) {
 		if postInsertQuery := config.Get[string](cf, cf.Join("db", table, "post-insert")); postInsertQuery != "" {
-			zlog.Trace().Msgf("post-insert %s:\n%s", table, postInsertQuery)
+			log.Debug("post-insert query", slog.String("table", table), slog.String("query", postInsertQuery))
 			if _, err = tx.ExecContext(ctx, postInsertQuery); err != nil {
-				zlog.Error().Err(err).Msgf("post-insert for %s failed", table)
+				log.Error("post-insert failed", slog.String("table", table), slog.Any("error", err))
 				return err
 			}
 		}
@@ -940,7 +940,7 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName string, lookupTable map[string]string, args ...any) (err error) {
 	query := config.Get[string](cf, config.Join(root, queryName), config.LookupTable(lookupTable))
 	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
-		zlog.Error().Err(err).Msg(query)
+		log.Error("executing SQL", slog.Any("error", err), slog.String("query", query))
 	}
 	return
 }
@@ -982,7 +982,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			privateKeyPath := string(privateKey)
 			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
+				log.Error("parsing licd private key", slog.String("path", privateKeyPath), slog.Any("error", err))
 				return sources, err
 			}
 		}
@@ -990,7 +990,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 		pkey, pkeyType, err := certs.ParsePrivateKey(pk)
 		if err != nil {
-			zlog.Error().Err(err).Msg("parsing private key")
+			log.Error("parsing private key", slog.Any("error", err))
 			return sources, err
 		}
 
@@ -1002,7 +1002,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		case certs.ED25519:
 			signingMethod = jwt.SigningMethodEdDSA
 		default:
-			zlog.Error().Msgf("unsupported licd private key type %q", pkeyType)
+			log.Error("unsupported licd private key type", slog.String("type", string(pkeyType)))
 			return sources, fmt.Errorf("unsupported licd private key type %q", pkeyType)
 		}
 
@@ -1018,7 +1018,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 		signedToken, err = token.SignedString(pkey)
 		if err != nil {
-			zlog.Debug().Err(err).Msg("signing licd JWT token")
+			log.Debug("signing licd JWT token", slog.Any("error", err))
 			return sources, err
 		}
 	}
@@ -1036,13 +1036,13 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			skip := config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify"))
 			roots, err := x509.SystemCertPool()
 			if err != nil {
-				zlog.Warn().Err(err).Msg("cannot read system certificates, continuing anyway")
+				log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
 			}
 
 			if !skip {
 				if chainfile := config.Get[string](cf, cf.Join("gdna", "licd-chain")); chainfile != "" {
 					if chainbytes, err := os.ReadFile(chainfile); err != nil {
-						zlog.Warn().Err(err).Msg("cannot read licd certificate chain, continuing with system certificates only")
+						log.Warn("cannot read licd certificate chain, continuing with system certificates only", slog.Any("error", err))
 					} else {
 						roots.AppendCertsFromPEM(chainbytes) // ignore ok/not ok
 					}
@@ -1095,7 +1095,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			path := filepath.Join(saveRemoteSources, filename)
 			w, err := os.Create(path)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("creating file to save summary report for %s", source)
+				log.Error("creating file to save summary report", slog.String("src", source), slog.Any("error", err))
 			} else {
 				r = io.TeeReader(r, w)
 				defer w.Close()
@@ -1107,7 +1107,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		c.Comment = '#'
 
 		if err = summaryReportToDB(ctx, cf, tx, c, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, ts); err != nil {
-			zlog.Error().Err(err).Msg("")
+			log.Error("processing summary report", slog.String("src", source), slog.Any("error", err))
 			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
 			return sources, err
 		}
@@ -1142,7 +1142,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			path := filepath.Join(saveRemoteSources, filename)
 			w, err := os.Create(path)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("creating file to save detail report for %s", source)
+				log.Error("creating file to save detail report", slog.String("src", source), slog.Any("error", err))
 			} else {
 				r = io.TeeReader(r, w)
 				defer w.Close()
@@ -1161,7 +1161,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		}
 
 	default:
-		zlog.Debug().Msgf("looking for files matching '%s'", source)
+		log.Debug("looking for files matching", slog.String("pattern", source))
 
 		files, err := filepath.Glob(source)
 		if err != nil {
@@ -1169,7 +1169,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		}
 
 		if len(files) == 0 {
-			zlog.Warn().Msgf("no matches for %s", source)
+			log.Warn("no matches found", slog.String("pattern", source))
 			return sources, nil
 		}
 
@@ -1190,7 +1190,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			sources = append(sources, sourceName)
 			s, err = os.Stat(file)
 			if err != nil {
-				zlog.Error().Err(err).Msg("")
+				log.Error("stat file failed", slog.String("file", file), slog.Any("error", err))
 				// record the failure
 				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
 				return sources, err
@@ -1209,24 +1209,24 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			query := config.Expand[string](cf, `SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
 			r1 := tx.QueryRowContext(ctx, query, sourceName)
 			if err := r1.Scan(&tm); err != nil {
-				zlog.Debug().Err(err).Msgf("no data for query %s (source '%s')", query, sourceName)
+				log.Debug("no data for query", slog.String("query", query), slog.String("src", sourceName), slog.Any("error", err))
 			}
 			if tm.Valid {
 				last, err := time.Parse(time.RFC3339, tm.String)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("parse time failed for %s", tm.String)
+					log.Error("parse time failed", slog.String("tm", tm.String), slog.Any("error", err))
 					// drop through, time is nil
 				}
 
 				if ts.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
-					zlog.Debug().Msgf("no update since %s", tm.String)
+					log.Debug("no update since", slog.String("tm", tm.String))
 					continue
 				}
 			}
 
 			r, err := os.Open(file)
 			if err != nil {
-				zlog.Error().Err(err).Msg(file)
+				log.Error("opening file failed", slog.String("file", file), slog.Any("error", err))
 				continue
 			}
 			c := csv.NewReader(r)
@@ -1234,7 +1234,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			c.Comment = '#'
 
 			if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
-				zlog.Error().Err(err).Msg(file)
+				log.Error("processing detail report", slog.String("file", file), slog.Any("error", err))
 				// record error
 				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
 			}
@@ -1246,7 +1246,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 			r, err = os.Open(file)
 			if err != nil {
-				zlog.Debug().Err(err).Msg(file)
+				log.Debug("opening file failed", slog.String("file", file), slog.Any("error", err))
 				continue
 			}
 			c = csv.NewReader(r)
@@ -1255,7 +1255,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 			sn := strings.TrimSuffix(sourceName, "_summary"+filepath.Ext(sourceName)) + filepath.Ext(sourceName)
 			if err = summaryReportToDB(ctx, cf, tx, c, sn, "file", file, ts); err != nil {
-				zlog.Error().Err(err).Msg("")
+				log.Error("processing summary report", slog.String("file", file), slog.Any("error", err))
 				updateSources(ctx, cf, tx, sn, "file", file, false, ts, err)
 				return sources, err
 			}

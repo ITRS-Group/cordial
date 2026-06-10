@@ -21,9 +21,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"os"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -82,18 +83,19 @@ var queryCmd = &cobra.Command{
 				break
 			}
 
-			zlog.Debug().Err(err).Msg("connection error, trying next proxy (if any)")
+			log.Debug("connection error, trying next proxy (if any)", slog.Any("error", err))
 		}
 
 		if err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to query ServiceNow", slog.Any("error", err))
+			os.Exit(1)
 		}
 
 		if !strings.EqualFold(queryCmdFormat, "csv") {
 			b, err := json.MarshalIndent(result.Results, "", "    ")
 			if err != nil {
-				zlog.Error().Err(err).Msg("")
-				return
+				log.Error("failed to marshal results", slog.Any("error", err))
+				os.Exit(1)
 			}
 			fmt.Println(string(b))
 			return

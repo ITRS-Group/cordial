@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
@@ -118,7 +119,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
 	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
 
-	zlog.Debug().Msgf("cmdGlobal %v, cmdKeepHosts %v, cmdWildcardNames %v, cmdAllInstancesMustMatch %v", cmdGlobal, cmdKeepHosts, cmdWildcardNames, cmdAllInstancesMustMatch)
+	log.Debug("command annotations", slog.Bool("cmdGlobal", cmdGlobal), slog.Bool("cmdKeepHosts", cmdKeepHosts), slog.Bool("cmdWildcardNames", cmdWildcardNames), slog.Bool("cmdAllInstancesMustMatch", cmdAllInstancesMustMatch))
 
 	cd := cmddata(c)
 	if cd == nil {

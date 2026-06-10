@@ -23,17 +23,19 @@ import (
 	"path"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // var cf *config.Config
 
 var configFile, Execname, logFile string
 var Debug bool
+
+var log = logger.Logger
 
 func init() {
 	Cmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "override config file")
@@ -53,8 +55,8 @@ func init() {
 		if Debug {
 			l = slog.LevelDebug
 		}
-		cordial.LogInit(Execname, cordial.ToZeroLogLevel(l))
-		zlog.Debug().Msgf("cordial 'servicenow2' running as executable '%s', version %s", cordial.ExecutableName(), cordial.VERSION)
+		slog.SetDefault(cordial.LogInit(Execname, cordial.SetLogLevel(l)))
+		log.Debug("cordial 'servicenow2' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))
 	})
 }
 
@@ -94,14 +96,17 @@ func LoadConfigFile(cmdName string) (cf *config.Config) {
 		config.MustExist(),
 	)
 	if err != nil {
-		zlog.Fatal().Msgf("failed to load a configuration file %q from any expected location", configBasename+".yaml")
+		log.Error("failed to load configuration", slog.Any("error", err))
 	}
-	zlog.Debug().Msgf("loaded config file %s",
-		config.Path(configBasename,
-			config.AppName("geneos"),
-			config.UseGlobal(),
-			config.Format("yaml"),
-			config.FilePath(configFile)),
+	log.Debug("loaded config file",
+		slog.String("path",
+			config.Path(configBasename,
+				config.AppName("geneos"),
+				config.UseGlobal(),
+				config.Format("yaml"),
+				config.FilePath(configFile),
+			),
+		),
 	)
 
 	return

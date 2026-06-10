@@ -22,17 +22,18 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
 	"time"
 
 	"github.com/PagerDuty/go-pagerduty"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 //go:embed pagerduty.defaults.yaml
@@ -61,6 +62,8 @@ var cf *config.Config
 
 var configFile, execname string
 
+var log = logger.Logger
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -71,7 +74,7 @@ func init() {
 	Cmd.PersistentFlags().MarkHidden("help")
 
 	execname = path.Base(os.Args[0])
-	cordial.LogInit(execname)
+	log = cordial.LogInit(execname)
 }
 
 // Cmd represents the base command when called without any subcommands
@@ -114,7 +117,7 @@ func initConfig() {
 		config.WithDefaults(defaults, "yaml"),
 		config.FilePath(configFile))
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("failed to load configuration")
+		log.Error("failed to load configuration", slog.Any("error", err))
 	}
 }
 
@@ -193,7 +196,8 @@ func sendEvent(eventType eventType) (err error) {
 
 	_, err = client.ManageEventWithContext(context.Background(), &v2event)
 	if err != nil {
-		zlog.Fatal().Err(err).Msgf("%+v, %+v", v2event, v2event.Payload)
+		log.Error("error managing event", slog.Any("error", err), slog.Any("event", v2event), slog.Any("payload", v2event.Payload))
+		os.Exit(1)
 	}
 	// log.Info().Msgf("%s", v2resp)
 	os.Exit(0)
@@ -208,7 +212,8 @@ func listServices() {
 	}
 	l, err := client.ListServicesPaginated(context.Background(), opts)
 	if err != nil {
-		zlog.Fatal().Err(err).Msgf("")
+		log.Error("error listing services", slog.Any("error", err))
+		os.Exit(1)
 	}
 	s, _ := json.MarshalIndent(l, "", "    ")
 	fmt.Println(string(s))

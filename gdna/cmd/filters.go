@@ -40,6 +40,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"slices"
@@ -47,7 +48,6 @@ import (
 	"time"
 	"unicode"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -169,7 +169,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 		config.AppName("geneos"),
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
-	zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
+	log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 	// filters := ig.GetSliceStringMapString(config.Join("filters", filterType, category))
 	var filters []Filter
@@ -279,7 +279,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 		config.AppName("geneos"),
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
-	zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
+	log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 	var filters []*Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
@@ -387,13 +387,15 @@ func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterTy
 	)
 
 	if err != nil {
-		zlog.Warn().Err(err).Msg("loading")
+		log.Warn("loading filters failed", slog.Any("error", err))
 	}
 
-	zlog.Debug().Msgf("loaded %ss from %s", filterType, config.Path(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	))
+	log.Debug("loaded filters", slog.String("type", filterType),
+		slog.String("path", config.Path(filterBase,
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
+		)),
+	)
 
 OUTER:
 	for f := range config.Get[map[string]any](cf, cf.Join("filters", filterType)) {
@@ -401,14 +403,14 @@ OUTER:
 
 		// if we are called between reporting db rebuilds, delete existing contents
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			zlog.Info().Err(err).Msgf("delete from %s failed", table)
+			log.Info("delete from table failed", slog.Any("error", err), slog.String("table", table))
 			// NOT an error in itself
 			err = nil
 		}
 
 		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", filterType, f, "insert")))
 		if err != nil {
-			zlog.Error().Err(err).Msgf("prepare for %s failed", table)
+			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
 			continue
 		}
 		defer insertStmt.Close()
@@ -427,7 +429,8 @@ OUTER:
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {
-					zlog.Fatal().Err(err).Msgf("insert for %s failed", table)
+					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
+					os.Exit(1)
 				}
 			}
 			continue OUTER
@@ -453,11 +456,11 @@ OUTER:
 					Time:  *i.Timestamp,
 				}),
 			); err != nil {
-				zlog.Error().Err(err).Msgf("insert for %s failed", table)
+				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
 				break
 			}
 		}
-		zlog.Debug().Msgf("added %d entries to %ss for %s", len(x), filterType, f)
+		log.Debug("added entries to filters", slog.Int("count", len(x)), slog.String("type", filterType), slog.String("filter", f))
 	}
 	return nil
 }

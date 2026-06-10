@@ -3,11 +3,10 @@ package pscmd
 import (
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"path"
 	"strings"
 	"time"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -258,7 +257,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 	}
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
-		zlog.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		i.Log().Debug("pid has CA child process", slog.Int("parent_pid", pi.PID), slog.Int("child_pid", capi.PID))
 		homedir := capi.Cwd
 		hs, err := h.Stat(homedir)
 		if err != nil {

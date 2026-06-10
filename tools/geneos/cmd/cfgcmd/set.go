@@ -19,8 +19,8 @@ package cfgcmd
 
 import (
 	_ "embed"
+	"log/slog"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -33,6 +33,8 @@ func init() {
 
 	// setCmd.Flags().VarP()
 }
+
+var log = cordial.Logger
 
 //go:embed _docs/set.md
 var setCmdDescription string
@@ -67,7 +69,7 @@ geneos config set geneos="/opt/geneos"
 		if err != nil {
 			return
 		}
-		zlog.Debug().Msgf("setting params: %v", params)
+		log.Debug("setting params", slog.Any("params", params))
 		cf.SetKeyValuePairs(params...)
 
 		if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
@@ -77,7 +79,7 @@ geneos config set geneos="/opt/geneos"
 			config.Delete(cf, "itrshome")
 		}
 
-		zlog.Debug().Msgf("save config %q", cordial.ExecutableName())
+		log.Debug("save config", slog.String("config", cordial.ExecutableName()))
 		return cf.Write(cordial.ExecutableName())
 	},
 }

@@ -24,13 +24,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -142,7 +142,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 
 	gateway, entities, probes, err := processInputFile(input)
 	if err != nil {
-		zlog.Error().Err(err).Msg("")
+		log.Error("failed to process input file", slog.Any("error", err))
 	}
 	if gateway == "" {
 		if prefix == "" {
@@ -158,6 +158,7 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 	}
 	_ = os.MkdirAll(dir, 0775)
 
+OUTER:
 	for format, filename := range config.Get[map[string]any](cf, "output.formats") {
 		if filename == "" {
 			continue
@@ -165,28 +166,32 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 		switch format {
 		case "json":
 			if err = outputJSON(cf, gateway, entities, probes); err != nil {
-				break
+				break OUTER
 			}
 		case "csv":
 			if err = outputCSVZip(cf, gateway, entities, probes); err != nil {
-				break
+				break OUTER
 			}
 		case "csvdir":
 			csvFiles, destdir, err := outputCSVDir(cf, gateway, entities, probes)
 			if err != nil {
-				break
+				break OUTER
 			}
 			if config.Get[bool](cf, cf.Join("output", "toolkit-include", "enable")) {
-				zlog.Debug().Msg("building include")
+				log.Debug("building include")
 				err = outputToolkitInclude(cf, gateway, destdir, csvFiles)
+				if err != nil {
+					log.Error("failed to build toolkit include", slog.Any("error", err))
+					break OUTER
+				}
 			}
 		case "xlsx":
 			if err = outputXLSX(cf, gateway, entities, probes); err != nil {
-				break
+				break OUTER
 			}
 		case "xml":
 			if err = outputXML(cf, gateway, savedXML); err != nil {
-				break
+				break OUTER
 			}
 		default:
 			// unknown
@@ -205,7 +210,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 	if !filepath.IsAbs(includeFile) {
 		includeFile = filepath.Join(destdir, includeFile)
 	}
-	zlog.Debug().Msgf("include: %s", includeFile)
+	log.Debug("include file", slog.String("includeFile", includeFile))
 
 	samplers := make([]geneos.Sampler, len(csvFiles))
 	for i, c := range csvFiles {

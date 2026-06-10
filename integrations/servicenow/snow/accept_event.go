@@ -20,12 +20,13 @@ package snow
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -117,7 +118,7 @@ func AcceptEvent(c echo.Context) (err error) {
 		// only lookup user after all defaults applied
 		u, err := snow.GET(Limit("1"), Fields("sys_id"), Query("user_name="+user)).QueryTableDetail("sys_user")
 		if err != nil || len(u) == 0 {
-			zlog.Error().Err(err).Msgf("user not found")
+			log.Error("user not found", slog.Any("error", err), slog.String("user", user))
 			return echo.NewHTTPError(http.StatusNotFound, "User not found")
 		}
 		incident[userfield] = u["sys_id"]

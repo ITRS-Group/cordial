@@ -4,21 +4,27 @@ package memory
 
 import (
 	"fmt"
+	"log/slog"
+	"os"
 	"reflect"
 
+	"github.com/itrs-group/cordial/pkg/logger"
+
 	extmemory "github.com/mackerelio/go-osstat/memory"
-	zlog "github.com/rs/zerolog/log"
 )
 
+var log = logger.Logger
+
 func (p *MemorySampler) DoSample() error {
-	zlog.Debug().Msg("called")
+	log.Debug("called")
 
 	table := [][]string{
 		{"counter", "bytes"},
 	}
 	m, err := extmemory.Get()
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error retrieving memory stats", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// use reflect to paint the structure into a table

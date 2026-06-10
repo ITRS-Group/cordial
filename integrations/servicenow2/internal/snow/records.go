@@ -20,14 +20,15 @@ package snow
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 type results map[string]string
@@ -80,6 +81,8 @@ type TableData struct {
 	CurrentStates map[int]TableStates `mapstructure:"current-state,omitempty"`
 	Response      TableResponses      `mapstructure:"response,omitempty"`
 }
+
+var log = logger.Logger
 
 func LookupRecord(ctx *Context, options ...config.ExpandOption) (sys_id string, state int, err error) {
 	cf := ctx.Conf
@@ -179,7 +182,7 @@ func GetRecord(ctx *Context, table string, options ...Option) (results results, 
 	if len(result.Results) > 0 {
 		results = result.Results[0]
 	}
-	zlog.Debug().Msgf("GetRecord results: %+v", results)
+	log.Debug("GetRecord results", slog.Any("results", results))
 	return
 }
 
@@ -192,9 +195,9 @@ func PostRecord(ctx *Context, table string, record Record, options ...Option) (r
 	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
-			zlog.Debug().Err(err).Msg("failed to marshal trace record for POST request")
+			log.Debug("failed to marshal trace record for POST request", slog.Any("error", err))
 		} else {
-			zlog.Debug().Msgf("POST (Create) %s with record:\n%s", table, js)
+			log.Debug("POST (Create) record", slog.String("table", table), slog.String("record", string(js)))
 		}
 	}
 	_, err = rc.Post(ctx.Request().Context(), AssembleURL(table, options...), record, &r)
@@ -217,9 +220,9 @@ func PutRecord(ctx *Context, table string, record Record, options ...Option) (re
 	if config.Get[bool](cf, "trace") {
 		js, err := json.MarshalIndent(record, "", "    ")
 		if err != nil {
-			zlog.Debug().Err(err).Msg("failed to marshal trace record for PUT request")
+			log.Debug("failed to marshal trace record for PUT request", slog.Any("error", err))
 		} else {
-			zlog.Debug().Msgf("PUT (Update) %s with record:\n%s", table, js)
+			log.Debug("PUT (Update) record", slog.String("table", table), slog.String("record", string(js)))
 		}
 	}
 
@@ -272,7 +275,7 @@ func TableConfig(cf *config.Config, tableName string) (tableData TableData, err 
 	var tables []TableData
 
 	if err = cf.UnmarshalKey("servicenow.tables", &tables, config.NoExpand()); err != nil {
-		zlog.Debug().Err(err).Msg("")
+		log.Debug("failed to unmarshal table configuration", slog.Any("error", err))
 		return
 	}
 	for _, t := range tables {

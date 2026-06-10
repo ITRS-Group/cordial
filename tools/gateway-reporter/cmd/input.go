@@ -22,11 +22,12 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log/slog"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/net/html/charset"
 	"gopkg.in/yaml.v3"
 
@@ -68,7 +69,8 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	}
 
 	if g.OperatingEnvironment == nil {
-		zlog.Fatal().Msg("no operating environment found")
+		log.Error("no operating environment found")
+		os.Exit(1)
 	}
 
 	gateway = g.OperatingEnvironment.GatewayName
@@ -107,13 +109,13 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		} else if entity.VirtualProbe != nil {
 			probename = entity.VirtualProbe.Name
 		} else {
-			zlog.Error().Msgf("no probe set for %q\n", entity.Name)
+			log.Error("no probe set for entity", slog.String("entity", entity.Name))
 			continue
 		}
 
 		probe, ok := probeMap[probename]
 		if !ok {
-			zlog.Error().Msgf("probe %q not found\n", probename)
+			log.Error("probe not found", slog.String("probe", probename))
 		}
 		var hostname string
 		var port int
@@ -131,7 +133,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		case geneos.ProbeTypeVirtual:
 			probename = probe.Name
 		default:
-			zlog.Error().Msgf("%q probe %q not found\n", entity.Name, probename)
+			log.Error("probe not found", slog.String("entity", entity.Name), slog.String("probe", probename))
 		}
 
 		ent.Name = entity.Name
@@ -155,7 +157,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 			// for s := range entity.ResolvedSamplers {
 			t, p, found := strings.Cut(s, ":")
 			if !found {
-				zlog.Error().Msgf("invalid sampler name %q for entity %q\n", s, entity.Name)
+				log.Error("invalid sampler name", slog.String("sampler", s), slog.String("entity", entity.Name))
 				continue
 			}
 			plugin := geneos.GetPlugin(samplers[p].Plugin)
@@ -204,13 +206,12 @@ func pluginName(in any) (name string) {
 			return n
 		}
 	default:
-		zlog.Debug().Msgf("unknown type %T", t)
+		log.Error("unknown type", slog.String("type", fmt.Sprintf("%T", t)))
 	}
 	return ""
 }
 
 func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDescriptor) {
-	// log.Info().Msgf("looking at plugin: %T", in)
 	switch plugin := in.(type) {
 	case *geneos.FKMPlugin:
 		// grab files
@@ -226,7 +227,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			} else if src.NTEventLog != "" {
 				sampler.Column1 = append(sampler.Column1, "NTEventLog:"+src.NTEventLog)
 			} else {
-				zlog.Error().Msg("unsupported FKM source tye")
+				log.Error("unsupported FKM source type")
 			}
 		}
 		if len(sampler.Column1) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
@@ -358,7 +359,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 	case *geneos.SQLToolkitPlugin:
 		sampler.Column1 = []string{plugin.Connection.String()}
 		for _, q := range plugin.Queries {
-			zlog.Debug().Msgf("name, query: %s = %s", q.Name, q.SQL)
+			log.Debug("name, query", slog.String("name", q.Name.String()), slog.String("query", q.SQL.String()))
 			n, _ := strconv.Unquote(q.Name.String())
 			if n == "" || strings.TrimSpace(q.SQL.String()) == "" {
 				if config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
@@ -368,7 +369,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			}
 			sampler.Column2 = append(sampler.Column2, fmt.Sprintf("%q: [\n%.*s\n]", q.Name, 32000, strings.TrimSpace(q.SQL.String())))
 		}
-		zlog.Debug().Msgf("col1: %v, col2: %v", sampler.Column1, sampler.Column2)
+		log.Debug("columns", slog.Any("col1", sampler.Column1), slog.Any("col2", sampler.Column2))
 
 	case *geneos.ControlMPlugin:
 		for _, d := range plugin.Dataviews {
@@ -392,9 +393,6 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				sampler.Column2 = append(sampler.Column2, p)
 			}
 		}
-
-	// case *geneos.JMXServerPlugin:
-	// 	log.Debug().Msg("jmx-server not yet supported")
 
 	case *geneos.WinServicesPlugin:
 		for _, s := range plugin.Services {
@@ -434,10 +432,10 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 
 	case string:
 		if plugin != "" {
-			zlog.Debug().Msgf("plugin %q not yet supported", plugin)
+			log.Debug("plugin not yet supported", slog.String("plugin", plugin))
 		}
 	default:
-		zlog.Debug().Msgf("unsupported plugin %q skipped", plugin)
+		log.Debug("unsupported plugin skipped", slog.Any("plugin", plugin))
 
 	}
 

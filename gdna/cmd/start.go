@@ -22,13 +22,13 @@ import (
 	"database/sql"
 	_ "embed"
 	"io"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -115,7 +115,7 @@ func start() (err error) {
 		return
 	}
 
-	zlog.Debug().Msg("starting scheduler")
+	log.Debug("starting scheduler")
 	sched.Start()
 
 	// save these as a global for config updates
@@ -154,12 +154,12 @@ func start() (err error) {
 		listeners,
 	)
 	if err != nil {
-		zlog.Error().Err(err).Msg("scheduling main job")
+		log.Error("scheduling main job", slog.Any("error", err))
 		return
 	}
 
 	rjt, _ := mainjob.NextRun()
-	zlog.Info().Msgf("next scheduled report job %v", rjt)
+	log.Info("next scheduled report job", slog.Time("at", rjt))
 
 	if es := config.Get[string](cf, cf.Join("gdna", "email-schedule")); es != "" {
 		emailjob, err = sched.NewJob(
@@ -170,11 +170,11 @@ func start() (err error) {
 			listeners,
 		)
 		if err != nil {
-			zlog.Error().Err(err).Msg("scheduling email job")
+			log.Error("scheduling email job", slog.Any("error", err))
 			return err
 		} else {
 			ejt, _ := emailjob.NextRun()
-			zlog.Info().Msgf("next scheduled email job %v", ejt)
+			log.Info("next scheduled email job", slog.Time("at", ejt))
 		}
 	}
 
@@ -199,12 +199,12 @@ func updateJobs() {
 			listeners,
 		)
 		if err != nil {
-			zlog.Error().Err(err).Msg("updating main job")
+			log.Error("updating main job", slog.Any("error", err))
 			return
 		}
 
 		rjt, _ := mainjob.NextRun()
-		zlog.Info().Msgf("next report job %v", rjt)
+		log.Info("next report job", slog.Time("at", rjt))
 	}
 
 	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
@@ -226,11 +226,11 @@ func updateJobs() {
 			)
 		}
 		if err != nil {
-			zlog.Error().Err(err).Msg("updating email job")
+			log.Error("updating email job", slog.Any("error", err))
 			return
 		}
 		ejt, _ := emailjob.NextRun()
-		zlog.Info().Msgf("next email job %v", ejt)
+		log.Info("next email job", slog.Time("at", ejt))
 	}
 
 }
@@ -242,15 +242,15 @@ var listeners = gocron.WithEventListeners(
 )
 
 func beforejob(_ uuid.UUID, jobName string) {
-	zlog.Info().Msgf("running %s", jobName)
+	log.Info("running job", slog.String("job", jobName))
 }
 
 func afterjob(_ uuid.UUID, jobName string) {
-	zlog.Info().Msgf("finished %s", jobName)
+	log.Info("finished job", slog.String("job", jobName))
 }
 
 func afterjoberr(_ uuid.UUID, jobName string, err error) {
-	zlog.Error().Err(err).Msgf("finished %s with error", jobName)
+	log.Error("finished job with error", slog.Any("error", err), slog.String("job", jobName))
 }
 
 func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
@@ -261,7 +261,7 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		zlog.Error().Err(err).Msg("cannot BEGIN transaction")
+		log.Error("cannot BEGIN transaction", slog.Any("error", err))
 		return
 	}
 
@@ -278,7 +278,7 @@ func do(ctx context.Context, cf *config.Config, db *sql.DB) (err error) {
 
 	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
-		zlog.Error().Err(err).Msg("cannot BEGIN transaction")
+		log.Error("cannot BEGIN transaction", slog.Any("error", err))
 		return
 	}
 	defer tx.Rollback()

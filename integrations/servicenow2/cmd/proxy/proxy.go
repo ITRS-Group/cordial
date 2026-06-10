@@ -26,7 +26,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -85,7 +85,8 @@ map and submit incidents.
 			}
 
 			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
-				zlog.Fatal().Err(err).Msg("failed to daemonise process")
+				log.Error("failed to daemonise process", slog.Any("error", err))
+				os.Exit(1)
 			}
 		}
 
@@ -98,7 +99,7 @@ map and submit incidents.
 		cf := cmd.LoadConfigFile("proxy")
 		// update logging for long running proxy
 		cordial.LogInit(cmd.Execname,
-			cordial.ToZeroLogLevel(l),
+			cordial.SetLogLevel(l),
 			cordial.SetLogfile(logFile),
 			cordial.LumberjackOptions(&lumberjack.Logger{
 				Filename:   logFile,
@@ -194,17 +195,17 @@ func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
 	starttime := c.Get("starttime").(time.Time)
 	latency := time.Since(starttime)
 
-	zlog.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
-		config.Get[string](cf, "servicenow.url"), // name of server (APP) with the environment
-		req.Proto,                                // protocol
-		resStatus,                                // response status
+	log.Info("request completed",
+		slog.String("url", config.Get[string](cf, "servicenow.url")), // name of server (APP) with the environment
+		slog.String("protocol", req.Proto),                           // protocol
+		slog.Int("status", resStatus),                                // response status
 		// stats here
-		bytes_in,
-		res.Size,
-		float64(latency.Milliseconds())/1000.0,
-		c.RealIP(), // client IP
-		reqMethod,  // request method
-		req.URL,    // request URI (path)
-		message,
+		slog.String("bytes_in", bytes_in),
+		slog.Int64("bytes_out", res.Size),
+		slog.Float64("latency", float64(latency.Milliseconds())/1000.0),
+		slog.String("client_ip", c.RealIP()), // client IP
+		slog.String("method", reqMethod),     // request method
+		slog.String("url", req.URL.String()), // request URI (path)
+		slog.String("message", message),
 	)
 }

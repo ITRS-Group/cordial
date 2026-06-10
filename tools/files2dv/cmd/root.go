@@ -21,13 +21,13 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -38,6 +38,8 @@ var cfgFile string
 var execname = cordial.ExecutableName()
 var debug, quiet bool
 var d int
+
+var log = cordial.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -149,7 +151,8 @@ func initConfig() {
 
 	cf, err = config.Read(execname, opts...)
 	if err != nil {
-		zlog.Fatal().Err(err).Msgf("loading from %s", config.Path(execname, opts...))
+		log.Error("loading configuration", slog.Any("error", err), slog.String("path", config.Path(execname, opts...)))
+		os.Exit(1)
 	}
 }
 

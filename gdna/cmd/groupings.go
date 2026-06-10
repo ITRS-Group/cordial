@@ -26,13 +26,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"slices"
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -121,7 +121,7 @@ var addGroupCmd = &cobra.Command{
 		}
 		var igPath string
 		if err != nil {
-			zlog.Warn().Err(err).Msg("loading")
+			log.Warn("loading filters failed", slog.Any("error", err))
 			igPath = config.Path(filterBase,
 				config.AppName("geneos"),
 				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
@@ -134,7 +134,7 @@ var addGroupCmd = &cobra.Command{
 				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
-		zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
+		log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 		var groups []Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
@@ -277,7 +277,7 @@ var removeGroupCmd = &cobra.Command{
 
 		var igPath string
 		if err != nil {
-			zlog.Warn().Err(err).Msg("loading")
+			log.Warn("loading filters failed", slog.Any("error", err))
 			igPath = config.Path(filterBase,
 				config.AppName("geneos"),
 				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
@@ -290,7 +290,7 @@ var removeGroupCmd = &cobra.Command{
 				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 			)
 		}
-		zlog.Debug().Msgf("loaded any existing filters from %q", igPath)
+		log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 		var groups []*Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
@@ -299,7 +299,7 @@ var removeGroupCmd = &cobra.Command{
 			panic(err)
 		}
 
-		zlog.Debug().Msgf("groups: %#v", groups)
+		log.Debug("groups loaded", slog.Any("groups", groups))
 		groups = slices.DeleteFunc(groups, func(g *Group) bool {
 			if removeCmdAll {
 				return true
@@ -324,7 +324,7 @@ var removeGroupCmd = &cobra.Command{
 			}
 			return false
 		})
-		zlog.Debug().Msgf("groups: %#v", groups)
+		log.Debug("groups loaded", slog.Any("groups", groups))
 
 		config.Set(ig, ig.Join("filters", "group", category), groups)
 
@@ -365,10 +365,12 @@ var listGroupCmd = &cobra.Command{
 			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
 		)
 
-		zlog.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
-		))
+		log.Debug("loaded groups from filters file",
+			slog.String("path", config.Path(filterBase,
+				config.AppName("geneos"),
+				config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
+			)),
+		)
 
 		if listFormat == "" {
 			listFormat = "table"
@@ -377,7 +379,7 @@ var listGroupCmd = &cobra.Command{
 
 		var rows [][]string
 		for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
-			zlog.Debug().Msgf("processing category %q", category)
+			log.Debug("processing category", slog.String("category", category))
 			var groups []Group
 			if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 				&groups,
@@ -385,7 +387,7 @@ var listGroupCmd = &cobra.Command{
 				panic(err)
 			}
 
-			zlog.Debug().Msgf("groups: %#v, len %d", groups, len(groups))
+			log.Debug("groups loaded", slog.Any("groups", groups), slog.Int("count", len(groups)))
 
 			for _, group := range groups {
 				rows = append(rows, []string{
@@ -420,24 +422,26 @@ func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
-	zlog.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	))
+	log.Debug("loaded groups from filters file",
+		slog.String("path", config.Path(filterBase,
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
+		)),
+	)
 
 OUTER:
 	for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
 		table := config.Get[string](cf, cf.Join("filters", "group", category, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			zlog.Info().Err(err).Msgf("delete from %q %q failed", category, table)
+			log.Info("delete from table failed", slog.String("category", category), slog.Any("error", err), slog.String("table", table))
 			// NOT an error in itself
 			err = nil
 		}
 
 		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", "group", category, "insert")))
 		if err != nil {
-			zlog.Error().Err(err).Msgf("prepare for %s failed", table)
+			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
 			continue
 		}
 		defer insertStmt.Close()
@@ -451,11 +455,11 @@ OUTER:
 
 		// check for defaults
 		if len(groups) == 0 {
-			zlog.Debug().Msgf("%s not in filters file, checking default", category)
+			log.Debug("category not in filters file, checking default", slog.String("category", category))
 
 			defaults := config.Get[[]byte](cf, config.Join("filters", "group", category, "default"))
 			if len(defaults) == 0 {
-				zlog.Debug().Msgf("default %q len 0", config.Join("filters", "group", category, "default"))
+				log.Debug("default length 0", slog.String("path", config.Join("filters", "group", category, "default")))
 				continue OUTER
 			}
 
@@ -476,7 +480,7 @@ OUTER:
 				}
 				if len(fields) < 2 {
 					line, _ := c.FieldPos(0)
-					zlog.Debug().Msgf("source: line %d has an incorrect format, it should be 'name,pattern'", line)
+					log.Debug("source: line has an incorrect format, it should be 'name,pattern'", slog.Int("line", line))
 					continue
 				}
 				//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
@@ -489,13 +493,13 @@ OUTER:
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {
-					zlog.Error().Err(err).Msgf("insert for %s failed", table)
+					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
 					continue OUTER
 				}
 				lines++
 			}
 
-			zlog.Debug().Msgf("read %d lines from defaults and added to %s", lines, table)
+			log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
 			continue OUTER
 		}
 
@@ -521,7 +525,7 @@ OUTER:
 						Time:  *group.Timestamp,
 					}),
 				); err != nil {
-					zlog.Error().Err(err).Msgf("insert for %s failed", table)
+					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
 					continue OUTER
 				}
 			}
@@ -538,24 +542,26 @@ func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) erro
 		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
 	)
 
-	zlog.Debug().Msgf("loaded groups from %s", config.Path(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	))
+	log.Debug("loaded groups from filters file",
+		slog.String("path", config.Path(filterBase,
+			config.AppName("geneos"),
+			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
+		)),
+	)
 
 OUTER:
 	for category := range config.Get[map[string]any](cf, cf.Join("filters", "allocations")) {
 		table := config.Get[string](cf, config.Join("filters", "allocations", category, "table"))
 
 		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			zlog.Info().Err(err).Msgf("delete from %q %q failed", category, table)
+			log.Info("delete from table failed", slog.Any("error", err), slog.String("category", category), slog.String("table", table))
 			// NOT an error in itself
 			err = nil
 		}
 
 		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, config.Join("filters", "allocations", category, "insert")))
 		if err != nil {
-			zlog.Error().Err(err).Msgf("prepare for %s failed", table)
+			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
 			continue
 		}
 		defer insertStmt.Close()
@@ -569,11 +575,11 @@ OUTER:
 
 		// check for defaults
 		if len(allocations) == 0 {
-			zlog.Debug().Msgf("%s not in filters file, checking default", category)
+			log.Debug("category not in filters file, checking default", slog.String("category", category))
 
 			defaults := config.Get[[]byte](cf, config.Join("filters", "allocations", category, "default"))
 			if len(defaults) == 0 {
-				zlog.Debug().Msgf("default %q len 0", config.Join("filters", "allocations", category, "default"))
+				log.Debug("default length 0", slog.String("path", config.Join("filters", "allocations", category, "default")))
 				continue OUTER
 			}
 
@@ -594,7 +600,7 @@ OUTER:
 				}
 				if len(fields) < 3 {
 					line, _ := c.FieldPos(0)
-					zlog.Debug().Msgf("source: line %d has an incorrect format, it should be 'name,pattern'", line)
+					log.Debug("source: line has an incorrect format, it should be 'name,pattern'", slog.Int("line", line))
 					continue
 				}
 				//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
@@ -608,13 +614,13 @@ OUTER:
 					sql.Named("comment", nil),
 					sql.Named("timestamp", nil),
 				); err != nil {
-					zlog.Error().Err(err).Msgf("insert for %s failed", table)
+					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
 					continue OUTER
 				}
 				lines++
 			}
 
-			zlog.Debug().Msgf("read %d lines from defaults and added to %s", lines, table)
+			log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
 			continue OUTER
 		}
 
@@ -640,7 +646,7 @@ OUTER:
 					Time:  *allocation.Timestamp,
 				}),
 			); err != nil {
-				zlog.Error().Err(err).Msgf("insert for %s failed", table)
+				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
 				continue OUTER
 			}
 		}

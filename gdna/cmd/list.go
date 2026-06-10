@@ -19,11 +19,11 @@ package cmd
 
 import (
 	_ "embed"
+	"log/slog"
 	"os"
 	"slices"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -164,7 +164,7 @@ func listReports(cf *config.Config, r reporter.Reporter) (err error) {
 		}
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
-			zlog.Error().Err(err).Msg("reports configuration format incorrect")
+			log.Error("reports configuration format incorrect", slog.Any("error", err), slog.String("report", name))
 			return
 		}
 

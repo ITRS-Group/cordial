@@ -58,7 +58,7 @@ func NewLogger(i geneos.Instance, groups ...string) (l *slog.Logger) {
 	for _, group := range groups {
 		l = l.WithGroup(group)
 	}
-	return l.WithGroup("instance").With(
+	return l.With(
 		slog.String("name", i.Name()),
 		slog.String("host", i.Host().String()),
 		slog.String("type", i.Type().String()),

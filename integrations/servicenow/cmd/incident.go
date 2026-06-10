@@ -23,13 +23,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
@@ -86,7 +86,8 @@ func incident(args []string) {
 		incident["short_description"] = short
 	}
 	if id != "" && rawid != "" {
-		zlog.Fatal().Msg("only one of -id or -rawid can be given")
+		log.Error("only one of -id or -rawid can be given")
+		os.Exit(1)
 	}
 
 	if id != "" {
@@ -133,7 +134,8 @@ func incident(args []string) {
 
 	requestBody, err := json.Marshal(incident)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error marshalling incident", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	var server string
@@ -146,14 +148,16 @@ func incident(args []string) {
 
 	u, err := url.Parse(server)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error parsing URL", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	u.Path = "/api/v1/incident"
 
 	req, err := http.NewRequest("POST", u.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error creating HTTP request", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	bearer := fmt.Sprintf("Bearer %s", config.Get[string](cf, "api.apikey"))
@@ -164,32 +168,38 @@ func incident(args []string) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error making HTTP request", slog.Any("error", err))
+		os.Exit(1)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error reading HTTP response", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if resp.StatusCode > 299 {
-		zlog.Fatal().Msgf("%s %s", resp.Status, string(body))
+		log.Error("HTTP request failed", slog.String("status", resp.Status), slog.String("body", string(body)))
+		os.Exit(1)
 	}
 
 	var result map[string]string
 
 	err = json.Unmarshal(body, &result)
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error unmarshalling HTTP response", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if result["message"] != "" {
-		zlog.Fatal().Msg(result["message"])
+		log.Error(result["message"])
+		os.Exit(1)
 	}
 
 	if result["action"] == "Failed" {
-		zlog.Fatal().Msgf("%s to create event for %s\n", result["action"], result["host"])
+		log.Error("Failed to create event", slog.String("host", result["host"]))
+		os.Exit(1)
 	}
 
 	fmt.Printf("%s %s %s\n", result["event_type"], result["number"], result["action"])
@@ -218,7 +228,7 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 	mapping, ok := severities[strings.ToLower(severity)]
 	if !ok {
 		// do nothing, but log
-		zlog.Printf("no mapping found for severity %q", severity)
+		log.Error("no mapping found for severity", slog.String("severity", severity))
 		return
 	}
 	fields := strings.SplitSeq(mapping, ",")
@@ -227,7 +237,7 @@ func mapSeverity(severity string, incident snow.IncidentFields, severities map[s
 		field = strings.TrimSpace(field)
 		k, v, found := strings.Cut(field, "=")
 		if !found {
-			zlog.Printf("invalid severity mapping %q", field)
+			log.Error("invalid severity mapping", slog.String("field", field))
 			continue
 		}
 

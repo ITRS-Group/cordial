@@ -20,6 +20,7 @@ package cmd
 import (
 	"bufio"
 	"errors"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,8 +28,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
@@ -46,7 +45,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 
 	for _, i := range config.Get[[]string](dv, "ignore-lines") {
 		if r, err := regexp.Compile(i); err != nil {
-			zlog.Error().Err(err).Msgf("compile of '%s' failed", i)
+			log.Error("failed to compile regex", slog.Any("error", err), slog.String("pattern", i))
 		} else {
 			ignores = append(ignores, r)
 		}
@@ -98,7 +97,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		if strings.ContainsAny(path, "*?[\\") {
 			files, err = filepath.Glob(path)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("match of pattern %q failed", path)
+				log.Error("failed to match pattern", slog.Any("error", err), slog.String("pattern", path))
 				continue
 			}
 		} else {
@@ -174,7 +173,7 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 
 			inp, err := os.Open(file)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("cannot open %s", file)
+				log.Error("cannot open file", slog.Any("error", err), slog.String("file", file))
 				continue
 			}
 			maxlines := config.Get[int](dv, "max-lines")

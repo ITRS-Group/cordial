@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"maps"
 	"os"
 	"path"
@@ -327,7 +328,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 	}
 	contents, ok := params[0].(*[]string)
 	if !ok {
-		zlog.Debug().Msgf("invalid contents parameter (%T and not `*[]string`)", contents)
+		i.Log().Debug("invalid contents parameter", slog.Any("contents", contents))
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
@@ -390,14 +391,14 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 		ignoreFiles,
 	); err != nil {
 		// missing dirs and inaccessible files are probably not errors
-		zlog.Debug().Err(err).Msg("")
+		i.Log().Debug("error walking instance home directory", slog.Any("error", err))
 	}
 
 	resp.Completed = []string{"included in backup"}
 
 	// add global tls directory, in all cases
 	if err := walkDir(i.Host(), i.Host().PathTo("tls")+"/", "tls", contents, ignoreDirs, []string{}); err != nil {
-		zlog.Debug().Err(err).Msg("")
+		i.Log().Debug("error walking global TLS directory", slog.Any("error", err))
 	}
 
 	if !backupCmdIncludeShared {
@@ -416,7 +417,7 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 			ignoreFiles,
 		); err != nil {
 			// missing dirs and inaccessible files are probably not errors
-			zlog.Debug().Err(err).Msg("")
+			i.Log().Debug("error walking shared directory", slog.Any("error", err))
 		}
 	}
 

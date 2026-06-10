@@ -3,13 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/url"
+	"os"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/geneos/api"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
+
+var log = logger.Logger
 
 func main() {
 	// var wg sync.WaitGroup
@@ -28,7 +31,7 @@ func main() {
 	flag.Parse()
 
 	if interval < 1*time.Second {
-		zlog.Fatal().Msgf("supplied sample interval (%v) too short, minimum 1 second", interval)
+		log.Error("supplied sample interval too short, minimum 1 second", slog.Duration("interval", interval))
 	}
 
 	// connect to netprobe
@@ -37,7 +40,8 @@ func main() {
 
 	p, err := api.NewXMLRPCClient(u.String(), api.InsecureSkipVerify())
 	if err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error creating XMLRPC client", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	s := api.NewSampler(p, "cpu", entityname, samplername)
@@ -45,7 +49,8 @@ func main() {
 	defer s.Close()
 	s.SetInterval(interval)
 	if err = s.Start(); err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("error starting sampler", slog.Any("error", err))
+		os.Exit(1)
 	}
 	select {} // and wait
 }

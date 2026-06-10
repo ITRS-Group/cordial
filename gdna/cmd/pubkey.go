@@ -20,10 +20,10 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -61,7 +61,7 @@ var pubkeyCmd = &cobra.Command{
 		if pubkeyCmdOutput != "" {
 			file, err := os.Create(pubkeyCmdOutput)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("creating output file %s", pubkeyCmdOutput)
+				log.Error("creating output file failed", slog.Any("error", err), slog.String("file", pubkeyCmdOutput))
 				return err
 			}
 			defer file.Close()
@@ -86,19 +86,19 @@ func printPublicKey() error {
 			privateKeyPath := string(privateKey)
 			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
 			if err != nil {
-				zlog.Error().Err(err).Msgf("parsing licd private key from %s", privateKeyPath)
+				log.Error("parsing licd private key failed", slog.Any("error", err), slog.String("file", privateKeyPath))
 				return err
 			}
 		}
 		defer clear(pk)
 		pubKey, err := certs.PublicKey(pk)
 		if err != nil {
-			zlog.Error().Err(err).Msg("getting public key from private key")
+			log.Error("getting public key from private key failed", slog.Any("error", err))
 			return err
 		}
 		_, err = certs.WritePublicKeyTo(os.Stdout, pubKey)
 		if err != nil {
-			zlog.Error().Err(err).Msg("encoding public key to PEM")
+			log.Error("encoding public key to PEM failed", slog.Any("error", err))
 			return err
 		}
 		return nil

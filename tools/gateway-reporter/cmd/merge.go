@@ -19,12 +19,11 @@ package cmd
 
 import (
 	"bytes"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -71,7 +70,7 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 	i := bytes.Index(output, []byte("<?xml"))
 	if i == -1 {
 		err = err2
-		zlog.Fatal().Err(err).Msg(string(output))
+		log.Error("failed to parse XML", slog.String("output", string(output)))
 	}
 	output = output[i:]
 	return

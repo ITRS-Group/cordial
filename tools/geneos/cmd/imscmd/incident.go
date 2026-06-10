@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
@@ -31,6 +32,8 @@ var incidentCmdDescription string
 func init() {
 	cmd.Cmd.AddCommand(incidentCmd)
 }
+
+var log = cordial.Logger
 
 var incidentCmd = &cobra.Command{
 	Use:          "incident",

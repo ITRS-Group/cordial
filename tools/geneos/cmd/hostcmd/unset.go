@@ -20,10 +20,11 @@ package hostcmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
+	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -32,7 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-var unsetCmdWarned bool
 var unsetCmdKeys values.UnsetValues
 var unsetCmdPrivateKeyfiles PrivateKeyFiles
 
@@ -86,13 +86,13 @@ geneos host unset rem2 -i /path/to/id_rsa
 			return
 		}
 
-		zlog.Debug().Msgf("%d hosts: %v", len(hosts), hosts)
+		log.Debug("hosts", slog.Int("count", len(hosts)), slog.Any("hosts", hosts))
 
 		for _, h := range hosts {
 			if len(unsetCmdKeys) > 0 {
 				for _, key := range unsetCmdKeys {
 					k, _, _ := strings.Cut(key, "=")
-					zlog.Debug().Msgf("will delete %s from host %s", k, h)
+					log.Debug("will delete key from host", slog.String("key", k), slog.String("host", h.String()))
 					config.Delete(h.Config, k)
 				}
 			}

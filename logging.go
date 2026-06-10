@@ -29,8 +29,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/rs/zerolog"
 	zlog "github.com/rs/zerolog/log"
+	"golang.org/x/term"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -126,15 +128,25 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 	zerolog.SetGlobalLevel(opts.level)
 
 	LogHandler = logger.NewHandler(
-		logger.WithLevelVar(&LogLevel),
-		logger.SourceRoot("cordial"),
-		logger.WithDelimiter("."),
+		logger.Leveler(&LogLevel),
+		logger.SourceAnchor("cordial"),
+		logger.Delimiter("."),
 		logger.Writer(out),
+		// logger.JSON(),
 	)
 
 	// set up slog
 	LogLevel.Set(opts.slogLevel)
 	Logger = slog.New(LogHandler)
+
+	if _, ok := out.(*lumberjack.Logger); ok {
+		color.NoColor = true
+	} else if o, ok := out.(*os.File); ok {
+		if !term.IsTerminal(int(o.Fd())) {
+			color.NoColor = true
+		}
+	}
+
 	return Logger
 }
 
@@ -183,8 +195,8 @@ func RotateOnStart(rotate bool) LogOption {
 	}
 }
 
-// ToZeroLogLevel takes a slog debug level to use as a default
-func ToZeroLogLevel(level slog.Level) LogOption {
+// SetLogLevel takes a slog debug level to use as a default
+func SetLogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		lo.slogLevel = level
 		switch level {

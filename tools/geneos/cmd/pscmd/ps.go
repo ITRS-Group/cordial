@@ -21,11 +21,11 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -191,7 +191,7 @@ func psInstanceCommon(i geneos.Instance) (pi *instance.ProcessInfo, base, actual
 	pi, err = instance.GetProcessInfo(i)
 	if err != nil {
 		if !errors.Is(err, os.ErrProcessDone) {
-			zlog.Debug().Err(err).Msgf("failed to get PID info for instance %s", i.Name())
+			i.Log().Debug("failed to get PID info for instance", slog.Any("error", err))
 		}
 		return
 	}
@@ -257,7 +257,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
-		zlog.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		i.Log().Debug("pid has CA child process", slog.Int("parent_pid", pi.PID), slog.Int("child_pid", capi.PID))
 
 		row := []string{}
 		row = append(row,
@@ -342,7 +342,7 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		row := []string{}
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
-		zlog.Debug().Msgf("pid %d has CA child process with pid %d", pi.PID, capi.PID)
+		i.Log().Debug("pid has CA child process", slog.Int("parent_pid", pi.PID), slog.Int("child_pid", capi.PID))
 		if psCmdToolkit {
 			row = append(row, instance.IDString(i)+" # ca")
 		}

@@ -21,8 +21,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-
-	zlog "github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -39,7 +38,7 @@ func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err e
 			}
 			for _, p := range config.Get[[]string](cf, config.Join("plugins", pluginTable, "plugins")) {
 				if _, err = stmt.ExecContext(ctx, p); err != nil {
-					zlog.Error().Err(err).Msg("insert failed")
+					log.Error("insert failed", slog.Any("error", err), slog.String("plugin", p), slog.String("table", table))
 					return
 				}
 			}
