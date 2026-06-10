@@ -247,6 +247,8 @@ COPY --from=build /app/cordial/gdna/gdna.exe /cordial/bin/
 COPY --from=build /app/cordial/gdna/cmd/gdna.defaults.yaml /cordial/etc/geneos/
 COPY --from=build /app/cordial/gdna/gdna.example.yaml /cordial/etc/geneos/gdna.example.yaml
 COPY --from=build /app/cordial/gdna/geneos/* /cordial/etc/geneos/gdna/
+# don't copy *.history that is created on build (delete it afterwards)
+RUN rm -f /cordial/etc/geneos/gdna/*.history
 
 # build tar
 # upx -q /cordial/bin/*; \

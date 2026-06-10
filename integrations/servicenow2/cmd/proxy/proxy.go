@@ -26,7 +26,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -49,6 +48,8 @@ func init() {
 
 	routerCmd.Flags().SortFlags = false
 }
+
+var log = cordial.Logger
 
 // routerCmd represents the proxy command
 var routerCmd = &cobra.Command{

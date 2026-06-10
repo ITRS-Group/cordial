@@ -24,7 +24,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"

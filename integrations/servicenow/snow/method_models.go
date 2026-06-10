@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/labstack/echo/v4"
 )
@@ -50,3 +51,5 @@ type RouterContext struct {
 
 // not a complete test, but just filter characters *allowed*
 var userRE = regexp.MustCompile(`^[\w\.@ ]+$`)
+
+var log = cordial.Logger

@@ -20,7 +20,7 @@ package snow
 import (
 	"bytes"
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,11 +52,13 @@ func InitializeConnection(vc *config.Config) *Connection {
 	if len(pw) == 0 {
 		var passwordfile = config.Get[string](vc, "servicenow.passwordfile")
 		if len(passwordfile) == 0 {
-			log.Fatalln("no password or password file configured")
+			log.Error("no password or password file configured")
+			os.Exit(1)
 		}
 		passwordfile = config.ResolveHome(passwordfile)
 		if pw, err = os.ReadFile(passwordfile); err != nil {
-			log.Fatalf("cannot read password from file %q", passwordfile)
+			log.Error("cannot read password from file", slog.Any("error", err), slog.String("file", passwordfile))
+			os.Exit(1)
 		}
 	}
 	password := strings.TrimSpace(string(pw))

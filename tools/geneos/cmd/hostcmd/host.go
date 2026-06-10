@@ -23,12 +23,15 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 func init() {
 	cmd.Cmd.AddCommand(hostCmd)
 }
+
+var log = cordial.Logger
 
 //go:embed README.md
 var hostCmdDescription string
