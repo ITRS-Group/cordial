@@ -77,17 +77,21 @@ func Start(i geneos.Instance, opts ...any) error {
 		if found {
 			s, err := strconv.Atoi(start)
 			if err != nil {
-				return fmt.Errorf("invalid CPU range %q: %w", c, err)
+				i.Log().Debug("invalid CPU value range start, skipping", slog.String("cpu", c), slog.String("start", start))
+				continue
 			}
 			e, err := strconv.Atoi(end)
 			if err != nil {
-				return fmt.Errorf("invalid CPU range %q: %w", c, err)
+				i.Log().Debug("invalid CPU value range end, skipping", slog.String("cpu", c), slog.String("end", end))
+				continue
 			}
 			for i := s; i <= e; i++ {
 				cpus = append(cpus, i)
 			}
 		} else if cpu, err := strconv.Atoi(c); err == nil {
 			cpus = append(cpus, cpu)
+		} else {
+			i.Log().Debug("invalid CPU value, skipping", slog.String("cpu", c))
 		}
 	}
 
