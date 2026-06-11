@@ -278,6 +278,9 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 				lines = append(lines, line)
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			zlog.Error().Err(err).Msg("")
+		}
 	case logCmdIgnore != "":
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
@@ -286,10 +289,16 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 				lines = append(lines, line)
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
+		}
 	default:
 		scanner := bufio.NewScanner(r)
 		for scanner.Scan() {
 			lines = append(lines, scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
 	}
 
@@ -310,6 +319,9 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 				fmt.Println(line)
 			}
 		}
+		if err := scanner.Err(); err != nil {
+			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
+		}
 	case logCmdIgnore != "":
 		scanner := bufio.NewScanner(reader)
 		for scanner.Scan() {
@@ -318,6 +330,9 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 				outHeader(i, path)
 				fmt.Println(line)
 			}
+		}
+		if err := scanner.Err(); err != nil {
+			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
 	default:
 		s, _ := reader.Seek(0, io.SeekCurrent)
