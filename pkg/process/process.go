@@ -27,7 +27,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// ProcessInfo is an example of a structure to pass to
+// ProcessInfoMinimal is an example of a structure to pass to
 // instance.ProcessStatus, using a field number for `stat` and a line
 // prefix for `status` tags. OpenFiles and OpenSockets fields are counts
 // of their respective names.
