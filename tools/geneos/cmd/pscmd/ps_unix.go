@@ -12,8 +12,9 @@ import (
 var instanceToolkitExtraColumns = []string{
 	"state",
 	"threads",
-	"openfiles",
-	"opensockets",
+	"cpuAffinity",
+	"openFiles",
+	"openSockets",
 	"residentSetSize",
 	"residentSetSizeAnon",
 	"residentSetSizeMax",
@@ -26,6 +27,7 @@ var instanceToolkitExtraColumns = []string{
 var instanceCSVExtraColumns = []string{
 	"State",
 	"Threads",
+	"CPU Affinity",
 	"Open Files",
 	"Open Sockets",
 	"RSS",
@@ -43,6 +45,7 @@ func psInstanceLongColumns(pi *instance.ProcessInfo) []string {
 	return []string{
 		pi.State,
 		fmt.Sprint(pi.Threads),
+		pi.CpusAllowedList,
 		fmt.Sprint(len(pi.OpenFiles)),
 		fmt.Sprint(pi.OpenSockets),
 		fmt.Sprintf("%.2f MiB", float64(pi.VmRSS)/(1024*1024)),

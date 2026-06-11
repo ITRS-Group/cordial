@@ -11,6 +11,7 @@ import (
 var instanceToolkitExtraColumns = []string{
 	"state",
 	"threads",
+	"cpuAffinity",
 	"openfiles",
 	"opensockets",
 	"residentSetSize",
@@ -25,6 +26,7 @@ var instanceToolkitExtraColumns = []string{
 var instanceCSVExtraColumns = []string{
 	"State",
 	"Threads",
+	"CPU Affinity",
 	"Open Files",
 	"Open Sockets",
 	"RSS",
