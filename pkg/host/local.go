@@ -27,6 +27,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"syscall"
 	"time"
 
@@ -232,6 +233,8 @@ func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
 	return nil
 }
 
+var startMutex sync.Mutex
+
 func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error) {
 	po := evalProcessOptions(options...)
 
@@ -241,6 +244,11 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err err
 	} else if !h.IsAbs(errfile) {
 		errfile = path.Join(cmd.Dir, errfile)
 	}
+
+	// Start is not thread-safe due to the use of cmd.Process.Release()
+	// and options CPU affinity settings
+	startMutex.Lock()
+	defer startMutex.Unlock()
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
