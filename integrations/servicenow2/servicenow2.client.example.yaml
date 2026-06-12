@@ -161,11 +161,21 @@ defaults:
       _update_only: true
     unset: [ urgency, impact ]
 
+  - if: [ "${match:_ALERT_TYPE:Deleted}" ]
+    # resolve as data item is removed
+    set:
+      state: 6
+      close_code: Resolved by Caller
+      close_notes: Resolved
+      _update_only: true
+    unset: [ urgency, impact ]
+    exit: 0
+
   - if: [ "${match:_PLUGINNAME:FKM}", "${match:_DATAVIEW:name}" ]
     set:
       # ${replace:_ROWNAME:/#.*$//}
       _correlation_id: ${_GATEWAY}${_NETPROBE_HOST}${_MANAGED_ENTITY}${_SAMPLER}${_DATAVIEW}${_filename}${replace:_triggerDetails:^[\d-]+\s[\d-]+::}
-      
+
 
 # profiles, selected from command line; e.g. `opsview`, `INFRA`, `Apps`
 #
