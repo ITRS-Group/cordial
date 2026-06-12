@@ -61,6 +61,13 @@ type SSHRemote struct {
 	lastAttempt time.Time
 }
 
+// NewSSHRemote returns a new SSHRemote with the given name and options.
+// The name is used as the key for caching SSH and SFTP sessions and so
+// should be unique for each remote host. Options are used to set the
+// hostname, port, username and authentication method (password or
+// private keys) for the remote host. If no options are given then the
+// local username is used and the hostname is set to the name of the
+// remote.
 func NewSSHRemote(name string, options ...any) Host {
 	r := &SSHRemote{
 		name: name,
@@ -199,7 +206,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 	// but not both
 	if signers := readSSHkeys(password, homedir, keyfiles...); len(signers) > 0 {
 		authmethods = append(authmethods, ssh.PublicKeys(signers...))
-	} else if password != nil && len(password) > 0 {
+	} else if len(password) > 0 {
 		authmethods = append(authmethods, ssh.Password(string(password)))
 	}
 
