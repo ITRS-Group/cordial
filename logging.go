@@ -92,7 +92,8 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 
 	// set up slog
 	LogLevel.Set(opts.slogLevel)
-	Logger = slog.New(LogHandler)
+	// update the point
+	*Logger = *slog.New(LogHandler)
 
 	if _, ok := out.(*lumberjack.Logger); ok {
 		color.NoColor = true
