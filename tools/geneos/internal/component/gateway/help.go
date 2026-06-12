@@ -20,8 +20,9 @@ package gateway
 import (
 	_ "embed"
 
-	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/spf13/cobra"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
 // Help command and text to hook into Cobra command tree
