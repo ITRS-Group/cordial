@@ -1,5 +1,21 @@
 # Change Log
 
+## Version v1.27.2
+> [!NOTE]
+> **Released 2026-06-11** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+
+### Version v1.27.2 Fixes
+
+### Version v1.27.2 Changes
+
+* Updated all components to to use Go `slog` for logging
+
+* `tools/geneos`
+
+  * Added support to set CPU Affinity for local Linux instances. The list of CPU cores to use can be set using the `cpus` parameters for all instances as a comma separated list decimal values including ranges, e.g. `cpus=0-3,5,7-9` to use cores 0,1,2,3,5,7,8 and 9. The `status`/`ps` command will show the Linux `Cpus_Allowed_list` value for each running instance when called with the `--long`/`-l` option.
+
+---
+
 ## Version v1.27.1
 
 > [!NOTE]
