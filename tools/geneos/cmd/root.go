@@ -299,6 +299,10 @@ var configPath string
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	if debug {
+		cordial.LogLevel.Set(slog.LevelDebug)
+	}
+
 	log.Debug("cordial 'geneos' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))
 
 	// `oldConfDir` is the original path to the user configuration,
