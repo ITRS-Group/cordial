@@ -20,9 +20,9 @@ When a Gateway instance is created, a simple `gateway.setup.xml` file is created
 
 An `instance.setup.xml` file is created in the Gateway instance directory. This file is built using the template file `${GENEOS_HOME}/gateway/templates/instance.setup.xml.gotmpl` and is "included" by the `gateway.setup.xml` file and contains settings synthesised from the instance configuration. This file is always updated when using the `geneos set`, `geneos unset` and `geneos rebuild` commands, regardless of the `config::rebuild` parameter. If you add environment variables to the instance configuration then they are added to the `instance.setup.xml` file as variables with names of the form `_ENV_VAR_NAME` and string values. For example, if you set an environment variable of `FOO=BAR` then a variable named `_ENV_FOO` with value `BAR` is created in the `instance.setup.xml` file. Any variables you add to the instance configuration using `geneos set gateway GATEWAY -v type:name=value` are also added to the `instance.setup.xml` file as variables with their specified names, types and values. For example, if you set a variable of `NAME=VALUE` with type `string` then a variable named `NAME` with value `VALUE` and type `string` is created in the `instance.setup.xml` file. This behaviour can be customised by setting the `config::template` parameter to use a different template that does not include these variables or includes them in a different way.
 
-### Standard Parameters
+### Required Parameters
 
-Standard parameters always have values, using a default if not changed in the configuration file.
+Required parameters always have values, using default values if not changed in the configuration file. Note that in some cases the deault is an empty value, which is different to the parameter being unset. For example, if `logdir` is unset then the default is to use the `home` directory of the instance for logs, but if `logdir` is set to an empty value then no log directory is used and the `logfile` parameter is used as an absolute path.
 
 In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installation, which is normally `/opt/itrs/geneos` but can be set during initialisation, and values like `${config:PARAMETER}` are references to another configuration parameters, which are evaluated and replaced in the resulting value.
 
@@ -62,11 +62,9 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 
   This parameter is combined with any `LD_LIBRARY_PATH` environment variable to create the `LD_LIBRARY_PATH` used when starting the Gateway. The default is the `lib64` directory of the Gateway installation version and the standard system library directory.
 
-* `options` (Default: Empty)
+* `cpus` (Default: Empty)
 
-  A space separated set of additional options to append to the command line of the Gateway. For example, when you create a "demo" environment using `geneos init demo` the Gateway gets a `option` of `-demo`. The contents are split on space before being passed as individual arguments; this means that it is not possible to use arguments containing spaces, such as a file path.
-
-  To pass extra parameters to the Gateway just once please see the `--extra`/`-x` option of the `geneos start`, `geneos restart` and `geneos deploy` commands.
+  For local Linux instances, a comma separated list of CPU numbers to set the CPU affinity to when starting the Gateway. The value should be a list of decimal values, including ranges. For example, `0-3,5,7-9` would set the affinity to CPUs 0,1,2,3,5,7,8 and 9. If empty then no CPU affinity is set and the Gateway may be scheduled by the kernel onto any available CPU cores.
 
 * `licdhost` (Default: `localhost`)
 * `licdport` (Default: `7041`)
@@ -103,29 +101,6 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 
   The port range is defined in the top-level configuration as `gateway::ports` and defaults to `7038-7039,7100-`. You can change this using `geneos config set gateway::ports="..."`. See the `geneos config` command for more details.
 
-* `insecureport` (Default: Unset)
-
-  An optional additional port to listen on for non-TLS connections. This allows the Gateway to support both TLS and non-TLS connections at the same time.
-
-* `tls`
-
-  * `tls::certificate` (Default: `${config:home}/gateway.pem`)
-  * `tls::privatekey` (Default: `${config:home}/gateway.key`)
-  * `tls::verify` (Default: `false`)
-  * `tls::ca-bundle` (Default: `${GENEOS_HOME}/tls/ca-bundle.pem`)
-  * `tls::minimumversion` (Default: `1.2`)
-
-  These parameters control TLS for Gateway connections. If `tls::certificate` and `tls::privatekey` are set then TLS is enabled and the Gateway is started with the appropriate options. The default is to have TLS enabled with the certificate and private key files in the instance home directory. If `tls::verify` is set to `true` then the Gateway will verify the remote endpoints it connects to, using the trusted roots in `tls::ca-bundle`.
-
-  If `tls::verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
-
-  Deprecated parameters for TLS are also supported for backwards compatibility but should not be used in new configurations. If you are upgrading from an older version of `cordial` there is a `geneos tls migrate` command to help you. These deprecated parameters are:
-
-  * `certificate`
-  * `privatekey`
-  * `certchain`
-  * `use-chain`
-
 * `autostart` (Default: `true`)
 
   Gateway instances are set to be started with the default `geneos start` command. Setting `autostart` to false is different to using `geneos disable` to stop an instance from running. This can be used for instances that only need to be run occasionally or manually, for example a load monitoring Gateway instance. To start a Gateway that has `autostart` set to false you must give both the type and the name to the `geneos start` command, for example `geneos start gateway example2`.
@@ -135,6 +110,45 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
   If `true` then the instance is protected from being changed or deleted by the `geneos start`, `geneos stop`, `geneos restart` or `geneos delete` and similar commands. This is useful for critical instances that should not be accidentally modified or removed. When an instance is protected, any attempt to change or delete it using the above commands will result in an error message unless the command is run with the `--force` option.
 
   This is different to using `geneos disable` to stop an instance from running. This can be used for instances that should not be changed or deleted, for example a production Gateway instance.
+
+### TLS Parameters
+
+* `tls::certificate` (Default: `${config:home}/gateway.pem`)
+* `tls::privatekey` (Default: `${config:home}/gateway.key`)
+* `tls::verify` (Default: `false`)
+* `tls::ca-bundle` (Default: `${GENEOS_HOME}/tls/ca-bundle.pem`)
+* `tls::minimumversion` (Default: `1.2`)
+
+These parameters control TLS for the Gateway. TLS is enabled by default with the certificate and private key files in the instance home directory. If `tls::verify` is set to `true` then the Gateway will verify the remote endpoints it connects to, using the trusted roots in `tls::ca-bundle`. If `tls::verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
+
+If `tls::verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
+
+Deprecated parameters for TLS are also supported for backwards compatibility but should not be used in new configurations. If you are upgrading from an older version of `cordial` there is a `geneos tls migrate` command to help you. These deprecated parameters are (top-level pparameters, not under `tls`):
+
+* `certificate`
+* `privatekey`
+* `certchain`
+* `use-chain`
+
+### Optional Parameters
+
+* `options` (Default: Unset)
+
+  A space separated set of additional options to append to the command line of the Gateway. For example, when you create a "demo" environment using `geneos init demo` the Gateway gets a `option` of `-demo`. The contents are split on space before being passed as individual arguments; this means that it is not possible to use arguments containing spaces, such as a file path.
+
+  To pass extra parameters to the Gateway just once please see the `--extra`/`-x` option of the `geneos start`, `geneos restart` and `geneos deploy` commands.
+
+* `insecureport` (Default: Unset)
+
+  An optional additional port to listen on for non-TLS connections. This allows the Gateway to support both TLS and non-TLS connections at the same time.
+
+### Configuration Parameters for `geneos rebuild`
+
+When creating a new Gateway instance two XML setup files are created.
+
+An `instance.setup.xml` include file is created and contains settings synthesised from the instance configuration. It is always updated when using the `geneos rebuild` command. This file is rebuilt regardless of the `config::rebuild` parameter.
+
+A default `gateway.setup.xml` file is also created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config::rebuild` to `never`.
 
 * `config::rebuild` (Default: `initial`)
 
@@ -151,6 +165,14 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 * `includes` (Default: Empty)
 
   A list of include files to be used when building the Gateway setup file from templates.
+
+  Gateways support the setting of Include files for use in templated configurations. These are set similarly to the `-e` parameters:
+
+  ```text
+  geneos set gateway example2 -i 100:/path/to/include
+  ```
+
+  The setting value is `priority:path` and path can be a relative or absolute path or a URL. In the case of a URL the source is NOT downloaded but instead the URL is written as-is in the template output.
 
 ### Centralised Configuration
 
@@ -169,21 +191,3 @@ Also, you should set `setup` to either an empty value or the literal `none` to t
 * `kerberos-principal` and `kerberos-keytab`
 
   To authenticate using Kerberos, set these parameters as documented in the Gateway Installation Guide.
-
-## Gateway templates
-
-When creating a new Gateway instance two setup files are created.
-
-An `instance.setup.xml` include file is created and contains settings synthesised from the instance configuration. It is always updated when using the `geneos rebuild` command. This file is rebuilt regardless of the `config::rebuild` parameter.
-
-A default `gateway.setup.xml` file is also created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config::rebuild` to `never`.
-
-### Gateway variables for templates
-
-Gateways support the setting of Include files for use in templated configurations. These are set similarly to the `-e` parameters:
-
-```text
-geneos set gateway example2 -i 100:/path/to/include
-```
-
-The setting value is `priority:path` and path can be a relative or absolute path or a URL. In the case of a URL the source is NOT downloaded but instead the URL is written as-is in the template output.
