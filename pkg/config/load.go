@@ -347,6 +347,13 @@ func Path(module string, options ...FileOption) string {
 		return "internal defaults"
 	}
 
+	// passing MustExist to Path() means we want to know if a file would
+	// be found, but we don't want to return "internal defaults" or
+	// "none" if not, we just want to know if a file would be found or
+	// not, so return an empty string if not found and MustExist is set.
+	// Otherwise return "none" if not found and no internal defaults, or
+	// "internal defaults" if not found but internal defaults are
+	// defined.
 	if opts.mustExist {
 		return ""
 	}
