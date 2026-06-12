@@ -27,9 +27,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
@@ -76,17 +78,19 @@ func ReadAll(source string) (b []byte, err error) {
 }
 
 // openSource returns an io.ReadCloser and the base filename for the
-// given source. The source can be a `https` or `http“ URL or a path to
-// a file or '-' for STDIN.
+// given source. The source can be a `https` or `http` URL, an `sftp`
+// URL (including directories) or a path to a file or '-' for STDIN.
 //
-// URLs are Parsed and fetched with the `http.Get“ function and so
-// support proxies and basic authentication as supported by the http
-// package.
+// `http` and `https` URLs are parsed and fetched with the `http.Get`
+// function and so support proxies and basic authentication as supported
+// by the http package.
+//
+// `sftp` URLs are parsed and fetched using the cordial `pkg/host` package.
 //
 // As a special case, if the file path begins '~/' then it is relative
 // to the home directory of the calling user, otherwise it is opened
 // relative to the working directory of the process. If passed the
-// option `geneos.Homedir()“ then this is used instead of the calling
+// option `geneos.Homedir()` then this is used instead of the calling
 // user's home directory
 //
 // If source is a path to a directory then `geneos.ErrIsADirectory` is
@@ -99,48 +103,90 @@ func openSource(source string, options ...PackageOption) (from io.ReadCloser, fi
 
 	switch {
 	case IsURL(source):
-		var req *http.Request
-		var resp *http.Response
-
-		client := &http.Client{}
-
-		req, err = http.NewRequest("GET", source, nil)
-		if err != nil {
-			return nil, "", -1, err
+		u, err2 := url.ParseRequestURI(source)
+		if err2 != nil {
+			return nil, "", -1, err2
 		}
 
-		// add any headers
-		for _, h := range opts.headers {
-			name, value, found := strings.Cut(h, "=")
-			if found {
-				req.Header.Add(name, value)
+		switch u.Scheme {
+		case "http", "https":
+
+			var req *http.Request
+			var resp *http.Response
+
+			client := &http.Client{}
+
+			req, err = http.NewRequest("GET", source, nil)
+			if err != nil {
+				return nil, "", -1, err
 			}
-		}
-		req1 := req.Clone(req.Context())
-		resp, err = client.Do(req1)
-		if err != nil {
-			return
-		}
 
-		// only use auth if required
-		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			if opts.username != "" {
-				req2 := req.Clone(req.Context())
-				pw := opts.password
-				req2.SetBasicAuth(opts.username, string(pw))
-				if resp, err = client.Do(req2); err != nil {
-					return
+			// add any headers
+			for _, h := range opts.headers {
+				name, value, found := strings.Cut(h, "=")
+				if found {
+					req.Header.Add(name, value)
 				}
 			}
-		}
+			req1 := req.Clone(req.Context())
+			resp, err = client.Do(req1)
+			if err != nil {
+				return
+			}
 
-		if resp.StatusCode > 299 {
-			return nil, "", -1, fmt.Errorf("server returned %s for %q", resp.Status, source)
-		}
+			// only use auth if required
+			if resp.StatusCode == 401 || resp.StatusCode == 403 {
+				if opts.username != "" {
+					req2 := req.Clone(req.Context())
+					pw := opts.password
+					req2.SetBasicAuth(opts.username, string(pw))
+					if resp, err = client.Do(req2); err != nil {
+						return
+					}
+				}
+			}
 
-		from = resp.Body
-		filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
-		filesize = resp.ContentLength
+			if resp.StatusCode > 299 {
+				return nil, "", -1, fmt.Errorf("server returned %s for %q", resp.Status, source)
+			}
+
+			from = resp.Body
+			filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
+			filesize = resp.ContentLength
+		case "sftp":
+			// use the SSHRemote implementation to open the source. If
+			// it's a directory then scan for matching releases
+			port, err := strconv.Atoi(u.Port())
+			if err != nil {
+				port = 22
+			}
+			password, _ := u.User.Password()
+			h := host.NewSSHRemote(
+				u.Host,
+				host.Hostname(u.Hostname()),
+				host.Username(u.User.Username()), // username is the login name for the remote host
+				host.Password([]byte(password)),  // password is the login password for the remote host
+				host.Port(uint16(port)),
+			)
+			p := strings.TrimPrefix(u.Path, "/")
+			s, err := h.Stat(p)
+			if err != nil {
+				return nil, "", -1, err
+			}
+			if s.IsDir() {
+				// scan dir, later
+				return nil, "", -1, fmt.Errorf("source is a directory, scanning for matching releases is not yet implemented")
+			} else {
+				from, err = h.Open(p)
+				if err != nil {
+					return nil, "", -1, err
+				}
+				filename = path.Base(p)
+				filesize = s.Size()
+			}
+		default:
+			return nil, "", -1, fmt.Errorf("unsupported URL scheme %q", u.Scheme)
+		}
 	case source == "-":
 		from = os.Stdin
 		filename = "STDIN"
