@@ -18,9 +18,8 @@ limitations under the License.
 package values
 
 import (
+	"log/slog"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 )
 
 // Includes is a map of include file priority to path
@@ -49,7 +48,7 @@ func (i *Includes) Set(value string) error {
 		path = b
 	} else {
 		// XXX check two values and first is a number
-		zlog.Debug().Msgf("second value missing after ':', using default %s", priority)
+		log.Debug("second value missing after ':', using default", slog.String("priority", priority))
 	}
 	(*i)[priority] = path
 	return nil

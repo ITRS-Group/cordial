@@ -23,8 +23,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
+
+var log = cordial.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(tlsCmd)

@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
 )
@@ -33,20 +31,20 @@ func send(w http.ResponseWriter, r *http.Request) {
 	rv := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := rv.(*ims.Response)
 	if !ok {
-		zlog.Debug().Msgf("response not correct type in request context")
+		log.Debug("response not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	v := r.Context().Value(ims.ContextKeyConfig)
 	if v == nil {
-		zlog.Debug().Msgf("config not found in request context")
+		log.Debug("config not found in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	cf, ok := v.(*config.Config)
 	if !ok {
-		zlog.Debug().Msgf("config not correct type in request context")
+		log.Debug("config not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}

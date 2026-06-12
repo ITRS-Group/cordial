@@ -22,11 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -152,11 +152,11 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 
 	// check if instance already exists
 	if !i.Loaded().IsZero() {
-		zlog.Error().Msgf("%s already exists", i)
+		i.Log().Error("already exists")
 		return
 	}
 
-	zlog.Debug().Msgf("writing config for new instance %s", i)
+	i.Log().Debug("writing config for new instance")
 	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 		return resp.Err
 	}
@@ -167,24 +167,26 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 			if len(addCmdBundlePassword) == 0 {
 				addCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
-					zlog.Fatal().Err(err).Msg("Failed to read password")
+					log.Error("Failed to read password", slog.Any("error", err))
 					return err
 				}
 				defer clear(addCmdBundlePassword)
 			}
 			certBundle, err = certs.P12ToCertBundle(addCmdInstanceBundle, addCmdBundlePassword)
 			if err != nil {
-				zlog.Fatal().Err(err).Msg("Failed to parse PFX file")
+				log.Error("Failed to parse PFX file", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
 				return err
 			}
 		} else {
 			certChain, err := config.ReadPEM(addCmdInstanceBundle, "instance certificate(s)")
 			if err != nil {
-				zlog.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+				log.Error("Failed to read instance certificate(s)", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
+				return err
 			}
 			certBundle, err = certs.ParsePEM(certChain, nil)
 			if err != nil {
-				zlog.Fatal().Err(err).Msg("Failed to decompose PEM")
+				log.Error("Failed to decompose PEM", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
+				return err
 			}
 			if certBundle.Leaf == nil || certBundle.Key == nil {
 				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
@@ -214,10 +216,10 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		}
 
 		// always set the ca-bundle path, updated or not
-		zlog.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
+		i.Log().Debug("setting TLS CA bundle path", slog.String("path", geneos.PathToCABundlePEM(h)))
 		config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
 
-		zlog.Debug().Msgf("writing config for instance %s with certificate bundle", i)
+		i.Log().Debug("writing config for instance with certificate bundle")
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return resp.Err
 		}
@@ -225,7 +227,8 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 
 	// call components specific Add()
 	if err = i.Add(addCmdTemplate, addCmdPort, addCmdInsecure || addCmdInstanceBundle != ""); err != nil {
-		zlog.Fatal().Err(err).Msg("")
+		log.Error("failed to add instance", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	if addCmdBase != "active_prod" {
@@ -253,7 +256,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 			// set usekeyfile for all new instances 5.14 and above
 			if instance.CompareVersion(i, "5.14.0") >= 0 {
 				// use keyfiles
-				zlog.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+				i.Log().Debug("gateway version 5.14.0 or above, using keyfiles on creation")
 				config.Set(cf, "usekeyfile", "true")
 			}
 		}
@@ -276,7 +279,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		}
 	}
 
-	zlog.Debug().Msgf("writing config for new instance %s with extras", i)
+	i.Log().Debug("writing config for new instance with extras")
 	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 		return resp.Err
 	}
@@ -292,7 +295,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 	basemame := config.Get[string](cf, "version")
 	exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basemame))
 	if !exists {
-		zlog.Debug().Msgf("instance %s: base version %s does not exist, attempting to create with an update", i, basemame)
+		i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basemame))
 		geneos.Update(h, ct, geneos.Basename(basemame))
 	}
 

@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 	"unicode"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -62,7 +61,7 @@ func openRemoteArchive(ct *Component, options ...PackageOption) (filename string
 		return
 	}
 
-	zlog.Debug().Msgf("download check for %s versions %q returned %s (%d bytes)", ct, opts.version, filename, resp.ContentLength)
+	log.Debug("download check for versions", slog.String("component", ct.String()), slog.String("version", opts.version), slog.String("filename", filename), slog.Int64("contentLength", resp.ContentLength))
 	return
 }
 
@@ -85,7 +84,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 
 		if opts.version != "latest" {
 			if platform != "" {
-				zlog.Error().Msgf("cannot download specific version for this platform (%q) - please download manually", platform)
+				log.Error("cannot download specific version for this platform - please download manually", slog.String("platform", platform))
 				err = ErrInvalidArgs
 				return
 			}
@@ -124,12 +123,12 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		basepath.RawQuery = v.Encode()
 		source = downloadURL.ResolveReference(basepath).String()
 
-		zlog.Debug().Msgf("source url: %s", source)
+		log.Debug("source url", slog.String("url", source))
 
 		var req *http.Request
 		req, err = http.NewRequest("GET", source, nil)
 		if err != nil {
-			zlog.Error().Err(err).Msg("source, trying next if configured")
+			log.Error("source, trying next if configured", slog.Any("error", err))
 			continue
 		}
 
@@ -144,7 +143,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		req1 := req.Clone(req.Context())
 
 		if resp, err = client.Do(req1); err != nil {
-			zlog.Error().Err(err).Msg("source, trying next if configured")
+			log.Error("source, trying next if configured", slog.Any("error", err))
 			continue
 		}
 
@@ -166,10 +165,10 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			basepath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(basepath).String()
 
-			zlog.Debug().Msgf("platform download failed, retry source url: %q", source)
+			log.Debug("platform download failed, retry source url", slog.String("url", source))
 			req2 := req.Clone(req.Context())
 			if resp, err = client.Do(req2); err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			if resp.StatusCode < 300 {
@@ -195,7 +194,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			}
 			authBody, err = json.Marshal(da)
 			if err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			// make a copy as bytes.NewBuffer() takes ownership
@@ -204,15 +203,15 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		}
 
 		if authReader == nil {
-			zlog.Error().Msg("source requires authentication but no credentials found, trying next if configured")
+			log.Error("source requires authentication but no credentials found, trying next if configured")
 			continue
 		}
-		zlog.Debug().Msgf("retrying source %q with auth", source)
+		log.Debug("retrying source with auth", slog.String("url", source))
 
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			req, err = http.NewRequest("POST", source, authReader)
 			if err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			req.Header.Set("Content-Type", "application/json")
@@ -224,7 +223,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 				}
 			}
 			if resp, err = client.Do(req); err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			if resp.StatusCode < 300 {
@@ -243,10 +242,10 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			basepath.RawQuery = v.Encode()
 			source = downloadURL.ResolveReference(basepath).String()
 
-			zlog.Debug().Msgf("trying source %q with auth", source)
+			log.Debug("trying source with auth", slog.String("url", source))
 			req, err = http.NewRequest("POST", source, authReader)
 			if err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			req.Header.Set("Content-Type", "application/json")
@@ -258,14 +257,14 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 				}
 			}
 			if resp, err = client.Do(req); err != nil {
-				zlog.Error().Err(err).Msg("source, trying next if configured")
+				log.Error("source, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			if resp.StatusCode < 300 {
 				return
 			}
 		}
-		zlog.Debug().Msgf("%s not found, trying next if configured", source)
+		log.Debug("source not found, trying next if configured", slog.String("url", source))
 	}
 	return
 }
@@ -337,7 +336,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 		v.Set("maven.artifactId", artifactId)
 		downloadURL.RawQuery = v.Encode()
 		source = downloadURL.String()
-		zlog.Debug().Msgf("nexus url: %s", source)
+		log.Debug("nexus url", slog.String("url", source))
 		if req, err = http.NewRequest("GET", source, nil); err != nil {
 			return
 		}
@@ -349,14 +348,14 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 			}
 		}
 		if opts.username != "" {
-			zlog.Debug().Msgf("setting creds for %s", opts.username)
+			log.Debug("setting creds", slog.String("username", opts.username))
 			req.SetBasicAuth(opts.username, string(opts.password))
 		}
 		if resp, err = client.Do(req); err != nil {
-			zlog.Debug().Err(err).Msg("req failed")
+			log.Debug("request failed", slog.Any("error", err))
 			return
 		}
-		zlog.Debug().Msg(resp.Status)
+		log.Debug("response status", slog.String("status", resp.Status))
 		if resp.StatusCode < 300 {
 			return
 		}

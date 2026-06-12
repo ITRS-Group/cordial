@@ -26,12 +26,16 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/itrs-group/cordial"
 )
 
 type ResultsResponse struct {
 	Fields  []string `json:"fields,omitempty"`
 	Results results  `json:"results,omitempty"`
 }
+
+var log = cordial.Logger
 
 var snowFieldRE = regexp.MustCompile(`^[\w\.-]+$`)
 

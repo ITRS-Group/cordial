@@ -22,11 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -128,15 +128,17 @@ func revertCommands() (err error) {
 		}
 		realpath = filepath.ToSlash(realpath)
 		if realpath != geneosExec {
-			zlog.Debug().Msgf("%s is not a link to %s, skipping", path, geneosExec)
+			log.Debug("not a link to geneos executable", slog.String("path", path), slog.String("geneosExec", geneosExec))
 			continue
 		}
 
 		if err = os.Remove(path); err != nil {
-			zlog.Fatal().Err(err).Msgf("cannot remove symlink %s, please take action to resolve", path)
+			log.Error("cannot remove symlink", slog.Any("error", err), slog.String("path", path))
+			return err
 		}
 		if err = os.Rename(path+".orig", path); err != nil {
-			zlog.Fatal().Err(err).Msgf("cannot rename %s.orig, please take action to resolve", path)
+			log.Error("cannot rename symlink", slog.Any("error", err), slog.String("path", path))
+			return err
 		}
 		fmt.Printf("%s reverted\n", path)
 	}

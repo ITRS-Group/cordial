@@ -26,7 +26,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -68,14 +67,6 @@ func init() {
 
 func initConfig() {
 	var err error
-	if quiet {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	} else if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
 	opts := []config.FileOption{
 		config.AppName("geneos"),
 		config.FilePath(cfgFile),

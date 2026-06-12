@@ -20,6 +20,7 @@ package cmd
 import (
 	"encoding/pem"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"slices"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -77,7 +77,7 @@ var serverCmd = &cobra.Command{
 		if config.Get[bool](cf, "server.tls.enable") {
 			usetls = "s"
 		}
-		zlog.Info().Msgf("starting %s version %s. listening for %s connections on %s:%d", cordial.ExecutableName(), cordial.VERSION, "http"+usetls, config.Get[string](cf, "server.host"), config.Get[uint16](cf, "server.port"))
+		log.Info("starting server", slog.String("version", cordial.VERSION), slog.String("protocol", "http"+usetls), slog.String("host", config.Get[string](cf, "server.host")), slog.Int("port", config.Get[int](cf, "server.port")))
 		cs, e := initServer(cf)
 		go cs.startServer(e)
 		<-done
@@ -96,7 +96,7 @@ func initServer(cf *config.Config) (cs *ConfigServer, e *echo.Echo) {
 		LogURI:    true,
 		LogStatus: true,
 		LogValuesFunc: func(c echo.Context, v middleware.RequestLoggerValues) error {
-			zlog.Debug().Str("URI", v.URI).Int("status", v.Status).Msg("request")
+			log.Debug("request", slog.String("URI", v.URI), slog.Int("status", v.Status))
 			return nil
 		},
 	}))
@@ -125,7 +125,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		if err == nil {
 			break
 		}
-		zlog.Error().Err(err).Msg("retrying until first inventory load(s) succeeds")
+		log.Error("retrying until first inventory load(s) succeeds", slog.Any("error", err))
 		check := config.Get[time.Duration](cs.conf, "inventory.check-interval")
 		if check == 0 {
 			check = 60 * time.Second
@@ -169,7 +169,8 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 	cf := cs.conf
 
 	if !cf.IsSet(cf.Join("server", "config-path")) {
-		zlog.Fatal().Msg("no configuration path (`server.config-path`) set, exiting")
+		log.Error("no configuration path (`server.config-path`) set, exiting")
+		os.Exit(1)
 	}
 
 	e.GET(config.Get[string](cf, "server.config-path")+"/:hostname", cs.ServeConfig)
@@ -184,7 +185,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		if !config.Get[bool](cf, "server.tls.enable") {
 			err = e.Start(fmt.Sprintf("%s:%d", config.Get[string](cf, "server.host"), config.Get[uint16](cf, "server.port")))
 			if err != nil {
-				zlog.Error().Err(err).Msg("retrying in 5 seconds")
+				log.Error("retrying in 5 seconds", slog.Any("error", err))
 				time.Sleep(5 * time.Second)
 			}
 			continue
@@ -213,7 +214,7 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 		err = e.StartTLS(listen, cert, key)
 
 		if err != nil {
-			zlog.Error().Err(err).Msg("retrying in 5 seconds")
+			log.Error("retrying in 5 seconds", slog.Any("error", err))
 			time.Sleep(5 * time.Second)
 		}
 	}
@@ -226,14 +227,14 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 	if hostname == "" {
 		return c.String(http.StatusBadRequest, "hostname not given")
 	}
-	zlog.Debug().Msgf("serve: hostname %s type %s", hostname, hosttype)
+	log.Debug("serve", slog.String("hostname", hostname), slog.String("type", hosttype))
 
 	np, finalHosttype := cs.NetprobeConfig(hostname, hosttype)
 
 	if len(np.SelfAnnounce.Gateways) == 0 {
 		return echo.ErrInternalServerError
 	}
-	zlog.Info().Msgf("sending config for '%s' type '%s'", hostname, finalHosttype)
+	log.Info("sending config", slog.String("hostname", hostname), slog.String("type", finalHosttype))
 	return c.XMLPretty(http.StatusOK, np, "    ")
 }
 

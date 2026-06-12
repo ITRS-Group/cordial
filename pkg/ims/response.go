@@ -33,18 +33,18 @@ type Results []results
 // include the raw response from the proxy for debugging or logging
 // purposes.
 type Response struct {
-	StartTime    time.Time  `json:"start_time,omitzero"`     // time the request was received by the gateway
-	EndTime      time.Time  `json:"end_time,omitzero"`       // time the response is sent by the gateway
-	Duration     float64    `json:"duration,omitzero"`       // duration of processing the request in seconds
-	Status       string     `json:"status,omitempty"`        // as per http.Response.Status from remote IMS, empty if request failed before reaching IMS
-	StatusCode   int        `json:"status_code,omitempty"`   // as per http.Response.StatusCode from remote IMS, empty if request failed before reaching IMS
-	Error        string     `json:"error,omitempty"`         // error message if applicable
-	ResultDetail string     `json:"result_detail,omitempty"` // error or success detail if applicable
-	Action       string     `json:"action,omitempty"`        // action taken by the gateway, e.g. "Created", "Updated", "Ignored", etc.
-	ID           string     `json:"id,omitempty"`            // ID of created or updated incident if applicable
-	Data         []string   `json:"data,omitempty"`          // any additional data returned by the gateway, e.g. for query results
-	DataTable    [][]string `json:"data_table,omitempty"`    // table of data, if applicable. first row is column names, subsequent rows are values
-	RawResponse  any        `json:"raw_response,omitempty"`
+	StartTime    time.Time     `json:"start_time,omitzero"`     // time the request was received by the gateway
+	EndTime      time.Time     `json:"end_time,omitzero"`       // time the response is sent by the gateway
+	Duration     time.Duration `json:"duration,omitzero"`       // duration of processing the request
+	Status       string        `json:"status,omitempty"`        // as per http.Response.Status from remote IMS, empty if request failed before reaching IMS
+	StatusCode   int           `json:"status_code,omitempty"`   // as per http.Response.StatusCode from remote IMS, empty if request failed before reaching IMS
+	Error        string        `json:"error,omitempty"`         // error message if applicable
+	ResultDetail string        `json:"result_detail,omitempty"` // error or success detail if applicable
+	Action       string        `json:"action,omitempty"`        // action taken by the gateway, e.g. "Created", "Updated", "Ignored", etc.
+	ID           string        `json:"id,omitempty"`            // ID of created or updated incident if applicable
+	Data         []string      `json:"data,omitempty"`          // any additional data returned by the gateway, e.g. for query results
+	DataTable    [][]string    `json:"data_table,omitempty"`    // table of data, if applicable. first row is column names, subsequent rows are values
+	RawResponse  any           `json:"raw_response,omitempty"`
 }
 
 // WriteJSONResponse writes the given value as JSON to the http.ResponseWriter
@@ -65,7 +65,7 @@ func WriteJSONResponse(w http.ResponseWriter, r *http.Request, status int) error
 		return nil // response in context is not of expected type, but not an error
 	}
 	response.EndTime = time.Now()
-	response.Duration = response.EndTime.Sub(response.StartTime).Seconds()
+	response.Duration = response.EndTime.Sub(response.StartTime)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		return err
 	}

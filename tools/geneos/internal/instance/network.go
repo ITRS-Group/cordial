@@ -19,10 +19,10 @@ package instance
 
 import (
 	"errors"
+	"log/slog"
+	"os"
 	"strconv"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -34,12 +34,13 @@ import (
 // to struct{} for each lookup.
 func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 	if h == geneos.ALL {
-		zlog.Fatal().Msg("getports() called with all hosts")
+		log.Error("getports() called with all hosts")
+		os.Exit(1)
 	}
 	ports = make(map[uint16]struct{})
 	for _, c := range Instances(h, nil) {
 		if c.Loaded().IsZero() {
-			zlog.Error().Msgf("cannot load configuration for %s", c)
+			c.Log().Error("cannot load configuration for instance")
 			continue
 		}
 		if port := config.Get[int](c.Config(), "port"); port != 0 {
@@ -70,7 +71,7 @@ func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 
 	for _, c := range Instances(h, nil) {
 		if c.Loaded().IsZero() {
-			zlog.Error().Msgf("cannot load configuration for %s", c)
+			c.Log().Error("cannot load configuration for instance")
 			continue
 		}
 		if p := config.Get[uint16](c.Config(), "port"); p != 0 {
@@ -103,7 +104,7 @@ func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 //
 // not concurrency safe at this time
 func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
-	zlog.Debug().Msgf("looking for %s, default %s", ct.PortRange, ct.ConfigAliases[ct.PortRange])
+	log.Debug("looking for next free port", slog.String("portRange", ct.PortRange), slog.String("default", ct.ConfigAliases[ct.PortRange]))
 	from := config.Get[string](config.Global(), ct.PortRange, config.DefaultValue(ct.ConfigAliases[ct.PortRange]))
 	used := GetAllPorts(h)
 	for p := range strings.SplitSeq(from, ",") {

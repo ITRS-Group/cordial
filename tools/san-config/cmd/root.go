@@ -41,6 +41,8 @@ var conffile string
 var nowatchconfig bool
 var hostname, hosttype, output string
 
+var log = cordial.Logger
+
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	Cmd.PersistentFlags().MarkHidden("debug")
@@ -129,8 +131,6 @@ func Execute() {
 		os.Exit(1)
 	}
 }
-
-var log = cordial.Logger
 
 // var cf *config.Config
 var logFile string

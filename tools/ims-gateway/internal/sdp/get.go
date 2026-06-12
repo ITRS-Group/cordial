@@ -1,9 +1,8 @@
 package sdp
 
 import (
+	"log/slog"
 	"net/http"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -13,22 +12,22 @@ func get(w http.ResponseWriter, r *http.Request) {
 	rv := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := rv.(*ims.Response)
 	if !ok {
-		zlog.Debug().Msgf("response not correct type in request context")
+		log.Debug("response not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
-	zlog.Debug().Msgf("handling request for %s", r.URL.Path)
+	log.Debug("handling request", slog.String("path", r.URL.Path))
 
 	v := r.Context().Value(ims.ContextKeyConfig)
 	if v == nil {
-		zlog.Debug().Msgf("config not found in request context")
+		log.Debug("config not found in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	cf, ok := v.(*config.Config)
 	if !ok {
-		zlog.Debug().Msgf("config not correct type in request context")
+		log.Debug("config not correct type in request context")
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -36,7 +35,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 	sdpCf := cf.Sub("sdp")
 	c, err := newClient(r.Context(), sdpCf, "SDP.requests.ALL")
 	if err != nil {
-		zlog.Debug().Msgf("error creating SDP client: %v", err)
+		log.Debug("error creating SDP client", slog.Any("error", err))
 		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -45,7 +44,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query().Get("query")
 	if q != "" {
-		zlog.Debug().Msgf("using query from request URL: %s", q)
+		log.Debug("using query from request URL", slog.String("query", q))
 		query = q
 	}
 

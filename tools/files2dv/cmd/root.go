@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -131,14 +130,6 @@ var defaults []byte
 
 func initConfig() {
 	var err error
-	if quiet {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	} else if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
 	// config.DefaultKeyDelimiter("::")
 
 	opts := []config.FileOption{

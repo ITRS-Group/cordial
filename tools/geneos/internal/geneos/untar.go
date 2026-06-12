@@ -4,12 +4,11 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"slices"
 	"time"
-
-	zlog "github.com/rs/zerolog/log"
 )
 
 // untar the archive from an io.Reader onto host h in directory dir.
@@ -78,11 +77,11 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 			}
 			bar.Add64(n)
 			if n != hdr.Size {
-				zlog.Error().Msgf("lengths different: %d %d", hdr.Size, n)
+				log.Error("lengths different", slog.Int64("expected", hdr.Size), slog.Int64("actual", n))
 			}
 			out.Close()
 			if err := h.Chtimes(fullpath, hdr.AccessTime, hdr.ModTime); err != nil {
-				zlog.Warn().Err(err).Msg("cannot update mtime")
+				log.Warn("cannot update mtime", slog.Any("error", err))
 			}
 		case tar.TypeDir:
 			if err = h.MkdirAll(fullpath, hdr.FileInfo().Mode()); err != nil {
@@ -103,11 +102,11 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 			}
 			if err := h.Lchtimes(fullpath, hdr.AccessTime, hdr.ModTime); h == LOCAL && err != nil {
 				// ignore on remotes, sftp cannot set times on symlinks
-				zlog.Debug().Err(err).Msg("cannot update mtime (symlink?)")
+				log.Debug("cannot update mtime (symlink?)", slog.Any("error", err))
 			}
 
 		default:
-			zlog.Warn().Msgf("unsupported file type %c\n", hdr.Typeflag)
+			log.Warn("unsupported file type", slog.String("type", string(hdr.Typeflag)))
 		}
 
 	}
@@ -115,7 +114,7 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 	slices.Reverse(dirtimes)
 	for _, d := range dirtimes {
 		if err := h.Chtimes(d.Name, time.Time{}, d.Modified); err != nil {
-			zlog.Warn().Err(err).Msgf("cannot update mtime on %q", d.Name)
+			log.Warn("cannot update mtime", slog.String("file", d.Name), slog.Any("error", err))
 		}
 	}
 	return

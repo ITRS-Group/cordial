@@ -30,8 +30,6 @@ import (
 	"syscall"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -49,6 +47,8 @@ type Instance struct {
 }
 
 var instanceMutex sync.Mutex
+
+var log = cordial.Logger
 
 // NewLogger returns a logger with the instance name, host and type in
 // the context. The logger is configured with the "cordial" prefix and
@@ -123,16 +123,16 @@ func IDString(i geneos.Instance) string {
 // are checked against all the values registered by components at
 // start-up.
 func ReservedName(name string) (ok bool) {
-	zlog.Debug().Msgf("checking %q", name)
+	log.Debug("checking", slog.String("name", name))
 	if geneos.ParseComponent(name) != nil {
-		zlog.Debug().Msg("matches a reserved word")
+		log.Debug("matches a reserved word")
 		return true
 	}
 	if reserved := config.Get[string](config.Global(), "reservednames"); reserved != "" {
 		list := strings.SplitSeq(reserved, ",")
 		for n := range list {
 			if strings.EqualFold(name, strings.TrimSpace(n)) {
-				zlog.Debug().Msgf("%s matches a user defined reserved name %s", name, n)
+				log.Debug("matches a user defined reserved name", slog.String("name", name), slog.String("reserved", n))
 				return true
 			}
 		}
@@ -558,7 +558,7 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		for _, name := range AllInstanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
-				zlog.Debug().Msgf("pattern %q matches instance name %q", pattern, name)
+				log.Debug("pattern matches instance name", slog.String("pattern", pattern), slog.String("name", name))
 				matched = true
 				if h == geneos.ALL {
 					names = append(names, n)
@@ -576,10 +576,10 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 
 			// if it's a valid name just save it for the caller to check later, otherwise ignore it
 			if ValidName(pattern) {
-				zlog.Debug().Msgf("pattern %q does not match any instance names but is a valid name, returning it for caller to check", pattern)
+				log.Debug("pattern does not match any instance names but is a valid name, returning it for caller to check", slog.String("pattern", pattern))
 				names = append(names, pattern)
 			} else {
-				zlog.Debug().Msgf("pattern %q does not match any instance names and is not a valid name, ignoring", pattern)
+				log.Debug("pattern does not match any instance names and is not a valid name, ignoring", slog.String("pattern", pattern))
 			}
 		}
 	}

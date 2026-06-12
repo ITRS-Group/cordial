@@ -19,11 +19,10 @@ package geneos
 
 import (
 	"fmt"
+	"log/slog"
 	"path"
 	"regexp"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -36,7 +35,7 @@ import (
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
 	if path.IsAbs(clean) || strings.HasPrefix(clean, "../") {
-		zlog.Debug().Msgf("path %q must be relative and descending only", clean)
+		log.Debug("path must be relative and descending only", slog.String("path", clean))
 		return "", host.ErrInvalidArgs
 	}
 

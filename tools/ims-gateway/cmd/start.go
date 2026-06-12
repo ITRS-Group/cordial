@@ -31,7 +31,6 @@ import (
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -73,7 +72,8 @@ var startCmd = &cobra.Command{
 			}
 
 			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
-				zlog.Fatal().Err(err).Msg("failed to daemonise process")
+				log.Error("failed to daemonise process", slog.String("error", err.Error()))
+				os.Exit(1)
 			}
 		}
 
@@ -84,7 +84,7 @@ var startCmd = &cobra.Command{
 
 		cf := LoadConfigFile()
 
-		cordial.LogInit(cordial.ExecutableName(),
+		log = cordial.LogInit(cordial.ExecutableName(),
 			cordial.SetLogLevel(l),
 			cordial.SetLogfile(logFile),
 			cordial.LumberjackOptions(&lumberjack.Logger{
@@ -108,7 +108,10 @@ func startGateway(cf *config.Config) {
 	listen := config.Get[string](cf, cf.Join("server", "listen"))
 	basePath := config.Get[string](cf, cf.Join("server", "path"))
 
-	zlog.Debug().Msgf("starting proxy with configuration: listen=%s, path=%s", listen, basePath)
+	log.Debug("starting proxy with configuration",
+		slog.String("listen", listen),
+		slog.String("path", basePath),
+	)
 
 	// init connection or fail early
 	// snow.NewClient(cf.Sub("snow"))
@@ -119,7 +122,10 @@ func startGateway(cf *config.Config) {
 		mux.HandleFunc(endpoint.Method+" "+basePath+endpoint.Path, func(w http.ResponseWriter, r *http.Request) {
 			endpoint.Handler(w, r)
 		})
-		zlog.Debug().Msgf("registered %s %s endpoint", endpoint.Method, basePath+endpoint.Path)
+		log.Debug("registered endpoint",
+			slog.String("method", endpoint.Method),
+			slog.String("path", basePath+endpoint.Path),
+		)
 	}
 
 	var handler http.Handler = mux
@@ -128,10 +134,11 @@ func startGateway(cf *config.Config) {
 	handler = withValues(cf, handler)
 	handler = withKeyAuth(cf, handler)
 
-	zlog.Debug().Msg("starting HTTP server")
+	log.Debug("starting HTTP server")
 
 	if err := startHTTPServer(cf, listen, handler); err != nil {
-		zlog.Fatal().Err(err).Msg("failed to start server")
+		log.Error("failed to start server", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
 
@@ -214,27 +221,27 @@ func requestLog(cf *config.Config, r *http.Request, reqBody, resBody []byte, res
 	respValue := r.Context().Value(ims.ContextKeyResponse)
 	response, ok := respValue.(*ims.Response)
 	if !ok {
-		zlog.Info().Msgf("response not correct type in request context")
+		log.Info("response not correct type in request context")
 		return
 	}
 
-	zlog.Info().Msgf("%s %s %3d %s/%d %.3fs %s %s %s %q",
-		"URL", // config.Get[string](cf, cf.Join("snow", "url")),
-		r.Proto,
-		resStatus,
-		bytesIn,
-		resSize,
-		response.Duration,
-		realIP(r),
-		r.Method,
-		r.URL.String(),
-		message,
+	log.Info("request completed",
+		slog.String("url", "URL"), // config.Get[string](cf, cf.Join("snow", "url")),
+		slog.String("proto", r.Proto),
+		slog.Int64("status", resStatus),
+		slog.String("bytesIn", bytesIn),
+		slog.Int64("bytesOut", resSize),
+		slog.Duration("duration", response.Duration),
+		slog.String("realIP", realIP(r)),
+		slog.String("method", r.Method),
+		slog.String("url", r.URL.String()),
+		slog.String("message", message),
 	)
 }
 
 func startHTTPServer(cf *config.Config, listen string, handler http.Handler) error {
 	if !config.Get[bool](cf, cf.Join("server", "tls", "enabled")) {
-		zlog.Debug().Msgf("starting server without TLS on %s", listen)
+		log.Debug("starting server without TLS", slog.String("listen", listen))
 		return http.ListenAndServe(listen, handler)
 	}
 
@@ -259,7 +266,7 @@ func startHTTPServer(cf *config.Config, listen string, handler http.Handler) err
 		return err
 	}
 
-	zlog.Debug().Msgf("starting server on %s", listen)
+	log.Debug("starting server on TLS", slog.String("listen", listen))
 	return srv.Serve(tls.NewListener(ln, srv.TLSConfig))
 }
 

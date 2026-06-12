@@ -20,6 +20,7 @@ package geneos
 import (
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -29,7 +30,6 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
-	zlog "github.com/rs/zerolog/log"
 )
 
 // CurrentVersion returns the version that base points to for the
@@ -68,20 +68,20 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 			// in the config file.
 			version, err = filepath.Rel(dir, version)
 			if err != nil {
-				zlog.Debug().Err(err).Msg("relative path")
+				log.Debug("relative path", slog.Any("error", err))
 			}
 		}
 
 		if version == base {
 			err = syscall.ELOOP
-			zlog.Debug().Err(err).Msg("loop")
+			log.Debug("loop", slog.Any("error", err))
 			version = "unknown"
 			return
 		}
 	}
 	if i == 10 {
 		err = fmt.Errorf("too many levels of symbolic link (>10)")
-		zlog.Debug().Err(err).Msg("levels")
+		log.Debug("levels", slog.Any("error", err))
 		version = "unknown"
 	}
 
@@ -132,7 +132,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 
 	dir := opts.source
 
-	zlog.Debug().Msgf("opening local archive directory %q", dir)
+	log.Debug("opening local archive directory", slog.String("directory", dir))
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return
@@ -161,7 +161,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 		return !strings.Contains(n, check)
 	})
 
-	zlog.Debug().Msgf("archives before platform filter: %v", archives)
+	log.Debug("archives before platform filter", slog.Any("archives", archives))
 
 	if opts.platformId == "" {
 		archives = slices.DeleteFunc(archives, func(n string) bool {
@@ -208,7 +208,7 @@ func LocalArchives(ct *Component, options ...PackageOption) (archives []string, 
 		}
 	})
 
-	zlog.Debug().Msgf("archives after platform filter: %v", archives)
+	log.Debug("archives after platform filter", slog.Any("archives", archives))
 
 	return
 }

@@ -20,18 +20,11 @@ limitations under the License.
 package cordial
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"path"
-	"runtime"
-	"strings"
-	"time"
 
 	"github.com/fatih/color"
-	"github.com/rs/zerolog"
-	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/term"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -51,7 +44,7 @@ type discardCloser struct {
 
 func (discardCloser) Close() error { return nil }
 
-// LogInit is called to set-up zerolog with our chosen defaults. The
+// LogInit is called to set-up logging with our chosen defaults. The
 // default is to log to STDERR.
 //
 // If logfile is passed and the first element is not empty, then use
@@ -59,28 +52,8 @@ func (discardCloser) Close() error { return nil }
 // (not STDERR) or equal to the [os.DevNull] value, in which case is
 // [io.Discard].
 func LogInit(prefix string, options ...LogOption) *slog.Logger {
-	var noColour bool
 	var out io.WriteCloser
 	out = os.Stderr
-
-	zerolog.CallerMarshalFunc = func(pc uintptr, file string, line int) string {
-		if zerolog.GlobalLevel() > zerolog.DebugLevel {
-			return ""
-		}
-		fnName := "UNKNOWN"
-		fn := runtime.FuncForPC(pc)
-		if fn != nil {
-			fnName = fn.Name()
-		}
-		fnName = path.Base(fnName)
-		// fnName = strings.TrimPrefix(fnName, "main.")
-
-		s := strings.SplitAfterN(file, prefix+"/", 2)
-		if len(s) == 2 {
-			file = s[1]
-		}
-		return fmt.Sprintf("%s:%d %s()", file, line, fnName)
-	}
 
 	opts := evalLoggerOptions(options...)
 
@@ -107,25 +80,7 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 		opts.lj.Filename = opts.logfile
 
 		out = opts.lj
-		noColour = true
 	}
-
-	zlog.Logger = zlog.Output(zerolog.ConsoleWriter{
-		Out:        out,
-		TimeFormat: time.RFC3339,
-		NoColor:    noColour,
-		FormatLevel: func(i any) string {
-			return strings.ToUpper(fmt.Sprintf("%s:", i))
-		},
-		FormatMessage: func(i any) string {
-			if i == nil {
-				return fmt.Sprintf("%s:", prefix)
-			}
-			return fmt.Sprintf("%s: %s", prefix, i)
-		},
-	}).With().Caller().Logger()
-
-	zerolog.SetGlobalLevel(opts.level)
 
 	LogHandler = logger.NewHandler(
 		logger.Leveler(&LogLevel),
@@ -154,7 +109,6 @@ type logOpts struct {
 	logfile       string
 	lj            *lumberjack.Logger
 	rotateOnStart bool
-	level         zerolog.Level
 	slogLevel     slog.Level
 }
 
@@ -199,17 +153,5 @@ func RotateOnStart(rotate bool) LogOption {
 func SetLogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		lo.slogLevel = level
-		switch level {
-		case -8:
-			lo.level = zerolog.TraceLevel
-		case slog.LevelDebug:
-			lo.level = zerolog.DebugLevel
-		case slog.LevelInfo:
-			lo.level = zerolog.InfoLevel
-		case slog.LevelWarn:
-			lo.level = zerolog.WarnLevel
-		case slog.LevelError:
-			lo.level = zerolog.ErrorLevel
-		}
 	}
 }

@@ -31,8 +31,6 @@ import (
 	"time"
 	"unicode"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -202,7 +200,7 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines 
 	}
 	defer f.Close()
 
-	text, err := tailLines(f, logCmdLines)
+	text, err := tailLines(i, f, logCmdLines)
 	if err != nil && !errors.Is(err, io.EOF) {
 		i.Log().Error("error reading log file", slog.Any("error", err), slog.String("file", logfile))
 	}
@@ -213,8 +211,8 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines 
 
 const charsPerLine = 132
 
-func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
-	var i int64
+func tailLines(i geneos.Instance, f io.ReadSeekCloser, linecount int) (text string, err error) {
+	var j int64
 
 	// reasonable guess at bytes per line to use as a multiplier
 	chunk := int64(linecount * charsPerLine)
@@ -234,11 +232,12 @@ func tailLines(f io.ReadSeekCloser, linecount int) (text string, err error) {
 	end, _ := f.Seek(0, io.SeekEnd)
 	f.Seek(pos, io.SeekStart)
 
-	for i = 1 + end/chunk; i > 0; i-- {
-		f.Seek((i-1)*chunk, io.SeekStart)
+	for j = 1 + end/chunk; j > 0; j-- {
+		f.Seek((j-1)*chunk, io.SeekStart)
 		n, err := f.Read(buf)
 		if err != nil && !errors.Is(err, io.EOF) {
-			zlog.Fatal().Err(err).Msg("")
+			i.Log().Error("error reading log file", slog.Any("error", err))
+			return "", err
 		}
 		buffer := string(buf[:n])
 
@@ -279,7 +278,7 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			zlog.Error().Err(err).Msg("")
+			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
 	case logCmdIgnore != "":
 		scanner := bufio.NewScanner(r)
@@ -290,7 +289,7 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
+			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
 	default:
 		scanner := bufio.NewScanner(r)
@@ -298,7 +297,7 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []s
 			lines = append(lines, scanner.Text())
 		}
 		if err := scanner.Err(); err != nil {
-			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
+			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
 	}
 
@@ -344,7 +343,7 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int6
 		}
 		_, err := io.Copy(os.Stdout, reader)
 		if err != nil {
-			zlog.Error().Err(err).Msg("")
+			i.Log().Error("error copying log file to stdout", slog.Any("error", err), slog.String("file", path))
 		}
 	}
 	sz, _ = reader.Seek(0, io.SeekCurrent)
@@ -434,7 +433,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 		return
 	} else {
 		// output up to this point
-		text, _ := tailLines(f, logCmdLines)
+		text, _ := tailLines(i, f, logCmdLines)
 
 		if len(text) != 0 {
 			filterOutput(i, logfile, strings.NewReader(text+"\n"))
@@ -445,7 +444,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
 	}
 	fl, _ := tails.Load(key)
 	offset, _ := f.Seek(0, io.SeekCurrent)
-	zlog.Debug().Msgf("watching %s from offset %d - %v", key, offset, fl)
+	i.Log().Debug("watching log file", slog.String("key", key), slog.Int64("offset", offset), slog.Any("file", fl))
 
 	return nil
 }
@@ -493,7 +492,7 @@ func watchLogs() (tails *sync.Map) {
 						// re-open if changed else return
 						var st fs.FileInfo
 						if st, err = tail.instance.Host().Stat(logfile); err != nil {
-							zlog.Error().Err(err).Msg("cannot stat file")
+							tail.instance.Log().Error("cannot stat file", slog.Any("error", err), slog.String("file", logfile))
 						} else if st.Size() == size {
 							return true
 						}
@@ -512,7 +511,7 @@ func watchLogs() (tails *sync.Map) {
 
 				// open new file, read to the end, return
 				if tail.reader, err = tail.instance.Host().Open(logfile); err != nil {
-					zlog.Error().Err(err).Msg("cannot (re)open")
+					tail.instance.Log().Error("cannot (re)open log file", slog.Any("error", err), slog.String("file", logfile))
 				}
 				tail.offset = filterOutput(tail.instance, logfile, tail.reader)
 				tails.Store(key, tail)

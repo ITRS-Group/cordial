@@ -22,11 +22,11 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -161,14 +161,14 @@ var deployCmd = &cobra.Command{
 				if deployCmdGeneosHome == "" {
 					var input, root string
 					if root, err = config.UserHomeDir(); err != nil {
-						zlog.Warn().Msg("cannot find user home directory")
+						log.Warn("cannot find user home directory", slog.Any("error", err))
 					}
 					if path.Base(root) != cordial.ExecutableName() {
 						root = path.Join(root, cordial.ExecutableName())
 					}
 					if input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
 						if strings.TrimSpace(input) != "" {
-							zlog.Debug().Msgf("set root to %s", input)
+							log.Debug("set root to", slog.String("root", input))
 							root = input
 						}
 					}
@@ -239,7 +239,7 @@ var deployCmd = &cobra.Command{
 		// Package installation
 
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
-		zlog.Debug().Msgf("version: %s", version)
+		log.Debug("version", slog.String("version", version))
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
 			if !deployCmdLocal && deployCmdUsername != "" && deployCmdPassword == nil {
 				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
@@ -275,7 +275,7 @@ var deployCmd = &cobra.Command{
 				options = append(options, geneos.UseNexus())
 			}
 
-			zlog.Debug().Msgf("installing on %s for %s", h, pkgct)
+			log.Debug("installing", slog.String("host", h.String()), slog.String("package", pkgct.String()))
 
 			if err = geneos.Install(h, pkgct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
@@ -308,7 +308,7 @@ var deployCmd = &cobra.Command{
 
 		// check if instance already exists
 		if !i.Loaded().IsZero() {
-			zlog.Error().Msgf("%s already exists", i)
+			i.Log().Error("instance already exists")
 			return
 		}
 
@@ -322,24 +322,26 @@ var deployCmd = &cobra.Command{
 				if len(deployCmdBundlePassword) == 0 {
 					deployCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
 					if err != nil {
-						zlog.Fatal().Err(err).Msg("Failed to read password")
+						log.Error("Failed to read password", slog.Any("error", err))
 						return err
 					}
 					defer clear(deployCmdBundlePassword)
 				}
 				certBundle, err = certs.P12ToCertBundle(deployCmdInstanceBundle, deployCmdBundlePassword)
 				if err != nil {
-					zlog.Fatal().Err(err).Msg("Failed to parse PFX file")
+					log.Error("Failed to parse PFX file", slog.Any("error", err))
 					return err
 				}
 			} else {
 				certChain, err := config.ReadPEM(deployCmdInstanceBundle, "instance certificate(s)")
 				if err != nil {
-					zlog.Fatal().Err(err).Msg("Failed to read instance certificate(s)")
+					log.Error("Failed to read instance certificate(s)", slog.Any("error", err))
+					return err
 				}
 				certBundle, err = certs.ParsePEM(certChain, nil)
 				if err != nil {
-					zlog.Fatal().Err(err).Msg("Failed to decompose PEM")
+					log.Error("Failed to decompose PEM", slog.Any("error", err))
+					return err
 				}
 				if certBundle.Leaf == nil || certBundle.Key == nil {
 					return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
@@ -370,7 +372,7 @@ var deployCmd = &cobra.Command{
 			}
 
 			// always set the ca-bundle path, updated or not
-			zlog.Debug().Msgf("setting %s TLS CA bundle path to %s", i, geneos.PathToCABundlePEM(h))
+			i.Log().Debug("setting TLS CA bundle path", slog.String("path", geneos.PathToCABundlePEM(h)))
 			config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
 
 			if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
@@ -380,7 +382,8 @@ var deployCmd = &cobra.Command{
 
 		// call components specific Add()
 		if err = i.Add(deployCmdTemplate, deployCmdPort, deployCmdInsecure || deployCmdInstanceBundle != ""); err != nil {
-			zlog.Fatal().Err(err).Msg("")
+			log.Error("failed to add instance", slog.Any("error", err))
+			return err
 		}
 
 		if deployCmdBase != "active_prod" {
@@ -391,13 +394,13 @@ var deployCmd = &cobra.Command{
 			// override the instance generated keyfile if options given
 			_, crc, err := geneos.ImportSharedKey(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
-				zlog.Error().Err(err).Msg("cannot import keyfile, ignoring")
+				i.Log().Error("cannot import keyfile, ignoring", slog.Any("error", err))
 			} else {
 				config.Set(cf, "keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
 				// set usekeyfile for all new instances 5.14 and above
 				if instance.CompareVersion(i, "5.14.0") >= 0 {
 					// use keyfiles
-					zlog.Debug().Msg("gateway version 5.14.0 or above, using keyfiles on creation")
+					i.Log().Debug("gateway version 5.14.0 or above, using keyfiles on creation")
 					config.Set(cf, "usekeyfile", "true")
 				}
 			}
@@ -437,7 +440,7 @@ var deployCmd = &cobra.Command{
 		basemame := config.Get[string](cf, "version")
 		exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basemame))
 		if !exists {
-			zlog.Debug().Msgf("instance %s: base version %s does not exist, attempting to create with an update", i, basemame)
+			i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basemame))
 			geneos.Update(h, ct, geneos.Basename(basemame))
 		}
 

@@ -23,13 +23,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
 	"golang.org/x/oauth2"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -195,7 +195,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	// req.Body = io.NopCloser(strings.NewReader(params.Encode()))
 
-	zlog.Debug().Msgf("requesting OAuth2 token from %s", req.URL.String())
+	log.Debug("requesting OAuth2 token", slog.String("url", req.URL.String()))
 	resp, err := hc.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve OAuth2 token: %v", err)
@@ -216,7 +216,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 	json.Unmarshal(body, &tok)
 	tok.Expiry = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 
-	zlog.Debug().Msgf("received OAuth2 token: %+v", tok)
+	log.Debug("received OAuth2 token", slog.Any("token", tok))
 
 	if tok.RefreshToken == "" {
 		return nil, fmt.Errorf("no refresh token received from OAuth2 token response")
@@ -226,7 +226,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 		return nil, err
 	}
 
-	zlog.Info().Msgf("saved OAuth2 token persistently")
+	log.Info("saved OAuth2 token persistently")
 
 	return
 }

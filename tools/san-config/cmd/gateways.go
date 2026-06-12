@@ -22,6 +22,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"log/slog"
 	"maps"
 	"net/http"
 	"net/url"
@@ -34,7 +35,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -80,7 +80,7 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 
 	for i, g := range config.Get[[]map[string]string](cf, "geneos.gateways") {
 		if g["name"] == "" && g["primary"] == "" {
-			zlog.Debug().Msgf("no name or primary defined for gateway %d, skipping", i)
+			log.Debug("no name or primary defined for gateway", slog.Int("index", i))
 		}
 
 		primary := g["primary"]
@@ -98,11 +98,11 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 
 		secure, err := strconv.ParseBool(g["secure"])
 		if err != nil {
-			zlog.Debug().Msgf("gateway %q secure setting unknown, assuming false", name)
+			log.Debug("gateway secure setting unknown, assuming false", slog.String("name", name))
 			secure = false
 		}
 
-		zlog.Debug().Msgf("primary %s, standby %s, secure %v", primary, standby, secure)
+		log.Debug("gateway details", slog.String("primary", primary), slog.String("standby", standby), slog.Bool("secure", secure))
 
 		if !strings.Contains(primary, ":") {
 			// append default port depending on secure flag
@@ -160,9 +160,9 @@ func CheckGateways(cf *config.Config) (liveGateways []string) {
 	liveGateways = gateways.gateways
 
 	if len(liveGateways) == totalCount {
-		zlog.Info().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
+		log.Info("gateway sets are available", slog.Int("available", len(liveGateways)), slog.Int("total", totalCount))
 	} else {
-		zlog.Warn().Msgf("%d/%d gateway sets are available", len(liveGateways), totalCount)
+		log.Warn("gateway sets are not fully available", slog.Int("available", len(liveGateways)), slog.Int("total", totalCount))
 
 	}
 
@@ -174,16 +174,16 @@ func checkGateway(client http.Client, wg *sync.WaitGroup, gateways *gatewayList,
 
 	resp, err := client.Get(livenessURL.String())
 	if err != nil {
-		zlog.Warn().Msgf("gateway %s %s %s not responding", name, role, livenessURL.Host)
+		log.Warn("gateway not responding", slog.String("name", name), slog.String("role", role), slog.String("host", livenessURL.Host))
 		return
 	}
 	resp.Body.Close()
 	if resp.StatusCode != 200 {
-		zlog.Warn().Msgf("gateway %s %s %s returned: %d %s", name, role, livenessURL.Host, resp.StatusCode, resp.Status)
+		log.Warn("gateway returned unexpected status", slog.String("name", name), slog.String("role", role), slog.String("host", livenessURL.Host), slog.Int("status", resp.StatusCode), slog.String("status_text", resp.Status))
 		return
 	}
 	// add to list
-	zlog.Debug().Msgf("gateway %s %s %s responding to liveness check", name, role, livenessURL.Host)
+	log.Debug("gateway responding to liveness check", slog.String("name", name), slog.String("role", role), slog.String("host", livenessURL.Host))
 	gateways.Lock()
 	if !slices.Contains(gateways.gateways, name) {
 		gateways.gateways = append(gateways.gateways, name)
@@ -210,7 +210,7 @@ func OrderGateways(netprobe string, gateways []string) (selection []string) {
 		gwUUIDs = append(gwUUIDs, gwUUID)
 	}
 
-	zlog.Debug().Msgf("uuids: %v", gwUUIDs)
+	log.Debug("uuids", slog.Any("uuids", gwUUIDs))
 
 	for _, k := range slices.Sorted(maps.Keys(gws)) {
 		selection = append(selection, gws[k])
@@ -287,7 +287,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 	// try to open file
 	r, err := os.Open(source)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("opening gateways file %q", source)
+		log.Error("error opening gateways file", slog.String("src", source), slog.Any("error", err))
 		return
 	}
 	defer r.Close()
@@ -298,7 +298,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 		columns, err := c.Read()
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				zlog.Error().Err(err).Msg("")
+				log.Error("error reading CSV", slog.Any("error", err))
 			}
 			return
 		}
@@ -310,7 +310,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 			row, err := c.Read()
 			if err != nil {
 				if !errors.Is(err, io.EOF) {
-					zlog.Error().Err(err).Msg("")
+					log.Error("error reading CSV", slog.Any("error", err))
 				}
 				return
 			}
@@ -326,7 +326,7 @@ func ReadGateways(source string) (gateways []map[string]string) {
 			}
 			if gw["name"] == "" {
 				line, _ := c.FieldPos(1)
-				zlog.Error().Msgf("no gateway name in %s on line %d", source, line)
+				log.Error("no gateway name", slog.String("src", source), slog.Int("line", line))
 			}
 			gateways = append(gateways, gw)
 		}

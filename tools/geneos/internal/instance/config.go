@@ -33,8 +33,6 @@ import (
 	"text/template"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -171,12 +169,15 @@ func ReadRCConfig(r host.Host, cf *config.Config, p string, prefix string, alias
 		if errors.Is(err, fs.ErrNotExist) {
 			return
 		}
-		zlog.Debug().Err(err).Msgf("loading rc %s:%s", r, config.Path("rc",
-			config.Host(r),
-			config.FilePath(p),
-			config.Format("env"),
-			config.UseDefaults(false),
-		))
+		log.Debug("loading rc",
+			slog.Any("error", err),
+			slog.String("file", config.Path("rc",
+				config.Host(r),
+				config.FilePath(p),
+				config.Format("env"),
+				config.UseDefaults(false),
+			)),
+		)
 		return
 	}
 

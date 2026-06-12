@@ -37,7 +37,6 @@ import (
 
 	"github.com/alecthomas/units"
 	"github.com/dsnet/compress/bzip2"
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -432,7 +431,7 @@ var contentsMutex sync.Mutex
 func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
-			zlog.Debug().Err(err).Msg(dir)
+			log.Debug("error walking directory", slog.Any("error", err), slog.String("dir", dir))
 			return err
 		}
 		fi, err := di.Info()
@@ -453,7 +452,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 			*contents = append(*contents, filepath.Join(relative, file)+"/")
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
-			zlog.Debug().Msgf("ignoring symlink %s", file)
+			log.Debug("ignoring symlink", slog.String("file", file))
 		default:
 			if !backupCmdIncludeAll {
 				for _, ig := range ignoreFiles {
@@ -462,7 +461,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 					}
 				}
 				if maxsize != 0 && fi.Size() > maxsize {
-					zlog.Debug().Msgf("skipping large file %s", filepath.Join(relative, file))
+					log.Debug("skipping large file", slog.String("file", filepath.Join(relative, file)))
 					return nil
 				}
 			}

@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -101,7 +100,7 @@ func migrateCommands() (err error) {
 		}
 		if err = os.Symlink(geneosExec, path); err != nil {
 			if err = os.Rename(path+".orig", path); err != nil {
-				zlog.Fatal().Err(err).Msgf("cannot restore %s after backup (to .orig), please fix manually", path)
+				log.Error("cannot restore after backup", slog.Any("error", err), slog.String("file", path))
 			}
 			fmt.Printf("cannot link %s to %s (skipping): %s", path, geneosExec, err)
 			continue

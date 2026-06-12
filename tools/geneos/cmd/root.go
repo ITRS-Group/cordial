@@ -28,7 +28,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
@@ -300,17 +299,6 @@ var configPath string
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	if quiet {
-		zerolog.SetGlobalLevel(zerolog.Disabled)
-	} else if debug {
-		cordial.LogLevel.Set(slog.LevelDebug)
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else {
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
-	// Execname = cordial.ExecutableName()
-
 	log.Debug("cordial 'geneos' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))
 
 	// `oldConfDir` is the original path to the user configuration,

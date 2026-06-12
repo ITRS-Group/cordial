@@ -1,5 +1,7 @@
 package values
 
+import "github.com/itrs-group/cordial"
+
 // package Values manages types for common repeatable flag types, such
 // as gateways, includes, variables and attributes. These are used by
 // various commands, such as set and unset, and also by the
@@ -62,3 +64,5 @@ type Values struct {
 	// more information.
 	Headers NameValues
 }
+
+var log = cordial.Logger

@@ -24,7 +24,6 @@ import (
 	"os"
 	dbg "runtime/debug"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	"gopkg.in/natefinch/lumberjack.v2"
 
@@ -118,22 +117,8 @@ func initConfig(cmd *cobra.Command) {
 	var deferredlog string
 	var loglevel slog.Level
 
-	// set both a log level for zerolog but also a slog level - for use
-	// in LogInit further below.
-	switch {
-	case trace:
-		loglevel = -8
-		zerolog.SetGlobalLevel(zerolog.TraceLevel)
-	case debug:
-		loglevel = slog.LevelDebug
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	default:
-		loglevel = slog.LevelInfo
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	}
-
 	if cf == nil {
-		opts := []config.FileOption{
+		cf, err = config.Read(execname,
 			config.AppName("geneos"),
 			config.FilePath(cfgFile),
 			config.Format("yaml"),
@@ -142,17 +127,40 @@ func initConfig(cmd *cobra.Command) {
 			// config.WatchConfig(configReloaded),
 			// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
 			config.WithEnvs("GDNA", "_"),
-		}
-
-		cf, err = config.Read(execname, opts...)
+		)
 		if err != nil {
-			log.Error(fmt.Sprintf("loading from %s: %v", config.Path(execname, opts...), err))
+			log.Error("loading config",
+				slog.Any("error", err),
+				slog.String("path",
+					config.Path(execname,
+						config.AppName("geneos"),
+						config.FilePath(cfgFile),
+						config.Format("yaml"),
+						config.WithDefaults(defaults, "yaml"),
+						config.StopOnInternalDefaultsErrors(),
+						// config.WatchConfig(configReloaded),
+						// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
+						config.WithEnvs("GDNA", "_"),
+					),
+				),
+			)
 			os.Exit(1)
 		}
 
-		// use MustExists() to check for actual files
-		opts = append(opts, config.MustExist())
-		deferredlog = fmt.Sprintf("configuration loaded from %s", config.Path(execname, opts...))
+		// save log for after log setup
+		deferredlog = fmt.Sprintf("configuration loaded from %s",
+			config.Path(execname,
+				config.AppName("geneos"),
+				config.FilePath(cfgFile),
+				config.Format("yaml"),
+				config.WithDefaults(defaults, "yaml"),
+				config.StopOnInternalDefaultsErrors(),
+				// config.WatchConfig(configReloaded),
+				// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
+				config.WithEnvs("GDNA", "_"),
+				config.MustExist(),
+			),
+		)
 	}
 
 	// check if logfile is set on the command line, which overrides config
@@ -169,12 +177,12 @@ func initConfig(cmd *cobra.Command) {
 		cordial.SetLogfile(logFile),
 		cordial.LumberjackOptions(&lumberjack.Logger{
 			Filename:   logFile,
-			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size")),
-			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups")),
-			MaxAge:     config.Get[int](cf, cf.Join("gdna", "log", "stale-after")),
-			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress")),
+			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size"), config.DefaultValue(10)),
+			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups"), config.DefaultValue(5)),
+			MaxAge:     config.Get[int](cf, cf.Join("gdna", "log", "stale-after"), config.DefaultValue(30)),
+			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress"), config.DefaultValue(true)),
 		}),
-		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"))),
+		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"), config.DefaultValue(false))),
 		cordial.SetLogLevel(loglevel),
 	)
 

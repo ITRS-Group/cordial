@@ -22,6 +22,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/itrs-group/cordial"
 )
 
 // ErrorResponse represents a typical error response from SDP v3 API.
@@ -290,6 +292,8 @@ type NameID struct {
 	Name string `json:"name,omitempty"`
 	ID   int64  `json:"id,string,omitempty"`
 }
+
+var log = cordial.Logger
 
 var sdpField1 = regexp.MustCompile(`^[\w\.-]+$`)
 

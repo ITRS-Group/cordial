@@ -24,15 +24,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
 	"text/tabwriter"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/reporter"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -90,6 +91,8 @@ type Dataview struct {
 	Headlines map[string]string
 }
 
+var log = cordial.Logger
+
 func Finished[R Response](resp *R) {
 	switch any(*resp).(type) {
 	case General:
@@ -105,7 +108,8 @@ func Finished[R Response](resp *R) {
 		r.Duration = time.Since(r.start)
 		*resp = any(r).(R)
 	default:
-		zlog.Fatal().Msgf("unsupported response type %T", resp)
+		log.Error("unsupported response type", slog.Any("type", resp))
+		os.Exit(1)
 	}
 }
 
@@ -132,7 +136,8 @@ func New[R Response](i geneos.Instance) *R {
 			Completed:  []string{},
 		}).(*R)
 	default:
-		zlog.Fatal().Msgf("unsupported response type %T", resp)
+		log.Error("unsupported response type", slog.Any("type", resp))
+		os.Exit(1)
 	}
 	return any(resp).(*R)
 }
@@ -430,7 +435,8 @@ OUTER:
 			}
 
 		default:
-			zlog.Fatal().Msgf("unknown writer type %T", writer)
+			log.Error("unknown writer type", slog.Any("type", writer))
+			os.Exit(1)
 		}
 	}
 
@@ -517,7 +523,7 @@ func (resp General) Report(writer any, options ...WriterOption) {
 			if opts.asJSON {
 				b, err := json.MarshalIndent(resp.Value, "    ", "    ")
 				if err != nil {
-					zlog.Error().Err(err).Msg("failed to marshal value to JSON")
+					log.Error("failed to marshal value to JSON", slog.Any("error", err))
 					return
 				}
 				fmt.Fprint(w, string(b))
@@ -541,7 +547,8 @@ func (resp General) Report(writer any, options ...WriterOption) {
 		}
 
 	default:
-		zlog.Fatal().Msgf("unknown writer type %T", writer)
+		log.Error("unknown writer type", slog.Any("type", writer))
+		os.Exit(1)
 	}
 
 	if opts.stderr != io.Discard {

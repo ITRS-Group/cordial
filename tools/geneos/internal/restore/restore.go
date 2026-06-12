@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"maps"
 	"os"
 	"path"
@@ -14,13 +15,15 @@ import (
 	"strings"
 
 	"github.com/dsnet/compress/bzip2"
-	zlog "github.com/rs/zerolog/log"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
+
+var log = cordial.Logger
 
 var fileTypes = map[string]string{
 	".tar.gz":  "gzip",
@@ -132,7 +135,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			dest, src, found := strings.Cut(name, "=")
 			if found {
 				if !instance.ValidName(src) || !instance.ValidName(dest) {
-					zlog.Debug().Msgf("invalid instance name format when using DEST=SRC format: %s", name)
+					log.Debug("invalid instance name format when using DEST=SRC format", slog.String("name", name))
 					return geneos.ErrInvalidArgs
 				}
 				mapping[dest] = src
@@ -194,13 +197,13 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		// check ctName is valid and if ct is not nil, filter for a match
 		nct := geneos.ParseComponent(ctName)
 		if nct == nil {
-			zlog.Debug().Msgf("unknown component type: %s, skipping", filename)
+			log.Debug("unknown component type, skipping", slog.String("filename", filename))
 			continue
 		}
 
 		// if a component type is wanted, reject others
 		if ct != nil && ct != nct {
-			zlog.Debug().Msgf("component type does not match: %s != %s, skipping", ct, nct)
+			log.Debug("component type does not match, skipping", slog.String("expected", ct.String()), slog.String("found", nct.String()))
 			continue
 		}
 
@@ -303,12 +306,12 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			if i, ok := instancesRestored[name]; ok && i == nil {
 				i, err = instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
 				if err != nil {
-					zlog.Debug().Err(err).Msgf("getting instance %s:%s for final rebuild", ctName, name)
+					log.Debug("getting instance for final rebuild", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
 				} else {
 					instancesRestored[name] = i
 					if err = i.Rebuild(false); err != nil {
 						if !errors.Is(err, geneos.ErrNotSupported) {
-							zlog.Debug().Err(err).Msgf("rebuild of instance %s:%s", ctName, name)
+							i.Log().Debug("rebuild of instance failed", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
 						} else {
 							err = nil
 						}
@@ -415,7 +418,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 		}
 
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
-			zlog.Debug().Err(err).Msg("")
+			log.Debug("creating file failed", slog.Any("error", err), slog.String("destPath", destPath))
 			return
 		}
 		defer w.Close()
@@ -501,7 +504,7 @@ func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restor
 					return err
 				}
 				if updated {
-					zlog.Debug().Msg("CA bundle updated")
+					log.Debug("CA bundle updated")
 				}
 				return nil
 			}

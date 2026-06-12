@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"strings"
 
-	zlog "github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -132,7 +131,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		cd.Unlock()
 	}
 
-	zlog.Debug().Msgf("args (%d): %v", len(args), args)
+	log.Debug("args", slog.Int("len", len(args)), slog.Any("args", args))
 
 	// first, if there is at least one arg then try to consume the first
 	// as a component type, then drop through
@@ -172,7 +171,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		}
 		// if !validNameRE.MatchString(a) {
 		if !instance.ValidName(a) {
-			zlog.Debug().Msgf("not a valid instance name, moving %q to parameters", a)
+			log.Debug("not a valid instance name, moving to parameters", slog.String("name", a))
 			params = args[i:]
 			break
 		}
@@ -184,8 +183,8 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		names, err = instance.Match(h, ct, cmdKeepHosts, cmdAllInstancesMustMatch, names...)
 	}
 
-	zlog.Debug().Msgf("names %v", names)
-	zlog.Debug().Msgf("ct %q, args %v, params %v", ct, args, params)
+	log.Debug("names", slog.Any("names", names))
+	log.Debug("ct", slog.Any("ct", ct), "args", slog.Any("args", args), "params", slog.Any("params", params))
 
 	cd.Lock()
 	cd.names = names

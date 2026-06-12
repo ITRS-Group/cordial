@@ -19,12 +19,11 @@ package geneos
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"path"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -192,19 +191,19 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 		return
 	}
 	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
-		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		log.Error("cannot create directory", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
 		return
 	}
 	w, err := h.Create(p, 0600)
 	if err != nil {
-		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		log.Error("cannot create keyfile", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
 		return
 	}
 	defer w.Close()
 
 	if err = kv.Write(w); err != nil {
-		zlog.Error().Err(err).Msgf("host %s, component %s", h, ct)
+		log.Error("cannot write keyfile", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
 	}
-	zlog.Debug().Msgf("keyfile saved to %s on %s", p, h)
+	log.Debug("keyfile saved", slog.String("path", p), slog.String("host", h.String()), slog.String("component", ct.String()))
 	return
 }

@@ -20,13 +20,10 @@ package snow
 import (
 	"context"
 	"crypto/tls"
-	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
-	zlog "github.com/rs/zerolog/log"
-	slogzerolog "github.com/samber/slog-zerolog/v2"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -82,8 +79,6 @@ func newClient(cf *config.Config) (c client) {
 
 	p := sn.JoinPath(config.Get[string](cf, "path", config.DefaultValue("/api/now/v2/table")))
 
-	logger := slog.New(slogzerolog.Option{Level: slog.LevelDebug, Logger: &zlog.Logger}.NewZerologHandler())
-
 	if clientID != "" && len(clientSecret) > 0 {
 		params := make(url.Values)
 		params.Set("grant_type", "password")
@@ -102,7 +97,7 @@ func newClient(cf *config.Config) (c client) {
 		c.Client = rest.NewClient(
 			rest.BaseURL(p),
 			rest.HTTPClient(hc),
-			rest.Logger(logger),
+			rest.Logger(log),
 		)
 	} else {
 		c.Client = rest.NewClient(
@@ -111,7 +106,7 @@ func newClient(cf *config.Config) (c client) {
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.SetBasicAuth(username, string(password))
 			}),
-			rest.Logger(logger),
+			rest.Logger(log),
 		)
 	}
 

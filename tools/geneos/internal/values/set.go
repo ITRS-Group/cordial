@@ -2,10 +2,9 @@ package values
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -125,7 +124,7 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 	for _, v := range items {
 		if v.Type == "secret" {
 			if keyfile == "" {
-				zlog.Error().Msgf("keyfile is required to set secret variable %q", v.Name)
+				log.Error("keyfile is required to set secret variable", slog.String("name", v.Name))
 				continue
 			}
 			v.Type = "string"
@@ -147,7 +146,7 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 				// encrypt value and store as special secret type
 				v.Value, err = keyfile.EncodeString(h, v.Value, true)
 				if err != nil {
-					zlog.Error().Err(err).Msgf("failed to encrypt secret for variable %q", v.Name)
+					log.Error("failed to encrypt secret for variable", slog.Any("error", err), slog.String("name", v.Name))
 					return
 				}
 			}

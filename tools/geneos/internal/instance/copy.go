@@ -20,10 +20,9 @@ package instance
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
-
-	zlog "github.com/rs/zerolog/log"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -49,7 +48,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		return fmt.Errorf("%w: source and destination must have different names and/or locations", geneos.ErrInvalidArgs)
 	}
 
-	zlog.Debug().Msgf("%s %s %s", ct, source, destination)
+	log.Debug("copying", ct, source, destination)
 
 	opts := evalCopyOptions(options...)
 
@@ -82,7 +81,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	if ct == nil {
 		for ct := range ct.OrList() {
 			if err = Copy(ct, source, destination, options...); err != nil {
-				zlog.Debug().Err(err).Msg("")
+				log.Debug("error copying", slog.Any("error", err), slog.String("component", ct.String()), slog.String("src", source), slog.String("destination", destination))
 				if errors.Is(err, host.ErrNotExist) {
 					return
 				}
@@ -112,12 +111,12 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		return fmt.Errorf("%w: destination host for %q not found", host.ErrNotExist, destination)
 	}
 
-	zlog.Debug().Msgf("checking %s", destination)
+	log.Debug("checking", slog.Any("destination", destination))
 	dst, err := Get(ct, destination)
 	if err == nil && !dst.Loaded().IsZero() {
 		return fmt.Errorf("%s already exists", dst)
 	}
-	zlog.Debug().Msg("destination does not already exist")
+	log.Debug("destination does not already exist")
 	// otherwise carry on
 	if dst != nil {
 		dst.Unload()
@@ -156,7 +155,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	// copy directory
 	if err = host.CopyAll(src.Host(), src.Home(), dHost, dst.Home()); err != nil {
-		zlog.Debug().Err(err).Msg("")
+		log.Debug("error copying directory", slog.Any("error", err))
 		return
 	}
 
@@ -165,7 +164,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		if done {
 			if opts.move {
 				// once we are done, try to delete old instance
-				zlog.Debug().Msgf("removing old instance %s", srcname)
+				log.Debug("removing old instance", slog.String("instance", srcname))
 				srcrem.RemoveAll(srchome)
 				fmt.Println(srcname, "moved to", dst)
 			} else {
@@ -173,7 +172,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			}
 		} else {
 			// remove new instance
-			zlog.Debug().Msgf("removing new instance %s", dst)
+			log.Debug("removing new instance", slog.String("instance", dst.String()))
 			dst.Host().RemoveAll(dst.Home())
 		}
 	}(src.String(), src.Host(), src.Home(), dst)
@@ -193,7 +192,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			sPort := config.Get[uint16](src.Config(), "port")
 			dPortsInUse := GetAllPorts(dHost)
 			if _, ok := dPortsInUse[sPort]; ok {
-				zlog.Debug().Msgf("found port in use: %d", sPort)
+				log.Debug("found port in use", slog.Int("port", int(sPort)))
 				config.Set(ncf, "port", NextFreePort(dHost, dst.Type()))
 			} else {
 				config.Set(ncf, "port", config.Get[uint16](src.Config(), "port"))
@@ -211,9 +210,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}
 
 	// config changes don't matter until writing config succeeds
-	zlog.Debug().Msgf("writing: %v", ncf.AllSettings())
+	log.Debug("writing config", slog.Any("config", ncf.AllSettings()))
 	if resp := Write(newdst); resp.Err != nil {
-		zlog.Debug().Err(resp.Err).Msg("")
+		log.Debug("error writing config", slog.Any("error", resp.Err))
 		return resp.Err
 	}
 
