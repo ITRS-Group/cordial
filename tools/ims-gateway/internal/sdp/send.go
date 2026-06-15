@@ -125,8 +125,8 @@ func send(w http.ResponseWriter, r *http.Request) {
 	requestTransformed := maps.Clone(request)
 
 	// apply a transform to fields before using them for lookups in create/update
-	if transform, ok := config.Lookup[ims.Transform](cf, cf.Join("sdp", "requests", "transform")); ok {
-		requestTransformed, err = transform.Apply(cf, "sdp", request)
+	if transform, ok := config.Lookup[ims.Transformation](cf, cf.Join("sdp", "requests", "transform")); ok {
+		requestTransformed, err = transform.Transform(cf, "sdp", request)
 		if err != nil {
 			response.Error = fmt.Sprintf("error applying transform: %v", err)
 			response.ResultDetail = config.Expand[string](cf,

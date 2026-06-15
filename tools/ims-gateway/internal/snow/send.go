@@ -220,7 +220,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	if ok {
 		var err error
-		incidentTransformed, err = transform.Apply(cf, "snow", incident)
+		incidentTransformed, err = transform.Transform(cf, "snow", incident)
 		if err != nil {
 			response.Error = fmt.Sprintf("error applying transform for state %d: %v", state, err)
 			response.ResultDetail = config.Expand[string](cf,

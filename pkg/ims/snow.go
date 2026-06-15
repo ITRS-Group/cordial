@@ -21,6 +21,13 @@ package ims
 // profile in imscmd raise, but may be extended to other areas in
 // future.
 
+// All names show be prefixed with `SNOW_` or `Snow` to avoid conflicts
+// with other IMS integrations and to make it clear that they are
+// specific to ServiceNow. Internal fields used for processing but not
+// sent to ServiceNow should be prefixed with `__snow_` to avoid
+// conflicts with actual ServiceNow fields and to indicate that they are
+// internal only.
+
 const (
 	// ServiceNow fields
 	SNOW_CMDB_CI_FIELD     = "cmdb_ci"
@@ -41,7 +48,7 @@ const (
 	SNOW_INCIDENT_TABLE  = "__snow_table"
 )
 
-// snowResult is the response from ServiceNow. It contains the results
+// SnowResult is the response from ServiceNow. It contains the results
 // of the request, which is a slice of results. It also contains an
 // error message if the request failed. The status field is used to
 // indicate the status of the request. If the request was successful,

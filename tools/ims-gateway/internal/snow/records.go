@@ -71,12 +71,12 @@ type TableResponses struct {
 }
 
 type TableData struct {
-	Name          string                `mapstructure:"name,omitempty"`
-	Search        string                `mapstructure:"search,omitempty"`
-	Query         TableQuery            `mapstructure:"query,omitempty"`
-	Defaults      ims.Values            `mapstructure:"defaults,omitempty"`
-	CurrentStates map[int]ims.Transform `mapstructure:"current-state,omitempty"`
-	Response      TableResponses        `mapstructure:"response,omitempty"`
+	Name          string                     `mapstructure:"name,omitempty"`
+	Search        string                     `mapstructure:"search,omitempty"`
+	Query         TableQuery                 `mapstructure:"query,omitempty"`
+	Defaults      ims.Values                 `mapstructure:"defaults,omitempty"`
+	CurrentStates map[int]ims.Transformation `mapstructure:"current-state,omitempty"`
+	Response      TableResponses             `mapstructure:"response,omitempty"`
 }
 
 func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOption) (sysID string, state int, err error) {

@@ -23,8 +23,11 @@ import (
 	"time"
 )
 
-type results map[string]string
-type Results []results
+// Results represents the results of an IMS query, which is a slice of
+// maps of string key/value pairs representing the fields and values of
+// each result. This is used for returning query results from the IMS
+// gateway to the client.
+type Results []map[string]string
 
 // Response is the standard response from the IMS gateway, which may
 // include the status code and message from the gateway itself, as well as

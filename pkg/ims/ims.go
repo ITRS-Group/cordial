@@ -36,6 +36,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
+var log = cordial.Logger
+
 type ContextKey string
 
 const (
@@ -55,6 +57,8 @@ const (
 // the configuration for a variety of operations.
 type Values map[string]string
 
+// ClientConfig represents the configuration for creating a new IMS
+// client.
 type ClientConfig struct {
 	URL     string        `json:"url,omitempty"`
 	Token   string        `json:"token,omitempty"`
@@ -68,23 +72,26 @@ type ClientConfig struct {
 	Trace bool `json:"trace,omitempty"`
 }
 
-var log = cordial.Logger
-
 // NewClient creates a new rest.Client for the given URL and
 // configuration. The client is NOT cached as each execution is a single
-// request to the first remote proxy that responds.
-func NewClient(cf *ClientConfig) *rest.Client {
+// request to the first remote proxy that responds, however the
+// underlying http.Client is cached and shared across all rest.Client
+// instances created by this function, so TLS configuration is shared
+// across all clients created by this function. The caller should ensure
+// that the TLS configuration is compatible with all URLs that may be
+// used.
+func NewClient(clientConfig *ClientConfig) *rest.Client {
 	var tcc *tls.Config
 
-	if strings.HasPrefix(cf.URL, "https:") {
-		skip := cf.TLS.SkipVerify
+	if strings.HasPrefix(clientConfig.URL, "https:") {
+		skip := clientConfig.TLS.SkipVerify
 		roots, err := x509.SystemCertPool()
 		if err != nil {
 			log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
 		}
 
 		if !skip {
-			if chain := cf.TLS.Chain; len(chain) != 0 {
+			if chain := clientConfig.TLS.Chain; len(chain) != 0 {
 				if ok := roots.AppendCertsFromPEM(chain); !ok {
 					log.Warn("error reading cert chain")
 				}
@@ -97,7 +104,7 @@ func NewClient(cf *ClientConfig) *rest.Client {
 		}
 	}
 
-	timeout := cf.Timeout
+	timeout := clientConfig.Timeout
 	if timeout <= 0 {
 		timeout = 10 * time.Second
 	}
@@ -112,27 +119,29 @@ func NewClient(cf *ClientConfig) *rest.Client {
 		Timeout: timeout,
 	}
 
-	if cf.Trace {
+	if clientConfig.Trace {
 		hc.Transport = &LogTransport{
 			Transport: hc.Transport.(*http.Transport),
 		}
 	}
 
 	return rest.NewClient(
-		rest.BaseURLString(cf.URL),
+		rest.BaseURLString(clientConfig.URL),
 		rest.HTTPClient(hc),
 		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-			req.Header.Add(
-				"Authorization",
-				fmt.Sprintf("Bearer %s", cf.Token),
-			)
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", clientConfig.Token))
 		}),
 	)
 }
 
 // Connect returns a sequence of *ClientConfig for each URL in the
-// configuration. The caller can use this to attempt to connect to each
-// configured URL in turn until a successful connection is made.
+// configuration. The caller can attempt to connect to each configured
+// URL in turn until a successful connection is made.
+//
+// The order of the URLs is not guaranteed, so the caller should not
+// rely on the order of the URLs in the configuration. The caller should
+// also be prepared to handle connection failures, as some of the URLs
+// may be unreachable or misconfigured.
 func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 	return func(yield func(*rest.Client) bool) {
 		for _, r := range config.Get[[]string](imsCf, "url") {
@@ -162,8 +171,7 @@ func CorrelationID(data string) string {
 	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
 }
 
-// debug transport for tracing
-
+// LogTransport is a transport for tracing HTTP requests and responses.
 type LogTransport struct {
 	Transport http.RoundTripper
 }

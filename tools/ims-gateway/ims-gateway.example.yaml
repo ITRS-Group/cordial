@@ -124,6 +124,53 @@ sdp:
             logical_operator: and
         fields_required: [ id, status.name ]
 
+    # optional transformation to apply to the request before using it
+    # for updates or creates. The transformation is applied after the
+    # search phase and any existing request has been found, but before
+    # the update or create is performed. This allows you to modify the
+    # request based on the current state of the incident in ServiceDesk
+    # Plus.
+    #
+    # The transformation supports the following steps, which are applied in
+    # the order given below:
+    transform:
+      # 1. `defaults` - set default values for fields if they have not
+      #    been set previously/elsewhere. This is applied before any
+      #    other steps, so the default values can be overridden by any
+      #    other step below.
+      defaults:
+
+      # 2. `remove` - remove the fields listed from those currently set.
+      #    Note that all fields with a double-underscore prefix will be
+      #    removed anyway, after all other processing, before the final
+      #    set is sent to ServiceDesk Plus.
+      remove:
+
+      # 3. `rename` - rename each fields used as a key to the value
+      #    given. Note that all fields with a prefix of `__sdp_` will be
+      #    automatically renamed to remove the prefix at the start of
+      #    the `rename` phase, before any given below.
+      #
+      #    Fields prefixed with `__sdp_` are always renamed to remove
+      #    the prefix at the start of this stage, and configured
+      #    renaming is applied after that.
+      rename:
+
+      # 4. `exclude` - if defined and non-zero in length, a list of
+      #    fields names that will be excluded from the request when it
+      #    is sent to ServiceDesk Plus.
+      exclude:
+
+      # 5. `include` - if defined and non-zero in length, a list of
+      #    fields names that will be included in the request when it is
+      #    sent to ServiceDesk Plus.
+      include:
+
+      # 6. `must-include` - if defined and non-zero in length, a list of
+      #    fields names that must be included in the request when it is
+      #    sent to ServiceDesk Plus.
+      must-include:
+
     # similar to search, above, this is used to get a list of requests from SDP
     get:
       list_info:
@@ -133,6 +180,7 @@ sdp:
             condition: is
             value: Open
         fields_required: [ impact_details, udf_fields, subject, requester, template, status, request_type, has_notes ]
+
     # list of columns for `get` above
     columns:
       - id
@@ -141,7 +189,7 @@ sdp:
       - template.name
       - ${config:requests.correlation_id}
 
-    # create a new request using these fields. the YAML from `request`
+    # Create a new request using these fields. The YAML from `request`
     # (inclusive) is "expanded" and converted to JSON and then passed to
     # the SDP API as the body of the create request. This allows you to
     # refer to other configuration values in the proxy configuration
@@ -163,7 +211,7 @@ sdp:
         udf_fields:
           txt_correlation_id: ${correlation_id}
 
-    # similar to `create`, above, this is used to update an existing
+    # Update, similar to `create` above, is used to update an existing
     # request, the YAML from `edit_request.request` (inclusive) is
     # "expanded" and converted to JSON and then passed to the SDP API as
     # the body of the update request. The YAML from
@@ -246,37 +294,50 @@ snow:
         contact_type: email
         caller_id: "david.miller@example.com"
 
-      current-state:
-        # each key is the numeric value of the current state of the
-        # incident before any changes are made. state 0 is a special
-        # value meaning that the incident could not be found and will be
-        # created, instead of updated.
-        #
-        # each section supports the following keys, which are processed
-        # in the order below:
-        #
-        # * `defaults` - set ServiceNow field default values if those
-        #   fields have not been set elsewhere
-        #
-        # * `remove` - remove the fields listed from those currently
-        #   set. Note that all fields with an underscore prefix will be
-        #   removed anyway, after all other processing, before the final
-        #   set is sent to ServiceNow
-        #
-        # * `rename` - rename each fields used as a key to the value
-        #   given
-        #
-        # * `must-include` - if defined and non-zero in length, a list
-        #   of fields names that must be set to a value, otherwise the
-        #   incident creation or update will not be performed and an
-        #   error returned.
-        #
-        # * `filter` - if defined and non-zero in length, a list of all
-        #   the fields that will be sent to ServiceNow. This list must
-        #   represent the complete list of fields you want to send via
-        #   the API.
+     
 
-        # current state 0 - doesn't exist, incident will be created
+      # `current-state` - each key is the numeric value of the current
+      # state of the incident before any changes are made. state 0 is a
+      # special value meaning that the incident could not be found and
+      # will be created, instead of updated.
+      current-state:
+        #
+        # The transformation for each state supports the following
+        # steps, which are applied in the order given below:
+        #
+        # 1. `defaults` - set default values for fields if they have not
+        #    been set previously/elsewhere. This is applied before any
+        #    other steps, so the default values can be overridden by any
+        #    other step below.
+        #
+        # 2. `remove` - remove the fields listed from those currently
+        #    set. Note that all fields with a double-underscore prefix
+        #    will be removed anyway, after all other processing, before
+        #    the final set is sent to ServiceNow.
+        #
+        # 3. `rename` - rename each fields used as a key to the value
+        #    given. Note that all fields with a prefix of `__snow_` will
+        #    be automatically renamed to remove the prefix at the start
+        #    of the `rename` phase, before any given below.
+        #
+        #    Fields prefixed with `__snow_` are always renamed to remove
+        #    the prefix at the start of this stage, and configured
+        #    renaming is applied after that.
+        #
+        # 4. `exclude` - if defined and non-zero in length, a list of
+        #    fields names that will be excluded from the request when it
+        #    is sent to ServiceNow.
+        #
+        # 5. `include` - if defined and non-zero in length, a list of
+        #    fields names that will be included in the request when it
+        #    is sent to ServiceNow.
+        #
+        # 6. `must-include` - if defined and non-zero in length, a list
+        #    of fields names that must be included in the request when
+        #    it is sent to ServiceNow.
+
+        # current state 0 - incident doesn't exist (or could not be
+        # found), incident will be created
         0:
           # default values if not set previously/elsewhere
           defaults:
@@ -291,18 +352,18 @@ snow:
         1:
           defaults:
             state: 2
+          remove: [ short_description ]
           rename:
             __incident_body_text: work_notes
-          remove: [ short_description ]
           must-include: [ work_notes ]
 
         # current state 2 - updated
         2:
           defaults:
             state: 2
+          remove: [ short_description ]
           rename:
             __incident_body_text: work_notes
-          remove: [ short_description ]
 
         # current state 6 - resolved
         6: # resolve

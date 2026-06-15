@@ -21,6 +21,8 @@ import "net/http"
 
 // register endpoints for IMS functions
 
+// Endpoint represents an API endpoint for the IMS integration,
+// including the HTTP method, path, and handler function.
 type Endpoint struct {
 	Method  string // HTTP method (e.g. "POST", "GET")
 	Path    string // URL path (e.g. "/create", "/update") relative to application base path and including any path parameters (e.g. "/create/{id}")
@@ -29,6 +31,10 @@ type Endpoint struct {
 
 var Endpoints = []Endpoint{}
 
+// RegisterEndpoint registers an API endpoint for the IMS integration,
+// including the HTTP method, path, and handler function. The path
+// should be relative to the application base path and can include path
+// parameters (e.g. "/create/{id}").
 func RegisterEndpoint(method, path string, handler http.HandlerFunc) {
 	// TODO: validate method and path
 	Endpoints = append(Endpoints, Endpoint{
