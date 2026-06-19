@@ -1,5 +1,3 @@
-# `geneos san`
-
 A `san` component is an instance of a [Geneos Netprobe](https://docs.itrsgroup.com/docs/geneos/current/collection/netprobe/introduction/netprobe-overview/index.html), which is the agent installed to collect data from monitored systems, running in a Self-Announcing mode.
 
 Other component types that represent specific flavours of Netprobe, e.g. `fa2` for the FIX Analyser Netprobe, `minimal` for the non-Collection Agent enabled Netprobe etc., can also be configured as a `san` component. Do this when adding a `san` component by prefixing the instance name with the package type, e.g. `fa2:faSAN1` or `minimal:minSAN1`. The `pkgtype` (see below) is then set to the prefix, e.g. `fa2` or `minimal`, which are currently the only valid alternatives to `netprobe`, the default.
@@ -73,21 +71,3 @@ The following structured parameters are used in the default `san.setup.xml.gotmp
   The `secret` type is specific to cordial and is used to store secrets in an encoded form. If you do not set a `VALUE` then you will be prompted for one, if you are running `geneos` from a terminal. If the `VALUE` is already encoded in expandable for, e.g. from `geneos aes password` then that will be used without change. Any other `VALUE` will be encoded using your user keyfile and later converted, for Gateway templates, to a Geneos style `stdAESPassword` using the Gateway keyfile. The `secret` type is not valid for other component types.
 
   Note that in all cases `NAME` is case-sensitive, unlike basic parameters. To remove a variable use `geneos unset -v NAME`.
-
-## Usage
-
-```text
-geneos san
-```
-
-### Options
-
-```text
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
-## SEE ALSO
-
-* [geneos](geneos.md)	 - Take control of your Geneos environments

@@ -26,7 +26,7 @@ import (
 
 // Help command and text to hook into Cobra command tree
 
-//go:embed README.md
+//go:embed webserver.md
 var longDescription string
 
 func init() {

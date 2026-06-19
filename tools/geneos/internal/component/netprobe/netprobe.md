@@ -1,5 +1,3 @@
-# `geneos netprobe`
-
 A `netprobe` component is an instance of a [Geneos Netprobe](https://docs.itrsgroup.com/docs/geneos/current/collection/netprobe/introduction/netprobe-overview/index.html), which is the primary agent used to collect data from monitored systems.
 
 While there are other component types that represent specific flavours of Netprobe, e.g. `fa2` for the FIX Analyser Netprobe, `minimal` for the non-Collection Agent enabled Netprobe etc., all of these kinds can also be configured as a normal `netprobe` component, to make overall management easier. On the other hand, the `san` and `floating` component types, while Netprobes, function differently and have different configuration parameters, so they must be configured using their own types.
@@ -33,21 +31,3 @@ The parameters described below are specific to the Netprobe component.
 * `hostname` (Default: `localhost`)
 
   The `HOSTNAME` environment variable is set to this value when the Netprobe is started. It is required by the Collection Agent when self-monitoring is enabled.
-
-## Usage
-
-```text
-geneos netprobe
-```
-
-### Options
-
-```text
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-```
-
-## SEE ALSO
-
-* [geneos](geneos.md)	 - Take control of your Geneos environments

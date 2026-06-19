@@ -27,7 +27,7 @@ import (
 
 // Help command and text to hook into Cobra command tree
 
-//go:embed README.md
+//go:embed ac2.md
 var ac2Description string
 
 func init() {

@@ -26,7 +26,7 @@ import (
 
 // Help command and text to hook into Cobra command tree
 
-//go:embed README.md
+//go:embed licd.md
 var licdDescription string
 
 func init() {
