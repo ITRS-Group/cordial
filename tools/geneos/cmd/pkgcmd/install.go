@@ -251,6 +251,7 @@ geneos install netprobe -b active_dev -U
 					err = fmt.Errorf("%w and password required", err)
 					return
 				}
+				// ok to defer clear here as the options are used before returning to caller
 				defer clear(installCmdPassword)
 			}
 		}
