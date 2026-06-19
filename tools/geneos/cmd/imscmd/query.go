@@ -38,32 +38,36 @@ import (
 var queryCmdSource, queryCmdQuery, queryCmdFormat string
 var queryCmdRaw bool
 var queryCmdIMSType string
+var queryCmdConfigFile string
 
 func init() {
 	incidentCmd.AddCommand(queryCmd)
 
-	queryCmd.Flags().StringVarP(&queryCmdIMSType, "ims", "i", "", "IMS type, e.g. \"snow\" or \"sdp\". default taken from config file")
+	queryCmd.Flags().StringVarP(&queryCmdConfigFile, "config", "c", "",
+		`config file to use`,
+	)
 
-	queryCmd.Flags().StringVarP(&queryCmdSource, "snow-table", "T", "", "ServiceNow table, defaults to incident")
-	queryCmd.Flags().BoolVarP(&queryCmdRaw, "snow-raw", "R", false, "turn ServiceNow sys_display off, i.e. return raw values instead of display values")
+	queryCmd.Flags().StringVarP(&queryCmdIMSType, "ims", "i", "",
+		`IMS type, e.g. "snow" or "sdp". If not specified, the default is taken from config file`,
+	)
 
-	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "Q", "", "query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. default taken from config file")
-	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv", "output format: `csv` or json")
+	queryCmd.Flags().StringVarP(&queryCmdSource, "snow-table", "T", "",
+		`ServiceNow table, defaults to incident`,
+	)
+
+	queryCmd.Flags().BoolVarP(&queryCmdRaw, "snow-raw", "R", false,
+		`turn ServiceNow sys_display off, i.e. return raw values instead of display values`,
+	)
+
+	queryCmd.Flags().StringVarP(&queryCmdQuery, "query", "Q", "",
+		`query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. If not specified, the default is taken from config file`,
+	)
+
+	queryCmd.Flags().StringVarP(&queryCmdFormat, "format", "f", "csv",
+		`output format: "csv" or "json"`,
+	)
 
 	queryCmd.Flags().SortFlags = false
-}
-
-type SnowResults map[string]string
-
-type Results []SnowResults
-
-type SnowResult struct {
-	Results SnowResults `json:"result,omitempty"`
-	Error   struct {
-		Message string `json:"message"`
-		Detail  string `json:"detail"`
-	} `json:"error"`
-	Status string `json:"status,omitempty"`
 }
 
 type queryParameters struct {
@@ -80,7 +84,7 @@ var queryCmd = &cobra.Command{
 	Long:         queryCmdDoc,
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
-		cf := imsLoadConfigFile("ims")
+		cf := imsLoadConfigFile("ims", queryCmdConfigFile)
 
 		var err error
 		var response ims.Response
@@ -109,7 +113,6 @@ var queryCmd = &cobra.Command{
 				Raw:   queryCmdRaw,
 			}
 		case "sdp":
-			// queryCmdSource = "requests"
 			log.Debug("using ServiceDesk Plus-specific query parameters", slog.String("query", queryCmdQuery))
 			if queryCmdQuery == "" {
 				var b bytes.Buffer

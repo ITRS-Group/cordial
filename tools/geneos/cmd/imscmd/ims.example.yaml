@@ -66,9 +66,10 @@ ims-gateway:
     # needs to match the one in the URL, and this is uncommon for
     # self-managed certificates.
     skip-verify: false
-    # chain to validate proxy connection, if not defined (and
-    # skip-verify is false) then use system roots
-    chain: ${file:/path/to/chain.pem}
+
+    # ca-certs is a bundle of roots to verify the proxy connections in
+    # addition to the system roots
+    ca-certs: ${file:/path/to/ca-bundle.pem}
 
   # trace: true
 

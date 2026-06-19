@@ -19,10 +19,12 @@ package imscmd
 
 import (
 	_ "embed"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
@@ -50,4 +52,42 @@ var incidentCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
+}
+
+// imsLoadConfigFile reads in the IMS specific client config file.
+//
+// This configuration file is different to the global `geneos` config,
+// and is specific to Incident Management Subsystem. It is typically
+// named `${HOME}/.config/geneos/ims.yaml` and contain the relevant
+// configuration for this subsystem, such as gateway types, URLs and
+// profiles.
+func imsLoadConfigFile(name string, configFile string) (cf *config.Config) {
+	var err error
+
+	if name == "" {
+		name = "ims"
+	}
+
+	cf, err = config.Read(name,
+		config.AppName(cordial.ExecutableName()),
+		config.UseGlobal(),
+		config.Format("yaml"),
+		config.FilePath(configFile),
+		config.MustExist(),
+	)
+	if err != nil {
+		log.Error("failed to load a configuration file from any expected location", slog.Any("error", err))
+	}
+	log.Debug("loaded config file",
+		slog.String("path",
+			config.Path(name,
+				config.AppName(cordial.ExecutableName()),
+				config.UseGlobal(),
+				config.Format("yaml"),
+				config.FilePath(configFile),
+			),
+		),
+	)
+
+	return
 }

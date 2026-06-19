@@ -31,7 +31,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
@@ -63,14 +62,16 @@ var raiseCmd = &cobra.Command{
 	SilenceUsage: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		// all keys with a leading `__` are passed to the IMS Gateway but the Gateway
-		// then removes them in addition to other configuration settings. The expected fields are:
+		// then removes them in addition to other configuration settings.
 		//
-		// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
+		// The expected fields are:
+		//
+		// correlation_id - raw correlation ID, which is left unchanged before use, or if not defined:
 		// __incident_correlation - correlation ID, which is SHA1 checksummed before use
 		//
-		// __incident_subject - short description
+		// __incident_subject - subject / short description
 		// __incident_body_text - long text
-		// __incident_body_html - long text with HTML formatting
+		// __incident_body_html - long text with HTML formatting - now supported by ServiceNow
 		//
 		// __itrs_severity - severity, e.g. 0-3 or critical, warning etc.
 		// __itrs_category - category of the incident, usually the `CATEGORY` ME attribute, e.g. "Database", "Application", "Network"
@@ -91,7 +92,7 @@ var raiseCmd = &cobra.Command{
 		// __sdp_item - item to request, e.g. "Laptop"
 
 		var defaults []ims.ActionGroup
-		var profileGroups []ims.ActionGroup
+		var actionGroups []ims.ActionGroup
 		var result map[string]any
 		var incident = make(ims.Values)
 
@@ -120,11 +121,11 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		cf := imsLoadConfigFile("ims")
+		cf := imsLoadConfigFile("ims", raiseCmdConfigFile)
 
 		// load and process defaults
 		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
-			log.Error("failed to unmarshal defaults", slog.Any("error", err))
+			log.Error("failed to load defaults from configuration file", slog.Any("error", err))
 			os.Exit(1)
 		}
 		for _, g := range defaults {
@@ -133,8 +134,7 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		defaultsJSON, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug("incident fields after processing defaults", slog.String("defaults", string(defaultsJSON)))
+		log.Debug("incident fields after processing defaults", slog.Any("defaults", incident))
 
 		if raiseCmdProfile == "" {
 			var ok bool
@@ -143,19 +143,19 @@ var raiseCmd = &cobra.Command{
 			}
 		}
 
-		if err = cf.UnmarshalKey(cf.Join("profiles", raiseCmdProfile), &profileGroups, config.NoExpand()); err != nil {
-			log.Error("failed to unmarshal profile", slog.Any("error", err))
+		if err = cf.UnmarshalKey(cf.Join("profiles", raiseCmdProfile), &actionGroups, config.NoExpand()); err != nil {
+			log.Error("failed to load profile action groups from configuration file", slog.Any("error", err), slog.String("profile", raiseCmdProfile))
 			os.Exit(1)
 		}
-		for _, g := range profileGroups {
-			log.Debug("processing profile", slog.String("profile", raiseCmdProfile), slog.Any("group", g))
-			if ims.ProcessActionGroup(cf, g, incident) {
+		for _, ag := range actionGroups {
+			log.Debug("processing profile", slog.String("profile", raiseCmdProfile), slog.Any("group", ag))
+			if ims.ProcessActionGroup(cf, ag, incident) {
 				break
 			}
 		}
 
 		profileJSON, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug("incident fields after processing profile (over defaults)", slog.String("profile", string(profileJSON)))
+		log.Debug("incident fields after processing profile action groups (over defaults)", slog.String("profile", string(profileJSON)))
 
 		if raiseCmdIMSType == "" {
 			raiseCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
@@ -212,42 +212,4 @@ var raiseCmd = &cobra.Command{
 
 		return
 	},
-}
-
-// imsLoadConfigFile reads in the IMS specific client config file.
-//
-// This configuration file is different to the global `geneos` config,
-// and is specific to Incident Management Subsystem. It is typically
-// named `${HOME}/.config/geneos/ims.yaml` and contain the relevant
-// configuration for this subsystem, such as gateway types, URLs and
-// profiles.
-func imsLoadConfigFile(name string) (cf *config.Config) {
-	var err error
-
-	if name == "" {
-		name = "ims"
-	}
-
-	cf, err = config.Read(name,
-		config.AppName(cordial.ExecutableName()),
-		config.UseGlobal(),
-		config.Format("yaml"),
-		config.FilePath(raiseCmdConfigFile),
-		config.MustExist(),
-	)
-	if err != nil {
-		log.Error("failed to load a configuration file from any expected location", slog.Any("error", err))
-	}
-	log.Debug("loaded config file",
-		slog.String("path",
-			config.Path(name,
-				config.AppName(cordial.ExecutableName()),
-				config.UseGlobal(),
-				config.Format("yaml"),
-				config.FilePath(raiseCmdConfigFile),
-			),
-		),
-	)
-
-	return
 }
