@@ -120,10 +120,12 @@ geneos init
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := cordial.Logger.With("command", "init")
+
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
 		}
+
 		// none of the arguments can be a reserved type
 		if ct != nil {
 			log.Error(ct.String(), slog.Any("error", geneos.ErrInvalidArgs))
@@ -306,7 +308,8 @@ func initProcessArgs(_ *cobra.Command, log *slog.Logger, args []string, extras .
 				return
 			}
 		}
-		defer clear(password)
+		// cannot clear password as it's an arg to the options below. caller should clear
+		// defer clear(password)
 
 		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(password))
 	}
