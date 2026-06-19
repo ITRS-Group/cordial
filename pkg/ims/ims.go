@@ -66,7 +66,7 @@ type ClientConfig struct {
 
 	TLS struct {
 		SkipVerify bool   `json:"skip-verify,omitzero"`
-		Chain      []byte `json:"chain,omitempty"`
+		CACerts    []byte `json:"ca-certs,omitempty"`
 	} `json:"tls"`
 
 	Trace bool `json:"trace,omitempty"`
@@ -91,9 +91,9 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 		}
 
 		if !skip {
-			if chain := clientConfig.TLS.Chain; len(chain) != 0 {
-				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					log.Warn("error reading cert chain")
+			if cacerts := clientConfig.TLS.CACerts; len(cacerts) != 0 {
+				if ok := roots.AppendCertsFromPEM(cacerts); !ok {
+					log.Warn("error reading CA certs")
 				}
 			}
 		}
@@ -142,6 +142,15 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 // rely on the order of the URLs in the configuration. The caller should
 // also be prepared to handle connection failures, as some of the URLs
 // may be unreachable or misconfigured.
+//
+// The configuration keys suported are:
+//
+//   - `url`: a list of URLs to connect to, e.g. `["https://ims1.example.com/api", "https://ims2.example.com/api"]`. The IMS type (e.g. `snow`) will be appended, as required by `ims-gateway`, to the URL when creating the client, so the actual URLs used will be `https://ims1.example.com/api/snow` and `https://ims2.example.com/api/snow`.
+//   - `authentication.token`: the token to use for authentication, e.g. `abc123`
+//   - `timeout`: the timeout for the connection, e.g. `10s`
+//   - `tls.skip-verify`: whether to skip TLS verification, e.g. `true`
+//   - `tls.chain`: a PEM encoded certificate chain to use for TLS verification, e.g. `-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----`
+//   - `trace`: whether to enable HTTP request/response tracing, e.g. `true`
 func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 	return func(yield func(*rest.Client) bool) {
 		for _, r := range config.Get[[]string](imsCf, "url") {
@@ -151,7 +160,7 @@ func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 				Timeout: config.Get[time.Duration](imsCf, config.Join("timeout")),
 			}
 			ccf.TLS.SkipVerify = config.Get[bool](imsCf, config.Join("tls", "skip-verify"))
-			ccf.TLS.Chain = config.Get[[]byte](imsCf, config.Join("tls", "chain"))
+			ccf.TLS.CACerts = config.Get[[]byte](imsCf, config.Join("tls", "chain"))
 			ccf.Trace = config.Get[bool](imsCf, config.Join("trace"))
 
 			if !yield(NewClient(ccf)) {
