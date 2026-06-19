@@ -128,7 +128,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		var req *http.Request
 		req, err = http.NewRequest("GET", source, nil)
 		if err != nil {
-			log.Error("source, trying next if configured", slog.Any("error", err))
+			log.Error("cannot create request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 			continue
 		}
 
@@ -143,11 +143,12 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		req1 := req.Clone(req.Context())
 
 		if resp, err = client.Do(req1); err != nil {
-			log.Error("source, trying next if configured", slog.Any("error", err))
+			log.Error("cannot perform request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 			continue
 		}
 
 		if resp.StatusCode < 300 {
+			log.Debug("source found", slog.String("url", source), slog.Int("status", resp.StatusCode))
 			return
 		}
 
@@ -168,14 +169,16 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			log.Debug("platform download failed, retry source url", slog.String("url", source))
 			req2 := req.Clone(req.Context())
 			if resp, err = client.Do(req2); err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot perform request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
 			}
 			if resp.StatusCode < 300 {
+				log.Debug("source found", slog.String("url", source), slog.Int("status", resp.StatusCode))
 				return
 			}
 		}
 
+		// close before next request
 		resp.Body.Close()
 
 		// if that fails, check for creds
@@ -194,7 +197,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			}
 			authBody, err = json.Marshal(da)
 			if err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot marshal auth body, trying next if configured", slog.Any("error", err))
 				continue
 			}
 			// make a copy as bytes.NewBuffer() takes ownership
@@ -203,15 +206,15 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 		}
 
 		if authReader == nil {
-			log.Error("source requires authentication but no credentials found, trying next if configured")
+			log.Error("source requires authentication but no credentials found, trying next if configured", slog.String("url", source))
 			continue
 		}
-		log.Debug("retrying source with auth", slog.String("url", source))
+		log.Debug("retrying source with auth", slog.String("url", source), slog.String("username", opts.username))
 
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
 			req, err = http.NewRequest("POST", source, authReader)
 			if err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot create request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
 			}
 			req.Header.Set("Content-Type", "application/json")
@@ -223,14 +226,17 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 				}
 			}
 			if resp, err = client.Do(req); err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot perform request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
 			}
 			if resp.StatusCode < 300 {
+				log.Debug("source found", slog.String("url", source), slog.Int("status", resp.StatusCode))
 				return
 			}
+			log.Debug("source not found with auth, trying next if configured", slog.Int("status", resp.StatusCode), slog.String("url", source))
 		}
 
+		// close before next request
 		resp.Body.Close()
 
 		if resp.StatusCode == 404 && platform != "" {
@@ -245,7 +251,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 			log.Debug("trying source with auth", slog.String("url", source))
 			req, err = http.NewRequest("POST", source, authReader)
 			if err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot create request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
 			}
 			req.Header.Set("Content-Type", "application/json")
@@ -257,14 +263,15 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 				}
 			}
 			if resp, err = client.Do(req); err != nil {
-				log.Error("source, trying next if configured", slog.Any("error", err))
+				log.Error("cannot perform request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
 			}
 			if resp.StatusCode < 300 {
 				return
 			}
 		}
-		log.Debug("source not found, trying next if configured", slog.String("url", source))
+
+		log.Debug("source not found, trying next if configured", slog.Int("status", resp.StatusCode), slog.String("url", source))
 	}
 	return
 }

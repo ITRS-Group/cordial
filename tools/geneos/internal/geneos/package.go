@@ -20,6 +20,7 @@ package geneos
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -135,6 +136,10 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 // component type ct must be given. options controls behaviour like
 // local only and restarts of affected instances.
 func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
+	var archive io.ReadCloser
+	var filename string
+	var filesize int64
+
 	log.Debug("installing release", slog.String("host", h.String()), slog.String("component", ct.String()))
 	if h == ALL || ct == nil {
 		return ErrInvalidArgs
@@ -149,12 +154,11 @@ func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
 		return nil
 	}
 
-	options = append(options, Destination(h), SetPlatformID(config.Get[string](h.Config, h.Config.Join("osinfo", "platform_id"))))
+	options = append(options, Onto(h), SetPlatformID(config.Get[string](h.Config, h.Config.Join("osinfo", "platform_id"))))
 
 	opts := evalOptions(options...)
 
-	// open an unarchive if given a tar.gz
-	archive, filename, filesize, err := openArchive(ct, options...)
+	archive, filename, filesize, err = OpenArchive(ct, options...)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			if IsURL(opts.source) {

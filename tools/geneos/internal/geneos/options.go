@@ -18,6 +18,7 @@ limitations under the License.
 package geneos
 
 import (
+	"io"
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -26,7 +27,9 @@ import (
 // packageOptions defines the internal options for various operations in
 // the geneos package
 type packageOptions struct {
-	source       string
+	archive      io.ReadCloser
+	archivename  string
+	archivesize  int64
 	basename     string
 	doupdate     bool
 	downloadbase string
@@ -42,6 +45,7 @@ type packageOptions struct {
 	password     config.Secret
 	platformId   string
 	restart      []Instance
+	source       string
 	start        func(Instance, ...any) error
 	stop         func(Instance, bool, bool) error
 	username     string
@@ -85,9 +89,9 @@ func DownloadOnly(download bool) PackageOption {
 	}
 }
 
-// Destination sets the destination host for the installation. This is
+// Onto sets the destination host for the installation. This is
 // used to determine the OS and architecture required for any download.
-func Destination(host *Host) PackageOption {
+func Onto(host *Host) PackageOption {
 	return func(po *packageOptions) {
 		po.host = host
 	}
@@ -236,5 +240,17 @@ func UseNexusSnapshots() PackageOption {
 func Headers(header ...string) PackageOption {
 	return func(d *packageOptions) {
 		d.headers = append(d.headers, header...)
+	}
+}
+
+// UseArchive sets the archive to use for installation. This can be used
+// after calling OpenArchive() to test availability of the archive and
+// then pass the archive to the installation function. If the archive is
+// nil then it is ignored and the source option is used instead.
+func UseArchive(archive io.ReadCloser, name string, size int64) PackageOption {
+	return func(d *packageOptions) {
+		d.archive = archive
+		d.archivename = name
+		d.archivesize = size
 	}
 }

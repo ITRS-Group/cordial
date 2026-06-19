@@ -50,7 +50,7 @@ var osMap = map[string]string{
 	"aarch64": "aarch64",
 }
 
-// openArchive locates and returns an io.ReadCloser for an archive for
+// OpenArchive locates and returns an io.ReadCloser for an archive for
 // the component ct.
 //
 // Options to control behaviour are passed as PackageOptions.
@@ -63,7 +63,7 @@ var osMap = map[string]string{
 //
 // LocalOnly()
 // DownloadOnly()
-func openArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, filename string, filesize int64, err error) {
+func OpenArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, filename string, filesize int64, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
