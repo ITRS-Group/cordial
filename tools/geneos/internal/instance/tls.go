@@ -34,7 +34,7 @@ const (
 	PRIVATEKEY          = "privatekey"
 	TLSVERIFY           = "verify"
 	CABUNDLE            = "ca-bundle"
-	CERTCHAIN           = "certchain"
+	CERTCHAIN           = "certchain" // deprecated, old parameter
 	MINVERSION          = "minimumversion"
 	TRUSTSTORE          = "truststore"
 	TRUSTSTORE_PASSWORD = "truststore-password"
