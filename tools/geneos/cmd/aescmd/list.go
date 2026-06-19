@@ -199,8 +199,8 @@ func aesListInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	return
 }
 
-func aesListShared(ct *geneos.Component, h *geneos.Host) (results responses.Responses, err error) {
-	results = make(responses.Responses)
+func aesListShared(ct *geneos.Component, h *geneos.Host) (results responses.GeneralResponses, err error) {
+	results = make(responses.GeneralResponses)
 	results["shared"] = responses.New[responses.General](nil)
 	resp := results["shared"]
 	for h := range h.OrList() {
@@ -286,8 +286,8 @@ func aesListInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	return
 }
 
-func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (rs responses.Responses) {
-	rs = make(responses.Responses)
+func aesListSharedCSV(ct *geneos.Component, h *geneos.Host) (rs responses.GeneralResponses) {
+	rs = make(responses.GeneralResponses)
 	var rows [][]string
 
 	for h := range h.OrList() {
@@ -387,8 +387,8 @@ func aesListPathJSON(i geneos.Instance, paths ...config.KeyFile) (resp *response
 	return
 }
 
-func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results responses.Responses, err error) {
-	results = make(responses.Responses)
+func aesListSharedJSON(ct *geneos.Component, h *geneos.Host) (results responses.GeneralResponses, err error) {
+	results = make(responses.GeneralResponses)
 	var values []*responses.General
 
 	for h := range h.OrList() {
