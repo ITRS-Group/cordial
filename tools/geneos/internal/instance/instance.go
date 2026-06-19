@@ -189,11 +189,11 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
+func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
 	instances := Instances(h, ct, MatchNames(names...))
-	rs = make(responses.Responses, len(instances))
+	rs = make(responses.GeneralResponses, len(instances))
 	ch := make(chan *responses.General, len(instances))
 
 	for _, c := range instances {
@@ -218,8 +218,8 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 // DoSerial is a variant of Do that executes the function calls
 // serially. This is for use by functions that are not concurrency safe.
-func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
-	rs = make(responses.Responses)
+func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	rs = make(responses.GeneralResponses)
 
 	instances := Instances(h, ct, MatchNames(names...))
 
@@ -236,10 +236,10 @@ func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneo
 // instead of looking them up by host, type and name. This is for use by
 // functions that have already looked up instances and want to call a
 // function on them concurrently.
-func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.Responses) {
+func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
-	rs = make(responses.Responses, len(instances))
+	rs = make(responses.GeneralResponses, len(instances))
 	ch := make(chan *responses.General, len(instances))
 
 	for _, c := range instances {

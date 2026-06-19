@@ -34,7 +34,7 @@ const (
 	outputFieldValue
 )
 
-type writeOptions struct {
+type options struct {
 	stderr       io.Writer
 	outputFields outputFields
 	ignoreerr    []error
@@ -48,7 +48,7 @@ type writeOptions struct {
 	headlines    map[string]string // optional headlines to include in the output, for formats that support it (toolkit, table, html)
 }
 
-var globalWriteOptions = writeOptions{
+var globalWriteOptions = options{
 	stderr:       os.Stderr,
 	ignoreerr:    []error{os.ErrProcessDone, geneos.ErrNotSupported},
 	skiponerr:    true,
@@ -58,10 +58,10 @@ var globalWriteOptions = writeOptions{
 	asJSON:       true,
 }
 
-// WriterOption controls to behaviour of the responses.Write method
-type WriterOption func(*writeOptions)
+// Option controls to behaviour of the responses.Write method
+type Option func(*options)
 
-func evalWriterOptions(options ...WriterOption) *writeOptions {
+func evalWriterOptions(options ...Option) *options {
 	opts := globalWriteOptions
 	for _, o := range options {
 		o(&opts)
@@ -71,31 +71,31 @@ func evalWriterOptions(options ...WriterOption) *writeOptions {
 
 // IndentJSON sets the JSON indentation to true or false for the output
 // of Values in responses.Write
-func IndentJSON(indent bool) WriterOption {
-	return func(wo *writeOptions) {
+func IndentJSON(indent bool) Option {
+	return func(wo *options) {
 		wo.indentJSON = indent
 	}
 }
 
 // StderrWriter sets the writer to use for errors. It defaults to
 // os.StderrWriter
-func StderrWriter(stderr io.Writer) WriterOption {
-	return func(wo *writeOptions) {
+func StderrWriter(stderr io.Writer) Option {
+	return func(wo *options) {
 		wo.stderr = stderr
 	}
 }
 
 // IgnoreErr adds err to the list of errors for responses.Write to skip.
-func IgnoreErr(err error) WriterOption {
-	return func(wo *writeOptions) {
+func IgnoreErr(err error) Option {
+	return func(wo *options) {
 		wo.ignoreerr = append(wo.ignoreerr, err)
 	}
 }
 
 // IgnoreErrs sets the errors that the responses.Write method will
 // skip outputting. It replaces any existing set.
-func IgnoreErrs(errs ...error) WriterOption {
-	return func(wo *writeOptions) {
+func IgnoreErrs(errs ...error) Option {
+	return func(wo *options) {
 		wo.ignoreerr = errs
 	}
 }
@@ -104,16 +104,16 @@ func IgnoreErrs(errs ...error) WriterOption {
 // output of other responses data if an error is present. If skip is
 // true then any response that has a non-ignored error will output the
 // error (subject to WriterStderr) and skip other returned data.
-func SkipOnErr(skip bool) WriterOption {
-	return func(wo *writeOptions) {
+func SkipOnErr(skip bool) Option {
+	return func(wo *options) {
 		wo.skiponerr = skip
 	}
 }
 
 // ShowTimes enables the output of the duration of each call. The
 // format of the output can be changed using WriterTimingFormat.
-func ShowTimes() WriterOption {
-	return func(wo *writeOptions) {
+func ShowTimes() Option {
+	return func(wo *options) {
 		wo.showtimes = true
 	}
 }
@@ -121,8 +121,8 @@ func ShowTimes() WriterOption {
 // TimingFormat sets the output format of any timing information.
 // It is a Printf-style format with the instance (as a geneos.Instance)
 // and the duration (as a time.Duration) as the two arguments.
-func TimingFormat(format string) WriterOption {
-	return func(wo *writeOptions) {
+func TimingFormat(format string) Option {
+	return func(wo *options) {
 		wo.timesformat = format
 	}
 }
@@ -130,16 +130,16 @@ func TimingFormat(format string) WriterOption {
 // Prefix is the Printf-style format to prefix plain text output
 // (only once per Lines). It can have one argument, the instance as a
 // geneos.Instance. The default is `"%s "`.
-func Prefix(prefix string) WriterOption {
-	return func(wo *writeOptions) {
+func Prefix(prefix string) Option {
+	return func(wo *options) {
 		wo.prefixformat = prefix
 	}
 }
 
 // Suffix is the suffix added to plain text output. The default is
 // a single newline (`\n`).
-func Suffix(suffix string) WriterOption {
-	return func(wo *writeOptions) {
+func Suffix(suffix string) Option {
+	return func(wo *options) {
 		wo.suffix = suffix
 	}
 }
@@ -148,41 +148,41 @@ func Suffix(suffix string) WriterOption {
 // is written as a string, in the format `prefix + value as %s +
 // suffix`, where prefix and suffix can be set using Prefix and
 // Suffix respectively, if the defaults are not suitable.
-func PlainValue() WriterOption {
-	return func(wo *writeOptions) {
+func PlainValue() Option {
+	return func(wo *options) {
 		wo.asJSON = false
 	}
 }
 
 // SummaryOnly makes responses.Write only output the Summary field.
-func SummaryOnly() WriterOption {
-	return func(wo *writeOptions) {
+func SummaryOnly() Option {
+	return func(wo *options) {
 		wo.outputFields = outputFieldSummary
 	}
 }
 
 // DetailsOnly makes responses.Write only output the Details field.
-func DetailsOnly() WriterOption {
-	return func(wo *writeOptions) {
+func DetailsOnly() Option {
+	return func(wo *options) {
 		wo.outputFields = outputFieldDetails
 	}
 }
 
 // CompletedOnly makes responses.Write only output the Completed field.
-func CompletedOnly() WriterOption {
-	return func(wo *writeOptions) {
+func CompletedOnly() Option {
+	return func(wo *options) {
 		wo.outputFields = outputFieldCompleted
 	}
 }
 
-func ValueOnly() WriterOption {
-	return func(wo *writeOptions) {
+func ValueOnly() Option {
+	return func(wo *options) {
 		wo.outputFields = outputFieldValue
 	}
 }
 
-func AddHeadline(key, value string) WriterOption {
-	return func(wo *writeOptions) {
+func AddHeadline(key, value string) Option {
+	return func(wo *options) {
 		if wo.headlines == nil {
 			wo.headlines = make(map[string]string)
 		}
@@ -190,8 +190,8 @@ func AddHeadline(key, value string) WriterOption {
 	}
 }
 
-func AddHeadlines(headlines map[string]string) WriterOption {
-	return func(wo *writeOptions) {
+func AddHeadlines(headlines map[string]string) Option {
+	return func(wo *options) {
 		if wo.headlines == nil {
 			wo.headlines = make(map[string]string)
 		}
