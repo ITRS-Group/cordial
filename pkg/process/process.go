@@ -122,3 +122,14 @@ func GetProcessInfo[T any](h host.Host, pid int, options ...ProcessOption) (pi T
 
 	return pi, os.ErrProcessDone
 }
+
+// ClearCache clears the process cache for host h. This can be used to
+// force a refresh of the cache on the next call to PID() or
+// GetProcessInfo(). This is useful if processes are expected to have
+// started or stopped since the last cache update, and an up to date
+// check is required. Note that the cache is automatically refreshed
+// every 5 seconds, so this function is only needed if an immediate
+// refresh is required.
+func ClearCache() {
+	clearCache()
+}

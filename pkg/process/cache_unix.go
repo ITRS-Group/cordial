@@ -190,6 +190,11 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	return c, true
 }
 
+func clearCache() {
+	procCacheMap = make(map[host.Host]map[string]any)
+	procCacheLastUpdate = make(map[host.Host]time.Time)
+}
+
 func checkAndFillCache[T any](h host.Host, pid int, pc T) {
 	// check if OpenFiles is empty, if so fill it
 	sv := reflect.ValueOf(pc).Elem()

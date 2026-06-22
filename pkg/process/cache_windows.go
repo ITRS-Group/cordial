@@ -22,16 +22,20 @@ import (
 var procCacheTTL = 5 * time.Second
 var procCacheMutex sync.Mutex
 var procCacheLastUpdate = make(map[host.Host]time.Time)
-var procCacheMap = make(map[host.Host]any)
+
+// var procCacheMap = make(map[host.Host]any)
+var procCacheMap = make(map[host.Host]map[string]any) // host / type / cache
 
 func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok bool) {
 	procCacheMutex.Lock()
 	defer procCacheMutex.Unlock()
 
+	tn := fmt.Sprintf("%T", (*T)(nil))
+
 	opts := evalProcessOptions(options...)
 	refreshCache := opts.refreshCache
 	if !refreshCache {
-		if c, ok = procCacheMap[h].(map[int]T); ok {
+		if c, ok = procCacheMap[h][tn].(map[int]T); ok {
 			if time.Since(procCacheLastUpdate[h]) < procCacheTTL {
 				return
 			}
@@ -77,9 +81,17 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 	}
 
 	procCacheLastUpdate[h] = time.Now()
-	procCacheMap[h] = c
+	if procCacheMap[h] == nil {
+		procCacheMap[h] = make(map[string]any)
+	}
+	procCacheMap[h][tn] = c
 
 	return c, true
+}
+
+func clearCache() {
+	procCacheMap = make(map[host.Host]map[string]any)
+	procCacheLastUpdate = make(map[host.Host]time.Time)
 }
 
 func checkAndFillCache[T any](h host.Host, pid int, pc T) {
