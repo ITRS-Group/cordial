@@ -51,11 +51,25 @@ func (discardCloser) Close() error { return nil }
 // that as the log file unless it is either "-" (which means use STDOUT
 // (not STDERR) or equal to the [os.DevNull] value, in which case is
 // [io.Discard].
+//
+// The environment variable `CORDIAL_LOG_OUTPUT` can be used to override
+// the logfile option. If `CORDIAL_LOG_OUTPUT` is set, then the
+// [cordial.SetLogfile] option is ignored.
+//
+// The environment variable `CORDIAL_LOG_FORMAT` can be used to set the
+// log format. If `CORDIAL_LOG_FORMAT` is set to "json", then the log
+// format is JSON, otherwise the format is a human readable format, with
+// colouring enabled if the output is a termial according to
+// `term.IsTerminal()`.
 func LogInit(prefix string, options ...LogOption) *slog.Logger {
 	var out io.WriteCloser
 	out = os.Stderr
 
 	opts := evalLoggerOptions(options...)
+
+	if os.Getenv("CORDIAL_LOG_OUTPUT") != "" {
+		opts.logfile = os.Getenv("CORDIAL_LOG_OUTPUT")
+	}
 
 	switch opts.logfile {
 	case "":
@@ -72,8 +86,8 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 	case os.DevNull:
 		out = discardCloser{io.Discard}
 	default:
-		// if given a filename, use the default lumberjack but override
-		// the filename
+		// if given a filename, use the provided or default lumberjack
+		// but override the filename
 		if opts.lj == nil {
 			opts.lj = &lumberjack.Logger{}
 		}
@@ -82,22 +96,28 @@ func LogInit(prefix string, options ...LogOption) *slog.Logger {
 		out = opts.lj
 	}
 
-	LogHandler = logger.NewHandler(
+	loggerOptions := []logger.Option{
 		logger.Leveler(&LogLevel),
-		logger.SourceAnchor("cordial"),
+		logger.SourceTrimTo(prefix),
 		logger.Delimiter("."),
 		logger.Writer(out),
-		// logger.JSON(),
-	)
+	}
+
+	if opts.format == "json" || os.Getenv("CORDIAL_LOG_FORMAT") == "json" {
+		loggerOptions = append(loggerOptions, logger.JSON())
+	}
+
+	LogHandler = logger.NewHandler(loggerOptions...)
 
 	// set up slog
 	LogLevel.Set(opts.slogLevel)
 	// update the point
 	*Logger = *slog.New(LogHandler)
 
-	if _, ok := out.(*lumberjack.Logger); ok {
+	switch o := out.(type) {
+	case *lumberjack.Logger:
 		color.NoColor = true
-	} else if o, ok := out.(*os.File); ok {
+	case *os.File:
 		if !term.IsTerminal(int(o.Fd())) {
 			color.NoColor = true
 		}
@@ -111,6 +131,7 @@ type logOpts struct {
 	lj            *lumberjack.Logger
 	rotateOnStart bool
 	slogLevel     slog.Level
+	format        string
 }
 
 type LogOption func(*logOpts)
@@ -154,5 +175,11 @@ func RotateOnStart(rotate bool) LogOption {
 func SetLogLevel(level slog.Level) LogOption {
 	return func(lo *logOpts) {
 		lo.slogLevel = level
+	}
+}
+
+func Format(format string) LogOption {
+	return func(lo *logOpts) {
+		lo.format = format
 	}
 }
