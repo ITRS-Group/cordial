@@ -72,26 +72,30 @@ func Start(i geneos.Instance, opts ...any) error {
 	errfile := ComponentFilepath(i, "txt")
 
 	var cpus []int
-	for c := range strings.SplitSeq(config.Get[string](i.Config(), "cpus"), ",") {
-		start, end, found := strings.Cut(c, "-")
-		if found {
-			s, err := strconv.Atoi(start)
-			if err != nil {
-				i.Log().Debug("invalid CPU value range start, skipping", slog.String("cpu", c), slog.String("start", start))
-				continue
+
+	cpuList, found := config.Lookup[string](i.Config(), "cpus")
+	if found {
+		for c := range strings.SplitSeq(cpuList, ",") {
+			start, end, found := strings.Cut(c, "-")
+			if found {
+				s, err := strconv.Atoi(start)
+				if err != nil {
+					i.Log().Debug("invalid CPU value range start, skipping", slog.String("cpu", c), slog.String("start", start))
+					continue
+				}
+				e, err := strconv.Atoi(end)
+				if err != nil {
+					i.Log().Debug("invalid CPU value range end, skipping", slog.String("cpu", c), slog.String("end", end))
+					continue
+				}
+				for i := s; i <= e; i++ {
+					cpus = append(cpus, i)
+				}
+			} else if cpu, err := strconv.Atoi(c); err == nil {
+				cpus = append(cpus, cpu)
+			} else {
+				i.Log().Debug("invalid CPU affinity value, skipping", slog.String("cpu", c))
 			}
-			e, err := strconv.Atoi(end)
-			if err != nil {
-				i.Log().Debug("invalid CPU value range end, skipping", slog.String("cpu", c), slog.String("end", end))
-				continue
-			}
-			for i := s; i <= e; i++ {
-				cpus = append(cpus, i)
-			}
-		} else if cpu, err := strconv.Atoi(c); err == nil {
-			cpus = append(cpus, cpu)
-		} else {
-			i.Log().Debug("invalid CPU value, skipping", slog.String("cpu", c))
 		}
 	}
 
