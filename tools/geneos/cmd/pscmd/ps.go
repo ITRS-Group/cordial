@@ -89,6 +89,9 @@ type psCommon struct {
 
 // CommandPS writes running instance information to STDOUT
 func CommandPS(ct *geneos.Component, names []string, params []string) {
+	// always start with a clean cache, in case this is called from init commands
+	process.ClearCache()
+
 	switch {
 	case psCmdJSON, psCmdIndent:
 		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
