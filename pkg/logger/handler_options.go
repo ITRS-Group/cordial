@@ -32,11 +32,11 @@ func Delimiter(delimiter string) Option {
 	}
 }
 
-// SourceAnchor sets the directory in the source path to trim up to,
+// SourceTrimTo sets the directory in the source path to trim up to,
 // including a tailing '/'. e.g. if the source path is
 // "/home/user/project/pkg/file.go" and the anchor is "project", the
 // resulting source path in the log will be "pkg/file.go".
-func SourceAnchor(anchor string) Option {
+func SourceTrimTo(anchor string) Option {
 	return func(opts *handlerOpts) {
 		opts.prefix = anchor
 	}
