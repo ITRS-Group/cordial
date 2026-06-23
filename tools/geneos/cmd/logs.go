@@ -31,10 +31,12 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/fatih/color"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 var logCmdLines int
@@ -100,6 +102,10 @@ var logsCmd = &cobra.Command{
 			logCmdCat = true
 		}
 
+		if !term.IsTerminal(int(os.Stdout.Fd())) {
+			color.NoColor = true
+		}
+
 		switch {
 		case logCmdCat:
 			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
@@ -112,6 +118,8 @@ var logsCmd = &cobra.Command{
 		return
 	},
 }
+
+var boldWhite = color.New(color.FgWhite).Add(color.Bold)
 
 // followLog sets up a watcher for the logs of a single instance. It is
 // used by both the logs command and the start command when --follow is
@@ -148,7 +156,7 @@ func outHeader(i geneos.Instance, path string) {
 	if lastout != "" {
 		fmt.Println()
 	}
-	fmt.Printf("===> %s %s <===\n", i, path)
+	boldWhite.Printf("===> %s %s <===\n", i, path)
 	lastout = i.String() + ":" + path
 }
 
@@ -162,7 +170,7 @@ func outHeaderString(i geneos.Instance, path string) (lines []string) {
 	if lastout != "" {
 		lines = append(lines, "")
 	}
-	lines = append(lines, fmt.Sprintf("===> %s %s <===", i, path))
+	lines = append(lines, boldWhite.Sprintf("===> %s %s <===", i, path))
 	lastout = i.String() + ":" + path
 	return
 }
@@ -189,7 +197,7 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines 
 	_, err := i.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{fmt.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
+			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
 			return
 		}
 		return
@@ -369,7 +377,7 @@ func logCatInstanceFile(i geneos.Instance, logfile string, kind string) (lines [
 	r, err := i.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{fmt.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
+			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
 			return
 		}
 		return
@@ -391,7 +399,7 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 		if err := logFollowInstanceFile(i, logfile); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				resp.Err = nil
-				fmt.Printf("===> %s %s STDERR log file not found, watching <===\n", i, logfile)
+				boldWhite.Printf("===> %s %s STDERR log file not found, watching <===\n", i, logfile)
 			} else {
 				resp.Err = err
 			}
@@ -402,7 +410,7 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 		if err := logFollowInstanceFile(i, logfile); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				resp.Err = nil
-				fmt.Printf("===> %s %s instance log file not found, watching <===\n", i, logfile)
+				boldWhite.Printf("===> %s %s instance log file not found, watching <===\n", i, logfile)
 			} else {
 				resp.Err = err
 			}
@@ -413,7 +421,7 @@ func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 		if err := logFollowInstanceFile(i, logfile); err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				resp.Err = nil
-				fmt.Printf("===> %s %s CA log file not found, watching <===\n", i, logfile)
+				boldWhite.Printf("===> %s %s CA log file not found, watching <===\n", i, logfile)
 			} else {
 				resp.Err = err
 			}
@@ -505,7 +513,7 @@ func watchLogs() (tails *sync.Map) {
 						// the old one, store a marker for next time
 						tail.reader.Close()
 						tails.Store(key, &files{tail.instance, nil, 0})
-						fmt.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
+						boldWhite.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
 					}
 				}
 
