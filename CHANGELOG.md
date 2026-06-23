@@ -34,6 +34,8 @@
 
   * Further reference documentation updates and improvements. In particular `geneos help set` now describes the common parameters for all component types, and initial component docs, e.g. `geneos help gateway` have been added to describe the component-specific parameters and configuration. This needs further work.
 
+  * `geneos logs` now highlights the instance header for each log file in bold, when writing to a terminal.
+
 * `intergetions/servicenow2`
 
   * Add an example in the client configuration to show how to resolve an incident on data item delete (from Alerts/Effects)
