@@ -1,26 +1,5 @@
 # Change Log
 
-## Version v1.27.2
-> [!NOTE]
-> **Released 2026-06-11** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
-
-### Version v1.27.2 Fixes
-
-### Version v1.27.2 Changes
-
-* Updated all components to to use Go `slog` for logging
-
-* `tools/geneos`
-
-  * Added support to set CPU Affinity for local Linux instances. The list of CPU cores to use can be set using the `cpus` parameters for all instances as a comma separated list decimal values including ranges, e.g. `cpus=0-3,5,7-9` to use cores 0,1,2,3,5,7,8 and 9. The `status`/`ps` command will show the Linux `Cpus_Allowed_list` value for each running instance when called with the `--long`/`-l` option.
-
----
-
-## Version v1.27.1
-
-> [!NOTE]
-> **Released 2026-06-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
-
 >[!WARNING]
 >Release v1.26 and later - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
@@ -28,6 +7,43 @@
 >   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
+
+## Version v1.28.0
+> [!NOTE]
+> **Released 2026-06-22** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+
+### Version v1.28.0 Fixes
+
+* `tools/geneos`
+
+  * `geneos init` commands now correctly use the prompted password for downloads. This was broken when removing memguard and the use of a `defer clear(password)` inside a common function meant that the password was cleared before it was used for downloads.
+
+  * `geneos init` commands will now list the final starting process list correctly again after the recent introduction of the process details cache, which will not have contained the new instances.
+
+  * `geneos aes set` now correctly writes instance configs in all cases.
+
+  * `geneos ps` now shows the correct version for each instance, which was broken by the process cache implementation in v1.22.2.
+
+### Version v1.28.0 Changes
+
+* Updated all components to to use Go `slog` for logging, replacing a mix of zerolog and others. Added a custom `slog` handler to output colour decorated output in human readable output when connected to an interactive session.
+
+* `tools/geneos`
+
+  * Added support to set CPU Affinity for local Linux instances. The list of CPU cores to use can be set using the `cpus` parameters for all instances as a comma separated list decimal values including ranges, e.g. `cpus=0-3,5,7-9` to use cores 0,1,2,3,5,7,8 and 9. The `status`/`ps` command will show the Linux `Cpus_Allowed_list` value for each running instance when called with the `--long`/`-l` option.
+
+  * Further reference documentation updates and improvements. In particular `geneos help set` now describes the common parameters for all component types, and initial component docs, e.g. `geneos help gateway` have been added to describe the component-specific parameters and configuration. This needs further work.
+
+* `intergetions/servicenow2`
+
+  * Add an example in the client configuration to show how to resolve an incident on data item delete (from Alerts/Effects)
+
+---
+
+## Version v1.27.1
+
+> [!NOTE]
+> **Released 2026-06-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.27.1 Fixes
 
@@ -172,14 +188,6 @@ After this release, planned work includes:
 ---
 
 ## Version v1.26.1
-
->[!WARNING]
->Release v1.26.1 - **BREAKING CHANGES**
->* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
->
->   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
->
->   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 > [!NOTE]
 > **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
