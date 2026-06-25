@@ -10,7 +10,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.28.0** - Released 2026-06-22 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is UNRELEASED **Version v1.28.0** - Which will be rReleased 2026-xx-xx - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 
