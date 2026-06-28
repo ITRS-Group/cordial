@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
