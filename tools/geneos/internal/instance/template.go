@@ -79,8 +79,6 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	var out io.WriteCloser
 	// var t *template.Template
 
-	i.Log().Debug("executing template", slog.String("name", name), slog.String("outputPath", outputPath), slog.String("template", string(defaultTemplate)), slog.Any("permissions", perms))
-
 	cf := i.Config()
 	h := i.Host()
 
@@ -254,8 +252,6 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	}
 
 	m["variables"] = newVals
-
-	i.Log().Debug("executing template", slog.String("name", name), slog.String("outputPathTmp", outputPathTmp), slog.Any("data", m))
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		i.Log().Error("Cannot create configuration from template(s)", slog.Any("error", err))
