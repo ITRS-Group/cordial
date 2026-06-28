@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -101,21 +102,50 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 			defer clear(s.Secret)
 		}
 
+		for _, s := range setCmdValues.Variables {
+			if s.Type == "secret" {
+				// prompt for value, save at string, leave encoding
+				// until later as multiple instances may have different
+				// keyfiles
+				if s.Value == "" {
+					secret, err := config.ReadPasswordInput(true, 3,
+						fmt.Sprintf("Enter Secret for variable %q", s.Name),
+						fmt.Sprintf("Re-enter Secret for variable %q", s.Name),
+					)
+					if err != nil {
+						return err
+					}
+					s.Value = string(secret)
+				}
+			}
+		}
+
 		setCmdValues.Params = params
-		instance.Do(geneos.GetHost(Hostname), ct, names, setValues, nil).Report(os.Stdout)
+		instance.Do(geneos.GetHost(Hostname), ct, names, setValues, setCmdValues).Report(os.Stdout)
 		return
 	},
 }
 
-func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
+func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
 	cf := i.Config()
-
 	keyfile := setCmdKeyfile
 
-	needKeyfile := len(setCmdValues.SecureParams) > 0 || len(setCmdValues.SecureEnvs) > 0
-	for _, v := range setCmdValues.Variables {
+	if len(args) != 1 {
+		resp.Err = fmt.Errorf("invalid arguments to setValues: %v", args)
+		return
+	}
+	v, ok := args[0].(values.Values)
+	if !ok {
+		resp.Err = fmt.Errorf("invalid argument type to setValues: %T", args[0])
+		return
+	}
+
+	// only look for keyfile if secure params or envs are set, or if any
+	// variable is of type secret
+	var needKeyfile = len(v.SecureParams) > 0 || len(v.SecureEnvs) > 0
+	for _, v := range v.Variables {
 		if v.Type == "secret" {
 			needKeyfile = true
 			break
@@ -141,7 +171,7 @@ func setValues(i geneos.Instance, _ ...any) (resp *responses.General) {
 		}
 	}
 
-	if cf, resp.Err = values.Set(i, setCmdValues, keyfile); resp.Err != nil {
+	if cf, resp.Err = values.Set(i, v, keyfile); resp.Err != nil {
 		return
 	}
 

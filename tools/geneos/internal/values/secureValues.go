@@ -29,9 +29,8 @@ import (
 type SecureValues []*SecureValue
 
 type SecureValue struct {
-	Name       string
-	Secret     config.Secret
-	Ciphertext string
+	Name   string
+	Secret config.Secret
 }
 
 func (p *SecureValues) String() string {

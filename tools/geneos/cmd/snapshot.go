@@ -35,7 +35,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-var snapshotCmdValues, snapshotCmdSeverities, snapshotCmdSnoozes, snapshotCmdUserAssignments, snapshotCmdXpathsonly bool
+var snapshotCmdValue, snapshotCmdSeverity, snapshotCmdSnooze, snapshotCmdUserAssignment, snapshotCmdXpathsonly bool
 var snapshotCmdMaxitems int
 var snapshotCmdUsername string
 var snapshotCmdPassword config.Secret
@@ -44,10 +44,11 @@ func init() {
 	Cmd.AddCommand(snapshotCmd)
 
 	snapshotCmd.Flags().SortFlags = false
-	snapshotCmd.Flags().BoolVarP(&snapshotCmdValues, "value", "V", true, "Request cell values")
-	snapshotCmd.Flags().BoolVarP(&snapshotCmdSeverities, "severity", "S", false, "Request cell severities")
-	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnoozes, "snooze", "Z", false, "Request cell snooze info")
-	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignments, "userassignment", "U", false, "Request cell user assignment info")
+
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdValue, "value", "V", true, "Request cell values")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdSeverity, "severity", "S", false, "Request cell severities")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdSnooze, "snooze", "Z", false, "Request cell snooze info")
+	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignment, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
 
@@ -142,9 +143,9 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 			continue
 		}
 
-		// always use auth details in per-instance config, default to
-		// from the command line or user/global config or credentials
-		// file
+		// always try to use auth details in per-instance config,
+		// default to from the command line or user/global config or
+		// credentials file
 		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
 		password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
 		defer clear(password)
@@ -177,9 +178,11 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 
 		i.Log().Debug("dialling", slog.Any("url", gatewayURL(i)))
 		var gw *commands.Connection
-		gw, resp.Err = commands.DialGateway(gatewayURL(i),
+		gw, resp.Err = commands.DialGateway(
+			gatewayURL(i),
 			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(username, password))
+			commands.SetBasicAuth(username, password),
+		)
 		if resp.Err != nil {
 			return
 		}
@@ -200,7 +203,12 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 		} else {
 			for _, view := range views {
 				var data *commands.Dataview
-				data, resp.Err = gw.Snapshot(view, "")
+				data, resp.Err = gw.Snapshot(view, "", commands.Scope{
+					Value:          snapshotCmdValue,
+					Severity:       snapshotCmdSeverity,
+					Snooze:         snapshotCmdSnooze,
+					UserAssignment: snapshotCmdUserAssignment,
+				})
 				if resp.Err != nil {
 					return
 				}

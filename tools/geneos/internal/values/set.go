@@ -14,19 +14,19 @@ import (
 // config structure with the updated parameters applied. It is up to the
 // caller to update the instance on success. SecureEnvs overwrite any
 // set by Envs earlier.
-func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.Config, err error) {
+func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (newCf *config.Config, err error) {
 	var secrets []string
 
 	// can't call instance.CloneConfig() here because of the lock, so
 	// create a new config and merge the instance config into it
-	cf = config.New()
-	cf.MergeConfigMap(i.Config().AllSettings())
+	newCf = config.New()
+	newCf.MergeConfigMap(i.Config().AllSettings())
 
 	ct := i.Type()
 	h := i.Host()
 
 	// set parameters, valid for all instance types
-	if err = cf.SetKeyValuePairs(values.Params...); err != nil {
+	if err = newCf.SetKeyValuePairs(values.Params...); err != nil {
 		return
 	}
 
@@ -39,13 +39,14 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		if err != nil {
 			return
 		}
-		if err = cf.SetKeyValuePairs(secrets...); err != nil {
+
+		if err = newCf.SetKeyValuePairs(secrets...); err != nil {
 			return
 		}
 	}
 
 	// set the environment values, valid for all instance types
-	updateSlice(cf, "env", values.Envs, nil)
+	updateSlice(newCf, "env", values.Envs, nil)
 
 	if len(values.SecureEnvs) > 0 {
 		if keyfile == "" {
@@ -56,36 +57,39 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		if err != nil {
 			return
 		}
-		updateSlice(cf, "env", secrets, nil)
+		updateSlice(newCf, "env", secrets, nil)
 	}
 
 	// includes are only valid for gateways
 
 	if ct.IsA("gateway") {
-		updateMap(cf, "includes", values.Includes)
+		updateMap(newCf, "includes", values.Includes)
 	}
 
 	// gateways are only valid for SAN and floating types
 
 	if ct.IsA("san", "floating") {
-		updateMap(cf, "gateways", values.Gateways)
+		updateMap(newCf, "gateways", values.Gateways)
 	}
 
 	// the rest of the settings are only valid for SAN types
 
 	if ct.IsA("san") {
-		updateSlice(cf, "types", values.Types, func(a string) string {
+		updateSlice(newCf, "types", values.Types, func(a string) string {
 			return a
 		})
 
-		updateSlice(cf, "attributes", values.Attributes, nil)
+		updateSlice(newCf, "attributes", values.Attributes, nil)
 
 	}
 
 	// vars can be used in the gateway instance.setup.xml
 	if ct.IsA("gateway", "san") {
-		updateVars(h, cf, "variables", values.Variables, keyfile)
+		i.Log().Debug("updating variables", slog.Int("count", len(values.Variables)))
+		updateVars(i.Host(), newCf, "variables", values.Variables, keyfile)
 	}
+
+	i.Log().Debug("updated configuration", slog.Any("config", newCf.AllSettings()))
 
 	return
 }
@@ -106,40 +110,36 @@ func updateMap[V any](cf *config.Config, confKey string, items map[string]V) {
 	config.Set(cf, confKey, s)
 }
 
-// updateVars updates the variables configuration for instance i, which
-// is now a slice of Variable, but previously was a map. Any old style
-// map is converted and then updated with the new items.
+// updateVars updates the variables configuration cf, which is now a
+// slice of Variable, but previously was a map. Any old style map is
+// converted and then updated with the new items.
 //
 // variables of type "secret" are checked and if the value is empty then
 // the user is prompted for the value, which is then encrypted with
 // their keyfile. non empty values are checked for encoding, and if
 // plain text then they are encoded
-func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Variable, keyfile config.KeyFile) {
-	s, found := config.Lookup[any](cf, confKey)
+func updateVars(h *geneos.Host, newCf *config.Config, confKey string, items []Variable, keyfile config.KeyFile) {
+	s, found := config.Lookup[any](newCf, confKey)
 	vars := []Variable{}
 	if found {
 		vars = NormaliseVars(s)
 	}
 
+	// encode secrets to strings, per instance. if a type is a secret
+	// then the plaintext should be in the value already. users should
+	// only be prompted once, in the caller
 	for _, v := range items {
+		// if the type is secret then the value should be encrypted and
+		// stored as a string, otherwise it is stored as a string. if
+		// the value is already encrypted then it is left as is. if the
+		// value is empty then the user should have been prompted for it
+		// already
 		if v.Type == "secret" {
 			if keyfile == "" {
 				log.Error("keyfile is required to set secret variable", slog.String("name", v.Name))
 				continue
 			}
-			v.Type = "string"
-			if v.Value == "" {
-				// prompt for value and encode
-				secret, err := config.ReadPasswordInput(true, 3,
-					fmt.Sprintf("Enter Secret for variable %q", v.Name),
-					fmt.Sprintf("Re-enter Secret for variable %q", v.Name),
-				)
-				if err != nil {
-					return
-				}
-				v.Value, err = keyfile.Encode(h, secret, true)
-				clear(secret)
-			} else if strings.HasPrefix(v.Value, "${enc:") {
+			if strings.HasPrefix(v.Value, "${enc:") {
 				// value is already encrypted, just use it as is
 			} else {
 				var err error
@@ -150,6 +150,8 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 					return
 				}
 			}
+			// now save as a string
+			v.Type = "string"
 		}
 
 		// check if variable already exists, update if so
@@ -163,10 +165,10 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 		}
 	}
 	if len(vars) == 0 {
-		config.Delete(cf, confKey)
+		config.Delete(newCf, confKey)
 		return
 	}
-	config.Set(cf, confKey, vars)
+	config.Set(newCf, confKey, vars)
 }
 
 // updateEncoded takes a slice of SecureValue and returns a slice of
@@ -177,8 +179,9 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items []Varia
 // can then be passed to config.SetKeyValuePairs to set the values in
 // the instance configuration.
 //
-// The Secret fields are cleared after encoding to remove the plaintext
-// value from memory as soon as possible.
+// The caller is responsible for erasuring the Secret values after use,
+// and for ensuring that the keyfile is not left in memory longer than
+// necessary.
 func updateEncoded(h *geneos.Host, values SecureValues, keyFile config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
@@ -189,19 +192,16 @@ func updateEncoded(h *geneos.Host, values SecureValues, keyFile config.KeyFile) 
 	}
 
 	for _, s := range values {
-		if s.Ciphertext != "" {
-			continue
-		}
+		var encoded string
 		if len(s.Secret) == 0 {
 			continue
 		}
-		s.Ciphertext, err = keyFile.Encode(h, s.Secret, true)
-		clear(s.Secret)
+		encoded, err = keyFile.Encode(h, s.Secret, true)
 		if err != nil {
 			return
 		}
 
-		params = append(params, s.Name+"="+s.Ciphertext)
+		params = append(params, s.Name+"="+encoded)
 	}
 	return
 }
