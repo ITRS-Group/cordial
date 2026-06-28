@@ -137,7 +137,7 @@ func Read(i geneos.Instance) (err error) {
 		i.SetLoaded(st.ModTime())
 	}
 
-	i.Log().Debug("config loaded", slog.String("file", used), slog.Duration("duration", time.Since(start)))
+	i.Log().Debug("read config", slog.String("file", used), slog.Duration("duration", time.Since(start)))
 	return nil
 }
 
@@ -261,8 +261,6 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 // (aliases) are removed from the set of values saved. Any empty
 // configuration values are removed from the saved configuration.
 func write(i geneos.Instance) (err error) {
-	i.Log().Debug("writing config")
-
 	// speculatively migrate the config, in case there is a legacy .rc
 	// file in place. Migrate() returns an error only for real errors
 	// and returns nil if there is no .rc file to migrate.
@@ -291,11 +289,9 @@ func write(i geneos.Instance) (err error) {
 	}
 
 	if st, err := i.Host().Stat(i.Config().ConfigFileUsed()); err == nil {
-		i.Log().Debug("setting modtime")
 		i.SetLoaded(st.ModTime())
 	}
 
-	i.Log().Debug("config saved")
 	return
 }
 
@@ -313,9 +309,8 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 
 	resp = responses.New[responses.General](i)
 
-	i.Log().Debug("committing config", slog.Bool("noRebuild", opts.noRebuild), slog.Bool("noReload", opts.noReload))
+	i.Log().Debug("writing config", slog.Bool("noRebuild", opts.noRebuild), slog.Bool("noReload", opts.noReload))
 
-	i.Log().Debug("writing config")
 	if err := write(i); err != nil {
 		resp.Err = err
 		return
@@ -330,7 +325,7 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	if err := i.Rebuild(false); err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) {
 			// not an error if not supported
-			i.Log().Debug("rebuild not supported")
+			i.Log().Debug("rebuild not supported for component type", slog.String("type", i.Type().Name))
 			err = nil
 		}
 		resp.Err = err
@@ -348,7 +343,7 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	i.Log().Debug("reloading instance")
 	if err = i.Reload(); err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) || errors.Is(err, os.ErrProcessDone) {
-			i.Log().Debug("reload not supported or not running, ignoring")
+			i.Log().Debug("reload not supported or not running, ignoring", slog.String("type", i.Type().Name))
 			err = nil
 		} else {
 			i.Log().Debug("reloading config failed", slog.Any("error", err))
