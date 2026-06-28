@@ -52,7 +52,7 @@ type Command struct {
 // CommandArgs is a map of argument indices to values
 type CommandArgs map[string]string
 
-// A Scope selects which properties the REST dataview snaptshot command
+// A Scope selects which properties the REST dataview snapshot command
 // returns.
 type Scope struct {
 	Value          bool `json:"value,omitempty"`
