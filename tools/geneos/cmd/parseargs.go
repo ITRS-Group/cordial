@@ -183,8 +183,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		names, err = instance.Match(h, ct, cmdKeepHosts, cmdAllInstancesMustMatch, names...)
 	}
 
-	log.Debug("names", slog.Any("names", names))
-	log.Debug("ct", slog.Any("ct", ct), "args", slog.Any("args", args), "params", slog.Any("params", params))
+	log.Debug("parsed args", slog.Any("ct", ct), slog.Any("args", args), slog.Any("params", params), slog.Any("names", names))
 
 	cd.Lock()
 	cd.names = names
