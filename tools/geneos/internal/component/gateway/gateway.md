@@ -61,6 +61,11 @@ The parameters described below are specific to the Gateway component.
 
   An optional additional port to listen on for non-TLS connections. This allows the Gateway to support both TLS and non-TLS connections at the same time.
 
+* `snapshot::username` (Default: Unset)
+* `snapshot::password` (Default: Unset)
+
+  Optional username and password for the `snapshot` command to use when connecting to the Gateway REST API. These are used as defaults for the `snapshot` command and can be overridden on the command line by the `--user`/`-u` option. If these parameters are not set and no credentials can be found in the credentials file then the user will be prompted for a username and password when running the `snapshot` command.
+
 ### Configuration Parameters for `geneos rebuild`
 
 When creating a new Gateway instance two XML setup files are created.
