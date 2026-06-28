@@ -157,6 +157,9 @@ func ReadKeyValues(r io.Reader) (kv *KeyValues, err error) {
 		}
 	}
 
+	if err = scanner.Err(); err != nil {
+		return nil, err
+	}
 	if !gotkey || !gotiv {
 		return nil, fmt.Errorf("invalid keyfile contents")
 	}
