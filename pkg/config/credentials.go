@@ -100,9 +100,7 @@ func DeleteCreds(domain string, options ...FileOption) (err error) {
 	if err != nil {
 		return
 	}
-	credmap := Get[map[string]any](cf, "credentials")
-	delete(credmap, domain)
-	Set(cf, "credentials", credmap)
+	Delete(cf, cf.Join("credentials", domain))
 	return cf.Write("credentials", options...)
 }
 
@@ -111,6 +109,6 @@ func DeleteCreds(domain string, options ...FileOption) (err error) {
 func DeleteAllCreds(options ...FileOption) (err error) {
 	options = append(options, KeyDelimiter("::"))
 	cf := New(options...)
-	Set(cf, "credentials", &Credentials{})
+	Set(cf, "credentials", &Credentials{}, NoExpand())
 	return cf.Write("credentials", options...)
 }
