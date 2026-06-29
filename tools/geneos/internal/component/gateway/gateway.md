@@ -2,9 +2,9 @@ A `gateway` component is an instance of a [Geneos Gateway](https://docs.itrsgrou
 
 ## Configuration
 
-The Gateway instance configuration, as opposed to the runtime configuration of the Gateway itself, is stored in the instance configuration file. This is a JSON file which is created with the instance and updated when the `geneos set` and `geneos unset` commands are used to change parameters. The configuration file is stored in the instance directory as `gateway.json`. This file should not be edited directly but instead the `geneos set` and `geneos unset` commands should be used to change the configuration parameters.
+The Gateway instance configuration, as opposed to the runtime configuration of the Gateway itself, is stored in the instance configuration file `gateway.json`. This file is created with the instance and updated when the `geneos set` and `geneos unset` commands are used to change parameters. The configuration file is stored in the instance working directory, which is shown when running the `geneos list` command. This file should not be edited directly but instead the `geneos set` and `geneos unset` commands should be used to change the configuration parameters.
 
-In a future `cordial` release the configuration file may move to a YAML format for better readability but the JSON format would continue to be supported for backwards compatibility.
+Note: In a future `cordial` release the configuration file may move to a YAML format for better readability but the JSON format would continue to be supported for backwards compatibility.
 
 ### Gateway Configuration Files
 

@@ -24,6 +24,10 @@
 
   * `geneos ps` now shows the correct version for each instance, which was broken by the process cache implementation in v1.22.2.
 
+  * `geneos set` now correctly sets secure parameters, environment variables when matching multiple instances. Setting the custom `secret` variable type now also only prompts for the secret once per multiple instances and sets the encoded value correctly across all matching instances.
+
+  * `geneos logout` will now correctly remove credentials for a single endpoint/domain.
+
 ### Version v1.28.0 Changes
 
 * Updated all components to to use Go `slog` for logging, replacing a mix of zerolog and others. Added a custom `slog` handler to output colour decorated output in human readable output when connected to an interactive session.

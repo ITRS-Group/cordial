@@ -6,7 +6,7 @@ There are two kinds of parameters, basic `NAME=VALUE` pairs, and structured para
 
 ## Basic Parameters
 
-Note that `geneos set` will overwrite existing parameters without warning. An empty value (e.g. `geneos set key=""`) will set the parameter to an empty value. To fully remove a parameter use the `geneos unset` command.
+Note that `geneos set` will overwrite existing parameters without warning. Setting a basic parameter to an empty string will effectively remove its value. This behaviour may change in a future release and should not be relied on. To remove a parameter use the `geneos unset` command.
 
 The `geneos set` command supports basic parameters given as `NAME=VALUE` pairs on the command line as well as options for structured or repeatable keys. Each basic parameter uses a case-insensitive `NAME` as the key in the instance configuration. You can also use `+=` or `+` to append values to an existing basic parameter (which will also create a parameter if it does not exist), e.g. `options+="-extra option"`. If the value starts with a dash it is assumed to be a new command line parameter and is appended with a space, otherwise it is appended as-is, but you are responsible for ensuring the resulting parameter is correctly formatted, e.g. paths having ":" separators.
 
