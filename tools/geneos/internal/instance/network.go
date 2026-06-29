@@ -26,6 +26,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -34,7 +35,7 @@ import (
 // to struct{} for each lookup.
 func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 	if h == geneos.ALL {
-		log.Error("getports() called with all hosts")
+		log.Error("GetAllPorts() called with all hosts")
 		os.Exit(1)
 	}
 	ports = make(map[uint16]struct{})
@@ -59,13 +60,24 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 	return
 }
 
+// PortInUse checks if the given port is in use on the given host.
+func PortInUse(h *geneos.Host, port uint16) (inUse bool, err error) {
+	if h == geneos.ALL {
+		err = errors.New("PortInUse() called with all hosts")
+		return
+	}
+	ports := GetAllPorts(h)
+	_, inUse = ports[port]
+	return
+}
+
 // ByPort returns an instance on host h that is configured to use port.
 // Returns an error if no instance is found or if the configuration
 // cannot be loaded for any instance on the host. Will not check if the
 // port is actually in use by any process.
 func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 	if h == geneos.ALL {
-		err = errors.New("getports() called with all hosts")
+		err = errors.New("ByPort() called with all hosts")
 		return
 	}
 

@@ -313,6 +313,12 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
+		if deployCmdPort > 0 {
+			if inUse, _ := instance.PortInUse(i.Host(), deployCmdPort); inUse {
+				return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, deployCmdPort)
+			}
+		}
+
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return resp.Err
 		}

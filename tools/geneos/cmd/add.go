@@ -156,6 +156,12 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		return
 	}
 
+	if addCmdPort > 0 {
+		if inUse, _ := instance.PortInUse(i.Host(), addCmdPort); inUse {
+			return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, addCmdPort)
+		}
+	}
+
 	i.Log().Debug("writing config for new instance")
 	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 		return resp.Err
