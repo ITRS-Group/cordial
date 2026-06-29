@@ -9,7 +9,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
 	github.com/aymerick/douceur v0.2.0
 	github.com/clbanning/mxj/v2 v2.7.0
-	github.com/coreos/go-oidc/v3 v3.18.0
+	github.com/coreos/go-oidc/v3 v3.19.0
 	github.com/dsnet/compress v0.0.1
 	github.com/fatih/color v1.19.0
 	github.com/fsnotify/fsnotify v1.10.1
@@ -23,19 +23,18 @@ require (
 	github.com/gurkankaymak/hocon v1.2.23
 	github.com/hashicorp/go-reap v0.0.0-20260220095743-4e27870b4f51
 	github.com/hashicorp/go-version v1.9.0
-	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
+	github.com/hectane/go-acl v1.0.0
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jedib0t/go-pretty/v6 v6.8.1
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
-	github.com/labstack/echo/v4 v4.15.2
-	github.com/labstack/gommon v0.5.0
+	github.com/labstack/echo/v4 v4.15.4
 	github.com/lestrrat-go/strftime v1.2.0
 	github.com/mackerelio/go-osstat v0.2.7
 	github.com/maja42/goval v1.6.0
-	github.com/mattn/go-sqlite3 v1.14.45
-	github.com/moby/moby/api v1.54.2
-	github.com/moby/moby/client v0.4.1
+	github.com/mattn/go-sqlite3 v1.14.47
+	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.0
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pkg/sftp v1.13.10
@@ -58,8 +57,8 @@ require (
 	golang.org/x/term v0.44.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.52.0
-	software.sslmate.com/src/go-pkcs12 v0.7.2
+	modernc.org/sqlite v1.53.0
+	software.sslmate.com/src/go-pkcs12 v0.7.3
 	src.elv.sh v0.21.0
 )
 
@@ -91,6 +90,7 @@ require (
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/kr/fs v0.1.0 // indirect
+	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
@@ -99,7 +99,7 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
 	github.com/richardlehane/msoleps v1.0.6 // indirect
@@ -124,7 +124,7 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
-	modernc.org/libc v1.73.0 // indirect
+	modernc.org/libc v1.73.5 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

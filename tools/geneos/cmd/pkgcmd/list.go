@@ -65,6 +65,7 @@ var listCmd = &cobra.Command{
 		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
+		// log := cordial.Logger.With("command", "package list")
 		ct, _, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return err

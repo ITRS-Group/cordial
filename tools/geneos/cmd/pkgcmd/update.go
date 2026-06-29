@@ -25,9 +25,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/labstack/gommon/log"
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -74,6 +74,7 @@ geneos package update netprobe --version 5.13.2
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log := cordial.Logger.With("command", "package update")
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
