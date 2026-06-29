@@ -303,12 +303,12 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	if !overwrite {
 		if _, _, err := ReadRootCertificateAndKey(); err == nil {
 			// root cert already exists
-			log.Info("root certificate already exists, skipping TLS initialisation")
+			log.Debug("root certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 		if _, err := readSigningCertificate(); err == nil {
 			// signing cert already exists
-			log.Info("signing certificate already exists, skipping TLS initialisation")
+			log.Debug("signing certificate already exists, skipping TLS initialisation")
 			return nil
 		}
 	}
