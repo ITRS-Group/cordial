@@ -10,7 +10,7 @@
 
 ## Version v1.28.0
 > [!NOTE]
-> **Released 2026-06-22** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+> **Released 2026-06-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
 
 ### Version v1.28.0 Fixes
 
@@ -30,7 +30,7 @@
 
 ### Version v1.28.0 Changes
 
-* Updated all components to to use Go `slog` for logging, replacing a mix of zerolog and others. Added a custom `slog` handler to output colour decorated output in human readable output when connected to an interactive session.
+* Updated everything to use Go `slog` for logging, replacing a mix of zerolog and others. Added a custom `slog` handler to output colour decorated output in human readable output when connected to an interactive session.
 
 * `tools/geneos`
 
