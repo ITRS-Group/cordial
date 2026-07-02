@@ -207,7 +207,12 @@ func (k *KeyStore) AddTrustedCertificate(alias string, cert *x509.Certificate) (
 		Content: cert.Raw,
 	}
 	k.DeleteEntry(alias)
-	k.SetTrustedCertificateEntry(alias, keystore.TrustedCertificateEntry{CreationTime: time.Now(), Certificate: c})
+	k.SetTrustedCertificateEntry(alias,
+		keystore.TrustedCertificateEntry{
+			CreationTime: cert.NotBefore,
+			Certificate:  c,
+		},
+	)
 	return
 }
 

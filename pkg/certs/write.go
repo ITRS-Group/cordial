@@ -97,7 +97,7 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 		added = true
 	}
 
-	if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, roots...); err != nil {
+	if err = WriteTrustStore(h, basePath+KeystoreExtension, nil, allCerts...); err != nil {
 		return false, err
 	}
 
