@@ -98,23 +98,33 @@ geneos add netprobe infraprobe12 --start --log
 			return
 		}
 		addCmdExtras.Params = params
-		return AddInstance(ct, addCmdExtras, names...)
+		return AddInstance(ct, names[0], addCmdPort, addCmdExtras,
+			Template(addCmdTemplate),
+			Base(addCmdBase),
+			Insecure(addCmdInsecure),
+			CertBundle(addCmdInstanceBundle),
+			CertBundlePassword(addCmdBundlePassword),
+			Keyfile(addCmdKeyfile),
+			KeyfileCRC(addCmdKeyfileCRC),
+			Imports(addCmdImportFiles),
+			StartAfterAdd(addCmdStart),
+			LogsAfterAdd(addCmdLogs),
+		)
 	},
 }
 
 // AddInstance add an instance of component type ct the the optional
-// extra configuration values addCmdExtras
-func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...string) (err error) {
+// extra configuration values extras
+func AddInstance(ct *geneos.Component, name string, port uint16, extras values.Values, options ...AddOption) (err error) {
 	if ct == nil {
 		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
-	if len(names) == 0 {
+	if name == "" {
 		return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
 
 	}
 
-	// check validity and reserved words here
-	name := names[0]
+	opts := evalAddOptions(options...)
 
 	h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
 
@@ -156,9 +166,9 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		return
 	}
 
-	if addCmdPort > 0 {
-		if inUse, _ := instance.PortInUse(i.Host(), addCmdPort); inUse {
-			return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, addCmdPort)
+	if port > 0 {
+		if inUse, _ := instance.PortInUse(i.Host(), port); inUse {
+			return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, port)
 		}
 	}
 
@@ -167,31 +177,32 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 		return resp.Err
 	}
 
-	if addCmdInstanceBundle != "" {
+	if opts.certBundle != "" {
 		var certBundle *certs.CertificateBundle
-		if path.Ext(addCmdInstanceBundle) == ".pfx" || path.Ext(addCmdInstanceBundle) == ".p12" {
-			if len(addCmdBundlePassword) == 0 {
-				addCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+		var certBundlePassword config.Secret = opts.certBundlePassword
+		if path.Ext(opts.certBundle) == ".pfx" || path.Ext(opts.certBundle) == ".p12" {
+			if len(certBundlePassword) == 0 {
+				certBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
 					log.Error("Failed to read password", slog.Any("error", err))
 					return err
 				}
-				defer clear(addCmdBundlePassword)
+				defer clear(certBundlePassword)
 			}
-			certBundle, err = certs.P12ToCertBundle(addCmdInstanceBundle, addCmdBundlePassword)
+			certBundle, err = certs.P12ToCertBundle(opts.certBundle, certBundlePassword)
 			if err != nil {
-				log.Error("Failed to parse PFX file", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
+				log.Error("Failed to parse PFX file", slog.Any("error", err), slog.String("file", opts.certBundle))
 				return err
 			}
 		} else {
-			certChain, err := config.ReadPEM(addCmdInstanceBundle, "instance certificate(s)")
+			certChain, err := config.ReadPEM(opts.certBundle, "instance certificate(s)")
 			if err != nil {
-				log.Error("Failed to read instance certificate(s)", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
+				log.Error("Failed to read instance certificate(s)", slog.Any("error", err), slog.String("file", opts.certBundle))
 				return err
 			}
 			certBundle, err = certs.ParsePEM(certChain, nil)
 			if err != nil {
-				log.Error("Failed to decompose PEM", slog.Any("error", err), slog.String("file", addCmdInstanceBundle))
+				log.Error("Failed to decompose PEM", slog.Any("error", err), slog.String("file", opts.certBundle))
 				return err
 			}
 			if certBundle.Leaf == nil || certBundle.Key == nil {
@@ -232,23 +243,23 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 	}
 
 	// call components specific Add()
-	if err = i.Add(addCmdTemplate, addCmdPort, addCmdInsecure || addCmdInstanceBundle != ""); err != nil {
+	if err = i.Add(opts.template, port, opts.insecure || opts.certBundle != ""); err != nil {
 		log.Error("failed to add instance", slog.Any("error", err))
 		os.Exit(1)
 	}
 
-	if addCmdBase != "active_prod" {
-		config.Set(cf, "version", addCmdBase)
+	if opts.base != "active_prod" {
+		config.Set(cf, "version", opts.base)
 	}
 
 	if ct.IsA("gateway") {
 		// override the instance generated keyfile if options given
 		var sharedPath string
-		if addCmdKeyfileCRC != "" {
-			crcFile := strings.TrimSuffix(addCmdKeyfileCRC, ".aes") + ".aes"
+		if opts.keyfileCRC != "" {
+			crcFile := strings.TrimSuffix(opts.keyfileCRC, ".aes") + ".aes"
 			sharedPath = i.Type().Shared(i.Host(), "keyfiles", crcFile)
-		} else if addCmdKeyfile != "" {
-			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), addCmdKeyfile, "Paste AES key file contents, end with newline and CTRL+D:")
+		} else if opts.keyfile != "" {
+			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), opts.keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
 				return err
 			}
@@ -269,7 +280,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 	}
 
 	keyfile := config.Get[config.KeyFile](cf, "keyfile")
-	if ncf, err := values.Set(i, addCmdExtras, keyfile); err == nil {
+	if ncf, err := values.Set(i, extras, keyfile); err == nil {
 		i.SetConfig(ncf)
 		cf = ncf
 	}
@@ -295,7 +306,7 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 	i.Load()
 	i.Rebuild(true)
 
-	_ = instance.ImportFiles(i, addCmdImportFiles...)
+	_ = instance.ImportFiles(i, opts.imports...)
 
 	// make sure base version link exists
 	basemame := config.Get[string](cf, "version")
@@ -307,17 +318,102 @@ func AddInstance(ct *geneos.Component, addCmdExtras values.Values, names ...stri
 
 	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
 
-	if addCmdStart || addCmdLogs {
+	if opts.start || opts.logs {
 		if err = instance.Start(i); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				err = nil
 			}
 			return
 		}
-		if addCmdLogs {
+		if opts.logs {
 			followLog(i) // never returns
 		}
 	}
 
 	return
+}
+
+type addOptions struct {
+	template           string
+	certBundle         string
+	certBundlePassword config.Secret
+	base               string
+	insecure           bool
+	start              bool
+	logs               bool
+	keyfile            string
+	keyfileCRC         string
+	imports            []string
+}
+
+type AddOption func(*addOptions)
+
+func evalAddOptions(opts ...AddOption) *addOptions {
+	o := &addOptions{
+		base: "active_prod",
+	}
+	for _, opt := range opts {
+		opt(o)
+	}
+	return o
+}
+
+func Template(template string) AddOption {
+	return func(o *addOptions) {
+		o.template = template
+	}
+}
+
+func CertBundle(bundle string) AddOption {
+	return func(o *addOptions) {
+		o.certBundle = bundle
+	}
+}
+
+func CertBundlePassword(password config.Secret) AddOption {
+	return func(o *addOptions) {
+		o.certBundlePassword = password
+	}
+}
+
+func Base(base string) AddOption {
+	return func(o *addOptions) {
+		o.base = base
+	}
+}
+
+func Insecure(insecure bool) AddOption {
+	return func(o *addOptions) {
+		o.insecure = insecure
+	}
+}
+
+func StartAfterAdd(start bool) AddOption {
+	return func(o *addOptions) {
+		o.start = start
+	}
+}
+
+func LogsAfterAdd(logs bool) AddOption {
+	return func(o *addOptions) {
+		o.logs = logs
+	}
+}
+
+func Keyfile(keyfile string) AddOption {
+	return func(o *addOptions) {
+		o.keyfile = keyfile
+	}
+}
+
+func KeyfileCRC(crc string) AddOption {
+	return func(o *addOptions) {
+		o.keyfileCRC = crc
+	}
+}
+
+func Imports(imports []string) AddOption {
+	return func(o *addOptions) {
+		o.imports = imports
+	}
 }

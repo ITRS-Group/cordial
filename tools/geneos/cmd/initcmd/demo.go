@@ -97,13 +97,11 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	port := "7038"
+	var port uint16 = 7038
 	if initCmdInsecure {
-		port = "7039"
+		port = 7039
 	}
-	gatewayValues := initCmdExtras
-	gatewayValues.Params = []string{"options=-demo", "port=" + port}
-	if err = cmd.AddInstance(ct, gatewayValues, "Demo Gateway@"+h.String()); err != nil {
+	if err = cmd.AddInstance(ct, "Demo Gateway@"+h.String(), port, initCmdExtras); err != nil {
 		return
 	}
 
@@ -123,7 +121,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if demoCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if err = cmd.AddInstance(netprobeCT, initCmdExtras, probename+"@"+h.String()); err != nil {
+	if err = cmd.AddInstance(netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
 		return
 	}
 
@@ -131,13 +129,11 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if err = pkgcmd.Install(h, ct, options...); err != nil {
 		return
 	}
-	port = "8443"
+	port = 8443
 	if initCmdInsecure {
-		port = "8080"
+		port = 8080
 	}
-	webserverValues := initCmdExtras
-	webserverValues.Params = []string{"port=" + port}
-	if err = cmd.AddInstance(ct, webserverValues, "demo@"+h.String()); err != nil {
+	if err = cmd.AddInstance(ct, "Demo Webserver@"+h.String(), port, initCmdExtras); err != nil {
 		return
 	}
 
@@ -147,7 +143,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		if err = pkgcmd.Install(h, ct, options...); err != nil {
 			return
 		}
-		if err = cmd.AddInstance(ct, initCmdExtras, "demo@"+h.String()); err != nil {
+		if err = cmd.AddInstance(ct, "Demo AC2@"+h.String(), 0, initCmdExtras); err != nil {
 			return
 		}
 	}
