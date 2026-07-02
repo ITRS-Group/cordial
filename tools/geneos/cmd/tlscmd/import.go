@@ -124,7 +124,6 @@ geneos tls import /path/to/file.pem
 			if err != nil {
 				return err
 			}
-
 		} else {
 			certChain, err := config.ReadPEM(file, "instance certificate(s)")
 			if err != nil {
