@@ -26,7 +26,7 @@ require (
 	github.com/hectane/go-acl v1.0.0
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.4
-	github.com/jedib0t/go-pretty/v6 v6.8.1
+	github.com/jedib0t/go-pretty/v6 v6.8.2
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/lestrrat-go/strftime v1.2.0
@@ -38,7 +38,7 @@ require (
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
 	github.com/pkg/sftp v1.13.10
-	github.com/schollz/progressbar/v3 v3.19.0
+	github.com/schollz/progressbar/v3 v3.19.1
 	github.com/skeema/knownhosts v1.3.2
 	github.com/spf13/afero v1.15.0
 	github.com/spf13/afero/sftpfs v1.15.0
