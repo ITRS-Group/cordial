@@ -223,7 +223,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 		return
 	}
 
-	if certchain, ok := config.Lookup[string](cf, "certchain"); ok {
+	if certchain, ok := config.Lookup[string](cf, instance.CERTCHAIN); ok {
 		chain, err := certs.ReadCertificates(h, certchain)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			resp.Err = err
@@ -270,23 +270,23 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp.Completed = append(resp.Completed, "wrote fullchain to instance certificate file")
 
 	// update instance parameters to new layout
-	if pk, ok := config.Lookup[string](cf, "privatekey", config.NoExpand()); ok {
+	if pk, ok := config.Lookup[string](cf, instance.PRIVATEKEY, config.NoExpand()); ok {
 		// this may have already been done above in webserver/sso-agent
-		config.Delete(cf, "privatekey")
+		config.Delete(cf, instance.PRIVATEKEY)
 		config.Set(cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), pk, config.Replace("home"))
 	}
 	config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
 	// only set tls::verify to false if `use-chain` is not set or false.
 	// If tls::verify is not set, the default is `true`
-	if usechain, ok := config.Lookup[bool](cf, "use-chain"); !ok || !usechain {
+	if usechain, ok := config.Lookup[bool](cf, instance.USECHAIN); !ok || !usechain {
 		config.Set(cf, cf.Join(instance.TLSBASE, instance.TLSVERIFY), false)
 	}
 
-	config.Delete(cf, "certchain")
-	config.Delete(cf, "use-chain")
-	config.Delete(cf, "truststore")
-	config.Delete(cf, "truststore-password")
+	config.Delete(cf, instance.USECHAIN)
+	config.Delete(cf, instance.CERTCHAIN)
+	config.Delete(cf, instance.TRUSTSTORE)
+	config.Delete(cf, instance.TRUSTSTORE_PASSWORD)
 
 	resp = responses.MergeResponse(resp, instance.Write(i))
 

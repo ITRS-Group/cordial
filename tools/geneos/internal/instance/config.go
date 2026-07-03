@@ -380,7 +380,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 
 	// has this instance been migrated to the new TLS parameters?
 	if !cf.IsSet(cf.Join(TLSBASE, CERTIFICATE)) {
-		args = setSecureArgs(i)
+		args = setSecureArgsLegacy(i)
 		for _, arg := range args {
 			if !strings.HasPrefix(arg, "-") {
 				fileChecks = append(fileChecks, arg)
@@ -454,10 +454,11 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	return
 }
 
-// setSecureArgs returns a slice of arguments to enable secure
-// connections if the correct configuration values are set. The private
-// key may be in the certificate file and the chain is optional.
-func setSecureArgs(i geneos.Instance) (args []string) {
+// setSecureArgsLegacy checks and returns a slice of arguments for legacy TLS
+// parameters to enable secure connections if the correct configuration
+// values are set. The private key may be in the certificate file and
+// the chain is optional.
+func setSecureArgsLegacy(i geneos.Instance) (args []string) {
 	cf := i.Config()
 
 	files := PathsTo(i, CERTIFICATE, PRIVATEKEY, CERTCHAIN)
@@ -479,9 +480,15 @@ func setSecureArgs(i geneos.Instance) (args []string) {
 	if chain == "" {
 		chain = i.Host().PathTo(TLSBASE, geneos.DeprecatedChainCertFile)
 	}
-	s, err := i.Host().Stat(chain)
-	if err == nil && !s.IsDir() && !(cf.IsSet("use-chain") && !config.Get[bool](cf, "use-chain")) {
-		args = append(args, "-ssl-certificate-chain", chain)
+
+	// default is to use chain unless explicitly set to false or the
+	// chain file doesn't exist
+	usechain, ok := config.Lookup[bool](cf, USECHAIN)
+	if !ok || (ok && usechain) {
+		s, err := i.Host().Stat(chain)
+		if err == nil && !s.IsDir() {
+			args = append(args, "-ssl-certificate-chain", chain)
+		}
 	}
 	return
 }

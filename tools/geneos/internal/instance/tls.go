@@ -19,6 +19,8 @@ package instance
 
 import (
 	"crypto/x509"
+	"errors"
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -29,15 +31,23 @@ import (
 )
 
 const (
-	TLSBASE             = "tls"
+	// TLSBASE is the base path for TLS parameters in the instance configuration
+	TLSBASE = "tls"
+
+	// TLS parameters, which used to be top-lebel parameters, are now
+	// under the TLSBASE path. The old parameters are still supported
+	// for backwards compatibility.
+
 	CERTIFICATE         = "certificate"
 	PRIVATEKEY          = "privatekey"
 	TLSVERIFY           = "verify"
 	CABUNDLE            = "ca-bundle"
-	CERTCHAIN           = "certchain" // deprecated, old parameter
 	MINVERSION          = "minimumversion"
 	TRUSTSTORE          = "truststore"
 	TRUSTSTORE_PASSWORD = "truststore-password"
+
+	CERTCHAIN = "certchain" // deprecated, old parameter
+	USECHAIN  = "use-chain" // deprecated, old parameter
 )
 
 // NewCertificate creates a new certificate for an instance.
@@ -249,6 +259,9 @@ func ReadCertificates(i geneos.Instance, ext ...string) (certChain []*x509.Certi
 	if chainPath != "" {
 		chainCerts, err := certs.ReadCertificates(i.Host(), chainPath)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return certChain, nil
+			}
 			return nil, err
 		}
 		certChain = append(certChain, chainCerts...)

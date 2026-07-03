@@ -109,6 +109,7 @@ var listCmd = &cobra.Command{
 		cmd.CmdNonInstanceArgsError: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
+		log = log.With("command", "tls list")
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
@@ -616,7 +617,7 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) 
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.DefaultValue(config.Get[string](cf, "chainfile")))
+	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
 
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
@@ -631,8 +632,8 @@ func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) 
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.DefaultValue(config.Get[string](cf, "certificate"))))
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.DefaultValue(config.Get[string](cf, "privatekey"))))
+		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)))
+		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)))
 		cols = append(cols, trustchain)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
@@ -659,7 +660,7 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Genera
 		return
 	}
 	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.DefaultValue(config.Get[string](cf, "chainfile")))
+	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -673,8 +674,8 @@ func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.Genera
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
 	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
 	if listCmdLong {
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.DefaultValue(config.Get[string](cf, "certificate"))))
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.DefaultValue(config.Get[string](cf, "privatekey"))))
+		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)))
+		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)))
 		cols = append(cols, trustchain)
 		cols = append(cols, cert.Issuer.CommonName)
 		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
@@ -698,7 +699,7 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Ge
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.DefaultValue(config.Get[string](cf, "chainfile")))
+	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -723,8 +724,8 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Ge
 	}
 	if listCmdLong {
 		cols = append(cols,
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.DefaultValue(config.Get[string](cf, "certificate"))),
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.DefaultValue(config.Get[string](cf, "privatekey"))),
+			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)),
+			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)),
 			trustchain,
 			cert.Issuer.CommonName,
 			strings.Join(cert.DNSNames, " "),
@@ -757,7 +758,7 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Gener
 	cert := certChain[0]
 	key, _ := instance.ReadPrivateKey(i)
 	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.DefaultValue(config.Get[string](cf, "chainfile")))
+	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
 	if err != nil && errors.Is(err, os.ErrNotExist) {
 		// this is OK - instance.ReadCert() reports no configured cert this way
 		return
@@ -776,8 +777,8 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Gener
 			cert.NotAfter,
 			cert.Subject.CommonName,
 			valid,
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.DefaultValue(config.Get[string](cf, "certificate"))),
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.DefaultValue(config.Get[string](cf, "privatekey"))),
+			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)),
+			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)),
 			trustchain,
 			cert.Issuer.CommonName,
 			cert.DNSNames,

@@ -547,6 +547,26 @@ func lookup[T any](c *Config, key string, options ...ExpandOption) (value T, fou
 func get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	if !c.isSet(key) {
 		opts := evalExpandOptions(c, options...)
+
+		if len(opts.promoteFrom) > 0 {
+			// loop through legacy keys, return first match and delete
+			// legacy key, otherwise drop through to further option
+			// processing
+			for _, legacy := range opts.promoteFrom {
+				if key == legacy {
+					// prevent infinite recursion if the legacy key is
+					// the same as the new key
+					continue
+				}
+				if c.isSet(legacy) {
+					v := get[T](c, legacy, options...)
+					set(c, key, v, options...)
+					deleteKey(c, legacy)
+					return v
+				}
+			}
+		}
+
 		if !isZero(opts.initialValue) {
 			if v, ok := opts.initialValue.(T); ok {
 				return v

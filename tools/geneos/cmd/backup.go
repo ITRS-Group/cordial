@@ -365,10 +365,10 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 	if !backupCmdIncludeTLS {
 		ignoreSecure = append(ignoreSecure,
 			// legacy path parameters
-			"certificate",
-			"privatekey",
-			"certchain",
-			// new path parameters
+			instance.CERTIFICATE,
+			instance.PRIVATEKEY,
+			instance.CERTCHAIN,
+			// new path parameters, under TLSBASE
 			cf.Join(instance.TLSBASE, instance.CERTIFICATE),
 			cf.Join(instance.TLSBASE, instance.PRIVATEKEY),
 			cf.Join(instance.TLSBASE, instance.CABUNDLE),

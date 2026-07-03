@@ -34,6 +34,7 @@ type expandOptions struct {
 	lookupTables       []map[string]string
 	noDecode           bool
 	noExpand           bool
+	promoteFrom        []string // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
 	replacements       []string
 	trimPrefix         bool
 	trimSpace          bool
@@ -290,5 +291,20 @@ func ExpandNonStringToCSV() ExpandOption {
 func ExpandNonStringToJSON() ExpandOption {
 	return func(eo *expandOptions) {
 		eo.expandNonString = true
+	}
+}
+
+// PromoteFrom sets a list of legacy configuration names to check for
+// and promote to the new name. If the primary name is found then these
+// legacy names are ignored, otherwise the first legacy name found is
+// promoted to the new name and the legacy name is deleted. This is
+// useful for renaming configuration items without breaking existing
+// configurations.
+//
+// This option is only valid for Get() function and is ignored for
+// Lookup() and Set() functions.
+func PromoteFrom(names ...string) ExpandOption {
+	return func(eo *expandOptions) {
+		eo.promoteFrom = names
 	}
 }
