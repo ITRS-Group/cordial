@@ -239,7 +239,7 @@ func listCertsCommand(ct *geneos.Component, names []string, _ []string) (err err
 			if t < time.Hour*24*7 {
 				expiringWeek++
 			}
-			if c.Dataview.Table[0][7] != "true" {
+			if c.Dataview.Table[0][7] != "OK" {
 				invalid++
 			}
 		}
@@ -470,7 +470,7 @@ func listCertsLongCommand(ct *geneos.Component, names []string, params []string)
 			if t < time.Hour*24*7 {
 				expiringWeek++
 			}
-			if c.Dataview.Table[0][7] != "true" {
+			if c.Dataview.Table[0][7] != "OK" {
 				invalid++
 			}
 		}
