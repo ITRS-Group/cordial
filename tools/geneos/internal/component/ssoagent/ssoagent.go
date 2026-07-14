@@ -317,6 +317,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 			changed = true
 		}
 
+		// ensure there is always an "ssokey" in the keystore
 		if !slices.Contains(ks.Aliases(), "ssokey") {
 			cert, key, err := genkeypair()
 			if err != nil {
@@ -351,7 +352,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 	return
 }
 
-// generate a keypair for ssoagent keystore if not present
+// generate a keypair for ssoagent keystore with the alias "ssokey". This must be an RSA key
 func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
