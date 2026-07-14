@@ -1,20 +1,20 @@
 # `geneos san`
 
-A `san` component is an instance of a [Geneos Netprobe](https://docs.itrsgroup.com/docs/geneos/current/collection/netprobe/introduction/netprobe-overview/index.html), which is the agent installed to collect data from monitored systems, running in a Self-Announcing mode.
+A `san` component is an instance of a [Geneos Netprobe](https://docs.itrsgroup.com/docs/geneos/current/collection/netprobe/introduction/netprobe-overview/index.html), which is a configuration of the primary agent used to collect data from monitored systems, running in a Self-Announcing mode.
 
 Other component types that represent specific flavours of Netprobe, e.g. `fa2` for the FIX Analyser Netprobe, `minimal` for the non-Collection Agent enabled Netprobe etc., can also be configured as a `san` component. Do this when adding a `san` component by prefixing the instance name with the package type, e.g. `fa2:faSAN1` or `minimal:minSAN1`. The `pkgtype` (see below) is then set to the prefix, e.g. `fa2` or `minimal`, which are currently the only valid alternatives to `netprobe`, the default.
 
 ## Configuration
 
-The SAN instance configuration is stored in the instance configuration file. This is a JSON file which is created when the instance is created and is updated when the `geneos set` and `geneos unset` commands are used to change parameters. The configuration file is stored in the instance directory as `san.json`. This file should not be edited directly but instead the `geneos set` and `geneos unset` commands should be used to change the configuration parameters.
+The SAN instance configuration is stored in the instance configuration file `san.json`. This file is created when the instance is created and is updated when the `geneos set` and `geneos unset` commands are used to change parameters. The configuration file is stored in the instance working directory. This file should not be edited directly but instead the `geneos set` and `geneos unset` commands should be used to change the configuration parameters.
 
-In a future `cordial` release the configuration file may move to a YAML format for better readability but the JSON format would continue to be supported for backwards compatibility.
+Note: In a future `cordial` release the configuration file may move to a YAML format for better readability but the JSON format would continue to be supported for backwards compatibility.
 
 ### Instance Parameters
 
 For general instance parameters, applicable to all component types, please see the documentation for the `geneos set` command, i.e. `geneos help set`.
 
-The parameters described below are specific to the Gateway component.
+The parameters described below are specific to the SAN component.
 
 * `pkgtype` (Default: `netprobe`)
 
