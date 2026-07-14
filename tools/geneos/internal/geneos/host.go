@@ -328,9 +328,9 @@ func Match(h string) iter.Seq[*Host] {
 	}
 }
 
-// OrList returns an iterator for Hosts; the receiver unless it is nil,
-// or the list of all hosts passed as args. If no args are given and the
-// receiver is nil then all hosts are returned.
+// OrList returns an iterator for *Host based on either the method
+// receiver h (which can be ALL), or if it is nil then any hosts args.
+// If h is nil and there are no hosts args then all hosts are returned.
 func (h *Host) OrList(hosts ...*Host) iter.Seq[*Host] {
 	return func(yield func(*Host) bool) {
 		switch h {
@@ -361,50 +361,56 @@ func (h *Host) OrList(hosts ...*Host) iter.Seq[*Host] {
 	}
 }
 
-// PathTo builds an absolute path based on the Geneos root of the host
-// h (using the executable name as the key) and the parts passed as
-// arguments. Each part can be a pointer to a geneos.Component, in which
-// case the component name or the parent component name is used, or any
-// other type is passed to fmt.Sprint to be stringified. The path is
-// returned from path.Join
+// PathTo returns an absolute path, rooted at the Geneos directory, on
+// host h and joining the given elements passed as elem. Each element
+// can be one of: *Component, in which case the component name or, if
+// set, the parent component name is used, a string, or any other type
+// which is passed to fmt.Sprint to be stringified. The path is returned
+// after calling a host specific Join on the resulting strings. If h is
+// nil then LOCAL is used.
 //
-// If calling this against the "packages" directory remember to use
-// ct.String() to not deference the parent type, which is done if a part
-// is a *Component
-func (h *Host) PathTo(parts ...any) string {
+// Calling Pathto() with no elements returns the Geneos directory for
+// the host h.
+//
+// Note: If calling this against the "packages" directory remember to
+// use ct.String() to not dereference the parent type, which is done if
+// a part is a *Component type
+func (h *Host) PathTo(elem ...any) string {
 	if h == nil {
 		h = LOCAL
 	}
 
-	strParts := []string{config.Get[string](h.Config, cordial.ExecutableName())}
+	strElems := []string{
+		config.Get[string](h.Config, cordial.ExecutableName()),
+	}
 
-	for _, p := range parts {
+	for _, p := range elem {
 		switch s := p.(type) {
 		case *Component:
 			if s.ParentType != nil {
-				strParts = append(strParts, s.ParentType.Name)
+				strElems = append(strElems, s.ParentType.Name)
 			} else {
-				strParts = append(strParts, s.Name)
+				strElems = append(strElems, s.Name)
 			}
 		case []any:
 			for _, t := range s {
-				strParts = append(strParts, fmt.Sprint(t))
+				strElems = append(strElems, fmt.Sprint(t))
 			}
 		case string:
-			strParts = append(strParts, s)
+			strElems = append(strElems, s)
 		case fmt.Stringer:
-			strParts = append(strParts, s.String())
+			strElems = append(strElems, s.String())
 		default:
-			strParts = append(strParts, fmt.Sprint(s))
+			strElems = append(strElems, fmt.Sprint(s))
 		}
 	}
 
-	return path.Join(strParts...)
+	return h.Join(strElems...)
 }
 
 // FullName returns name with the host h label appended if there is no
 // existing host label in the form `instance@host`. Any existing label
-// is not checked or changed.
+// is not validated.
 func (h *Host) FullName(name string) string {
 	if strings.Contains(name, "@") {
 		return name
@@ -412,7 +418,7 @@ func (h *Host) FullName(name string) string {
 	return name + "@" + h.String()
 }
 
-// RemoteHosts returns a slice of all valid (loaded and reachable)
+// RemoteHosts returns a slice of all valid (loaded and not hidden)
 // remote hosts sorted by name
 func RemoteHosts(includeHidden bool) (hs []*Host) {
 	hs = []*Host{}
@@ -466,12 +472,6 @@ func LoadHostConfig() {
 	for name, hostval := range config.Get[map[string]any](h, "hosts") {
 		v := config.New()
 
-		// set defaults ?
-		v.Default("name", name)
-		v.Default("hostname", name)
-		v.Default("port", 22)
-		v.Default("username", LOCAL.Username())
-
 		switch m := hostval.(type) {
 		case map[string]any:
 			v.MergeConfigMap(m)
@@ -480,15 +480,24 @@ func LoadHostConfig() {
 			continue
 		}
 
+		name := config.Get[string](v, "name", config.DefaultValue(name))
+
 		r := host.NewSSHRemote(
-			config.Get[string](v, "name"),
-			host.Username(config.Get[string](v, "username")), // username is the login name for the remote host
-			host.Hostname(config.Get[string](v, "hostname")),
-			host.Port(config.Get[uint16](v, "port")),
+			name,
+			host.Hostname(config.Get[string](v, "hostname", config.DefaultValue(name))),
+			// username is the login name for the remote host
+			host.Username(config.Get[string](v, "username", config.DefaultValue(LOCAL.Username()))),
+			host.Port(config.Get[uint16](v, "port", config.DefaultValue(22))),
 			host.Password(config.Get[config.Secret](v, "password")),
 			host.PrivateKeyFiles(config.Get[[]string](v, "privatekeys")...),
 		)
-		hosts.Store(config.Get[string](v, "name"), &Host{r, v, config.Get[bool](v, "hidden"), true})
+
+		hosts.Store(name, &Host{
+			Host:   r,
+			Config: v,
+			hidden: config.Get[bool](v, "hidden"),
+			loaded: true,
+		})
 	}
 }
 
