@@ -114,10 +114,12 @@ func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate
 
 // WriteCertificates concatenate certs in PEM format and writes to path
 // on host h. Certificates that are expired are skipped, only errors
-// from writing the resulting file are returned. Certificates are written
-// in the order provided. Directories in the path are created with 0755 permissions
-// if they do not already exist. The certificate file is created with
-// 0644 permissions (before umask).
+// from writing the resulting file are returned. Any existing file is
+// overwritten, and permissions are maintained as per [os.WriteFile].
+// Certificates are written in the order provided. Directories in the
+// path are created with 0755 permissions if they do not already exist.
+// The certificate file is created with 0644 permissions (before umask)
+// unless a file already exists.
 func WriteCertificates(h host.Host, certPath string, certs ...*x509.Certificate) (err error) {
 	var b bytes.Buffer
 	if _, err = WriteCertificatesTo(&b, certs...); err != nil {
@@ -275,7 +277,8 @@ func WriteNewSigningCertTo(w io.Writer, rootCert *x509.Certificate, rootKey Priv
 // WritePrivateKey writes a DER encoded private key as a PKCS#8 encoded
 // PEM file to path on host h. sets file permissions to 0600 (before
 // umask). Directories in the path are created with 0755 permissions if
-// they do not already exist.
+// they do not already exist. Any existing file is overwritten, and
+// permissions are maintained as per [os.WriteFile].
 func WritePrivateKey(h host.Host, keypath string, key PrivateKey) (err error) {
 	var b bytes.Buffer
 	if _, err = WritePrivateKeyTo(&b, key); err != nil {
