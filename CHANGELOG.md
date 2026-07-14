@@ -8,6 +8,28 @@
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
+## Version v1.28.1
+> [!NOTE]
+> **Released 2026-07-09** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+
+### Version v1.28.1 Fixes
+
+* `tools/geneos`
+
+  * Fix `ca-bundle.db` truststore sync
+
+  * Fix port allocations for `geneos init` commands, especially for `licd` in the `geneos init all` command
+
+### Version v1.28.1 Changes
+
+* Update to Go 1.26.5 and update dependencies.
+
+* `tools/geneos`
+
+  * Allow pfx/pkcs12 signing bundles to be used with `geneos init all` and `geneos deploy` commands. The password for the bundle can be supplied on the command line or will be prompted for if required.
+
+---
+
 ## Version v1.28.0
 > [!NOTE]
 > **Released 2026-06-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
