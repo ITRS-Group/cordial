@@ -10,7 +10,7 @@
 
 ## Version v1.28.1
 > [!NOTE]
-> **Released 2026-07-09** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+> **Released 2026-07-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
 
 ### Version v1.28.1 Fixes
 
