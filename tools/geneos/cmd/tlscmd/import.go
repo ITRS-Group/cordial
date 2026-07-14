@@ -104,7 +104,7 @@ geneos tls import /path/to/file.pem
 		}
 
 		if ct == nil && len(names) == 0 {
-			return geneos.TLSImportBundle(file, importCmdPrivateKey)
+			return geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword)
 		}
 
 		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {

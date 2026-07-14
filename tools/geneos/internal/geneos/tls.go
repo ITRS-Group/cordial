@@ -208,40 +208,60 @@ func readSigningPrivateKey() (key certs.PrivateKey, err error) {
 //
 // If the bundle contains only root certificates then these are added to
 // the ca-bundle only. In this case any privateKeySource parameter is
-func TLSImportBundle(signingBundleSource, privateKeySource string) (err error) {
+// ignored. If the bundle contains a signing certificate and private key
+// then these are written to the user's app config directory along with
+// the root certificate. The ca-bundle is updated with the root
+// certificate.
+func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundlePassword config.Secret) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
 		// ignored.
 	}
 
-	signingBundle, err := config.ReadPEM(signingBundleSource, "signing certificate(s)")
-	if err != nil {
-		return err
-	}
+	var certBundle *certs.CertificateBundle
 
-	leaf, chain, roots, _, err := certs.DecodePEM(signingBundle)
-	if leaf == nil && len(chain) == 0 && len(roots) > 0 {
-		// import roots to ca-bundle only
-		updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), roots...)
+	if path.Ext(signingBundleSource) == ".pfx" || path.Ext(signingBundleSource) == ".p12" {
+		if len(signingBundlePassword) == 0 {
+			signingBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+			if err != nil {
+				return err
+			}
+			defer clear(signingBundlePassword)
+		}
+		certBundle, err = certs.P12ToCertBundle(signingBundleSource, signingBundlePassword)
 		if err != nil {
 			return err
-		} else if updated {
-			fmt.Printf("ca-bundle updated with root certificate(s)\n")
-		} else {
-			fmt.Printf("ca-bundle is already up to date\n")
 		}
-		return nil
-	}
+	} else {
+		signingBundle, err := config.ReadPEM(signingBundleSource, "signing certificate(s)")
+		if err != nil {
+			return err
+		}
 
-	privateKey, err := config.ReadPEM(privateKeySource, "signing key")
-	if err != nil {
-		return err
-	}
+		leaf, intermediates, roots, _, err := certs.DecodePEM(signingBundle)
+		if leaf == nil && len(intermediates) == 0 && len(roots) > 0 {
+			// import roots to ca-bundle only
+			updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), roots...)
+			if err != nil {
+				return err
+			} else if updated {
+				fmt.Printf("ca-bundle updated with root certificate(s)\n")
+			} else {
+				fmt.Printf("ca-bundle is already up to date\n")
+			}
+			return nil
+		}
 
-	certBundle, err := certs.ParsePEM(signingBundle, privateKey)
-	if err != nil {
-		return err
+		privateKey, err := config.ReadPEM(privateKeySource, "signing key")
+		if err != nil {
+			return err
+		}
+
+		certBundle, err = certs.ParsePEM(signingBundle, privateKey)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !certBundle.Valid {

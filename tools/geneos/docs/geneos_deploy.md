@@ -75,14 +75,14 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
   -n, --nosave                        Do not save a local copy of any downloads
-  -C, --signing-bundle PEM            signing certificate bundle file, in PEM format.
-                                      Use a dash (`-`) to be prompted for PEM from console
+  -C, --signing-bundle string         signing certificate bundle file, in PEM or PFX/PKCS#12 format.
+                                      Use a dash ('-') to be prompted for PEM from console.
+                                      PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
   -c, --certs-bundle file             Instance certificate bundle file in PEM or PFX/PKCS#12 format.
-                                      Use a dash (`-`) to be prompted for PEM from console
-      --certs-password SECRET         Password for PFX/PKCS#12 file decryption.
-                                      You will be prompted if not supplied as an argument.
-                                      PFX/PKCS#12 files are identified by the .pfx or .p12
-                                      file extension and only supported for instance bundles
+                                      Use a dash ('-') to be prompted for PEM from console.
+                                      PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
+      --certs-password SECRET         Password for PFX/PKCS#12 certificate file.
+                                      You will be prompted if required and not supplied as an argument.
       --insecure                      Do not initialise TLS subsystem.
                                       Ignored if --instance-bundle is given.
       --keyfile PATH                  Keyfile PATH to use. Default is to create one

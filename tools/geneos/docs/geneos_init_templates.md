@@ -15,27 +15,29 @@ geneos init templates [flags]
 ### Options
 
 ```text
-      --allow-root                allow running as root (not recommended)
-  -A, --archive string            Directory of releases for installation
-  -G, --config string             config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -e, --env NAME=VALUE            Environment variable for instance start-up
-                                  (Repeat as required)
-  -F, --force                     Ignore existing directories and files and overwrite
-  -w, --gateway-template string   A gateway template file
-      --header NAME=VALUE         HTTP header in the format NAME=VALUE
-                                  (Repeat as required)
-  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --insecure                  Do not create internal certificates for TLS support
-  -l, --log                       Follow logs after starting instance(s)
-  -n, --name string               Use name for instances and configurations instead of the hostname
-  -N, --nexus                     Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -C, --signing-bundle string     signing bundle in PEM format.
-                                  This bundle must contain an unencrypted private key
-                                  and matching signing certificate and other certificates up to the root CA.
-  -S, --snapshots                 Download from nexus snapshots. Requires -N
-  -T, --tls                       Create internal certificates for TLS support
-  -u, --username string           Username for downloads (password prompted)
-  -V, --version VERSION           Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
+      --allow-root                       allow running as root (not recommended)
+  -A, --archive string                   Directory of releases for installation
+  -G, --config string                    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -e, --env NAME=VALUE                   Environment variable for instance start-up
+                                         (Repeat as required)
+  -F, --force                            Ignore existing directories and files and overwrite
+  -w, --gateway-template string          A gateway template file
+      --header NAME=VALUE                HTTP header in the format NAME=VALUE
+                                         (Repeat as required)
+  -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --insecure                         Do not create internal certificates for TLS support
+  -l, --log                              Follow logs after starting instance(s)
+  -n, --name string                      Use name for instances and configurations instead of the hostname
+  -N, --nexus                            Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
+                                         Use a dash ('-') to be prompted for PEM from console.
+                                         PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
+      --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
+                                         You will be prompted if required and not supplied as an argument.
+  -S, --snapshots                        Download from nexus snapshots. Requires -N
+  -T, --tls                              Create internal certificates for TLS support
+  -u, --username string                  Username for downloads (password prompted)
+  -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
 
 ## SEE ALSO

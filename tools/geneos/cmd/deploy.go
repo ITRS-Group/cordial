@@ -65,9 +65,9 @@ func init() {
 	deployCmd.Flags().BoolVarP(&deployCmdTLS, "tls", "T", false, "Initialise TLS subsystem if required.\nUse options below to import existing certificate bundles")
 	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
 
-	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "signing certificate bundle file, in `PEM` format.\nUse a dash (`-`) to be prompted for PEM from console")
-	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash (`-`) to be prompted for PEM from console")
-	deployCmd.Flags().Var(&deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 file decryption.\nYou will be prompted if not supplied as an argument.\nPFX/PKCS#12 files are identified by the .pfx or .p12\nfile extension and only supported for instance bundles")
+	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "signing certificate bundle file, in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
+	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
+	deployCmd.Flags().Var(&deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
 
 	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem.\nIgnored if --instance-bundle is given.")
 
@@ -291,7 +291,7 @@ var deployCmd = &cobra.Command{
 
 		if !deployCmdInsecure {
 			if deployCmdSigningBundle != "" {
-				if err = geneos.TLSImportBundle(deployCmdSigningBundle, ""); err != nil {
+				if err = geneos.TLSImportBundle(deployCmdSigningBundle, "", deployCmdBundlePassword); err != nil {
 					return err
 				}
 			} else {
