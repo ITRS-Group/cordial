@@ -8,6 +8,23 @@
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
+## Version v1.28.2
+
+> [!NOTE]
+> **Released 2026-07-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+
+### Version v1.28.2 Fixes
+
+* `tools/geneos`
+
+  * Fix initial rebuild of gateway `instance.setup.xml` to ensure port numbers are set correctly when creating the instance
+
+### Version v1.28.2 Changes
+
+* Updated Go package dependencies
+
+* GDNA images use latest Geneos releases (7.10.x)
+
 ## Version v1.28.1
 > [!NOTE]
 > **Released 2026-07-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
