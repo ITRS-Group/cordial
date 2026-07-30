@@ -324,29 +324,6 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 	}
 	cf := i.Config()
 
-	// always rebuild an instance template
-	i.Log().Debug("rebuilding instance template", slog.String("template", instanceTemplateName))
-	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
-		return
-	}
-	i.Log().Debug("instance template rebuilt", slog.String("include", INSTANCEXML))
-
-	configRebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
-	setup := config.Get[string](cf, "setup")
-
-	if configRebuild == "never" || setup == "" || setup == "none" {
-		return
-	}
-
-	if !(configRebuild == "always" || (initial && configRebuild == "initial")) {
-		return
-	}
-
-	if strings.HasPrefix(setup, "http://") || strings.HasPrefix(setup, "https://") {
-		i.Log().Debug("setup is URL based, skipping rebuild")
-		return
-	}
-
 	// recheck check certs/keys
 	var changed bool
 
@@ -379,11 +356,34 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 		changed = true
 	}
 
+	// always rebuild an instance template
+	i.Log().Debug("rebuilding instance template", slog.String("template", instanceTemplateName))
+	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
+		return
+	}
+	i.Log().Debug("instance template rebuilt", slog.String("include", INSTANCEXML))
+
 	if changed {
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			i.Log().Error("Cannot save configuration", slog.Any("error", resp.Err))
 			return resp.Err
 		}
+	}
+
+	configRebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
+	setup := config.Get[string](cf, "setup")
+
+	if configRebuild == "never" || setup == "" || setup == "none" {
+		return
+	}
+
+	if !(configRebuild == "always" || (initial && configRebuild == "initial")) {
+		return
+	}
+
+	if strings.HasPrefix(setup, "http://") || strings.HasPrefix(setup, "https://") {
+		i.Log().Debug("setup is URL based, skipping rebuild")
+		return
 	}
 
 	return instance.ExecuteTemplate(i,
