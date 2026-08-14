@@ -8,6 +8,25 @@
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
+## Version v1.28.3
+
+> [!NOTE]
+> **Released 2026-08-13** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+### Version v1.28.3 Changes
+
+* Update Go to 1.26.6 and update dependencies
+
+* `tools/gateway-reporter`
+
+  * Retire this from builds as the functionality is superceeded by the Gateway's built-in reporting features.
+
+### Version v1.28.3 Fixes
+
+* `tools/dv2email`
+
+  * Reorder and fix inclusion of Type in XLSX headline outputs
+
 ## Version v1.28.2
 
 > [!NOTE]

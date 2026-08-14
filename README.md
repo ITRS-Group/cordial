@@ -2,7 +2,7 @@
 
 > [!NOTE]
 >
-> This is **Version v1.28.2** - Released 2026-07-30 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+> This is **Version v1.28.3** - Released 2026-08-13 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
 
 ## Tools and Utilities
 

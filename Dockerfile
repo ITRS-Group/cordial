@@ -19,7 +19,7 @@ FROM golang:${GOVERSION} AS build
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, gateway-reporter, san-config
+# geneos, dv2email, san-config
 COPY tools /app/cordial/tools
 # servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
@@ -42,10 +42,6 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     cd /app/cordial/tools/ims-gateway; \
     go build -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
     GOOS=windows go build -tags noxlsx --ldflags '-s -w'; \
-    # gateway-reporter (in Windows version)
-    cd /app/cordial/tools/gateway-reporter; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w'; \
     # dv2email
     cd /app/cordial/tools/dv2email; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
@@ -76,7 +72,7 @@ ENV GOTOOLCHAIN=go${GOVERSION}
 # base files
 COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, gateway-reporter, san-config
+# geneos, dv2email, san-config
 COPY tools /app/cordial/tools
 # servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
@@ -151,7 +147,7 @@ RUN set -eux; \
 # base files
 COPY VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, gateway-reporter, san-config
+# geneos, dv2email, san-config
 COPY tools /app/cordial/tools
 # servicenow*, pagerduty
 COPY integrations /app/cordial/integrations/
@@ -163,7 +159,6 @@ COPY gdna /app/cordial/gdna
 WORKDIR /docs
 COPY tools/geneos/README.md geneos.md
 COPY tools/ims-gateway/*.md ims-gateway/
-COPY tools/gateway-reporter/README.md gateway-reporter.md
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
 COPY tools/san-config/README.md san-config.md
@@ -176,7 +171,7 @@ COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/geneos tools/gateway-reporter tools/dv2email tools/san-config integrations/servicenow integrations/servicenow2 integrations/pagerduty libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/geneos tools/dv2email tools/san-config integrations/servicenow integrations/servicenow2 integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
     for i in ${READMEDIRS}; \
@@ -211,7 +206,6 @@ COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
 COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway /cordial/bin/
 COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway.exe /cordial/bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 
 # tools/geneos include files
@@ -265,7 +259,6 @@ CMD [ "bash" ]
 # FROM ubuntu:jammy AS cordial-run-ubuntu
 FROM debian:stable AS cordial-run-debian
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
@@ -288,7 +281,6 @@ CMD [ "bash" ]
 # build a UBI8 for testing
 FROM redhat/ubi8 AS cordial-run-ubi8
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
@@ -306,7 +298,6 @@ CMD [ "bash" ]
 # build a UBI9
 FROM redhat/ubi9 AS cordial-run-ubi9
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
@@ -322,7 +313,6 @@ CMD [ "bash" ]
 # build a UBI10
 FROM redhat/ubi10 AS cordial-run-ubi10
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/gateway-reporter/gateway-reporter /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
