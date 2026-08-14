@@ -7,7 +7,7 @@
 #
 # This is to allow downloading Geneos release archives during the build.
 
-ARG GOVERSION=1.26.5
+ARG GOVERSION=1.26.6
 
 # Note: To build an executable for a modern Mac use something like:
 #
@@ -348,6 +348,7 @@ COPY --from=build /app/cordial/gdna/geneos/* /etc/geneos/gdna/
 COPY --chmod=555 gdna/docker/start-up.sh /etc/geneos/gdna/start-up.sh
 
 ENV DEBIANFRONTEND=noninteractive
+ENV ITRS_DOWNLOAD_TIMEOUT=5m
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \

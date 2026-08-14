@@ -1,6 +1,6 @@
 module github.com/itrs-group/cordial
 
-go 1.26.5
+go 1.26.6
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
@@ -50,23 +50,29 @@ require (
 	github.com/tklauser/go-sysconf v0.4.0
 	github.com/wneessen/go-mail v0.8.1
 	github.com/xuri/excelize/v2 v2.11.0
-	golang.org/x/crypto v0.54.0
-	golang.org/x/net v0.57.0
+	golang.org/x/crypto v0.55.0
+	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.55.0
+	modernc.org/sqlite v1.56.0
 	software.sslmate.com/src/go-pkcs12 v0.7.3
 	src.elv.sh v0.21.0
 )
 
 require (
+	dario.cat/mergo v1.0.2 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
+	github.com/Masterminds/goutils v1.1.1 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
+	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/PuerkitoBio/goquery v1.12.0 // indirect
+	github.com/alecthomas/kingpin/v2 v2.4.0 // indirect
 	github.com/andybalholm/cascadia v1.3.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/chzyer/readline v1.5.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
@@ -80,9 +86,12 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/google/pprof v0.0.0-20260709232956-b9395ee17fa0 // indirect
+	github.com/google/certificate-transparency-go v1.3.2 // indirect
+	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
+	github.com/huandu/xstrings v1.5.0 // indirect
+	github.com/ianlancetaylor/demangle v0.0.0-20250417193237-f615e6bd150b // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jcmturner/aescts/v2 v2.0.0 // indirect
 	github.com/jcmturner/dnsutils/v2 v2.0.0 // indirect
@@ -95,10 +104,14 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
+	github.com/mitchellh/copystructure v1.2.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
+	github.com/mwitkow/go-http-dialer v0.0.0-20161116154839-378f744fb2b8 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
+	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/richardlehane/mscfb v1.0.7 // indirect
@@ -106,25 +119,30 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
+	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tiendc/go-deepcopy v1.7.2 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	github.com/weppos/publicsuffix-go v0.50.3-0.20260108123922-15eaa75052c0 // indirect
+	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
 	github.com/xuri/efp v0.0.1 // indirect
 	github.com/xuri/nfp v0.0.2-0.20250530014748-2ddeb826f9a9 // indirect
+	github.com/zmap/zcrypto v0.0.0-20250129210703-03c45d0bae98 // indirect
+	github.com/zmap/zlint/v3 v3.6.7 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0 // indirect
-	go.opentelemetry.io/otel v1.44.0 // indirect
-	go.opentelemetry.io/otel/metric v1.44.0 // indirect
-	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0 // indirect
+	go.opentelemetry.io/otel v1.45.0 // indirect
+	go.opentelemetry.io/otel/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1 // indirect
-	modernc.org/libc v1.74.4 // indirect
+	modernc.org/libc v1.75.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
+	modernc.org/memory v1.12.0 // indirect
 )
