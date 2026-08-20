@@ -11,11 +11,11 @@
 ## Version v1.28.3
 
 > [!NOTE]
-> **Released 2026-08-13** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-08-20** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.28.3 Changes
 
-* Update Go to 1.26.6 and update dependencies
+* Update Go to 1.27.0 and update `go.mod` dependencies
 
 * `tools/gateway-reporter`
 

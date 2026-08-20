@@ -48,7 +48,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		return fmt.Errorf("%w: source and destination must have different names and/or locations", geneos.ErrInvalidArgs)
 	}
 
-	log.Debug("copying", ct, source, destination)
+	log.Debug("copying", slog.String("component", ct.String()), slog.String("source", source), slog.String("destination", destination))
 
 	opts := evalCopyOptions(options...)
 
