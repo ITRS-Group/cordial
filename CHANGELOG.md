@@ -19,7 +19,11 @@
 
 * `tools/gateway-reporter`
 
-  * Retire this from builds as the functionality is superceeded by the Gateway's built-in reporting features.
+  * Retire this from builds as the functionality is superceeded by the Gateway's built-in reporting features
+
+* `gdna`
+
+  * Update plugin dashboard screenshot and related text in `README.md`
 
 ### Version v1.28.3 Fixes
 
