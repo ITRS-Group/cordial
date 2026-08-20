@@ -82,11 +82,11 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 ### Plugin Utilization Dashboard
 
-The second dashboard, known as the "beehive", shows you a more in-depth view of individual plugin utilization:
+The second dashboard shows you a more in-depth view of individual plugin utilization:
 
 ![Plugin Utilization Example](screenshots/gdna-3.jpg)
 
-Each hexagon represents a specific plugin, grouped into logical segments. The numbers are how many individual plugin instances are deployed and how many separate servers they are deployed on.
+Each row represents a specific plugin, grouped into logical blocks. The numbers are how many individual plugin instances are deployed and how many separate servers they are deployed on.
 
 ### Version Summary Dashboard
 
