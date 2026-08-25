@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.4.0-250527 at 2025-06-27 16:50:08 by cnielsen on ITRSLP365-->
+<!-- Gateway-created setup include file for user LDN\cnielsen at 10.10.21.133 -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.4.2-250625/gateway.xsd">
+	<authentication>
+		<users>
+			<userGroup name="Administrators">
+				<roleProperties>
+					<roleProperty>Administrators</roleProperty>
+				</roleProperties>
+				<user name="LDN\cnielsen">
+					<fullName>Claus Nielsen</fullName>
+					<allowLogin>true</allowLogin>
+					<allowSystemAuth>true</allowSystemAuth>
+				</user>
+				<user name="LDN\khaider">
+					<fullName>Kamal Haider</fullName>
+					<allowLogin>true</allowLogin>
+					<allowSystemAuth>true</allowSystemAuth>
+				</user>
+				<user name="Generic User">
+					<genericUser>true</genericUser>
+					<allowLogin>true</allowLogin>
+					<allowSystemAuth>true</allowSystemAuth>
+				</user>
+			</userGroup>
+			<userGroup name="ReadOnly">
+				<roleProperties>
+					<roleProperty>ReadOnly</roleProperty>
+				</roleProperties>
+				<user name="GWSharing">
+					<!--PW geneos-->
+					<fullName>Gateway Sharing Account</fullName>
+					<password>
+						<encodedPassword>3lSqOICe6o5eA</encodedPassword>
+					</password>
+					<allowLogin>true</allowLogin>
+					<roleProperties>
+						<roleProperty>ReadOnly</roleProperty>
+					</roleProperties>
+				</user>
+			</userGroup>
+		</users>
+	</authentication>
+</gateway>

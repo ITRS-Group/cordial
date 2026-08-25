@@ -1,0 +1,2423 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.1.2-241218 at 2025-06-30 11:14:45 by peter on HPSpectre360-->
+<!-- Gateway-created setup include file for user LDN\cnielsen at 10.10.21.133 -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.3.1-250422/gateway.xsd">
+	<samplers>
+		<samplerGroup name="Gateway">
+			<samplerGroup name="Gateway Info">
+				<sampler name="Entities">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<plugin>
+						<Gateway-managedEntitiesData>
+							<mode>SummaryAndDetails</mode>
+						</Gateway-managedEntitiesData>
+					</plugin>
+					<dataviews>
+						<dataview name="Entities Details">
+							<additions>
+								<var-columns>
+									<data>
+										<column>
+											<data>priority</data>
+										</column>
+									</data>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+					<schemas>
+						<dataviews>
+							<dataviewSchema>
+								<dataview>Entities Details</dataview>
+								<schema>
+									<data>
+										<headlines>
+          </headlines>
+										<columns>
+											<column>
+												<name>priority</name>
+												<string/>
+											</column>
+										</columns>
+										<publish>true</publish>
+									</data>
+								</schema>
+							</dataviewSchema>
+						</dataviews>
+					</schemas>
+				</sampler>
+				<sampler name="Severity Count">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<sampleInterval>
+						<data>10</data>
+					</sampleInterval>
+					<plugin>
+						<Gateway-severityCount>
+							
+							
+						</Gateway-severityCount>
+					</plugin>
+				</sampler>
+				<sampler name="Severity Data">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<sampleInterval>
+						<data>10</data>
+					</sampleInterval>
+					<plugin>
+						<Gateway-severityData>
+							<includeUserAssigned>true</includeUserAssigned>
+							<includeSnoozed>true</includeSnoozed>
+							<excludeSelfGenerated>true</excludeSelfGenerated>
+							<filter>
+								<filterByAttribute>
+									<attribute>
+										<exclude>
+											<name>APPLICATION</name>
+											<values>
+												<value>Info Overviews</value>
+												<value>Global Overviews</value>
+												<value>Application Overviews</value>
+											</values>
+										</exclude>
+									</attribute>
+								</filterByAttribute>
+							</filter>
+							<attributeColumns>
+								<attributeColumn>APPLICATION</attributeColumn>
+								<attributeColumn>COMPONENT</attributeColumn>
+							</attributeColumns>
+						</Gateway-severityData>
+					</plugin>
+				</sampler>
+				<sampler name="Scheduled Commands Data">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<plugin>
+						<Gateway-scheduledCommandData/>
+					</plugin>
+				</sampler>
+				<sampler name="Scheduled Commands History Data">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<plugin>
+						<Gateway-scheduledCommandsHistoryData>
+							<history/>
+						</Gateway-scheduledCommandsHistoryData>
+					</plugin>
+				</sampler>
+				<sampler name="Gateway">
+					<var-group>
+						<data>Gateway Info</data>
+					</var-group>
+					<plugin>
+						<Gateway-gatewayData/>
+					</plugin>
+					<dataviews>
+						<dataview name="Gateway">
+							<additions>
+								<var-rows>
+									<data>
+										<row>
+											<data>gatewayTime</data>
+										</row>
+									</data>
+								</var-rows>
+							</additions>
+						</dataview>
+					</dataviews>
+					<schemas>
+						<dataviews>
+							<dataviewSchema>
+								<dataview>Gateway</dataview>
+								<schema>
+									<data>
+										<headlines>
+          </headlines>
+										<columns>
+											<column>
+												<name>gatewayTime</name>
+												<string/>
+											</column>
+										</columns>
+										<publish>true</publish>
+									</data>
+								</schema>
+							</dataviewSchema>
+						</dataviews>
+					</schemas>
+				</sampler>
+				<sampler name="Licence">
+					<var-group>
+						<data>Licence</data>
+					</var-group>
+					<plugin>
+						<Gateway-licenceUsage>
+							<groups/>
+						</Gateway-licenceUsage>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Gateway Validation Tools">
+				<sampler name="Entities Attributes">
+					<var-group>
+						<data>Attributes</data>
+					</var-group>
+					<plugin>
+						<Gateway-sql>
+							<setupSql>
+								<sql>
+									<data>create table attributes (name text);
+create table MES(name text, attributes text, value text);
+</data>
+								</sql>
+							</setupSql>
+							<tables>
+								<dataview>
+									<tableName>
+										<data>AllME</data>
+									</tableName>
+									<xpath>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-managedEntitiesData&quot;)]/dataview[(@name=&quot;Entities Details&quot;)]</xpath>
+								</dataview>
+							</tables>
+							<sampleSql>
+								<sql>
+									<data>delete from attributes;
+delete from MES;
+insert into attributes
+      WITH split(word, str, hascomma) AS (
+    select &apos;&apos;, attributes, 1 from AllME
+    UNION ALL SELECT
+    substr(str, 0, 
+        case when instr(str, &apos;,&apos;)
+        then instr(str, &apos;,&apos;)
+        else length(str)+1 end),
+    ltrim(substr(str, instr(str, &apos;,&apos;)), &apos;,&apos;),
+    instr(str, &apos;,&apos;)
+    FROM split
+    WHERE hascomma
+)
+SELECT distinct substr(trim(word),0,instr(trim(word),&apos;=&apos;)) FROM split WHERE word!=&apos;&apos;;
+
+insert into MES
+select * from 
+(
+    select ME.name as name, A.name as attributes,instr(ME.attributes,A.name) as value from AllME ME, attributes A
+);
+
+</data>
+								</sql>
+							</sampleSql>
+							<views>
+								<view>
+									<name>
+										<data>Attributes Missing from MEs</data>
+									</name>
+									<sql>
+										<data>select * from MES where value=&quot;0&quot; limit 2000</data>
+									</sql>
+									<showRowID>true</showRowID>
+								</view>
+								<view>
+									<name>
+										<data>Attributes</data>
+									</name>
+									<sql>
+										<data>select attributes from MES
+GROUP by attributes</data>
+									</sql>
+									<showRowID>true</showRowID>
+								</view>
+							</views>
+						</Gateway-sql>
+					</plugin>
+					<debug>
+						<setting>debugSQLCommands</setting>
+						<setting>statusDetails</setting>
+					</debug>
+				</sampler>
+			</samplerGroup>
+		</samplerGroup>
+		<samplerGroup name="Dashboard">
+			<sampler name="Alert Overview">
+				<var-group>
+					<data>Alert Overview</data>
+				</var-group>
+				<sampleInterval>
+					<data>10</data>
+				</sampleInterval>
+				<plugin>
+					<Gateway-sql>
+						<tables>
+							<xpath>
+								<tableName>
+									<data>gateways_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>insecurePort</data>
+										</name>
+										<xpath>../../row[(@name=&quot;insecureGatewayPort&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>clients</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(@name=&quot;Client Connections&quot;)]/dataview/headlines/cell[(@name=&quot;clientConnectionCount&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>release</data>
+										</name>
+										<xpath>../../row[(@name=&quot;release&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>releaseAge</data>
+										</name>
+										<xpath>../../row[(@name=&quot;releaseAge&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>lastSync</data>
+										</name>
+										<xpath>../../row[(@name=&quot;gatewayTime&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>hotStandbyState</data>
+										</name>
+										<xpath>../../row[(@name=&quot;hotStandbyRole&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>secondaryStatus</data>
+										</name>
+										<xpath>../../row[(@name=&quot;secondaryGatewayConnectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>licenseDaysRemaining</data>
+										</name>
+										<xpath>../../row[(@name=&quot;licenseDaysRemaining&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>gwsev_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>probeCount</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/headlines/cell[(@name=&quot;probeCount&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>probesUp</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/headlines/cell[(@name=&quot;probesUp&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>maxDataAge</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/headlines/cell[(@name=&quot;maxDataAge&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>criticalItems</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-severityData&quot;)]/dataview/headlines/cell[(@name=&quot;criticalItems&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>warningItems</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-severityData&quot;)]/dataview/headlines/cell[(@name=&quot;warningItems&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>snoozedItems</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-snoozeData&quot;)]/dataview/headlines/cell[(@name=&quot;snoozedItemCount&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>assignedItems</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-userAssignmentData&quot;)]/dataview/headlines/cell[(@name=&quot;assignedItemCount&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>severity_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-severityData&quot;)]/dataview/rows/row/cell[(@column=&quot;timestamp&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>id</data>
+										</name>
+										<xpath>@rowname</xpath>
+									</column>
+									<column>
+										<name>
+											<data>severity</data>
+										</name>
+										<xpath>../cell[(@column=&quot;severity&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>alertTime</data>
+										</name>
+										<xpath>../cell[(@column=&quot;timestamp&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>managedEntity</data>
+										</name>
+										<xpath>../cell[(@column=&quot;managedEntity&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>sampler</data>
+										</name>
+										<xpath>../cell[(@column=&quot;sampler&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>type</data>
+										</name>
+										<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dataview</data>
+										</name>
+										<xpath>../cell[(@column=&quot;dataView&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>cell</data>
+										</name>
+										<xpath>../cell[(@column=&quot;cell&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>value</data>
+										</name>
+										<xpath>../cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>snoozed</data>
+										</name>
+										<xpath>../cell[(@column=&quot;snoozed&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>userAssigned</data>
+										</name>
+										<xpath>../cell[(@column=&quot;userassigned&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>assignment_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-userAssignmentData&quot;)]/dataview/rows/row/cell[(@column=&quot;timestamp&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>id</data>
+										</name>
+										<xpath>@rowname</xpath>
+									</column>
+									<column>
+										<name>
+											<data>assignAge</data>
+										</name>
+										<xpath>../cell[(@column=&quot;duration&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>managedEntity</data>
+										</name>
+										<xpath>../cell[(@column=&quot;managedEntity&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>sampler</data>
+										</name>
+										<xpath>../cell[(@column=&quot;sampler&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dataview</data>
+										</name>
+										<xpath>../cell[(@column=&quot;dataView&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>cell</data>
+										</name>
+										<xpath>../cell[(@column=&quot;cell&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>assignedBy</data>
+										</name>
+										<xpath>../cell[(@column=&quot;assignerFullName&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>assignedTo</data>
+										</name>
+										<xpath>../cell[(@column=&quot;assigneeFullName&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>assignTime</data>
+										</name>
+										<xpath>../cell[(@column=&quot;timestamp&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>comment</data>
+										</name>
+										<xpath>../cell[(@column=&quot;comment&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>snooze_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-snoozeData&quot;)]/dataview/rows/row/cell[(@column=&quot;duration&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>id</data>
+										</name>
+										<xpath>@rowname</xpath>
+									</column>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>managedEntity</data>
+										</name>
+										<xpath>../cell[(@column=&quot;managedEntity&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>sampler</data>
+										</name>
+										<xpath>../cell[(@column=&quot;sampler&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dataview</data>
+										</name>
+										<xpath>../cell[(@column=&quot;dataView&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>cell</data>
+										</name>
+										<xpath>../cell[(@column=&quot;cell&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>snoozeTime</data>
+										</name>
+										<xpath>../cell[(@column=&quot;timestamp&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>snoozeAge</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>timeTillAutoUnsnooze</data>
+										</name>
+										<xpath>../cell[(@column=&quot;timeTillAutoUnsnooze&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>snoozeType</data>
+										</name>
+										<xpath>../cell[(@column=&quot;snoozeType&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>user</data>
+										</name>
+										<xpath>../cell[(@column=&quot;user&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>userFullName</data>
+										</name>
+										<xpath>../cell[(@column=&quot;userFullName&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>comment</data>
+										</name>
+										<xpath>../cell[(@column=&quot;comment&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>severity_count</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-severityCount&quot;)]/dataview/rows/row/cell[(@column=&quot;okItems&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>id</data>
+										</name>
+										<xpath>@rowname</xpath>
+									</column>
+									<column>
+										<name>
+											<data>okItems</data>
+										</name>
+										<xpath>../cell[(@column=&quot;okItems&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>warningItems</data>
+										</name>
+										<xpath>../cell[(@column=&quot;warningItems&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>criticalItems</data>
+										</name>
+										<xpath>../cell[(@column=&quot;criticalItems&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>managedEntity</data>
+										</name>
+										<xpath>ancestor::managedEntity/@name</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>probe_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/rows/row/cell[not(@value=&quot;Virtual&quot;)][(@column=&quot;type&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>probe</data>
+										</name>
+										<xpath>@rowname</xpath>
+									</column>
+									<column>
+										<name>
+											<data>type</data>
+										</name>
+										<xpath>../cell[(@column=&quot;type&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>hostname</data>
+										</name>
+										<xpath>../cell[(@column=&quot;hostname&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>ipaddress</data>
+										</name>
+										<xpath>../cell[(@column=&quot;ipaddress&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>connectionState</data>
+										</name>
+										<xpath>../cell[(@column=&quot;connectionState&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>release</data>
+										</name>
+										<xpath>../cell[(@column=&quot;release&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>releaseAge</data>
+										</name>
+										<xpath>../cell[(@column=&quot;releaseAge&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>security</data>
+										</name>
+										<xpath>../cell[(@column=&quot;security&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>OS</data>
+										</name>
+										<xpath>../cell[(@column=&quot;OS&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>db_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dbEnabled</data>
+										</name>
+										<xpath>../../row[(@name=&quot;databaseLoggingEnabled&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dbConnection</data>
+										</name>
+										<xpath>../../row[(@name=&quot;databaseConnectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dbHost</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-databaseLoggin&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;host&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>dbCacheFiles</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-databaseLogging&quot;)]/dataview[(@name=&quot;Cache&quot;)]/rows/row[(@name=&quot;cacheFiles&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>analytics_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-obcervConnection&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;enabled&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-itrsAnalyticsConnection&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;enabled&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>analyticsEnabled</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>analyticsConnection</data>
+										</name>
+										<xpath>../../row[(@name=&quot;connectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>analyticsMessagesDropped</data>
+										</name>
+										<xpath>../../row[(@name=&quot;messagesDroppedPerSample&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>connections_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-clientConnectionData&quot;)]/dataview/rows/row/cell[(@column=&quot;userName&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>userName</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>hostname</data>
+										</name>
+										<xpath>../cell[(@column=&quot;hostname&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>userGroups</data>
+										</name>
+										<xpath>../cell[(@column=&quot;userGroups&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>genericUser</data>
+										</name>
+										<xpath>../cell[(@column=&quot;genericUser&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>security</data>
+										</name>
+										<xpath>../cell[(@column=&quot;security&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>duration</data>
+										</name>
+										<xpath>../cell[(@column=&quot;duration&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>release</data>
+										</name>
+										<xpath>../cell[(@column=&quot;release&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>releaseAge</data>
+										</name>
+										<xpath>../cell[(@column=&quot;releaseAge&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>config_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Imported Data&quot;)]/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-includesData&quot;)]/dataview/rows/row/cell[(@column=&quot;file&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>ancestor-or-self::managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayName&quot;)]/cell[(@column=&quot;value&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>file</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>changed</data>
+										</name>
+										<xpath>../cell[(@column=&quot;changed&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>applied</data>
+										</name>
+										<xpath>../cell[(@column=&quot;applied&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>isMain</data>
+										</name>
+										<xpath>../cell[(@column=&quot;isMain&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+							<xpath>
+								<tableName>
+									<data>gw_table</data>
+								</tableName>
+								<xpaths>
+									<xpath>ancestor-or-self::gateway/directory/probe/managedEntity/sampler[(@name=&quot;Imported Data&quot;)]/dataview/rows/row/cell[(@column=&quot;gatewayName&quot;)]</xpath>
+								</xpaths>
+								<columns>
+									<column>
+										<name>
+											<data>gateway</data>
+										</name>
+										<xpath>@value</xpath>
+									</column>
+									<column>
+										<name>
+											<data>connectionStatus</data>
+										</name>
+										<xpath>../cell[(@column=&quot;connectionStatus&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>pHost</data>
+										</name>
+										<xpath>../cell[(@column=&quot;primaryHost&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>sHost</data>
+										</name>
+										<xpath>../cell[(@column=&quot;secondaryHost&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>port</data>
+										</name>
+										<xpath>../cell[(@column=&quot;primaryPort&quot;)]</xpath>
+									</column>
+									<column>
+										<name>
+											<data>security</data>
+										</name>
+										<xpath>../cell[(@column=&quot;security&quot;)]</xpath>
+									</column>
+								</columns>
+							</xpath>
+						</tables>
+						<views>
+							<view>
+								<name>
+									<data>Current Alerts</data>
+								</name>
+								<sql>
+									<data>SELECT
+st.severity,
+st.alertTime,
+st.gateway,
+st.managedEntity || &quot; &gt; &quot; || st.sampler || &quot; &gt; &quot; || st.dataview || &quot; &gt; &quot; || st.cell as xPath,
+CASE WHEN st.snoozed==&apos;true&apos; THEN &apos;1&apos; ELSE &apos;0&apos; END AS s1,
+(SELECT snoozeAge FROM snooze_table sd WHERE sd.id = st.id) AS snoozeAge,
+CASE WHEN st.userAssigned==&apos;true&apos; THEN &apos;1&apos; ELSE &apos;0&apos; END AS a1,
+(SELECT assignAge FROM assignment_table at WHERE at.id=st.id) AS assignAge
+FROM severity_table st 
+ORDER BY st.severity ASC, st.alertTime ASC</data>
+								</sql>
+								<disabled>false</disabled>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Snoozed Items</data>
+								</name>
+								<sql>
+									<data>select *,
+managedEntity || &quot; &gt; &quot; || sampler || &quot; &gt; &quot; || dataview || &quot; &gt; &quot; || cell AS xPath
+FROM snooze_table
+ORDER BY snoozeAge DESC</data>
+								</sql>
+								<disabled>false</disabled>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Assigned Items</data>
+								</name>
+								<sql>
+									<data>select *,
+managedEntity || &quot; &gt; &quot; || sampler || &quot; &gt; &quot; || dataview || &quot; &gt; &quot; || cell AS xPath
+FROM assignment_table
+ORDER BY assignAge DESC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data> PB Sources</data>
+								</name>
+								<sql>
+									<data>SELECT * FROM probe_table pt
+ORDER BY gateway, probe ASC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Database</data>
+								</name>
+								<sql>
+									<data>SELECT * FROM db_table db
+ORDER BY gateway ASC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Analytics</data>
+								</name>
+								<sql>
+									<data>SELECT * FROM analytics_table
+ORDER BY gateway ASC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>GW Sources</data>
+								</name>
+								<sql>
+									<data>SELECT * FROM gwsev_table
+ORDER BY gateway ASC</data>
+								</sql>
+								<disabled>true</disabled>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Users</data>
+								</name>
+								<sql>
+									<data>SELECT
+username,
+COUNT(username) AS connections,
+userGroups,
+genericUser,
+GROUP_CONCAT(gateway) AS gateways,
+hostname,
+release,
+releaseAge
+FROM connections_table
+GROUP BY username
+ORDER BY username ASC</data>
+								</sql>
+							</view>
+							<view>
+								<name>
+									<data>PB Versions</data>
+								</name>
+								<sql>
+									<data>SELECT 
+release,
+COUNT(release) AS instances,
+releaseAge
+FROM probe_table
+GROUP BY release
+ORDER BY release DESC</data>
+								</sql>
+							</view>
+							<view>
+								<name>
+									<data>Gateways</data>
+								</name>
+								<sql>
+									<data>SELECT
+gateway,
+warningItems,
+criticalItems,
+probeCount,
+probesUp,
+maxDataAge,
+(SELECT dbEnabled FROM db_table db WHERE sv.gateway=db.gateway) AS dbEnabled,
+(SELECT dbConnection FROM db_table db WHERE sv.gateway=db.gateway) as dbConnection,
+(SELECT dbCacheFiles FROM db_table db WHERE sv.gateway=db.gateway) as dbCacheFiles,
+(SELECT analyticsEnabled FROM analytics_table at WHERE sv.gateway=at.gateway) AS analyticsEnabled,
+(SELECT analyticsConnection FROM analytics_table at WHERE sv.gateway=at.gateway) as analyticsConnection,
+(SELECT analyticsMessagesDropped FROM analytics_table at WHERE sv.gateway=at.gateway) as analyticsMessagesDropped,
+(SELECT lastSync FROM gateways_table gw where sv.gateway=gw.gateway) AS lastSync,
+(SELECT hotStandbyState from gateways_table gw where sv.gateway=gw.gateway) AS hotStandbyState,
+(SELECT secondaryStatus from gateways_table gw where sv.gateway=gw.gateway) AS secondaryStatus
+FROM gwsev_table sv
+ORDER BY gateway ASC
+</data>
+								</sql>
+								<disabled>false</disabled>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Setup</data>
+								</name>
+								<sql>
+									<data>SELECT gateway, changed, applied FROM config_table WHERE isMain==&quot;true&quot;
+ORDER BY gateway ASC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>Includes</data>
+								</name>
+								<sql>
+									<data>SELECT gateway, file, changed, applied FROM config_table WHERE isMain==&quot;false&quot;
+ORDER BY gateway ASC,  file ASC</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>GW Sources</data>
+								</name>
+								<sql>
+									<data>SELECT
+gt.gateway,
+gt.connectionStatus,
+gt.pHost AS primaryHost,
+gt.sHost AS secondaryHost,
+gt.port,
+gt.security,
+gw.clients,
+gw.release,
+gw.releaseAge,
+gw.licenseDaysRemaining
+FROM gateways_table gw 
+LEFT JOIN gw_table gt ON gt.gateway=gw.gateway</data>
+								</sql>
+								<showRowID>true</showRowID>
+							</view>
+							<view>
+								<name>
+									<data>GW Versions</data>
+								</name>
+								<sql>
+									<data>SELECT 
+release,
+COUNT(release) AS instances,
+releaseAge
+FROM gateways_table
+GROUP BY release
+ORDER BY release DESC</data>
+								</sql>
+							</view>
+						</views>
+					</Gateway-sql>
+				</plugin>
+				<dataviews>
+					<dataview name="Current Alerts">
+						<expectRowsVar>
+							<var ref="1to30"/>
+						</expectRowsVar>
+						<var-group>
+							<data>Dataitems</data>
+						</var-group>
+						<additions>
+							<var-headlines>
+								<data>
+									<headline>
+										<data>criticalItems</data>
+									</headline>
+									<headline>
+										<data>warningItems</data>
+									</headline>
+									<headline>
+										<data>totalItems</data>
+									</headline>
+									<headline>
+										<data>time</data>
+									</headline>
+									<headline>
+										<data>visible</data>
+									</headline>
+								</data>
+							</var-headlines>
+							<var-columns>
+								<data>
+									<column>
+										<data>t1</data>
+									</column>
+									<column>
+										<data>alertAge</data>
+									</column>
+								</data>
+							</var-columns>
+						</additions>
+					</dataview>
+					<dataview name="Snoozed Items">
+						<var-group>
+							<data>Dataitems</data>
+						</var-group>
+						<additions>
+							<var-headlines>
+								<data>
+									<headline>
+										<data>totalItems</data>
+									</headline>
+								</data>
+							</var-headlines>
+							<var-columns>
+								<data>
+									<column>
+										<data>t1</data>
+									</column>
+									<column>
+										<data>snoozedFor</data>
+									</column>
+								</data>
+							</var-columns>
+						</additions>
+					</dataview>
+					<dataview name="GW Sources">
+						<displayName>Gateways</displayName>
+						<var-group>
+							<data>Sources</data>
+						</var-group>
+						<additions>
+							<var-headlines>
+								<data>
+									<headline>
+										<data>totalItems</data>
+									</headline>
+									<headline>
+										<data>expectedItems</data>
+									</headline>
+								</data>
+							</var-headlines>
+						</additions>
+					</dataview>
+					<dataview name="Assigned Items">
+						<var-group>
+							<data>Dataitems</data>
+						</var-group>
+						<additions>
+							<var-headlines>
+								<data>
+									<headline>
+										<data>totalItems</data>
+									</headline>
+								</data>
+							</var-headlines>
+							<var-columns>
+								<data>
+									<column>
+										<data>t1</data>
+									</column>
+									<column>
+										<data>assignAgeMins</data>
+									</column>
+								</data>
+							</var-columns>
+						</additions>
+					</dataview>
+					<dataview name="Database">
+						<var-group>
+							<data>DataExport</data>
+						</var-group>
+					</dataview>
+					<dataview name="Analytics">
+						<var-group>
+							<data>DataExport</data>
+						</var-group>
+					</dataview>
+					<dataview name="Users">
+						<var-group>
+							<data>Users</data>
+						</var-group>
+					</dataview>
+					<dataview name="PB Sources">
+						<displayName>Probes</displayName>
+						<var-group>
+							<data>Sources</data>
+						</var-group>
+					</dataview>
+					<dataview name="Gateways">
+						<expectRowsVar>
+							<var ref="1to30"/>
+						</expectRowsVar>
+						<var-group>
+							<data>Gateway</data>
+						</var-group>
+						<additions>
+							<var-headlines>
+								<data>
+									<headline>
+										<data>totalItems</data>
+									</headline>
+								</data>
+							</var-headlines>
+							<var-columns>
+								<data>
+									<column>
+										<data>t1</data>
+									</column>
+									<column>
+										<data>d1</data>
+									</column>
+									<column>
+										<data>a1</data>
+									</column>
+									<column>
+										<data>h1</data>
+									</column>
+								</data>
+							</var-columns>
+						</additions>
+					</dataview>
+					<dataview name="Setup">
+						<var-group>
+							<data>Configuration</data>
+						</var-group>
+					</dataview>
+					<dataview name="Includes">
+						<var-group>
+							<data>Configuration</data>
+						</var-group>
+					</dataview>
+					<dataview name="GW Versions">
+						<displayName>Gateways</displayName>
+						<var-group>
+							<data>Versions</data>
+						</var-group>
+					</dataview>
+					<dataview name="PB Versions">
+						<displayName>Probes</displayName>
+						<var-group>
+							<data>Versions</data>
+						</var-group>
+					</dataview>
+				</dataviews>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="Gateway">
+			<default name="GLOBAL Administration Default">
+				<rule>
+					<priorityGroup>11000</priorityGroup>
+				</rule>
+			</default>
+			<rule name="releaseAge">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;release&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-clientConnectionData&quot;)]/dataview/rows/row/cell[(@column=&quot;release&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/rows/row/cell[(@column=&quot;release&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<!--The below figure is a year calculated as seconds (60 seconds, 60 minutes, 24 hours, 365 days).-->
+					<!--This is the suggested threshold for releaseAge and should not be confused with supported versions.-->
+					<!--We support the last two major releases, but recommend that you update at least once every 6-12 months.-->
+					<!--Adjust to align with your organisations policies.-->
+					<set>
+						<var ref="date"/>
+						<stringAfter>
+							<dataItem>
+								<property>@value</property>
+							</dataItem>
+							<string>-</string>
+						</stringAfter>
+					</set>
+					<set>
+						<var ref="epoch"/>
+						<parseDate>
+							<string>%y%m%d</string>
+							<var ref="date"/>
+						</parseDate>
+					</set>
+					<if>
+						<equal>
+							<dataItem>
+								<property>@value</property>
+							</dataItem>
+							<string/>
+						</equal>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>undefined</severity>
+							</update>
+						</transaction>
+						<if>
+							<gt>
+								<subtract>
+									<now/>
+									<var ref="epoch"/>
+								</subtract>
+								<integer>31536000</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</if>
+				</block>
+			</rule>
+			<rule name="duration">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-snoozeData&quot;)]/dataview/rows/row/cell[(@column=&quot;duration&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-userAssignmentData&quot;)]/dataview/rows/row/cell[(@column=&quot;duration&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<if>
+						<gt>
+							<dataItem>
+								<property>@value</property>
+							</dataItem>
+							<integer>20160</integer>
+						</gt>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>critical</severity>
+							</update>
+						</transaction>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>10080</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</if>
+				</block>
+			</rule>
+			<rule name="time">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayTime&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/headlines/cell[(@name=&quot;time&quot;)]</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Alert Overview&quot;)]/dataview/headlines/cell[(@name=&quot;time&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<transaction>
+						<update>
+							<property>@value</property>
+							<printDate>
+								<string>%Y/%m/%d %H:%M:%S</string>
+								<now/>
+							</printDate>
+						</update>
+					</transaction>
+				</block>
+			</rule>
+			<ruleGroup name="Client Connections">
+				<rule name="duration">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-clientConnectionData&quot;)]/dataview/rows/row/cell[(@column=&quot;duration&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview[(@name=&quot;Connections&quot;)]/rows/row/cell[(@column=&quot;duration&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="component">../cell[(@column=&quot;component&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<or>
+								<equal>
+									<dataItem>
+										<pathAlias ref="component"/>
+										<property>@value</property>
+									</dataItem>
+									<string>GeneosWebServer</string>
+								</equal>
+								<equal>
+									<dataItem>
+										<pathAlias ref="component"/>
+										<property>@value</property>
+									</dataItem>
+									<string>Gateway</string>
+								</equal>
+							</or>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>4320</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Gateway">
+				<rule name="hotStandbyRole">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;hotStandbyRole&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/rows/row/cell[(@column=&quot;hotStandbyRole&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Secondary</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="secondaryGatewayConnectionStatus">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;secondaryGatewayConnectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Connected</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="databaseConnectionStatus">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;databaseConnectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="enabled">ancestor::rows/row[(@name=&quot;databaseLoggingEnabled&quot;)]/cell[(@column=&quot;value&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<pathAlias ref="enabled"/>
+									<property>@value</property>
+								</dataItem>
+								<string>false</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Connected</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Netprobes">
+				<rule name="probesDown">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/headlines/cell[(@name=&quot;probesDown&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/rows/row/cell[(@column=&quot;probesDown&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="connectionState">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/rows/row/cell[(@column=&quot;connectionState&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/rows/row/cell[(@column=&quot;connectionState&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Up</string>
+								</notEqual>
+								<transaction>
+									<delay>10</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="maxDataAge">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-probeData&quot;)]/dataview/headlines/cell[(@name=&quot;maxDataAge&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview/rows/row/cell[(@column=&quot;maxDataAge&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="dataAgeLimit">../cell[(@name=&quot;dataAgeLimit&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<multiply>
+										<dataItem>
+											<pathAlias ref="dataAgeLimit"/>
+											<property>@value</property>
+										</dataItem>
+										<double>0.75</double>
+									</multiply>
+								</gt>
+								<transaction>
+									<delay>300</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<multiply>
+											<dataItem>
+												<pathAlias ref="dataAgeLimit"/>
+												<property>@value</property>
+											</dataItem>
+											<double>0.50</double>
+										</multiply>
+									</gt>
+									<transaction>
+										<delay>300</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="managedEntityCount">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview/rows/row/cell[(@column=&quot;managedEntityCount&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>0</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Database">
+				<rule name="cacheFiles">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-databaseLogging&quot;)]/dataview[(@name=&quot;Cache&quot;)]/rows/row[(@name=&quot;cacheFiles&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>0</integer>
+							</gt>
+							<transaction>
+								<delay>60</delay>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Obcerv - Analytics">
+				<rule name="connectionStatus">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-obcervConnection&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;connectionStatus&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="enabled">../../row[(@name=&quot;enabled&quot;)]/cell[(@column=&quot;value&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<pathAlias ref="enabled"/>
+									<property>@value</property>
+								</dataItem>
+								<string>false</string>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Ready</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="messagesDroppedPerSample">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-obcervConnection&quot;)]/dataview[(@name=&quot;Summary&quot;)]/rows/row[(@name=&quot;messagesDroppedPerSample&quot;)]/cell[(@column=&quot;value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="enabled">../../row[(@name=&quot;enabled&quot;)]/cell[(@column=&quot;value&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>0</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Licence">
+				<rule name="connected">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-licenceUsage&quot;)]/dataview/rows/row[(@name=&quot;connected&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>YES</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="licenceDaysRemaining">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-licenceUsage&quot;)]/dataview/rows/row[(@name=&quot;licenseDaysRemaining&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[wild(@name,&quot;Global *&quot;)]/dataview[(@name=&quot;GW Components&quot;)]/rows/row/cell[(@column=&quot;licenseDaysRemaining&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<lt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>5</integer>
+								</lt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<lt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>15</integer>
+									</lt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Import Export">
+				<rule name="connectionStatus">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-importedData&quot;)]/dataview/rows/row/cell[(@column=&quot;connectionStatus&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<notEqual>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>Up</string>
+							</notEqual>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="conflictingProbes">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-importedData&quot;)]/dataview/rows/row/cell[(@column=&quot;conflictingProbes&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<block>
+						<if>
+							<notEqual>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</notEqual>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>warning</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Entities">
+				<rule name="priority">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Entities Details&quot;)]/rows/row/cell[(@column=&quot;priority&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="att">../cell[(@column=&quot;attributes&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<like>
+								<dataItem>
+									<pathAlias ref="att"/>
+									<property>@value</property>
+								</dataItem>
+								<string>*PRIORITY*</string>
+							</like>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<stringBefore>
+										<stringAfter>
+											<dataItem>
+												<pathAlias ref="att"/>
+												<property>@value</property>
+											</dataItem>
+											<string>PRIORITY=</string>
+										</stringAfter>
+										<string>,</string>
+									</stringBefore>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<string/>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+		<ruleGroup name="Sampling Status">
+			<rule name="Sampling Status">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview/headlines/cell[(@name=&quot;samplingStatus&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<block>
+					<if>
+						<or>
+							<like>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>OK</string>
+							</like>
+							<like>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string>NOTE: Stats collection is disabled</string>
+							</like>
+						</or>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>undefined</severity>
+							</update>
+						</transaction>
+						<transaction>
+							<update>
+								<property>state/@severity</property>
+								<severity>warning</severity>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+		</ruleGroup>
+		<ruleGroup name="Transparency">
+			<rule name="d1">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell[(@column=&quot;d1&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="enabled">../cell[(@column=&quot;dbEnabled&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<equal>
+							<dataItem>
+								<pathAlias ref="enabled"/>
+								<property>@value</property>
+							</dataItem>
+							<string>true</string>
+						</equal>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<string>1</string>
+							</update>
+						</transaction>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<string>0</string>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+			<rule name="o1">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell[(@column=&quot;a1&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="enabled">../cell[(@column=&quot;analyticsEnabled&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<equal>
+							<dataItem>
+								<pathAlias ref="enabled"/>
+								<property>@value</property>
+							</dataItem>
+							<string>true</string>
+						</equal>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<string>1</string>
+							</update>
+						</transaction>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<string>0</string>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+			<rule name="h1">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Alert Overview&quot;)]/dataview[(@name=&quot;Gateways&quot;)]/rows/row/cell[(@column=&quot;h1&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="hsState">../cell[(@column=&quot;hotStandbyState&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<or>
+							<equal>
+								<dataItem>
+									<pathAlias ref="hsState"/>
+									<property>@value</property>
+								</dataItem>
+								<string>Primary</string>
+							</equal>
+							<equal>
+								<dataItem>
+									<pathAlias ref="hsState"/>
+									<property>@value</property>
+								</dataItem>
+								<string>Secondary</string>
+							</equal>
+						</or>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<integer>1</integer>
+							</update>
+						</transaction>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<integer>0</integer>
+							</update>
+						</transaction>
+					</if>
+				</block>
+			</rule>
+			<rule name="t1">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Alert Overview&quot;)]/dataview/rows/row/cell[(@column=&quot;t1&quot;)]</target>
+				</targets>
+				<priority>1</priority>
+				<pathAliases>
+					<pathAlias name="availability">../cell[(@column=&quot;Availability&quot;)]</pathAlias>
+				</pathAliases>
+				<block>
+					<if>
+						<equal>
+							<dataItem>
+								<pathAlias ref="availability"/>
+								<property>@value</property>
+							</dataItem>
+							<string>present</string>
+						</equal>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<string>1</string>
+							</update>
+						</transaction>
+						<if>
+							<equal>
+								<dataItem>
+									<pathAlias ref="availability"/>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<string>1</string>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>@value</property>
+									<string>0</string>
+								</update>
+							</transaction>
+						</if>
+					</if>
+				</block>
+			</rule>
+		</ruleGroup>
+	</rules>
+	<exportedData>
+		<dataSet name="Info Overviews">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;APPLICATION&quot;)=&quot;Info Overviews&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+	<operatingEnvironment>
+		<selfMonitoring>
+			<netprobeInfo>false</netprobeInfo>
+			<attribute>
+				<name>APPLICATION</name>
+				<value>Info Overviews</value>
+			</attribute>
+			<gatewaySamplerOverride>
+				<what>Custom</what>
+				<how>
+					<sampler ref="Licence"/>
+				</how>
+			</gatewaySamplerOverride>
+			<gatewaySamplerOverride>
+				<what>Custom</what>
+				<how>
+					<sampler ref="Severity Data"/>
+				</how>
+			</gatewaySamplerOverride>
+			<gatewaySamplerOverride>
+				<what>Gateway</what>
+				<how>
+					<sampler ref="Gateway"/>
+				</how>
+			</gatewaySamplerOverride>
+			<gatewaySamplerOverride>
+				<what>Severity Count</what>
+				<how>
+					<sampler ref="Severity Count"/>
+				</how>
+			</gatewaySamplerOverride>
+			<gatewaySamplerOverride>
+				<what>Entities</what>
+				<how>
+					<sampler ref="Entities"/>
+				</how>
+			</gatewaySamplerOverride>
+		</selfMonitoring>
+	</operatingEnvironment>
+</gateway>

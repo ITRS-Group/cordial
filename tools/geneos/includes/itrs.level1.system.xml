@@ -1,0 +1,639 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.5.0-250804 at 2025-10-28 14:49:39 by PeterGalbavy on ITRSLP372-->
+<!-- Gateway-created setup include file for user LDN\cnielsen at 10.10.20.24 -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.9.1-260505/gateway.xsd">
+	<managedEntities>
+		<managedEntityGroup name="System">
+			<attribute name="CATEGORY">Infrastructure</attribute>
+			<attribute name="COMPONENT">System</attribute>
+			<addTypes>
+				<type ref="System">
+					<environment ref="System"/>
+				</type>
+			</addTypes>
+		</managedEntityGroup>
+	</managedEntities>
+	<types>
+		<typeGroup name="System">
+			<type name="System">
+				<environment ref="System Defaults"/>
+				<sampler ref="CPU"/>
+				<sampler ref="Disk"/>
+				<sampler ref="Hardware"/>
+				<sampler ref="Network"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="System">
+			<sampler name="CPU">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="FAST_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<cpu/>
+				</plugin>
+			</sampler>
+			<sampler name="Disk">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="SLOW_SAMPLE"/>
+				</sampleInterval>
+				<expectRows>
+					<var ref="EXPECTED_PARTITIONS"/>
+				</expectRows>
+				<plugin>
+					<disk>
+						<excludePartitions>
+							<excludePartition>
+								<path>/dev/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/run/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/proc/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/sys/*</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/dev/pts</path>
+							</excludePartition>
+							<excludePartition>
+								<path>/cdrom/*</path>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>overlay</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>tmpfs</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>fuse.snapfuse</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>9p</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>squashfs</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>CDFS</fileSystem>
+							</excludePartition>
+							<excludePartition>
+								<fileSystem>UDF</fileSystem>
+							</excludePartition>
+						</excludePartitions>
+						<autoDetect>
+							<data>true</data>
+						</autoDetect>
+						<checkNFSPartitions>
+							<data>false</data>
+						</checkNFSPartitions>
+					</disk>
+				</plugin>
+			</sampler>
+			<sampler name="Hardware">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="NORMAL_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<hardware>
+						
+					</hardware>
+				</plugin>
+				<dataviews>
+					<dataview name="NT-HARDWARE">
+						<displayName>Hardware</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="Network">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<sampleInterval>
+					<var ref="FAST_SAMPLE"/>
+				</sampleInterval>
+				<plugin>
+					<network>
+						<showVirtualInterface>
+							<data>true</data>
+						</showVirtualInterface>
+						<showLoopback>
+							<data>false</data>
+						</showLoopback>
+						<showMBits>
+							<data>true</data>
+						</showMBits>
+						<showAbsolute>
+							<data>true</data>
+						</showAbsolute>
+						<showUnconfiguredNics>
+							<data>false</data>
+						</showUnconfiguredNics>
+					</network>
+				</plugin>
+				<dataviews>
+					<dataview name="NT-NETWORK">
+						<displayName>Network</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="System">
+			<ruleGroup name="CPU">
+				<rule name="CPU Utilisation">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;Average_cpu&quot;)]/cell[(@column=&quot;percentUtilisation&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;_Total&quot;)]/cell[(@column=&quot;%processorTime&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;cpuUtilisation&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>90</integer>
+							</gt>
+							<transaction>
+								<delay unit="samples">2</delay>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>80</integer>
+								</gt>
+								<transaction>
+									<delay unit="samples">2</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Disk">
+				<rule name="Percentage Used">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;DISK&quot;)]/dataview/rows/row/cell[(@column=&quot;percentageUsed&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<pathAliases>
+						<pathAlias name="freespace">parent::node()/cell[(@column=&quot;freeSpace&quot;)]</pathAlias>
+						<pathAlias name="totalspace">parent::node()/cell[(@column=&quot;totalSpace&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="FS"/>
+							<dataItem>
+								<pathAlias ref="freespace"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<set>
+							<var ref="TS"/>
+							<dataItem>
+								<pathAlias ref="totalspace"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<if>
+							<and>
+								<equal>
+									<var ref="FS"/>
+									<integer>0</integer>
+								</equal>
+								<equal>
+									<var ref="TS"/>
+									<integer>0</integer>
+								</equal>
+							</and>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<and>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>90</integer>
+									</gt>
+									<lt>
+										<var ref="FS"/>
+										<integer>10000</integer>
+									</lt>
+								</and>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<and>
+										<gt>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<integer>85</integer>
+										</gt>
+										<lt>
+											<var ref="FS"/>
+											<integer>10000</integer>
+										</lt>
+									</and>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<if>
+										<and>
+											<gt>
+												<dataItem>
+													<property>@value</property>
+												</dataItem>
+												<integer>80</integer>
+											</gt>
+											<lt>
+												<var ref="FS"/>
+												<integer>20000</integer>
+											</lt>
+										</and>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>warning</severity>
+											</update>
+										</transaction>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>ok</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Hardware">
+				<rule name="Memory Used Percent">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;memoryUsedPercent&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>1005</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<pathAliases>
+						<pathAlias name="available">../../row[(@name=&quot;memoryAvailable&quot;)]/cell[(@column=&quot;Value&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>90</integer>
+							</gt>
+							<transaction>
+								<delay unit="samples">2</delay>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>80</integer>
+								</gt>
+								<transaction>
+									<delay unit="samples">2</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="Paging">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;paging&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>999999</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>ok</severity>
+								</update>
+							</transaction>
+						</if>
+					</block>
+				</rule>
+				<rule name="Swap Used">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;swapUsed&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>999999</integer>
+							</gt>
+							<transaction>
+								<delay>120</delay>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>90</integer>
+								</gt>
+								<transaction>
+									<delay>120</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="Zombie Process">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;zombieProcesses&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<block>
+						<if>
+							<or>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string/>
+								</equal>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>NA</string>
+								</equal>
+							</or>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>999999</integer>
+								</gt>
+								<transaction>
+									<delay unit="samples">2</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>10</integer>
+									</gt>
+									<transaction>
+										<delay unit="samples">2</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+			<ruleGroup name="Network">
+				<rule name="Network Status Unix">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview/rows/row/cell[(@column=&quot;status&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<activeStateAffectsCell>false</activeStateAffectsCell>
+					<block>
+						<if>
+							<equal>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<string/>
+							</equal>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>undefined</severity>
+								</update>
+							</transaction>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>DOWN</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<equal>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>OK</string>
+									</equal>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</if>
+					</block>
+				</rule>
+				<rule name="Network Status Windows">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview[(@name=&quot;NT-NETWORK&quot;)]/headlines/cell[(@name=&quot;tcpRetransmissionRate&quot;)]</target>
+					</targets>
+					<priority>5</priority>
+					<block>
+						<if>
+							<gt>
+								<dataItem>
+									<property>@value</property>
+								</dataItem>
+								<integer>999999</integer>
+							</gt>
+							<transaction>
+								<update>
+									<property>state/@severity</property>
+									<severity>critical</severity>
+								</update>
+							</transaction>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>20</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</if>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<environments>
+		<environmentGroup name="System">
+			<environment name="System Defaults">
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+				<var name="EXPECTED_PARTITIONS">
+					<stringList/>
+				</var>
+				<var name="SAMPLER_GROUP">
+					<string>System</string>
+				</var>
+			</environment>
+			<environment name="System"/>
+		</environmentGroup>
+	</environments>
+	<exportedData>
+		<dataSet name="System">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+</gateway>

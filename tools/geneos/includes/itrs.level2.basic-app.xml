@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.5.0-250804 at 2025-10-28 14:57:43 by PeterGalbavy on ITRSLP372-->
+<!-- Gateway-created setup include file for user ActiveConsole1 at 127.0.0.1 -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.9.1-260505/gateway.xsd">
+	<managedEntities>
+		<managedEntityGroup name="Application">
+			<attribute name="CATEGORY">Application</attribute>
+			<attribute name="COMPONENT">Baseline</attribute>
+		</managedEntityGroup>
+	</managedEntities>
+	<types>
+		<typeGroup name="Application">
+			<type name="Application">
+				<environment ref="Application Defaults"/>
+				<sampler ref="Logs"/>
+				<sampler ref="Processes"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Application">
+			<sampler name="Logs">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<plugin>
+					<fkm>
+						<display>
+							<triggerMode>MULTIPLE_GROUPED_TRIGGER</triggerMode>
+							<lastTriggerInStatus>
+								<data>false</data>
+							</lastTriggerInStatus>
+							<useFullPathInRowNames>
+								<data>true</data>
+							</useFullPathInRowNames>
+						</display>
+						<isPCREMode>
+							<data>true</data>
+						</isPCREMode>
+						<defaultFileActiveTime>
+							<var ref="LOGS_ACTIVE"/>
+						</defaultFileActiveTime>
+						<extendedNTEventLogOutput>
+							<data>true</data>
+						</extendedNTEventLogOutput>
+						<persistentData>
+							<enabled>
+								<data>true</data>
+							</enabled>
+						</persistentData>
+					</fkm>
+				</plugin>
+			</sampler>
+			<sampler name="Processes">
+				<var-group>
+					<var ref="SAMPLER_GROUP"/>
+				</var-group>
+				<plugin>
+					<processes>
+						<regexMode>PCRE</regexMode>
+					</processes>
+				</plugin>
+				<activeTimes>
+					<activeTime>
+						<var ref="PROCESSES_ACTIVE"/>
+					</activeTime>
+				</activeTimes>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<ruleGroup name="Application"/>
+	</rules>
+	<activeTimes>
+		<activeTimeGroup name="Application">
+			<activeTime name="Application - Always">
+				<scheduledPeriod>
+					<days>
+						<monday>true</monday>
+						<tuesday>true</tuesday>
+						<wednesday>true</wednesday>
+						<thursday>true</thursday>
+						<friday>true</friday>
+						<saturday>true</saturday>
+						<sunday>true</sunday>
+					</days>
+				</scheduledPeriod>
+			</activeTime>
+		</activeTimeGroup>
+	</activeTimes>
+	<environments>
+		<environmentGroup name="Common">
+			<environment name="Application Defaults">
+				<var name="LOGS_ACTIVE">
+					<activeTime>
+						<activeTime ref="Application - Always"/>
+					</activeTime>
+				</var>
+				<var name="PROCESSES_ACTIVE">
+					<activeTime>
+						<activeTime ref="Application - Always"/>
+					</activeTime>
+				</var>
+				<var name="SAMPLER_GROUP">
+					<string>Application</string>
+				</var>
+			</environment>
+			<environment name="Application"/>
+		</environmentGroup>
+	</environments>
+	<staticVars>
+		<fkmTables/>
+	</staticVars>
+	<exportedData>
+		<dataSet name="Application">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Application&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+</gateway>
