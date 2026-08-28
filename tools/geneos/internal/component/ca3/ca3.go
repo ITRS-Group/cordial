@@ -75,7 +75,7 @@ var CA3 = geneos.Component{
 		`program={{"/usr/bin/java"}}`,
 		`logdir={{join .home}}`,
 		`logfile=collection-agent.log`,
-		`config={{join .home "collection-agent.yml"}}`,
+		`setup={{join .home "collection-agent.yml"}}`,
 		`minheap=512M`,
 		`maxheap=512M`,
 		`autostart=true`,
@@ -279,7 +279,7 @@ func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 
 	checks = append(checks, classPath)
 	checks = append(checks, logback)
-	checks = append(checks, config.Get[string](cf, "config"))
+	checks = append(checks, config.Get[string](cf, "setup", config.PromoteFrom("config")))
 
 	args = []string{
 		"-Xms" + config.Get[string](cf, "minheap", config.DefaultValue("512M")),
@@ -288,7 +288,7 @@ func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 		"-cp", path.Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + i.Home(),
 		"com.itrsgroup.collection.ca.Main",
-		config.Get[string](cf, "config"),
+		config.Get[string](cf, "setup", config.PromoteFrom("config")),
 	}
 
 	hostname, err := os.Hostname()
@@ -336,7 +336,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 		if strings.Contains(arg, "collection-agent") {
 			jarOK = true
 		}
-		if strings.Contains(arg, config.Get[string](c.Config(), "config")) {
+		if strings.Contains(arg, config.Get[string](c.Config(), "setup", config.PromoteFrom("config"))) {
 			configOK = true
 		}
 		if jarOK && configOK {
