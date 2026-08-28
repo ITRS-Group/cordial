@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.1.2-241218 at 2025-06-30 11:14:45 by peter on HPSpectre360-->
-<!-- Gateway-created setup include file for user LDN\cnielsen at 10.10.21.133 -->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.3.1-250422/gateway.xsd">
 	<samplers>
 		<samplerGroup name="Gateway">
@@ -33,8 +31,7 @@
 								<dataview>Entities Details</dataview>
 								<schema>
 									<data>
-										<headlines>
-          </headlines>
+										<headlines></headlines>
 										<columns>
 											<column>
 												<name>priority</name>
