@@ -102,7 +102,7 @@ var SSOAgent = geneos.Component{
 
 type SSOAgents instance.Instance
 
-// ensure that Webservers satisfies geneos.Instance interface
+// ensure that SSOAgents satisfies geneos.Instance interface
 var _ geneos.Instance = (*SSOAgents)(nil)
 
 func init() {
