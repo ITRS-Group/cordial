@@ -446,9 +446,9 @@ func (i *Webservers) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline []string) bool {
+func pidCheckFn(customArg any, cmdline []string) bool {
 	var wdOK, jarOK bool
-	w, ok := arg.(*Webservers)
+	i, ok := customArg.(*Webservers)
 	if !ok {
 		return false
 	}
@@ -458,7 +458,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 	}
 
 	for _, arg := range cmdline[1:] {
-		if arg == "-Dworking.directory="+w.Home() {
+		if arg == "-Dworking.directory="+i.Home() {
 			wdOK = true
 		}
 		if strings.HasSuffix(arg, "geneos-web-server.jar") {

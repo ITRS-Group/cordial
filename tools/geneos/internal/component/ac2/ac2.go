@@ -297,17 +297,17 @@ func (i *AC2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline []string) bool {
-	c, ok := arg.(*AC2s)
+func pidCheckFn(customArg any, cmdline []string) bool {
+	i, ok := customArg.(*AC2s)
 	if !ok {
 		return false
 	}
 
-	if cmdline[0] != config.Get[string](c.Config(), "program") {
+	if cmdline[0] != config.Get[string](i.Config(), "program") {
 		return false
 	}
 	for _, arg := range cmdline[1:] {
-		if string(arg) == c.Home() {
+		if string(arg) == i.Home() {
 			return true
 		}
 	}

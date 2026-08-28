@@ -444,9 +444,9 @@ func (i *SSOAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func pidCheckFn(arg any, cmdline []string) bool {
+func pidCheckFn(customArg any, cmdline []string) bool {
 	var wdOK, appOK bool
-	s, ok := arg.(*SSOAgents)
+	i, ok := customArg.(*SSOAgents)
 	if !ok {
 		return false
 	}
@@ -456,7 +456,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 	}
 
 	for _, arg := range cmdline[1:] {
-		if arg == "-Dapp.home="+s.Home() {
+		if arg == "-Dapp.home="+i.Home() {
 			wdOK = true
 		}
 		if arg == "com.itrsgroup.ssoagent.AgentServer" {
