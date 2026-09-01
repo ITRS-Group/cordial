@@ -1,0 +1,43 @@
+pluginDirectory: ${env:PLUGIN_DIR}
+
+monitoring:
+  healthProbe:
+    enabled: false
+  selfMetrics:
+    enabled: true
+    dimensions:
+      hostname: ${env:HOSTNAME}
+      app: ${env:APP}
+
+workflow:
+  storeDirectory: .
+  metrics:
+    reporter: stdout
+  logs:
+    reporter: stdout
+  events:
+    reporter: stdout
+  attributes:
+    reporter: stdout
+
+routingWorkflow:
+  routes:
+    - reporters: [receiver]
+
+reporters:
+  - type: logging
+    name: stdout
+
+  - type: plugin
+    name: receiver
+    className: RoutingReporter
+    hostname: localhost
+    port: ${env:REPORTER_PORT}
+    usePlainText: true
+    useCompression: true
+
+collectors:
+  - type: plugin
+    name: routing-grpc
+    className: RoutingCollector
+    port: ${env:COLLECTOR_PORT}

@@ -280,6 +280,10 @@ func (i *Gateways) SetConfig(cf *config.Config) {
 }
 
 func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
 	cf := i.Config()
 
 	if port == 0 {

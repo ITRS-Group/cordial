@@ -36,6 +36,7 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
 	// components from internals for documentation
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fileagent"
@@ -45,7 +46,9 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/mdgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/router"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/san"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ssoagent"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/trgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 
