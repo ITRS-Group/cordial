@@ -341,6 +341,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 		return nil
 	}
 
+	var restarted []Instance
 	if opts.start != nil && opts.stop != nil {
 		for _, c := range opts.restart {
 			// only stop selected instances using components on the host we are working on
@@ -353,6 +354,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 			}
 			if err = opts.stop(c, opts.force, false); err == nil {
 				// only restart instances that we stopped, regardless of success of install/update
+				restarted = append(restarted, c)
 				defer opts.start(c)
 			}
 		}
@@ -363,6 +365,12 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 	}
 	if err := h.Symlink(version, basepath); err != nil {
 		return err
+	}
+	for _, c := range restarted {
+		NotifyAudit(c, "update", map[string]string{
+			"version": version,
+			"base":    opts.basename,
+		})
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
 	return nil

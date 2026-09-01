@@ -47,7 +47,7 @@ type packageOptions struct {
 	restart      []Instance
 	source       string
 	start        func(Instance, ...any) error
-	stop         func(Instance, bool, bool) error
+	stop         func(Instance, bool, bool, ...any) error
 	username     string
 	version      string
 }
@@ -162,7 +162,7 @@ func StartFunc(fn func(Instance, ...any) error) PackageOption {
 
 // StopFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StopFunc(fn func(Instance, bool, bool) error) PackageOption {
+func StopFunc(fn func(Instance, bool, bool, ...any) error) PackageOption {
 	return func(d *packageOptions) {
 		d.stop = fn
 	}

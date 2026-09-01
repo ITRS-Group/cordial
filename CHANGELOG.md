@@ -1,5 +1,12 @@
 # Change Log
 
+## Unreleased
+
+* `tools/geneos`
+
+  * `md-gateway` and `tr-gateway` install released product archives as shipped: wrapping directory, `lib/` jar, bundled JDK, and `config/logback.xml`. Maven snapshot filenames (`1.0.0-SNAPSHOT`, `1.0.0-20260826.031023-95`) are recognised without `--override`.
+  * `md-gateway` and `tr-gateway` operational audit log records JSON lines (`module`, `event`, event-specific fields) for `import`, `start`, `stop`, `restart`, `update`, `set`, `add`, `delete`, `enable`, and `disable`. Filename is configurable (`audit-log` / `TYPE::audit-log-file`). Logs rotate at 10 MiB (five files).
+
 >[!WARNING]
 >Release v1.26 and later - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.

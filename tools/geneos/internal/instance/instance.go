@@ -633,7 +633,23 @@ func ParseName(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct 
 
 func ImportFiles(s geneos.Instance, files ...string) (err error) {
 	for _, item := range files {
-		if _, err = geneos.ImportSource(s.Host(), s.Home(), item); err != nil {
+		var dest string
+		dest, err = geneos.ImportSource(s.Host(), s.Home(), item)
+		if err != nil {
+			return
+		}
+		if s.Type() == nil || s.Type().OnImport == nil || dest == "" {
+			continue
+		}
+		setup := config.Get[string](s.Config(), "setup")
+		setupBase := path.Base(PathTo(s, "setup"))
+		if setupBase == "." {
+			setupBase = path.Base(setup)
+		}
+		if dest != setupBase && dest != path.Base(setup) && dest != setup {
+			continue
+		}
+		if err = s.Type().OnImport(s, dest); err != nil {
 			return
 		}
 	}

@@ -135,13 +135,13 @@ geneos install netprobe -b active_dev -U
 					return fmt.Errorf("`--override` is only valid with a single file parameter")
 				}
 
-				st, err := h.Stat(params[0])
-				if err != nil {
-					return fmt.Errorf("%w: `--override` only valid with a single file parameter", err)
-				}
-
-				if st.IsDir() {
+				// Archives given on the command line are local paths, even
+				// when installing onto a remote host (`-H`).
+				if geneos.IsDir(params[0]) {
 					return fmt.Errorf("%s is a directory: `--override` only valid with a single file parameter", params[0])
+				}
+				if !geneos.IsFile(params[0]) {
+					return fmt.Errorf("%w: `--override` only valid with a single file parameter", fs.ErrNotExist)
 				}
 			}
 

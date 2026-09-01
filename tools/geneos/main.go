@@ -47,10 +47,12 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/floating"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/mdgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/san"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ssoagent"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/trgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 )
 

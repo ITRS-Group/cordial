@@ -90,6 +90,7 @@ var disableCmd = &cobra.Command{
 			if !instance.IsProtected(i) || disableCmdForce {
 				if resp.Err = instance.Disable(i); resp.Err == nil {
 					resp.Completed = append(resp.Completed, "disabled")
+					geneos.NotifyAudit(i, "disable", nil)
 					return
 				}
 			}

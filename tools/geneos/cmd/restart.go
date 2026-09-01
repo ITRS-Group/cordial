@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -83,10 +84,7 @@ var restartCmd = &cobra.Command{
 			}
 			instance.DoInstances(instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
-				resp.Err = instance.Stop(i, restartCmdForce, false)
-				if resp.Err == nil || restartCmdAll {
-					resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))
-				}
+				resp.Err = restartInstance(i)
 				return
 			}).Report(os.Stdout)
 			return
@@ -98,10 +96,7 @@ var restartCmd = &cobra.Command{
 		}
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
-			resp.Err = instance.Stop(i, restartCmdForce, false)
-			if resp.Err == nil || restartCmdAll {
-				resp.Err = instance.Start(i, instance.StartingExtras(restartCmdExtras), instance.StartingEnvs(restartCmdEnvs))
-			}
+			resp.Err = restartInstance(i)
 			return
 		}).Report(os.Stdout)
 
@@ -112,4 +107,30 @@ var restartCmd = &cobra.Command{
 		}
 		return
 	},
+}
+
+func restartInstance(i geneos.Instance) error {
+	var oldPid int
+	if instance.IsRunning(i) {
+		oldPid, _ = instance.GetPID(i)
+	}
+	err := instance.Stop(i, restartCmdForce, restartCmdKill, instance.WithoutStopAudit())
+	if err == nil || restartCmdAll {
+		err = instance.Start(i,
+			instance.StartingExtras(restartCmdExtras),
+			instance.StartingEnvs(restartCmdEnvs),
+			instance.WithoutAudit(),
+		)
+	}
+	if err == nil {
+		fields := map[string]string{}
+		if oldPid > 0 {
+			fields["oldPid"] = strconv.Itoa(oldPid)
+		}
+		if newPid, pidErr := instance.GetLivePID(i); pidErr == nil && newPid > 0 {
+			fields["newPid"] = strconv.Itoa(newPid)
+		}
+		geneos.NotifyAudit(i, "restart", fields)
+	}
+	return err
 }
