@@ -60,6 +60,7 @@ func Start(i geneos.Instance, opts ...any) error {
 			options = append(options, option)
 		}
 	}
+	so := evalStartOptions(options...)
 	cmd, err := BuildCmd(i, false, options...)
 	if err != nil {
 		return err
@@ -106,6 +107,13 @@ func Start(i geneos.Instance, opts ...any) error {
 	}
 
 	fmt.Printf("%s started with PID %d\n", i, pid)
+	if !so.skipAudit {
+		fields := map[string]string{
+			"command": cmd.String(),
+			"pid":     strconv.Itoa(pid),
+		}
+		geneos.NotifyAudit(i, "start", fields)
+	}
 	return nil
 }
 
@@ -200,6 +208,7 @@ type startOptions struct {
 	envs          []string
 	extras        []string
 	skipfilecheck bool
+	skipAudit     bool
 }
 
 type StartOption func(*startOptions)
@@ -233,5 +242,12 @@ func StartingEnvs(envs []string) StartOption {
 func SkipFileCheck() StartOption {
 	return func(so *startOptions) {
 		so.skipfilecheck = true
+	}
+}
+
+// WithoutAudit suppresses the operational audit log entry for this start.
+func WithoutAudit() StartOption {
+	return func(so *startOptions) {
+		so.skipAudit = true
 	}
 }

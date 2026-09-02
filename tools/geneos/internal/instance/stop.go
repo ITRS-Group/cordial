@@ -20,6 +20,7 @@ package instance
 import (
 	"errors"
 	"os"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -29,12 +30,34 @@ import (
 // Stop an instance
 //
 // TODO: check for managed CAs and wait for those too
-func Stop(i geneos.Instance, force, kill bool) (err error) {
+func Stop(i geneos.Instance, force, kill bool, opts ...any) (err error) {
+	options := []StopOption{}
+	for _, o := range opts {
+		if option, ok := o.(StopOption); ok {
+			options = append(options, option)
+		}
+	}
+	so := evalStopOptions(options...)
 	if !force && IsProtected(i) {
 		return geneos.ErrProtected
 	}
 
-	if !IsRunning(i) {
+	wasRunning := IsRunning(i)
+	var stoppedPID int
+	if wasRunning {
+		stoppedPID, _ = GetPID(i)
+	}
+	defer func() {
+		if err == nil && wasRunning && !so.skipAudit {
+			fields := map[string]string{}
+			if stoppedPID > 0 {
+				fields["pid"] = strconv.Itoa(stoppedPID)
+			}
+			geneos.NotifyAudit(i, "stop", fields)
+		}
+	}()
+
+	if !wasRunning {
 		i.Log().Debug("not running")
 		return os.ErrProcessDone
 	}
@@ -69,4 +92,25 @@ func Stop(i geneos.Instance, force, kill bool) (err error) {
 		return nil
 	}
 	return
+}
+
+type stopOptions struct {
+	skipAudit bool
+}
+
+type StopOption func(*stopOptions)
+
+func evalStopOptions(options ...StopOption) *stopOptions {
+	so := &stopOptions{}
+	for _, opt := range options {
+		opt(so)
+	}
+	return so
+}
+
+// WithoutStopAudit suppresses the operational audit log entry for this stop.
+func WithoutStopAudit() StopOption {
+	return func(so *stopOptions) {
+		so.skipAudit = true
+	}
 }

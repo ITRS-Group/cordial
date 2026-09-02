@@ -43,6 +43,19 @@ geneos add netprobe MyProbe -g localhost:7039  # Connect to gateway
 geneos start netprobe MyProbe -l               # Start and follow logs
 ```
 
+### MD Gateway / TR Gateway
+```bash
+# Released archives (including Maven snapshots) install as-is
+geneos package install md-gateway ./md-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz
+geneos add md-gateway prod1 --import md-gateway.yaml=./prod1.yaml -S
+geneos import md-gateway prod1 md-gateway.yaml=./prod1-v2.yaml
+geneos restart md-gateway prod1
+
+# tr-gateway is the same shape
+geneos package install tr-gateway ./tr-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz
+geneos add tr-gateway prod1 --import tr-gateway.yaml=./prod1.yaml -S
+```
+
 ### Daily Health Check
 ```bash
 geneos ps                             # What's running?

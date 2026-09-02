@@ -196,6 +196,16 @@ type Component struct {
 	// GetPID returns the process ID of an instance - if nil a standard
 	// function for the OS type is used
 	GetPID func(arg any, cmdline []string) bool // if set, use this to get the PID of an instance
+
+	// OnImport is called after a file is imported into an instance home
+	// directory. dest is the destination basename (or relative path) of
+	// the imported file. If nil, no extra action is taken.
+	OnImport func(i Instance, dest string) error
+
+	// Audit is called to record operational events for an instance (for
+	// example import, start, stop, update). If nil, no audit entry is
+	// written.
+	Audit func(i Instance, event string, fields map[string]string) error
 }
 
 // String returns the stringified name of ct. If ct is nil then return

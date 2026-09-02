@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -179,7 +180,49 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 	i.SetConfig(cf)
 
 	resp = responses.MergeResponse(resp, instance.Write(i))
+	if resp.Err == nil {
+		geneos.NotifyAudit(i, "set", map[string]string{"keys": auditSetKeys(v)})
+	}
 	return
+}
+
+func auditSetKeys(v values.Values) string {
+	keys := make([]string, 0, len(v.Params)+len(v.Envs)+len(v.SecureParams)+len(v.SecureEnvs))
+	for _, p := range v.Params {
+		if k, _, ok := strings.Cut(p, "="); ok {
+			keys = append(keys, k)
+		}
+	}
+	for _, e := range v.Envs {
+		if k, _, ok := strings.Cut(e, "="); ok {
+			keys = append(keys, "env:"+k)
+		}
+	}
+	for _, s := range v.SecureParams {
+		keys = append(keys, s.Name)
+	}
+	for _, s := range v.SecureEnvs {
+		keys = append(keys, s.Name)
+	}
+	for name := range v.Gateways {
+		keys = append(keys, "gateway:"+name)
+	}
+	for _, a := range v.Attributes {
+		if k, _, ok := strings.Cut(a, "="); ok {
+			keys = append(keys, "attribute:"+k)
+		}
+	}
+	for _, t := range v.Types {
+		keys = append(keys, "type:"+t)
+	}
+	for name := range v.Includes {
+		keys = append(keys, "include:"+name)
+	}
+	for _, vr := range v.Variables {
+		keys = append(keys, "variable:"+vr.Name)
+	}
+	slices.Sort(keys)
+	return strings.Join(keys, ",")
 }
 
 func promptForSecrets(prompt string, v values.SecureValues) (err error) {

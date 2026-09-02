@@ -94,7 +94,13 @@ func FilenameToComponentVersion(oct *Component, filename string) (ct *Component,
 	return
 }
 
-var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})$`)
+// Package versions are numeric (1, 1.2, 1.2.3) with optional Maven snapshot
+// qualifiers used by early md-gateway / tr-gateway (and similar) releases:
+//
+//	1.0.0-SNAPSHOT
+//	1.0.0-20260826.031023-95
+//	1.0.0-SNAPSHOT-20260826.031023-95
+var anchoredVersRE = regexp.MustCompile(`^(\d+(\.\d+){0,2})(-SNAPSHOT)?(-\d{8}\.\d+(-\d+)?)?$`)
 
 func matchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)

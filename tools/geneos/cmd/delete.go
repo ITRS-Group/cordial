@@ -91,6 +91,7 @@ func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 				return
 			}
 		}
+		geneos.NotifyAudit(i, "delete", nil)
 		if resp.Err = i.Host().RemoveAll(i.Home()); resp.Err != nil {
 			return
 		}

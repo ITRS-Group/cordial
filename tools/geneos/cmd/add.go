@@ -25,6 +25,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -317,6 +318,9 @@ func AddInstance(ct *geneos.Component, name string, port uint16, extras values.V
 	}
 
 	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
+	geneos.NotifyAudit(i, "add", map[string]string{
+		"port": strconv.Itoa(int(config.Get[uint16](cf, "port"))),
+	})
 
 	if opts.start || opts.logs {
 		if err = instance.Start(i); err != nil {
