@@ -1,12 +1,5 @@
 # Change Log
 
-## Unreleased
-
-* `tools/geneos`
-
-  * `md-gateway` and `tr-gateway` install released product archives as shipped: wrapping directory, `lib/` jar, bundled JDK, and `config/logback.xml`. Maven snapshot filenames (`1.0.0-SNAPSHOT`, `1.0.0-20260826.031023-95`) are recognised without `--override`.
-  * `md-gateway` and `tr-gateway` operational audit log records JSON lines (`module`, `event`, event-specific fields) for `import`, `start`, `stop`, `restart`, `update`, `set`, `add`, `delete`, `enable`, and `disable`. Filename is configurable (`audit-log` / `TYPE::audit-log-file`). Logs rotate at 10 MiB (five files).
-
 >[!WARNING]
 >Release v1.26 and later - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
@@ -15,28 +8,36 @@
 >
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
-## Version v1.28.3
+## Version v1.29.0
 
 > [!NOTE]
-> **Released 2026-08-20** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-09-02** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
-### Version v1.28.3 Changes
+### Version v1.29.0 Changes
 
-* Update Go to 1.27.0 and update `go.mod` dependencies
+* Update Go to 1.27.1 and update `go.mod` dependencies
 
-* `tools/gateway-reporter`
+* `tools/geneos`
 
-  * Retire this from builds as the functionality is superceeded by the Gateway's built-in reporting features
+  * Add support for the new `netprobe-router` component as `router` but with aliases to `netprobe-router` and `netproberouter`. It is described in for detail here: <https://docs.itrsgroup.com/docs/geneos/collection/netprobe-router/current/user-guide/intro-to-np-router/index.html>
+
+  * Added various include files to `tools/geneos/includes` which are early releases of Geneos Best Practice configurations which will be improved and expanded over time. These are intended to be used as-is or as a starting point for your own configurations and as a replacement for the legacy `GLOBAL_*.xml` files that have been previously shared.
 
 * `gdna`
 
   * Update plugin dashboard screenshot and related text in `README.md`
 
-### Version v1.28.3 Fixes
+* `tools/gateway-reporter`
+
+  * Retire this from builds as the functionality is superceeded by the Gateway's built-in reporting features
+
+### Version v1.29.0 Fixes
 
 * `tools/dv2email`
 
   * Reorder and fix inclusion of Type in XLSX headline outputs
+
+---
 
 ## Version v1.28.2
 
