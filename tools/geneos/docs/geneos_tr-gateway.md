@@ -83,7 +83,7 @@ For general instance parameters see `geneos help set`. Parameters specific to `t
 
 * `setup` (Default: `${config:home}/tr-gateway.yaml`) — path to the YAML config passed to the Java main class.
 * `jar` (Default: `lib/tr-gateway.jar`) — jar path relative to the installed package directory.
-* `mainclass` (Default: `com.itrsgroup.trgateway.Main`)
+* `main-class` (Default: `com.itrsgroup.trgateway.Main`)
 * `program` (Default: bundled `jdk/bin/java` under the selected package version)
 * `logback` (Default: packaged `config/logback.xml`)
 * `audit-log` (Default: `tr-gateway-audit.log`) — operational audit log basename in the instance home directory.

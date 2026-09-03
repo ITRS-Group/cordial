@@ -31,7 +31,7 @@ reporters:
   - type: plugin
     name: receiver
     className: RoutingReporter
-    hostname: localhost
+    hostname: ${env:REPORTER_HOST}
     port: ${env:REPORTER_PORT}
     usePlainText: true
     useCompression: true

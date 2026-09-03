@@ -333,8 +333,8 @@ func (i *Routers) Command(skipFileCheck bool) (args, env []string, home string, 
 	args = []string{
 		"-Dlogback.configurationFile=" + logback,
 		"-XX:+UseG1GC",
-		"-Xms" + config.Get[string](cf, "minheap", config.DefaultValue("512M")),
-		"-Xmx" + config.Get[string](cf, "maxheap", config.DefaultValue("1024M")),
+		"-Xms" + strings.TrimPrefix(config.Get[string](cf, "xms", config.PromoteFrom("minheap"), config.DefaultValue("512m")), "-Xms"),
+		"-Xmx" + strings.TrimPrefix(config.Get[string](cf, "xmx", config.PromoteFrom("maxheap"), config.DefaultValue("1024m")), "-Xmx"),
 		"-cp", path.Join(classPath, "*"),
 	}
 
@@ -344,7 +344,7 @@ func (i *Routers) Command(skipFileCheck bool) (args, env []string, home string, 
 	// The main class must appear after all options are set otherwise
 	// they are seen as arguments to the application
 	args = append(args,
-		"com.itrsgroup.collection.ca.Main",
+		config.Get[string](cf, "main-class", config.DefaultValue("com.itrsgroup.collection.ca.Main")),
 		config.Get[string](cf, "setup", config.DefaultValue("router-config.yaml")),
 	)
 
@@ -357,6 +357,7 @@ func (i *Routers) Command(skipFileCheck bool) (args, env []string, home string, 
 		fmt.Sprintf("PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(path.Join(base, "plugins")))),
 		fmt.Sprintf("COLLECTOR_PORT=%d", config.Get[uint16](cf, "port", config.DefaultValue(4317))),
 		fmt.Sprintf("REPORTER_PORT=%d", config.Get[uint16](cf, "reporter-port", config.DefaultValue(4318))),
+		fmt.Sprintf("REPORTER_HOST=%s", config.Get[string](cf, "reporter-host", config.DefaultValue("localhost"))),
 		fmt.Sprintf("HOSTNAME=%s", config.Get[string](cf, "hostname", config.DefaultValue(hostname))),
 		fmt.Sprintf("APP=%s", config.Get[string](cf, "router-name", config.DefaultValue(i.Name()))),
 	}

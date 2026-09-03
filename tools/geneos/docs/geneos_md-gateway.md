@@ -85,7 +85,7 @@ For general instance parameters see `geneos help set`. Parameters specific to `m
 
 * `setup` (Default: `${config:home}/md-gateway.yaml`) — path to the YAML config passed to the Java main class.
 * `jar` (Default: `lib/md-gateway.jar`) — jar path relative to the installed package directory.
-* `mainclass` (Default: `com.itrsgroup.mdgateway.Main`)
+* `main-class` (Default: `com.itrsgroup.mdgateway.Main`)
 * `program` (Default: bundled `jdk/bin/java` under the selected package version)
 * `logback` (Default: packaged `config/logback.xml`)
 * `audit-log` (Default: `md-gateway-audit.log`) — operational audit log basename in the instance home directory.

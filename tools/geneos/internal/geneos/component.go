@@ -141,10 +141,10 @@ type Component struct {
 	//   maven.groupId=com.itrsgroup.geneos
 	DownloadParamsNexus *[]string
 
-	// StripArchivePrefix, if not nil, is the strings removed from the
-	// path of each file in the release archive. This is a pointer so
-	// that an empty string can be used (i.e. for webservers)
-	// StripArchivePrefix *string
+	// ArchiveLeaveFirstDir, if true, leaves the first directory in the
+	// archive path, otherwise it is stripped. This is used for Active
+	// Console and other archives that have a single top-level directory
+	// in the archive.
 	ArchiveLeaveFirstDir bool
 
 	// Defaults are name=value templates that are "run" for each new

@@ -108,6 +108,7 @@ The subsystems below group related functions together and have their own sub-com
 
 | Command | Description |
 |-------|-------|
+| [`geneos ac2`](geneos_ac2.md)	 | Active Console 2 |
 | [`geneos ca3`](geneos_ca3.md)	 | Collection Agent 3 |
 | [`geneos fa2`](geneos_fa2.md)	 | Fix Analyser 2 |
 | [`geneos fileagent`](geneos_fileagent.md)	 | File Agent |
@@ -117,7 +118,9 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos md-gateway`](geneos_md-gateway.md)	 | MD Gateway |
 | [`geneos minimal`](geneos_minimal.md)	 | Minimal Netprobes |
 | [`geneos netprobe`](geneos_netprobe.md)	 | Netprobes |
+| [`geneos router`](geneos_router.md)	 | Netprobe Router |
 | [`geneos san`](geneos_san.md)	 | Self-Announcing Netprobes |
+| [`geneos sso-agent`](geneos_sso-agent.md)	 | SSO Agent |
 | [`geneos tr-gateway`](geneos_tr-gateway.md)	 | TR Gateway |
 | [`geneos webserver`](geneos_webserver.md)	 | Web Dashboard Servers |
 

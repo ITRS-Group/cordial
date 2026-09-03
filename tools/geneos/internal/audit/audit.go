@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package appgw
+package audit
 
 import (
 	"crypto/sha256"
@@ -56,7 +56,7 @@ func AuditEvent(i geneos.Instance, event string, fields map[string]string) error
 	}
 
 	ct := i.Type()
-	auditPath := auditLogPath(i)
+	auditPath := LogPath(i)
 	maxBytes := int64(config.Get[int](config.Global(), config.Join(ct.String(), "audit-max-bytes"), config.DefaultValue(defaultAuditMaxBytes)))
 	maxFiles := config.Get[int](config.Global(), config.Join(ct.String(), "audit-max-files"), config.DefaultValue(defaultAuditMaxFiles))
 	if maxFiles < 1 {
@@ -80,14 +80,14 @@ func AuditEvent(i geneos.Instance, event string, fields map[string]string) error
 	return h.WriteFile(auditPath, append(existing, line...), 0664)
 }
 
-func auditLogFile(module string) string {
+func LogFile(module string) string {
 	return module + "-audit.log"
 }
 
-func auditLogPath(i geneos.Instance) string {
+func LogPath(i geneos.Instance) string {
 	name := config.Get[string](i.Config(), "audit-log")
 	if name == "" {
-		name = config.Get[string](config.Global(), config.Join(i.Type().String(), "audit-log-file"), config.DefaultValue(auditLogFile(i.Type().String())))
+		name = config.Get[string](config.Global(), config.Join(i.Type().String(), "audit-log-file"), config.DefaultValue(LogFile(i.Type().String())))
 	}
 	return path.Join(i.Home(), path.Base(name))
 }
@@ -177,7 +177,7 @@ func rotateAuditLog(h *geneos.Host, auditPath string, maxFiles int) error {
 	return h.Rename(auditPath, auditPath+".1")
 }
 
-func auditImport(i geneos.Instance, dest string) error {
+func AuditImport(i geneos.Instance, dest string) error {
 	if i == nil || dest == "" {
 		return nil
 	}

@@ -31,6 +31,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/audit"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -95,8 +96,8 @@ func Register(spec Spec) *geneos.Component {
 		GlobalSettings: map[string]string{
 			config.Join(nameKey, "ports"):          spec.Ports,
 			config.Join(nameKey, "clean"):          "",
-			config.Join(nameKey, "purge"):          strings.Join([]string{"*.log", auditLogFile(spec.Name)}, ":"),
-			config.Join(nameKey, "audit-log-file"): auditLogFile(spec.Name),
+			config.Join(nameKey, "purge"):          strings.Join([]string{"*.log", audit.LogFile(spec.Name)}, ":"),
+			config.Join(nameKey, "audit-log-file"): audit.LogFile(spec.Name),
 		},
 		PortRange: config.Join(nameKey, "ports"),
 		CleanList: config.Join(nameKey, "clean"),
@@ -120,15 +121,15 @@ func Register(spec Spec) *geneos.Component {
 			`xms=512m`,
 			`xmx=512m`,
 			`autostart=true`,
-			`audit-log=` + auditLogFile(spec.Name),
+			`audit-log=` + audit.LogFile(spec.Name),
 		},
 		Directories: []string{
 			"packages/" + spec.Name,
 			spec.Name + "/" + plural,
 		},
 		GetPID:   pidCheckFn,
-		OnImport: auditImport,
-		Audit:    AuditEvent,
+		OnImport: audit.AuditImport,
+		Audit:    audit.AuditEvent,
 	}
 
 	ct.Register(factory(ct))
@@ -289,7 +290,7 @@ func seedPackagedYAML(i *AppGW) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	_ = auditImport(i, path.Base(setup))
+	_ = audit.AuditImport(i, path.Base(setup))
 }
 
 func (i *AppGW) Command(skipFileCheck bool) (args, env []string, home string, err error) {

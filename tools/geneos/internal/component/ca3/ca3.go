@@ -76,8 +76,6 @@ var CA3 = geneos.Component{
 		`logdir={{join .home}}`,
 		`logfile=collection-agent.log`,
 		`setup={{join .home "collection-agent.yml"}}`,
-		`minheap=512M`,
-		`maxheap=512M`,
 		`autostart=true`,
 	},
 
@@ -282,8 +280,8 @@ func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 	checks = append(checks, config.Get[string](cf, "setup", config.PromoteFrom("config")))
 
 	args = []string{
-		"-Xms" + config.Get[string](cf, "minheap", config.DefaultValue("512M")),
-		"-Xmx" + config.Get[string](cf, "maxheap", config.DefaultValue("512M")),
+		"-Xms" + strings.TrimPrefix(config.Get[string](cf, "xms", config.PromoteFrom("minheap"), config.DefaultValue("512m")), "-Xms"),
+		"-Xmx" + strings.TrimPrefix(config.Get[string](cf, "xmx", config.PromoteFrom("maxheap"), config.DefaultValue("512m")), "-Xmx"),
 		"-Dlogback.configurationFile=" + logback,
 		"-cp", path.Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + i.Home(),

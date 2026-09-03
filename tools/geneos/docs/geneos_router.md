@@ -1,3 +1,5 @@
+# `geneos router`
+
 An `router` component is an instance of the Geneos Netprobe Router.
 
 ## Configuration
@@ -58,3 +60,21 @@ The parameters described below are specific to the Netprobe Router component.
 
   This parameter value is used in the default template as the value for the `pluginsDirectory` property in the Netprobe Router configuration file. It is passed as the environment variable `PLUGIN_DIR`. Note the singular for of `PLUGIN` for the environment variable, which is deliberate and based on Collection Agent configurations.
 
+
+## Usage
+
+```text
+geneos router
+```
+
+### Options
+
+```text
+      --allow-root      allow running as root (not recommended)
+  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+```
+
+## SEE ALSO
+
+* [geneos](geneos.md)	 - Take control of your Geneos environments
