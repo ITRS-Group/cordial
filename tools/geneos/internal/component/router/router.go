@@ -36,11 +36,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "webserver"
+const Name = "netprobe-router"
 
 var Router = geneos.Component{
 	Initialise:   initialise,
-	Name:         "netprobe-router",
+	Name:         Name,
 	Aliases:      []string{"netproberouter", "router"},
 	LegacyPrefix: "router",
 	Templates: []geneos.Templates{
@@ -91,6 +91,7 @@ var Router = geneos.Component{
 	Directories: []string{
 		"packages/netprobe-router",
 		"netprobe-router/netprobe-routers",
+		"netprobe-router/templates",
 	},
 	GetPID: pidCheckFn,
 }
@@ -110,7 +111,7 @@ func init() {
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
-	if err := r.WriteFile(r.PathTo("router", "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(Name, "templates", templateName), template, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }
