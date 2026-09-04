@@ -37,13 +37,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "san"
+const component = "san"
 
 var San = geneos.Component{
 	Initialise:   initialise,
-	Name:         "san",
+	Name:         component,
 	Aliases:      []string{"sans"},
-	LegacyPrefix: "san",
+	LegacyPrefix: component,
 
 	ParentType:   &netprobe.Netprobe,
 	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &minimal.Minimal, &fa2.FA2},
@@ -53,22 +53,22 @@ var San = geneos.Component{
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7036,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "7036,7100-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -89,7 +89,7 @@ var San = geneos.Component{
 	},
 	Defaults: []string{
 		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "netprobe" "sans" .name}}`,
+		`home={{join .root "netprobe" "` + component + `s" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
@@ -103,14 +103,14 @@ var San = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/netprobe",
-		"netprobe/shared",
-		"netprobe/sans",
-		"netprobe/templates",
+		filepath.Join("packages", "netprobe"),
+		filepath.Join("netprobe", "shared"),
+		filepath.Join("netprobe", "` + component + `s"),
+		filepath.Join("netprobe", "templates"),
 	},
 	SharedDirectories: []string{
-		"netprobe/netprobes_shared",
-		"netprobe/shared",
+		filepath.Join("netprobe", "netprobes_shared"),
+		filepath.Join("netprobe", "shared"),
 	},
 }
 

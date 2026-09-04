@@ -28,6 +28,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -44,12 +45,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "webserver"
+const component = "sso-agent"
 
 var SSOAgent = geneos.Component{
-	Name:         "sso-agent",
+	Name:         component,
 	Aliases:      []string{"ssoagent", "sso"},
-	LegacyPrefix: "sso",
+	LegacyPrefix: component,
 	// https://resources.itrsgroup.com/download/latest/SSO+Agent?title=sso-agent-1.15.0-bin.zip
 	DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]bin.(?<suffix>zip)$`),
 	DownloadParams: &[]string{
@@ -60,30 +61,30 @@ var SSOAgent = geneos.Component{
 		"maven.extension=zip",
 		"maven.groupId=com.itrsgroup.geneos",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "SSO+Agent", Nexus: "sso-agent"},
-	DownloadInfix: "sso-agent",
+	DownloadBase:  geneos.DownloadBases{Default: "SSO+Agent", Nexus: component},
+	DownloadInfix: component,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "1180-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "1180-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "sso-agent" "sso-agents" .name}}`,
-		`install={{join .root "packages" "sso-agent"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{"/usr/bin/java"}}`,
 		`logdir=logs`,
@@ -94,8 +95,8 @@ var SSOAgent = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/sso-agent",
-		"sso-agent/sso-agents",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
 	},
 	GetPID: pidCheckFn,
 }

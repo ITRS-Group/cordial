@@ -34,28 +34,28 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "licd"
+const component = "licd"
 
 var Licd = geneos.Component{
-	Name:         "licd",
+	Name:         component,
 	Aliases:      []string{"licds"},
-	LegacyPrefix: "licd",
+	LegacyPrefix: component,
 	DownloadBase: geneos.DownloadBases{Default: "Licence+Daemon", Nexus: "geneos-licd"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7041,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{
+		config.Join(component, "ports"): "7041,7100-",
+		config.Join(component, "clean"): strings.Join([]string{
 			"reporting/",
 		}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -75,8 +75,8 @@ var Licd = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=licd.linux_64`,
-		`home={{join .root "licd" "licds" .name}}`,
-		`install={{join .root "packages" "licd"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=licd.log`,
@@ -86,8 +86,8 @@ var Licd = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/licd",
-		"licd/licds",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
 	},
 }
 

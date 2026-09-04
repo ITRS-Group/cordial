@@ -35,32 +35,32 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "fa2"
+const component = "fa2"
 
 var FA2 = geneos.Component{
-	Name:          "fa2",
+	Name:          component,
 	Aliases:       []string{"fixanalyser", "fixanalyzer"},
-	LegacyPrefix:  "fa2",
+	LegacyPrefix:  component,
 	ParentType:    &netprobe.Netprobe,
 	DownloadBase:  geneos.DownloadBases{Default: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
 	DownloadInfix: "fixanalyser2-netprobe",
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7030,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "7030,7100-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"*.db",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -80,8 +80,8 @@ var FA2 = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=fix-analyser2-netprobe.linux_64`,
-		`home={{join .root "netprobe" "fa2s" .name}}`,
-		`install={{join .root "packages" "fa2"}}`,
+		`home={{join .root "netprobe" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=fa2.log`,
@@ -91,13 +91,13 @@ var FA2 = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/fa2",
-		"netprobe/fa2s",
-		"netprobe/shared",
+		filepath.Join("packages", component),
+		filepath.Join("netprobe", component+"s"),
+		filepath.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
-		"netprobe/netprobes_shared",
-		"netprobe/shared",
+		filepath.Join("netprobe", "netprobes_shared"),
+		filepath.Join("netprobe", "shared"),
 	},
 }
 

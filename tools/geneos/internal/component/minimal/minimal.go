@@ -35,10 +35,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "minimal"
+const component = "minimal"
 
 var Minimal = geneos.Component{
-	Name:         "minimal",
+	Name:         component,
 	Aliases:      []string{"netprobe-mini", "netprobe-minimal", "mini-netprobe"},
 	LegacyPrefix: "mini",
 	ParentType:   &netprobe.Netprobe,
@@ -47,20 +47,20 @@ var Minimal = geneos.Component{
 	DownloadInfix: "netprobe-minimal",
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7036,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "7036,7100-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -81,23 +81,23 @@ var Minimal = geneos.Component{
 	Defaults: []string{
 		`binary=netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
 		`home={{join .root "netprobe" "netprobes" .name}}`,
-		`install={{join .root "packages" "minimal"}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
-		`logfile=minimal.log`,
+		`logfile=` + component + `.log`,
 		`port=7030`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
 
 	Directories: []string{
-		"packages/minimal",
-		"netprobe/shared",
-		"netprobe/netprobes",
+		filepath.Join("packages", component),
+		filepath.Join("netprobe", "shared"),
+		filepath.Join("netprobe", "netprobes"),
 	},
 	SharedDirectories: []string{
-		"netprobe/netprobes_shared",
-		"netprobe/shared",
+		filepath.Join("netprobe", "netprobes_shared"),
+		filepath.Join("netprobe", "shared"),
 	},
 }
 

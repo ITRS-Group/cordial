@@ -22,7 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
-	"regexp"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -33,21 +33,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-// // TRGateway is the registered tr-gateway component type.
-// var TRGateway = appgw.Register(appgw.Spec{
-// 	Name:      "tr-gateway",
-// 	Aliases:   []string{"trgateway", "trgw"},
-// 	Jar:       "lib/tr-gateway.jar",
-// 	MainClass: "com.itrsgroup.trgateway.Main",
-// 	SetupFile: "tr-gateway.yaml",
-// 	LogFile:   "tr-gateway.log",
-// 	Ports:     "19000-",
-// })
-
-const Name = "tr-gateway"
+const component = "tr-gateway"
 
 var TRGateway = geneos.Component{
-	Name:         "tr-gateway",
+	Name:         component,
 	Aliases:      []string{"trgateway", "trgw"},
 	LegacyPrefix: "trgw",
 
@@ -60,44 +49,44 @@ var TRGateway = geneos.Component{
 		"maven.extension=tar.gz",
 		"maven.groupId=com.itrsgroup.trgateway",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "TR+Gateway", Nexus: "tr-gateway"},
-	DownloadInfix: "tr-gateway",
+	DownloadBase:  geneos.DownloadBases{Default: "TR+Gateway", Nexus: component},
+	DownloadInfix: component,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "19000-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
-			audit.LogFile(Name),
+		config.Join(component, "ports"): "19000-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
+			audit.LogFile(component),
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "tr-gateway" "tr-gateways" .name}}`,
-		`install={{join .root "packages" "tr-gateway"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "jdk" "bin" "java"}}`,
 		`logback={{join "${config:install}" "${config:version}" "config" "logback.xml"}}`,
-		`logfile=tr-gateway.log`,
-		`setup={{join "${config:home}" "tr-gateway.yaml"}}`,
-		`jar=lib/tr-gateway.jar`,
+		`logfile=` + component + `.log`,
+		`setup={{join "${config:home}" "` + component + `.yaml"}}`,
+		`jar=lib/` + component + `.jar`,
 		`main-class=com.itrsgroup.trgateway.Main`,
 		`autostart=true`,
-		`audit-log-file=` + audit.LogFile(Name),
+		`audit-log-file=` + audit.LogFile(component),
 	},
 
 	Directories: []string{
-		"packages/tr-gateway",
-		"tr-gateway/tr-gateways",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
 	},
 	GetPID:   pidCheckFn,
 	OnImport: audit.AuditImport,

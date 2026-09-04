@@ -33,10 +33,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "netprobe"
+const component = "netprobe"
 
 var Netprobe = geneos.Component{
-	Name:         Name,
+	Name:         component,
 	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
 	UsesKeyfiles: true,
@@ -45,24 +45,24 @@ var Netprobe = geneos.Component{
 	DownloadInfix: "netprobe-standard",
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7036,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{
+		config.Join(component, "ports"): "7036,7100-",
+		config.Join(component, "clean"): strings.Join([]string{
 			"collection-agent-*.log",
 		}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -82,7 +82,7 @@ var Netprobe = geneos.Component{
 	},
 	Defaults: []string{
 		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "netprobe" "netprobes" .name}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
@@ -93,13 +93,13 @@ var Netprobe = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/netprobe",
-		"netprobe/shared",
-		"netprobe/netprobes",
+		filepath.Join("packages", component),
+		filepath.Join(component, "shared"),
+		filepath.Join(component, "netprobes"),
 	},
 	SharedDirectories: []string{
-		"netprobe/netprobes_shared",
-		"netprobe/shared",
+		filepath.Join(component, "netprobes_shared"),
+		filepath.Join(component, "shared"),
 	},
 }
 
@@ -137,7 +137,7 @@ func factory(name string) (netprobe geneos.Instance) {
 		InstanceHost: h,
 	}
 
-	netprobe.Config().Default("pkgtype", "netprobe")
+	netprobe.Config().Default("pkgtype", component)
 	if ct != nil {
 		// check for valid pkgtypes by name, as the PackageType field is not set for Netprobe to avoid an import cycle with minimal and fa2
 		switch ct.Name {

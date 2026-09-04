@@ -36,7 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "gateway"
+const component = "gateway"
 
 const (
 	INSTANCEXML = "instance.setup.xml"
@@ -44,7 +44,7 @@ const (
 
 var Gateway = geneos.Component{
 	Initialise:   initialise,
-	Name:         "gateway",
+	Name:         component,
 	Aliases:      []string{"gateways"},
 	LegacyPrefix: "gate",
 	UsesKeyfiles: true,
@@ -55,12 +55,12 @@ var Gateway = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Gateway+2", Nexus: "geneos-gateway"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7038-7039,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{
+		config.Join(component, "ports"): "7038-7039,7100-",
+		config.Join(component, "clean"): strings.Join([]string{
 			"*.history",
 			"*.download",
 		}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"stats.xml",
@@ -70,13 +70,13 @@ var Gateway = geneos.Component{
 			"database/",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -103,8 +103,8 @@ var Gateway = geneos.Component{
 	Defaults: []string{
 		// order is important, do not change
 		`binary=gateway2.linux_64`,
-		`home={{join .root "gateway" "gateways" .name}}`,
-		`install={{join .root "packages" "gateway"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=gateway.log`,
@@ -116,19 +116,19 @@ var Gateway = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/gateway",
-		"gateway/config",
-		"gateway/gateways",
-		"gateway/includes",
-		"gateway/shared",
-		"gateway/templates",
+		filepath.Join("packages", component),
+		filepath.Join(component, "config"),
+		filepath.Join(component, "gateways"),
+		filepath.Join(component, "includes"),
+		filepath.Join(component, "shared"),
+		filepath.Join(component, "templates"),
 	},
 	SharedDirectories: []string{
-		"gateway/config",
-		"gateway/gateway_shared",
-		"gateway/gateway_config",
-		"gateway/includes",
-		"gateway/shared",
+		filepath.Join(component, "config"),
+		filepath.Join(component, "gateway_shared"),
+		filepath.Join(component, "gateway_config"),
+		filepath.Join(component, "includes"),
+		filepath.Join(component, "shared"),
 	},
 }
 
@@ -153,10 +153,10 @@ func init() {
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.PathTo("gateway", "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(component, "templates", templateName), template, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
-	if err := r.WriteFile(r.PathTo("gateway", "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(component, "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }

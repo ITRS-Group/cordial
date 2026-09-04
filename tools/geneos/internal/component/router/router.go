@@ -24,6 +24,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -36,11 +37,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "netprobe-router"
+const component = "netprobe-router"
 
 var Router = geneos.Component{
 	Initialise:   initialise,
-	Name:         Name,
+	Name:         component,
 	Aliases:      []string{"netproberouter", "router"},
 	LegacyPrefix: "router",
 	Templates: []geneos.Templates{
@@ -56,32 +57,32 @@ var Router = geneos.Component{
 		"maven.extension=zip",
 		"maven.groupId=com.itrsgroup.collection.ca.packages",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+Router", Nexus: "netprobe-router"},
-	DownloadInfix: "netprobe-router",
+	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+Router", Nexus: component},
+	DownloadInfix: component,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "4317,4319-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(component, "ports"): "4317,4319-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "netprobe-router" "netprobe-routers" .name}}`,
-		`install={{join .root "packages" "netprobe-router"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{"/usr/bin/java"}}`,
 		`logdir=logs`,
-		`logfile=netprobe-router.log`,
+		`logfile=` + component + `.log`,
 		`port=1180`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`setup={{join "${config:home}" "router-config.yaml"}}`,
@@ -89,9 +90,9 @@ var Router = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/netprobe-router",
-		"netprobe-router/netprobe-routers",
-		"netprobe-router/templates",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
+		filepath.Join(component, "templates"),
 	},
 	GetPID: pidCheckFn,
 }
@@ -111,7 +112,7 @@ func init() {
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
-	if err := r.WriteFile(r.PathTo(Name, "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(component, "templates", templateName), template, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }

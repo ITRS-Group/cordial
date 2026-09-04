@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -36,10 +37,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "ca3"
+const component = "ca3"
 
 var CA3 = geneos.Component{
-	Name:         Name,
+	Name:         component,
 	Aliases:      []string{"collection-agent", "ca3s", "collector"},
 	LegacyPrefix: "",
 	ParentType:   &netprobe.Netprobe,
@@ -47,28 +48,28 @@ var CA3 = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "9137-",
-		config.Join(Name, "clean"): strings.Join([]string{
+		config.Join(component, "ports"): "9137-",
+		config.Join(component, "clean"): strings.Join([]string{
 			"collection-agent-*.log",
 		}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "purge"): strings.Join([]string{
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "netprobe" "ca3s" .name}}`,
+		`home={{join .root "netprobe" "` + component + `s" .name}}`,
 		`install={{join .root "packages" "netprobe"}}`,
 		`version=active_prod`,
 		`plugins={{join .install .version "collection_agent" "plugins"}}`,
@@ -80,13 +81,13 @@ var CA3 = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/ca3",
-		"netprobe/ca3s",
-		"netprobe/shared",
+		filepath.Join("packages", component),
+		filepath.Join("netprobe", component+"s"),
+		filepath.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
-		"netprobe/shared",
-		"netprobe/netprobes_shared",
+		filepath.Join("netprobe", "shared"),
+		filepath.Join("netprobe", "netprobes_shared"),
 	},
 	GetPID: pidCheckFn,
 }

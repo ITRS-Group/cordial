@@ -23,6 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -34,10 +35,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "ac2"
+const component = "ac2"
 
 var AC2 = geneos.Component{
-	Name:         Name,
+	Name:         component,
 	Aliases:      []string{"active-console", "activeconsole"},
 	LegacyPrefix: "",
 
@@ -46,26 +47,26 @@ var AC2 = geneos.Component{
 	ArchiveLeaveFirstDir: true,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7040-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "7040-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=ActiveConsole{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "ac2" "ac2s" .name}}`,
-		`install={{join .root "packages" "ac2"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=ActiveConsole.log`,
@@ -75,8 +76,8 @@ var AC2 = geneos.Component{
 		`autostart=false`,
 	},
 	Directories: []string{
-		"packages/ac2",
-		"ac2/ac2s",
+		filepath.Join("packages", component),
+		filepath.Join(component, "ac2s"),
 	},
 	GetPID: pidCheckFn,
 }

@@ -22,7 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
-	"regexp"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -34,10 +34,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const Name = "md-gateway"
+const component = "md-gateway"
 
 var MDGateway = geneos.Component{
-	Name:         "md-gateway",
+	Name:         component,
 	Aliases:      []string{"mdgateway", "mdgw"},
 	LegacyPrefix: "mdgw",
 
@@ -49,44 +49,44 @@ var MDGateway = geneos.Component{
 		"maven.extension=tar.gz",
 		"maven.groupId=com.itrsgroup.mdgateway",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "MD+Gateway", Nexus: "md-gateway"},
-	DownloadInfix: "md-gateway",
+	DownloadBase:  geneos.DownloadBases{Default: "MD+Gateway", Nexus: component},
+	DownloadInfix: component,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "18000-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
-			audit.LogFile(Name),
+		config.Join(component, "ports"): "18000-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
+			audit.LogFile(component),
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "md-gateway" "md-gateways" .name}}`,
-		`install={{join .root "packages" "md-gateway"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "jdk" "bin" "java"}}`,
 		`logback={{join "${config:install}" "${config:version}" "config" "logback.xml"}}`,
-		`logfile=md-gateway.log`,
-		`setup={{join "${config:home}" "md-gateway.yaml"}}`,
-		`jar=lib/md-gateway.jar`,
+		`logfile=` + component + `.log`,
+		`setup={{join "${config:home}" "` + component + `.yaml"}}`,
+		`jar=lib/` + component + `.jar`,
 		`main-class=com.itrsgroup.mdgateway.Main`,
 		`autostart=true`,
-		`audit-log-file=` + audit.LogFile(Name),
+		`audit-log-file=` + audit.LogFile(component),
 	},
 
 	Directories: []string{
-		"packages/md-gateway",
-		"md-gateway/md-gateways",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
 	},
 	GetPID:   pidCheckFn,
 	OnImport: audit.AuditImport,

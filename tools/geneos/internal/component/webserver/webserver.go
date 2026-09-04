@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -34,10 +35,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "webserver"
+const component = "webserver"
 
 var Webserver = geneos.Component{
-	Name:                 "webserver",
+	Name:                 component,
 	Aliases:              []string{"web-server", "webservers", "webdashboard", "dashboards"},
 	LegacyPrefix:         "webs",
 	DownloadBase:         geneos.DownloadBases{Default: "Web+Dashboard", Nexus: "geneos-web-server"},
@@ -45,20 +46,20 @@ var Webserver = geneos.Component{
 	ArchiveLeaveFirstDir: true,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "8443,8080-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(component, "ports"): "8443,8080-",
+		config.Join(component, "clean"): strings.Join([]string{}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{
 			"logs/",
 			"webapps/",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(component, "ports"),
+	CleanList: config.Join(component, "clean"),
+	PurgeList: config.Join(component, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(component, "ports"): component + "portrange",
+		config.Join(component, "clean"): component + "cleanlist",
+		config.Join(component, "purge"): component + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -79,8 +80,8 @@ var Webserver = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "webserver" "webservers" .name}}`,
-		`install={{join .root "packages" "webserver"}}`,
+		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
+		`install={{join .root "packages" "` + component + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "JRE/bin/java"}}`,
 		`logdir=logs`,
@@ -92,8 +93,8 @@ var Webserver = geneos.Component{
 	},
 
 	Directories: []string{
-		"packages/webserver",
-		"webserver/webservers",
+		filepath.Join("packages", component),
+		filepath.Join(component, component+"s"),
 	},
 	GetPID: pidCheckFn,
 }
