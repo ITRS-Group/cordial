@@ -51,7 +51,7 @@ var TRGateway = geneos.Component{
 	Aliases:      []string{"trgateway", "trgw"},
 	LegacyPrefix: "trgw",
 
-	DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz)$`),
+	// DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz)$`),
 	DownloadParams: &[]string{
 		"title=",
 	},

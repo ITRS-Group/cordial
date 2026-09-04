@@ -41,7 +41,6 @@ var MDGateway = geneos.Component{
 	Aliases:      []string{"mdgateway", "mdgw"},
 	LegacyPrefix: "mdgw",
 
-	DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz)$`),
 	DownloadParams: &[]string{
 		"title=",
 	},
