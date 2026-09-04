@@ -1,5 +1,18 @@
 # Change Log
 
+## Version v1.29.1
+
+> [!NOTE]
+> **Released 2026-09-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+## Version v1.29.1 Fixes
+
+* `tools/geneos`
+
+  * Fix panic in `geneos init` subsystem when checking for the new Netprobe Router component's templates directory. The code mistakenly referred to both `netprobe-router` and `router` directory names. The previous release have been removed and replaced with this one.
+
+---
+
 >[!WARNING]
 >Release v1.26 and later - **BREAKING CHANGES**
 >* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
@@ -9,6 +22,9 @@
 >   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 ## Version v1.29.0
+
+> [!IMPORTANT]
+> This release has been withdrawn. Please use v1.29.1 instead.
 
 > [!NOTE]
 > **Released 2026-09-02** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
