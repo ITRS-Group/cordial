@@ -45,7 +45,7 @@ func CleanRelativePath(p string) (clean string, err error) {
 // split an package archive name into type and version
 //
 // geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
-var archiveRE = regexp.MustCompile(`^geneos-(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-](?<os>linux|windows).*?\.(?<suffix>[\w\.]+)$`)
+var archiveRE = regexp.MustCompile(`^(?:geneos-)?(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-](?<os>linux|windows).*?\.(?<suffix>[\w\.]+)$`)
 
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
