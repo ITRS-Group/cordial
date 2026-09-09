@@ -100,7 +100,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 # writers the support for relative links to files is broken, so
 # documents with links to other docs in the same repo will be wrong.
 #
-FROM node:lts AS cordial-docs
+FROM node:24 AS cordial-docs
 ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 ENV PUPPETEER_SKIP_DOWNLOAD=true
