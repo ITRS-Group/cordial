@@ -1,5 +1,28 @@
 # Change Log
 
+## Version v1.29.2
+
+> [!NOTE]
+> **Released 2026-09-10** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+## Version v1.29.2 Changes
+
+* Update package dependencies
+
+* Rename `examples` to `_examples` to prevent Go from pulling in unwanted dependencies to `go.mod`
+
+## Version v1.29.2 Fixes
+
+* `tools/geneos`
+
+  * Fix `geneos init demo` to correctly add the `-demo` option to the gateway created. This appears to have been accidentally removed during a clean-up effort a couple of minor releases ago.
+
+* `gdna`
+
+  * Fix the docker image(s) that would have been non-functional because of the above issue with demo environments.
+
+---
+
 ## Version v1.29.1
 
 > [!NOTE]
