@@ -46,7 +46,7 @@ func AddCertChainToKeyStore(h host.Host, path string, password config.Secret, al
 	}
 	k.DeleteEntry(alias)
 	k.AddKeystoreKey(alias, key, password, certChain...)
-	return k.WriteKeystore(h, path, password)
+	return k.WriteKeystore(h, path, password, 0600)
 }
 
 // AddRootsToTrustStore adds the given root certificates to the truststore
@@ -80,7 +80,9 @@ func AddRootsToTrustStore(h host.Host, path string, password config.Secret, root
 		}
 	}
 
-	if err = k.WriteKeystore(h, path, password); err != nil {
+	// write the updated truststore back to the host with appropriate
+	// permissions
+	if err = k.WriteKeystore(h, path, password, 0644); err != nil {
 		return err
 	}
 
@@ -111,8 +113,9 @@ func WriteTrustStore(h host.Host, path string, password config.Secret, roots ...
 		password = config.Secret("changeit")
 	}
 
-	// a truststore is just a keystore with trusted certs
-	return k.WriteKeystore(h, path, password)
+	// a truststore is just a keystore with trusted certs, permissions
+	// are less restrictive then keystores that contain private keys
+	return k.WriteKeystore(h, path, password, 0644)
 }
 
 // ReadKeystore returns a keystore.
@@ -175,9 +178,10 @@ func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, trustst
 	return UpdateCACertsFiles(h, caBundlePath, roots...)
 }
 
-// WriteKeystore writes the keystore to the given path. If password is
-// nil, "changeit" is used.
-func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secret) (err error) {
+// WriteKeystore writes the keystore to the given path with the given
+// permissions. If password is nil, "changeit" is used. If perms is 0,
+// 0600 is used.
+func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secret, perms os.FileMode) (err error) {
 	if k == nil {
 		return os.ErrInvalid
 	}
@@ -187,7 +191,10 @@ func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secre
 		pw = password
 	}
 
-	w, err := h.Create(path, 0644)
+	if perms == 0 {
+		perms = 0600
+	}
+	w, err := h.Create(path, perms)
 	if err != nil {
 		return
 	}

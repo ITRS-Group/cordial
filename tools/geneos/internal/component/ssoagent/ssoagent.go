@@ -331,7 +331,7 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 		}
 
 		if changed {
-			err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword)
+			err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
 		}
 
 		alias := config.Get[string](ssoconf, ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
