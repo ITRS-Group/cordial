@@ -1,6 +1,6 @@
 Deploy a new instance of component `TYPE`.
 
-The difference between `deploy` and `add` or `init` commands is that deploy will check and create the Geneos directory hierarchy if required, then download and/or install packages for the component type and add the instance, optionally starting it.
+The difference between `deploy` and `add` or `init` commands is that `deploy` will check and create the Geneos directory hierarchy as required, then download and/or install packages for the component type and add the instance, optionally starting it.
 
 This allows you to create an instance without having to worry about initialising the set-up and so on. The name if the instance can be given on the command line as `NAME` but defaults to the hostname of the system.
 
@@ -20,7 +20,7 @@ The stages that deploy goes through will help you choose the options you need:
 
 4. An instance is added with the various options available, just like the `add` command, with the options selected and additional parameters given as `NAME=VALUE` pairs on the command line.
 
-5. If the `--start`/`-S` or `--log`/`-l` options are given then the new instance is started.
+5. If the `--start`/`-S` or `--log`/`-l` options are given then the new instance is started and the logs tail-ed for the latter.
 
 You can select the distribution of SAN or Floating Netprobe using the special syntax for the `NAME` in the form `TYPE:[NAME]`. The `TYPE` can be one of `fa2` or `minimal` to change the package used. `NAME` REMAINS optional, and if not given defaults to the local hostname, but remember to include the colon (`:`) to indicate you are using this syntax.
 
@@ -32,11 +32,19 @@ The underlying package used by each instance is referenced by a `basename` param
 
 Any additional command line arguments are used to set configuration values. Any arguments not in the form `NAME=VALUE` are ignored. Note that `NAME` must be a plain word and must not contain dots (`.`) or double colons (`::`) as these are used as internal delimiters. No component uses hierarchical configuration names except those that can be set by the options above.
 
-## TLS Secured Instances
+## TLS Support
 
-To deploy a TLS enabled instance on a new server you can use the `--signing-bundle`/`-C`. The PEM formatted data containing the required certificates and private key for signing new certificates can be obtained using `geneos tls export` on your main Geneos server. If you have been give a certificate and key file from a non-Geneos system then you have to make sure they are in PEM format and you can pass them in using the separate flags. The certificate file should also contain any parent certificates required for verification.
+TLS is always enabled on new servers unless the `--insecure` flag is given during initial deployment. By default, new root and signing certificates and private keys are created unless you supply either a signing or a certificate bundle. This typically only makes sense during the initial set-up of Geneos and subsequent deployments should share the trust chain established by the initial deployment.
 
-You can also create a new TLS root and signing certificate/key set with the `--tls`/`-T` flags.
+To deploy a component on a new server that will share the trust chain with an existing installation, for example a new Netprobe on an endpoint connected to by an existing Gateway, you can use the `--signing-bundle`/`-C`. This bundle should contain the signing certificate and private key used by the existing installation to maintain a consistent trust chain. A new leaf certificate and private key will be generated for the new instance. The root CA in the bundle will automatically be added to the trust chains `ca-bundle.pem` and `ca-bundle.db` files in the Geneos `tls` directory.
+
+To deploy an instance with a previously issued certificate use the `--certs-bundle`/`-c` option. This bundle should contain a full certificate chain from a root CA to the leaf certificate that will be used by the instance and the private key for that certificate. The root CA will automatically be added to the trust chains `ca-bundle.pem` and `ca-bundle.db` files in the Geneos `tls` directory.
+
+In both cases the supplied bundle can be either in PEM or PFX/PKCS#12 format.
+
+PEM formatted data containing the required certificates and private key for signing new certificates can be obtained using `geneos tls export` on your existing Geneos server. If you have been give a certificate and key file from a non-Geneos system then you have to make sure they are in PEM format and you can pass them in using the separate flags. The certificate file should also contain any parent certificates required for verification. PEM bundles can be local files, URLs or formatted text prefixed with `pem:`.
+
+PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always protected by a password (which is however considered insecure in the modern world) and this must be supplied with either the `--certs-password` flag or in an environment variable `ITRS_CERTS_PASSWORD`. In both cases the password can be encoded using Coridal expandable format (the output of `geneos aes password`, for example). PFX/PKCS#12 files must be local paths.
 
 ## AES Key Files
 

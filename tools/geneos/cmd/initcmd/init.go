@@ -73,6 +73,11 @@ func init() {
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
+
+	// set a default from env, if available. can be in expandable format
+	if p, ok := os.LookupEnv("ITRS_CERTS_PASSWORD"); ok {
+		initCmdBundlePassword = config.ExpandToPassword(p)
+	}
 	initCmd.PersistentFlags().Var(&initCmdBundlePassword, "signing-bundle-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
 
 	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")

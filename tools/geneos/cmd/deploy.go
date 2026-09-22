@@ -66,10 +66,16 @@ func init() {
 	deployCmd.Flags().MarkDeprecated("tls", "TLS is now enabled by default, use --insecure to disable")
 
 	deployCmd.Flags().StringVarP(&deployCmdSigningBundle, "signing-bundle", "C", "", "signing certificate bundle file, in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
-	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
-	deployCmd.Flags().Var(&deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
 
-	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem.\nIgnored if --instance-bundle is given.")
+	deployCmd.Flags().StringVarP(&deployCmdInstanceBundle, "certs-bundle", "c", "", "Instance certificate bundle `file` in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
+
+	// set a default from env, if available. can be in expandable format
+	if p, ok := os.LookupEnv("ITRS_CERTS_PASSWORD"); ok {
+		deployCmdBundlePassword = config.ExpandToPassword(p)
+	}
+	deployCmd.Flags().Var(&deployCmdBundlePassword, "certs-password", "Password for PFX/PKCS#12 signing or certificate bundle file.\nYou will be prompted if required and have not supplied one as an argument.\nThe password can be in cordial expandable format.")
+
+	deployCmd.Flags().BoolVarP(&deployCmdInsecure, "insecure", "", false, "Do not initialise TLS subsystem.\nIgnored if --certs-bundle is given.")
 
 	deployCmd.Flags().StringVar(&deployCmdKeyfile, "keyfile", "", "Keyfile `PATH` to use. Default is to create one\nfor TYPEs that support them")
 	deployCmd.Flags().StringVar(&deployCmdKeyfileCRC, "keycrc", "", "`CRC` of key file in the component's shared \"keyfiles\" \ndirectory to use (extension optional)")
