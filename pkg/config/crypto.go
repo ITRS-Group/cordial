@@ -43,9 +43,11 @@ func (secret *Secret) String() string {
 	return string(*secret)
 }
 
-// Set is required to satisfy the pflag Values interface
+// Set is required to satisfy the pflag Values interface. The value can
+// be in expandable format, to allow to AES256 encrypted values and
+// other interpolation.
 func (secret *Secret) Set(value string) error {
-	*secret = Secret(value)
+	*secret = ExpandToPassword(value)
 	return nil
 }
 

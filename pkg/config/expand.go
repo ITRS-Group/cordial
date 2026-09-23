@@ -182,6 +182,13 @@ func (c *Config) ExpandToPassword(input string, options ...ExpandOption) Secret 
 	return Secret(expand[[]byte](c, input, options...))
 }
 
+// ExpandToPassword expands the input string using the global
+// configuration and returns a Secret. The TrimSpace option is ignored.
+// This is a convenience wrapper around the method on the global Config.
+func ExpandToPassword(input string, options ...ExpandOption) Secret {
+	return global.ExpandToPassword(input, options...)
+}
+
 // ExpandAllSettings returns all the settings from config structure c
 // applying ExpandString to all string values and all string slice
 // values. Non-string types are left unchanged. Further types, e.g. maps
