@@ -3,6 +3,7 @@
 	<includes>
 		<priority>1</priority>
 		<include>
+            <!--This include file is read-only and is created and updated by the "geneos" program.-->
 			<priority>150</priority>
 			<required>false</required>
 			<location>instance.setup.xml</location>
@@ -19,20 +20,20 @@
 		<authenticateUsers>true</authenticateUsers>
 		<users>
 			<user name="generic">
-	<fullName>Catch All User</fullName>
-	<genericUser>true</genericUser>
-	<allowLogin>true</allowLogin>
-	<allowSystemAuth>true</allowSystemAuth>
-	<roleProperties>
-		<roleProperty>Administrators</roleProperty>
-	</roleProperties>
+				<fullName>Catch All User</fullName>
+				<genericUser>true</genericUser>
+				<allowLogin>true</allowLogin>
+				<allowSystemAuth>true</allowSystemAuth>
+				<roleProperties>
+					<roleProperty>Administrators</roleProperty>
+				</roleProperties>
 			</user>
 		</users>
 		<roles>
 			<role name="Administrators">
-	<roleProperties>
-		<roleProperty>Administrators</roleProperty>
-	</roleProperties>
+				<roleProperties>
+					<roleProperty>Administrators</roleProperty>
+				</roleProperties>
 			</role>
 		</roles>
 	</authentication>
