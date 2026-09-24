@@ -25,6 +25,7 @@ const (
 	CommandGroupConfig      = "config"
 	CommandGroupComponents  = "components"
 	CommandGroupCredentials = "credentials"
+	CommandGroupIncludes    = "includes"
 	CommandGroupManage      = "manage"
 	CommandGroupOther       = "other"
 	CommandGroupProcess     = "process"
@@ -60,6 +61,10 @@ func init() {
 	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupOther,
 		Title: "Miscellaneous",
+	})
+	Cmd.AddGroup(&cobra.Group{
+		ID:    CommandGroupIncludes,
+		Title: "Includes",
 	})
 	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,

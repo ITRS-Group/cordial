@@ -39,6 +39,8 @@ import (
 
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 
+	_ "github.com/itrs-group/cordial/tools/geneos/includes"
+
 	// each component type registers itself when imported here
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
@@ -58,6 +60,9 @@ import (
 )
 
 var log = cordial.Logger
+
+//go:embed includes
+var Includes embed.FS
 
 func init() {
 	// strip any whitespace from the embedded VERSION value as early as

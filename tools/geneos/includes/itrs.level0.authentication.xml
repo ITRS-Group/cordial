@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.3.1-250422/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-09-24 12:58:21 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.10.0-260526/gateway.xsd">
 	<authentication>
 		<roles>
 			<role name="Administrators">

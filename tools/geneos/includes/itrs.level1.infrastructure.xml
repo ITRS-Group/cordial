@@ -1,20 +1,21 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.9.1-260505/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-09-24 12:42:02 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.10.0-260526/gateway.xsd">
 	<managedEntities>
-		<managedEntityGroup name="System">
+		<managedEntityGroup name="Level 1 - Infrastructure">
 			<attribute name="CATEGORY">Infrastructure</attribute>
 			<attribute name="COMPONENT">System</attribute>
 			<addTypes>
-				<type ref="System">
-					<environment ref="System"/>
+				<type ref="Level 1 - Infrastructure">
+					<environment ref="Level 1 - Infrastructure Overrides"/>
 				</type>
 			</addTypes>
 		</managedEntityGroup>
 	</managedEntities>
 	<types>
-		<typeGroup name="System">
-			<type name="System">
-				<environment ref="System Defaults"/>
+		<typeGroup name="Level 1 - Infrastructure">
+			<type name="Level 1 - Infrastructure">
+				<environment ref="Level 1 - Infrastructure Defaults"/>
 				<sampler ref="CPU"/>
 				<sampler ref="Disk"/>
 				<sampler ref="Hardware"/>
@@ -23,7 +24,7 @@
 		</typeGroup>
 	</types>
 	<samplers>
-		<samplerGroup name="System">
+		<samplerGroup name="Level 1 - Infrastructure">
 			<sampler name="CPU">
 				<var-group>
 					<var ref="SAMPLER_GROUP"/>
@@ -150,13 +151,13 @@
 		</samplerGroup>
 	</samplers>
 	<rules>
-		<ruleGroup name="System">
+		<ruleGroup name="Level 1 - Infrastructure">
 			<ruleGroup name="CPU">
 				<rule name="CPU Utilisation">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;Average_cpu&quot;)]/cell[(@column=&quot;percentUtilisation&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;_Total&quot;)]/cell[(@column=&quot;%processorTime&quot;)]</target>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;cpuUtilisation&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;Average_cpu&quot;)]/cell[(@column=&quot;percentUtilisation&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;CPU&quot;)]/dataview/rows/row[(@name=&quot;_Total&quot;)]/cell[(@column=&quot;%processorTime&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;cpuUtilisation&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 					</targets>
 					<priority>1005</priority>
 					<block>
@@ -202,7 +203,7 @@
 			<ruleGroup name="Disk">
 				<rule name="Percentage Used">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;DISK&quot;)]/dataview/rows/row/cell[(@column=&quot;percentageUsed&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;DISK&quot;)]/dataview/rows/row/cell[(@column=&quot;percentageUsed&quot;)]</target>
 					</targets>
 					<priority>1005</priority>
 					<activeStateAffectsCell>false</activeStateAffectsCell>
@@ -315,7 +316,7 @@
 			<ruleGroup name="Hardware">
 				<rule name="Memory Used Percent">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;memoryUsedPercent&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;memoryUsedPercent&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 					</targets>
 					<priority>1005</priority>
 					<activeStateAffectsCell>false</activeStateAffectsCell>
@@ -363,7 +364,7 @@
 				</rule>
 				<rule name="Paging">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;paging&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;paging&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 					</targets>
 					<priority>5</priority>
 					<block>
@@ -391,7 +392,7 @@
 				</rule>
 				<rule name="Swap Used">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;swapUsed&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;swapUsed&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 					</targets>
 					<priority>5</priority>
 					<activeStateAffectsCell>false</activeStateAffectsCell>
@@ -436,7 +437,7 @@
 				</rule>
 				<rule name="Zombie Process">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;zombieProcesses&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;HARDWARE&quot;)]/dataview/rows/row[(@name=&quot;zombieProcesses&quot;)]/cell[(@column=&quot;Value&quot;)]</target>
 					</targets>
 					<priority>5</priority>
 					<activeStateAffectsCell>false</activeStateAffectsCell>
@@ -505,7 +506,7 @@
 			<ruleGroup name="Network">
 				<rule name="Network Status Unix">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview/rows/row/cell[(@column=&quot;status&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview/rows/row/cell[(@column=&quot;status&quot;)]</target>
 					</targets>
 					<priority>5</priority>
 					<activeStateAffectsCell>false</activeStateAffectsCell>
@@ -562,7 +563,7 @@
 				</rule>
 				<rule name="Network Status Windows">
 					<targets>
-						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview[(@name=&quot;NT-NETWORK&quot;)]/headlines/cell[(@name=&quot;tcpRetransmissionRate&quot;)]</target>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)][(param(&quot;PluginName&quot;)=&quot;NETWORK&quot;)]/dataview[(@name=&quot;NT-NETWORK&quot;)]/headlines/cell[(@name=&quot;tcpRetransmissionRate&quot;)]</target>
 					</targets>
 					<priority>5</priority>
 					<block>
@@ -606,8 +607,8 @@
 		</ruleGroup>
 	</rules>
 	<environments>
-		<environmentGroup name="System">
-			<environment name="System Defaults">
+		<environmentGroup name="Level 1 - Infrastructure">
+			<environment name="Level 1 - Infrastructure Defaults">
 				<var name="SLOW_SAMPLE">
 					<integer>300</integer>
 				</var>
@@ -624,13 +625,13 @@
 					<string>System</string>
 				</var>
 			</environment>
-			<environment name="System"/>
+			<environment name="Level 1 - Infrastructure Overrides"/>
 		</environmentGroup>
 	</environments>
 	<exportedData>
-		<dataSet name="System">
+		<dataSet name="Level 1 - Infrastructure">
 			<paths>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;System&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 1 - Infrastructure&quot;)]</path>
 			</paths>
 		</dataSet>
 	</exportedData>

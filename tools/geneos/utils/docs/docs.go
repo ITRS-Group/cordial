@@ -35,6 +35,8 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 
+	_ "github.com/itrs-group/cordial/tools/geneos/includes"
+
 	// components from internals for documentation
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
