@@ -1,14 +1,13 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-09-24 12:58:21 by PeterGalbavy on ITRSLP372-->
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.10.0-260526/gateway.xsd">
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<managedEntities>
-		<managedEntityGroup name="Geneos Cordial">
+		<managedEntityGroup name="Level 0 - Geneos">
 			<attribute name="APPLICATION">Geneos</attribute>
 			<attribute name="CATEGORY">Information</attribute>
-			<attribute name="COMPONENT">Cordial</attribute>
+			<attribute name="COMPONENT">Geneos</attribute>
 			<addTypes>
-				<type ref="Cordial Status">
-					<environment ref="Cordial"/>
+				<type ref="Level 0 - Geneos">
+					<environment ref="Level 0 - Geneos Overrides"/>
 				</type>
 			</addTypes>
 			<managedEntity disabled="true" name="example">
@@ -20,31 +19,31 @@ You may need to define your own Environment to override the paths to the binary 
 			<managedEntityGroup name="With Diagnostic Views">
 				<!--Place the Managed Entity in this group to add extra Dataviews including open files and network connections.-->
 				<addTypes>
-					<type ref="Cordial Diagnostics">
-						<environment ref="Cordial"/>
+					<type ref="Level 0 - Geneos Extras">
+						<environment ref="Level 0 - Geneos Overrides"/>
 					</type>
 				</addTypes>
 			</managedEntityGroup>
 		</managedEntityGroup>
 	</managedEntities>
 	<types>
-		<typeGroup name="Geneos Cordial">
-			<type name="Cordial Status">
-				<environment ref="Cordial Defaults"/>
+		<typeGroup name="Level 0 - Geneos">
+			<type name="Level 0 - Geneos">
+				<environment ref="Level 0 - Geneos Defaults"/>
 				<var name="SAMPLER_GROUP">
-					<string>Cordial Status</string>
+					<string>Geneos</string>
 				</var>
-				<sampler ref="Cordial Summary"/>
+				<sampler ref="Summary"/>
 				<sampler ref="Instances"/>
 				<sampler ref="Installed Releases"/>
 				<sampler ref="Running"/>
 				<sampler ref="Certificates"/>
 				<sampler ref="AES Files"/>
 			</type>
-			<type name="Cordial Diagnostics">
-				<environment ref="Cordial Defaults"/>
+			<type name="Level 0 - Geneos Diagnostics">
+				<environment ref="Level 0 - Geneos Defaults"/>
 				<var name="SAMPLER_GROUP">
-					<string>Cordial Diagnostics</string>
+					<string>Geneos Diagnostics</string>
 				</var>
 				<sampler ref="Open Files"/>
 				<sampler ref="Open TCP Ports"/>
@@ -52,8 +51,8 @@ You may need to define your own Environment to override the paths to the binary 
 		</typeGroup>
 	</types>
 	<samplers>
-		<samplerGroup name="Geneos Cordial">
-			<samplerGroup name="Cordial Status">
+		<samplerGroup name="Level 0 - Geneos">
+			<samplerGroup name="Level 0 - Geneos">
 				<sampler name="AES Files">
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
@@ -96,25 +95,6 @@ You may need to define your own Environment to override the paths to the binary 
 								<var ref="GENEOS_HOSTS"/>
 							</samplerScript>
 							<showExecutionDuration>false</showExecutionDuration>
-						</toolkit>
-					</plugin>
-				</sampler>
-				<sampler name="Cordial Summary">
-					<var-group>
-						<var ref="SAMPLER_GROUP"/>
-					</var-group>
-					<sampleInterval>
-						<data>300</data>
-					</sampleInterval>
-					<plugin>
-						<toolkit>
-							<samplerScript>
-								<var ref="GENEOS_EXEC"/>
-								<data> </data>
-								<var ref="GENEOS_CONFIG"/>
-								<data> version -t </data>
-								<var ref="GENEOS_HOSTS"/>
-							</samplerScript>
 						</toolkit>
 					</plugin>
 				</sampler>
@@ -176,8 +156,27 @@ You may need to define your own Environment to override the paths to the binary 
 						</toolkit>
 					</plugin>
 				</sampler>
+				<sampler name="Summary">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<data>300</data>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="GENEOS_EXEC"/>
+								<data> </data>
+								<var ref="GENEOS_CONFIG"/>
+								<data> version -t </data>
+								<var ref="GENEOS_HOSTS"/>
+							</samplerScript>
+						</toolkit>
+					</plugin>
+				</sampler>
 			</samplerGroup>
-			<samplerGroup name="Cordial Diagnostics">
+			<samplerGroup name="Level 0 - Geneos Extras">
 				<sampler name="Open Files">
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
@@ -216,13 +215,13 @@ You may need to define your own Environment to override the paths to the binary 
 		</samplerGroup>
 	</samplers>
 	<rules>
-		<ruleGroup name="Geneos Cordial">
-			<ruleGroup name="Cordial Status">
-				<default name="Cordial Status">
+		<ruleGroup name="Level 0 - Geneos">
+			<ruleGroup name="Level 0 - Geneos">
+				<default name="Level 0 - Geneos">
 					<rule>
 						<contexts>
-							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Status&quot;)]/dataview/rows/row/cell</context>
-							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/headlines/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
 						</contexts>
 						<priorityGroup>100</priorityGroup>
 					</rule>
@@ -576,12 +575,12 @@ You may need to define your own Environment to override the paths to the binary 
 					</rule>
 				</ruleGroup>
 			</ruleGroup>
-			<ruleGroup name="Cordial Diagnostics">
-				<default name="Cordial Diagnostics">
+			<ruleGroup name="Level 0 - Geneos Extras">
+				<default name="Level 0 - Geneos Extras">
 					<rule>
 						<contexts>
-							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/rows/row/cell</context>
-							<context>/geneos/gateway/directory/probe/managedEntity[(attr(&quot;COMPONENT&quot;)=&quot;Cordial&quot;)][(attr(&quot;APPLICATION&quot;)=&quot;Geneos&quot;)]/sampler[(@type=&quot;Cordial Diagnostics&quot;)]/dataview/headlines/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
 						</contexts>
 						<priorityGroup>100</priorityGroup>
 					</rule>
@@ -675,12 +674,12 @@ You may need to define your own Environment to override the paths to the binary 
 		</ruleGroup>
 	</rules>
 	<environments>
-		<environmentGroup name="Geneos Cordial">
-			<environment name="Cordial"><!--This environment is an empty placeholder for any user settings required.
+		<environmentGroup name="Level 0 - Geneos">
+			<environment name="Level 0 - Geneos Overrides"><!--This environment is an empty placeholder for any user settings required.
 
 Create a copy of this environment, in the same hierarchy, in your main setup file and add variables as required.--></environment>
-			<environment name="Cordial Defaults">
-				<!--Note: GENEOS_CONFIG has a default intentionally of a space character. Without this space the command line containing an empty variable creates errors in the Netprobe log.-->
+			<environment name="Level 0 - Geneos Defaults">
+				<!--Note: GENEOS_CONFIG has a intentioal default of a space character. Without this space the command line containing an empty variable creates errors in the Netprobe log.-->
 				<var name="GENEOS_HOSTS">
 					<string>-H localhost</string>
 				</var>
@@ -694,10 +693,10 @@ Create a copy of this environment, in the same hierarchy, in your main setup fil
 		</environmentGroup>
 	</environments>
 	<exportedData>
-		<dataSet name="Geneos Cordial">
+		<dataSet name="Level 0 - Geneos">
 			<paths>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Cordial Status&quot;)]</path>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Cordial Diagnostics&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]</path>
 			</paths>
 		</dataSet>
 	</exportedData>

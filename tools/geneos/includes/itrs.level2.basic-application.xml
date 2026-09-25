@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-09-24 12:43:41 by PeterGalbavy on ITRSLP372-->
-<!-- Gateway-created setup include file for user ActiveConsole1 at 127.0.0.1 -->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.10.0-260526/gateway.xsd">
 	<managedEntities>
 		<managedEntityGroup name="Level 2 - Basic Application">
@@ -12,8 +10,12 @@
 		<typeGroup name="Level 2 - Basic Application">
 			<type name="Level 2 - Basic Application">
 				<environment ref="Level 2 - Basic Application Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Application</string>
+				</var>
 				<sampler ref="Logs"/>
 				<sampler ref="Processes"/>
+				<sampler ref="Windows Services"/>
 			</type>
 		</typeGroup>
 	</types>
@@ -66,6 +68,11 @@
 					</activeTime>
 				</activeTimes>
 			</sampler>
+			<sampler name="Windows Services">
+				<plugin>
+					<win-services/>
+				</plugin>
+			</sampler>
 		</samplerGroup>
 	</samplers>
 	<rules>
@@ -100,9 +107,6 @@
 					<activeTime>
 						<activeTime ref="Application - Always"/>
 					</activeTime>
-				</var>
-				<var name="SAMPLER_GROUP">
-					<string>Application</string>
 				</var>
 			</environment>
 			<environment name="Level 2 - Basic Application Overrides"/>

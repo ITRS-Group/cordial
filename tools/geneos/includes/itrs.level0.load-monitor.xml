@@ -1,0 +1,2083 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
+	<types>
+		<typeGroup name="Level 1 - Load Monitor">
+			<type name="Gateway Load Monitor">
+				<sampler ref="gwLoadComponents"/>
+				<sampler ref="gwLoadConnections"/>
+				<sampler ref="gwLoadRules"/>
+				<sampler ref="gwLoadRulesBySampler"/>
+				<sampler ref="gwLoadRulesByProbe"/>
+				<sampler ref="gwLoadRulesByEntity"/>
+				<sampler ref="gwLoadDatabaseByEntity"/>
+				<sampler ref="gwLoadDatabaseByItem"/>
+				<sampler ref="gwLoadGatewaySQLByEntity"/>
+				<sampler ref="gwLoadGatewaySQLBySampler"/>
+				<sampler ref="gwLoadRulesByType"/>
+				<sampler ref="gwLoadRulesByPlugin"/>
+				<sampler ref="gwLoadRuleThreads"/>
+				<sampler disabled="true" ref="gwLoadRulesBySamplerAndRule"/>
+				<sampler disabled="true" ref="gwLoadRulesByEntityAndRule"/>
+			</type>
+			<type name="Gateway Load Monitor XPaths">
+				<sampler ref="gwLoadXPathsAbsolute"/>
+				<sampler ref="gwLoadXPathsRelative"/>
+			</type>
+			<type name="Gateway Environment">
+				<sampler ref="gwProcesses"/>
+				<sampler ref="gwDataQuality"/>
+				<sampler ref="gwFilesCheck"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Level 1 - Load Monitor">
+			<sampler name="gwLoadComponents">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Components</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<componentStats/>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadComponents">
+						<displayName>Components</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadConnections">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Connections</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<connectionStats/>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadConnections">
+						<displayName>Connections</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadDatabaseByEntity">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Database Logging by Entity</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>managedEntity</group>
+									</grouping>
+									<statistics>
+										<expandType>dbLogging</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadDatabaseByEntity">
+						<displayName>Database Logging by Entity</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadDatabaseColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadDatabaseByItem">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Database Logging by Item</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>dbItem</group>
+									</grouping>
+									<statistics>
+										<expandType>dbLogging</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadDatabaseByItem">
+						<displayName>Database Logging by Item</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadDatabaseColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadGatewaySQLByEntity">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Gateway SQL by Entity</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<Gateway-sql>
+									<grouping>
+										<group>managedEntity</group>
+									</grouping>
+									<statistics>
+										<expandType>times</expandType>
+									</statistics>
+								</Gateway-sql>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadGatewaySQLByEntity">
+						<displayName>Gateway SQL by Entity</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadGatewaySQLBySampler">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Gateway SQL by Sampler</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<Gateway-sql>
+									<grouping>
+										<group>sampler</group>
+									</grouping>
+									<statistics>
+										<expandType>times</expandType>
+									</statistics>
+								</Gateway-sql>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadGatewaySQLBySampler">
+						<displayName>Gateway SQL by Sampler</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRules">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>rule</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRules">
+						<displayName>Rules</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesByEntity">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Entity</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>managedEntity</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesByEntity">
+						<displayName>Rules by Entity</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesByEntityAndRule">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Entity-Rule</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>managedEntity</group>
+										<group>rule</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesByEntityAndRule">
+						<displayName>Rules by Entity-Rule</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesByPlugin">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Plugin</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>plug-in</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesByPlugin">
+						<displayName>Rules by Plugin</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesByProbe">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Probe</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>probe</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesByProbe">
+						<displayName>Rules by Probe</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesBySampler">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Sampler</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>sampler</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesBySampler">
+						<displayName>Rules by Sampler</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesBySamplerAndRule">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Sampler-Rule</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>sampler</group>
+										<group>rule</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesBySamplerAndRule">
+						<displayName>Rules by Sampler-Rule</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRulesByType">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rules by Type</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<directoryStats>
+									<grouping>
+										<group>type</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</directoryStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRulesByType">
+						<displayName>Rules by Type</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadRuleThreads">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>Rule Threads</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<componentStats>
+									<grouping>
+										<group>ThreadID</group>
+									</grouping>
+									<statistics>
+										<expandType>rules</expandType>
+									</statistics>
+								</componentStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadRuleThreads">
+						<displayName>Rule Threads</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadXPathsAbsolute">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>XPaths - Absolute</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<xpathStats>
+									<filter>
+										<method>getItems</method>
+									</filter>
+								</xpathStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadXPathsAbsolute">
+						<displayName>XPaths - Absolute</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwLoadXPathsRelative">
+				<var-group>
+					<data>Gateway Load</data>
+				</var-group>
+				<displayName>XPaths - Relative</displayName>
+				<sampleInterval>
+					<var ref="gwLoadSampleInterval"/>
+				</sampleInterval>
+				<sampleOnStartup>false</sampleOnStartup>
+				<plugin>
+					<Gateway-gatewayLoad>
+						<view>
+							<category>
+								<xpathStats>
+									<filter>
+										<method>getRelativeItems</method>
+									</filter>
+								</xpathStats>
+							</category>
+							<source>
+								<file>
+									<var ref="gwLoadDirectory"/>
+									<data>/</data>
+									<var ref="gwLoadStatsFile"/>
+								</file>
+							</source>
+						</view>
+					</Gateway-gatewayLoad>
+				</plugin>
+				<dataviews>
+					<dataview name="gwLoadXPathsRelative">
+						<displayName>XPaths - Relative</displayName>
+						<additions>
+							<var-columns>
+								<var ref="gwLoadHistoryColumns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+		</samplerGroup>
+		<samplerGroup name="Gateway Environment">
+			<sampler name="gwProcesses">
+				<var-group>
+					<data>Gateway Environment</data>
+				</var-group>
+				<displayName>Gateway Process</displayName>
+				<sampleInterval>
+					<var ref="gwLoadEnvInterval"/>
+				</sampleInterval>
+				<plugin>
+					<processes>
+						<var-displayMode>
+							<data>SUMMARY</data>
+						</var-displayMode>
+						<processes>
+							<process>
+								<data>
+									<alias>
+										<var ref="gwLoadGatewayName"/>
+									</alias>
+									<ID>
+										<searchString>
+											<data>gateway2.linux_64.*\s</data>
+											<var ref="gwLoadGatewayName"/>
+											<data>\s</data>
+										</searchString>
+									</ID>
+								</data>
+							</process>
+						</processes>
+					</processes>
+				</plugin>
+				<dataviews>
+					<dataview name="gwProcesses">
+						<displayName>Gateway Process</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwDataQuality">
+				<var-group>
+					<data>Gateway Environment</data>
+				</var-group>
+				<displayName>Gateway Data Quality</displayName>
+				<sampleInterval>
+					<var ref="gwLoadEnvInterval"/>
+				</sampleInterval>
+				<plugin>
+					<stateTracker>
+						<columns>
+							<renameTrackerColumn>
+								<data>metric</data>
+							</renameTrackerColumn>
+						</columns>
+						<templateOptions>
+							<hideTrackerIDs>
+								<data>true</data>
+							</hideTrackerIDs>
+						</templateOptions>
+						<performance>
+							<skipMidSampleUpdates>
+								<data>true</data>
+							</skipMidSampleUpdates>
+						</performance>
+						<trackerGroup name="Data Quality">
+							<columns>
+								<column>
+									<data>period</data>
+								</column>
+								<column>
+									<data>lifetime</data>
+								</column>
+							</columns>
+							<trackers>
+								<tracker name="Data Age Stats">
+									<filename>
+										<var ref="gwLoadDirectory"/>
+										<data>/</data>
+										<var ref="gwLoadLogFile"/>
+									</filename>
+									<rewind>
+										<data>true</data>
+									</rewind>
+									<messageTimestamp>
+										<identifyingPattern>
+											<data>^(\d+-\d+-\d+\s\d+:\d+:.+)\+</data>
+										</identifyingPattern>
+										<datePatternGroup>0</datePatternGroup>
+										<dateFormat>
+											<data>%Y-%m-%d %H:%M:%S%f</data>
+										</dateFormat>
+									</messageTimestamp>
+									<template>
+										<data>true</data>
+									</template>
+									<transitionStates>
+										<defaultState name="starting">
+
+                                        </defaultState>
+										<state name="update">
+											<keys>
+												<key>
+													<regularExpression>
+														<data>
+															<regex>INFO: DataQuality\s+(?&lt;id&gt;[^:]+): period - (\d+ \w+),\s+lifetime - (\d+ \w+)</regex>
+														</data>
+													</regularExpression>
+												</key>
+											</keys>
+										</state>
+									</transitionStates>
+								</tracker>
+							</trackers>
+						</trackerGroup>
+					</stateTracker>
+				</plugin>
+				<dataviews>
+					<dataview name="Data Quality">
+						<additions>
+							<var-columns>
+								<var ref="gwLoadEnvHistory Columns"/>
+							</var-columns>
+						</additions>
+					</dataview>
+				</dataviews>
+			</sampler>
+			<sampler name="gwFilesCheck">
+				<var-group>
+					<data>Gateway Environment</data>
+				</var-group>
+				<displayName>Gateway Files</displayName>
+				<sampleInterval>
+					<var ref="gwLoadEnvInterval"/>
+				</sampleInterval>
+				<plugin>
+					<fkm>
+						<display>
+							<columns>
+								<column>status</column>
+								<column>permissions</column>
+								<column>lastModificationTime</column>
+								<column>secondsSinceLastModified</column>
+								<column>fileSize</column>
+								<column>absolutePath</column>
+								<column>fileOwner</column>
+							</columns>
+						</display>
+						<files>
+							<file>
+								<source>
+									<filename>
+										<var ref="gwLoadDirectory"/>
+										<data>/</data>
+										<var ref="gwLoadStatsFile"/>
+									</filename>
+								</source>
+								<alias>
+									<data>Gateway Load Stats File</data>
+								</alias>
+							</file>
+							<file>
+								<source>
+									<filename>
+										<var ref="gwLoadDirectory"/>
+										<data>/</data>
+										<var ref="gwLoadLogFile"/>
+									</filename>
+								</source>
+								<alias>
+									<data>Gateway Log File</data>
+								</alias>
+							</file>
+						</files>
+					</fkm>
+				</plugin>
+				<dataviews>
+					<dataview name="gwFilesCheck">
+						<displayName>Gateway Files</displayName>
+					</dataview>
+				</dataviews>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<rules>
+		<historyPeriod name="1 minute">
+			<calculationPeriod>
+				<rollingPeriod>
+					<measure>minute</measure>
+					<length>1</length>
+					<maxValues>3</maxValues>
+				</rollingPeriod>
+			</calculationPeriod>
+		</historyPeriod>
+		<historyPeriod name="5 minutes">
+			<calculationPeriod>
+				<rollingPeriod>
+					<measure>minute</measure>
+					<length>5</length>
+					<maxValues>6</maxValues>
+				</rollingPeriod>
+			</calculationPeriod>
+		</historyPeriod>
+		<historyPeriod name="1 hour">
+			<calculationPeriod>
+				<rollingPeriod>
+					<measure>hour</measure>
+					<length>1</length>
+					<maxValues>13</maxValues>
+				</rollingPeriod>
+			</calculationPeriod>
+		</historyPeriod>
+		<historyPeriod name="1 day">
+			<calculationPeriod>
+				<rollingPeriod>
+					<measure>day</measure>
+					<length>1</length>
+					<maxValues>25</maxValues>
+				</rollingPeriod>
+			</calculationPeriod>
+		</historyPeriod>
+		<ruleGroup name="Level 1 - Load Monitor">
+			<ruleGroup name="Load History">
+				<ruleGroup name="time">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadComponents&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRules&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByPlugin&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByProbe&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySampler&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByType&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRuleThreads&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntityAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySamplerAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadComponents&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRules&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByPlugin&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByProbe&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySampler&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByType&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRuleThreads&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntityAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySamplerAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuMin&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadComponents&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRules&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByPlugin&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByProbe&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySampler&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByType&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRuleThreads&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntityAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySamplerAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadComponents&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRules&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByPlugin&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByProbe&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySampler&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByType&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRuleThreads&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesByEntityAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadRulesBySamplerAndRule&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="totalTime">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu5Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="updates">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByEntity&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwLoadDatabaseByItem&quot;)][(@type=&quot;Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+			</ruleGroup>
+			<ruleGroup name="Environment History">
+				<rule name="1 hour">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwDataQuality&quot;)][(@type=&quot;Gateway Environment&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;hour&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="period">../cell[(@column=&quot;period&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="seconds"/>
+							<integer>3600</integer>
+						</set>
+						<set>
+							<var ref="max"/>
+							<maximum>
+								<historicalDataItem>
+									<pathAlias ref="period"/>
+									<property>@value</property>
+									<historyPeriod ref="1 hour"/>
+								</historicalDataItem>
+							</maximum>
+						</set>
+						<set>
+							<var ref="period"/>
+							<dataItem>
+								<pathAlias ref="period"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<format>
+									<string>%d %s</string>
+									<var ref="max"/>
+									<stringAfter>
+										<var ref="period"/>
+										<string> </string>
+									</stringAfter>
+								</format>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+				<rule name="1 day">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;gwDataQuality&quot;)][(@type=&quot;Gateway Environment&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;day&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="period">../cell[(@column=&quot;period&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="seconds"/>
+							<integer>86400</integer>
+						</set>
+						<set>
+							<var ref="max"/>
+							<maximum>
+								<historicalDataItem>
+									<pathAlias ref="period"/>
+									<property>@value</property>
+									<historyPeriod ref="1 day"/>
+								</historicalDataItem>
+							</maximum>
+						</set>
+						<set>
+							<var ref="period"/>
+							<dataItem>
+								<pathAlias ref="period"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<format>
+									<string>%d %s</string>
+									<var ref="max"/>
+									<stringAfter>
+										<var ref="period"/>
+										<string> </string>
+									</stringAfter>
+								</format>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<persistence>
+		<writePeriod>30</writePeriod>
+		<rewritePeriod>500</rewritePeriod>
+	</persistence>
+	<operatingEnvironment>
+		<numRuleEvaluationThreads>4</numRuleEvaluationThreads>
+		<var name="gwLoadStatsFile">
+			<string>stats.xml</string>
+		</var>
+		<var name="gwLoadDirectory">
+			<string>/tmp</string>
+		</var>
+		<var name="gwLoadLogFile">
+			<string>gateway.log</string>
+		</var>
+		<var name="gwLoadSampleInterval">
+			<integer>20</integer>
+		</var>
+		<var name="gwLoadEnvInterval">
+			<integer>5</integer>
+		</var>
+		<var name="gwLoadGatewayName">
+			<string>none</string>
+		</var>
+		<var name="gwLoadHistoryColumns">
+			<stringList>
+				<string>cpu1Min</string>
+				<string>cpu5Min</string>
+			</stringList>
+		</var>
+		<var name="gwLoadEnvHistory Columns">
+			<stringList>
+				<string>hour</string>
+				<string>day</string>
+			</stringList>
+		</var>
+		<var name="gwLoadDatabaseColumns">
+			<stringList>
+				<string>cpu1Min</string>
+				<string>cpu5Min</string>
+				<string>updates1Min</string>
+				<string>updates5Min</string>
+			</stringList>
+		</var>
+	</operatingEnvironment>
+</gateway>
