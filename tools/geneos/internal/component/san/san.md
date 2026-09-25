@@ -54,8 +54,13 @@ The following structured parameters are used in the default `san.setup.xml.gotmp
 
 * `gateways` (Default: Empty)
 
-  The list of Gateway instances that this SAN will attempt to connect to. When setting these values the format is `HOSTNAME:PORT`. If the SAN is configured to support TLS then the connection to the Gateway(s) will be set to use secure mode *except* in the case when the Gateway port is `7039` which is the default insecure port.
+  The list of Gateway instances that this SAN will attempt to connect to. When setting these values the format is `HOSTNAME:PORT`. If the SAN is configured to support TLS then the connection to the Gateway(s) will be set to use if any of the following are true:
 
+  * A `tls::secure` parameter is set to `true`.
+  * A `tls::ca-bundle` is specified.
+  * A `tls::verify` parameter is set to `true`.
+  * A `certchain` is specified.
+  
 * `attributes` (Default: Empty)
 
   Attributes are set using `--attribute`/`-a` with a value in the form `NAME=VALUE`. Note that the `NAME` is case-sensitive, unlike basic parameters. To remove an attribute use `geneos unset -a NAME`.

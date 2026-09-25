@@ -94,9 +94,9 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	return
 }
 
-// DeleteSettingFromMap removes key from the map from and if it is
+// deleteSettingFromMap removes key from the map from and if it is
 // registered as an alias it also removes the key that alias refers to.
-func DeleteSettingFromMap(cf *config.Config, ct *geneos.Component, from map[string]any, key string) {
+func deleteSettingFromMap(cf *config.Config, ct *geneos.Component, from map[string]any, key string) {
 	if a, ok := ct.LegacyParameters[key]; ok {
 		// delete any setting this is an alias for, as well as the alias
 		delete(from, a)
@@ -107,7 +107,7 @@ func DeleteSettingFromMap(cf *config.Config, ct *geneos.Component, from map[stri
 func unsetMap(cf *config.Config, ct *geneos.Component, key string, items UnsetValues) {
 	x := config.Get[map[string]any](cf, key)
 	for _, k := range items {
-		DeleteSettingFromMap(cf, ct, x, k)
+		deleteSettingFromMap(cf, ct, x, k)
 	}
 	if len(x) == 0 {
 		config.Delete(cf, key)

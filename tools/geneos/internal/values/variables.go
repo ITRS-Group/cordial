@@ -9,9 +9,9 @@ import (
 
 // variables - passed in as [TYPE:]NAME=VALUE
 type Variable struct {
-	Type  string
-	Name  string
-	Value string
+	Type  string `mapstructure:"type,omitempty"`
+	Name  string `mapstructure:"name,omitempty"`
+	Value string `mapstructure:"value,omitempty"`
 }
 
 type Variables []Variable
@@ -28,6 +28,14 @@ func (v *Variables) String() string {
 	return ""
 }
 
+// Set parses a variable in the format [TYPE:]NAME=VALUE and adds it to
+// the Variables slice. If a variable with the same name already exists,
+// it is updated. This is required to implement the pflag.Value
+// interface.
+//
+// Any prefix terminating in a '/' to indicate the managed entity for
+// the variable is moved to the Name field, regardless of Type being
+// defined or not
 func (v *Variables) Set(value string) error {
 	if *v == nil {
 		*v = Variables{}
@@ -52,12 +60,31 @@ func (v *Variables) Type() string {
 func getVarValue(in string) (variable Variable) {
 	var t, name, value string
 
-	t, r, found := strings.Cut(in, ":")
-	if !found {
+	// check for managed entity prefix and save to move to name later
+
+	// ENTITY/TYPE:NAME=VALUE
+	entity, rest, foundEntity := strings.Cut(in, "/")
+	if foundEntity {
+		// or is it TYPE:ENTITY/NAME=VALUE ?
+		if t, e, found := strings.Cut(entity, ":"); found {
+			// if the entity contains a type prefix, move it to the name for further processing
+			entity = e
+			in = t + ":" + rest
+		} else {
+			in = rest
+		}
+	}
+
+	t, r, foundType := strings.Cut(in, ":")
+	if !foundType {
 		t = "string"
 		name, value, _ = strings.Cut(in, "=")
 	} else {
 		name, value, _ = strings.Cut(r, "=")
+	}
+
+	if foundEntity {
+		name = entity + "/" + name
 	}
 
 	// XXX check types here - e[0] options type, default string

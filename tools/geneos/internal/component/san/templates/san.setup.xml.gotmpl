@@ -1,69 +1,99 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<netprobe
-	compatibility="1"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA2011.2-110303/netprobe.xsd">
+<netprobe>
 	<selfAnnounce>
 		<enabled>true</enabled>
 		<retryInterval>60</retryInterval>
 		<requireReverseConnection>true</requireReverseConnection>
-		<probeName>{{.sanname}}</probeName>
+		<probeName>{{ .sanname }}</probeName>
 		<managedEntities>
+			{{- if .types }}
 			<managedEntity>
-				<name>{{.sanname}}</name>
-				{{if .attributes -}}
+				<name>{{ .sanname }}</name>
+				{{ if .attributes -}}
 				<attributes>
-					{{range $key, $value := .attributes -}}
-					<attribute name="{{nameOf $value "="}}">{{valueOf $value "="}}</attribute>
-					{{end}}
+					{{ range $key, $value := .attributes -}}
+					<attribute name="{{ nameOf $value "=" }}">{{ valueOf $value "=" }}</attribute>
+					{{ end }}
 				</attributes>
 				{{- end}}
-				{{if .variables -}}
 				<variables>
 					<!-- variables prefixed with '_' are added automatically -->
 					<var name="_netprobeInstance">
-						<string>{{.name}}</string>
+						<string>{{ .name }}</string>
 					</var>
 					<var name="_geneosHome">
-						<string>{{.root}}</string>
+						<string>{{ .root }}</string>
 					</var>
 					<var name="_netprobeHome">
-						<string>{{.home}}</string>
+						<string>{{ .home }}</string>
 					</var>
 					<var name="_netprobeBaseVersion">
-						<string>{{.version}}</string>
+						<string>{{ .version }}</string>
 					</var>
 					<var name="_netprobeLogFile">
-						<string>{{join .home .logfile}}</string>
+						<string>{{ join .home .logfile }}</string>
 					</var>
-					{{range $value := .variables -}}
-					<var name="{{$value.name}}">
-						<{{$value.type}}>{{$value.value}}</{{$value.type}}>
-					</var>
-					{{end}}
+					{{- if .variables }}
+					{{- range .variables }}
+					<var name="{{ .name }}">
+						<{{ .type }}>{{ .value }}</{{ .type }}>
+					</var>{{- end }}
+					{{- end }}
 				</variables>
-				{{- end}}
-				{{if .types -}}
+				{{- if .types }}
 				<types>
-					{{range .types -}}<type>{{.}}</type>
-					{{end}}
+					{{- range .types }}
+					<type>{{ . }}</type>
+					{{- end }}
 				</types>
-				{{- end}}
+				{{- end }}
 			</managedEntity>
+			{{- end -}}
+			{{- range .entities }}
+			{{- if .types }}
+			<managedEntity>
+				<name>{{ .name}}</name>
+				{{if .attributes -}}<attributes>
+					{{ range $key, $value := .attributes -}}
+					<attribute name="{{ nameOf $value "=" }}">{{ valueOf $value "=" }}</attribute>
+					{{- end }}
+				</attributes>
+				{{- end -}}
+				{{- if .variables -}}
+				<variables>
+					{{- range .variables }}
+					<var name="{{ .name }}">
+						<{{ .type }}>{{ .value }}</{{ .type }}>
+					</var>{{ end }}
+				</variables>
+				{{- end -}}
+				{{- if .types }}
+				<types>
+					{{- range .types }}
+					<type>{{ . }}</type>{{ end }}
+				</types>
+				{{- end }}
+			</managedEntity>
+			{{- end }}
+			{{- end }}
 		</managedEntities>
 		<gateways>
 			{{- with $data := . -}}
-			{{ $secure := or $data.tls.secure (index $data.tls "ca-bundle") $data.tls.verify $data.certchain -}}
-			{{range $key, $value := $data.gateways -}}<gateway>
+			{{- $secure := or $data.certchain (and $data.tls (or $data.tls.secure (index $data.tls "ca-bundle") $data.tls.verify)) }}
+			{{- range $key, $value := $data.gateways }}
+			<gateway>
 				<hostname>{{$key}}</hostname>
 				<port>{{$value}}</port>
 				<secure>{{if $secure}}true{{else}}false{{end}}</secure>
 			</gateway>
-			{{else -}}<gateway>
+			{{- else }}
+			<gateway>
 				<hostname>localhost</hostname>
-				<port>{{if $secure}}7038{{else}}7039{{end}}</port>
-				<secure>{{if $secure}}true{{else}}false{{end}}</secure>
+				<port>{{ if $secure }}7038{{ else }}7039{{ end }}</port>
+				<secure>{{ if $secure }}true{{ else }}false{{ end }}</secure>
 			</gateway>
-		{{end -}}{{end -}}</gateways>
+			{{- end }}
+			{{- end }}
+		</gateways>
 	</selfAnnounce>
 </netprobe>
