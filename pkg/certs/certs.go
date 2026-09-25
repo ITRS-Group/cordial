@@ -250,13 +250,15 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	return true
 }
 
-// ParseCertChain tries to verify the provided certificate chain. It
-// returns the leaf certificate, any intermediates and any root
-// certificate found in the chain. It returns an error if verification
-// fails. The first certificate in the certs provided is assumed to be
-// the leaf certificate. The order of the remaining certificates does
-// not matter.
+// ParseCertChain tries to verify the provided certificates into a
+// chain. It returns the leaf certificate, any intermediates and any
+// root certificate found in the chain. It returns an error if
+// verification fails. The first certificate in the certs provided is
+// assumed to be the leaf certificate. The order of the remaining
+// certificates does not matter.
 func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermediates []*x509.Certificate, root *x509.Certificate, err error) {
+	var roots []*x509.Certificate
+
 	for _, c := range cert {
 		switch {
 		case IsValidLeafCert(c):
@@ -266,11 +268,7 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 			}
 			leaf = c
 		case IsValidRootCA(c):
-			if root != nil && !root.Equal(c) {
-				err = errors.New("multiple root certificates found")
-				return
-			}
-			root = c
+			roots = append(roots, c)
 		case IsValidSigningCA(c):
 			intermediates = append(intermediates, c)
 		default:
@@ -285,9 +283,11 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 	}
 
 	opts := x509.VerifyOptions{}
-	if root != nil {
+	if len(roots) > 0 {
 		opts.Roots = x509.NewCertPool()
-		opts.Roots.AddCert(root)
+		for _, rc := range roots {
+			opts.Roots.AddCert(rc)
+		}
 	}
 	if len(intermediates) > 0 {
 		opts.Intermediates = x509.NewCertPool()
