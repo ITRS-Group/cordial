@@ -338,7 +338,7 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 		return
 	}
 
-	// if rebuild succeeds, reload the instance to pick up any
+	// if rebuild succeeds, send the instance a reload to pick up any
 	// changes to the config that are made by the rebuild
 	i.Log().Debug("reloading instance")
 	if err = i.Reload(); err != nil {
