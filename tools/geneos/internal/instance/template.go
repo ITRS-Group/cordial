@@ -18,6 +18,7 @@ limitations under the License.
 package instance
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -117,16 +118,20 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	// convert "variables" (if any) from slice of structs to slice of
 	// maps for lower case keys in templates
-	newVals := []map[string]string{}
-	if variables, found := m["variables"]; found {
-		switch vx := variables.(type) {
+	//
+	// we don't need to do the same for entity specific "variables" as
+	// that configuration format was introduced after variable format
+	// changes that this code is helping migrate
+	variables := []map[string]string{}
+	if vars, found := m["variables"]; found {
+		switch vx := vars.(type) {
 		case []map[string]string:
-			newVals = vx
+			variables = vx
 		case []any:
 			for _, v := range vx {
 				vMap, ok := v.(map[string]any)
 				if !ok {
-					i.Log().Warn("variable is not a map", slog.Any("variable", v))
+					i.Log().Warn("variable is not a map", slog.Any("variable", v), slog.String("type", fmt.Sprintf("%T", v)))
 					return
 					// continue
 				}
@@ -137,8 +142,11 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 					"name":  vMap["name"].(string),
 					"value": vMap["value"].(string),
 				}
-				newVals = append(newVals, nv)
+				variables = append(variables, nv)
 			}
+		// have to handle both []values.Variable and values.Variables
+		// types separately even though they are the same underlying
+		// types
 		case []values.Variable:
 			for _, v := range vx {
 				nv := map[string]string{
@@ -146,13 +154,21 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 					"name":  v.Name,
 					"value": v.Value,
 				}
-				newVals = append(newVals, nv)
+				variables = append(variables, nv)
+			}
+		case values.Variables:
+			for _, v := range vx {
+				nv := map[string]string{
+					"type":  v.Type,
+					"name":  v.Name,
+					"value": v.Value,
+				}
+				variables = append(variables, nv)
 			}
 		default:
-			i.Log().Warn("variables is in an unexpected format", slog.Any("variables", variables))
+			i.Log().Warn("variables is in an unexpected format", slog.Any("variables", vars), slog.String("type", fmt.Sprintf("%T", vars)))
 			// drop through
 		}
-
 	}
 
 	// tls migration, for now lift new settings up to old names
@@ -178,7 +194,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		// strings.
 		//
 		// Self-announcing netprobes do not support password variables,
-		// but we leave them as strings for toolkits etc to potentially
+		// so we leave them as strings for toolkits etc to potentially
 		// decode
 		if k, _, _, err := ReadAESKeyFile(i); err == nil {
 			if env, ok := m["env"]; ok {
@@ -214,7 +230,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 								// but remove it anyway to avoid leaving secrets in plain text
 								return true
 							}
-							newVals = append(newVals, map[string]string{
+							variables = append(variables, map[string]string{
 								"type":  "stdAESPassword",
 								"name":  name,
 								"value": "<stdAES>" + enc + "</stdAES>",
@@ -229,7 +245,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 				m["env"] = envsStr
 			}
 
-			newVals = slices.DeleteFunc(newVals, func(v map[string]string) bool {
+			variables = slices.DeleteFunc(variables, func(v map[string]string) bool {
 				if v["type"] == "string" && strings.HasPrefix(v["value"], "${enc:") {
 					secret := cf.ExpandToPassword(v["value"])
 					defer clear(secret)
@@ -251,7 +267,9 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		}
 	}
 
-	m["variables"] = newVals
+	// overwrite the top-level "variables" key with the processed
+	// variables slice, leave SAN managed-entity ones alone
+	m["variables"] = variables
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		i.Log().Error("Cannot create configuration from template(s)", slog.Any("error", err))
