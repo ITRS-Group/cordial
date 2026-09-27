@@ -113,7 +113,7 @@ const (
 // directory. If p does not have a prefix of `~/` then a cleaned copy is
 // returned. If there is an error resolving the user's home directory
 // then the path is returned relative to the working directory, i.e. with
-// just the `~/` removed (and cleaned).
+// the `~/` removed (and cleaned).
 func ResolveHome(p string) string {
 	p2 := string(p)
 	if !strings.HasPrefix(p2, homePrefixDir) {

@@ -191,9 +191,12 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 // necessary type assertion. Other specific types may be added in the
 // future.
 //
-// If the option [`config.Default`] is used, then the type must be
-// identical to T. If it is not, then the default value is the zero
-// value for the type T.
+// If the key is not set then the zero value for the type is returned,
+// with maps and slices initialised to an empty value to avoid nil
+// pointer panics in callers that expect a map or slice. If the option
+// [`config.DefaultValue`] is used, then the type must be identical to
+// T. If it is not, then the default value is the zero value for the
+// type T.
 func Get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
