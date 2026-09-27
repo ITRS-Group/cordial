@@ -218,7 +218,7 @@ func (c *Config) expandAllSettings(options ...ExpandOption) (all map[string]any)
 
 // expandEncodedString accepts input of the form:
 //
-//	[enc:]keyfile[,keyfile...]:[+encs+HEX|external]
+//	[enc:]keyfile[|keyfile...]:[+encs+HEX|external]
 //
 // Each keyfile is tried until the first that does not return a decoding
 // error. `keyfile` may be prefixed `~/` in which case the file is
@@ -244,7 +244,7 @@ func expandEncoded[T string | []byte](c *Config, s T, options ...ExpandOption) (
 		return
 	}
 
-	for _, k := range strings.Split(keyfiles, "|") {
+	for k := range strings.SplitSeq(keyfiles, "|") {
 		keyfile := KeyFile(ResolveHome(k))
 		p, err := keyfile.DecodeString(host.Localhost, encodedValue)
 		if err != nil {
