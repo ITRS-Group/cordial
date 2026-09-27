@@ -92,18 +92,18 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		if err = promptForSecrets("Parameter", setCmdValues.SecureParams); err != nil {
 			return
 		}
-		for _, s := range setCmdValues.SecureParams {
-			defer clear(s.Secret)
+		for i := range setCmdValues.SecureParams {
+			defer clear(setCmdValues.SecureParams[i].Secret)
 		}
 
 		if err = promptForSecrets("Environment Variable", setCmdValues.SecureEnvs); err != nil {
 			return
 		}
-		for _, s := range setCmdValues.SecureEnvs {
-			defer clear(s.Secret)
+		for i := range setCmdValues.SecureEnvs {
+			defer clear(setCmdValues.SecureEnvs[i].Secret)
 		}
 
-		for _, s := range setCmdValues.Variables {
+		for i, s := range setCmdValues.Variables {
 			if s.Type == "secret" {
 				// prompt for value, save at string, leave encoding
 				// until later as multiple instances may have different
@@ -116,7 +116,7 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 					if err != nil {
 						return err
 					}
-					s.Value = string(secret)
+					setCmdValues.Variables[i].Value = string(secret)
 				}
 			}
 		}
