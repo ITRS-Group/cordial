@@ -20,11 +20,13 @@ package values
 import (
 	"fmt"
 	"log/slog"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -33,21 +35,21 @@ import (
 // configuration is not modified. It is up to the caller to update the
 // instance configuration on success. SecureEnvs overwrite any set by
 // Envs earlier.
-func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (newCf *config.Config, err error) {
+func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.Config, err error) {
 	var secrets []string
 
-	// can't call instance.CloneConfig() here because of the lock, so
-	// create a new config and merge the instance config into it
-	newCf = config.New()
-	newCf.MergeConfigMap(i.Config().AllSettings())
-
-	cf := i.Config()
 	ct := i.Type()
-	h := i.Host()
+
+	// can't call instance.CloneConfig() here because of the lock, so
+	// create a new config and merge the instance config into it later
+	cf = config.New()
+	cf.MergeConfigMap(i.Config().AllSettings())
 
 	// set parameters, valid for all instance types
-	if err = newCf.SetKeyValuePairs(values.Params...); err != nil {
-		return
+	if err = cf.SetKeyValuePairs(values.Params...); err != nil {
+		// ignore junk on the command line, log to debug?
+		i.Log().Debug("ignoring invalid key-value pairs on the command line")
+		// return
 	}
 
 	if len(values.SecureParams) > 0 {
@@ -55,253 +57,271 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (newCf *confi
 			err = fmt.Errorf("keyfile is required to set secure parameters")
 			return
 		}
-		secrets, err = updateEncoded(h, values.SecureParams, keyfile)
+		secrets, err = updateEncoded(i, values.SecureParams, keyfile)
 		if err != nil {
 			return
 		}
 
-		if err = newCf.SetKeyValuePairs(secrets...); err != nil {
+		if err = cf.SetKeyValuePairs(secrets...); err != nil {
 			return
 		}
 	}
 
 	// set the environment values, valid for all instance types
-	updateSlice(newCf, "env", values.Envs, nil)
+	for _, e := range values.Envs {
+		updateStringSliceValue(i, cf, ENVIRONMENT, e, nil)
+	}
 
 	if len(values.SecureEnvs) > 0 {
 		if keyfile == "" {
 			err = fmt.Errorf("keyfile is required to set secure environment variables")
 			return
 		}
-		secrets, err = updateEncoded(h, values.SecureEnvs, keyfile)
+		secrets, err = updateEncoded(i, values.SecureEnvs, keyfile)
 		if err != nil {
 			return
 		}
-		updateSlice(newCf, "env", secrets, nil)
+		for _, s := range secrets {
+			updateStringSliceValue(i, cf, ENVIRONMENT, s, nil)
+		}
 	}
 
 	// includes are only valid for gateways
 
 	if ct.IsA("gateway") {
-		updateMap(newCf, "includes", values.Includes)
+		for k, v := range values.Includes {
+			updateMapValue(i, cf, INCLUDES, k, v)
+		}
 	}
 
 	// gateways are only valid for SAN and floating types
 
 	if ct.IsA("san", "floating") {
-		updateMap(newCf, "gateways", values.Gateways)
+		for k, v := range values.Gateways {
+			updateMapValue(i, cf, GATEWAYS, k, v)
+		}
 	}
 
 	// these settings are only valid for SAN types
 	if ct.IsA("san") {
-		// build three maps of managed entity specific settings: types, attributes, and variables
-		entityTypes := make(map[string][]string)
+		// build three maps of managed entity specific settings: types,
+		// attributes, and variables
+
+		// first, types
+
+		// get the current list, if any, of managed entities in the
+		// config, map the name to the index
+		entities := config.Get[map[string]map[string]any](i.Config(), MANAGED_ENTITIES)
+		managedEntitiesIdx := make(map[string]string, len(entities))
+		for key, me := range entities {
+			if name, ok := me["name"].(string); ok {
+				managedEntitiesIdx[name] = key
+			}
+		}
+
+		// build a map of managed entity specific types, with an empty
+		// string for top-level entity
 		for _, t := range values.Types {
-			if entity, typ, found := strings.Cut(t, "/"); found {
-				entityTypes[entity] = append(entityTypes[entity], typ)
+			entity, typ, found := strings.Cut(t, "/")
+			if !found {
+				updateStringSliceValue(i, cf, TYPES, t, nil)
 				continue
 			}
 
-			entityTypes[""] = append(entityTypes[""], t)
-		}
-
-		// get the current list, if any, of managed entities in the config, map the name to the index
-
-		entities := config.Get[map[string]map[string]any](cf, "entities")
-		managedEntities := make(map[string]string, len(entities))
-		for key, me := range entities {
-			if name, ok := me["name"].(string); ok {
-				managedEntities[name] = key
-			}
-		}
-
-		for entity, typs := range entityTypes {
-			if entity == "" {
-				updateSlice(newCf, "types", typs, nil)
-				continue
-			}
-
-			if _, ok := managedEntities[entity]; !ok {
-				if len(entities) == 0 {
+			if _, ok := managedEntitiesIdx[entity]; !ok {
+				l := len(entities)
+				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
-				managedEntities[entity] = strconv.Itoa(len(entities))
-				config.Set(newCf, newCf.Join("entities", managedEntities[entity], "name"), entity)
+
+				e := strconv.Itoa(l)
+				managedEntitiesIdx[entity] = e
+				entities[e] = make(map[string]any)
+				entities[e]["name"] = entity
+
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
 			}
-			updateSlice(newCf, newCf.Join("entities", managedEntities[entity], "types"), typs, nil)
+			updateStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], TYPES), typ, nil)
 		}
 
-		// refresh the list of managed entities after updating types
-		entities = config.Get[map[string]map[string]any](newCf, "entities")
-		for key, me := range entities {
-			if name, ok := me["name"].(string); ok {
-				managedEntities[name] = key
-			}
-		}
+		// second, attributes
 
-		entityAttributes := make(map[string][]string)
+		// build a map of managed entity specific attributes, with an
+		// empty string for top-level entity
 		for _, a := range values.Attributes {
-			if entity, attr, found := strings.Cut(a, "/"); found {
-				entityAttributes[entity] = append(entityAttributes[entity], attr)
+			entity, attr, found := strings.Cut(a, "/")
+			if !found {
+				updateStringSliceValue(i, cf, ATTRIBUTES, a, nil)
 				continue
 			}
 
-			// else save it with no entity name, and the unchanged string
-			entityAttributes[""] = append(entityAttributes[""], a)
-		}
-
-		for entity, attrs := range entityAttributes {
-			if entity == "" {
-				updateSlice(newCf, "attributes", attrs, nil)
-				continue
-			}
-			if _, ok := managedEntities[entity]; !ok {
-				if len(entities) == 0 {
+			if _, ok := managedEntitiesIdx[entity]; !ok {
+				l := len(entities)
+				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
-				managedEntities[entity] = strconv.Itoa(len(entities))
-				config.Set(newCf, newCf.Join("entities", managedEntities[entity], "name"), entity)
-			}
 
-			updateSlice(newCf, newCf.Join("entities", managedEntities[entity], "attributes"), attrs, nil)
+				e := strconv.Itoa(l)
+				managedEntitiesIdx[entity] = e
+				entities[e] = make(map[string]any)
+				entities[e]["name"] = entity
+
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
+			}
+			updateStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], ATTRIBUTES), attr, nil)
 		}
 
-		// refresh the list of managed entities after updating attributes
-		entities = config.Get[map[string]map[string]any](newCf, "entities")
-		for key, me := range entities {
-			if name, ok := me["name"].(string); ok {
-				managedEntities[name] = key
+		// third, variables
+
+		// first migrate original vars
+		if vars, found := config.Lookup[any](cf, VARIABLES); found {
+			var changed bool
+			if vars, changed = NormaliseVars(vars); changed {
+				config.Set(cf, VARIABLES, vars)
 			}
 		}
 
-		entityVars := make(map[string][]Variable)
+		// build a map of managed entity specific variables, with an
+		// empty string for top-level entity
+		// entityVars := make(map[string][]Variable)
 		for _, v := range values.Variables {
-			i.Log().Debug("processing variable", slog.Any("variable", v))
-			if entity, varName, found := strings.Cut(v.Name, "/"); found {
-				i.Log().Debug("found managed entity prefix", slog.String("entity", entity), slog.String("varName", varName))
-				v.Name = varName
-				entityVars[entity] = append(entityVars[entity], v)
+			entity, _, found := strings.Cut(v.Name, "/")
+			if !found {
+				updateVariableValue(i, cf, VARIABLES, v, keyfile)
 				continue
 			}
 
-			entityVars[""] = append(entityVars[""], v)
-		}
-
-		for entity, vars := range entityVars {
-			if entity == "" {
-				updateVars(i.Host(), newCf, "variables", vars, keyfile)
-				continue
-			}
-
-			if _, ok := managedEntities[entity]; !ok {
-				if len(entities) == 0 {
+			if _, ok := managedEntitiesIdx[entity]; !ok {
+				l := len(entities)
+				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
-				managedEntities[entity] = strconv.Itoa(len(entities))
-				config.Set(newCf, newCf.Join("entities", managedEntities[entity], "name"), entity)
+
+				e := strconv.Itoa(l)
+				managedEntitiesIdx[entity] = e
+				entities[e] = make(map[string]any)
+				entities[e]["name"] = entity
+
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
 			}
 
-			updateVars(i.Host(), newCf, newCf.Join("entities", managedEntities[entity], "variables"), vars, keyfile)
+			updateVariableValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], VARIABLES), v, keyfile)
 		}
-
-		// updateVars(i.Host(), newCf, "variables", values.Variables, keyfile)
 	}
 
-	// vars can be used in sans and the gateway instance.setup.xml template
+	// vars can also be used gateway instance.setup.xml template
 	if ct.IsA("gateway") {
-		updateVars(i.Host(), newCf, "variables", values.Variables, keyfile)
+		for _, v := range values.Variables {
+			updateVariableValue(i, cf, VARIABLES, v, keyfile)
+		}
+		// updateVariableItems(i, cf, VARIABLES, values.Variables, keyfile)
 	}
 
-	i.Log().Debug("updated configuration", slog.Any("config", newCf.AllSettings()))
+	i.Log().Debug("updated configuration", slog.Any("config", cf.AllSettings()))
 
 	return
 }
 
-// updateMap updates the values configuration confKey for instance i,
-// which is a map[string]V. Any existing values with the same item key
-// are overwritten. If the resulting map is empty then the key is
-// deleted from the instance configuration.
-func updateMap[V any](cf *config.Config, confKey string, items map[string]V) {
+// updateMapValue updates the value of a single key in a map
+// configuration. If the value was changed, it returns true. Otherwise,
+// it returns false.
+func updateMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, key string, value V) (changed bool) {
 	s := config.Get[map[string]any](cf, confKey)
-	for k, v := range items {
-		s[k] = v
+	if reflect.DeepEqual(s[key], value) {
+		return false
 	}
-	if len(s) == 0 {
-		config.Delete(cf, confKey)
-		return
-	}
+	s[key] = value
 	config.Set(cf, confKey, s)
+	return true
 }
 
-// updateVars updates the variables configuration cf, which is now a
-// slice of Variable, but previously was a map. Any old style map is
-// converted and then updated with the new items.
+// updateMapItems updates the values configuration confKey in config cf,
+// which is a map[string]V. Any existing values with the same item key
+// are overwritten. If the map was updated, changed is returned as true.
+func updateMapItems[V any](i geneos.Instance, cf *config.Config, confKey string, items map[string]V) (changed bool) {
+	s := config.Get[map[string]any](cf, confKey)
+	for k, v := range items {
+		if reflect.DeepEqual(s[k], v) {
+			continue
+		}
+		s[k] = v
+		changed = true
+	}
+
+	if changed {
+		config.Set(cf, confKey, s)
+	}
+	return
+}
+
+// updateVariableValue updates the variable item configuration cf for
+// the given confKey. Any old style map is converted and then updated
+// with the new items.
 //
 // variables of type "secret" are checked and if the value is empty then
 // the user is prompted for the value, which is then encrypted with
-// their keyfile. non empty values are checked for encoding, and if
-// plain text then they are encoded
-func updateVars(h *geneos.Host, cf *config.Config, confKey string, items Variables, keyfile config.KeyFile) {
-	vars := []Variable{}
-
-	if s, found := config.Lookup[any](cf, confKey); found {
-		vars = NormaliseVars(s)
+// their user keyfile. non empty values are checked for encoding, and if
+// in plain text then they are encoded
+func updateVariableValue(i geneos.Instance, cf *config.Config, confKey string, item Variable, keyfile config.KeyFile) (changed bool) {
+	if item.Name == "" {
+		log.Error("variable name is required")
+		return false
 	}
 
-	// encode secrets to strings, per instance. if a type is a secret
-	// then the plaintext should be in the value already. users should
-	// only be prompted once, in the caller
-	for _, v := range items {
+	switch item.Type {
+	case "secret":
 		// if the type is secret then the value should be encrypted and
 		// stored as a string, otherwise it is stored as a string. if
 		// the value is already encrypted then it is left as is. if the
 		// value is empty then the user should have been prompted for it
 		// already
-		if v.Type == "secret" {
-			if keyfile == "" {
-				log.Error("keyfile is required to set secret variable", slog.String("name", v.Name))
-				continue
-			}
-			if strings.HasPrefix(v.Value, "${enc:") {
-				// value is already encrypted, just use it as is
-			} else {
-				var err error
-				// encrypt value and store as special secret type
-				v.Value, err = keyfile.EncodeString(h, v.Value, true)
-				if err != nil {
-					log.Error("failed to encrypt secret for variable", slog.Any("error", err), slog.String("name", v.Name))
-					return
-				}
-			}
-			// now save as a string
-			v.Type = "string"
+		if keyfile == "" {
+			log.Error("keyfile is required to set secret variable", slog.String("name", item.Name))
+			return false
 		}
-
-		// check if variable already exists, update if so
-		n := slices.IndexFunc(vars, func(item Variable) bool {
-			return item.Name == v.Name
-		})
-		if n >= 0 {
-			vars[n] = v
+		if strings.HasPrefix(item.Value, "${enc:") {
+			// value is already encrypted, just use it as is
 		} else {
-			vars = append(vars, v)
+			var err error
+			i.Log().Info("encoding string", slog.String("value", item.Value))
+			// encrypt value and store as special secret type
+			item.Value, err = keyfile.EncodeString(i.Host(), item.Value, true)
+			if err != nil {
+				log.Error("failed to encrypt secret for variable", slog.Any("error", err), slog.String("name", item.Name))
+				return false
+			}
 		}
-	}
-	if len(vars) == 0 {
-		config.Delete(cf, confKey)
-		return
+		// now save as a string
+		item.Type = "string"
+	case "":
+		item.Type = "string"
 	}
 
-	// turn vars into a slice of maps to avoid case issues in templates
-	maps := make([]map[string]any, len(vars))
-	for i, v := range vars {
-		maps[i] = map[string]any{
-			"type":  v.Type,
-			"name":  v.Name,
-			"value": v.Value,
-		}
+	// save it back, over any existing variables with the same name
+	// (regardless of type), else just save
+	vars, found := config.Lookup[Variables](cf, confKey)
+	if !found {
+		config.Set(cf, confKey, []Variable{item})
+		return true
 	}
-	config.Set(cf, confKey, maps)
+
+	// check if variable already exists, update if so
+	n := slices.IndexFunc(vars, func(v Variable) bool {
+		return v.Name == item.Name
+	})
+
+	if n >= 0 {
+		// check if existing has same values, return false
+		if vars[n] == item {
+			return false
+		}
+		vars[n] = item
+	} else {
+		vars = append(vars, item)
+	}
+
+	config.Set(cf, confKey, vars)
+	return true
 }
 
 // updateEncoded takes a slice of SecureValue and returns a slice of
@@ -315,11 +335,12 @@ func updateVars(h *geneos.Host, cf *config.Config, confKey string, items Variabl
 // The caller is responsible for erasuring the Secret values after use,
 // and for ensuring that the keyfile is not left in memory longer than
 // necessary.
-func updateEncoded(h *geneos.Host, values SecureValues, keyFile config.KeyFile) (params []string, err error) {
+func updateEncoded(i geneos.Instance, values SecureValues, keyFile config.KeyFile) (params []string, err error) {
 	if len(values) == 0 {
 		return
 	}
 
+	h := i.Host()
 	if _, err = keyFile.ReadCRC(h); err != nil {
 		return
 	}
@@ -339,17 +360,18 @@ func updateEncoded(h *geneos.Host, values SecureValues, keyFile config.KeyFile) 
 	return
 }
 
-// updateSlice updates configuration value confKey in instance i for the
-// slice items, using the getKey function to determine the key for each
-// item. Any existing values with the same key are overwritten, and any
-// existing values with keys not in the new items are retained. If the
-// resulting slice is empty then the key is deleted from the instance
-// configuration.
+// updateStringSliceValue updates a string slice configuration value for the
+// given key. The getKey function is used to determine the key for each
+// item. The default is to split the string at the first "=" and use the
+// part before it as the key. Any existing values with the same key are
+// overwritten, and any existing values with keys not in the new items
+// are retained. If the resulting slice is empty then the key is deleted
+// from the instance configuration.
 //
-// If getKey is nil, the default getKey function is used, which splits
-// the string at the first "=" and returns the key.
-func updateSlice(cf *config.Config, confKey string, items []string, getKey func(string) string) (changed bool) {
-	if len(items) == 0 {
+// If key is an empty string no action is taken. If value is an empty
+// string no action is taken either.
+func updateStringSliceValue(i geneos.Instance, cf *config.Config, confKey string, value string, getKey func(string) string) (changed bool) {
+	if confKey == "" || value == "" {
 		return
 	}
 
@@ -360,43 +382,28 @@ func updateSlice(cf *config.Config, confKey string, items []string, getKey func(
 		}
 	}
 
-	newvals := []string{}
-	vals := config.Get[[]string](cf, confKey)
-
-	// if there are no existing values just set directly and finish
-	if len(vals) == 0 {
-		config.Set(cf, confKey, items)
-		changed = true
-		return
+	values := config.Get[[]string](cf, confKey)
+	keysIdx := make(map[string]int, len(values))
+	for i, v := range values {
+		keysIdx[getKey(v)] = i
 	}
 
-	// map to store the identifier and the full value for later checks
-	keys := map[string]string{}
-	for _, v := range items {
-		keys[getKey(v)] = v
-		newvals = append(newvals, v)
-	}
-
-	for _, v := range vals {
-		if w, ok := keys[getKey(v)]; ok {
-			// exists
-			if v != w {
-				// only changed if different value
-				changed = true
-				continue
-			}
-		} else {
-			// copying the old value is not a change
-			newvals = append(newvals, v)
+	key := getKey(value)
+	if _, ok := keysIdx[key]; ok {
+		// key already exists, update the value if changed
+		if values[keysIdx[key]] != value {
+			values[keysIdx[key]] = value
+			changed = true
 		}
-	}
-
-	// check old values against map, copy those that do not exist
-
-	if len(newvals) == 0 {
-		config.Delete(cf, confKey)
 	} else {
-		config.Set(cf, confKey, newvals)
+		// key does not exist, append the new value
+		values = append(values, value)
+		changed = true
 	}
+
+	if changed {
+		config.Set(cf, confKey, values)
+	}
+
 	return
 }

@@ -1,14 +1,43 @@
-package values
+/*
+Copyright © 2026 ITRS Group
 
-import "github.com/itrs-group/cordial"
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
 
-// package Values manages types for common repeatable flag types, such
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// package values manages types for common repeatable flag types, such
 // as gateways, includes, variables and attributes. These are used by
 // various commands, such as set and unset, and also by the
 // configuration file management code to manage the internal
 // representation of these items in the configuration file. The types in
 // this package implement the pflag.Value interface, so can be used
 // directly as flag types for commands that need them.
+package values
+
+import (
+	"github.com/itrs-group/cordial"
+)
+
+// constants to ensure consistent usage of key names in the configuration
+const (
+	ATTRIBUTES       = "attributes"
+	ENVIRONMENT      = "env"
+	GATEWAYS         = "gateways"
+	INCLUDES         = "includes"
+	MANAGED_ENTITIES = "managed-entities"
+	TYPES            = "types"
+	VARIABLES        = "variables"
+)
 
 // Values defined the set of configuration options that can be accepted
 // by various commands

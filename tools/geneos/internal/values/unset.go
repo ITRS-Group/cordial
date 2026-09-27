@@ -18,21 +18,40 @@ limitations under the License.
 package values
 
 import (
+	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 type UnsetConfigValues struct {
+	// for all components
+	Keys UnsetValues
+	Envs UnsetValues
+
+	// for gateways only
+	Includes UnsetValues
+
+	// for SANs only
+	//
+	Gateways UnsetValues
+	//
+	// name of entity to remove
+	Entities UnsetValues
+	//
+	// these can be prefixed with an optional entity name and a '/' as
+	// for set
 	Attributes UnsetValues
-	Envs       UnsetValues
-	Gateways   UnsetValues
-	Includes   UnsetValues
-	Keys       UnsetValues
 	Types      UnsetValues
-	Variables  UnsetVars
+
+	// for SAN and gateways
+	//
+	// for SANs these can be prefixed by an optional entity name and a '/' as for set
+	Variables UnsetVars
 }
 
 // Unset applies the settings in unset to instance i by iterating
@@ -52,22 +71,22 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	if len(unset.Gateways) > 0 {
 		changed = true
 	}
-	unsetMap(cf, i.Type(), "gateways", unset.Gateways)
+	unsetMap(cf, i.Type(), GATEWAYS, unset.Gateways)
 
 	if len(unset.Includes) > 0 {
 		changed = true
 	}
-	unsetMap(cf, i.Type(), "includes", unset.Includes)
+	unsetMap(cf, i.Type(), INCLUDES, unset.Includes)
 
 	if len(unset.Variables) > 0 {
 		changed = true
 	}
-	unsetVariables(cf, "variables", unset.Variables)
+	unsetVariables(cf, VARIABLES, unset.Variables)
 
 	if len(unset.Attributes) > 0 {
 		changed = true
 	}
-	unsetSlice(cf, "attributes", unset.Attributes,
+	unsetSlice(cf, ATTRIBUTES, unset.Attributes,
 		func(a, b string) bool {
 			return strings.HasPrefix(a, b+"=")
 		},
@@ -76,7 +95,7 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	if len(unset.Envs) > 0 {
 		changed = true
 	}
-	unsetSlice(cf, "env", unset.Envs,
+	unsetSlice(cf, ENVIRONMENT, unset.Envs,
 		func(a, b string) bool {
 			return strings.HasPrefix(a, b+"=")
 		},
@@ -85,9 +104,19 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	if len(unset.Types) > 0 {
 		changed = true
 	}
-	unsetSlice(cf, "types", unset.Types,
+	unsetSlice(cf, TYPES, unset.Types,
 		func(a, b string) bool {
 			return a == b
+		},
+	)
+
+	if len(unset.Entities) > 0 {
+		changed = true
+	}
+	i.Log().Debug("unsetting entities", slog.Any(MANAGED_ENTITIES, unset.Entities))
+	unsetIndexedMapOfMaps(cf, MANAGED_ENTITIES, unset.Entities,
+		func(a map[string]any, b string) bool {
+			return a["name"] == b
 		},
 	)
 
@@ -122,7 +151,7 @@ func unsetVariables(cf *config.Config, confKey string, items UnsetVars) {
 	if !found {
 		return
 	}
-	vars := NormaliseVars(x)
+	vars, _ := NormaliseVars(x)
 
 	for _, name := range items {
 		vars = slices.DeleteFunc(vars, func(item Variable) bool {
@@ -148,6 +177,30 @@ OUTER:
 			}
 		}
 		newvals = append(newvals, t)
+	}
+	if len(newvals) == 0 {
+		config.Delete(cf, key)
+		return
+	}
+	config.Set(cf, key, newvals)
+}
+
+func unsetIndexedMapOfMaps(cf *config.Config, key string, items []string, cmp func(map[string]any, string) bool) {
+	newvals := map[string]map[string]any{}
+	vals := config.Get[map[string]map[string]any](cf, key)
+	log.Debug("entities loaded", slog.Any(MANAGED_ENTITIES, vals))
+	i := 0
+OUTER:
+	for _, t := range vals {
+		for _, v := range items {
+			log.Debug("checking", slog.Any("entity", t))
+			if cmp(t, v) {
+				log.Debug("found key", slog.String("key", v))
+				continue OUTER
+			}
+		}
+		newvals[strconv.Itoa(i)] = t
+		i++
 	}
 	if len(newvals) == 0 {
 		config.Delete(cf, key)

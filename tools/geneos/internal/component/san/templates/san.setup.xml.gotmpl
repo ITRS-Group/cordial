@@ -49,7 +49,7 @@
 				{{- end }}
 			</managedEntity>
 			{{- end -}}
-			{{- range .entities }}
+			{{- range index . "managed-entities" }}
 			{{- if .types }}
 			<managedEntity>
 				<name>{{ .name}}</name>

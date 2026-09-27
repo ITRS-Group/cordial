@@ -127,12 +127,16 @@ func getVarValue(in string) (variable Variable) {
 }
 
 // NormaliseVars updates old style "variables" items.
-func NormaliseVars(vars any) (newVars []Variable) {
+func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 	ft := reflect.TypeOf(vars)
 	switch ft.Kind() {
 	case reflect.Slice:
 		for _, item := range vars.([]any) {
-			item := item.(map[string]any)
+			item, ok := item.(map[string]any)
+			if !ok {
+				log.Debug("item is not a map[string]any, skipping", slog.Any("item", item))
+				continue
+			}
 			variable := Variable{
 				Type:  item["type"].(string),
 				Name:  item["name"].(string),
@@ -147,7 +151,7 @@ func NormaliseVars(vars any) (newVars []Variable) {
 			newVars = append(newVars, variable)
 		}
 
-		return newVars
+		return newVars, true
 	case reflect.Map:
 		if ft.Elem().Kind() == reflect.String && ft.Key().Kind() == reflect.String {
 			// very old format, key was `NAME`, value was `TYPE:VALUE`
@@ -163,7 +167,7 @@ func NormaliseVars(vars any) (newVars []Variable) {
 					Value: v,
 				})
 			}
-			return
+			return newVars, true
 		} else if ft.Elem().Kind() == reflect.Interface && ft.Key().Kind() == reflect.String {
 			// previous format, just convert map to slice, drop keys
 			for _, item := range vars.(map[string]any) {
@@ -175,11 +179,11 @@ func NormaliseVars(vars any) (newVars []Variable) {
 				}
 				newVars = append(newVars, variable)
 			}
-			return
+			return newVars, true
 		}
 	default:
 		// nothing
 	}
 
-	return
+	return newVars, false
 }
