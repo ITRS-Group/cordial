@@ -103,6 +103,9 @@ geneos add netprobe infraprobe12 --start --log
 		if err != nil {
 			return
 		}
+		if len(names) == 0 {
+			return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
+		}
 		addCmdExtras.Params = params
 		return AddInstance(ct, names[0], addCmdPort, addCmdExtras,
 			Template(addCmdTemplate),
