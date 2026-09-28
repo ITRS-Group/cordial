@@ -26,6 +26,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -47,6 +48,8 @@ func init() {
 	unsetCmd.Flags().VarP(&unsetCmdValues.Attributes, "attribute", "a", "Remove the attribute `NAME`\n(Repeat as required, san only)")
 	unsetCmd.Flags().VarP(&unsetCmdValues.Types, "type", "t", "Remove the type `NAME`\n(Repeat as required, san only)")
 	unsetCmd.Flags().VarP(&unsetCmdValues.Variables, "variable", "v", "Remove the variable `NAME`\n(Repeat as required, san only)")
+
+	unsetCmd.Flags().VarP(&unsetCmdValues.Entities, "entity", "M", "Remove a managed entity `NAME`\n(Repeat as required, san only)")
 
 	unsetCmd.Flags().SortFlags = false
 }
