@@ -39,6 +39,10 @@ const (
 	VARIABLES        = "variables"
 )
 
+// MANAGED_ENTITIES_SEPARATOR is the separator used for managed entity
+// names for command line parameters
+const MANAGED_ENTITIES_SEPARATOR = "/"
+
 // Values defined the set of configuration options that can be accepted
 // by various commands
 type Values struct {
@@ -92,6 +96,32 @@ type Values struct {
 	// otherwise ignored by the values package. See `geneos.Headers` for
 	// more information.
 	Headers NameValues
+}
+
+type UnsetConfigValues struct {
+	// for all components
+	Keys UnsetValues
+	Envs UnsetValues
+
+	// for gateways only
+	Includes UnsetValues
+
+	// for SANs only
+	//
+	Gateways UnsetValues
+	//
+	// name of entity to remove
+	Entities UnsetValues
+	//
+	// these can be prefixed with an optional entity name and a '/' as
+	// for set
+	Attributes UnsetValues
+	Types      UnsetValues
+
+	// for SAN and gateways
+	//
+	// for SANs these can be prefixed by an optional entity name and a '/' as for set
+	Variables UnsetVars
 }
 
 var log = cordial.Logger

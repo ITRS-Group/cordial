@@ -28,32 +28,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-type UnsetConfigValues struct {
-	// for all components
-	Keys UnsetValues
-	Envs UnsetValues
-
-	// for gateways only
-	Includes UnsetValues
-
-	// for SANs only
-	//
-	Gateways UnsetValues
-	//
-	// name of entity to remove
-	Entities UnsetValues
-	//
-	// these can be prefixed with an optional entity name and a '/' as
-	// for set
-	Attributes UnsetValues
-	Types      UnsetValues
-
-	// for SAN and gateways
-	//
-	// for SANs these can be prefixed by an optional entity name and a '/' as for set
-	Variables UnsetVars
-}
-
 // Unset applies the settings in unset to instance i by iterating
 // through the fields and calling the appropriate helper function.
 //
@@ -66,84 +40,136 @@ type UnsetConfigValues struct {
 // responsibility to write the configuration after calling this
 // function.
 func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
-	if len(unset.Gateways) > 0 {
-		changed = unsetMap(i, GATEWAYS, unset.Gateways)
+	for _, k := range unset.Gateways {
+		changed = unsetMapValue(i, GATEWAYS, k) || changed
 	}
 
-	if len(unset.Includes) > 0 {
-		changed = unsetMap(i, INCLUDES, unset.Includes)
+	for _, k := range unset.Includes {
+		changed = unsetMapValue(i, INCLUDES, k) || changed
 	}
 
-	if len(unset.Variables) > 0 {
-		changed = unsetVariables(i, VARIABLES, unset.Variables) || changed
-	}
-
-	if len(unset.Attributes) > 0 {
-		unsetSliceFunc(i, ATTRIBUTES, unset.Attributes,
-			func(value, item string) bool {
-				return strings.HasPrefix(value, item+"=")
-			},
-		)
-		changed = true
+	if i.Type().IsA("gateway") {
+		if len(unset.Variables) > 0 {
+			changed = unsetVariables(i, VARIABLES, unset.Variables) || changed
+		}
 	}
 
 	if len(unset.Envs) > 0 {
-		unsetSliceFunc(i, ENVIRONMENT, unset.Envs,
+		changed = unsetSliceFunc(i, ENVIRONMENT, unset.Envs,
 			func(value, item string) bool {
 				return strings.HasPrefix(value, item+"=")
 			},
-		)
-		changed = true
+		) || changed
 	}
 
-	if len(unset.Types) > 0 {
-		unsetSlice(i, TYPES, unset.Types)
-		changed = true
-	}
+	if i.Type().IsA("san") {
+		entities := config.Get[map[string]map[string]any](i.Config(), MANAGED_ENTITIES)
 
-	if len(unset.Entities) > 0 {
+		managedEntitiesByName := make(map[string]string, len(entities))
+		for idx, me := range entities {
+			if entity, ok := me[MAPKEY_NAME].(string); ok {
+				managedEntitiesByName[entity] = idx
+			}
+		}
 
-		i.Log().Debug("unsetting entities", slog.Any(MANAGED_ENTITIES, unset.Entities))
-		unsetMapFunc(i, MANAGED_ENTITIES, unset.Entities,
-			func(a map[string]any, b string) bool {
-				return a["name"] == b
-			},
-		)
-		changed = true
+		if len(unset.Attributes) > 0 {
+			for _, k := range unset.Attributes {
+				entity, attr, found := strings.Cut(k, MANAGED_ENTITIES_SEPARATOR)
+				if !found {
+					changed = deleteSliceItemFunc(i, ATTRIBUTES, k,
+						func(value, item string) bool {
+							return strings.HasPrefix(value, item+"=")
+						},
+					) || changed
+					continue
+				}
+				changed = deleteSliceItemFunc(i, i.Config().Join(MANAGED_ENTITIES, managedEntitiesByName[entity], ATTRIBUTES), attr,
+					func(value, item string) bool {
+						return strings.HasPrefix(value, item+"=")
+					},
+				) || changed
+			}
+		}
+
+		if len(unset.Types) > 0 {
+			for _, k := range unset.Types {
+				entity, typ, found := strings.Cut(k, MANAGED_ENTITIES_SEPARATOR)
+				if !found {
+					changed = deleteSliceItem(i, TYPES, k) || changed
+					continue
+				}
+				changed = deleteSliceItem(i, i.Config().Join(MANAGED_ENTITIES, managedEntitiesByName[entity], TYPES), typ) || changed
+			}
+		}
+
+		if len(unset.Variables) > 0 {
+			for _, k := range unset.Variables {
+				entity, variable, found := strings.Cut(k, MANAGED_ENTITIES_SEPARATOR)
+				if !found {
+					changed = deleteVariable(i, VARIABLES, k) || changed
+					continue
+				}
+				changed = deleteVariable(i, i.Config().Join(MANAGED_ENTITIES, managedEntitiesByName[entity], VARIABLES), variable) || changed
+			}
+		}
+
+		// only delete entities last, then the managedEntitiesByName
+		// doesn't change above
+		if len(unset.Entities) > 0 {
+			changed = unsetMapFunc(i, MANAGED_ENTITIES, unset.Entities,
+				func(a map[string]any, b string) bool {
+					return a["name"] == b
+				},
+			) || changed
+		}
 	}
 
 	return
 }
 
-// deleteSettingFromMap removes key from the map from and if it is
-// registered as an alias it also removes the key that alias refers to.
-func deleteSettingFromMap(cf *config.Config, ct *geneos.Component, from map[string]any, key string) {
-	if a, ok := ct.LegacyParameters[key]; ok {
-		// delete any setting this is an alias for, as well as the alias
-		delete(from, a)
-	}
-	delete(from, key)
-}
-
-// unsetMap removes the specified keys from the map stored under the
-// given configuration key. It returns true if any changes were made. If
-// the map becomes empty, it deletes the key from the configuration.
-func unsetMap(i geneos.Instance, key string, items UnsetValues) (changed bool) {
+func unsetMapValue(i geneos.Instance, key string, item string) (changed bool) {
 	cf := i.Config()
-	x := config.Get[map[string]any](cf, key)
-	for _, k := range items {
-		deleteSettingFromMap(cf, i.Type(), x, k)
+	m := config.Get[map[string]any](cf, key)
+
+	if _, ok := m[item]; ok {
+		delete(m, item)
 		changed = true
 	}
 
-	if len(x) == 0 {
-		changed = true
+	if len(m) == 0 {
 		config.Delete(cf, key)
-		return
+		return true
 	}
 
 	if changed {
-		config.Set(cf, key, x)
+		config.Set(cf, key, m)
+	}
+
+	return
+}
+
+func deleteVariable(i geneos.Instance, confKey string, name string) (changed bool) {
+	cf := i.Config()
+	x, found := config.Lookup[any](cf, confKey)
+	if !found {
+		return
+	}
+	vars, changed := NormaliseVars(x)
+
+	vars = slices.DeleteFunc(vars, func(item Variable) bool {
+		c := item.Name == name
+		changed = changed || c
+		return c
+	})
+
+	if len(vars) == 0 {
+		changed = true
+		config.Delete(cf, confKey)
+		return true
+	}
+
+	if changed {
+		config.Set(cf, confKey, vars)
 	}
 
 	return
@@ -176,6 +202,66 @@ func unsetVariables(i geneos.Instance, confKey string, items UnsetVars) (changed
 
 	if changed {
 		config.Set(cf, confKey, vars)
+	}
+
+	return
+}
+
+func deleteSliceItem(i geneos.Instance, key string, item string) (changed bool) {
+	cf := i.Config()
+	values, found := config.Lookup[[]string](cf, key)
+	if !found {
+		return
+	}
+
+	values = slices.DeleteFunc(values, func(value string) bool {
+		if value == item {
+			changed = true
+			return true
+		}
+		return false
+	})
+
+	if len(values) == 0 {
+		i.Log().Debug("deleting key as slice is empty", slog.String("key", key))
+		config.Delete(cf, key)
+		return true
+	}
+
+	if changed {
+		config.Set(cf, key, values)
+	}
+
+	return
+}
+
+func deleteSliceItemFunc(i geneos.Instance, key string, item string, fn func(value string, item string) bool) (changed bool) {
+	if fn == nil {
+		return
+	}
+
+	cf := i.Config()
+	values, found := config.Lookup[[]string](cf, key)
+	if !found {
+		return
+	}
+
+	values = slices.DeleteFunc(values, func(value string) bool {
+		if fn(value, item) {
+			changed = true
+			return true
+		}
+		return false
+	})
+
+	if len(values) == 0 {
+		i.Log().Debug("deleting key as slice is empty", slog.String("key", key))
+		config.Delete(cf, key)
+		return true
+	}
+
+	if changed {
+		config.Set(cf, key, values)
 	}
 
 	return

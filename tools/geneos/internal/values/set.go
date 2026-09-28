@@ -69,7 +69,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 	// set the environment values, valid for all instance types
 	for _, e := range values.Envs {
-		updateStringSliceValue(i, cf, ENVIRONMENT, e, nil)
+		setStringSliceValue(i, cf, ENVIRONMENT, e)
 	}
 
 	if len(values.SecureEnvs) > 0 {
@@ -82,7 +82,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 			return
 		}
 		for _, s := range secrets {
-			updateStringSliceValue(i, cf, ENVIRONMENT, s, nil)
+			setStringSliceValue(i, cf, ENVIRONMENT, s)
 		}
 	}
 
@@ -90,7 +90,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 	if ct.IsA("gateway") {
 		for k, v := range values.Includes {
-			updateMapValue(i, cf, INCLUDES, k, v)
+			setMapValue(i, cf, INCLUDES, k, v)
 		}
 	}
 
@@ -98,7 +98,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 	if ct.IsA("san", "floating") {
 		for k, v := range values.Gateways {
-			updateMapValue(i, cf, GATEWAYS, k, v)
+			setMapValue(i, cf, GATEWAYS, k, v)
 		}
 	}
 
@@ -112,36 +112,37 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		// get the current list, if any, of managed entities in the
 		// config, map the name to the index
 		entities := config.Get[map[string]map[string]any](i.Config(), MANAGED_ENTITIES)
-		managedEntitiesIdx := make(map[string]string, len(entities))
-		for key, me := range entities {
-			if name, ok := me["name"].(string); ok {
-				managedEntitiesIdx[name] = key
+
+		managedEntitiesByName := make(map[string]string, len(entities))
+		for idx, me := range entities {
+			if entity, ok := me[MAPKEY_NAME].(string); ok {
+				managedEntitiesByName[entity] = idx
 			}
 		}
 
 		// build a map of managed entity specific types, with an empty
 		// string for top-level entity
 		for _, t := range values.Types {
-			entity, typ, found := strings.Cut(t, "/")
+			entity, typ, found := strings.Cut(t, MANAGED_ENTITIES_SEPARATOR)
 			if !found {
-				updateStringSliceValue(i, cf, TYPES, t, nil)
+				setStringSliceValue(i, cf, TYPES, t)
 				continue
 			}
 
-			if _, ok := managedEntitiesIdx[entity]; !ok {
+			if _, ok := managedEntitiesByName[entity]; !ok {
 				l := len(entities)
 				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
 
 				e := strconv.Itoa(l)
-				managedEntitiesIdx[entity] = e
+				managedEntitiesByName[entity] = e
 				entities[e] = make(map[string]any)
-				entities[e]["name"] = entity
+				entities[e][MAPKEY_NAME] = entity
 
-				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, MAPKEY_NAME), entity)
 			}
-			updateStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], TYPES), typ, nil)
+			setStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesByName[entity], TYPES), typ)
 		}
 
 		// second, attributes
@@ -149,26 +150,26 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		// build a map of managed entity specific attributes, with an
 		// empty string for top-level entity
 		for _, a := range values.Attributes {
-			entity, attr, found := strings.Cut(a, "/")
+			entity, attr, found := strings.Cut(a, MANAGED_ENTITIES_SEPARATOR)
 			if !found {
-				updateStringSliceValue(i, cf, ATTRIBUTES, a, nil)
+				setStringSliceValue(i, cf, ATTRIBUTES, a)
 				continue
 			}
 
-			if _, ok := managedEntitiesIdx[entity]; !ok {
+			if _, ok := managedEntitiesByName[entity]; !ok {
 				l := len(entities)
 				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
 
 				e := strconv.Itoa(l)
-				managedEntitiesIdx[entity] = e
+				managedEntitiesByName[entity] = e
 				entities[e] = make(map[string]any)
-				entities[e]["name"] = entity
+				entities[e][MAPKEY_NAME] = entity
 
-				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, MAPKEY_NAME), entity)
 			}
-			updateStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], ATTRIBUTES), attr, nil)
+			setStringSliceValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesByName[entity], ATTRIBUTES), attr)
 		}
 
 		// third, variables
@@ -183,36 +184,37 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 
 		// build a map of managed entity specific variables, with an
 		// empty string for top-level entity
-		// entityVars := make(map[string][]Variable)
 		for _, v := range values.Variables {
-			entity, _, found := strings.Cut(v.Name, "/")
+			entity, name, found := strings.Cut(v.Name, MANAGED_ENTITIES_SEPARATOR)
 			if !found {
-				updateVariableValue(i, cf, VARIABLES, v, keyfile)
+				setVariableValue(i, cf, VARIABLES, v, keyfile)
 				continue
 			}
 
-			if _, ok := managedEntitiesIdx[entity]; !ok {
+			if _, ok := managedEntitiesByName[entity]; !ok {
 				l := len(entities)
 				if l == 0 {
 					entities = make(map[string]map[string]any)
 				}
 
 				e := strconv.Itoa(l)
-				managedEntitiesIdx[entity] = e
+				managedEntitiesByName[entity] = e
 				entities[e] = make(map[string]any)
-				entities[e]["name"] = entity
+				entities[e][MAPKEY_NAME] = entity
 
-				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, "name"), entity)
+				config.Set(cf, cf.Join(MANAGED_ENTITIES, e, MAPKEY_NAME), entity)
 			}
 
-			updateVariableValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesIdx[entity], VARIABLES), v, keyfile)
+			// update the variable name to exclude the managed entity prefix
+			v.Name = name
+			setVariableValue(i, cf, cf.Join(MANAGED_ENTITIES, managedEntitiesByName[entity], VARIABLES), v, keyfile)
 		}
 	}
 
 	// vars can also be used gateway instance.setup.xml template
 	if ct.IsA("gateway") {
 		for _, v := range values.Variables {
-			updateVariableValue(i, cf, VARIABLES, v, keyfile)
+			setVariableValue(i, cf, VARIABLES, v, keyfile)
 		}
 		// updateVariableItems(i, cf, VARIABLES, values.Variables, keyfile)
 	}
@@ -222,10 +224,10 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 	return
 }
 
-// updateMapValue updates the value of a single key in a map
+// setMapValue updates the value of a single key in a map
 // configuration. If the value was changed, it returns true. Otherwise,
 // it returns false.
-func updateMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, key string, value V) (changed bool) {
+func setMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, key string, value V) (changed bool) {
 	s := config.Get[map[string]any](cf, confKey)
 	if reflect.DeepEqual(s[key], value) {
 		return false
@@ -235,26 +237,7 @@ func updateMapValue[V any](i geneos.Instance, cf *config.Config, confKey string,
 	return true
 }
 
-// updateMapItems updates the values configuration confKey in config cf,
-// which is a map[string]V. Any existing values with the same item key
-// are overwritten. If the map was updated, changed is returned as true.
-func updateMapItems[V any](i geneos.Instance, cf *config.Config, confKey string, items map[string]V) (changed bool) {
-	s := config.Get[map[string]any](cf, confKey)
-	for k, v := range items {
-		if reflect.DeepEqual(s[k], v) {
-			continue
-		}
-		s[k] = v
-		changed = true
-	}
-
-	if changed {
-		config.Set(cf, confKey, s)
-	}
-	return
-}
-
-// updateVariableValue updates the variable item configuration cf for
+// setVariableValue updates the variable item configuration cf for
 // the given confKey. Any old style map is converted and then updated
 // with the new items.
 //
@@ -262,9 +245,9 @@ func updateMapItems[V any](i geneos.Instance, cf *config.Config, confKey string,
 // the user is prompted for the value, which is then encrypted with
 // their user keyfile. non empty values are checked for encoding, and if
 // in plain text then they are encoded
-func updateVariableValue(i geneos.Instance, cf *config.Config, confKey string, item Variable, keyfile config.KeyFile) (changed bool) {
+func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item Variable, keyfile config.KeyFile) (changed bool) {
 	if item.Name == "" {
-		log.Error("variable name is required")
+		i.Log().Error("variable name is required")
 		return false
 	}
 
@@ -276,14 +259,13 @@ func updateVariableValue(i geneos.Instance, cf *config.Config, confKey string, i
 		// value is empty then the user should have been prompted for it
 		// already
 		if keyfile == "" {
-			log.Error("keyfile is required to set secret variable", slog.String("name", item.Name))
+			i.Log().Error("keyfile is required to set secret variable", slog.String("name", item.Name))
 			return false
 		}
 		if strings.HasPrefix(item.Value, "${enc:") {
 			// value is already encrypted, just use it as is
 		} else {
 			var err error
-			i.Log().Info("encoding string", slog.String("value", item.Value))
 			// encrypt value and store as special secret type
 			item.Value, err = keyfile.EncodeString(i.Host(), item.Value, true)
 			if err != nil {
@@ -291,7 +273,7 @@ func updateVariableValue(i geneos.Instance, cf *config.Config, confKey string, i
 				return false
 			}
 		}
-		// now save as a string
+		// now mark it as a string
 		item.Type = "string"
 	case "":
 		item.Type = "string"
@@ -360,26 +342,22 @@ func updateEncoded(i geneos.Instance, values SecureValues, keyFile config.KeyFil
 	return
 }
 
-// updateStringSliceValue updates a string slice configuration value for the
-// given key. The getKey function is used to determine the key for each
-// item. The default is to split the string at the first "=" and use the
-// part before it as the key. Any existing values with the same key are
-// overwritten, and any existing values with keys not in the new items
-// are retained. If the resulting slice is empty then the key is deleted
-// from the instance configuration.
+// setStringSliceValue updates a string slice configuration value for
+// the given key. The key is split at the first "=". Any existing values
+// with the same key are overwritten, and any existing values with keys
+// not in the new items are retained. If the resulting slice is empty
+// then the key is deleted from the instance configuration.
 //
 // If key is an empty string no action is taken. If value is an empty
 // string no action is taken either.
-func updateStringSliceValue(i geneos.Instance, cf *config.Config, confKey string, value string, getKey func(string) string) (changed bool) {
+func setStringSliceValue(i geneos.Instance, cf *config.Config, confKey string, value string) (changed bool) {
 	if confKey == "" || value == "" {
 		return
 	}
 
-	if getKey == nil {
-		getKey = func(s string) (key string) {
-			key, _, _ = strings.Cut(s, "=")
-			return
-		}
+	getKey := func(s string) (key string) {
+		key, _, _ = strings.Cut(s, "=")
+		return
 	}
 
 	values := config.Get[[]string](cf, confKey)

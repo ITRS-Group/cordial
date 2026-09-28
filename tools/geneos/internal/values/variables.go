@@ -31,6 +31,14 @@ type Variable struct {
 	Value string `mapstructure:"value,omitempty"`
 }
 
+// map keys for variables and managed-entities (name only)
+const (
+	MAPKEY_NAME = "name"
+
+	VARMAP_KEY_TYPE  = "type"
+	VARMAP_KEY_VALUE = "value"
+)
+
 type Variables []Variable
 
 const VarsOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
@@ -138,9 +146,9 @@ func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 				continue
 			}
 			variable := Variable{
-				Type:  item["type"].(string),
-				Name:  item["name"].(string),
-				Value: item["value"].(string),
+				Type:  item[VARMAP_KEY_TYPE].(string),
+				Name:  item[MAPKEY_NAME].(string),
+				Value: item[VARMAP_KEY_VALUE].(string),
 			}
 			if variable.Name == "" {
 				continue
@@ -173,9 +181,9 @@ func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 			for _, item := range vars.(map[string]any) {
 				item := item.(map[string]any)
 				variable := Variable{
-					Type:  item["type"].(string),
-					Name:  item["name"].(string),
-					Value: item["value"].(string),
+					Type:  item[VARMAP_KEY_TYPE].(string),
+					Name:  item[MAPKEY_NAME].(string),
+					Value: item[VARMAP_KEY_VALUE].(string),
 				}
 				newVars = append(newVars, variable)
 			}

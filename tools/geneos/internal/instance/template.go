@@ -118,12 +118,8 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	// convert "variables" (if any) from slice of structs to slice of
 	// maps for lower case keys in templates
-	//
-	// we don't need to do the same for entity specific "variables" as
-	// that configuration format was introduced after variable format
-	// changes that this code is helping migrate
 	variables := []map[string]string{}
-	if vars, found := m["variables"]; found {
+	if vars, found := m[values.VARIABLES]; found {
 		switch vx := vars.(type) {
 		case []map[string]string:
 			variables = vx
@@ -138,9 +134,9 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 				// the key is a kex string of the name to avoid case-sensitive
 				// issues with the name
 				nv := map[string]string{
-					"type":  vMap["type"].(string),
-					"name":  vMap["name"].(string),
-					"value": vMap["value"].(string),
+					values.MAPKEY_NAME:      vMap["name"].(string),
+					values.VARMAP_KEY_TYPE:  vMap["type"].(string),
+					values.VARMAP_KEY_VALUE: vMap["value"].(string),
 				}
 				variables = append(variables, nv)
 			}
@@ -150,18 +146,18 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		case []values.Variable:
 			for _, v := range vx {
 				nv := map[string]string{
-					"type":  v.Type,
-					"name":  v.Name,
-					"value": v.Value,
+					values.MAPKEY_NAME:      v.Name,
+					values.VARMAP_KEY_TYPE:  v.Type,
+					values.VARMAP_KEY_VALUE: v.Value,
 				}
 				variables = append(variables, nv)
 			}
 		case values.Variables:
 			for _, v := range vx {
 				nv := map[string]string{
-					"type":  v.Type,
-					"name":  v.Name,
-					"value": v.Value,
+					values.MAPKEY_NAME:      v.Name,
+					values.VARMAP_KEY_TYPE:  v.Type,
+					values.VARMAP_KEY_VALUE: v.Value,
 				}
 				variables = append(variables, nv)
 			}
@@ -231,9 +227,9 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 								return true
 							}
 							variables = append(variables, map[string]string{
-								"type":  "stdAESPassword",
-								"name":  name,
-								"value": "<stdAES>" + enc + "</stdAES>",
+								values.MAPKEY_NAME:      name,
+								values.VARMAP_KEY_TYPE:  "stdAESPassword",
+								values.VARMAP_KEY_VALUE: "<stdAES>" + enc + "</stdAES>",
 							})
 						}
 						// remove all encoded vars
@@ -246,8 +242,8 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 			}
 
 			variables = slices.DeleteFunc(variables, func(v map[string]string) bool {
-				if v["type"] == "string" && strings.HasPrefix(v["value"], "${enc:") {
-					secret := cf.ExpandToPassword(v["value"])
+				if v[values.VARMAP_KEY_TYPE] == "string" && strings.HasPrefix(v[values.VARMAP_KEY_VALUE], "${enc:") {
+					secret := cf.ExpandToPassword(v[values.VARMAP_KEY_VALUE])
 					defer clear(secret)
 					if len(secret) == 0 {
 						return true
@@ -255,11 +251,11 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 					enc, err := k.Encode(h, secret, false)
 					if err != nil {
-						i.Log().Warn("Cannot re-encode variable", slog.String("name", v["name"]), slog.Any("error", err))
+						i.Log().Warn("Cannot re-encode variable", slog.String("name", v[values.MAPKEY_NAME]), slog.Any("error", err))
 						return true
 					}
-					v["type"] = "stdAESPassword"
-					v["value"] = "<stdAES>" + enc + "</stdAES>"
+					v[values.VARMAP_KEY_TYPE] = "stdAESPassword"
+					v[values.VARMAP_KEY_VALUE] = "<stdAES>" + enc + "</stdAES>"
 				}
 
 				return false
@@ -267,9 +263,75 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		}
 	}
 
+	// convert SAN managed-entity variables to move from struct to map
+	// with lower case keys so templates can access them consistently
+	if i.Type().IsA("san") {
+		ents, ok := m[values.MANAGED_ENTITIES] // map[string]map[string]any
+		if ok {
+			if entities, ok := ents.(map[string]any); ok {
+				for key, entitiesMap := range entities {
+					// do processing per entity, as required
+
+					entity, ok := entitiesMap.(map[string]any)
+					if !ok {
+						continue
+					}
+
+					for _, k := range []string{values.TYPES, values.ATTRIBUTES, values.VARIABLES} {
+						if _, ok := entity[k]; !ok {
+							continue
+						}
+
+						// delete keys marked as unset
+						if !cf.IsSet(cf.Join(values.MANAGED_ENTITIES, key, k)) {
+							delete(entity, k)
+						}
+					}
+
+					variables := []map[string]string{}
+
+					vars := entity[values.VARIABLES]
+
+					switch vx := vars.(type) {
+					// have to handle both []values.Variable and values.Variables
+					// types separately even though they are the same underlying
+					// types
+					case []values.Variable:
+						for _, v := range vx {
+							nv := map[string]string{
+								values.MAPKEY_NAME:      v.Name,
+								values.VARMAP_KEY_TYPE:  v.Type,
+								values.VARMAP_KEY_VALUE: v.Value,
+							}
+							variables = append(variables, nv)
+						}
+					case values.Variables:
+						for _, v := range vx {
+							nv := map[string]string{
+								values.MAPKEY_NAME:      v.Name,
+								values.VARMAP_KEY_TYPE:  v.Type,
+								values.VARMAP_KEY_VALUE: v.Value,
+							}
+							variables = append(variables, nv)
+						}
+					}
+					if len(variables) == 0 {
+						delete(entity, values.VARIABLES)
+					} else {
+						entity[values.VARIABLES] = variables
+					}
+
+					entities[key] = entity
+				}
+
+				m[values.MANAGED_ENTITIES] = entities
+			}
+		}
+	}
+
 	// overwrite the top-level "variables" key with the processed
-	// variables slice, leave SAN managed-entity ones alone
-	m["variables"] = variables
+	// variables slice
+	m[values.VARIABLES] = variables
 
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		i.Log().Error("Cannot create configuration from template(s)", slog.Any("error", err))

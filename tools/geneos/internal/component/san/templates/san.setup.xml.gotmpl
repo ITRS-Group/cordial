@@ -40,20 +40,19 @@
 					</var>{{- end }}
 					{{- end }}
 				</variables>
-				{{- if .types }}
 				<types>
 					{{- range .types }}
 					<type>{{ . }}</type>
 					{{- end }}
 				</types>
-				{{- end }}
 			</managedEntity>
 			{{- end -}}
 			{{- range index . "managed-entities" }}
 			{{- if .types }}
 			<managedEntity>
 				<name>{{ .name}}</name>
-				{{if .attributes -}}<attributes>
+				{{- if .attributes }}
+				<attributes>
 					{{ range $key, $value := .attributes -}}
 					<attribute name="{{ nameOf $value "=" }}">{{ valueOf $value "=" }}</attribute>
 					{{- end }}
@@ -67,12 +66,10 @@
 					</var>{{ end }}
 				</variables>
 				{{- end -}}
-				{{- if .types }}
 				<types>
 					{{- range .types }}
 					<type>{{ . }}</type>{{ end }}
 				</types>
-				{{- end }}
 			</managedEntity>
 			{{- end }}
 			{{- end }}
