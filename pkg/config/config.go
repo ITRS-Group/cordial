@@ -203,12 +203,18 @@ func Get[T any](c *Config, key string, options ...ExpandOption) (value T) {
 	return get[T](c, key, options...)
 }
 
+// Lookup is similar to Get, but it also returns a boolean indicating
+// whether the key was found in the configuration. If the key is not set
+// or has been deleted, found will be false.
 func Lookup[T any](c *Config, key string, options ...ExpandOption) (value T, found bool) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return lookup[T](c, key, options...)
 }
 
+// Delete removes the key from the configuration by marking it as
+// deleted. The key will be treated as not set by Get and Lookup
+// functions.
 func Delete(c *Config, key string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
