@@ -191,6 +191,9 @@ func (c *Config) expandAllSettings(options ...ExpandOption) (all map[string]any)
 
 	for k, v := range as {
 		switch ev := v.(type) {
+		case deletedKey:
+			// skip deleted keys
+			continue
 		case string:
 			all[k] = expand[string](c, ev, options...)
 		case []string:
@@ -700,8 +703,33 @@ func set[T any](c *Config, key string, value T, options ...ExpandOption) {
 		}
 		c.config.Set(key, vt)
 	case map[string]string:
-		for k, v := range vt {
+		// for maps we have to also delete any keys that have been
+		// removed from the original map
+		m := c.config.GetStringMapString(key)
+		maps.DeleteFunc(m, func(k string, _ string) bool {
+			_, found := vt[k]
+			c.config.Set(key+c.delimiter+k, deletedKey{})
+			return !found
+		})
+
+		for k, v := range m {
 			c.config.Set(key+c.delimiter+k, c.replaceStringParam(v, options...))
+		}
+	case map[string]any:
+		// for maps we have to also delete any keys that have been
+		// removed from the original map
+		m := c.config.GetStringMap(key)
+		maps.DeleteFunc(m, func(k string, _ any) bool {
+			_, found := vt[k]
+			c.config.Set(key+c.delimiter+k, deletedKey{})
+			return !found
+		})
+
+		// now set each key individually in the config, as viper is
+		// broken in the way it handles maps and deep keys, so we can't
+		// just set the whole map
+		for k, v := range m {
+			c.config.Set(key+c.delimiter+k, v)
 		}
 	default:
 		// no replacement needed for non-string types, but still need to
