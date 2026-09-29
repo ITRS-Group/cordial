@@ -127,22 +127,25 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 	return
 }
 
-func unsetMapValue(i geneos.Instance, key string, item string) (changed bool) {
+// unsetMapValue removes a key from a map stored in the configuration
+// under confKey. It returns true if the map was modified. If the map
+// becomes empty, it deletes the key from the configuration.
+func unsetMapValue(i geneos.Instance, confKey string, key string) (changed bool) {
 	cf := i.Config()
-	m := config.Get[map[string]any](cf, key)
+	value := config.Get[map[string]any](cf, confKey)
 
-	if _, ok := m[item]; ok {
-		delete(m, item)
+	if _, ok := value[key]; ok {
+		delete(value, key)
 		changed = true
 	}
 
-	if len(m) == 0 {
-		config.Delete(cf, key)
+	if len(value) == 0 {
+		config.Delete(cf, confKey)
 		return true
 	}
 
 	if changed {
-		config.Set(cf, key, m)
+		config.Set(cf, confKey, value)
 	}
 
 	return
@@ -328,7 +331,6 @@ func unsetMapFunc[M ~map[string]any](i geneos.Instance, key string, items []stri
 
 	cf := i.Config()
 	vals := config.Get[map[string]M](cf, key)
-	i.Log().Debug("entities loaded", slog.Any(MANAGED_ENTITIES, vals))
 
 	maps.DeleteFunc(vals, func(k string, v M) bool {
 		for _, i := range items {
