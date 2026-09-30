@@ -1,0 +1,78 @@
+default: none
+profiles:
+  all:
+    gateway:
+        - name: ${hostname}
+    licd:
+        - name: perm
+    netprobe:
+        - name: ${hostname}
+    webserver:
+          - name: ${hostname}
+  demo:
+    gateway:
+        - name: Demo Gateway
+          options: -demo
+    netprobe:
+        - name: ${hostname}-demo
+    webserver:
+        - name: ${hostname}-demo
+  motm-endpoint:
+    sans:
+      - name: ${hostname}-motm
+        gateways:
+          - localhost: 7112
+        attributes:
+          - CATEGORY=Geneos
+          - COMPONENT=MOTM2
+        types:
+          - Level 0 - Geneos
+          - Level 0 - Geneos Extras
+          - Level 1 - Infrastructure
+        managed-entities:
+          - for-each: gateway
+            # match: [ "Example*" ]
+            # Ignore: [ "Demo*" ]
+            name: ${replace:gatewayname:name:/ /_/} Gateway
+            attributes:
+              - APPLICATION=Geneos
+              - CATEGORY=Geneos
+              - COMPONENT=Gateway
+              - GATEWAY=${config:name}
+            types:
+              - Level 0 - Load Monitoring
+              - Level 2 - Basic Application
+              - Level 2 - Geneos Gateway
+            variables:
+              - type: string
+                name: logfile
+                value: ${config:home}/${config:logfile}
+              - type: string
+                name: statsfile
+                value: ${config:home}/stats.xml
+          - for-each: netprobe
+            name: ${config:name} Netprobe
+            attributes:
+              - APPLICATION=Geneos
+              - CATEGORY=Geneos
+              - COMPONENT=Netprobe
+            types:
+              - Level 2 - Basic Application
+              - Level 2 - Geneos Netprobe
+            variables:
+              - type: string
+                name: logfile
+                value: ${config:home}/${config:logfile}
+          - for-each: webserver
+            name: ${config:name} Webserver
+            attributes:
+              - APPLICATION=Geneos
+              - CATEGORY=Geneos
+              - COMPONENT=Webserver
+            types:
+              - Level 2 - Basic Application
+              - Level 2 - Geneos Webserver
+            variables:
+              - type: string
+                name: logfile
+                value: ${config:home}/${config:logfile}
