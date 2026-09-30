@@ -26,9 +26,9 @@ import (
 
 // variables - passed in as [TYPE:]NAME=VALUE
 type Variable struct {
-	Type  string `mapstructure:"type,omitempty"`
-	Name  string `mapstructure:"name,omitempty"`
-	Value string `mapstructure:"value,omitempty"`
+	Type  string `yaml:"type,omitempty"`
+	Name  string `yaml:"name,omitempty"`
+	Value string `yaml:"value,omitempty"`
 }
 
 // map keys for variables and managed-entities (name only)
