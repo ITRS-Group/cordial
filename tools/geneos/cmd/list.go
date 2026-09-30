@@ -74,6 +74,8 @@ var listCmd = &cobra.Command{
 		CmdWildcardNames:        "true",
 		CmdAllowRoot:            "true",
 		CmdNonInstanceArgsError: "true",
+		CmdAuditCommand:         "never",
+		CmdAuditActions:         "never",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, _, err := FetchArgs(cmd)

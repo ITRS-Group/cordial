@@ -36,6 +36,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+// TODO: rewrite to use slog
+
 const (
 	defaultAuditMaxBytes = 10 * 1024 * 1024 // 10 MiB
 	defaultAuditMaxFiles = 5

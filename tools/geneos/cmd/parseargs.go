@@ -25,6 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -71,9 +73,34 @@ const (
 	// global configuration option `allow-root` which will set this
 	// annotation to "true" for all commands.
 	CmdAllowRoot = "allowroot"
+
+	// CmdAuditCommand and CmdAuditActions are used for auditing
+	// purposes. Their values are set in global config vars for the
+	// duration of the command. If these global configuration values
+	// already exist then they are not changed.
+	//
+	// see:
+	//     config.Get(config.Global(), config.Join("audit", "commands"))
+	//     config.Get(config.Global(), config.Join("audit", "actions"))
+
+	// CmdAuditCommand is used to enable auditing the primary command.
+	// To audit the resulting actions use CmdAuditActions. The default
+	// value comes from the global configuration. Valid values are
+	// "always" or "never", to override the global configuration, or
+	// "true" or "false" to set a default if there is no global
+	// configuration.
+	CmdAuditCommand = "auditcommand"
+
+	// CmdAuditActions is used to enable auditing of all the resulting
+	// actions. To audit the primary command triggering the actions use
+	// CmdAuditCommand. The default value comes from the global
+	// configuration. Valid values are "always" or "never", to override
+	// the global configuration, or "true" or "false" to set a default
+	// if there is no global configuration.
+	CmdAuditActions = "auditactions"
 )
 
-// REFRESH:
+// TODO: rewrite this
 //
 // command have the format:
 //
@@ -117,6 +144,46 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	cmdKeepHosts, _ := strconv.ParseBool(c.Annotations[CmdKeepHosts])
 	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
 	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
+
+	if auditCommands, ok := c.Annotations[CmdAuditCommand]; ok {
+		cf := config.Global()
+		confKey := config.Join("audit", "commands")
+
+		switch auditCommands {
+		case "always":
+			config.Set(cf, confKey, true)
+		case "never":
+			config.Set(cf, confKey, false)
+		case "true":
+			if !cf.IsSet(confKey) {
+				config.Set(cf, confKey, true)
+			}
+		case "false":
+			if !cf.IsSet(confKey) {
+				config.Set(cf, confKey, false)
+			}
+		}
+	}
+
+	if auditActions, ok := c.Annotations[CmdAuditActions]; ok {
+		cf := config.Global()
+		confKey := config.Join("audit", "actions")
+
+		switch auditActions {
+		case "always":
+			config.Set(cf, confKey, true)
+		case "never":
+			config.Set(cf, confKey, false)
+		case "true":
+			if !cf.IsSet(confKey) {
+				config.Set(cf, confKey, true)
+			}
+		case "false":
+			if !cf.IsSet(confKey) {
+				config.Set(cf, confKey, false)
+			}
+		}
+	}
 
 	log.Debug("command annotations", slog.Bool("cmdGlobal", cmdGlobal), slog.Bool("cmdKeepHosts", cmdKeepHosts), slog.Bool("cmdWildcardNames", cmdWildcardNames), slog.Bool("cmdAllInstancesMustMatch", cmdAllInstancesMustMatch))
 

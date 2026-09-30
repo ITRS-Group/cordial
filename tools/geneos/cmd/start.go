@@ -59,6 +59,8 @@ var startCmd = &cobra.Command{
 		CmdRequireHome:          "true",
 		CmdWildcardNames:        "true",
 		CmdNonInstanceArgsError: "true",
+		CmdAuditCommand:         "always",
+		CmdAuditActions:         "always",
 	},
 	RunE: func(cmd *cobra.Command, origargs []string) (err error) {
 		var autostart bool
