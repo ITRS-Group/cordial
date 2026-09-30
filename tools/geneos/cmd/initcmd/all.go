@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -131,13 +132,13 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		return
 	}
 
-	if err = cmd.AddInstance(licdCT, initCmdName, 7041, initCmdExtras); err != nil {
+	if err = instance.Add(h, licdCT, initCmdName, 7041, initCmdExtras); err != nil {
 		return
 	}
 	if err = cmd.ImportFiles(licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(gatewayCT, initCmdName, 7038, initCmdExtras); err != nil {
+	if err = instance.Add(h, gatewayCT, initCmdName, 7038, initCmdExtras); err != nil {
 		return
 	}
 
@@ -145,10 +146,10 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if allCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if err = cmd.AddInstance(netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
+	if err = instance.Add(h, netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
 		return
 	}
-	if err = cmd.AddInstance(webserverCT, initCmdName, 8443, initCmdExtras); err != nil {
+	if err = instance.Add(h, webserverCT, initCmdName, 8443, initCmdExtras); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, true, e); err != nil {

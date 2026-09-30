@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -103,7 +104,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	}
 	gatewayValues := initCmdExtras
 	gatewayValues.Params = []string{"options=-demo"}
-	if err = cmd.AddInstance(ct, "Demo Gateway@"+h.String(), port, gatewayValues); err != nil {
+	if err = instance.Add(h, ct, "Demo Gateway@"+h.String(), port, gatewayValues); err != nil {
 		return
 	}
 
@@ -123,7 +124,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if demoCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if err = cmd.AddInstance(netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
+	if err = instance.Add(h, netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
 		return
 	}
 
@@ -135,7 +136,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if initCmdInsecure {
 		port = 8080
 	}
-	if err = cmd.AddInstance(ct, "Demo Webserver@"+h.String(), port, initCmdExtras); err != nil {
+	if err = instance.Add(h, ct, "Demo Webserver@"+h.String(), port, initCmdExtras); err != nil {
 		return
 	}
 
@@ -145,7 +146,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		if err = pkgcmd.Install(h, ct, options...); err != nil {
 			return
 		}
-		if err = cmd.AddInstance(ct, "Demo AC2@"+h.String(), 0, initCmdExtras); err != nil {
+		if err = instance.Add(h, ct, "Demo AC2@"+h.String(), 0, initCmdExtras); err != nil {
 			return
 		}
 	}
