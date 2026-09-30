@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -187,10 +188,6 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	var b bytes.Buffer
 	output := fmt.Appendf(nil, "# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
-
-	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
-		return
-	}
 
 	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, validatedCertChain[0]...); err != nil {
 		return
