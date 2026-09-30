@@ -25,26 +25,23 @@ import (
 	"path"
 )
 
-// UserConfigDir returns the configuration directory for username, or is
-// none given then the current user. If os.UserConfigDir() fails then we
-// lookup the user and return a path relative to the homedir (which
-// works around empty environments)
-func UserConfigDir(username ...string) (confdir string, err error) {
-	if len(username) == 0 {
-		if confdir, err = os.UserConfigDir(); err == nil {
-			return
-		}
-		u, err := user.Current()
-		if err != nil {
-			return confdir, err
-		}
-		confdir = path.Join(u.HomeDir, ".config")
-		return confdir, nil
-	}
-	u, err := user.Lookup(username[0])
-	if err != nil {
+// UserConfigPath returns the configuration path for the specified
+// subdirectory and/or file made up of joining the elements of [elem]
+// using [path.Join]. If [os.UserConfigPath] fails then return a path
+// relative to the homedir (which works around empty environments). If
+// [user.Current] - used to get the home directory - fails then an empty
+// path and an error are returned.
+func UserConfigPath(elem ...string) (confdir string, err error) {
+	if confdir, err = os.UserConfigDir(); err == nil {
+		confdir = path.Join(append([]string{confdir}, elem...)...)
 		return
 	}
-	confdir = path.Join(u.HomeDir, ".config")
-	return
+	// fallback to home directory if os.UserConfigDir fails
+	u, err := user.Current()
+	if err != nil {
+		return confdir, err
+	}
+
+	confdir = path.Join(append([]string{u.HomeDir, ".config"}, elem...)...)
+	return confdir, nil
 }

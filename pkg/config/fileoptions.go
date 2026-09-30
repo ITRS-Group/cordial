@@ -108,11 +108,9 @@ func evalLoadOptions(module string, options ...FileOption) (c *fileOptions) {
 	// if not cleared by options...
 	if c.userConfDir == "placeholder" {
 		var err error
-		c.userConfDir, err = UserConfigDir()
-		// if lookup fails, for example a domain account and we are
-		// built without CGO for static linking, then set none.
-		if err != nil {
-			c.userConfDir = ""
+		if c.userConfDir, err = UserConfigPath(); err != nil {
+			// if lookup fails, for example a domain account, and we are
+			// built without CGO for static linking, then set none.
 			return
 		}
 	}
@@ -141,14 +139,15 @@ func evalSaveOptions(module string, options ...FileOption) (c *fileOptions) {
 		configDirs: []string{},
 	}
 
-	c.userConfDir, _ = UserConfigDir()
+	// TODO: check this logic and the below if len()
+	c.userConfDir, _ = UserConfigPath()
 
 	for _, opt := range options {
 		opt(c)
 	}
 
 	if len(c.configDirs) == 0 {
-		dir, _ := UserConfigDir()
+		dir, _ := UserConfigPath()
 		c.configDirs = append(c.configDirs, path.Join(dir, c.appName))
 	}
 	return
@@ -212,7 +211,7 @@ func DefaultsFrom(cf *Config) FileOption {
 	}
 }
 
-// MustExist sets config.Read() or config.Path() to return an error if
+// MustExist causes config.Read() or config.Path() to return an error if
 // the main configuration file is not found.
 func MustExist() FileOption {
 	return func(lo *fileOptions) {

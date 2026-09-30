@@ -22,7 +22,6 @@ package config
 import (
 	"bytes"
 	"errors"
-	"path"
 	"strings"
 	"sync"
 
@@ -55,10 +54,10 @@ func init() {
 func New(options ...FileOption) *Config {
 	var appUserConfDir string
 	opts := evalFileOptions(options...)
-	if userConfDir, err := UserConfigDir(); err == nil {
-		// only set if no error, else ignore
-		appUserConfDir = path.Join(userConfDir, opts.appName)
-	}
+
+	// on error path remains empty, which is okay
+	appUserConfDir, _ = UserConfigPath(opts.appName)
+
 	cf := &Config{
 		config:               newWithOptions(opts),
 		rwmutex:              &sync.RWMutex{},

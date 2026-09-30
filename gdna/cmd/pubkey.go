@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 
@@ -73,11 +72,11 @@ var pubkeyCmd = &cobra.Command{
 }
 
 func printPublicKey() error {
-	confDir, err := config.UserConfigDir()
+	defaultPubkey, err := config.UserConfigPath("geneos", "gdna-private-key.pem")
 	if err != nil {
 		return err
 	}
-	if privateKey, ok := config.Lookup[config.Secret](cf, cf.Join("gdna", "licd-private-key"), config.DefaultValue(path.Join(confDir, "geneos", "gdna-private-key.pem"))); ok && len(privateKey) > 0 {
+	if privateKey, ok := config.Lookup[config.Secret](cf, cf.Join("gdna", "licd-private-key"), config.DefaultValue(defaultPubkey)); ok && len(privateKey) > 0 {
 		defer clear(privateKey)
 		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
 		if err != nil {
@@ -104,5 +103,5 @@ func printPublicKey() error {
 		return nil
 	}
 
-	return fmt.Errorf("no private key found in configuration at %q or %q", cf.Join("gdna", "licd-private-key"), path.Join(confDir, "geneos", "gdna-private-key.pem"))
+	return fmt.Errorf("no private key found in configuration at %q or %q", cf.Join("gdna", "licd-private-key"), defaultPubkey)
 }

@@ -310,7 +310,7 @@ func initConfig() {
 	// already looks in standardised user and global directories. If
 	// user lookup fails we get an empty path, which is fine - so ignore
 	// errors.
-	oldConfDir, _ := config.UserConfigDir()
+	oldConfDir, _ := config.UserConfigPath()
 
 	cf, err := config.Read(cordial.ExecutableName(),
 		config.FilePath(cfgFile),
