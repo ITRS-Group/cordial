@@ -20,16 +20,13 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
-	"log/slog"
-	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
-	"github.com/itrs-group/cordial/pkg/geneos/xpath"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -39,6 +36,7 @@ var snapshotCmdValue, snapshotCmdSeverity, snapshotCmdSnooze, snapshotCmdUserAss
 var snapshotCmdMaxitems int
 var snapshotCmdUsername string
 var snapshotCmdPassword config.Secret
+var snapshotCmdFormat string
 
 func init() {
 	Cmd.AddCommand(snapshotCmd)
@@ -51,6 +49,7 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignment, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdFormat, "format", "f", "json", "Output format (json, toolkit)")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -112,7 +111,9 @@ var snapshotCmd = &cobra.Command{
 			defer clear(snapshotCmdPassword)
 		}
 
-		instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params).Report(os.Stdout, responses.IndentJSON(true))
+		resp := instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
+
+		resp.Report(os.Stdout, responses.IndentJSON(true))
 	},
 }
 
@@ -129,113 +130,27 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 		panic("wrong type")
 	}
 
-	if instance.CompareVersion(i, "5.14") <= 0 {
-		resp.Err = fmt.Errorf("%s is too old (5.14 or above required)", i)
+	// values := []any{}
+
+	values, err := instance.SnapshotDataviews(i, paths,
+		instance.SnapshotUsername(snapshotCmdUsername),
+		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotScopes(commands.Scope{
+			Value:          snapshotCmdValue,
+			Severity:       snapshotCmdSeverity,
+			Snooze:         snapshotCmdSnooze,
+			UserAssignment: snapshotCmdUserAssignment,
+		}),
+		instance.SnapshotMaxItems(snapshotCmdMaxitems),
+		instance.SnapshotXPathOnly(snapshotCmdXpathsonly),
+	)
+	if err != nil {
+		resp.Err = err
 		return
 	}
-	values := []any{}
-	i.Log().Debug("snapshot on", slog.Any("paths", paths))
-	for _, path := range paths {
-		var x *xpath.XPath
-		x, resp.Err = xpath.Parse(path)
-		if resp.Err != nil {
-			i.Log().Error("failed to parse xpath", slog.Any("error", resp.Err), slog.String("path", path))
-			continue
-		}
 
-		// always try to use auth details in per-instance config,
-		// default to from the command line or user/global config or
-		// credentials file
-		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
-		password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
-		defer clear(password)
-
-		if username == "" {
-			username = snapshotCmdUsername
-		}
-
-		if password == nil {
-			password = snapshotCmdPassword
-		}
-
-		// if username is still unset then look for credentials
-		//
-		// credential domain is gateway:NAME or gateway:* for wildcard
-		if username == "" {
-			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.AppName(cordial.ExecutableName()))
-			if creds != nil {
-				username = config.Get[string](creds, "username")
-				password = config.Get[config.Secret](creds, "password")
-				defer clear(password)
-			} else {
-				if creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName())); creds != nil {
-					username = config.Get[string](creds, "username")
-					password = config.Get[config.Secret](creds, "password")
-					defer clear(password)
-				}
-			}
-		}
-
-		i.Log().Debug("dialling", slog.Any("url", gatewayURL(i)))
-		var gw *commands.Connection
-		gw, resp.Err = commands.DialGateway(
-			gatewayURL(i),
-			commands.AllowInsecureCertificates(true),
-			commands.SetBasicAuth(username, password),
-		)
-		if resp.Err != nil {
-			return
-		}
-		d := x.ResolveTo(&xpath.Dataview{})
-		i.Log().Debug("matching xpath", slog.Any("xpath", d))
-		var views []*xpath.XPath
-		views, resp.Err = gw.Match(d, 0)
-		if resp.Err != nil {
-			return
-		}
-		if snapshotCmdMaxitems > 0 && len(views) > snapshotCmdMaxitems {
-			views = views[0:snapshotCmdMaxitems]
-		}
-		if snapshotCmdXpathsonly {
-			for _, x := range views {
-				values = append(values, x)
-			}
-		} else {
-			for _, view := range views {
-				var data *commands.Dataview
-				data, resp.Err = gw.Snapshot(view, "", commands.Scope{
-					Value:          snapshotCmdValue,
-					Severity:       snapshotCmdSeverity,
-					Snooze:         snapshotCmdSnooze,
-					UserAssignment: snapshotCmdUserAssignment,
-				})
-				if resp.Err != nil {
-					return
-				}
-				values = append(values, data)
-			}
-		}
-	}
 	if len(values) > 0 {
 		resp.Value = values
-	}
-	return
-}
-
-func gatewayURL(i geneos.Instance) (u *url.URL) {
-	if !instance.IsA(i, "gateway") {
-		return
-	}
-	u = &url.URL{}
-	hostname := config.Get[string](i.Host().Config, "hostname")
-	if hostname == "" {
-		hostname = "localhost"
-	}
-	port := config.Get[uint16](i.Config(), "port")
-	u.Host = fmt.Sprintf("%s:%d", hostname, port)
-	u.Scheme = "http"
-	if instance.IsTLSCapable(i) {
-		u.Scheme = "https"
 	}
 	return
 }
