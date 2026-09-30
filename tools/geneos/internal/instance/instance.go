@@ -558,7 +558,6 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		for _, name := range AllInstanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
-				log.Debug("pattern matches instance name", slog.String("pattern", pattern), slog.String("name", name))
 				matched = true
 				if h == geneos.ALL {
 					names = append(names, n)

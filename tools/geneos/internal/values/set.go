@@ -219,16 +219,14 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		// updateVariableItems(i, cf, VARIABLES, values.Variables, keyfile)
 	}
 
-	i.Log().Debug("updated configuration", slog.Any("config", cf.AllSettings()))
-
 	return
 }
 
-// setMapValue updates the value of a single key in a map
-// configuration. If the value was changed, it returns true. Otherwise,
-// it returns false.
+// setMapValue updates the value of a single key in a map configuration.
+// If the value was changed, it returns true. Otherwise, it returns
+// false.
 func setMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, key string, value V) (changed bool) {
-	s := config.Get[map[string]any](cf, confKey)
+	s := config.Get[map[string]V](cf, confKey)
 	if reflect.DeepEqual(s[key], value) {
 		return false
 	}
