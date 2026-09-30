@@ -20,7 +20,7 @@ package values
 // attribute - name=value
 type NameValues []string
 
-const AttributesOptionsText = "Attribute in the format `NAME=VALUE\n(Repeat as required, san only)"
+const AttributesOptionsText = "Attribute in the format NAME=VALUE\n(Repeat as required, san only)"
 const EnvsOptionsText = "Environment variable for instance start-up in the format NAME=VALUE\n(Repeat as required)"
 const HeadersOptionsText = "HTTP header in the format NAME=VALUE\n(Repeat as required)"
 
