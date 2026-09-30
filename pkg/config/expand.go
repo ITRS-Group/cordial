@@ -167,11 +167,17 @@ func Expand[T string | []byte](c *Config, input string, options ...ExpandOption)
 }
 
 // ExpandStringSlice applies ExpandString to each member of the input
-// slice
+// slice.
+func (c *Config) ExpandStringSlice(input []string, options ...ExpandOption) []string {
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
+	return c.expandStringSlice(input, options...)
+}
+
+// ExpandStringSlice applies ExpandString to each member of the input
+// slice for the global configuration.
 func ExpandStringSlice(input []string, options ...ExpandOption) []string {
-	global.rwmutex.RLock()
-	defer global.rwmutex.RUnlock()
-	return global.expandStringSlice(input, options...)
+	return global.ExpandStringSlice(input, options...)
 }
 
 // ExpandPassword expands the input string and returns a Secret. The
