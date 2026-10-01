@@ -102,6 +102,16 @@ func applySans(pf *config.Config, sans []San) {
 			if ncf, err := values.Set(i, vals, keyfile); err == nil {
 				i.SetConfig(ncf)
 			}
+
+			if san.CertBundle != "" {
+				updated, err := instance.ImportCertificates(i, san.CertBundle, "", san.CertBundlePassword)
+				if err != nil {
+					i.Log().Error("failed to import certificates", slog.Any("error", err))
+				}
+				if updated {
+					i.Log().Debug("ca-bundle updated")
+				}
+			}
 			if resp := instance.Write(i); resp.Err != nil {
 				i.Log().Error("write failed", slog.Any("error", resp.Err))
 				return
