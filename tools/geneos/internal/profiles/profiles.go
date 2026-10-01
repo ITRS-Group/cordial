@@ -25,10 +25,16 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -85,13 +91,9 @@ type Profile struct {
 type Common struct {
 	Name               string            `yaml:"name"`
 	Env                values.NameValues `yaml:"env,omitempty"`
-	Options            string            `yaml:"options,omitempty"`
+	Params             []string          `yaml:"params,omitempty"`
 	CertBundle         string            `yaml:"cert-bundle,omitempty,omitemtpy"` // path or PEM
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
-}
-
-type Netprobe struct {
-	Common `mapstructure:",squash"`
 }
 
 type Webserver struct {
@@ -103,16 +105,6 @@ type Licd struct {
 	LicenseFile string `yaml:"licd-file,omitempty"`
 }
 
-type ManagedEntity struct {
-	Name       string            `yaml:"name"`
-	ForEach    string            `yaml:"for-each,omitempty"`
-	Match      []string          `yaml:"match,omitempty"`  // filter only those instances that match one of the global patterns - Match is applied before Ignore
-	Ignore     []string          `yaml:"ignore,omitempty"` // filter out those instances that match one of the global patterns - Ignore is applied after Match
-	Types      []string          `yaml:"types,omitempty"`
-	Attributes values.NameValues `yaml:"attributes,omitempty"`
-	Variables  []values.Variable `yaml:"variables,omitempty"`
-}
-
 // Apply applies the specified profile to the local configuration.
 func Apply(pf *config.Config, name string) error {
 	profile, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
@@ -121,55 +113,95 @@ func Apply(pf *config.Config, name string) error {
 		return fmt.Errorf("profile %q not found", name)
 	}
 
-	// each key is a component type, with or with a plural
-	var gateways []Gateway
-	var netprobes []Netprobe
-	var sans []San
-	var webservers []Webserver
-
 	for key := range profile {
-		switch key {
-		case "san", "sans":
-			// handle san component
-			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand()); err != nil {
-				log.Error("failed to unmarshal SANs", slog.Any("err", err))
-				return fmt.Errorf("failed to unmarshal SANs for profile %q: %w", name, err)
+		ct := geneos.ParseComponent(key)
+		if ct.ApplyProfile != nil {
+			if err := ct.ApplyProfile(pf, name, key); err != nil {
+				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
-			applySans(pf, sans)
-		case "gateway", "gateways":
-			// handle gateway component
-			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
-				return fmt.Errorf("failed to unmarshal Gateways for profile %q: %w", name, err)
-			}
-			log.Debug("gateways", slog.String("gateways", fmt.Sprintf("%+v", gateways)))
-			applyGateways(pf, gateways)
-		case "netprobe", "netprobes":
-			// handle netprobe component
-			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &netprobes, config.NoExpand()); err != nil {
-				return fmt.Errorf("failed to unmarshal Netprobes for profile %q: %w", name, err)
-			}
-		case "webserver", "webservers":
-			// handle webserver component
-			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &webservers, config.NoExpand()); err != nil {
-				return fmt.Errorf("failed to unmarshal Webservers for profile %q: %w", name, err)
-			}
-		default:
-			// handle unknown component
 		}
 	}
 
 	return nil
 }
 
-// applyCommonParams applies the common parameters from the Common
+// ApplyCommonParams applies the common parameters from the Common
 // struct to the given values.
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
-func applyCommonParams(p Common, vals values.Values) (values.Values, error) {
+func ApplyCommonParams(p Common) (vals values.Values) {
 	vals.Envs = p.Env
-	if len(p.Options) > 0 {
-		vals.Params = append(vals.Params, "options="+p.Options)
+	vals.Params = p.Params
+	return
+}
+
+func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) error {
+	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
+	log.Debug("retrieved instances", slog.String("component", ct.String()), slog.String("name", name), slog.Int("count", len(instances)))
+
+	if len(instances) == 0 {
+		// create here
+		log.Debug("creating instance", slog.String("component", ct.String()), slog.String("name", name))
+		var port uint16
+		if len(vals.Params) > 0 {
+			pos := slices.IndexFunc(vals.Params, func(e string) bool {
+				return strings.HasPrefix(e, "port=")
+			})
+			if pos >= 0 {
+				p := strings.TrimPrefix(vals.Params[pos], "port=")
+				pv, _ := strconv.Atoi(p)
+				port = uint16(pv)
+			}
+		}
+		_, err := instance.Add(geneos.LOCAL, ct, name, port, vals,
+			instance.CertBundle(common.CertBundle),
+			instance.CertBundlePassword(common.CertBundlePassword),
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		// update the first / only instance
+		i := instances[0]
+		cf := i.Config()
+
+		if config.Get[bool](cf, "protected") {
+			return fmt.Errorf("instance %q is protected, skipping", name)
+		}
+
+		keyfile := config.Get[config.KeyFile](cf, "keyfile")
+
+		// Reset existing configuration for this instance before applying new values
+		for _, key := range deleteKeys {
+			config.Delete(cf, key)
+		}
+
+		if ncf, err := values.Set(i, vals, keyfile); err == nil {
+			i.SetConfig(ncf)
+		}
+
+		if common.CertBundle != "" {
+			updated, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
+			if err != nil {
+				i.Log().Error("failed to import certificates", slog.Any("error", err))
+			}
+			if updated {
+				i.Log().Debug("ca-bundle updated")
+			}
+		}
+
+		if resp := instance.Write(i); resp.Err != nil {
+			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
+		}
+		i.Rebuild(true)
 	}
-	return vals, nil
+
+	instance.Do(geneos.LOCAL, ct, []string{name}, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		resp = responses.New[responses.General](i)
+		resp.Err = instance.Start(i)
+		return
+	}, vals).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+
+	return nil
 }

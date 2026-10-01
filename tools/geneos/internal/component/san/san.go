@@ -112,6 +112,8 @@ var San = geneos.Component{
 		filepath.Join("netprobe", "netprobes_shared"),
 		filepath.Join("netprobe", "shared"),
 	},
+
+	ApplyProfile: applyProfile,
 }
 
 type Sans instance.Instance

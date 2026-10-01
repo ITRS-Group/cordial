@@ -69,7 +69,6 @@ var profileCmd = &cobra.Command{
 		}
 
 		log.Debug("applying profile", slog.String("type", profileType))
-		profiles.Apply(pf, profileType)
-		return nil
+		return profiles.Apply(pf, profileType)
 	},
 }

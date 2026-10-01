@@ -11,7 +11,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// replacePrefix supports the "replace" prefix. It takes a strings with
+// ReplacePrefix supports the "replace" prefix. It takes a strings with
 // four components of the form: `${replace:param:/PATTERN/TEXT/}` (where
 // the `/` can be any character except ':', but is then solely used to
 // separate the pattern and the replacement text and must be the last
@@ -19,7 +19,7 @@ import (
 // If the parameter is empty or not defined, an empty string is
 // returned. If parsing the PATTERN fails then no substitution is
 // performed.
-func replacePrefix(ci map[string]any, s string, trim bool) (result string, err error) {
+func ReplacePrefix(ci map[string]any, s string, trim bool) (result string, err error) {
 	s = strings.TrimPrefix(s, "replace:")
 	sep := s[len(s)-1:] // last character as separator
 	if sep == ":" || sep == "" {
@@ -78,7 +78,7 @@ func replacePrefix(ci map[string]any, s string, trim bool) (result string, err e
 // parameter is set but an empty string then it is treated as if it were
 // not set. To return a blank string if no parameter is set use
 // `${select:param:}` noting the colon just before the closing brace.
-func selectPrefix(ci map[string]any, s string, trim bool) (result string, err error) {
+func SelectPrefix(ci map[string]any, s string, trim bool) (result string, err error) {
 	// const validSeparators = "+ /-"
 	var r strings.Builder
 

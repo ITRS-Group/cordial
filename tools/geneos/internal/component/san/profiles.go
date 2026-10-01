@@ -1,20 +1,20 @@
-package profiles
+package san
 
 import (
 	"log/slog"
-	"os"
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/labstack/gommon/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-type San struct {
-	Common          `mapstructure:",squash"`
+type SanProfile struct {
+	profiles.Common `mapstructure:",squash"`
 	Gateways        map[string]string `yaml:"gateways,omitempty"`
 	Types           []string          `yaml:"types,omitempty"`
 	Attributes      values.NameValues `yaml:"attributes,omitempty"`
@@ -22,28 +22,49 @@ type San struct {
 	ManagedEntities []ManagedEntity   `yaml:"managed-entities,omitempty"`
 }
 
-func applySans(pf *config.Config, sans []San) {
-	if len(sans) == 0 {
-		return
-	}
+type ManagedEntity struct {
+	Name       string            `yaml:"name"`
+	ForEach    string            `yaml:"for-each,omitempty"`
+	Match      []string          `yaml:"match,omitempty"`  // filter only those instances that match one of the global patterns - Match is applied before Ignore
+	Ignore     []string          `yaml:"ignore,omitempty"` // filter out those instances that match one of the global patterns - Ignore is applied after Match
+	Types      []string          `yaml:"types,omitempty"`
+	Attributes values.NameValues `yaml:"attributes,omitempty"`
+	Variables  []values.Variable `yaml:"variables,omitempty"`
+}
 
+func applyProfile(pf *config.Config, name, key string) (err error) {
 	ct := geneos.ParseComponent("san")
+
+	var sans []SanProfile
+	if err2 := pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand()); err2 != nil {
+		log.Error("failed to unmarshal SANs", slog.Any("err", err2))
+		return err2
+	}
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
 		"hostname": geneos.LOCAL.String(),
 	}
 
+	// build param key delete list
+	deleteKeys := []string{
+		values.GATEWAYS,
+		values.ATTRIBUTES,
+		values.TYPES,
+		values.VARIABLES,
+		values.ENVIRONMENT,
+		values.MANAGED_ENTITIES,
+	}
+
 	for _, san := range sans {
 		// does it already exist?
 		name := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
-		vals := values.Values{
-			Gateways:   san.Gateways,
-			Types:      san.Types,
-			Attributes: san.Attributes,
-			Variables:  san.Variables,
-		}
+		vals := profiles.ApplyCommonParams(san.Common)
+		vals.Gateways = san.Gateways
+		vals.Types = san.Types
+		vals.Attributes = san.Attributes
+		vals.Variables = san.Variables
 
 		// now add managed-entities, prefixing each with the "name/"
 		for _, me := range san.ManagedEntities {
@@ -56,62 +77,11 @@ func applySans(pf *config.Config, sans []San) {
 			}
 		}
 
-		// apply common params
-		vals, err := applyCommonParams(san.Common, vals)
-		if err != nil {
-			log.Error("failed to apply common params", slog.String("name", name), slog.Any("error", err))
-			return
+		if err := profiles.ApplyInstance(ct, san.Common, name, deleteKeys, vals); err != nil {
+			return err
 		}
-
-		instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
-		log.Debug("retrieved SAN instances", slog.String("name", name), slog.Int("count", len(instances)))
-		if len(instances) == 0 {
-			// create here
-			log.Debug("creating SAN instance", slog.String("name", name))
-			instance.Add(geneos.LOCAL, ct, name, 0, vals,
-				instance.CertBundle(san.Common.CertBundle),
-				instance.CertBundlePassword(san.Common.CertBundlePassword),
-			)
-		} else {
-			// update the first / only instance
-			i := instances[0]
-			log.Debug("updating SAN instance", slog.String("name", i.Name()))
-			cf := i.Config()
-			keyfile := config.Get[config.KeyFile](cf, "keyfile")
-
-			// Reset existing SAN configuration for this instance before applying new values
-			config.Delete(cf, values.GATEWAYS)
-			config.Delete(cf, values.ATTRIBUTES)
-			config.Delete(cf, values.TYPES)
-			config.Delete(cf, values.VARIABLES)
-			config.Delete(cf, values.ENVIRONMENT)
-			config.Delete(cf, values.MANAGED_ENTITIES)
-
-			if ncf, err := values.Set(i, vals, keyfile); err == nil {
-				i.SetConfig(ncf)
-			}
-
-			if san.CertBundle != "" {
-				updated, err := instance.ImportCertificates(i, san.CertBundle, "", san.CertBundlePassword)
-				if err != nil {
-					i.Log().Error("failed to import certificates", slog.Any("error", err))
-				}
-				if updated {
-					i.Log().Debug("ca-bundle updated")
-				}
-			}
-			if resp := instance.Write(i); resp.Err != nil {
-				i.Log().Error("write failed", slog.Any("error", resp.Err))
-				return
-			}
-		}
-		instance.Do(geneos.LOCAL, ct, []string{name}, func(i geneos.Instance, a ...any) (resp *responses.General) {
-			resp = responses.New[responses.General](i)
-			resp.Err = instance.Start(i)
-			return
-		}, vals).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
-
 	}
+	return
 }
 
 func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err error) {
@@ -174,29 +144,29 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 					Name: v.Name,
 					Value: config.Expand[string](cf, v.Value,
 						config.LookupTable(lookup),
-						config.Prefix("select", selectPrefix),
-						config.Prefix("replace", replacePrefix),
+						config.Prefix("select", profiles.SelectPrefix),
+						config.Prefix("replace", profiles.ReplacePrefix),
 					),
 				}
 			}
 
 			name := config.Expand[string](cf, entity.Name,
 				config.LookupTable(lookup),
-				config.Prefix("select", selectPrefix),
-				config.Prefix("replace", replacePrefix),
+				config.Prefix("select", profiles.SelectPrefix),
+				config.Prefix("replace", profiles.ReplacePrefix),
 			)
 
 			e := ManagedEntity{
 				Name: name,
 				Types: cf.ExpandStringSlice(entity.Types,
 					config.LookupTable(lookup),
-					config.Prefix("select", selectPrefix),
-					config.Prefix("replace", replacePrefix),
+					config.Prefix("select", profiles.SelectPrefix),
+					config.Prefix("replace", profiles.ReplacePrefix),
 				),
 				Attributes: cf.ExpandStringSlice(entity.Attributes,
 					config.LookupTable(lookup),
-					config.Prefix("select", selectPrefix),
-					config.Prefix("replace", replacePrefix),
+					config.Prefix("select", profiles.SelectPrefix),
+					config.Prefix("replace", profiles.ReplacePrefix),
 				),
 				Variables: variables,
 			}

@@ -206,6 +206,8 @@ type Component struct {
 	// example import, start, stop, update). If nil, no audit entry is
 	// written.
 	Audit func(i Instance, event string, fields map[string]string) error
+
+	ApplyProfile func(pf *config.Config, name, key string) error
 }
 
 // String returns the stringified name of ct. If ct is nil then return

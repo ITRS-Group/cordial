@@ -101,6 +101,7 @@ var Netprobe = geneos.Component{
 		filepath.Join(component, "netprobes_shared"),
 		filepath.Join(component, "shared"),
 	},
+	ApplyProfile: applyProfile,
 }
 
 type Netprobes instance.Instance
