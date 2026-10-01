@@ -20,7 +20,9 @@ package instance
 import (
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -116,6 +118,28 @@ func WriteCertificateAndKey(i geneos.Instance, key certs.PrivateKey, certChain .
 	}
 	if err = writePrivateKey(i, key); err != nil {
 		return
+	}
+	return
+}
+
+// WriteCertificateBundle writes the certificate, key and trust chain to
+// the instance. It returns a boolean indicating if the trust chain was
+// updated and any error encountered. If the trust chain is updated, the
+// instance configuration `tls::ca-bundle` parameter is also updated.
+func WriteCertificateBundle(i geneos.Instance, bundle *certs.CertificateBundle) (trustChainUpdated bool, err error) {
+	if i == nil || i.Type() == nil || bundle == nil {
+		return false, geneos.ErrInvalidArgs
+	}
+
+	if err = WriteCertificateAndKey(i, bundle.Key, bundle.FullChain...); err != nil {
+		return false, err
+	}
+
+	trustChainUpdated, err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), bundle.Root)
+	if trustChainUpdated {
+		cf := i.Config()
+		config.Set(cf, cf.Join(TLSBASE, CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
+
 	}
 	return
 }
@@ -312,4 +336,60 @@ func IsTLSCapable(i geneos.Instance) bool {
 
 	missing := CheckPaths(i, certPath, keyPath)
 	return len(missing) == 0
+}
+
+// ImportCertificates imports the certificate bundle and private key for
+// the instance. It supports both PFX/P12 and PEM formats. It does not
+// write the instance configuration, even when updating parameters,
+// which the caller is responsible for.
+func ImportCertificates(i geneos.Instance, certBundlePath, privateKeyPath string, certBundlePassword config.Secret) (trustChainUpdated bool, err error) {
+	var certBundle *certs.CertificateBundle
+
+	if i == nil || i.Type() == nil {
+		return false, geneos.ErrInvalidArgs
+	}
+
+	if path.Ext(certBundlePath) == ".pfx" || path.Ext(certBundlePath) == ".p12" {
+		if len(certBundlePassword) == 0 {
+			certBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+			if err != nil {
+				return false, err
+			}
+			defer clear(certBundlePassword)
+		}
+		certBundle, err = certs.P12ToCertBundle(certBundlePath, certBundlePassword)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		certChain, err := config.ReadPEM(certBundlePath, "instance certificate(s)")
+		if err != nil {
+			return false, err
+		}
+
+		if len(privateKeyPath) > 0 {
+			key, err := config.ReadPEM(privateKeyPath, "instance key")
+			if err != nil {
+				return false, err
+			}
+			certBundle, err = certs.ParsePEM(certChain, key)
+			if err != nil {
+				return false, err
+			}
+		} else {
+			certBundle, err = certs.ParsePEM(certChain)
+			if err != nil {
+				return false, err
+			}
+		}
+	}
+
+	if !certBundle.Valid {
+		return false, fmt.Errorf("certificate bundle is not valid, check trust chain and key match")
+	}
+	if certBundle.Leaf == nil || certBundle.Key == nil {
+		return false, fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
+	}
+
+	return WriteCertificateBundle(i, certBundle)
 }

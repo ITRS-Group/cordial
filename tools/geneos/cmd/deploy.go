@@ -331,58 +331,9 @@ var deployCmd = &cobra.Command{
 		}
 
 		if deployCmdInstanceBundle != "" {
-			var certBundle *certs.CertificateBundle
-			if path.Ext(deployCmdInstanceBundle) == ".pfx" || path.Ext(deployCmdInstanceBundle) == ".p12" {
-				if len(deployCmdBundlePassword) == 0 {
-					deployCmdBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
-					if err != nil {
-						log.Error("Failed to read password", slog.Any("error", err))
-						return err
-					}
-					defer clear(deployCmdBundlePassword)
-				}
-				certBundle, err = certs.P12ToCertBundle(deployCmdInstanceBundle, deployCmdBundlePassword)
-				if err != nil {
-					log.Error("Failed to parse PFX file", slog.Any("error", err))
-					return err
-				}
-			} else {
-				certChain, err := config.ReadPEM(deployCmdInstanceBundle, "instance certificate(s)")
-				if err != nil {
-					log.Error("Failed to read instance certificate(s)", slog.Any("error", err))
-					return err
-				}
-				certBundle, err = certs.ParsePEM(certChain, nil)
-				if err != nil {
-					log.Error("Failed to decompose PEM", slog.Any("error", err))
-					return err
-				}
-				if certBundle.Leaf == nil || certBundle.Key == nil {
-					return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-				}
-			}
-
-			if !certBundle.Valid {
-				return fmt.Errorf("invalid certificate bundle")
-			}
-
-			if certBundle.Leaf == nil || certBundle.Key == nil {
-				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-			}
-
-			if err = instance.WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); err != nil {
+			_, err = instance.ImportCertificates(i, deployCmdInstanceBundle, "", deployCmdBundlePassword)
+			if err != nil {
 				return err
-			}
-			fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
-
-			var updated bool
-			if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
-				return err
-			}
-			config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
-
-			if updated {
-				fmt.Printf("%s ca-bundle updated\n", i)
 			}
 
 			// always set the ca-bundle path, updated or not

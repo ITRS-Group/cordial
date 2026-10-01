@@ -6,11 +6,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -82,61 +80,12 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	}
 
 	if opts.certBundle != "" {
-		var certBundle *certs.CertificateBundle
-		var certBundlePassword config.Secret = opts.certBundlePassword
-		if path.Ext(opts.certBundle) == ".pfx" || path.Ext(opts.certBundle) == ".p12" {
-			if len(certBundlePassword) == 0 {
-				certBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
-				if err != nil {
-					log.Error("Failed to read password", slog.Any("error", err))
-					return err
-				}
-				defer clear(certBundlePassword)
-			}
-			certBundle, err = certs.P12ToCertBundle(opts.certBundle, certBundlePassword)
-			if err != nil {
-				log.Error("Failed to parse PFX file", slog.Any("error", err), slog.String("file", opts.certBundle))
-				return err
-			}
-		} else {
-			certChain, err := config.ReadPEM(opts.certBundle, "instance certificate(s)")
-			if err != nil {
-				log.Error("Failed to read instance certificate(s)", slog.Any("error", err), slog.String("file", opts.certBundle))
-				return err
-			}
-			certBundle, err = certs.ParsePEM(certChain, nil)
-			if err != nil {
-				log.Error("Failed to decompose PEM", slog.Any("error", err), slog.String("file", opts.certBundle))
-				return err
-			}
-			if certBundle.Leaf == nil || certBundle.Key == nil {
-				return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-			}
-		}
-
-		if !certBundle.Valid {
-			return fmt.Errorf("invalid certificate bundle")
-		}
-
-		if certBundle.Leaf == nil || certBundle.Key == nil {
-			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
-		}
-
-		if err = WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); err != nil {
-			return err
-		}
-		fmt.Printf("%s certificate, trust chain and key written\n%s", i, certs.CertificateComments(certBundle.Leaf))
-
-		var updated bool
-		if updated, err = certs.UpdateCACertsFiles(h, geneos.PathToCABundle(h), certBundle.Root); err != nil {
+		_, err = ImportCertificates(i, opts.certBundle, "", opts.certBundlePassword)
+		if err != nil {
 			return err
 		}
 
-		if updated {
-			fmt.Printf("%s ca-bundle updated\n", i)
-		}
-
-		// always set the ca-bundle path, updated or not
+		// always set the ca-bundle path, updated or not above
 		i.Log().Debug("setting TLS CA bundle path", slog.String("path", geneos.PathToCABundlePEM(h)))
 		config.Set(cf, cf.Join(TLSBASE, CABUNDLE), geneos.PathToCABundlePEM(h))
 

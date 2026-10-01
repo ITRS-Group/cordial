@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -156,7 +157,7 @@ geneos tls import /path/to/file.pem
 // It returns a Response indicating success or failure.
 func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
-	cf := i.Config()
+	// cf := i.Config()
 
 	if len(params) != 1 {
 		resp.Err = geneos.ErrInvalidArgs
@@ -169,18 +170,11 @@ func tlsWriteInstance(i geneos.Instance, params ...any) (resp *responses.General
 		return
 	}
 
-	if resp.Err = instance.WriteCertificateAndKey(i, certBundle.Key, certBundle.FullChain...); resp.Err != nil {
+	updated, err := instance.WriteCertificateBundle(i, certBundle)
+	if err != nil {
+		resp.Err = err
 		return
 	}
-	resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s certificate, trust chain and key written", i))
-
-	var updated bool
-	updated, resp.Err = certs.UpdateCACertsFiles(i.Host(), geneos.PathToCABundle(i.Host()), certBundle.Root)
-
-	if resp.Err == nil {
-		config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
-	}
-
 	if updated {
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s ca-bundle updated", i))
 	}
