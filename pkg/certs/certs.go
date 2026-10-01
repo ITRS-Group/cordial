@@ -461,6 +461,11 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	return
 }
 
+// P12ToCertBundle converts a PKCS#12 (PFX) file to a CertificateBundle.
+// It reads the PFX file, extracts the private key and certificate
+// chain, and constructs a CertificateBundle with the leaf certificate,
+// full chain, root certificate, and private key. The password must be
+// supplied and there is no default.
 func P12ToCertBundle(pfxPath string, password config.Secret) (certBundle *CertificateBundle, err error) {
 	pfxData, err := os.ReadFile(pfxPath)
 	if err != nil {
