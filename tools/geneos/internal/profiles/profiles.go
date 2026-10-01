@@ -90,16 +90,6 @@ type Common struct {
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
 }
 
-type Gateway struct {
-	Common
-	GatewayName string            `yaml:"gateway-name"`
-	LicdHost    string            `yaml:"licd-host,omitempty"`
-	LicdPort    int               `yaml:"licd-port,omitempty"`
-	LicdSecure  bool              `yaml:"licd-secure,omitempty"`
-	Includes    []string          `yaml:"includes,omitempty"`
-	Variables   []values.Variable `yaml:"variables,omitempty"`
-}
-
 type Netprobe struct {
 	Common `mapstructure:",squash"`
 }
@@ -151,6 +141,8 @@ func Apply(pf *config.Config, name string) error {
 			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
 				return fmt.Errorf("failed to unmarshal Gateways for profile %q: %w", name, err)
 			}
+			log.Debug("gateways", slog.String("gateways", fmt.Sprintf("%+v", gateways)))
+			applyGateways(pf, gateways)
 		case "netprobe", "netprobes":
 			// handle netprobe component
 			if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &netprobes, config.NoExpand()); err != nil {

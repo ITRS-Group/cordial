@@ -45,23 +45,16 @@ func applySans(pf *config.Config, sans []San) {
 			Variables:  san.Variables,
 		}
 
-		log.Debug("processing SAN", slog.String("name", name), slog.Any("values", vals))
-
 		// now add managed-entities, prefixing each with the "name/"
 		for _, me := range san.ManagedEntities {
 			// start with clean values for each managed entity
 			if extraVals, err := processSANManagedEntity(me); err == nil {
 				// merge into top-level values
-				log.Debug("merging ME attributes", slog.String("managedEntity", me.Name), slog.Any("attributes", extraVals.Attributes))
 				vals.Attributes = append(vals.Attributes, extraVals.Attributes...)
-				log.Debug("merging ME types", slog.String("managedEntity", me.Name), slog.Any("types", extraVals.Types))
 				vals.Types = append(vals.Types, extraVals.Types...)
-				log.Debug("merging ME variables", slog.String("managedEntity", me.Name), slog.Any("variables", extraVals.Variables))
 				vals.Variables = append(vals.Variables, extraVals.Variables...)
 			}
 		}
-
-		log.Debug("final SAN values", slog.String("name", name), slog.Any("values", vals))
 
 		// apply common params
 		vals, err := applyCommonParams(san.Common, vals)
@@ -79,11 +72,6 @@ func applySans(pf *config.Config, sans []San) {
 				instance.CertBundle(san.Common.CertBundle),
 				instance.CertBundlePassword(san.Common.CertBundlePassword),
 			)
-			instance.Do(geneos.LOCAL, ct, []string{name}, func(i geneos.Instance, a ...any) (resp *responses.General) {
-				resp = responses.New[responses.General](i)
-				resp.Err = instance.Start(i)
-				return
-			}, vals).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
 		} else {
 			// update the first / only instance
 			i := instances[0]
@@ -117,6 +105,12 @@ func applySans(pf *config.Config, sans []San) {
 				return
 			}
 		}
+		instance.Do(geneos.LOCAL, ct, []string{name}, func(i geneos.Instance, a ...any) (resp *responses.General) {
+			resp = responses.New[responses.General](i)
+			resp.Err = instance.Start(i)
+			return
+		}, vals).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+
 	}
 }
 
