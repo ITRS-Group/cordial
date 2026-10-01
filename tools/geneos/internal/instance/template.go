@@ -18,7 +18,6 @@ limitations under the License.
 package instance
 
 import (
-	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -119,52 +118,15 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	// convert "variables" (if any) from slice of structs to slice of
 	// maps for lower case keys in templates
 	variables := []map[string]string{}
-	if vars, found := m[values.VARIABLES]; found {
-		switch vx := vars.(type) {
-		case []map[string]string:
-			variables = vx
-		case []any:
-			for _, v := range vx {
-				vMap, ok := v.(map[string]any)
-				if !ok {
-					i.Log().Warn("variable is not a map", slog.Any("variable", v), slog.String("type", fmt.Sprintf("%T", v)))
-					return
-					// continue
-				}
-				// the key is a kex string of the name to avoid case-sensitive
-				// issues with the name
-				nv := map[string]string{
-					values.MAPKEY_NAME:      vMap["name"].(string),
-					values.VARMAP_KEY_TYPE:  vMap["type"].(string),
-					values.VARMAP_KEY_VALUE: vMap["value"].(string),
-				}
-				variables = append(variables, nv)
-			}
-		// have to handle both []values.Variable and values.Variables
-		// types separately even though they are the same underlying
-		// types
-		case []values.Variable:
-			for _, v := range vx {
-				nv := map[string]string{
-					values.MAPKEY_NAME:      v.Name,
-					values.VARMAP_KEY_TYPE:  v.Type,
-					values.VARMAP_KEY_VALUE: v.Value,
-				}
-				variables = append(variables, nv)
-			}
-		case values.Variables:
-			for _, v := range vx {
-				nv := map[string]string{
-					values.MAPKEY_NAME:      v.Name,
-					values.VARMAP_KEY_TYPE:  v.Type,
-					values.VARMAP_KEY_VALUE: v.Value,
-				}
-				variables = append(variables, nv)
-			}
-		default:
-			i.Log().Warn("variables is in an unexpected format", slog.Any("variables", vars), slog.String("type", fmt.Sprintf("%T", vars)))
-			// drop through
-		}
+
+	nv, _ := values.NormaliseVars(m[values.VARIABLES])
+
+	for _, v := range nv {
+		variables = append(variables, map[string]string{
+			values.MAPKEY_NAME:      v.Name,
+			values.VARMAP_KEY_TYPE:  v.Type,
+			values.VARMAP_KEY_VALUE: v.Value,
+		})
 	}
 
 	// tls migration, for now lift new settings up to old names
@@ -290,31 +252,15 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 					variables := []map[string]string{}
 
-					vars := entity[values.VARIABLES]
-
-					switch vx := vars.(type) {
-					// have to handle both []values.Variable and values.Variables
-					// types separately even though they are the same underlying
-					// types
-					case []values.Variable:
-						for _, v := range vx {
-							nv := map[string]string{
-								values.MAPKEY_NAME:      v.Name,
-								values.VARMAP_KEY_TYPE:  v.Type,
-								values.VARMAP_KEY_VALUE: v.Value,
-							}
-							variables = append(variables, nv)
-						}
-					case values.Variables:
-						for _, v := range vx {
-							nv := map[string]string{
-								values.MAPKEY_NAME:      v.Name,
-								values.VARMAP_KEY_TYPE:  v.Type,
-								values.VARMAP_KEY_VALUE: v.Value,
-							}
-							variables = append(variables, nv)
-						}
+					nv, _ := values.NormaliseVars(entity[values.VARIABLES])
+					for _, v := range nv {
+						variables = append(variables, map[string]string{
+							values.MAPKEY_NAME:      v.Name,
+							values.VARMAP_KEY_TYPE:  v.Type,
+							values.VARMAP_KEY_VALUE: v.Value,
+						})
 					}
+
 					if len(variables) == 0 {
 						delete(entity, values.VARIABLES)
 					} else {

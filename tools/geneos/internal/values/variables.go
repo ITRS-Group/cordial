@@ -136,6 +136,18 @@ func getVarValue(in string) (variable Variable) {
 
 // NormaliseVars updates old style "variables" items.
 func NormaliseVars(vars any) (newVars []Variable, changed bool) {
+	if vars == nil {
+		return nil, false
+	}
+
+	// short circuit if already in the desired format(s)
+	if _, ok := vars.([]Variable); ok {
+		return vars.([]Variable), false
+	}
+	if _, ok := vars.(Variables); ok {
+		return vars.(Variables), false
+	}
+
 	ft := reflect.TypeOf(vars)
 	switch ft.Kind() {
 	case reflect.Slice:
