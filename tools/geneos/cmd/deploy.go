@@ -307,119 +307,26 @@ var deployCmd = &cobra.Command{
 				}
 			}
 		}
-		// we are installed and ready to go, drop through to code from `add`
-		i, err := instance.GetWithHost(h, ct, name)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return
-		}
-		cf := i.Config()
 
-		// check if instance already exists
-		if !i.Loaded().IsZero() {
-			i.Log().Error("instance already exists")
-			return
-		}
+		deployCmdExtras.Params = params
 
-		if deployCmdPort > 0 {
-			if inUse, _ := instance.PortInUse(i.Host(), deployCmdPort); inUse {
-				return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, deployCmdPort)
-			}
-		}
-
-		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
-			return resp.Err
-		}
-
-		if deployCmdInstanceBundle != "" {
-			_, err = instance.ImportCertificates(i, deployCmdInstanceBundle, "", deployCmdBundlePassword)
-			if err != nil {
-				return err
-			}
-
-			// always set the ca-bundle path, updated or not
-			i.Log().Debug("setting TLS CA bundle path", slog.String("path", geneos.PathToCABundlePEM(h)))
-			config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(h))
-
-			if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
-				return resp.Err
-			}
-		}
-
-		// call components specific Add()
-		if err = i.Add(deployCmdTemplate, deployCmdPort, deployCmdInsecure || deployCmdInstanceBundle != ""); err != nil {
-			log.Error("failed to add instance", slog.Any("error", err))
+		i, err := instance.Add(h, ct, name, deployCmdPort, deployCmdExtras,
+			instance.Template(deployCmdTemplate),
+			instance.Base(deployCmdBase),
+			instance.Insecure(deployCmdInsecure),
+			instance.CertBundle(deployCmdInstanceBundle),
+			instance.CertBundlePassword(deployCmdBundlePassword),
+			instance.Keyfile(deployCmdKeyfile),
+			instance.KeyfileCRC(deployCmdKeyfileCRC),
+			instance.Imports(deployCmdImportFiles),
+			instance.StartAfterAdd(deployCmdStart),
+		)
+		if err != nil {
 			return err
 		}
 
-		if deployCmdBase != "active_prod" {
-			config.Set(cf, "version", deployCmdBase)
-		}
-
-		if ct.IsA("gateway") && (deployCmdKeyfile != "" || deployCmdKeyfileCRC != "") {
-			// override the instance generated keyfile if options given
-			_, crc, err := geneos.ImportSharedKey(i.Host(), i.Type(), deployCmdKeyfile, deployCmdKeyfileCRC, "Paste AES key file contents, end with newline and CTRL+D:")
-			if err != nil {
-				i.Log().Error("cannot import keyfile, ignoring", slog.Any("error", err))
-			} else {
-				config.Set(cf, "keyfile", instance.Shared(i, "keyfiles", fmt.Sprintf("%d.aes", crc)))
-				// set usekeyfile for all new instances 5.14 and above
-				if instance.CompareVersion(i, "5.14.0") >= 0 {
-					// use keyfiles
-					i.Log().Debug("gateway version 5.14.0 or above, using keyfiles on creation")
-					config.Set(cf, "usekeyfile", "true")
-				}
-			}
-		}
-
-		deployCmdExtras.Params = params
-		keyfile := config.Get[config.KeyFile](cf, "keyfile")
-
-		if ncf, err := values.Set(i, deployCmdExtras, keyfile); err == nil {
-			i.SetConfig(ncf)
-			cf = ncf
-		}
-
-		// update home to ensure write is correct
-		config.Set(cf, "home", instance.Home(i))
-
-		// if the instance is TLS capable and there is no setting for
-		// licdsecure, then enable TLS for the licd connection by default
-		if instance.IsTLSCapable(i) {
-			if _, ok := config.Lookup[string](cf, "licdsecure"); !ok {
-				config.Set(cf, "licdsecure", "true")
-			}
-		}
-
-		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
-			return resp.Err
-		}
-
-		// reload config as instance data is not updated by Add() as an interface value
-		i.Unload()
-		i.Load()
-		i.Rebuild(true)
-
-		_ = instance.ImportFiles(i, deployCmdImportFiles...)
-
-		// make sure base version link exists
-		basemame := config.Get[string](cf, "version")
-		exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basemame))
-		if !exists {
-			i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basemame))
-			geneos.Update(h, ct, geneos.Basename(basemame))
-		}
-
-		fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
-
-		if deployCmdStart || deployCmdLogs {
-			if err = instance.Start(i, instance.StartingExtras(deployCmdExtraOpts)); err != nil {
-				if errors.Is(err, os.ErrProcessDone) {
-					err = nil
-				}
-			}
-			if deployCmdLogs {
-				followLog(i) // never returns
-			}
+		if deployCmdLogs {
+			followLog(i) // never returns
 		}
 
 		return

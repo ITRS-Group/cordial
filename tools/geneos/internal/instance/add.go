@@ -17,12 +17,12 @@ import (
 
 // Add add an instance of component type ct the the optional
 // extra configuration values extras
-func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras values.Values, options ...AddOption) (err error) {
+func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras values.Values, options ...AddOption) (i geneos.Instance, err error) {
 	if ct == nil {
-		return fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
+		return nil, fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
 	if name == "" {
-		return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
+		return nil, fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
 
 	}
 
@@ -49,10 +49,10 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 
 	if err = ct.MakeDirs(h); err != nil {
-		return
+		return nil, err
 	}
 
-	i, err := GetWithHost(h, ct, name)
+	i, err = GetWithHost(h, ct, name)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		// we get a not exists error for a new instance, but c is still populated
 		return
@@ -69,20 +69,20 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	}
 
 	if port > 0 {
-		if inUse, _ := PortInUse(i.Host(), port); inUse {
-			return fmt.Errorf("%w: port %d is already in use", geneos.ErrInvalidArgs, port)
+		if j, err := ByPort(i.Host(), port); err == nil {
+			return nil, fmt.Errorf("%w: port %d is already in use by %q", geneos.ErrInvalidArgs, port, j.String())
 		}
 	}
 
 	i.Log().Debug("writing config for new instance")
 	if resp := Write(i, NoRebuild()); resp.Err != nil {
-		return resp.Err
+		return nil, resp.Err
 	}
 
 	if opts.certBundle != "" {
 		_, err = ImportCertificates(i, opts.certBundle, "", opts.certBundlePassword)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// always set the ca-bundle path, updated or not above
@@ -91,14 +91,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 
 		i.Log().Debug("writing config for instance with certificate bundle")
 		if resp := Write(i, NoRebuild()); resp.Err != nil {
-			return resp.Err
+			return nil, resp.Err
 		}
 	}
 
 	// call components specific Add()
 	if err = i.Add(opts.template, port, opts.insecure || opts.certBundle != ""); err != nil {
 		log.Error("failed to add instance", slog.Any("error", err))
-		os.Exit(1)
+		return nil, err
 	}
 
 	if opts.base != "active_prod" {
@@ -114,7 +114,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 		} else if opts.keyfile != "" {
 			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), opts.keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
-				return err
+				return nil, err
 			}
 			sharedPath = paths[0]
 		}
@@ -151,7 +151,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 
 	i.Log().Debug("writing config for new instance with extras")
 	if resp := Write(i, NoRebuild()); resp.Err != nil {
-		return resp.Err
+		return nil, resp.Err
 	}
 
 	// reload config as instance data is not updated by Add() as an interface value
@@ -179,14 +179,11 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 			if errors.Is(err, os.ErrProcessDone) {
 				err = nil
 			}
-			return
+			return nil, err
 		}
-		// if opts.logs {
-		// 	followLog(i) // never returns
-		// }
 	}
 
-	return
+	return i, nil
 }
 
 type addOptions struct {

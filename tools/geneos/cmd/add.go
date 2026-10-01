@@ -100,7 +100,7 @@ geneos add netprobe infraprobe12 --start --log
 			return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
 		}
 		addCmdExtras.Params = params
-		return instance.Add(geneos.GetHost(Hostname), ct, names[0], addCmdPort, addCmdExtras,
+		i, err := instance.Add(geneos.GetHost(Hostname), ct, names[0], addCmdPort, addCmdExtras,
 			instance.Template(addCmdTemplate),
 			instance.Base(addCmdBase),
 			instance.Insecure(addCmdInsecure),
@@ -112,5 +112,9 @@ geneos add netprobe infraprobe12 --start --log
 			instance.StartAfterAdd(addCmdStart),
 			instance.LogsAfterAdd(addCmdLogs),
 		)
+		if addCmdLogs {
+			followLog(i) // never returns
+		}
+		return err
 	},
 }
