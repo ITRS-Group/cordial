@@ -9,11 +9,11 @@
 			{{- if .types }}
 			<managedEntity>
 				<name>{{ .sanname }}</name>
-				{{ if .attributes -}}
+				{{- if .attributes }}
 				<attributes>
-					{{ range $key, $value := .attributes -}}
+					{{- range $key, $value := .attributes }}
 					<attribute name="{{ nameOf $value "=" }}">{{ valueOf $value "=" }}</attribute>
-					{{ end }}
+					{{- end }}
 				</attributes>
 				{{- end}}
 				<variables>
@@ -53,19 +53,19 @@
 				<name>{{ .name}}</name>
 				{{- if .attributes }}
 				<attributes>
-					{{ range $key, $value := .attributes -}}
+					{{- range $key, $value := .attributes }}
 					<attribute name="{{ nameOf $value "=" }}">{{ valueOf $value "=" }}</attribute>
 					{{- end }}
 				</attributes>
-				{{- end -}}
-				{{- if .variables -}}
+				{{- end }}
+				{{ if .variables -}}
 				<variables>
 					{{- range .variables }}
 					<var name="{{ .name }}">
 						<{{ .type }}>{{ .value }}</{{ .type }}>
 					</var>{{ end }}
 				</variables>
-				{{- end -}}
+				{{- end }}
 				<types>
 					{{- range .types }}
 					<type>{{ . }}</type>{{ end }}
