@@ -108,6 +108,7 @@ func ReadPEM(from, prompt string) (data []byte, err error) {
 			fmt.Println()
 		}
 	default:
+		from = ResolveHome(from)
 		data, err = os.ReadFile(from)
 		if err != nil {
 			return data, err
