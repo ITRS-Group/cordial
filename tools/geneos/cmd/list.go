@@ -41,6 +41,7 @@ type listCmdType struct {
 	AutoStart bool   `json:"autostart"`
 	TLS       bool   `json:"tls"`
 	Port      uint16 `json:"port,omitempty"`
+	Base      string `json:"base,omitempty"`
 	Version   string `json:"version,omitempty"`
 	Home      string `json:"home,omitempty"`
 }
@@ -110,6 +111,7 @@ var listCmd = &cobra.Command{
 				"running",
 				"tls",
 				"port",
+				"base",
 				"version",
 				"home",
 			}, nil, responses.AddHeadlines(headlines))
@@ -125,6 +127,7 @@ var listCmd = &cobra.Command{
 				"Running",
 				"TLS",
 				"Port",
+				"Base",
 				"Version",
 				"Home",
 			},
@@ -230,7 +233,9 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		running,
 		tls,
 		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
-		fmt.Sprintf("%s:%s", base, underlying), i.Home(),
+		base,
+		underlying,
+		i.Home(),
 	)
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 	return
@@ -255,7 +260,8 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 		AutoStart: instance.IsAutoStart(i),
 		TLS:       len(secureArgs) > 0,
 		Port:      config.Get[uint16](i.Config(), "port"),
-		Version:   fmt.Sprintf("%s:%s", base, underlying),
+		Base:      base,
+		Version:   underlying,
 		Home:      i.Home(),
 	}
 	return
