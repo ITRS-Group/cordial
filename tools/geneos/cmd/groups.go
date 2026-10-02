@@ -29,6 +29,7 @@ const (
 	CommandGroupManage      = "manage"
 	CommandGroupOther       = "other"
 	CommandGroupProcess     = "process"
+	CommandGroupProfile     = "profile"
 	CommandGroupSubsystems  = "subsystems"
 	CommandGroupView        = "view"
 )
@@ -69,5 +70,9 @@ func init() {
 	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,
 		Title: "Component Types",
+	})
+	Cmd.AddGroup(&cobra.Group{
+		ID:    CommandGroupProfile,
+		Title: "Profile Components",
 	})
 }

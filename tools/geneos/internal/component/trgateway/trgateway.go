@@ -332,8 +332,10 @@ func (i *TRGateways) Reload() error {
 	return geneos.ErrNotSupported
 }
 
-func (i *TRGateways) Rebuild(bool) error {
-	return nil
+// Rebuild is not implemented for TRGateways and always returns false,
+// geneos.ErrNotSupported.
+func (i *TRGateways) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
 
 func pidCheckFn(arg any, cmdline []string) bool {

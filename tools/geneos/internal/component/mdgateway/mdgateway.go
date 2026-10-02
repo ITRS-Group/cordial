@@ -332,8 +332,9 @@ func (i *MDGateways) Reload() error {
 	return geneos.ErrNotSupported
 }
 
-func (i *MDGateways) Rebuild(bool) error {
-	return nil
+// Rebuild is not supported for MDGateways.
+func (i *MDGateways) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
 
 func pidCheckFn(arg any, cmdline []string) bool {

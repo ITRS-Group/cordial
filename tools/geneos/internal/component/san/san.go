@@ -301,9 +301,9 @@ func (i *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 // Rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (i *Sans) Rebuild(initial bool) (err error) {
+func (i *Sans) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
-		return os.ErrInvalid
+		return false, os.ErrInvalid
 	}
 
 	cf := i.Config()
@@ -324,7 +324,6 @@ func (i *Sans) Rebuild(initial bool) (err error) {
 	}
 
 	// recheck check certs/keys
-	var changed bool
 	secure := instance.IsTLSCapable(i)
 	gws := config.Get[map[string]string](cf, "gateways")
 	for gw := range gws {
@@ -341,15 +340,16 @@ func (i *Sans) Rebuild(initial bool) (err error) {
 	if changed {
 		config.Set(cf, "gateways", gws)
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
-			return resp.Err
+			return false, resp.Err
 		}
 	}
-	return instance.ExecuteTemplate(i,
+	changedSetup, err := instance.ExecuteTemplate(i,
 		setup,
 		instance.FileOf(i, "config::template"),
 		template,
 		0664,
 	)
+	return changed || changedSetup, err
 }
 
 func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err error) {

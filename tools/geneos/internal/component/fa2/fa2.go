@@ -287,6 +287,8 @@ func (i *FA2s) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (i *FA2s) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for FA2 instances. It always returns false
+// and an ErrNotSupported error.
+func (i *FA2s) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }

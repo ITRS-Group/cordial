@@ -8,13 +8,9 @@
 			<required>false</required>
 			<location>instance.setup.xml</location>
 		</include>
-		{{range $key, $value := .includes -}}
-		<include>
-			<priority>{{$key}}</priority>
-			<required>true</required>
-			<location>{{$value}}</location>
-		</include>
-		{{end -}}
+		{{- if .includes }}
+		{{- template "includes" $.includes }}
+		{{- end }}
 	</includes>
 	<authentication>
 		<authenticateUsers>true</authenticateUsers>
@@ -49,3 +45,20 @@
 		</writeStatsToFile>
 	</operatingEnvironment>
 </gateway>
+
+{{- define "includes" }}
+		{{- range $key, $value := . }}
+		{{- if isString $value }}
+		<include>
+			<priority>{{$key}}</priority>
+			<required>true</required>
+			<location>{{$value}}</location>
+		</include>
+		{{- end }}
+		{{- if isMap $value }}
+		<includeGroup name="{{$key}}">
+			{{- template "includes" $value }}
+		</includeGroup>
+		{{- end }}
+		{{- end }}
+{{- end }}

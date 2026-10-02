@@ -169,9 +169,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 		geneos.Update(h, ct, geneos.Basename(basemame))
 	}
 
-	fmt.Printf("%s added, port %d\n", i, config.Get[uint16](cf, "port"))
+	port, found := config.Lookup[uint16](cf, "port")
+	if found {
+		fmt.Printf("%s added, port %d\n", i, port)
+	} else {
+		fmt.Printf("%s added\n", i)
+	}
 	geneos.NotifyAudit(i, "add", map[string]string{
-		"port": strconv.Itoa(int(config.Get[uint16](cf, "port"))),
+		"port": strconv.Itoa(int(port)),
 	})
 
 	if opts.start || opts.logs {

@@ -283,6 +283,7 @@ func (i *Licds) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (i *Licds) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for Licds.
+func (i *Licds) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }

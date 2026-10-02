@@ -34,7 +34,6 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -136,13 +135,13 @@ func ApplyCommonParams(p Common) (vals values.Values) {
 	return
 }
 
-func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) error {
+func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
 	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
-	log.Debug("retrieved instances", slog.String("component", ct.String()), slog.String("name", name), slog.Int("count", len(instances)))
+
+	var i geneos.Instance
 
 	if len(instances) == 0 {
 		// create here
-		log.Debug("creating instance", slog.String("component", ct.String()), slog.String("name", name))
 		var port uint16
 		if len(vals.Params) > 0 {
 			pos := slices.IndexFunc(vals.Params, func(e string) bool {
@@ -154,7 +153,7 @@ func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys 
 				port = uint16(pv)
 			}
 		}
-		_, err := instance.Add(geneos.LOCAL, ct, name, port, vals,
+		i, err = instance.Add(geneos.LOCAL, ct, name, port, vals,
 			instance.CertBundle(common.CertBundle),
 			instance.CertBundlePassword(common.CertBundlePassword),
 		)
@@ -163,7 +162,7 @@ func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys 
 		}
 	} else {
 		// update the first / only instance
-		i := instances[0]
+		i = instances[0]
 		cf := i.Config()
 
 		if config.Get[bool](cf, "protected") {
@@ -182,26 +181,22 @@ func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys 
 		}
 
 		if common.CertBundle != "" {
-			updated, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
+			_, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
 			if err != nil {
 				i.Log().Error("failed to import certificates", slog.Any("error", err))
-			}
-			if updated {
-				i.Log().Debug("ca-bundle updated")
 			}
 		}
 
 		if resp := instance.Write(i); resp.Err != nil {
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
+
+		// always force a rebuild, even for those instances marked as "initial"
 		i.Rebuild(true)
 	}
 
-	instance.Do(geneos.LOCAL, ct, []string{name}, func(i geneos.Instance, a ...any) (resp *responses.General) {
-		resp = responses.New[responses.General](i)
-		resp.Err = instance.Start(i)
-		return
-	}, vals).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
-
+	if !instance.IsRunning(i) {
+		return instance.Start(i)
+	}
 	return nil
 }

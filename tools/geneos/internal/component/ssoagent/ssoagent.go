@@ -269,16 +269,16 @@ func (i *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *SSOAgents) Rebuild(initial bool) (err error) {
+func (i *SSOAgents) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
-		return os.ErrInvalid
+		return false, os.ErrInvalid
 	}
 	ssoconf := config.New()
 	if err = ssoconf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil
+			return false, nil
 		}
-		return err
+		return false, err
 	}
 
 	truststorePath := instance.HomeRel(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
@@ -293,15 +293,13 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
 	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(i.Host(), certs.KeystoreExtension) {
 		if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, roots...); err != nil {
-			return err
+			return false, err
 		}
 	}
 
 	// (re)build the keystore (config/keystore.db) ensuring there is
 	// always an "ssokey".
 	if ksl, ok := config.Lookup[string](ssoconf, config.Join("server", "key_store", "location")); ok {
-		var changed bool
-
 		keystorePath := instance.HomeRel(i, ksl)
 		keystorePassword := config.Get[config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
@@ -338,19 +336,23 @@ func (i *SSOAgents) Rebuild(initial bool) (err error) {
 
 		certChain, err := instance.ReadCertificates(i)
 		if err != nil {
-			return err
+			return false, err
 		}
 		if len(certChain) == 0 {
-			return err
+			return false, err
 		}
 		key, err := instance.ReadPrivateKey(i)
 		if err != nil {
-			return err
+			return false, err
 		}
 		keystorePath = instance.HomeRel(i, keystorePath)
-		return certs.AddCertChainToKeyStore(i.Host(), keystorePath, keystorePassword, alias, key, certChain...)
+		err = certs.AddCertChainToKeyStore(i.Host(), keystorePath, keystorePassword, alias, key, certChain...)
+		if err == nil {
+			changed = true
+		}
+		return changed, err
 	}
-	return
+	return false, nil
 }
 
 // generate a keypair for ssoagent keystore with the alias "ssokey". This must be an RSA key

@@ -63,10 +63,13 @@ var rebuildCmd = &cobra.Command{
 		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
-			if resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
+			var changed bool
+			if changed, resp.Err = i.Rebuild(rebuildCmdForce); resp.Err != nil {
 				return
 			}
-			resp.Completed = append(resp.Completed, "configuration rebuilt")
+			if changed {
+				resp.Completed = append(resp.Completed, "configuration rebuilt")
+			}
 			i.Log().Debug("configuration rebuilt (if supported)", slog.Bool("force", rebuildCmdForce))
 			if !rebuildCmdReload {
 				return

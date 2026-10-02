@@ -258,8 +258,10 @@ func (i *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *CA3s) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for CA3 instances. It always returns false
+// and an ErrNotSupported error.
+func (i *CA3s) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
 
 func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err error) {

@@ -246,8 +246,10 @@ func (i *AC2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *AC2s) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for AC2 instances. It always returns false
+// and an ErrNotSupported error.
+func (i *AC2s) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
 
 // Command returns the command, args and environment for the instance

@@ -283,9 +283,10 @@ func (i *Routers) Add(template string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *Routers) Rebuild(initial bool) (err error) {
+// Rebuild any configuration based on the template configured.
+func (i *Routers) Rebuild(initial bool) (changed bool, cerr error) {
 	if i == nil {
-		return os.ErrInvalid
+		return false, os.ErrInvalid
 	}
 
 	cf := i.Config()
@@ -294,16 +295,16 @@ func (i *Routers) Rebuild(initial bool) (err error) {
 	setup := config.Get[string](cf, "setup")
 
 	if configRebuild == "never" || setup == "" || setup == "none" {
-		return
+		return false, nil
 	}
 
 	if !(configRebuild == "always" || (initial && configRebuild == "initial")) {
-		return
+		return false, nil
 	}
 
 	if strings.HasPrefix(setup, "http://") || strings.HasPrefix(setup, "https://") {
 		i.Log().Debug("setup is URL based, skipping rebuild")
-		return
+		return false, nil
 	}
 
 	return instance.ExecuteTemplate(i,

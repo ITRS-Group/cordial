@@ -50,7 +50,11 @@ func Start(i geneos.Instance, opts ...any) error {
 		return fmt.Errorf("%s is configured with a different user to the one trying to start it (instance user %q != %q (you))", i, instanceUsername, username)
 	}
 
-	binary := config.Get[string](i.Config(), "program")
+	binary, found := config.Lookup[string](i.Config(), "program")
+	if !found {
+		return geneos.ErrNotSupported
+	}
+
 	if _, err := i.Host().Stat(binary); err != nil {
 		return fmt.Errorf("%q %w", binary, err)
 	}

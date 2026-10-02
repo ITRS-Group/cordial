@@ -318,11 +318,11 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	resp.Completed = append(resp.Completed, "config written")
 
 	if opts.noRebuild {
-		i.Log().Debug("skipping rebuild")
 		return
 	}
 
-	if err := i.Rebuild(false); err != nil {
+	changed, err := i.Rebuild(false)
+	if err != nil {
 		if errors.Is(err, geneos.ErrNotSupported) {
 			// not an error if not supported
 			i.Log().Debug("rebuild not supported for component type", slog.String("type", i.Type().Name))
@@ -331,9 +331,11 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 		resp.Err = err
 		return
 	}
-	resp.Completed = append(resp.Completed, "instance rebuilt")
+	if changed {
+		resp.Completed = append(resp.Completed, "instance rebuilt")
+	}
 
-	if opts.noReload {
+	if opts.noReload || !changed {
 		i.Log().Debug("skipping reload")
 		return
 	}

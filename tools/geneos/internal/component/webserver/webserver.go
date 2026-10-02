@@ -272,9 +272,9 @@ func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *Webservers) Rebuild(initial bool) (err error) {
+func (i *Webservers) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
-		return os.ErrInvalid
+		return false, os.ErrInvalid
 	}
 
 	cf := i.Config()
@@ -286,7 +286,7 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
 		i.Log().Error("reading security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return nil
+		return false, err
 	}
 
 	sp["port"] = config.Get[string](cf, "port")
@@ -297,8 +297,9 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
 		i.Log().Error("writing security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return
+		return false, err
 	}
+	changed = true
 
 	// create truststore from ca-bundle
 	truststorePath := sp["trustStore"]
@@ -310,8 +311,9 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 		truststorePath = instance.HomeRel(i, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
 			i.Log().Error("updating truststore", slog.Any("path", truststorePath), slog.Any("error", err))
-			return err
+			return false, err
 		}
+		changed = true
 	}
 
 	// create keystore from certificate and private key
@@ -323,18 +325,22 @@ func (i *Webservers) Rebuild(initial bool) (err error) {
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
 		i.Log().Error("reading certificate chain", slog.Any("error", err))
-		return
+		return false, err
 	}
 	if len(certChain) == 0 {
-		return
+		return false, err
 	}
 	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
 		i.Log().Error("reading private key", slog.Any("error", err))
-		return
+		return false, err
 	}
 	keyStore = instance.HomeRel(i, keyStore)
-	return certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
+	err = certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
+	if err == nil {
+		changed = true
+	}
+	return changed, err
 }
 
 func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home string, err error) {

@@ -18,6 +18,8 @@ limitations under the License.
 package instance
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -55,11 +57,23 @@ func first(d ...any) string {
 	return ""
 }
 
+func isString(v any) bool {
+	_, ok := v.(string)
+	return ok
+}
+
+func isMap(v any) bool {
+	_, ok := v.(map[string]any)
+	return ok
+}
+
 var fnmap = template.FuncMap{
-	"first":   first,
-	"join":    path.Join,
-	"nameOf":  nameOf,
-	"valueOf": valueOf,
+	"first":    first,
+	"join":     path.Join,
+	"nameOf":   nameOf,
+	"valueOf":  valueOf,
+	"isString": isString,
+	"isMap":    isMap,
 }
 
 // ExecuteTemplate loads the template name from the component
@@ -75,7 +89,7 @@ var fnmap = template.FuncMap{
 // If an error occurs, any temporary file is removed and the error
 // returned. The existing outputPath file is not modified until the
 // final rename step.
-func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultTemplate []byte, perms os.FileMode) (err error) {
+func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultTemplate []byte, perms os.FileMode) (changed bool, err error) {
 	var out io.WriteCloser
 	// var t *template.Template
 
@@ -93,10 +107,9 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		t = template.Must(t.Parse(string(defaultTemplate)))
 	}
 
-	i.Log().Debug("creating configuration file", slog.String("path", outputPathTmp), slog.Any("permissions", perms))
 	if out, err = h.Create(outputPathTmp, perms); err != nil {
 		i.Log().Warn("Cannot create configuration file", slog.Any("error", err), slog.String("path", outputPathTmp))
-		return err
+		return changed, err
 	}
 
 	m := cf.ExpandAllSettings(config.NoDecode(true))
@@ -144,7 +157,47 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	}
 
 	if i.Type().IsA("gateway") {
-		// finally, for gateways, go through environment variables and
+		// the default template will take includes which are a
+		// map[string]any, where the value can the a string - a path -
+		// or a map[string]any to indicate a group, which is recursive
+
+		// the config for incConf, if the path incConf '|' then use
+		// these are include groups,
+		incConf, ok := m[values.INCLUDES]
+
+		// groups are maps to includes which are also maps
+		if ok {
+
+			i.Log().Debug("found includes for gateway", slog.Any("includes", incConf), slog.String("type", fmt.Sprintf("%T", incConf)))
+			includes, ok := incConf.(map[string]any)
+
+			// the top-level input is a map[string]any where all values
+			// are unprocessed strings, the key is the priority and must
+			// be unqiue, perfect for maps.
+			if ok {
+				i.Log().Debug("processing includes for gateway", slog.Any("includes", includes))
+				for k, v := range includes {
+					vs, ok := v.(string) // convert the value to a string for further processing
+					if !ok {
+						i.Log().Warn("unexpected include format, expected string", slog.Any("include", v), slog.String("type", fmt.Sprintf("%T", v)))
+						continue
+					}
+					// process the string, replacing the "any" value
+					// with either a string or a map[string]any for
+					// include groups recursively for the number of
+					// separators '|' in the string.
+					//
+					// priority should always be the lowest level key
+					// and the path the value
+					processIncludeString(includes, k, vs)
+				}
+			}
+			i.Log().Debug("includes now", slog.String("includes", fmt.Sprintf("%+v", includes)))
+		}
+
+		// m[values.INCLUDE_GROUPS] = groups
+
+		// for gateways, go through environment variables and
 		// variables for encoded values, attempt to decode them using
 		// given keyfile and re-encode them using the instance keyfile
 		// (if any) and move them into a new list so they can be pulled
@@ -279,19 +332,99 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	// variables slice
 	m[values.VARIABLES] = variables
 
+	defer h.Remove(outputPathTmp)
+
 	if err = t.ExecuteTemplate(out, name, m); err != nil {
 		i.Log().Error("Cannot create configuration from template(s)", slog.Any("error", err))
 		// close the file first so Windows systems do not break on Remove
 		out.Close()
-		h.Remove(outputPathTmp)
+		return
+	}
+	out.Close()
+
+	// compare new and original files and return changed = false if they are the same
+	same, err := filesAreSame(outputPath, outputPathTmp)
+
+	changed = !same
+
+	if changed {
+		err = h.Rename(outputPathTmp, outputPath)
+	}
+	return
+}
+
+// processIncludeString takes a string with '|' separated parts and
+// converts it into a nested map structure. All strings have white
+// spaces trimmed. The key should be the key in the lowest level map
+func processIncludeString(includes map[string]any, key, s string) {
+	parts := strings.Split(s, "|")
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	if len(parts) == 1 {
+		includes[key] = parts[0]
 		return
 	}
 
-	i.Log().Debug("renaming template", slog.String("from", outputPathTmp), slog.String("to", outputPath))
-	// close the file first before renaming, stops Windows systems breaking
-	out.Close()
-	if err = h.Rename(outputPathTmp, outputPath); err != nil {
-		h.Remove(outputPathTmp)
+	nested, ok := includes[parts[0]].(map[string]any)
+	if !ok {
+		nested = make(map[string]any)
 	}
-	return
+	processIncludeString(nested, key, strings.Join(parts[1:], "|"))
+	delete(includes, key)
+	includes[parts[0]] = nested
+}
+
+func filesAreSame(file1, file2 string) (bool, error) {
+	f1, err := os.Open(file1)
+	if err != nil {
+		return false, err
+	}
+	defer f1.Close()
+
+	f2, err := os.Open(file2)
+	if err != nil {
+		return false, err
+	}
+	defer f2.Close()
+
+	// Check file sizes first; if they differ, files are not identical
+	stat1, err := f1.Stat()
+	if err != nil {
+		return false, err
+	}
+	stat2, err := f2.Stat()
+	if err != nil {
+		return false, err
+	}
+	if stat1.Size() != stat2.Size() {
+		return false, nil
+	}
+
+	// Compare chunks using a 64KB buffer
+	const chunkSize = 64 * 1024
+	b1 := make([]byte, chunkSize)
+	b2 := make([]byte, chunkSize)
+
+	for {
+		n1, err1 := f1.Read(b1)
+		n2, err2 := f2.Read(b2)
+
+		if err1 != nil && err1 != io.EOF {
+			return false, err1
+		}
+		if err2 != nil && err2 != io.EOF {
+			return false, err2
+		}
+
+		if n1 != n2 || !bytes.Equal(b1[:n1], b2[:n2]) {
+			return false, nil
+		}
+
+		if err1 == io.EOF && err2 == io.EOF {
+			break
+		}
+	}
+
+	return true, nil
 }

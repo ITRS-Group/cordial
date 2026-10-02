@@ -130,6 +130,8 @@ var Gateway = geneos.Component{
 		filepath.Join(component, "includes"),
 		filepath.Join(component, "shared"),
 	},
+
+	ApplyProfile: applyProfile,
 }
 
 type Gateways instance.Instance
@@ -322,20 +324,17 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (i *Gateways) Rebuild(initial bool) (err error) {
+func (i *Gateways) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
-		return os.ErrInvalid
+		return false, os.ErrInvalid
 	}
 	cf := i.Config()
-
-	// recheck check certs/keys
-	var changed bool
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetAllPorts(i.Host())
 	nextport := instance.NextFreePort(i.Host(), &Gateway)
 	if nextport == 0 {
-		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
+		return false, fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
 	secure := instance.IsTLSCapable(i)
@@ -362,15 +361,17 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 
 	// always rebuild an instance template
 	i.Log().Debug("rebuilding instance template", slog.String("template", instanceTemplateName))
-	if err = instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444); err != nil {
+	changedInstanceTemplate, err := instance.ExecuteTemplate(i, instance.HomeRel(i, INSTANCEXML), instanceTemplateName, instanceTemplate, 0444)
+	if err != nil {
 		return
 	}
+	changed = changed || changedInstanceTemplate
 	i.Log().Debug("instance template rebuilt", slog.String("include", INSTANCEXML))
 
 	if changed {
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			i.Log().Error("Cannot save configuration", slog.Any("error", resp.Err))
-			return resp.Err
+			return changed, resp.Err
 		}
 	}
 
@@ -390,12 +391,14 @@ func (i *Gateways) Rebuild(initial bool) (err error) {
 		return
 	}
 
-	return instance.ExecuteTemplate(i,
+	changedSetup, err := instance.ExecuteTemplate(i,
 		setup,
 		instance.FileOf(i, "config::template"),
 		template,
 		0664,
 	)
+	changed = changed || changedSetup
+	return
 }
 
 func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {

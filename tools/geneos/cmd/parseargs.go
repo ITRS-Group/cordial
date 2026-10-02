@@ -98,6 +98,11 @@ const (
 	// the global configuration, or "true" or "false" to set a default
 	// if there is no global configuration.
 	CmdAuditActions = "auditactions"
+
+	// CmdProfileTrigger is a booleanused to specify if the command
+	// should trigger the application of profiles. This can be used to
+	// automatically apply profiles when specific conditions are met.
+	CmdProfileTrigger = "profiletrigger"
 )
 
 // TODO: rewrite this

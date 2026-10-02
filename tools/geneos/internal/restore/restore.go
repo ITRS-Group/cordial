@@ -309,7 +309,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 					log.Debug("getting instance for final rebuild", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
 				} else {
 					instancesRestored[name] = i
-					if err = i.Rebuild(false); err != nil {
+					if _, err = i.Rebuild(false); err != nil {
 						if !errors.Is(err, geneos.ErrNotSupported) {
 							i.Log().Debug("rebuild of instance failed", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
 						} else {

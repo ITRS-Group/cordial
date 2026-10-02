@@ -259,8 +259,9 @@ func (i *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (i *Netprobes) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for Netprobes.
+func (i *Netprobes) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
 
 func (i *Netprobes) Command(skipFileCheck bool) (args, env []string, home string, err error) {

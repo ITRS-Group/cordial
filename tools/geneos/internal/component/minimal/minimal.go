@@ -302,6 +302,7 @@ func (i *Minimals) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (i *Minimals) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for Minimals.
+func (i *Minimals) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }

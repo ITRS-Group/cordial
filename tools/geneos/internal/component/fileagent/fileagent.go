@@ -257,6 +257,8 @@ func (i *FileAgents) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
-func (i *FileAgents) Rebuild(initial bool) error {
-	return geneos.ErrNotSupported
+// Rebuild is not supported for FileAgent instances. It always returns false
+// and an ErrNotSupported error.
+func (i *FileAgents) Rebuild(initial bool) (changed bool, err error) {
+	return false, geneos.ErrNotSupported
 }
