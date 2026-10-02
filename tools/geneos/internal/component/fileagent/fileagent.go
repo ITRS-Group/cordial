@@ -111,7 +111,7 @@ var instances sync.Map
 func factory(name string) (fileagent geneos.Instance) {
 	h, _, local := instance.ParseName(name)
 
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
 	if f, ok := instances.Load(h.FullName(local)); ok {

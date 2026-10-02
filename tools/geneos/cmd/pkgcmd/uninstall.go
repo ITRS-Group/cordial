@@ -116,7 +116,7 @@ geneos uninstall --version 7.4.2
 		for h := range h.OrList() {
 			for ct := range ct.OrList() {
 				// remove cached packages, but only locally
-				if h == geneos.LOCAL && !uninstallCmdKeep {
+				if h.IsLocalhost() && !uninstallCmdKeep {
 					pattern := ct.DownloadInfix
 					if pattern == "" {
 						pattern = ct.Name

@@ -141,7 +141,7 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	}
 
 	disp := os.Getenv("DISPLAY")
-	if h == geneos.LOCAL && disp != "" {
+	if h.IsLocalhost() && disp != "" {
 		ct = geneos.ParseComponent("ac2")
 		if err = pkgcmd.Install(h, ct, options...); err != nil {
 			return

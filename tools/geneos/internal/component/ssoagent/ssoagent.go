@@ -118,7 +118,7 @@ func factory(name string) (ssoagent geneos.Instance) {
 	}
 	h, _, local := instance.ParseName(name)
 
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
 

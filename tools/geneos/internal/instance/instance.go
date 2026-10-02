@@ -313,7 +313,7 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 	if instance == nil {
 		// if no instance is created, check why
 		h, _, _ := ParseName(name)
-		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
+		if h.IsLocalhost() && geneos.LocalRoot() == "" {
 			err = geneos.ErrRootNotSet
 			return
 		}
@@ -340,7 +340,7 @@ func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance ge
 
 	instance = ct.New(h.FullName(name))
 	if instance == nil {
-		if h == geneos.LOCAL && geneos.LocalRoot() == "" {
+		if h.IsLocalhost() && geneos.LocalRoot() == "" {
 			err = geneos.ErrRootNotSet
 			return
 		}

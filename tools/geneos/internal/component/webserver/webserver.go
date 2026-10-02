@@ -116,7 +116,7 @@ func factory(name string) (webserver geneos.Instance) {
 	}
 	h, _, local := instance.ParseName(name)
 
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
 	if w, ok := instances.Load(h.FullName(local)); ok {

@@ -68,7 +68,7 @@ cat $(geneos home gateway example2)/gateway.txt
 		}
 
 		h, _, n := instance.ParseName(names[0], geneos.GetHost(Hostname))
-		if h == geneos.LOCAL || h == geneos.ALL {
+		if h.IsLocalhost() || h == geneos.ALL {
 			i, err := instance.Get(ct, n)
 
 			if err != nil {

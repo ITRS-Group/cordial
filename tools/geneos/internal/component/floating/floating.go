@@ -128,7 +128,7 @@ var instances sync.Map
 func factory(name string) (floating geneos.Instance) {
 	h, ct, local := instance.ParseName(name)
 
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
 

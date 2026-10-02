@@ -152,7 +152,7 @@ func factory(name string) (san geneos.Instance) {
 	}
 	h, ct, local := instance.ParseName(name)
 
-	if local == "" || h == nil || (h == geneos.LOCAL && geneos.LocalRoot() == "") {
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
 	s, ok := instances.Load(h.FullName(local))
