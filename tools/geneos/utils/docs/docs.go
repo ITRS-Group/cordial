@@ -22,6 +22,8 @@ package main
 import (
 	"os"
 
+	"github.com/spf13/cobra"
+
 	// main command directory for documentation
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 
@@ -54,7 +56,8 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/trgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 
-	"github.com/spf13/cobra"
+	// special components
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/profile"
 )
 
 type docs struct {

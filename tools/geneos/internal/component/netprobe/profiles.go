@@ -5,7 +5,6 @@ import (
 	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/labstack/gommon/log"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"

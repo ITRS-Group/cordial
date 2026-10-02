@@ -57,6 +57,9 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ssoagent"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/trgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
+
+	// special components
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/profile"
 )
 
 var log = cordial.Logger

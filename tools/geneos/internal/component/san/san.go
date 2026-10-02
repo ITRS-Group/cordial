@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
@@ -36,6 +37,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
+
+var log = cordial.Logger
 
 const component = "san"
 
