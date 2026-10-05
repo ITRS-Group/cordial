@@ -120,7 +120,7 @@ func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string)
 
 	if watchlogs {
 		// also watch STDERR on start-up
-		followLogs(ct, names, true) // never returns
+		instance.FollowLogs(geneos.GetHost(Hostname), ct, names, instance.WithStderr(true)) // never returns
 	}
 
 	return

@@ -18,18 +18,11 @@ limitations under the License.
 package cmd
 
 import (
-	"bufio"
 	_ "embed"
-	"errors"
-	"fmt"
 	"io"
 	"io/fs"
-	"log/slog"
 	"os"
-	"strings"
 	"sync"
-	"time"
-	"unicode"
 
 	"github.com/fatih/color"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -108,425 +101,34 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logCatInstance).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
+			instance.Do(geneos.GetHost(Hostname), ct, names, instance.CatInstance,
+				instance.WithStderr(logCmdStderr),
+				instance.WithoutNormal(logCmdNoNormal),
+				instance.WithCALog(logCmdCALog),
+				instance.WithLines(logCmdLines),
+				instance.WithMatch(logCmdMatch),
+				instance.WithIgnore(logCmdIgnore),
+			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		case logCmdFollow:
-			followLogs(ct, names, logCmdStderr) // never returns
+			instance.FollowLogs(geneos.GetHost(Hostname), ct, names,
+				instance.WithStderr(logCmdStderr),
+				instance.WithoutNormal(logCmdNoNormal),
+				instance.WithCALog(logCmdCALog),
+				instance.WithLines(logCmdLines),
+				instance.WithMatch(logCmdMatch),
+				instance.WithIgnore(logCmdIgnore),
+			) // never returns
 		default:
-			instance.Do(geneos.GetHost(Hostname), ct, names, logTailInstance).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
+			instance.Do(geneos.GetHost(Hostname), ct, names, instance.TailInstance,
+				instance.WithStderr(logCmdStderr),
+				instance.WithoutNormal(logCmdNoNormal),
+				instance.WithCALog(logCmdCALog),
+				instance.WithLines(logCmdLines),
+				instance.WithMatch(logCmdMatch),
+				instance.WithIgnore(logCmdIgnore),
+			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		}
 
 		return
 	},
-}
-
-var boldWhite = color.New(color.FgWhite).Add(color.Bold)
-
-// followLog sets up a watcher for the logs of a single instance. It is
-// used by both the logs command and the start command when --follow is
-// set. It never returns.
-func followLog(i geneos.Instance) {
-	done := make(chan bool)
-	tails = watchLogs()
-	if resp := logFollowInstance(i); resp.Err != nil {
-		i.Log().Error("cannot follow logs", slog.Any("error", resp.Err))
-	}
-	<-done
-}
-
-// followLogs sets up watchers for logs and never returns. It is used by
-// both the logs command and the start command when --follow is set.
-func followLogs(ct *geneos.Component, args []string, stderr bool) {
-	logCmdStderr = stderr
-	done := make(chan bool)
-	tails = watchLogs()
-	instance.Do(geneos.GetHost(Hostname), ct, args, logFollowInstance)
-	<-done
-}
-
-// last logfile written out
-var lastout string
-
-func outHeader(i geneos.Instance, path string) {
-	if logCmdNoHeaders {
-		return
-	}
-	if lastout == i.String()+":"+path {
-		return
-	}
-	if lastout != "" {
-		fmt.Println()
-	}
-	boldWhite.Printf("===> %s %s <===\n", i, path)
-	lastout = i.String() + ":" + path
-}
-
-func outHeaderString(i geneos.Instance, path string) (lines []string) {
-	if logCmdNoHeaders {
-		return
-	}
-	if lastout == i.String()+":"+path {
-		return
-	}
-	if lastout != "" {
-		lines = append(lines, "")
-	}
-	lines = append(lines, boldWhite.Sprintf("===> %s %s <===", i, path))
-	lastout = i.String() + ":" + path
-	return
-}
-
-func logTailInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.New[responses.General](i)
-
-	if logCmdStderr {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
-	}
-
-	if !logCmdNoNormal {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.LogFilePath(i), "instance")...)
-	}
-
-	if logCmdCALog && i.Type().IsA("netprobe") {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, instance.PathTo(i, "calogfile"), "CA")...)
-	}
-
-	return
-}
-
-func logTailInstanceFile(i geneos.Instance, logfile string, kind string) (lines []string) {
-	_, err := i.Host().Stat(logfile)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
-			return
-		}
-		return
-	}
-	f, err := i.Host().Open(logfile)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-
-	text, err := tailLines(i, f, logCmdLines)
-	if err != nil && !errors.Is(err, io.EOF) {
-		i.Log().Error("error reading log file", slog.Any("error", err), slog.String("file", logfile))
-	}
-	lines = filterOutputStrings(i, logfile, strings.NewReader(text+"\n"))
-
-	return
-}
-
-const charsPerLine = 132
-
-func tailLines(i geneos.Instance, f io.ReadSeekCloser, linecount int) (text string, err error) {
-	var j int64
-
-	// reasonable guess at bytes per line to use as a multiplier
-	chunk := int64(linecount * charsPerLine)
-	buf := make([]byte, chunk)
-	allLines := []string{""}
-
-	if f == nil {
-		return
-	}
-	if linecount == 0 {
-		// seek to end and return
-		_, err = f.Seek(0, io.SeekEnd)
-		return
-	}
-
-	pos, _ := f.Seek(0, io.SeekCurrent)
-	end, _ := f.Seek(0, io.SeekEnd)
-	f.Seek(pos, io.SeekStart)
-
-	for j = 1 + end/chunk; j > 0; j-- {
-		f.Seek((j-1)*chunk, io.SeekStart)
-		n, err := f.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
-			i.Log().Error("error reading log file", slog.Any("error", err))
-			return "", err
-		}
-		buffer := string(buf[:n])
-
-		// split buffer, count lines, if enough shortcut a return
-		// else keep allLines[0] (partial end of previous line), save the rest and
-		// repeat until beginning of file or N lines
-		if len(allLines) > 0 {
-			newlines := strings.FieldsFunc(buffer+allLines[0], isLineSep)
-			allLines = append(newlines, allLines[1:]...)
-		}
-		if len(allLines) > linecount {
-			text = strings.Join(allLines[len(allLines)-linecount:], "\n")
-			f.Seek(end, io.SeekStart)
-			return text, err
-		}
-	}
-
-	text = strings.Join(allLines, "\n")
-	f.Seek(end, io.SeekStart)
-	return
-}
-
-func isLineSep(r rune) bool {
-	if r == rune('\n') || r == rune('\r') {
-		return true
-	}
-	return unicode.Is(unicode.Zp, r)
-}
-
-func filterOutputStrings(i geneos.Instance, path string, r io.Reader) (lines []string) {
-	switch {
-	case logCmdMatch != "":
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, logCmdMatch) {
-				lines = append(lines, line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	case logCmdIgnore != "":
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.Contains(line, logCmdIgnore) {
-				lines = append(lines, line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	default:
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			lines = append(lines, scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	}
-
-	// if we read any lines, check for header change
-	header := outHeaderString(i, path)
-	lines = append(header, lines...)
-	return
-}
-
-func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker) (sz int64) {
-	switch {
-	case logCmdMatch != "":
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, logCmdMatch) {
-				outHeader(i, path)
-				fmt.Println(line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	case logCmdIgnore != "":
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.Contains(line, logCmdIgnore) {
-				outHeader(i, path)
-				fmt.Println(line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	default:
-		s, _ := reader.Seek(0, io.SeekCurrent)
-		e, _ := reader.Seek(0, io.SeekEnd)
-		reader.Seek(s, io.SeekStart)
-
-		if e > s {
-			outHeader(i, path)
-		}
-		_, err := io.Copy(os.Stdout, reader)
-		if err != nil {
-			i.Log().Error("error copying log file to stdout", slog.Any("error", err), slog.String("file", path))
-		}
-	}
-	sz, _ = reader.Seek(0, io.SeekCurrent)
-	return
-}
-
-func logCatInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.New[responses.General](i)
-
-	if logCmdStderr {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.ComponentFilepath(i, "txt"), "STDERR")...)
-	}
-	if !logCmdNoNormal {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.LogFilePath(i), "instance")...)
-	}
-	if logCmdCALog && i.Type().IsA("netprobe") {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, instance.PathTo(i, "calogfile"), "CA")...)
-	}
-	return
-}
-
-func logCatInstanceFile(i geneos.Instance, logfile string, kind string) (lines []string) {
-	r, err := i.Host().Open(logfile)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
-			return
-		}
-		return
-	}
-	defer r.Close()
-	lines = filterOutputStrings(i, logfile, r)
-
-	return
-}
-
-// add local logs to a watcher list
-// for remote logs, spawn a go routine for each log, watch using stat etc.
-// and output changes
-func logFollowInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
-	resp = responses.New[responses.General](i)
-
-	if logCmdStderr {
-		logfile := instance.ComponentFilepath(i, "txt")
-		if err := logFollowInstanceFile(i, logfile); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				resp.Err = nil
-				boldWhite.Printf("===> %s %s STDERR log file not found, watching <===\n", i, logfile)
-			} else {
-				resp.Err = err
-			}
-		}
-	}
-	if !logCmdNoNormal {
-		logfile := instance.LogFilePath(i)
-		if err := logFollowInstanceFile(i, logfile); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				resp.Err = nil
-				boldWhite.Printf("===> %s %s instance log file not found, watching <===\n", i, logfile)
-			} else {
-				resp.Err = err
-			}
-		}
-	}
-	if logCmdCALog && i.Type().IsA("netprobe") {
-		logfile := instance.PathTo(i, "calogfile")
-		if err := logFollowInstanceFile(i, logfile); err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				resp.Err = nil
-				boldWhite.Printf("===> %s %s CA log file not found, watching <===\n", i, logfile)
-			} else {
-				resp.Err = err
-			}
-		}
-	}
-	return
-}
-
-func logFollowInstanceFile(i geneos.Instance, logfile string) (err error) {
-	// store a placeholder, records interest for this instance even if
-	// file does not exist at start
-	key := i.Host().String() + ":" + logfile
-	tails.Store(key, &files{i, nil, 0})
-
-	f, err := i.Host().Open(logfile)
-	if err != nil {
-		return
-	} else {
-		// output up to this point
-		text, _ := tailLines(i, f, logCmdLines)
-
-		if len(text) != 0 {
-			filterOutput(i, logfile, strings.NewReader(text+"\n"))
-		}
-
-		offset, _ := f.Seek(0, io.SeekCurrent)
-		tails.Store(key, &files{i, f, offset})
-	}
-	fl, _ := tails.Load(key)
-	offset, _ := f.Seek(0, io.SeekCurrent)
-	i.Log().Debug("watching log file", slog.String("key", key), slog.Int64("offset", offset), slog.Any("file", fl))
-
-	return nil
-}
-
-// set-up remote watchers
-func watchLogs() (tails *sync.Map) {
-	tails = new(sync.Map)
-	ticker := time.NewTicker(500 * time.Millisecond)
-
-	go func() {
-		for range ticker.C {
-			tails.Range(func(key, value any) bool {
-				if value == nil {
-					return true
-				}
-				tail, ok := value.(*files)
-				if !ok {
-					return true
-				}
-
-				_, logfile, found := strings.Cut(key.(string), ":")
-				if !found {
-					return true
-				}
-
-				st, err := tail.instance.Host().Stat(logfile)
-				if err != nil {
-					return true
-				}
-				size := st.Size()
-
-				if size == tail.offset {
-					// no change
-					return true
-				}
-
-				// if we have an existing file and it appears
-				// to have grown then output whatever is new
-				if tail.reader != nil {
-					size = filterOutput(tail.instance, logfile, tail.reader)
-
-					switch {
-					case size == tail.offset:
-						// check stat for real size, drop through to
-						// re-open if changed else return
-						var st fs.FileInfo
-						if st, err = tail.instance.Host().Stat(logfile); err != nil {
-							tail.instance.Log().Error("cannot stat file", slog.Any("error", err), slog.String("file", logfile))
-						} else if st.Size() == size {
-							return true
-						}
-					case size > tail.offset:
-						tail.offset = size
-						tails.Store(key, tail)
-						return true
-					case size < tail.offset:
-						// if the file seems to have shrunk, then close
-						// the old one, store a marker for next time
-						tail.reader.Close()
-						tails.Store(key, &files{tail.instance, nil, 0})
-						boldWhite.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
-					}
-				}
-
-				// open new file, read to the end, return
-				if tail.reader, err = tail.instance.Host().Open(logfile); err != nil {
-					tail.instance.Log().Error("cannot (re)open log file", slog.Any("error", err), slog.String("file", logfile))
-				}
-				tail.offset = filterOutput(tail.instance, logfile, tail.reader)
-				tails.Store(key, tail)
-				return true
-			})
-		}
-	}()
-
-	return
 }

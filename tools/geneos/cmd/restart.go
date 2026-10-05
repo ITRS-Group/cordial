@@ -103,7 +103,7 @@ var restartCmd = &cobra.Command{
 		if restartCmdLogs {
 			// also watch STDERR on start-up
 			// never returns
-			followLogs(ct, names, true)
+			instance.FollowLogs(geneos.GetHost(Hostname), ct, names, instance.WithStderr(true)) // never returns
 		}
 		return
 	},

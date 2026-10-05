@@ -101,7 +101,7 @@ geneos add netprobe infraprobe12 --start --log
 		}
 		addCmdExtras.Params = params
 		i, err := instance.Add(geneos.GetHost(Hostname), ct, names[0], addCmdPort, addCmdExtras,
-			instance.Template(addCmdTemplate),
+			instance.TemplatePath(addCmdTemplate),
 			instance.Base(addCmdBase),
 			instance.Insecure(addCmdInsecure),
 			instance.CertBundle(addCmdInstanceBundle),
@@ -113,7 +113,7 @@ geneos add netprobe infraprobe12 --start --log
 			instance.LogsAfterAdd(addCmdLogs),
 		)
 		if addCmdLogs {
-			followLog(i) // never returns
+			instance.FollowLog(i, instance.WithStderr(true)) // never returns
 		}
 		return err
 	},
