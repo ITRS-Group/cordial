@@ -70,7 +70,7 @@ func Initialise(h *Host, options ...PackageOption) (err error) {
 
 	// dir must first not exist (or be empty) and then be creatable
 	//
-	// XXX maybe check that the entire list of registered directories
+	// TODO: maybe check that the entire list of registered directories
 	// are either directories or do not exist
 	if _, err := h.Stat(opts.geneosdir); err != nil {
 		if err = h.MkdirAll(opts.geneosdir, 0775); err != nil {

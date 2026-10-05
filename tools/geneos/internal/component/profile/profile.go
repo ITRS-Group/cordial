@@ -167,7 +167,7 @@ func (i *Profiles) SetConfig(cf *config.Config) {
 }
 
 func (i *Profiles) Add(tmpl string, port uint16, noCerts bool) (err error) {
-	pf, err := profiles.Load(cordial.ExecutableName())
+	pf, err := profiles.Load(cordial.ExecutableName(), config.FilePath(config.Get[string](i.Config(), "profiles")))
 	if err != nil {
 		return err
 	}

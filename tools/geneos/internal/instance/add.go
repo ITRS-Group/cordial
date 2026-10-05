@@ -23,7 +23,6 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	}
 	if name == "" {
 		return nil, fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
-
 	}
 
 	opts := evalAddOptions(options...)
@@ -93,6 +92,10 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 		if resp := Write(i, NoRebuild()); resp.Err != nil {
 			return nil, resp.Err
 		}
+	}
+
+	if ct.IsA("profile") && opts.profiles != "" {
+		config.Set(cf, "profiles", opts.profiles)
 	}
 
 	// call components specific Add()
@@ -202,6 +205,7 @@ type addOptions struct {
 	keyfile            string
 	keyfileCRC         string
 	imports            []string
+	profiles           string
 }
 
 type AddOption func(*addOptions)
@@ -216,7 +220,7 @@ func evalAddOptions(opts ...AddOption) *addOptions {
 	return o
 }
 
-func Template(template string) AddOption {
+func TemplatePath(template string) AddOption {
 	return func(o *addOptions) {
 		o.template = template
 	}
@@ -273,5 +277,11 @@ func KeyfileCRC(crc string) AddOption {
 func Imports(imports []string) AddOption {
 	return func(o *addOptions) {
 		o.imports = imports
+	}
+}
+
+func ProfilesPath(profiles string) AddOption {
+	return func(o *addOptions) {
+		o.profiles = profiles
 	}
 }

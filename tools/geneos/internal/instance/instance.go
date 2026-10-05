@@ -65,14 +65,6 @@ func NewLogger(i geneos.Instance, groups ...string) (l *slog.Logger) {
 	)
 }
 
-func CloneConfig(i geneos.Instance) (cf *config.Config) {
-	instanceMutex.Lock()
-	defer instanceMutex.Unlock()
-	cf = config.New()
-	cf.MergeConfigMap(i.Config().AllSettings())
-	return
-}
-
 // IsA returns true if instance i has a type that is component of one of
 // names.
 func IsA(i geneos.Instance, names ...string) bool {

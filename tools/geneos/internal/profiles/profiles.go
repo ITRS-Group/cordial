@@ -69,22 +69,18 @@ func Initialise(appName string) {
 
 // LoadProfiles initializes the profiles by reading from the specified configuration file.
 // If the file does not exist, it creates a new one with default values.
-func Load(appName string) (pf *config.Config, err error) {
-	pf, err = config.Read("profiles",
+func Load(appName string, options ...config.FileOption) (pf *config.Config, err error) {
+	options = append(options,
 		config.AppName(appName),
 		config.Format("yaml"),
 		config.WithDefaults(profilesDefault, "yaml"),
 	)
+	pf, err = config.Read("profiles", options...)
 	if err != nil {
 		return
 	}
 
 	return
-}
-
-type Profile struct {
-	Name       string           // name of the profile
-	Components []map[string]any // slice of components
 }
 
 type Common struct {
@@ -93,15 +89,6 @@ type Common struct {
 	Params             []string          `yaml:"params,omitempty"`
 	CertBundle         string            `yaml:"cert-bundle,omitempty,omitemtpy"` // path or PEM
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
-}
-
-type Webserver struct {
-	Common `mapstructure:",squash"`
-}
-
-type Licd struct {
-	Common      `mapstructure:",squash"`
-	LicenseFile string `yaml:"licd-file,omitempty"`
 }
 
 // Apply applies the specified profile to the local configuration.
@@ -122,6 +109,52 @@ func Apply(pf *config.Config, name string) error {
 	}
 
 	return nil
+}
+
+type Instance struct {
+	Name      string `yaml:"name"`
+	Component string `yaml:"component"`
+	Package   string `yaml:"package"`
+	Host      string `yaml:"host"`
+	Config    *config.Config
+}
+
+func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances []Instance) {
+	var comps map[string][]Common
+
+	if !pf.IsSet(pf.Join("profiles", name)) {
+		return
+	}
+
+	lookup := map[string]string{
+		"hostname": h.String(),
+	}
+
+	pf.UnmarshalKey(pf.Join("profiles", name), &comps,
+		config.NoExpand(),
+		config.LookupTable(lookup),
+	)
+
+	for key, value := range comps {
+		for _, component := range value {
+			name := config.Expand[string](pf, component.Name)
+			cf := pf.Sub(pf.Join("profiles", name, key, name))
+
+			p := key
+			if pkg, _, found := strings.Cut(name, ":"); found {
+				p = pkg
+			}
+			instances = append(instances, Instance{
+				Component: key,
+				Package:   p,
+				Name:      name,
+				Host:      h.String(),
+				Config:    cf,
+			})
+		}
+	}
+
+	return
 }
 
 // ApplyCommonParams applies the common parameters from the Common

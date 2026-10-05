@@ -110,9 +110,10 @@ type Component struct {
 	ParentType *Component
 
 	// PackageTypes is a list of packages that can be used to support
-	// this component. For example, a 'san' could be either a plain
-	// 'netprobe' or an 'fa2'. The entries must reference components
-	// that do not have PackageTypes set to avoid recursion.
+	// this component when the component doesn't have it's own package.
+	// For example, a 'san' could be either a plain 'netprobe' or an
+	// 'fa2'. The entries must reference components that do not have
+	// PackageTypes set to avoid recursion.
 	PackageTypes []*Component
 
 	// DownloadBase lists, for each download source, the path to append
