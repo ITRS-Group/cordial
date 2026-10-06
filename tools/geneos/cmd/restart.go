@@ -20,8 +20,8 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
-	"strconv"
 
 	"github.com/spf13/cobra"
 
@@ -123,14 +123,14 @@ func restartInstance(i geneos.Instance) error {
 		)
 	}
 	if err == nil {
-		fields := map[string]string{}
+		args := []any{}
 		if oldPid > 0 {
-			fields["oldPid"] = strconv.Itoa(oldPid)
+			args = append(args, slog.Int("oldPid", oldPid))
 		}
 		if newPid, pidErr := instance.GetLivePID(i); pidErr == nil && newPid > 0 {
-			fields["newPid"] = strconv.Itoa(newPid)
+			args = append(args, slog.Int("newPid", newPid))
 		}
-		geneos.NotifyAudit(i, "restart", fields)
+		i.AuditLog().Event("restart", args...)
 	}
 	return err
 }

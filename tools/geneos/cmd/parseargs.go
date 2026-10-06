@@ -37,34 +37,34 @@ import (
 const (
 	// CmdWildcardNames should be "true" or "false". True will pass all
 	// names through a path.Match style lookup
-	CmdWildcardNames = "wildcard"
+	CmdWildcardNames = geneos.CmdWildcardNames
 
 	// CmdNonInstanceArgsError should be "true" to cause a failure if
 	// any args do not match any instances. This should prevent
 	// misspelled instance names from dropping through as parameters.
-	CmdNonInstanceArgsError = "noninstanceargserror"
+	CmdNonInstanceArgsError = geneos.CmdNonInstanceArgsError
 
 	// CmdAllInstancesMustMatch should be "true" to cause a failure if
 	// any instance name patterns do not match any instances. This
 	// should prevent misspelled instance names from being ignored.
-	CmdAllInstancesMustMatch = "allmustmatch"
+	CmdAllInstancesMustMatch = geneos.CmdAllInstancesMustMatch
 
 	// CmdKeepHosts should be "true" to not expand "@host", for command
 	// like copy/move
-	CmdKeepHosts = "hosts"
+	CmdKeepHosts = geneos.CmdKeepHosts
 
 	// CmdReplacedBy should be set to the new command that replaces
 	// this one. It should be a full path without the executable, e.g.
 	// "package install"
-	CmdReplacedBy = "replacedby"
+	CmdReplacedBy = geneos.CmdReplacedBy
 
 	// CmdRequireHome shouw be "true" if the command requires the Geneos
 	// home directory to be set, initialised or not
-	CmdRequireHome = "needshomedir"
+	CmdRequireHome = geneos.CmdRequireHome
 
 	// CmdGlobal should be "true" if an empty list of instances should
 	// mean all instances.
-	CmdGlobal = "global"
+	CmdGlobal = geneos.CmdGlobal
 
 	// CmdAllowRoot should be "true" to allow running as root, otherwise
 	// the command will fail if the effective user ID is 0. This can be
@@ -72,7 +72,7 @@ const (
 	// annotation to "true" for the duration of the command, or the
 	// global configuration option `allow-root` which will set this
 	// annotation to "true" for all commands.
-	CmdAllowRoot = "allowroot"
+	CmdAllowRoot = geneos.CmdAllowRoot
 
 	// CmdAuditCommand and CmdAuditActions are used for auditing
 	// purposes. Their values are set in global config vars for the
@@ -89,7 +89,7 @@ const (
 	// "always" or "never", to override the global configuration, or
 	// "true" or "false" to set a default if there is no global
 	// configuration.
-	CmdAuditCommand = "auditcommand"
+	CmdAuditCommand = geneos.CmdAuditCommand
 
 	// CmdAuditActions is used to enable auditing of all the resulting
 	// actions. To audit the primary command triggering the actions use
@@ -97,12 +97,12 @@ const (
 	// configuration. Valid values are "always" or "never", to override
 	// the global configuration, or "true" or "false" to set a default
 	// if there is no global configuration.
-	CmdAuditActions = "auditactions"
+	CmdAuditActions = geneos.CmdAuditActions
 
 	// CmdProfileTrigger is a booleanused to specify if the command
 	// should trigger the application of profiles. This can be used to
 	// automatically apply profiles when specific conditions are met.
-	CmdProfileTrigger = "profiletrigger"
+	CmdProfileTrigger = geneos.CmdProfileTrigger
 )
 
 // TODO: rewrite this
