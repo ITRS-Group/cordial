@@ -22,7 +22,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -62,7 +62,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution (default is ./)")
 
 	execname = path.Base(os.Args[0])
-	cordial.LogInit(execname)
+	logger.Init(execname)
 }
 
 // initConfig reads in config file and ENV variables if set.

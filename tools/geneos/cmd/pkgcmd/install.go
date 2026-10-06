@@ -30,7 +30,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -94,7 +93,7 @@ geneos install netprobe -b active_dev -U
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "package install")
+		log := log.With("command", "package install")
 		if installCmdDownloadOnly {
 			if installCmdLocal || installCmdBase != "active_prod" || installCmdUpdate || installCmdNoSave || installCmdOverride != "" {
 				return errors.New("flag --download/-D set with other incompatible options")

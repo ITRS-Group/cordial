@@ -31,7 +31,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -74,7 +73,7 @@ geneos uninstall --version 7.4.2
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "package uninstall")
+		log := log.With("command", "package uninstall")
 		ct, args, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return err
@@ -132,12 +131,12 @@ geneos uninstall --version 7.4.2
 						if err = h.Remove(f); err == nil {
 							fmt.Printf("removed %q\n", f)
 						} else {
-							cordial.Logger.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
+							log.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
 						}
 					}
 				}
 				if len(ct.PackageTypes) > 0 {
-					cordial.Logger.Debug("skipping as has related types, remove those instead", slog.String("ct", ct.String()))
+					log.Debug("skipping as has related types, remove those instead", slog.String("ct", ct.String()))
 					continue
 				}
 
@@ -223,7 +222,7 @@ geneos uninstall --version 7.4.2
 					}
 					// remove the release
 					if err = h.RemoveAll(path.Join(basedir, release.Version)); err != nil {
-						cordial.Logger.Error("cannot remove release", slog.Any("error", err), slog.String("release", release.Version))
+						log.Error("cannot remove release", slog.Any("error", err), slog.String("release", release.Version))
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
@@ -240,7 +239,7 @@ geneos uninstall --version 7.4.2
 							versions, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
 								if !errors.Is(err, fs.ErrNotExist) {
-									cordial.Logger.Error("cannot get installed releases", slog.Any("error", err))
+									log.Error("cannot get installed releases", slog.Any("error", err))
 								}
 								continue
 							}
@@ -267,8 +266,6 @@ geneos uninstall --version 7.4.2
 		return
 	},
 }
-
-var log = cordial.Logger
 
 // updateLinks removes the base symlink for oldVersion and recreates a
 // new one pointing to target. It also updates all other links in the

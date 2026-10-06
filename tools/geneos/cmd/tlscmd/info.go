@@ -45,7 +45,6 @@ import (
 	"github.com/spf13/cobra"
 	"software.sslmate.com/src/go-pkcs12"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/reporter"
@@ -142,7 +141,7 @@ var infoCmd = &cobra.Command{
 		cmd.CmdAllowRoot:   "true",
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
-		log := cordial.Logger.With("command", "tls info")
+		log := log.With("command", "tls info")
 		// gather cert info
 		certInfos := make([]certInfo, len(paths))
 

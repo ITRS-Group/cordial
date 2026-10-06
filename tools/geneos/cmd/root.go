@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -62,11 +63,11 @@ You can do one of the following:
 `, "|", "`"))
 
 var AllowRoot bool
-var log *slog.Logger
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(func() {
-		log = cordial.LogInit(packageName)
+		logger.Init(packageName)
 		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
@@ -300,7 +301,7 @@ var configPath string
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if debug {
-		cordial.LogLevel.Set(slog.LevelDebug)
+		logger.LogLevel.Set(slog.LevelDebug)
 	}
 
 	log.Debug("cordial 'geneos' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))

@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -29,7 +28,6 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
 		return fmt.Errorf("failed to unmarshal Gateways for profile %q: %w", name, err)
 	}
-	log.Debug("gateways", slog.String("gateways", fmt.Sprintf("%+v", gateways)))
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
@@ -48,7 +46,6 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	for _, gateway := range gateways {
 		name := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
 
-		log.Debug("gateway name", slog.String("name", name))
 		if name == "" {
 			panic("name empty")
 		}

@@ -26,15 +26,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
-
-var log = cordial.Logger
 
 const component = "netprobe"
 
@@ -158,7 +155,7 @@ func factory(name string) (netprobe geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(netprobe.Config(), "home", instance.Home(netprobe))
-	netprobe.(*Netprobes).Logger = instance.NewLogger(netprobe)
+	netprobe.(*Netprobes).Logger = instance.Logger(netprobe)
 	instances.Store(h.FullName(local), netprobe)
 
 	return

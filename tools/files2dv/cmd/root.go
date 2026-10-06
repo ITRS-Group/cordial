@@ -31,6 +31,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cfgFile string
@@ -38,12 +39,12 @@ var execname = cordial.ExecutableName()
 var debug, quiet bool
 var d int
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	cordial.LogInit(execname)
+	logger.Init(execname)
 
 	FILE2DVCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
 

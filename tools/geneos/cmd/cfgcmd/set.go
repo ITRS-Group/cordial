@@ -25,6 +25,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
 
@@ -34,7 +35,7 @@ func init() {
 	// setCmd.Flags().VarP()
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 //go:embed _docs/set.md
 var setCmdDescription string

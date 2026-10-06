@@ -61,7 +61,7 @@ var loginCmd = &cobra.Command{
 		CmdRequireHome: "false",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		log := cordial.Logger.With("command", "login")
+		log := log.With("command", "login")
 
 		urlMatch := "itrsgroup.com"
 

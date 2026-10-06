@@ -24,11 +24,12 @@ import (
 	"os"
 	dbg "runtime/debug"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/process"
 )
 
@@ -173,17 +174,17 @@ func initConfig(cmd *cobra.Command) {
 		}
 	}
 
-	log = cordial.LogInit(execname,
-		cordial.SetLogfile(logFile),
-		cordial.LumberjackOptions(&lumberjack.Logger{
+	log = logger.Init(execname,
+		logger.SetLogfile(logFile),
+		logger.LogRotateOptions(&timberjack.Logger{
 			Filename:   logFile,
 			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size"), config.DefaultValue(10)),
 			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups"), config.DefaultValue(5)),
 			MaxAge:     config.Get[int](cf, cf.Join("gdna", "log", "stale-after"), config.DefaultValue(30)),
 			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress"), config.DefaultValue(true)),
 		}),
-		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"), config.DefaultValue(false))),
-		cordial.SetLogLevel(loglevel),
+		logger.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"), config.DefaultValue(false))),
+		logger.SetLogLevel(loglevel),
 	)
 
 	info, _ := dbg.ReadBuildInfo()

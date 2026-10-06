@@ -25,7 +25,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -53,7 +54,7 @@ var copyCmd = &cobra.Command{
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "copy")
+		log := logger.Logger.With("command", "copy")
 
 		ct, names, params, err := FetchArgs(cmd)
 		if err != nil {

@@ -24,9 +24,9 @@ limitations under the License.
 // directly as flag types for commands that need them.
 package values
 
-import (
-	"github.com/itrs-group/cordial"
-)
+import "github.com/itrs-group/cordial/pkg/logger"
+
+var log = logger.Logger
 
 // constants to ensure consistent usage of key names in the configuration
 const (
@@ -123,5 +123,3 @@ type UnsetConfigValues struct {
 	// for SANs these can be prefixed by an optional entity name and a '/' as for set
 	Variables UnsetVars
 }
-
-var log = cordial.Logger

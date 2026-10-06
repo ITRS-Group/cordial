@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // Useful errors for the package to return
@@ -46,7 +47,7 @@ var (
 	ErrNotRunning   = errors.New("instance is not running")
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 // DisableExtension is the suffix added to instance config files to mark
 // them disabled

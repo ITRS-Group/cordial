@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/email"
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cfgFile string
@@ -41,7 +42,7 @@ var inlineCSS bool
 var entityArg, samplerArg, typeArg, dataviewArg string
 var toArg, ccArg, bccArg, subjectArg string
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	// cobra.OnInitialize(initConfig)
@@ -76,14 +77,14 @@ var globalCf *config.Config
 func initConfig() {
 	var err error
 
-	log = cordial.LogInit(execname)
+	log = logger.Init(execname)
 
 	if quiet {
-		cordial.LogLevel.Set(slog.LevelError)
+		logger.LogLevel.Set(slog.LevelError)
 	} else if debug {
-		cordial.LogLevel.Set(slog.LevelDebug)
+		logger.LogLevel.Set(slog.LevelDebug)
 	} else {
-		cordial.LogLevel.Set(slog.LevelInfo)
+		logger.LogLevel.Set(slog.LevelInfo)
 	}
 
 	// config.DefaultKeyDelimiter("::")

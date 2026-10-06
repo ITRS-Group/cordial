@@ -134,10 +134,9 @@ gdna:
 
   # `log` controls how the `gdna` program logs it's output.
   #
-  # See <https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2#Logger> for
-  # the meaning of the similarly named fields (but not using the field
-  # tags) except for `rotate-on-start` which does what the name
-  # suggests.
+  # See <https://github.com/DeRuina/timberjack/> for the meaning of the
+  # similarly named fields (but not using the field tags) except for
+  # `rotate-on-start` which does what the name suggests.
   log:
     filename: ./gdna.log
     max-size: 10

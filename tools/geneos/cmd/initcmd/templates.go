@@ -25,7 +25,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -48,7 +47,7 @@ var templatesCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "init templates")
+		log := log.With("command", "init templates")
 		ct, _, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return

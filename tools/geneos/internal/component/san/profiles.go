@@ -1,7 +1,7 @@
 package san
 
 import (
-	"log/slog"
+	"fmt"
 	"path"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -36,8 +36,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 
 	var sans []SanProfile
 	if err2 := pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand()); err2 != nil {
-		log.Error("failed to unmarshal SANs", slog.Any("err", err2))
-		return err2
+		return fmt.Errorf("failed to unmarshal SANs: %w", err2)
 	}
 
 	// global lookup table, add values here as needed
@@ -90,7 +89,6 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 	ct := geneos.ParseComponent(entity.ForEach)
 
 	if entity.ForEach != "" {
-		log.Debug("processing SAN managed entity", slog.String("component", ct.String()))
 		// default is match all
 		match := []string{"*"}
 		if len(entity.Match) > 0 {
@@ -99,7 +97,6 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 
 		names, err = instance.Match(geneos.LOCAL, ct, false, true, match...)
 		if err != nil {
-			log.Debug("no matching instances, skipping")
 			return vals, geneos.ErrNotExist
 		}
 

@@ -34,6 +34,8 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -53,6 +55,8 @@ var initCmdBundlePassword config.Secret
 // initCmdExtras is shared between all `init` commands as they share common
 // flags (for now)
 var initCmdExtras = values.Values{}
+
+var log = logger.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(initCmd)
@@ -126,7 +130,7 @@ geneos init
 	//
 	// XXX Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "init")
+		log := log.With("command", "init")
 
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {

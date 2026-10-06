@@ -24,13 +24,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/process"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
@@ -49,7 +49,7 @@ func init() {
 	routerCmd.Flags().SortFlags = false
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 // routerCmd represents the proxy command
 var routerCmd = &cobra.Command{
@@ -99,17 +99,17 @@ map and submit incidents.
 
 		cf := cmd.LoadConfigFile("proxy")
 		// update logging for long running proxy
-		cordial.LogInit(cmd.Execname,
-			cordial.SetLogLevel(l),
-			cordial.SetLogfile(logFile),
-			cordial.LumberjackOptions(&lumberjack.Logger{
+		logger.Init(cmd.Execname,
+			logger.SetLogLevel(l),
+			logger.SetLogfile(logFile),
+			logger.LogRotateOptions(&timberjack.Logger{
 				Filename:   logFile,
 				MaxSize:    config.Get[int](cf, cf.Join("server", "log", "max-size")),
 				MaxBackups: config.Get[int](cf, cf.Join("server", "log", "max-backups")),
 				MaxAge:     config.Get[int](cf, cf.Join("server", "log", "stale-after")),
 				Compress:   config.Get[bool](cf, cf.Join("server", "log", "compress")),
 			}),
-			cordial.RotateOnStart(config.Get[bool](cf, cf.Join("server", "log", "rotate-on-start"))),
+			logger.RotateOnStart(config.Get[bool](cf, cf.Join("server", "log", "rotate-on-start"))),
 		)
 		proxy(cf)
 	},

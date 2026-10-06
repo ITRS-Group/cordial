@@ -27,7 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
@@ -37,8 +36,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
-
-var log = cordial.Logger
 
 const component = "san"
 
@@ -177,7 +174,7 @@ func factory(name string) (san geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(san.Config(), "home", instance.Home(san))
-	san.(*Sans).Logger = instance.NewLogger(san)
+	san.(*Sans).Logger = instance.Logger(san)
 	instances.Store(h.FullName(local), san)
 
 	return

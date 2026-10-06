@@ -30,11 +30,11 @@ import (
 	"github.com/jcmturner/gokrb5/v8/service"
 	"github.com/jcmturner/gokrb5/v8/spnego"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 // SplitUsername takes a name of the form 'domain\user' or 'user@domain'
 // and returns the two. realm will be empty of none found

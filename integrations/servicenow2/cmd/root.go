@@ -27,6 +27,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // var cf *config.Config
@@ -34,7 +35,7 @@ import (
 var configFile, Execname, logFile string
 var Debug bool
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	Cmd.PersistentFlags().StringVarP(&configFile, "conf", "c", "", "override config file")
@@ -54,7 +55,7 @@ func init() {
 		if Debug {
 			l = slog.LevelDebug
 		}
-		slog.SetDefault(cordial.LogInit(Execname, cordial.SetLogLevel(l)))
+		slog.SetDefault(logger.Init(Execname, logger.SetLogLevel(l)))
 		log.Debug("cordial 'servicenow2' running", slog.String("executable", cordial.ExecutableName()), slog.String("version", cordial.VERSION))
 	})
 }

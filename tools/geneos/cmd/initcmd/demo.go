@@ -25,7 +25,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
@@ -58,7 +57,7 @@ var demoCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "init demo")
+		log := log.With("command", "init demo")
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return

@@ -23,7 +23,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // ErrorResponse represents a typical error response from SDP v3 API.
@@ -293,7 +293,7 @@ type NameID struct {
 	ID   int64  `json:"id,string,omitempty"`
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 var sdpField1 = regexp.MustCompile(`^[\w\.-]+$`)
 

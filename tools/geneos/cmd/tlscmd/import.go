@@ -27,7 +27,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -79,7 +78,7 @@ geneos tls import /path/to/file.pem
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var certBundle *certs.CertificateBundle
 
-		log := cordial.Logger.With("command", "tls import")
+		log := log.With("command", "tls import")
 
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {

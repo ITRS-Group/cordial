@@ -2,7 +2,6 @@ package netprobe
 
 import (
 	"fmt"
-	"log/slog"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -22,7 +21,6 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &netprobes, config.NoExpand()); err != nil {
 		return fmt.Errorf("failed to unmarshal Netprobes for profile %q: %w", name, err)
 	}
-	log.Debug("netprobes", slog.String("netprobes", fmt.Sprintf("%+v", netprobes)))
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
@@ -35,7 +33,6 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	for _, netprobe := range netprobes {
 		name := config.Expand[string](pf, netprobe.Name, config.LookupTable(lookup))
 
-		log.Debug("netprobe name", slog.String("name", name))
 		if name == "" {
 			panic("name empty")
 		}

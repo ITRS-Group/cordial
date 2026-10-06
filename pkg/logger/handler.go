@@ -1,9 +1,26 @@
+/*
+Copyright © 2026 ITRS Group
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 // package logger provides an slog handler that can be used in place of
 // the default slog handler. It also provides a function to set up the
-// logger with a file output and rotation using lumberjack. The logger
-// is configured to include the caller information and to format the log
-// messages with a prefix. The log level can be set using the LogLevel
-// option.
+// logger with a file output and rotation using lumberjack/timberjack.
+// The logger is configured to include the caller information and to
+// format the log messages with a prefix. The log level can be set using
+// the LogLevel option.
 
 package logger
 
@@ -33,7 +50,7 @@ type Handler struct {
 	level          slog.Leveler
 }
 
-func NewHandler(options ...Option) (handler slog.Handler) {
+func NewHandler(options ...HandlerOption) (handler slog.Handler) {
 	var fp string
 
 	opts := evalOpts(options...)

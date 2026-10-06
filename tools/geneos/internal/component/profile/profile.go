@@ -101,7 +101,7 @@ func factory(name string) (profile geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(profile.Config(), "home", instance.Home(profile))
-	profile.(*Profiles).Logger = instance.NewLogger(profile)
+	profile.(*Profiles).Logger = instance.Logger(profile)
 	instances.Store(h.FullName(local), profile)
 
 	return

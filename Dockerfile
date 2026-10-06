@@ -17,7 +17,7 @@ ARG GOVERSION=1.27.1
 
 FROM golang:${GOVERSION} AS build
 # base files
-COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
+COPY go.mod go.sum cordial.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, san-config
 COPY tools /app/cordial/tools
@@ -70,7 +70,7 @@ RUN set -eux; \
 ARG GOVERSION
 ENV GOTOOLCHAIN=go${GOVERSION}
 # base files
-COPY go.mod go.sum cordial.go logging.go VERSION README.md CHANGELOG.md /app/cordial/
+COPY go.mod go.sum cordial.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, san-config
 COPY tools /app/cordial/tools

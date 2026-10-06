@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -80,7 +80,7 @@ type Dataview struct {
 	Headlines map[string]string
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func Finished[R Response](resp *R) {
 	switch any(*resp).(type) {

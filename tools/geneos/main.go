@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
@@ -62,7 +63,7 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/profile"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 //go:embed includes
 var Includes embed.FS

@@ -30,8 +30,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -46,15 +46,13 @@ type Instance struct {
 	Logger       *slog.Logger      `json:"-"`
 }
 
-var instanceMutex sync.Mutex
+var log = logger.Logger
 
-var log = cordial.Logger
-
-// NewLogger returns a logger with the instance name, host and type in
-// the context. The logger is configured with the "cordial" prefix and
-// an indent, and is set to the Info level.
-func NewLogger(i geneos.Instance, groups ...string) (l *slog.Logger) {
-	l = slog.New(cordial.LogHandler)
+// Logger returns a logger with the instance name, host and type in the
+// context. The logger is configured with the "logger" prefix and an
+// indent, and is set to the Info level.
+func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
+	l = slog.New(logger.LogHandler)
 	for _, group := range groups {
 		l = l.WithGroup(group)
 	}

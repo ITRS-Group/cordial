@@ -23,8 +23,11 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
+
+var log = logger.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(packageCmd)

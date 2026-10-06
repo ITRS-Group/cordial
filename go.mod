@@ -3,6 +3,7 @@ module github.com/itrs-group/cordial
 go 1.27.1
 
 require (
+	github.com/DeRuina/timberjack v1.4.8
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/PagerDuty/go-pagerduty v1.8.0
 	github.com/alecthomas/units v0.0.0-20240927000941-0f3dac36c52b
@@ -49,7 +50,6 @@ require (
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
-	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	modernc.org/sqlite v1.60.1
 	software.sslmate.com/src/go-pkcs12 v0.7.3
@@ -73,6 +73,7 @@ require (
 	github.com/jcmturner/gofork v1.7.6 // indirect
 	github.com/jcmturner/rpc/v2 v2.0.3 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

@@ -146,7 +146,7 @@ func factory(name string) (router geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(router.Config(), "home", instance.Home(router))
-	router.(*Routers).Logger = instance.NewLogger(router)
+	router.(*Routers).Logger = instance.Logger(router)
 	instances.Store(h.FullName(local), router)
 
 	return

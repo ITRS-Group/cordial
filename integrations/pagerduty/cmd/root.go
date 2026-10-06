@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 //go:embed pagerduty.defaults.yaml
@@ -61,7 +62,7 @@ var cf *config.Config
 
 var configFile, execname string
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -73,7 +74,7 @@ func init() {
 	Cmd.PersistentFlags().MarkHidden("help")
 
 	execname = path.Base(os.Args[0])
-	log = cordial.LogInit(execname)
+	log = logger.Init(execname)
 }
 
 // Cmd represents the base command when called without any subcommands

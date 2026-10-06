@@ -132,7 +132,7 @@ func factory(name string) (trgateway geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(trgateway.Config(), "home", instance.Home(trgateway))
-	trgateway.(*TRGateways).Logger = instance.NewLogger(trgateway)
+	trgateway.(*TRGateways).Logger = instance.Logger(trgateway)
 	instances.Store(h.FullName(local), trgateway)
 
 	return

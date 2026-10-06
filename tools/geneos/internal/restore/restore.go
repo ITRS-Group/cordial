@@ -16,14 +16,15 @@ import (
 
 	"github.com/dsnet/compress/bzip2"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 var fileTypes = map[string]string{
 	".tar.gz":  "gzip",

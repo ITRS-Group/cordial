@@ -31,12 +31,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/process"
 
 	_ "github.com/itrs-group/cordial/tools/ims-gateway/internal/sdp"
@@ -84,17 +85,17 @@ var startCmd = &cobra.Command{
 
 		cf := LoadConfigFile()
 
-		log = cordial.LogInit(cordial.ExecutableName(),
-			cordial.SetLogLevel(l),
-			cordial.SetLogfile(logFile),
-			cordial.LumberjackOptions(&lumberjack.Logger{
+		log = logger.Init(cordial.ExecutableName(),
+			logger.SetLogLevel(l),
+			logger.SetLogfile(logFile),
+			logger.LogRotateOptions(&timberjack.Logger{
 				Filename:   logFile,
 				MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "max-size")),
 				MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "max-backups")),
 				MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "stale-after")),
 				Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
 			}),
-			cordial.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
+			logger.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
 		)
 		startGateway(cf)
 	},

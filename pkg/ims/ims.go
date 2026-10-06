@@ -31,12 +31,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 type ContextKey string
 

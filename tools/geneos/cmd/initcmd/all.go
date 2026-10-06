@@ -26,7 +26,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -67,7 +66,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := cordial.Logger.With("command", "init all")
+		log := log.With("command", "init all")
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return

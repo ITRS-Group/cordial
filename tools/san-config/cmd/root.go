@@ -26,13 +26,14 @@ import (
 	dbg "runtime/debug"
 	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cf *config.Config
@@ -41,7 +42,7 @@ var conffile string
 var nowatchconfig bool
 var hostname, hosttype, output string
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
@@ -184,25 +185,25 @@ func initConfig(cmd *cobra.Command) {
 		}
 	}
 
-	log = cordial.LogInit(cordial.ExecutableName(),
-		cordial.SetLogfile(logFile),
-		cordial.LumberjackOptions(&lumberjack.Logger{
+	log = logger.Init(cordial.ExecutableName(),
+		logger.SetLogfile(logFile),
+		logger.LogRotateOptions(&timberjack.Logger{
 			Filename:   logFile,
 			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "max-size")),
 			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "max-backups")),
 			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "stale-after")),
 			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
 		}),
-		cordial.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
+		logger.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
 	)
 
 	switch {
 	case quiet:
-		cordial.LogLevel.Set(slog.LevelError)
+		logger.LogLevel.Set(slog.LevelError)
 	case trace, debug:
-		cordial.LogLevel.Set(slog.LevelDebug)
+		logger.LogLevel.Set(slog.LevelDebug)
 	default:
-		cordial.LogLevel.Set(slog.LevelInfo)
+		logger.LogLevel.Set(slog.LevelInfo)
 	}
 
 	info, _ := dbg.ReadBuildInfo()

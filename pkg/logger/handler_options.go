@@ -1,3 +1,20 @@
+/*
+Copyright © 2026 ITRS Group
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package logger
 
 import (
@@ -15,18 +32,18 @@ type handlerOpts struct {
 	json       bool
 }
 
-type Option func(*handlerOpts)
+type HandlerOption func(*handlerOpts)
 
 // JSON configures the handler to output JSON instead of a
 // human-readable format.
-func JSON() Option {
+func JSON() HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.json = true
 	}
 }
 
 // Delimiter sets the delimiter between attributes in the output. The default is a single dot.
-func Delimiter(delimiter string) Option {
+func Delimiter(delimiter string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.delimiter = delimiter
 	}
@@ -36,7 +53,7 @@ func Delimiter(delimiter string) Option {
 // including a tailing '/'. e.g. if the source path is
 // "/home/user/project/pkg/file.go" and the anchor is "project", the
 // resulting source path in the log will be "pkg/file.go".
-func SourceTrimTo(anchor string) Option {
+func SourceTrimTo(anchor string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.prefix = anchor
 	}
@@ -45,7 +62,7 @@ func SourceTrimTo(anchor string) Option {
 // Leveler sets the log level for the handler using a slog.Leveler.
 // This allows the log level to be changed at runtime. The default is
 // slog.LevelInfo.
-func Leveler(level *slog.LevelVar) Option {
+func Leveler(level *slog.LevelVar) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.level = level
 	}
@@ -53,7 +70,7 @@ func Leveler(level *slog.LevelVar) Option {
 
 // Writer sets the output writer for the handler. The default is
 // os.Stderr.
-func Writer(w io.Writer) Option {
+func Writer(w io.Writer) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.w = w
 	}
@@ -62,13 +79,13 @@ func Writer(w io.Writer) Option {
 // TimeFormat sets the time format for time attributes. The default is
 // "2006-01-02T15:04:05.000Z07:00". The format should be a valid Go time
 // format string.
-func TimeFormat(format string) Option {
+func TimeFormat(format string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.timeFormat = format
 	}
 }
 
-func evalOpts(options ...Option) *handlerOpts {
+func evalOpts(options ...HandlerOption) *handlerOpts {
 	opts := &handlerOpts{
 		w:          os.Stderr,
 		level:      &slog.LevelVar{},

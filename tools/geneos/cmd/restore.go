@@ -29,7 +29,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
@@ -77,7 +76,7 @@ geneos restore gateway ABC x.tgz
 		CmdWildcardNames: "false",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		log := cordial.Logger.With("command", "restore")
+		log := log.With("command", "restore")
 
 		ct, names, params, err := FetchArgs(command)
 		if err != nil {

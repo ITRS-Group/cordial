@@ -29,15 +29,15 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 //go:embed "profiles.defaults.yaml"
 var profilesDefault []byte

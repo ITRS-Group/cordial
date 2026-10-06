@@ -27,7 +27,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 type ResultsResponse struct {
@@ -35,7 +35,7 @@ type ResultsResponse struct {
 	Results results  `json:"results,omitempty"`
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 var snowFieldRE = regexp.MustCompile(`^[\w\.-]+$`)
 

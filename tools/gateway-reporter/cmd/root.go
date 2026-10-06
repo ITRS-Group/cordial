@@ -26,11 +26,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
-	"gopkg.in/natefinch/lumberjack.v2"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cf *config.Config
@@ -47,7 +48,7 @@ var defaults []byte
 //go:embed _docs/root.md
 var rootCmdDescription string
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -55,7 +56,7 @@ func init() {
 	startTime = time.Now()
 	startTimestamp = startTime.Format("20060102150405")
 
-	log = cordial.LogInit(execname)
+	log = logger.Init(execname)
 
 	Cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
@@ -99,8 +100,8 @@ var Cmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// no logging - XML output only
-		log = cordial.LogInit(execname,
-			cordial.LumberjackOptions(&lumberjack.Logger{
+		logger.Init(execname,
+			logger.LogRotateOptions(&timberjack.Logger{
 				Filename:   "/tmp/reporter.log",
 				MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
 				MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),

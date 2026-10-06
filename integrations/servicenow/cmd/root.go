@@ -27,6 +27,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cf *config.Config
@@ -34,7 +35,7 @@ var cf *config.Config
 var conffile, execname string
 var debug bool
 
-var log = cordial.Logger
+var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(initConfig)
@@ -51,7 +52,7 @@ func init() {
 	Cmd.Flags().SortFlags = false
 
 	execname = path.Base(os.Args[0])
-	log = cordial.LogInit(execname)
+	log = logger.Init(execname)
 }
 
 var Cmd = &cobra.Command{
