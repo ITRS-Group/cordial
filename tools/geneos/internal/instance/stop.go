@@ -19,8 +19,8 @@ package instance
 
 import (
 	"errors"
+	"log/slog"
 	"os"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -49,11 +49,11 @@ func Stop(i geneos.Instance, force, kill bool, opts ...any) (err error) {
 	}
 	defer func() {
 		if err == nil && wasRunning && !so.skipAudit {
-			fields := map[string]string{}
+			args := []any{}
 			if stoppedPID > 0 {
-				fields["pid"] = strconv.Itoa(stoppedPID)
+				args = append(args, slog.Int("pid", stoppedPID))
 			}
-			geneos.NotifyAudit(i, "stop", fields)
+			i.AuditLog().Event("stop", args...)
 		}
 	}()
 

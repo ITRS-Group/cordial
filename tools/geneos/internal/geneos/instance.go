@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // Instance interfaces contains the method set for an instance of a
@@ -30,6 +31,9 @@ type Instance interface {
 
 	// Log returns a logger for the instance
 	Log() *slog.Logger
+
+	// AuditLog returns the audit logger for the instance
+	AuditLog() *logger.AuditLogger
 
 	// String returns the display name of the instance in the form `TYPE
 	// NAME` for local instances and `TYPE NAME@HOST` for those on

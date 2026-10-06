@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -101,7 +102,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (ac2 geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -118,20 +119,21 @@ func factory(name string) (ac2 geneos.Instance) {
 		}
 	}
 
-	ac2 = &AC2s{
+	i = &AC2s{
 		Component:    &AC2,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(ac2, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", ac2, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(ac2.Config(), "home", instance.Home(ac2))
-	ac2.(*AC2s).Logger = instance.Logger(ac2)
-	instances.Store(h.FullName(local), ac2)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*AC2s).Logger = instance.Logger(i)
+	i.(*AC2s).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -169,6 +171,13 @@ func (i *AC2s) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *AC2s) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *AC2s) String() string {

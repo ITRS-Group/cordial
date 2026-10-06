@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -143,7 +144,7 @@ var instances sync.Map
 //
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
-func factory(name string) (san geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -159,23 +160,24 @@ func factory(name string) (san geneos.Instance) {
 			return sn
 		}
 	}
-	san = &Sans{
+	i = &Sans{
 		Component:    &San,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	san.Config().Default("pkgtype", "netprobe")
+	i.Config().Default("pkgtype", "netprobe")
 	if ct != nil {
-		san.Config().Default("pkgtype", ct.Name)
+		i.Config().Default("pkgtype", ct.Name)
 	}
-	if err := instance.SetDefaults(san, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", san, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(san.Config(), "home", instance.Home(san))
-	san.(*Sans).Logger = instance.Logger(san)
-	instances.Store(h.FullName(local), san)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Sans).Logger = instance.Logger(i)
+	i.(*Sans).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -213,6 +215,13 @@ func (i *Sans) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Sans) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Sans) String() string {

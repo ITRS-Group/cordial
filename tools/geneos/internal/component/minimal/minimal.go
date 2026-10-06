@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -112,7 +113,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (minimal geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -129,20 +130,21 @@ func factory(name string) (minimal geneos.Instance) {
 		}
 	}
 
-	minimal = &Minimals{
+	i = &Minimals{
 		Conf:         config.New(),
 		InstanceHost: h,
 		Component:    &Minimal,
 	}
 
-	if err := instance.SetDefaults(minimal, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", minimal, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(minimal.Config(), "home", instance.Home(minimal))
-	minimal.(*Minimals).Logger = instance.Logger(minimal)
-	instances.Store(instance.ShortName(minimal), minimal)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Minimals).Logger = instance.Logger(i)
+	i.(*Minimals).AuditLogger = instance.AuditLogger(i)
+	instances.Store(instance.ShortName(i), i)
 
 	return
 }
@@ -183,6 +185,13 @@ func (i *Minimals) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Minimals) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Minimals) String() string {

@@ -113,11 +113,11 @@ func Start(i geneos.Instance, opts ...any) error {
 
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	if !so.skipAudit {
-		fields := map[string]string{
-			"command": cmd.String(),
-			"pid":     strconv.Itoa(pid),
+		args := []any{
+			slog.String("command", cmd.String()),
+			slog.Int("pid", pid),
 		}
-		geneos.NotifyAudit(i, "start", fields)
+		i.AuditLog().Event("start", args...)
 	}
 	return nil
 }

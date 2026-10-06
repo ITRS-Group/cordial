@@ -187,7 +187,7 @@ func initConfig(cmd *cobra.Command) {
 
 	log = logger.Init(cordial.ExecutableName(),
 		logger.SetLogfile(logFile),
-		logger.LogRotateOptions(&timberjack.Logger{
+		logger.SetWriter(&timberjack.Logger{
 			Filename:   logFile,
 			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "max-size")),
 			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "max-backups")),

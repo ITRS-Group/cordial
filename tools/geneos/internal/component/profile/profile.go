@@ -29,6 +29,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -78,7 +79,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (profile geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
@@ -90,19 +91,20 @@ func factory(name string) (profile geneos.Instance) {
 		}
 	}
 
-	profile = &Profiles{
+	i = &Profiles{
 		Component:    &Profile,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(profile, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", profile, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(profile.Config(), "home", instance.Home(profile))
-	profile.(*Profiles).Logger = instance.Logger(profile)
-	instances.Store(h.FullName(local), profile)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Profiles).Logger = instance.Logger(i)
+	i.(*Profiles).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -134,6 +136,13 @@ func (i *Profiles) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Profiles) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Profiles) String() string {

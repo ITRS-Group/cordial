@@ -34,6 +34,18 @@ type handlerOpts struct {
 
 type HandlerOption func(*handlerOpts)
 
+func evalHandlerOpts(options ...HandlerOption) *handlerOpts {
+	opts := &handlerOpts{
+		w:          os.Stderr,
+		level:      &slog.LevelVar{},
+		timeFormat: "2006-01-02T15:04:05.000Z07:00",
+	}
+	for _, o := range options {
+		o(opts)
+	}
+	return opts
+}
+
 // JSON configures the handler to output JSON instead of a
 // human-readable format.
 func JSON() HandlerOption {
@@ -49,11 +61,11 @@ func Delimiter(delimiter string) HandlerOption {
 	}
 }
 
-// SourceTrimTo sets the directory in the source path to trim up to,
-// including a tailing '/'. e.g. if the source path is
+// TrimSourcePathTo sets the anchor in the source path to trim up to,
+// automatically including a trailing '/'. e.g. if the source path is
 // "/home/user/project/pkg/file.go" and the anchor is "project", the
 // resulting source path in the log will be "pkg/file.go".
-func SourceTrimTo(anchor string) HandlerOption {
+func TrimSourcePathTo(anchor string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.prefix = anchor
 	}
@@ -61,7 +73,7 @@ func SourceTrimTo(anchor string) HandlerOption {
 
 // Leveler sets the log level for the handler using a slog.Leveler.
 // This allows the log level to be changed at runtime. The default is
-// slog.LevelInfo.
+// a pointer to [slog.LevelInfo].
 func Leveler(level *slog.LevelVar) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.level = level
@@ -83,16 +95,4 @@ func TimeFormat(format string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.timeFormat = format
 	}
-}
-
-func evalOpts(options ...HandlerOption) *handlerOpts {
-	opts := &handlerOpts{
-		w:          os.Stderr,
-		level:      &slog.LevelVar{},
-		timeFormat: "2006-01-02T15:04:05.000Z07:00",
-	}
-	for _, o := range options {
-		o(opts)
-	}
-	return opts
 }

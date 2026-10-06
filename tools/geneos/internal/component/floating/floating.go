@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -125,7 +126,7 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 
 var instances sync.Map
 
-func factory(name string) (floating geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	h, ct, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
@@ -138,23 +139,24 @@ func factory(name string) (floating geneos.Instance) {
 		}
 	}
 
-	floating = &Floatings{
+	i = &Floatings{
 		Component:    &Floating,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	floating.Config().Default("pkgtype", "netprobe")
+	i.Config().Default("pkgtype", "netprobe")
 	if ct != nil {
-		floating.Config().Default("pkgtype", ct.Name)
+		i.Config().Default("pkgtype", ct.Name)
 	}
-	if err := instance.SetDefaults(floating, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", floating, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(floating.Config(), "home", instance.Home(floating))
-	floating.(*Floatings).Logger = instance.Logger(floating)
-	instances.Store(h.FullName(local), floating)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Floatings).Logger = instance.Logger(i)
+	i.(*Floatings).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -186,6 +188,13 @@ func (i *Floatings) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Floatings) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Floatings) String() string {

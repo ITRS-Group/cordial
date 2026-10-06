@@ -29,6 +29,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -110,7 +111,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (webserver geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -125,19 +126,20 @@ func factory(name string) (webserver geneos.Instance) {
 		}
 	}
 
-	webserver = &Webservers{
+	i = &Webservers{
 		Conf:         config.New(),
 		InstanceHost: h,
 		Component:    &Webserver,
 	}
 
-	if err := instance.SetDefaults(webserver, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", webserver, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(webserver.Config(), "home", instance.Home(webserver))
-	webserver.(*Webservers).Logger = instance.Logger(webserver)
-	instances.Store(h.FullName(local), webserver)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Webservers).Logger = instance.Logger(i)
+	i.(*Webservers).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -188,6 +190,13 @@ func (i *Webservers) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Webservers) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Webservers) String() string {

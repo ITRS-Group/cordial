@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -108,7 +109,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (fileagent geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	h, _, local := instance.ParseName(name)
 
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
@@ -120,19 +121,20 @@ func factory(name string) (fileagent geneos.Instance) {
 		}
 	}
 
-	fileagent = &FileAgents{
+	i = &FileAgents{
 		Component:    &FileAgent,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(fileagent, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", fileagent, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(fileagent.Config(), "home", instance.Home(fileagent))
-	fileagent.(*FileAgents).Logger = instance.Logger(fileagent)
-	instances.Store(h.FullName(local), fileagent)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*FileAgents).Logger = instance.Logger(i)
+	i.(*FileAgents).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -164,6 +166,13 @@ func (i *FileAgents) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *FileAgents) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *FileAgents) String() string {

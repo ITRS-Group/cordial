@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -39,11 +40,12 @@ import (
 
 // The Instance type is the common data shared by all instances
 type Instance struct {
-	Conf         *config.Config    `json:"-"`
-	InstanceHost *geneos.Host      `json:"-"`
-	Component    *geneos.Component `json:"-"`
-	ConfigLoaded time.Time         `json:"-"`
-	Logger       *slog.Logger      `json:"-"`
+	Conf         *config.Config      `json:"-"`
+	InstanceHost *geneos.Host        `json:"-"`
+	Component    *geneos.Component   `json:"-"`
+	ConfigLoaded time.Time           `json:"-"`
+	Logger       *slog.Logger        `json:"-"`
+	AuditLogger  *logger.AuditLogger `json:"-"`
 }
 
 var log = logger.Logger
@@ -57,10 +59,24 @@ func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
 		l = l.WithGroup(group)
 	}
 	return l.With(
-		slog.String("name", i.Name()),
 		slog.String("host", i.Host().String()),
-		slog.String("type", i.Type().String()),
+		slog.String("component", i.Type().String()),
+		slog.String("instance", i.Name()),
 	)
+}
+
+// AuditLogger returns an audit logger with the instance name, host and
+// type in the context.
+func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
+	l = logger.NewAuditLogger()
+	return &logger.AuditLogger{
+		Logger: l.With(
+			slog.String("username", i.Host().Username()),
+			slog.String("host", i.Host().String()),
+			slog.String("component", i.Type().String()),
+			slog.String("instance", i.Name()),
+		),
+	}
 }
 
 // IsA returns true if instance i has a type that is component of one of
@@ -193,6 +209,52 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 			resp := f(c, values...)
 			responses.Finished(resp)
+			ch <- resp
+		}(c)
+	}
+	wg.Wait()
+	close(ch)
+
+	for resp := range ch {
+		rs[resp.Instance.String()] = resp
+	}
+
+	return
+}
+
+// DoWithAudit calls function f for each matching instance and gathers
+// the return values into responses for handling by the caller. The
+// functions are executed in goroutines and must be concurrency safe.
+//
+// The values are passed to each function called and must not be changes
+// by the called function. The called function should validate and cast
+// values for use.
+//
+// DoWithAudit calls Instances() to resolve the names given to a list of
+// matching instances on host h (which can be geneos.ALL to look on all
+// hosts) and for type ct, which can be nil to look across all component
+// types.
+func DoWithAudit(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	var wg sync.WaitGroup
+
+	if cmd.Annotations[geneos.CmdAuditCommand] == "true" {
+		logger.Audit.Event(cmd.Name())
+	}
+
+	instances := Instances(h, ct, MatchNames(names...))
+	rs = make(responses.GeneralResponses, len(instances))
+	ch := make(chan *responses.General, len(instances))
+
+	for _, c := range instances {
+		wg.Add(1)
+		go func(c geneos.Instance) {
+			defer wg.Done()
+
+			resp := f(c, values...)
+			responses.Finished(resp)
+			if cmd.Annotations[geneos.CmdAuditActions] == "true" {
+				c.AuditLog().Event(cmd.Name(), slog.Any("result", resp.Err))
+			}
 			ch <- resp
 		}(c)
 	}
@@ -620,27 +682,26 @@ func ParseName(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct 
 	return
 }
 
-func ImportFiles(s geneos.Instance, files ...string) (err error) {
+func ImportFiles(i geneos.Instance, files ...string) (err error) {
 	for _, item := range files {
 		var dest string
-		dest, err = geneos.ImportSource(s.Host(), s.Home(), item)
+		dest, err = geneos.ImportSource(i.Host(), i.Home(), item)
 		if err != nil {
 			return
 		}
-		if s.Type() == nil || s.Type().OnImport == nil || dest == "" {
+		if i.Type() == nil || dest == "" {
 			continue
 		}
-		setup := config.Get[string](s.Config(), "setup")
-		setupBase := path.Base(PathTo(s, "setup"))
+		setup := config.Get[string](i.Config(), "setup")
+		setupBase := path.Base(PathTo(i, "setup"))
 		if setupBase == "." {
 			setupBase = path.Base(setup)
 		}
 		if dest != setupBase && dest != path.Base(setup) && dest != setup {
 			continue
 		}
-		if err = s.Type().OnImport(s, dest); err != nil {
-			return
-		}
+		// TODO: check callers for audit
+		i.AuditLog().Event("import", slog.String("file", dest))
 	}
 	return
 }

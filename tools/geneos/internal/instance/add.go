@@ -6,7 +6,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -178,9 +177,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	} else {
 		fmt.Printf("%s added\n", i)
 	}
-	geneos.NotifyAudit(i, "add", map[string]string{
-		"port": strconv.Itoa(int(port)),
-	})
+	i.AuditLog().Event("add", slog.Int("port", int(port)))
 
 	if opts.start || opts.logs {
 		if err = Start(i); err != nil {

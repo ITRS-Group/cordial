@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -166,7 +167,7 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 var instances sync.Map
 
 // factory is the factory method for Gateways
-func factory(name string) (gateway geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -183,20 +184,21 @@ func factory(name string) (gateway geneos.Instance) {
 		}
 	}
 
-	gateway = &Gateways{
+	i = &Gateways{
 		Component:    &Gateway,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(gateway, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", gateway, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(gateway.Config(), "home", instance.Home(gateway))
-	gateway.(*Gateways).Logger = instance.Logger(gateway)
-	instances.Store(h.FullName(local), gateway)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Gateways).Logger = instance.Logger(i)
+	i.(*Gateways).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -234,6 +236,13 @@ func (i *Gateways) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Gateways) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Gateways) String() string {

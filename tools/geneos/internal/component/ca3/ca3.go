@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -115,7 +116,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (ca3 geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -131,19 +132,20 @@ func factory(name string) (ca3 geneos.Instance) {
 		}
 	}
 
-	ca3 = &CA3s{
+	i = &CA3s{
 		Component:    &CA3,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(ca3, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", ca3, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(ca3.Config(), "home", instance.Home(ca3))
-	ca3.(*CA3s).Logger = instance.Logger(ca3)
-	instances.Store(h.FullName(local), ca3)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*CA3s).Logger = instance.Logger(i)
+	i.(*CA3s).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -181,6 +183,13 @@ func (i *CA3s) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *CA3s) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *CA3s) String() string {

@@ -27,6 +27,7 @@ import (
 	"golang.org/x/term"
 )
 
+// package globals available to callers
 var (
 	LogLevel   slog.LevelVar
 	Logger     *slog.Logger = slog.Default()
@@ -57,8 +58,8 @@ func (discardCloser) Close() error { return nil }
 // colouring enabled if the output is a termial according to
 // `term.IsTerminal()`.
 func Init(prefix string, options ...LoggerOption) *slog.Logger {
-	var out io.WriteCloser
-	out = os.Stderr
+	// var out io.WriteCloser
+	// out = os.Stderr
 
 	opts := evalLoggerOptions(options...)
 
@@ -68,54 +69,62 @@ func Init(prefix string, options ...LoggerOption) *slog.Logger {
 
 	switch opts.logfile {
 	case "":
-		if opts.lj != nil {
-			if opts.rotateOnStart {
-				opts.lj.Rotate()
+		if opts.rotator != nil {
+			if w, ok := opts.rotator.(interface{ io.Writer }); ok {
+				opts.w = w
+				if opts.rotateOnStart {
+					if r, ok := opts.rotator.(interface{ Rotate() error }); ok {
+						r.Rotate()
+					}
+				}
 			}
-			out = opts.lj
 		} else {
-			out = os.Stderr
+			opts.w = os.Stderr
 		}
 	case "-":
-		out = os.Stdout
+		opts.w = os.Stdout
 	case os.DevNull:
-		out = discardCloser{io.Discard}
+		opts.w = discardCloser{io.Discard}
 	default:
 		// if given a filename, use the provided or default
 		// lumberjack/timeberjack but override the filename
-		if opts.lj == nil {
-			opts.lj = &timberjack.Logger{}
+		if opts.rotator == nil {
+			opts.rotator = &timberjack.Logger{
+				Filename: opts.logfile,
+			}
 		}
-		opts.lj.Filename = opts.logfile
-
-		out = opts.lj
+		if w, ok := opts.rotator.(interface{ io.Writer }); ok {
+			opts.w = w
+		}
 	}
 
-	loggerOptions := []HandlerOption{
+	handlerOptions := []HandlerOption{
 		Leveler(&LogLevel),
-		SourceTrimTo(prefix),
+		TrimSourcePathTo(prefix),
 		Delimiter("."),
-		Writer(out),
+		Writer(opts.w),
 	}
 
 	if opts.format == "json" || os.Getenv("CORDIAL_LOG_FORMAT") == "json" {
-		loggerOptions = append(loggerOptions, JSON())
+		handlerOptions = append(handlerOptions, JSON())
 	}
 
-	LogHandler = NewHandler(loggerOptions...)
+	LogHandler = NewHandler(handlerOptions...)
 
 	// set up slog
 	LogLevel.Set(opts.slogLevel)
-	// update the point
+
+	// update the pointer
 	*Logger = *slog.New(LogHandler)
 
-	switch o := out.(type) {
-	case *timberjack.Logger:
-		color.NoColor = true
+	switch o := opts.w.(type) {
 	case *os.File:
 		if !term.IsTerminal(int(o.Fd())) {
 			color.NoColor = true
 		}
+	default:
+		// for all other types of writers, disable color
+		color.NoColor = true
 	}
 
 	return Logger

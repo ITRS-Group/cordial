@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/audit"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -55,9 +55,7 @@ var MDGateway = geneos.Component{
 	GlobalSettings: map[string]string{
 		config.Join(component, "ports"): "18000-",
 		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
-			audit.LogFile(component),
-		}, ":"),
+		config.Join(component, "purge"): strings.Join([]string{}, ":"),
 	},
 	PortRange: config.Join(component, "ports"),
 	CleanList: config.Join(component, "clean"),
@@ -77,20 +75,18 @@ var MDGateway = geneos.Component{
 		`program={{join "${config:install}" "${config:version}" "jdk" "bin" "java"}}`,
 		`logback={{join "${config:install}" "${config:version}" "config" "logback.xml"}}`,
 		`logfile=` + component + `.log`,
+		`audit-log-file=` + component + `-audit.log`,
 		`setup={{join "${config:home}" "` + component + `.yaml"}}`,
 		`jar=lib/` + component + `.jar`,
 		`main-class=com.itrsgroup.mdgateway.Main`,
 		`autostart=true`,
-		`audit-log-file=` + audit.LogFile(component),
 	},
 
 	Directories: []string{
 		filepath.Join("packages", component),
 		filepath.Join(component, component+"s"),
 	},
-	GetPID:   pidCheckFn,
-	OnImport: audit.AuditImport,
-	Audit:    audit.AuditEvent,
+	GetPID: pidCheckFn,
 }
 
 type MDGateways instance.Instance
@@ -104,7 +100,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (mdgateway geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -120,20 +116,21 @@ func factory(name string) (mdgateway geneos.Instance) {
 		}
 	}
 
-	mdgateway = &MDGateways{
+	i = &MDGateways{
 		Component:    &MDGateway,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(mdgateway, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", mdgateway, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(mdgateway.Config(), "home", instance.Home(mdgateway))
-	mdgateway.(*MDGateways).Logger = instance.Logger(mdgateway)
-	instances.Store(h.FullName(local), mdgateway)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*MDGateways).Logger = instance.Logger(i)
+	i.(*MDGateways).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -171,6 +168,13 @@ func (i *MDGateways) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *MDGateways) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *MDGateways) String() string {
@@ -255,7 +259,7 @@ func seedPackagedYAML(i *MDGateways) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	_ = audit.AuditImport(i, path.Base(setup))
+	i.AuditLog().Event("import", slog.Any("file", path.Base(setup)))
 }
 
 func (i *MDGateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {

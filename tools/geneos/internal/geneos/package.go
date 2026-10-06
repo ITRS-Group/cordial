@@ -367,10 +367,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 		return err
 	}
 	for _, c := range restarted {
-		NotifyAudit(c, "update", map[string]string{
-			"version": version,
-			"base":    opts.basename,
-		})
+		c.AuditLog().Event("update", slog.String("version", version), slog.String("base", opts.basename))
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
 	return nil

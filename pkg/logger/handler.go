@@ -40,20 +40,22 @@ import (
 )
 
 type Handler struct {
-	preformatted   []byte   // data from WithGroup and WithAttrs
-	unopenedGroups []string // groups from WithGroup that haven't been opened
-	groupPrefix    []string
 	mu             *sync.Mutex
-	opts           handlerOpts
 	w              io.Writer
 	filePrefix     string
 	level          slog.Leveler
+	opts           handlerOpts
+	preformatted   []byte   // data from WithGroup and WithAttrs
+	unopenedGroups []string // groups from WithGroup that haven't been opened
+	groupPrefix    []string
 }
 
+// NewHandler creates a new instance of the custom slog handler with the
+// provided options.
 func NewHandler(options ...HandlerOption) (handler slog.Handler) {
 	var fp string
 
-	opts := evalOpts(options...)
+	opts := evalHandlerOpts(options...)
 	if opts.json {
 		return slog.NewJSONHandler(opts.w, &slog.HandlerOptions{
 			AddSource: true,
@@ -61,8 +63,8 @@ func NewHandler(options ...HandlerOption) (handler slog.Handler) {
 		})
 	}
 
-	_, file, _, _ := runtime.Caller(0)
 	if len(opts.prefix) > 0 {
+		_, file, _, _ := runtime.Caller(0)
 		if i := strings.Index(file, opts.prefix); i != -1 {
 			l := i + len(opts.prefix)
 			fp = file[:l+1]
@@ -148,6 +150,7 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 }
 
 var timeFormat = "2006-01-02T15:04:05.000Z07:00"
+
 var (
 	grey       = color.New(color.FgHiBlack).SprintFunc()
 	boldWhite  = color.New(color.FgWhite).Add(color.Bold).SprintFunc()

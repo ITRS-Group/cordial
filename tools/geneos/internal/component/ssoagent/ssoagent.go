@@ -39,6 +39,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -112,7 +113,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (ssoagent geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -128,19 +129,20 @@ func factory(name string) (ssoagent geneos.Instance) {
 		}
 	}
 
-	ssoagent = &SSOAgents{
+	i = &SSOAgents{
 		Component:    &SSOAgent,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(ssoagent, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", ssoagent, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 	// set the home dir based on where it might be, default to one above
-	config.Set(ssoagent.Config(), "home", instance.Home(ssoagent))
-	ssoagent.(*SSOAgents).Logger = instance.Logger(ssoagent)
-	instances.Store(h.FullName(local), ssoagent)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*SSOAgents).Logger = instance.Logger(i)
+	i.(*SSOAgents).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -190,6 +192,13 @@ func (i *SSOAgents) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *SSOAgents) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *SSOAgents) String() string {

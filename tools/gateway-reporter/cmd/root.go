@@ -101,7 +101,7 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// no logging - XML output only
 		logger.Init(execname,
-			logger.LogRotateOptions(&timberjack.Logger{
+			logger.SetWriter(&timberjack.Logger{
 				Filename:   "/tmp/reporter.log",
 				MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
 				MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),

@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -102,7 +103,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (licd geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -118,20 +119,21 @@ func factory(name string) (licd geneos.Instance) {
 		}
 	}
 
-	licd = &Licds{
+	i = &Licds{
 		Component:    &Licd,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	if err := instance.SetDefaults(licd, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", licd, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(licd.Config(), "home", instance.Home(licd))
-	licd.(*Licds).Logger = instance.Logger(licd)
-	instances.Store(h.FullName(local), licd)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Licds).Logger = instance.Logger(i)
+	i.(*Licds).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -172,6 +174,13 @@ func (i *Licds) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Licds) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Licds) String() string {

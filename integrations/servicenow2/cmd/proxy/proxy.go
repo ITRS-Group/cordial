@@ -102,7 +102,7 @@ map and submit incidents.
 		logger.Init(cmd.Execname,
 			logger.SetLogLevel(l),
 			logger.SetLogfile(logFile),
-			logger.LogRotateOptions(&timberjack.Logger{
+			logger.SetWriter(&timberjack.Logger{
 				Filename:   logFile,
 				MaxSize:    config.Get[int](cf, cf.Join("server", "log", "max-size")),
 				MaxBackups: config.Get[int](cf, cf.Join("server", "log", "max-backups")),

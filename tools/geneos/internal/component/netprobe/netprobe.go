@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -115,7 +116,7 @@ func init() {
 
 var instances sync.Map
 
-func factory(name string) (netprobe geneos.Instance) {
+func factory(name string) (i geneos.Instance) {
 	if name == "" {
 		return nil
 	}
@@ -132,31 +133,32 @@ func factory(name string) (netprobe geneos.Instance) {
 		}
 	}
 
-	netprobe = &Netprobes{
+	i = &Netprobes{
 		Component:    &Netprobe,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
 
-	netprobe.Config().Default("pkgtype", component)
+	i.Config().Default("pkgtype", component)
 	if ct != nil {
 		// check for valid pkgtypes by name, as the PackageType field is not set for Netprobe to avoid an import cycle with minimal and fa2
 		switch ct.Name {
 		case "netprobe", "minimal", "fa2":
-			config.Set(netprobe.Config(), "pkgtype", ct.Name)
+			config.Set(i.Config(), "pkgtype", ct.Name)
 		default:
 			panic(fmt.Sprintf("invalid pkgtype for netprobe: %s", ct.Name))
 		}
 	}
 
-	if err := instance.SetDefaults(netprobe, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", netprobe, err))
+	if err := instance.SetDefaults(i, local); err != nil {
+		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
 	}
 
 	// set the home dir based on where it might be, default to one above
-	config.Set(netprobe.Config(), "home", instance.Home(netprobe))
-	netprobe.(*Netprobes).Logger = instance.Logger(netprobe)
-	instances.Store(h.FullName(local), netprobe)
+	config.Set(i.Config(), "home", instance.Home(i))
+	i.(*Netprobes).Logger = instance.Logger(i)
+	i.(*Netprobes).AuditLogger = instance.AuditLogger(i)
+	instances.Store(h.FullName(local), i)
 
 	return
 }
@@ -194,6 +196,13 @@ func (i *Netprobes) Log() *slog.Logger {
 		return slog.Default()
 	}
 	return i.Logger
+}
+
+func (i *Netprobes) AuditLog() *logger.AuditLogger {
+	if i == nil {
+		return nil
+	}
+	return i.AuditLogger
 }
 
 func (i *Netprobes) String() string {

@@ -1,15 +1,18 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
+	"os"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
 type loggerOpts struct {
+	w             io.Writer
 	logfile       string
-	lj            *timberjack.Logger
+	rotator       any
 	rotateOnStart bool
 	slogLevel     slog.Level
 	format        string
@@ -19,6 +22,7 @@ type LoggerOption func(*loggerOpts)
 
 func evalLoggerOptions(options ...LoggerOption) *loggerOpts {
 	opts := &loggerOpts{
+		w:             os.Stderr,
 		rotateOnStart: true,
 	}
 	for _, opt := range options {
@@ -34,14 +38,17 @@ func SetLogfile(logfile string) LoggerOption {
 	}
 }
 
-// LogRotateOptions set the log writer to the configured
-// lumberjack/timeberjack settings but only if the lj.Filename field is
-// not empty, otherwise it is ignored.
-func LogRotateOptions(lj *timberjack.Logger) LoggerOption {
+// SetWriter set the log writer to the configured lumberjack/timeberjack
+// settings but only if the lj.Filename field is not empty, otherwise it
+// is ignored.
+func SetWriter(w io.Writer) LoggerOption {
 	return func(lo *loggerOpts) {
-		if lj.Filename != "" {
-			lj.Filename = config.ResolveHome(lj.Filename)
-			lo.lj = lj
+		switch v := w.(type) {
+		case *timberjack.Logger:
+			if v.Filename != "" {
+				v.Filename = config.ResolveHome(v.Filename)
+				lo.rotator = v
+			}
 		}
 	}
 }

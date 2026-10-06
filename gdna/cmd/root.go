@@ -176,7 +176,7 @@ func initConfig(cmd *cobra.Command) {
 
 	log = logger.Init(execname,
 		logger.SetLogfile(logFile),
-		logger.LogRotateOptions(&timberjack.Logger{
+		logger.SetWriter(&timberjack.Logger{
 			Filename:   logFile,
 			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size"), config.DefaultValue(10)),
 			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups"), config.DefaultValue(5)),
