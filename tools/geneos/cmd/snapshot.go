@@ -20,7 +20,9 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -49,7 +51,7 @@ func init() {
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdUserAssignment, "userassignment", "U", false, "Request cell user assignment info")
 
 	snapshotCmd.Flags().StringVarP(&snapshotCmdUsername, "username", "u", "", "Username")
-	snapshotCmd.Flags().StringVarP(&snapshotCmdFormat, "format", "f", "json", "Output format (json, toolkit)")
+	snapshotCmd.Flags().StringVarP(&snapshotCmdFormat, "format", "f", "json", "Output format (json, toolkit, toolkit-multi)")
 
 	snapshotCmd.Flags().IntVarP(&snapshotCmdMaxitems, "limit", "l", 0, "limit matching items to display. default is unlimited. results unsorted.")
 	snapshotCmd.Flags().BoolVarP(&snapshotCmdXpathsonly, "xpaths", "x", false, "just show matching xpaths")
@@ -111,13 +113,21 @@ var snapshotCmd = &cobra.Command{
 			defer clear(snapshotCmdPassword)
 		}
 
-		resp := instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstance, params)
+		var resp responses.GeneralResponses
 
+		switch {
+		case snapshotCmdFormat == "toolkit":
+			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkit, params)
+		case snapshotCmdFormat == "toolkit-multi":
+			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkitMulti, params)
+		default:
+			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
+		}
 		resp.Report(os.Stdout, responses.IndentJSON(true))
 	},
 }
 
-func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General) {
+func snapshotInstanceJSON(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
 	if len(params) == 0 {
@@ -151,6 +161,117 @@ func snapshotInstance(i geneos.Instance, params ...any) (resp *responses.General
 
 	if len(values) > 0 {
 		resp.Value = values
+	}
+	return
+}
+
+// snapshotInstanceToolkit handles snapshot requests for the toolkit
+// format. Only the first matching dataview is rendered, even though all
+// paths matching the first params element (as a []string) are
+// considered, which may impact performance.
+func snapshotInstanceToolkit(i geneos.Instance, params ...any) (resp *responses.General) {
+	resp = responses.New[responses.General](i)
+
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	paths, ok := params[0].([]string)
+	if !ok {
+		panic("wrong type")
+	}
+
+	dataviews, err := instance.SnapshotDataviews(i, paths,
+		instance.SnapshotUsername(snapshotCmdUsername),
+		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotMaxItems(snapshotCmdMaxitems),
+	)
+	if err != nil {
+		resp.Err = err
+		return
+	}
+
+	// render as Toolkit CSV format
+	if len(dataviews) > 0 {
+		dv := dataviews[0]
+		columns := dv.ColumnOrder
+		rows := dv.RowOrder
+		headlines := dv.HeadlineOrder
+
+		if len(rows) > 0 {
+			fmt.Println(strings.Join(columns, ","))
+		} else {
+			fmt.Println("rowname")
+		}
+		for _, headline := range headlines {
+			fmt.Printf("<!>%s,%s\n", headline, strings.ReplaceAll(dv.Headlines[headline].Value, ",", "\\,"))
+		}
+		if len(rows) == 0 {
+			return
+		}
+		for _, row := range rows {
+			values := []string{strings.ReplaceAll(row, ",", "\\,")}
+			r := dv.Table[row]
+			for _, column := range columns[1:] {
+				values = append(values, strings.ReplaceAll(r[column].Value, ",", "\\,"))
+			}
+			fmt.Println(strings.Join(values, ","))
+		}
+	}
+	return
+}
+
+func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *responses.General) {
+	resp = responses.New[responses.General](i)
+
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
+
+	paths, ok := params[0].([]string)
+	if !ok {
+		panic("wrong type")
+	}
+
+	dataviews, err := instance.SnapshotDataviews(i, paths,
+		instance.SnapshotUsername(snapshotCmdUsername),
+		instance.SnapshotPassword(snapshotCmdPassword),
+		instance.SnapshotMaxItems(snapshotCmdMaxitems),
+	)
+	if err != nil {
+		resp.Err = err
+		return
+	}
+
+	// render as Toolkit CSV format
+	for _, dv := range dataviews {
+		columns := dv.ColumnOrder
+		rows := dv.RowOrder
+		headlines := dv.HeadlineOrder
+
+		fmt.Println("<dataview>" + dv.Name)
+		if len(rows) > 0 {
+			fmt.Println("<h>" + strings.Join(columns, ","))
+		} else {
+			fmt.Println("<h>rowname")
+		}
+		for _, headline := range headlines {
+			fmt.Printf("<!>%s,%s\n", headline, strings.ReplaceAll(dv.Headlines[headline].Value, ",", "\\,"))
+		}
+		if len(rows) == 0 {
+			i.Log().Debug("no rows available", slog.String("dataview", dv.Name))
+			continue
+		}
+		for _, row := range rows {
+			values := []string{strings.ReplaceAll(row, ",", "\\,")}
+			r := dv.Table[row]
+			for _, column := range columns[1:] {
+				values = append(values, strings.ReplaceAll(r[column].Value, ",", "\\,"))
+			}
+			fmt.Println(strings.Join(values, ","))
+		}
 	}
 	return
 }
