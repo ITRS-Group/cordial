@@ -88,7 +88,7 @@ geneos init [flags] [DIRECTORY]
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string                  Username for downloads (password prompted)
   -w, --gateway-template string          A gateway template file
-  -e, --env NAME=VALUE                   Environment variable for instance start-up
+  -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)

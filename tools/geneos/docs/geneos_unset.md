@@ -31,6 +31,8 @@ geneos unset [flags] [TYPE] [NAME...]
                            (Repeat as required, san only)
   -v, --variable NAME      Remove the variable NAME
                            (Repeat as required, san only)
+  -M, --entity NAME        Remove a managed entity NAME
+                           (Repeat as required, san only)
       --allow-root         allow running as root (not recommended)
   -G, --config string      config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")

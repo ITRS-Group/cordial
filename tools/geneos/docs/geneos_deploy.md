@@ -121,7 +121,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       name of the import source or if given it must be
                                       relative to and below the instance directory
                                       (Repeat as required)
-  -e, --env NAME=VALUE                Environment variable for instance start-up
+      --profiles string               Profile configuration file
+  -e, --env NAME=VALUE                Environment variable for instance start-up in the format NAME=VALUE
                                       (Repeat as required)
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
                                       (Repeat as required, gateway only)

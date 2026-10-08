@@ -20,7 +20,7 @@ geneos init templates [flags]
       --allow-root                       allow running as root (not recommended)
   -A, --archive string                   Directory of releases for installation
   -G, --config string                    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -e, --env NAME=VALUE                   Environment variable for instance start-up
+  -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
   -F, --force                            Ignore existing directories and files and overwrite
   -w, --gateway-template string          A gateway template file

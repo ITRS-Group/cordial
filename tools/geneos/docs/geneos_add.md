@@ -47,7 +47,7 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
   -l, --log                           Follow the logs after starting the instance.
                                       Implies -S to start the instance
   -p, --port uint16                   Override the default port selection
-  -e, --env NAME=VALUE                Environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up in the format NAME=VALUE
                                       (Repeat as required)
   -V, --version string                Select the version for the instance. Defaults to 'active_prod'
                                       which is the default symlink to the installed release. (default "active_prod")

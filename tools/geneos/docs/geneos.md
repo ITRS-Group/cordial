@@ -20,6 +20,7 @@ The subsystems below group related functions together and have their own sub-com
 
 | Command | Description |
 |-------|-------|
+| [`geneos adb`](geneos_adb.md)	 | ADB File Operations |
 | [`geneos aes`](geneos_aes.md)	 | AES256 Key File Operations |
 | [`geneos config`](geneos_config.md)	 | Configure Command Behaviour |
 | [`geneos host`](geneos_host.md)	 | Remote Host Operations |
@@ -104,6 +105,14 @@ The subsystems below group related functions together and have their own sub-com
 
 ---
 
+## Includes
+
+| Command | Description |
+|-------|-------|
+| [`geneos includes`](geneos_includes.md)	 | Includes |
+
+---
+
 ## Component Types
 
 | Command | Description |
@@ -123,6 +132,14 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos sso-agent`](geneos_sso-agent.md)	 | SSO Agent |
 | [`geneos tr-gateway`](geneos_tr-gateway.md)	 | TR Gateway |
 | [`geneos webserver`](geneos_webserver.md)	 | Web Dashboard Servers |
+
+---
+
+## Profile Components
+
+| Command | Description |
+|-------|-------|
+| [`geneos profile`](geneos_profile.md)	 | Profile |
 
 ### Options
 

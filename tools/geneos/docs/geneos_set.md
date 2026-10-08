@@ -138,7 +138,7 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
                                       default is instance configured keyfile,
                                       or user keyfile if not used by the instance type
   -s, --secure NAME[=VALUE]           encode a secret for NAME, prompt if VALUE not supplied, using a keyfile
-  -e, --env NAME=VALUE                Environment variable for instance start-up
+  -e, --env NAME=VALUE                Environment variable for instance start-up in the format NAME=VALUE
                                       (Repeat as required)
   -E, --secureenv NAME[=VALUE]        encode a secret for env var NAME, prompt if VALUE not supplied, using a keyfile
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
