@@ -28,6 +28,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 
 	// subsystems from commands for documentation
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/adbcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"

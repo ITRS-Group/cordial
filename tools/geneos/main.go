@@ -18,6 +18,7 @@ limitations under the License.
 package main
 
 import (
+	"embed"
 	"fmt"
 	"os"
 	"path"
@@ -29,10 +30,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
 	// import subsystems here for command registration
+	_ "github.com/itrs-group/cordial/tools/geneos/cmd/adbcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/aescmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/cfgcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/hostcmd"
-
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/imscmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/initcmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/pkgcmd"

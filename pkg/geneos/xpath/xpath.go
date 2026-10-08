@@ -41,7 +41,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
+	"log/slog"
+	"path"
 	"regexp"
 	"strings"
 	"unicode"
@@ -65,6 +66,10 @@ type XPath struct {
 	Headline *Headline `json:"headline,omitempty"`
 	Row      *Row      `json:"row,omitempty"`
 	Column   *Column   `json:"column,omitempty"`
+}
+
+type Elements interface {
+	Gateway | Probe | Entity | Sampler | Dataview | Headline | Row | Column
 }
 
 type Gateway struct {
@@ -103,7 +108,7 @@ type Column struct {
 
 // New returns an XPath to the level of the element passed, which can be
 // populated with fields.
-func New(element any) *XPath {
+func New[E Elements](element *E) *XPath {
 	x := &XPath{}
 	if r := x.ResolveTo(element); r != nil {
 		return r
@@ -145,7 +150,7 @@ func NewHeadlinePath(name string) (x *XPath) {
 //
 //	x := x.ResolveTo(&Dataview{})
 //	y := xpath.ResolveTo(&Headline{Name: "headlineName"})
-func (x *XPath) ResolveTo(element any) *XPath {
+func (x *XPath) ResolveTo[E Elements](element *E) *XPath {
 	if element == nil {
 		return nil
 	}
@@ -154,12 +159,12 @@ func (x *XPath) ResolveTo(element any) *XPath {
 	var nx XPath
 
 	// skip through any pointers
-	for reflect.ValueOf(element).Kind() == reflect.Pointer {
-		element = reflect.Indirect(reflect.ValueOf(element)).Interface()
-	}
+	// for reflect.ValueOf(element).Kind() == reflect.Pointer {
+	// 	element = reflect.Indirect(reflect.ValueOf(element)).Interface()
+	// }
 
 	// set the element, remove others
-	switch e := element.(type) {
+	switch e := any(*element).(type) {
 	case Gateway:
 		nx = XPath{
 			Gateway: x.Gateway,
@@ -643,6 +648,158 @@ func Parse(s string) (xpath *XPath, err error) {
 		err = ErrInvalidPath
 		return
 	}
+}
+
+// Match checks if the given XPath x matches the filter XPath. It
+// applies glob patterns for names and treats nil elements in the filter
+// as wildcards.
+func (x *XPath) Match(filter *XPath) bool {
+	if x == nil || filter == nil {
+		return false
+	}
+
+	// for each element of x, check if the same element in filter would
+	// match, applying glob patterns as per [path.Match]. empty (nil)
+	// elements in filter mean wildcard. empty elements in x must match
+	// exactly. attributes and types have to be treated specially
+
+	if filter.Gateway == nil {
+		return true
+	}
+
+	if filter.Gateway.Name != "" {
+		// if there's a filter...
+		if x.Gateway == nil {
+			// ... element name cannot be empty
+			return false
+		}
+
+		// compare names use [path.Match]
+		match, err := path.Match(filter.Gateway.Name, x.Gateway.Name)
+		if err != nil || !match {
+			return false
+		}
+	}
+
+	if filter.Probe == nil {
+		return true
+	}
+	if filter.Probe.Name != "" {
+		if x.Probe == nil {
+			return false
+		}
+
+		slog.Debug("Matching probe", slog.String("filter", filter.Probe.Name), slog.String("x", x.Probe.Name))
+		match, err := path.Match(filter.Probe.Name, x.Probe.Name)
+		if err != nil || !match {
+			return false
+		}
+		slog.Debug("Probe matched", slog.String("filter", filter.Probe.Name), slog.String("x", x.Probe.Name))
+	}
+
+	if filter.Entity == nil {
+		return true
+	}
+	if filter.Entity.Name != "" || len(filter.Entity.Attributes) > 0 {
+		if x.Entity == nil {
+			return false
+		}
+
+		match, err := path.Match(filter.Entity.Name, x.Entity.Name)
+		if err != nil || !match {
+			return false
+		}
+
+		for k, v := range filter.Entity.Attributes {
+			if _, ok := x.Entity.Attributes[k]; !ok {
+				return false
+			}
+
+			match, err := path.Match(v, x.Entity.Attributes[k])
+			if err != nil || !match {
+				return false
+			}
+		}
+	}
+
+	if filter.Sampler == nil {
+		return true
+	}
+	if filter.Sampler.Name != "" || (filter.Sampler.Type != nil && *filter.Sampler.Type != "") {
+		if x.Sampler == nil {
+			return false
+		}
+
+		match, err := path.Match(filter.Sampler.Name, x.Sampler.Name)
+		if err != nil || !match {
+			return false
+		}
+
+		if x.Sampler.Type != nil {
+			if filter.Sampler.Type != nil {
+				match, err := path.Match(*filter.Sampler.Type, *x.Sampler.Type)
+				if err != nil || !match {
+					return false
+				}
+			}
+		}
+	}
+
+	if filter.Dataview == nil {
+		return true
+	}
+	if filter.Dataview.Name != "" {
+		if x.Dataview == nil {
+			return false
+		}
+
+		match, err := path.Match(filter.Dataview.Name, x.Dataview.Name)
+		if err != nil || !match {
+			return false
+		}
+	}
+
+	// filter down to one of these, then check row / headline etc.
+	if filter.Headline == nil && filter.Column == nil && filter.Row == nil {
+		return true
+	}
+
+	if filter.Rows != x.Rows {
+		return false
+	}
+
+	if filter.Headline != nil && filter.Headline.Name != "" {
+		if x.Headline == nil {
+			return false
+		}
+		match, err := path.Match(filter.Headline.Name, x.Headline.Name)
+		if err != nil || !match {
+			return false
+		}
+	}
+
+	if filter.Column != nil && filter.Column.Name != "" {
+		if x.Column == nil {
+			return false
+		}
+		match, err := path.Match(filter.Column.Name, x.Column.Name)
+		if err != nil || !match {
+			return false
+		}
+	}
+
+	if filter.Row != nil && filter.Row.Name != "" {
+		if x.Row == nil {
+			return false
+		}
+		match, err := path.Match(filter.Row.Name, x.Row.Name)
+		if err != nil || !match {
+			return false
+		}
+	}
+
+	// if we get this far, they match
+	return true
 }
 
 // return Xpath as a string
