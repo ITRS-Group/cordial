@@ -4,6 +4,8 @@ import (
 	"io"
 	"log/slog"
 	"os"
+
+	"github.com/itrs-group/cordial/pkg/process"
 )
 
 // provides a set of audit logger functions, including initialisation and formatting
@@ -29,6 +31,10 @@ var auditHandler slog.Handler
 // file always receives all audit entries. If an optional writer is
 // specifed using [logger.AuditWriter], it will also receive the audit
 // entries.
+//
+// The audit logger will always log the username of the current user,
+// and if it is different then the login name (from
+// `/proc/self/loginuid` on Linux).
 func NewAuditLogger(options ...AuditOption) *AuditLogger {
 	opts := evalAuditOptions(options...)
 
@@ -50,8 +56,24 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 	}
 	handlers = append(handlers, auditHandler)
 
+	username, err := process.GetCurrentUsername()
+	if err != nil {
+		username = "unknown"
+	}
+	userattr := []any{
+		slog.String("username", username),
+	}
+
+	loginname, err := process.GetLoginName(-1)
+	if err != nil {
+		loginname = "unknown"
+	}
+
+	if username != loginname {
+		userattr = append(userattr, slog.String("login", loginname))
+	}
 	return &AuditLogger{
-		Logger: slog.New(slog.NewMultiHandler(handlers...)),
+		Logger: slog.New(slog.NewMultiHandler(handlers...)).With(userattr...),
 	}
 }
 

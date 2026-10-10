@@ -22,6 +22,7 @@ package process
 import (
 	"bufio"
 	"fmt"
+	"os"
 	"os/exec"
 	"os/user"
 	"reflect"
@@ -31,8 +32,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/tklauser/go-sysconf"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 // cache lookups, including fails
@@ -81,6 +83,35 @@ func GetGroupname(gid int) (groupname string) {
 	groupnames.Store(gid, groupname)
 
 	return
+}
+
+// GetLoginName returns the original login username associated with
+// process pid. If the loginuid is -1 then the current user is returned.
+func GetLoginName(pid int) (name string, err error) {
+	pidStr := fmt.Sprint(pid)
+	if pid < 0 {
+		pidStr = "self"
+	}
+
+	uidBytes, err := os.ReadFile(fmt.Sprintf("/proc/%s/loginuid", pidStr))
+	var uid int32
+	if _, err = fmt.Sscanf(string(uidBytes), "%d", &uid); err != nil || uid == -1 {
+		currentUser, err2 := user.Current()
+		if err2 != nil {
+			err = err2
+			return
+		}
+		return currentUser.Username, nil
+	}
+	return GetUsername(int(uid)), nil
+}
+
+func GetCurrentUsername() (name string, err error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "unknown", err
+	}
+	return currentUser.Username, nil
 }
 
 func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats T, err error) {

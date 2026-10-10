@@ -92,7 +92,6 @@ func AuditEvent(i geneos.Instance, event string, args ...any) {
 	}
 	auditLogger := AuditLogger(i)
 	attrs := []any{
-		slog.String("username", i.Host().Username()),
 		slog.Group("instance",
 			slog.String("component", i.Type().String()),
 			slog.String("name", i.Name()),

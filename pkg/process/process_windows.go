@@ -285,6 +285,10 @@ func GetGroupname(gid int) (groupname string) {
 	return
 }
 
+func GetLoginName(pid int) (name string, err error) {
+	return
+}
+
 func prepareCmd(cmd *exec.Cmd) {
 	if cmd.SysProcAttr == nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
