@@ -57,6 +57,7 @@ var RootComponent = Component{
 		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
 	},
 	Directories: []string{
+		"audit",
 		"packages/downloads",
 	},
 	CleanList: strings.Join([]string{

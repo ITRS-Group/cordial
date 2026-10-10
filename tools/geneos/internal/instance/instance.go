@@ -69,13 +69,31 @@ func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
 }
 
 // AuditLogger returns an audit logger with the instance name, host and
-// type in the context.
+// type in the context. Optional configuration to customize the audit
+// logger can be provided through the instance's config under the
+// `audit` key. The following sub-keys are supported (with their
+// defaults):
+//
+//   - `file` - Default is `TYPE-audit.log` relative to the working directory
+//   - `max-size` MiB - Default is `10`
+//   - `max-age` days - Default is `30`
+//   - `max-backups` - Default is `5`
+//   - `compression` - Default is `gzip`
+//
+// Defaults are first taken from the global config keys of the same
+// name, if they are defined.
+//
+// NOTE: This only writes instance audit logs on LOCALHOST, for remote
+// instances it will only write to any global audit destination
 func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
+	if i.Host().IsLocalhost() == false {
+		return logger.NewAuditLogger()
+	}
+
 	cf := i.Config()
-	filename := HomeRel(i, config.Get[string](cf, cf.Join("audit", "logfile"), config.DefaultValue(i.Type().String()+"-audit.log")))
 
 	auditwriter := &timberjack.Logger{
-		Filename:         filename,
+		Filename:         AuditFilepath(i),
 		MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(10)))),
 		MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(30)))),
 		MaxBackups:       config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(5)))),
@@ -86,6 +104,11 @@ func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
 	}
 
 	return logger.NewAuditLogger(logger.AuditWriter(auditwriter))
+}
+
+func AuditFilepath(i geneos.Instance) string {
+	cf := i.Config()
+	return HomeRel(i, config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(i.Type().String()+"-audit.log")))
 }
 
 func AuditEvent(i geneos.Instance, event string, args ...any) {

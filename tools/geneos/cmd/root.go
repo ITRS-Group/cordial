@@ -25,8 +25,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
@@ -78,11 +80,32 @@ var log = logger.Logger
 
 func init() {
 	cobra.OnInitialize(func() {
+		// initialise standard logging before loading global config
 		logger.Init(packageName)
+
+		cf, err := initGlobalConfig()
+		if err != nil {
+			log.Error("failed to initialize global config")
+
+		}
+
+		defaultFile := filepath.Join(config.Get[string](cf, cordial.ExecutableName(), config.DefaultValue(os.TempDir())), "audit", "audit.log")
+		if err = os.MkdirAll(filepath.Dir(defaultFile), 0755); err != nil {
+			log.Error("failed to create audit directory:", slog.Any("error", err), slog.String("directory", filepath.Dir(defaultFile)))
+		}
+
+		// initialise global audit logging after loading global config,
+		// which may contain defaults etc.
 		logger.InitGlobalAudit(&timberjack.Logger{
-			Filename: "/tmp/audit.log",
+			Filename:         config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(defaultFile)),
+			MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.DefaultValue(10))),
+			MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.DefaultValue(30))),
+			MaxBackups:       config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(config.DefaultValue(5))),
+			Compression:      config.Get[string](cf, cf.Join("audit", "compression"), config.DefaultValue(config.DefaultValue("gzip"))),
+			BackupTimeFormat: "20060102150405",
+			RotationInterval: time.Hour * 24 * 7,
+			RotateAt:         []string{"00:00"},
 		})
-		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
 
@@ -313,8 +336,9 @@ func cmdNormalizeFunc(f *pflag.FlagSet, name string) pflag.NormalizedName {
 
 var configPath string
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() {
+// initGlobalConfig reads in global config file and and ENV variables if
+// set.
+func initGlobalConfig() (cf *config.Config, err error) {
 	if debug {
 		logger.LogLevel.Set(slog.LevelDebug)
 	}
@@ -328,7 +352,7 @@ func initConfig() {
 	// errors.
 	oldConfDir, _ := config.UserConfigPath()
 
-	cf, err := config.Read(cordial.ExecutableName(),
+	cf, err = config.Read(cordial.ExecutableName(),
 		config.FilePath(cfgFile),
 		config.UseGlobal(),
 		config.SearchDirs(oldConfDir),
@@ -373,11 +397,7 @@ func initConfig() {
 	geneos.InitHosts(cordial.ExecutableName())
 	log.Debug("hosts loaded")
 
-	// TODO ignore profiles for now
-	// _, err = profiles.Load()
-	// if err != nil {
-	// 	log.Fatal().Err(err).Msg("failed to load profiles")
-	// }
+	return
 }
 
 // RunE runs a command in a sub-package to avoid import loops. It is

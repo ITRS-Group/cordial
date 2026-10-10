@@ -67,8 +67,13 @@ func TailInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	}
 	opts := evalLogWatcherOptions(options...)
 
+	if opts.audit {
+		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, AuditFilepath(i), "audit", opts)...)
+		return
+	}
+
 	if opts.stderr {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, ComponentFilepath(i, "txt"), "STDERR", opts)...)
+		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, ComponentFilepath(i, "txt"), "console", opts)...)
 	}
 
 	if !opts.noNormal {
@@ -116,8 +121,13 @@ func CatInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	}
 	opts := evalLogWatcherOptions(options...)
 
+	if opts.audit {
+		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, AuditFilepath(i), "audit", opts)...)
+		return
+	}
+
 	if opts.stderr {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, ComponentFilepath(i, "txt"), "STDERR", opts)...)
+		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, ComponentFilepath(i, "txt"), "console", opts)...)
 	}
 	if !opts.noNormal {
 		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, LogFilePath(i), "instance", opts)...)
@@ -154,6 +164,19 @@ func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 		}
 	}
 	opts := evalLogWatcherOptions(options...)
+
+	if opts.audit {
+		logfile := AuditFilepath(i)
+		if err := logFollowInstanceFile(i, logfile, opts); err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				resp.Err = nil
+				boldWhite.Printf("===> %s %s audit log file not found, watching <===\n", i, logfile)
+			} else {
+				resp.Err = err
+			}
+		}
+		return
+	}
 
 	if opts.stderr {
 		logfile := ComponentFilepath(i, "txt")
@@ -476,6 +499,7 @@ type logWatcherOptions struct {
 	stderr    bool
 	noNormal  bool
 	caLog     bool
+	audit     bool
 	lines     int
 }
 
@@ -495,13 +519,13 @@ func WithNoHeaders(noHeaders bool) LogWatcherOptions {
 	}
 }
 
-func WithMatch(match string) LogWatcherOptions {
+func Matching(match string) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.match = match
 	}
 }
 
-func WithIgnore(ignore string) LogWatcherOptions {
+func IgnoreMatches(ignore string) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.ignore = ignore
 	}
@@ -525,7 +549,13 @@ func WithCALog(caLog bool) LogWatcherOptions {
 	}
 }
 
-func WithLines(lines int) LogWatcherOptions {
+func ShowAuditLogs(audit bool) LogWatcherOptions {
+	return func(lo *logWatcherOptions) {
+		lo.audit = audit
+	}
+}
+
+func MaxLines(lines int) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.lines = lines
 	}

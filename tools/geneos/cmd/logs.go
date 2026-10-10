@@ -29,11 +29,12 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"golang.org/x/term"
 )
 
 var logCmdLines int
-var logCmdStderr, logCmdNoNormal, logCmdCALog, logCmdFollow, logCmdCat bool
+var logCmdStderr, logCmdNoNormal, logCmdCALog, logCmdFollow, logCmdCat, logCmdAudit bool
 var logCmdMatch, logCmdIgnore string
 var logCmdNoHeaders bool
 
@@ -53,16 +54,29 @@ func init() {
 	logsCmd.Flags().IntVarP(&logCmdLines, "lines", "n", 10, "Lines to tail")
 	logsCmd.Flags().BoolVarP(&logCmdCat, "cat", "c", false, "Output whole file")
 
-	logsCmd.Flags().BoolVarP(&logCmdStderr, "stderr", "E", false, "Show STDERR output files")
-	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "no-stdout", "N", false, "Do not show STDOUT log files")
+	logsCmd.Flags().BoolVarP(&logCmdStderr, "console", "E", false, "Show console (stdout/stderr) output files")
+	logsCmd.Flags().BoolVarP(&logCmdNoNormal, "no-normal", "N", false, "Do NOT show normal instance log files")
+
 	logsCmd.Flags().BoolVarP(&logCmdNoHeaders, "no-headers", "X", false, "Do not show log file headers, useful for --match/-g output")
 	logsCmd.Flags().BoolVarP(&logCmdCALog, "ca", "C", false, "Include Collection Agent log for Netprobe instances")
+
+	logsCmd.Flags().BoolVarP(&logCmdAudit, "audit", "A", false, "Show only audit log files")
 
 	logsCmd.Flags().StringVarP(&logCmdMatch, "match", "g", "", "Match lines with STRING")
 	logsCmd.Flags().StringVarP(&logCmdIgnore, "ignore", "v", "", "Match lines without STRING")
 
 	logsCmd.MarkFlagsMutuallyExclusive("match", "ignore")
 	logsCmd.MarkFlagsMutuallyExclusive("cat", "follow")
+
+	logsCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "no-stderr":
+			name = "no-normal"
+		case "stderr":
+			name = "console"
+		}
+		return pflag.NormalizedName(name)
+	})
 
 	logsCmd.Flags().SortFlags = false
 }
@@ -105,27 +119,30 @@ var logsCmd = &cobra.Command{
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
-				instance.WithLines(logCmdLines),
-				instance.WithMatch(logCmdMatch),
-				instance.WithIgnore(logCmdIgnore),
+				instance.MaxLines(logCmdLines),
+				instance.Matching(logCmdMatch),
+				instance.IgnoreMatches(logCmdIgnore),
+				instance.ShowAuditLogs(logCmdAudit),
 			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		case logCmdFollow:
 			instance.FollowLogs(geneos.GetHost(Hostname), ct, names,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
-				instance.WithLines(logCmdLines),
-				instance.WithMatch(logCmdMatch),
-				instance.WithIgnore(logCmdIgnore),
+				instance.MaxLines(logCmdLines),
+				instance.Matching(logCmdMatch),
+				instance.IgnoreMatches(logCmdIgnore),
+				instance.ShowAuditLogs(logCmdAudit),
 			) // never returns
 		default:
 			instance.Do(geneos.GetHost(Hostname), ct, names, instance.TailInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
-				instance.WithLines(logCmdLines),
-				instance.WithMatch(logCmdMatch),
-				instance.WithIgnore(logCmdIgnore),
+				instance.MaxLines(logCmdLines),
+				instance.Matching(logCmdMatch),
+				instance.IgnoreMatches(logCmdIgnore),
+				instance.ShowAuditLogs(logCmdAudit),
 			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		}
 
