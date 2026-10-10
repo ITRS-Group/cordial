@@ -117,7 +117,7 @@ func Start(i geneos.Instance, opts ...any) error {
 			slog.String("command", cmd.String()),
 			slog.Int("pid", pid),
 		}
-		i.AuditLog().Event("start", args...)
+		i.AuditEvent("start", args...)
 	}
 	return nil
 }

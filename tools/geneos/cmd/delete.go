@@ -93,7 +93,7 @@ func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 				return
 			}
 		}
-		i.AuditLog().Event("delete")
+		instance.AuditEvent(i, "delete")
 		if resp.Err = i.Host().RemoveAll(i.Home()); resp.Err != nil {
 			return
 		}

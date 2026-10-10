@@ -180,7 +180,7 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 
 	resp = responses.MergeResponse(resp, instance.Write(i))
 	if resp.Err == nil {
-		i.AuditLog().Event("set", slog.String("values", fmt.Sprintf("%+v", v)))
+		i.AuditEvent("set", slog.String("values", fmt.Sprintf("%+v", v)))
 	}
 	return
 }
@@ -207,8 +207,6 @@ func promptForSecrets(prompt string, v values.SecureValues) (err error) {
 // If the instance does not use keyfiles then it tries to read or create
 // a user keyfile. If no keyfile can be found or created then an error
 // is returned.
-//
-// TODO: remove printf
 func getKeyfile(i geneos.Instance) (keyFile config.KeyFile, created bool, err error) {
 	cf := i.Config()
 	ct := i.Type()

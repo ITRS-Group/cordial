@@ -28,8 +28,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"src.elv.sh/pkg/md"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -51,16 +53,25 @@ var UserKeyFile = geneos.DefaultUserKeyfile
 
 var debug, quiet bool
 
-var GeneosUnsetError = errors.New(strings.ReplaceAll(`Geneos location not set.
+var GeneosUnsetError = errors.New(md.RenderString((strings.ReplaceAll(
+
+	`No existing Geneos environment found.
 
 You can do one of the following:
-* Run |geneos config set geneos=/PATH| (where |/PATH| is the location of the Geneos installation)
-* Run |geneos init| or |geneos init /PATH| to initialise an installation
-  * There are also variations on the |init| command, please see help for the command
-* Set the |GENEOS_HOME| or |ITRS_HOME| environment variables, either once or in your |.profile|:
-  * |export GENEOS_HOME=/PATH|
 
-`, "|", "`"))
+* For a new environment, run one of the |geneos init| commands. For more details use |geneos help init|
+
+* To adopt an existing environment, which you currently manage using scripts like |gatewayctl| and |netprobectl|, use
+
+    geneos config set geneos=/PATH
+	
+  where "/PATH" is the location of the Geneos installation. Also consider using |geneos migrate -X| to replace those script with symbolic links to the this program.
+
+* Another option, for advanced uses is to set the |GENEOS_HOME| or |ITRS_HOME| environment variables, either once or in your |${HOME}/.profile| or |${HOME}/.bash_profile|:
+
+    export GENEOS_HOME=/PATH
+
+`, "|", "`")), &md.TTYCodec{Width: 76}))
 
 var AllowRoot bool
 var log = logger.Logger
@@ -68,6 +79,9 @@ var log = logger.Logger
 func init() {
 	cobra.OnInitialize(func() {
 		logger.Init(packageName)
+		logger.InitGlobalAudit(&timberjack.Logger{
+			Filename: "/tmp/audit.log",
+		})
 		initConfig()
 		geneos.Init(cordial.ExecutableName())
 	})
@@ -221,7 +235,7 @@ geneos restart
 			}
 		}
 
-		// same as above, but no warning message (XXX - can't recall why, indirection?)
+		// same as above, but no warning message (TODO - can't recall why, indirection?)
 		if r, ok := command.Annotations[CmdReplacedBy]; ok {
 			var newargs []string
 			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
@@ -263,6 +277,7 @@ geneos restart
 			command.SetUsageTemplate(" ")
 			return GeneosUnsetError
 		}
+
 		if command.Name() == "help" {
 			// don't parse args if the command is a help
 			return nil

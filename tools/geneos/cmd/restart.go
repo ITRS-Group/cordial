@@ -130,7 +130,7 @@ func restartInstance(i geneos.Instance) error {
 		if newPid, pidErr := instance.GetLivePID(i); pidErr == nil && newPid > 0 {
 			args = append(args, slog.Int("newPid", newPid))
 		}
-		i.AuditLog().Event("restart", args...)
+		i.AuditEvent("restart", args...)
 	}
 	return err
 }

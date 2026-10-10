@@ -53,7 +53,7 @@ func Stop(i geneos.Instance, force, kill bool, opts ...any) (err error) {
 			if stoppedPID > 0 {
 				args = append(args, slog.Int("pid", stoppedPID))
 			}
-			i.AuditLog().Event("stop", args...)
+			i.AuditEvent("stop", args...)
 		}
 	}()
 

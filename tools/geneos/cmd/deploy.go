@@ -35,7 +35,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -356,12 +356,12 @@ var deployCmd = &cobra.Command{
 
 func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 	// discover which components are in the profile
-	pf, err := profiles.Load(cordial.ExecutableName(), config.FilePath(deployCmdProfiles))
+	pf, err := profile.Load(cordial.ExecutableName(), config.FilePath(deployCmdProfiles))
 	if err != nil {
 		return err
 	}
-	instances := profiles.ListComponents(h, pf, name)
-	log.Debug("components in profile", slog.String("host", h.String()), slog.String("profile", name), slog.Any("components", instances))
+	instances := profile.ListComponents(h, pf, name)
+	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
 
 	installed := []geneos.Instance{}
 	for _, pi := range instances {

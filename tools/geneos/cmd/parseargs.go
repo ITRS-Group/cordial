@@ -20,12 +20,14 @@ package cmd
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -150,6 +152,9 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
 	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
 
+	// set audit configuration in the global configuration based on
+	// command annotations
+
 	if auditCommands, ok := c.Annotations[CmdAuditCommand]; ok {
 		cf := config.Global()
 		confKey := config.Join("audit", "commands")
@@ -168,6 +173,23 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 				config.Set(cf, confKey, false)
 			}
 		}
+	}
+
+	if config.Get[bool](config.Global(), config.Join("audit", "commands")) {
+		defer func() {
+			var cmdLine strings.Builder
+			for _, a := range os.Args {
+				if strings.Contains(a, " ") {
+					cmdLine.WriteString(` "`)
+					cmdLine.WriteString(a)
+					cmdLine.WriteString(`"`)
+				} else {
+					cmdLine.WriteString(" ")
+					cmdLine.WriteString(a)
+				}
+			}
+			logger.Audit().Event(c.Name(), slog.String("command", strings.TrimSpace(cmdLine.String())))
+		}()
 	}
 
 	if auditActions, ok := c.Annotations[CmdAuditActions]; ok {

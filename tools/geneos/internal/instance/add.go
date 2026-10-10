@@ -164,20 +164,23 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	_ = ImportFiles(i, opts.imports...)
 
 	// make sure base version link exists
-	basemame := config.Get[string](cf, "version")
-	exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basemame))
-	if !exists {
-		i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basemame))
-		geneos.Update(h, ct, geneos.Basename(basemame))
+	if basename, found := config.Lookup[string](cf, "version"); found {
+		exists, err := geneos.CheckBasename(h, ct, geneos.Basename(basename))
+		if err != nil {
+			i.Log().Error("failed to check base version", slog.Any("error", err))
+		} else if !exists {
+			i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basename))
+			geneos.Update(h, ct, geneos.Basename(basename))
+		}
 	}
 
-	port, found := config.Lookup[uint16](cf, "port")
-	if found {
+	if port, found := config.Lookup[uint16](cf, "port"); found {
 		fmt.Printf("%s added, port %d\n", i, port)
+		i.AuditEvent("add", slog.Int("port", int(port)))
 	} else {
 		fmt.Printf("%s added\n", i)
+		i.AuditEvent("add")
 	}
-	i.AuditLog().Event("add", slog.Int("port", int(port)))
 
 	if opts.start || opts.logs {
 		if err = Start(i); err != nil {

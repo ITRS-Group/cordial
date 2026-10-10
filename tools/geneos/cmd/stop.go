@@ -57,6 +57,8 @@ var stopCmd = &cobra.Command{
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdNonInstanceArgsError:  "true",
+		CmdAuditCommand:          "true",
+		CmdAuditActions:          "true",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		if stopCmdPort != 0 {
