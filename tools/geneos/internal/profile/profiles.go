@@ -1,5 +1,5 @@
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2026 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ limitations under the License.
 
 // Package profiles provides functionality to manage and manipulate profiles.
 
-package profiles
+package profile
 
 import (
 	_ "embed"
@@ -91,7 +91,10 @@ type Common struct {
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
 }
 
-// Apply applies the specified profile to the local configuration.
+// Apply applies the specified profile to the local configuration. It
+// iterates over all the components defined in the profile and applies
+// their respective profile settings by calling the component's
+// ApplyProfile function if it is defined.
 func Apply(pf *config.Config, name string) error {
 	profile, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 	if !found {
@@ -102,6 +105,7 @@ func Apply(pf *config.Config, name string) error {
 	for key := range profile {
 		ct := geneos.ParseComponent(key)
 		if ct.ApplyProfile != nil {
+			slog.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
 			if err := ct.ApplyProfile(pf, name, key); err != nil {
 				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
@@ -119,8 +123,11 @@ type Instance struct {
 	Config    *config.Config
 }
 
+// ListComponents lists all components for the given host and profile.
+// The caller has to supply the profile config structure loaded from the
+// selected config file.
 func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances []Instance) {
-	var comps map[string][]Common
+	var components map[string][]Common
 
 	if !pf.IsSet(pf.Join("profiles", name)) {
 		return
@@ -130,12 +137,12 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 		"hostname": h.String(),
 	}
 
-	pf.UnmarshalKey(pf.Join("profiles", name), &comps,
-		config.NoExpand(),
+	pf.UnmarshalKey(pf.Join("profiles", name), &components,
+		config.NoDecode(true),
 		config.LookupTable(lookup),
 	)
 
-	for key, value := range comps {
+	for key, value := range components {
 		for _, component := range value {
 			name := config.Expand[string](pf, component.Name)
 			cf := pf.Sub(pf.Join("profiles", name, key, name))
@@ -157,8 +164,8 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 	return
 }
 
-// ApplyCommonParams applies the common parameters from the Common
-// struct to the given values.
+// ApplyCommonParams applies the common parameters from the
+// [profiles.Common] struct. These are currently `Envs` and `Params`.
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
@@ -168,6 +175,8 @@ func ApplyCommonParams(p Common) (vals values.Values) {
 	return
 }
 
+// ApplyInstance applies the given common parameters and values to the
+// specified instance.
 func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
 	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
 

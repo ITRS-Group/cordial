@@ -1,0 +1,24 @@
+#
+#
+
+profiles:
+  all:
+    gateway:
+      - name: ${hostname}
+    netprobe:
+      - name: ${hostname}
+    licd:
+      - name: perm
+    webserver:
+      - name: ${hostname}
+
+  demo:
+    gateway:
+      - name: Demo Gateway
+        options: "-demo"
+    netprobe:
+      - name: ${hostname}-demo
+    webserver:
+      - name: ${hostname}-demo
+
+

@@ -1,34 +1,85 @@
-default: none
 profiles:
   all:
     gateway:
         - name: ${hostname}
     licd:
         - name: perm
+          import:
+            - geneos.lic=/tmp/abc.lic
     netprobe:
         - name: ${hostname}
     webserver:
           - name: ${hostname}
   demo:
     gateway:
-        - name: Demo Gateway
-          options: -demo
+      - name: Demo Gateway
+        profile-managed: false
+        params:
+          - options=-demo
+          - port=7039
     netprobe:
-        - name: ${hostname}-demo
+      - name: ${hostname}-demo
+        params:
+          - port=7036
     webserver:
-        - name: ${hostname}-demo
+      - name: ${hostname}-demo
+  motm:
+    gateways:
+      - name: ${hostname}-motm
+        profile-managed: true
+        env:
+          - JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+        params:
+          - licdhost=licd.example.com
+            licdsecure=true
+        includes:
+          - 10: /test/path.xml
+            11: /another/test/path.xml
+            50: >
+              ITRS Geneos Best Practice |
+              Level 0 |
+              /path/to/level0.xml
+            100: >
+              ITRS Geneos Best Practice |
+              Level 1 - Infrastructure |
+              ../../geneos/includes/itrs.level1.infrastructure.xml
+            101: >
+              ITRS Geneos Best Practice |
+              Level 2 - Basic Application |
+              ../../includes/itrs.level2.basic-application.xml
+        variables:
+          - type: string
+            name: example_variable
+            value: example_value
+    netprobes:
+        - name: minimal:${hostname}-motm
   motm-endpoint:
     sans:
-      - name: ${hostname}-motm
+      - name: minimal:${hostname}-motm
+        profile-managed: always
+        # cert-bundle: "~/path/to/cert-bundle.pem"
+        # cert-bundle-password: "changeit"
+        env:
+          - JAVA_HOME=/usr/lib/jvm/java-11-openjdk
         gateways:
           - localhost: 7112
+        params:
+          - options=example
         attributes:
           - CATEGORY=Geneos
           - COMPONENT=MOTM2
+          - ATTR=VALUE
         types:
           - Level 0 - Geneos
           - Level 0 - Geneos Extras
           - Level 1 - Infrastructure
+        variables:
+          - type: string
+            name: example_variable
+            value: example_value
+          - type: string
+            name: another_example_variable
+            value: another_example_value
         managed-entities:
           - for-each: gateway
             # match: [ "Example*" ]

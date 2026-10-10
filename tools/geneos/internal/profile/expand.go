@@ -1,4 +1,4 @@
-package profiles
+package profile
 
 // configuration handling functions, including [config.Prefix] callbacks
 
@@ -10,6 +10,8 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
+
+// Expand* function custom prefix functions
 
 // ReplacePrefix supports the "replace" prefix. It takes a strings with
 // four components of the form: `${replace:param:/PATTERN/TEXT/}` (where
