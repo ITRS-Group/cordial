@@ -1,7 +1,9 @@
 package logger
 
 import (
+	"io"
 	"log/slog"
+	"os"
 )
 
 // provides a set of audit logger functions, including initialisation and formatting
@@ -15,49 +17,83 @@ type AuditLogger struct {
 	*slog.Logger
 }
 
+// global holds the global audit handler.
+var auditLogger *AuditLogger
+
+// auditHandler holds the global audit handler.
+var auditHandler slog.Handler
+
+// NewAuditLogger creates a new audit logger with the specified options.
+// The logger writes to one or more destinations, depending on the
+// options provided, using a multi-destination handler. A global audit
+// file always receives all audit entries. If an optional writer is
+// specifed using [logger.AuditWriter], it will also receive the audit
+// entries.
 func NewAuditLogger(options ...AuditOption) *AuditLogger {
 	opts := evalAuditOptions(options...)
 
-	handler := slog.NewJSONHandler(opts.w, &slog.HandlerOptions{
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			switch a.Key {
-			case slog.TimeKey:
-				// if a custom timestamp field is specified, use it
-				// instead of the default "timestamp"
-				if opts.timestampField == nil {
-					a.Key = "timestamp"
-					return a
-				}
-				if *opts.timestampField == "" {
-					return slog.Attr{}
-				}
-				a.Key = *opts.timestampField
-				return a
-			case slog.LevelKey:
-				// no level
-				return slog.Attr{}
-			case slog.MessageKey:
-				a.Key = "event"
-				return a
-			}
-			// Custom logic for replacing attributes goes here.
-			return a
-		},
-	})
+	var handlers []slog.Handler
+
+	if opts.w != nil {
+		handlers = append(handlers,
+			newHandler(opts.w),
+		)
+	}
+
+	// build the global audit handler if necessary
+	if auditHandler == nil {
+		var w io.Writer = os.Stderr
+		if opts.global != nil {
+			w = opts.global
+		}
+		InitGlobalAudit(w)
+	}
+	handlers = append(handlers, auditHandler)
 
 	return &AuditLogger{
-		Logger: slog.New(handler),
+		Logger: slog.New(slog.NewMultiHandler(handlers...)),
 	}
 }
 
-var Audit *AuditLogger
+func Audit() *AuditLogger {
+	if auditLogger == nil {
+		auditLogger = NewAuditLogger()
+	}
+	return auditLogger
+}
 
+func InitGlobalAudit(w io.Writer) {
+	auditHandler = newHandler(w)
+}
+
+func newHandler(w io.Writer) slog.Handler {
+	return slog.NewJSONHandler(w,
+		&slog.HandlerOptions{
+			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
+				switch a.Key {
+				case slog.TimeKey:
+					a.Key = "timestamp"
+					return a
+				case slog.LevelKey:
+					return slog.Attr{}
+				case slog.MessageKey:
+					a.Key = "event"
+					return a
+				}
+				return a
+			},
+		},
+	)
+}
+
+// Event logs an audit event with the specified event name and optional
+// arguments.
+//
+// If the audit logger is not initialized, a global audit logger will be
+// created automatically.
 func (a *AuditLogger) Event(event string, args ...any) {
 	if a == nil {
-		if Audit == nil {
-			Audit = NewAuditLogger()
-		}
-		a = Audit
+		panic("audit logger is not initialized")
 	}
 	a.Info(event, args...)
 }
