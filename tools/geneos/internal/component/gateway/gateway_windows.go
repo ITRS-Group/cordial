@@ -17,6 +17,6 @@ limitations under the License.
 
 package gateway
 
-func (i *Gateways) Reload() (err error) {
+func (i *Gateway) Reload() (err error) {
 	return
 }

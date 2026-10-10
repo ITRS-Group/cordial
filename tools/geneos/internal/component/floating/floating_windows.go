@@ -17,6 +17,6 @@ limitations under the License.
 
 package floating
 
-func (i *Floatings) Reload() (err error) {
+func (i *Floating) Reload() (err error) {
 	return
 }
