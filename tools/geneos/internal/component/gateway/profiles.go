@@ -6,18 +6,18 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 type GatewayProfile struct {
-	profiles.Common `mapstructure:",squash"`
-	GatewayName     string            `yaml:"gateway-name"`
-	LicdHost        string            `yaml:"licd-host,omitempty"`
-	LicdPort        int               `yaml:"licd-port,omitempty"`
-	LicdSecure      *bool             `yaml:"licd-secure,omitempty"`
-	Includes        values.Includes   `yaml:"includes,omitempty"`
-	Variables       []values.Variable `yaml:"variables,omitempty"`
+	profile.Common `mapstructure:",squash"`
+	GatewayName    string            `yaml:"gateway-name"`
+	LicdHost       string            `yaml:"licd-host,omitempty"`
+	LicdPort       int               `yaml:"licd-port,omitempty"`
+	LicdSecure     *bool             `yaml:"licd-secure,omitempty"`
+	Includes       values.Includes   `yaml:"includes,omitempty"`
+	Variables      []values.Variable `yaml:"variables,omitempty"`
 }
 
 func applyProfile(pf *config.Config, name, key string) (err error) {
@@ -50,11 +50,11 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			panic("name empty")
 		}
 
-		vals := profiles.ApplyCommonParams(gateway.Common)
+		vals := profile.ApplyCommonParams(gateway.Common)
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 
-		if err := profiles.ApplyInstance(ct, gateway.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(ct, gateway.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

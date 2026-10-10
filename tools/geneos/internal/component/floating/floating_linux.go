@@ -24,7 +24,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func (i *Floatings) Reload() (err error) {
+func (i *Floating) Reload() (err error) {
 	if i == nil {
 		err = os.ErrInvalid
 		return

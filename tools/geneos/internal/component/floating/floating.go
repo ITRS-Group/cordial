@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -39,15 +38,15 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const Name = "floating"
+const name = "floating"
 
-var Floating = geneos.Component{
+var Component = geneos.Component{
 	Initialise:   initialise,
 	Name:         "floating",
 	Aliases:      []string{"float"},
 	LegacyPrefix: "flt",
-	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &minimal.Minimal, &fa2.FA2},
+	ParentType:   &netprobe.Component,
+	PackageTypes: []*geneos.Component{&netprobe.Component, &minimal.Component, &fa2.Component},
 	UsesKeyfiles: true,
 	Templates: []geneos.Templates{
 		{Filename: templateName, Content: template},
@@ -55,22 +54,22 @@ var Floating = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "ports"): "7036,7100-",
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{
+		config.Join(name, "ports"): "7036,7100-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(Name, "ports"),
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "ports"): Name + "portrange",
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -103,10 +102,10 @@ var Floating = geneos.Component{
 	},
 }
 
-type Floatings instance.Instance
+type Floating instance.Instance
 
 // ensure that Floatings satisfies geneos.Instance interface
-var _ geneos.Instance = (*Floatings)(nil)
+var _ geneos.Instance = (*Floating)(nil)
 
 //go:embed templates/floating.setup.xml.gotmpl
 var template []byte
@@ -114,7 +113,7 @@ var template []byte
 const templateName = "floating.setup.xml.gotmpl"
 
 func init() {
-	Floating.Register(factory)
+	Component.Register(factory)
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
@@ -124,7 +123,7 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 	}
 }
 
-var instances sync.Map
+var floatings sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	h, ct, local := instance.ParseName(name)
@@ -133,14 +132,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if f, ok := instances.Load(h.FullName(local)); ok {
-		if ft, ok := f.(*Floatings); ok {
+	if f, ok := floatings.Load(h.FullName(local)); ok {
+		if ft, ok := f.(*Floating); ok {
 			return ft
 		}
 	}
 
-	i = &Floatings{
-		Component:    &Floating,
+	i = &Floating{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -154,9 +153,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Floatings).Logger = instance.Logger(i)
-	i.(*Floatings).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Floating).Logger = instance.Logger(i)
+	i.(*Floating).AuditLogger = instance.AuditLogger(i)
+	floatings.Store(h.FullName(local), i)
 
 	return
 }
@@ -164,76 +163,73 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Floatings) Type() *geneos.Component {
+func (i *Floating) Type() *geneos.Component {
 	return i.Component
 }
 
-func (i *Floatings) Name() string {
+func (i *Floating) Name() string {
 	if i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Floatings) Home() string {
+func (i *Floating) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Floatings) Host() *geneos.Host {
+func (i *Floating) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
-func (i *Floatings) Log() *slog.Logger {
+func (i *Floating) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Floatings) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Floating) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Floatings) String() string {
+func (i *Floating) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Floatings) Load() (err error) {
+func (i *Floating) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Floatings) Unload() (err error) {
-	instances.Delete(i.Name() + "@" + i.Host().String())
+func (i *Floating) Unload() (err error) {
+	floatings.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Floatings) Loaded() time.Time {
+func (i *Floating) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
-func (i *Floatings) SetLoaded(t time.Time) {
+func (i *Floating) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
-func (i *Floatings) Config() *config.Config {
+func (i *Floating) Config() *config.Config {
 	return i.Conf
 }
 
-func (i *Floatings) SetConfig(cf *config.Config) {
+func (i *Floating) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Floatings) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *Floating) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := i.Config()
 
 	cf.Default(cf.Join("config", "template"), templateName)
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Floating)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -263,7 +259,7 @@ func (i *Floatings) Add(template string, port uint16, noCerts bool) (err error) 
 // rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (i *Floatings) Rebuild(initial bool) (changed bool, err error) {
+func (i *Floating) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
 	configrebuild := config.Get[string](cf, cf.Join("config", "rebuild"))
 	if configrebuild == "never" {
@@ -308,7 +304,7 @@ func (i *Floatings) Rebuild(initial bool) (changed bool, err error) {
 	)
 }
 
-func (i *Floatings) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Floating) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	cf := i.Config()

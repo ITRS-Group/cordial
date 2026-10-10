@@ -31,18 +31,17 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "netprobe-router"
+const name = "netprobe-router"
 
-var Router = geneos.Component{
+var Component = geneos.Component{
 	Initialise:   initialise,
-	Name:         component,
+	Name:         name,
 	Aliases:      []string{"netproberouter", "router"},
 	LegacyPrefix: "router",
 	Templates: []geneos.Templates{
@@ -58,32 +57,32 @@ var Router = geneos.Component{
 		"maven.extension=zip",
 		"maven.groupId=com.itrsgroup.collection.ca.packages",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+Router", Nexus: component},
-	DownloadInfix: component,
+	DownloadBase:  geneos.DownloadBases{Default: "Netprobe+Router", Nexus: name},
+	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "4317,4319-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "ports"): "4317,4319-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{"/usr/bin/java"}}`,
 		`logdir=logs`,
-		`logfile=` + component + `.log`,
+		`logfile=` + name + `.log`,
 		`port=1180`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`setup={{join "${config:home}" "router-config.yaml"}}`,
@@ -91,17 +90,19 @@ var Router = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
-		filepath.Join(component, "templates"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
+		filepath.Join(name, "templates"),
 	},
 	GetPID: pidCheckFn,
 }
 
-type Routers instance.Instance
+type Router instance.Instance
 
 // ensure that Routers satisfies geneos.Instance interface
-var _ geneos.Instance = (*Routers)(nil)
+var _ geneos.Instance = (*Router)(nil)
+
+var routers sync.Map
 
 //go:embed templates/router-config.yaml.gotmpl
 var template []byte
@@ -109,16 +110,14 @@ var template []byte
 const templateName = "router-config.yaml.gotmpl"
 
 func init() {
-	Router.Register(factory)
+	Component.Register(factory)
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
-	if err := r.WriteFile(r.PathTo(component, "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(name, "templates", templateName), template, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -130,14 +129,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if s, ok := instances.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*Routers); ok {
+	if s, ok := routers.Load(h.FullName(local)); ok {
+		if ss, ok := s.(*Router); ok {
 			return ss
 		}
 	}
 
-	i = &Routers{
-		Component:    &Router,
+	i = &Router{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -147,9 +146,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Routers).Logger = instance.Logger(i)
-	i.(*Routers).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Router).Logger = instance.Logger(i)
+	i.(*Router).AuditLogger = instance.AuditLogger(i)
+	routers.Store(h.FullName(local), i)
 
 	return
 }
@@ -166,91 +165,88 @@ var initialFiles = []string{
 // interface method set
 
 // Return the Component for an Instance
-func (i *Routers) Type() *geneos.Component {
+func (i *Router) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Routers) Name() string {
+func (i *Router) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Routers) Home() string {
+func (i *Router) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Routers) Host() *geneos.Host {
+func (i *Router) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Routers) Log() *slog.Logger {
+func (i *Router) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Routers) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Router) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Routers) String() string {
+func (i *Router) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Routers) Load() (err error) {
+func (i *Router) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Routers) Unload() (err error) {
+func (i *Router) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	routers.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Routers) Loaded() time.Time {
+func (i *Router) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Routers) SetLoaded(t time.Time) {
+func (i *Router) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Routers) Config() *config.Config {
+func (i *Router) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *Routers) SetConfig(cf *config.Config) {
+func (i *Router) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Routers) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *Router) Add(template string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
@@ -258,7 +254,7 @@ func (i *Routers) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := i.Config()
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Router)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -293,7 +289,7 @@ func (i *Routers) Add(template string, port uint16, noCerts bool) (err error) {
 }
 
 // Rebuild any configuration based on the template configured.
-func (i *Routers) Rebuild(initial bool) (changed bool, cerr error) {
+func (i *Router) Rebuild(initial bool) (changed bool, cerr error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
@@ -324,7 +320,7 @@ func (i *Routers) Rebuild(initial bool) (changed bool, cerr error) {
 	)
 }
 
-func (i *Routers) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -386,13 +382,13 @@ func (i *Routers) Command(skipFileCheck bool) (args, env []string, home string, 
 	return
 }
 
-func (i *Routers) Reload() (err error) {
+func (i *Router) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 func pidCheckFn(customArg any, cmdline []string) bool {
 	var jarOK, appOK, configOK bool
-	i, ok := customArg.(*Routers)
+	i, ok := customArg.(*Router)
 	if !ok {
 		return false
 	}

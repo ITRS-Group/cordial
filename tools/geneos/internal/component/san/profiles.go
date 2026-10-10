@@ -8,12 +8,12 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 type SanProfile struct {
-	profiles.Common `mapstructure:",squash"`
+	profile.Common  `mapstructure:",squash"`
 	Gateways        map[string]string `yaml:"gateways,omitempty"`
 	Types           []string          `yaml:"types,omitempty"`
 	Attributes      values.NameValues `yaml:"attributes,omitempty"`
@@ -58,7 +58,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 		// does it already exist?
 		name := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
-		vals := profiles.ApplyCommonParams(san.Common)
+		vals := profile.ApplyCommonParams(san.Common)
 		vals.Gateways = san.Gateways
 		vals.Types = san.Types
 		vals.Attributes = san.Attributes
@@ -75,7 +75,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			}
 		}
 
-		if err := profiles.ApplyInstance(ct, san.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(ct, san.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}
@@ -140,29 +140,29 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 					Name: v.Name,
 					Value: config.Expand[string](cf, v.Value,
 						config.LookupTable(lookup),
-						config.Prefix("select", profiles.SelectPrefix),
-						config.Prefix("replace", profiles.ReplacePrefix),
+						config.Prefix("select", profile.SelectPrefix),
+						config.Prefix("replace", profile.ReplacePrefix),
 					),
 				}
 			}
 
 			name := config.Expand[string](cf, entity.Name,
 				config.LookupTable(lookup),
-				config.Prefix("select", profiles.SelectPrefix),
-				config.Prefix("replace", profiles.ReplacePrefix),
+				config.Prefix("select", profile.SelectPrefix),
+				config.Prefix("replace", profile.ReplacePrefix),
 			)
 
 			e := ManagedEntity{
 				Name: name,
 				Types: cf.ExpandStringSlice(entity.Types,
 					config.LookupTable(lookup),
-					config.Prefix("select", profiles.SelectPrefix),
-					config.Prefix("replace", profiles.ReplacePrefix),
+					config.Prefix("select", profile.SelectPrefix),
+					config.Prefix("replace", profile.ReplacePrefix),
 				),
 				Attributes: cf.ExpandStringSlice(entity.Attributes,
 					config.LookupTable(lookup),
-					config.Prefix("select", profiles.SelectPrefix),
-					config.Prefix("replace", profiles.ReplacePrefix),
+					config.Prefix("select", profile.SelectPrefix),
+					config.Prefix("replace", profile.ReplacePrefix),
 				),
 				Variables: variables,
 			}

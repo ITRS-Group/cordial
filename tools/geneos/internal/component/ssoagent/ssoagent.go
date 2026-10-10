@@ -39,19 +39,18 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "sso-agent"
+const name = "sso-agent"
 
-var SSOAgent = geneos.Component{
-	Name:         component,
+var Component = geneos.Component{
+	Name:         name,
 	Aliases:      []string{"ssoagent", "sso"},
-	LegacyPrefix: component,
+	LegacyPrefix: name,
 	// https://resources.itrsgroup.com/download/latest/SSO+Agent?title=sso-agent-1.15.0-bin.zip
 	DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-]bin.(?<suffix>zip)$`),
 	DownloadParams: &[]string{
@@ -62,30 +61,30 @@ var SSOAgent = geneos.Component{
 		"maven.extension=zip",
 		"maven.groupId=com.itrsgroup.geneos",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "SSO+Agent", Nexus: component},
-	DownloadInfix: component,
+	DownloadBase:  geneos.DownloadBases{Default: "SSO+Agent", Nexus: name},
+	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "1180-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "ports"): "1180-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{"/usr/bin/java"}}`,
 		`logdir=logs`,
@@ -96,22 +95,22 @@ var SSOAgent = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
 	},
 	GetPID: pidCheckFn,
 }
 
-type SSOAgents instance.Instance
+type SSOAgent instance.Instance
 
 // ensure that SSOAgents satisfies geneos.Instance interface
-var _ geneos.Instance = (*SSOAgents)(nil)
+var _ geneos.Instance = (*SSOAgent)(nil)
+
+var ssoagents sync.Map
 
 func init() {
-	SSOAgent.Register(factory)
+	Component.Register(factory)
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -123,14 +122,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if s, ok := instances.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*SSOAgents); ok {
+	if s, ok := ssoagents.Load(h.FullName(local)); ok {
+		if ss, ok := s.(*SSOAgent); ok {
 			return ss
 		}
 	}
 
-	i = &SSOAgents{
-		Component:    &SSOAgent,
+	i = &SSOAgent{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -140,9 +139,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*SSOAgents).Logger = instance.Logger(i)
-	i.(*SSOAgents).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*SSOAgent).Logger = instance.Logger(i)
+	i.(*SSOAgent).AuditLogger = instance.AuditLogger(i)
+	ssoagents.Store(h.FullName(local), i)
 
 	return
 }
@@ -162,97 +161,94 @@ var initialFiles = []string{
 // interface method set
 
 // Return the Component for an Instance
-func (i *SSOAgents) Type() *geneos.Component {
+func (i *SSOAgent) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *SSOAgents) Name() string {
+func (i *SSOAgent) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *SSOAgents) Home() string {
+func (i *SSOAgent) Home() string {
 	return instance.Home(i)
 }
 
-func (i *SSOAgents) Host() *geneos.Host {
+func (i *SSOAgent) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *SSOAgents) Log() *slog.Logger {
+func (i *SSOAgent) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *SSOAgents) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *SSOAgent) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *SSOAgents) String() string {
+func (i *SSOAgent) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *SSOAgents) Load() (err error) {
+func (i *SSOAgent) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *SSOAgents) Unload() (err error) {
+func (i *SSOAgent) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	ssoagents.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *SSOAgents) Loaded() time.Time {
+func (i *SSOAgent) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *SSOAgents) SetLoaded(t time.Time) {
+func (i *SSOAgent) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *SSOAgents) Config() *config.Config {
+func (i *SSOAgent) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *SSOAgents) SetConfig(cf *config.Config) {
+func (i *SSOAgent) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *SSOAgent) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &SSOAgent)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -278,7 +274,7 @@ func (i *SSOAgents) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *SSOAgents) Rebuild(initial bool) (changed bool, err error) {
+func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
@@ -391,7 +387,7 @@ func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	return certs.CreateCertificate(template, template, privateKey)
 }
 
-func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *SSOAgent) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -452,13 +448,13 @@ func (i *SSOAgents) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
-func (i *SSOAgents) Reload() (err error) {
+func (i *SSOAgent) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 func pidCheckFn(customArg any, cmdline []string) bool {
 	var wdOK, appOK bool
-	i, ok := customArg.(*SSOAgents)
+	i, ok := customArg.(*SSOAgent)
 	if !ok {
 		return false
 	}

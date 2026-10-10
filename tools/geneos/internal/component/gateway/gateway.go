@@ -30,22 +30,21 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "gateway"
+const name = "gateway"
 
 const (
 	INSTANCEXML = "instance.setup.xml"
 )
 
-var Gateway = geneos.Component{
+var Component = geneos.Component{
 	Initialise:   initialise,
-	Name:         component,
+	Name:         name,
 	Aliases:      []string{"gateways"},
 	LegacyPrefix: "gate",
 	UsesKeyfiles: true,
@@ -56,12 +55,12 @@ var Gateway = geneos.Component{
 	DownloadBase: geneos.DownloadBases{Default: "Gateway+2", Nexus: "geneos-gateway"},
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "7038-7039,7100-",
-		config.Join(component, "clean"): strings.Join([]string{
+		config.Join(name, "ports"): "7038-7039,7100-",
+		config.Join(name, "clean"): strings.Join([]string{
 			"*.history",
 			"*.download",
 		}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"stats.xml",
@@ -71,13 +70,13 @@ var Gateway = geneos.Component{
 			"database/",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -104,8 +103,8 @@ var Gateway = geneos.Component{
 	Defaults: []string{
 		// order is important, do not change
 		`binary=gateway2.linux_64`,
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=gateway.log`,
@@ -117,28 +116,30 @@ var Gateway = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, "config"),
-		filepath.Join(component, "gateways"),
-		filepath.Join(component, "includes"),
-		filepath.Join(component, "shared"),
-		filepath.Join(component, "templates"),
+		filepath.Join("packages", name),
+		filepath.Join(name, "config"),
+		filepath.Join(name, "gateways"),
+		filepath.Join(name, "includes"),
+		filepath.Join(name, "shared"),
+		filepath.Join(name, "templates"),
 	},
 	SharedDirectories: []string{
-		filepath.Join(component, "config"),
-		filepath.Join(component, "gateway_shared"),
-		filepath.Join(component, "gateway_config"),
-		filepath.Join(component, "includes"),
-		filepath.Join(component, "shared"),
+		filepath.Join(name, "config"),
+		filepath.Join(name, "gateway_shared"),
+		filepath.Join(name, "gateway_config"),
+		filepath.Join(name, "includes"),
+		filepath.Join(name, "shared"),
 	},
 
 	ApplyProfile: applyProfile,
 }
 
-type Gateways instance.Instance
+type Gateway instance.Instance
 
 // ensure that Gateways satisfies geneos.Instance interface
-var _ geneos.Instance = (*Gateways)(nil)
+var _ geneos.Instance = (*Gateway)(nil)
+
+var gateways sync.Map
 
 //go:embed templates/gateway.setup.xml.gotmpl
 var template []byte
@@ -151,20 +152,18 @@ var instanceTemplate []byte
 const instanceTemplateName = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
-	Gateway.Register(factory)
+	Component.Register(factory)
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
 	// copy default template to directory
-	if err := r.WriteFile(r.PathTo(component, "templates", templateName), template, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(name, "templates", templateName), template, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
-	if err := r.WriteFile(r.PathTo(component, "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
+	if err := r.WriteFile(r.PathTo(name, "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
 		panic(fmt.Sprintf("%s initialise: %v", ct, err))
 	}
 }
-
-var instances sync.Map
 
 // factory is the factory method for Gateways
 func factory(name string) (i geneos.Instance) {
@@ -178,14 +177,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if g, ok := instances.Load(h.FullName(local)); ok {
-		if gw, ok := g.(*Gateways); ok {
+	if g, ok := gateways.Load(h.FullName(local)); ok {
+		if gw, ok := g.(*Gateway); ok {
 			return gw
 		}
 	}
 
-	i = &Gateways{
-		Component:    &Gateway,
+	i = &Gateway{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -196,9 +195,9 @@ func factory(name string) (i geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Gateways).Logger = instance.Logger(i)
-	i.(*Gateways).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Gateway).Logger = instance.Logger(i)
+	i.(*Gateway).AuditLogger = instance.AuditLogger(i)
+	gateways.Store(h.FullName(local), i)
 
 	return
 }
@@ -206,91 +205,88 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Gateways) Type() *geneos.Component {
+func (i *Gateway) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Gateways) Name() string {
+func (i *Gateway) Name() string {
 	if i == nil || i.Conf == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Gateways) Home() string {
+func (i *Gateway) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Gateways) Host() *geneos.Host {
+func (i *Gateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Gateways) Log() *slog.Logger {
+func (i *Gateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Gateways) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Gateway) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Gateways) String() string {
+func (i *Gateway) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Gateways) Load() (err error) {
+func (i *Gateway) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Gateways) Unload() (err error) {
+func (i *Gateway) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	gateways.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Gateways) Loaded() time.Time {
+func (i *Gateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Gateways) SetLoaded(t time.Time) {
+func (i *Gateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Gateways) Config() *config.Config {
+func (i *Gateway) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *Gateways) SetConfig(cf *config.Config) {
+func (i *Gateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *Gateway) Add(template string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
@@ -298,7 +294,7 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := i.Config()
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Gateway)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -333,7 +329,7 @@ func (i *Gateways) Add(template string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (i *Gateways) Rebuild(initial bool) (changed bool, err error) {
+func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
@@ -341,7 +337,7 @@ func (i *Gateways) Rebuild(initial bool) (changed bool, err error) {
 
 	// use getPorts() to check valid change, else go up one
 	ports := instance.GetAllPorts(i.Host())
-	nextport := instance.NextFreePort(i.Host(), &Gateway)
+	nextport := instance.NextFreePort(i.Host(), &Component)
 	if nextport == 0 {
 		return false, fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
@@ -410,7 +406,7 @@ func (i *Gateways) Rebuild(initial bool) (changed bool, err error) {
 	return
 }
 
-func (i *Gateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Gateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {

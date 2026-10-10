@@ -69,7 +69,7 @@ Each operational event is appended as one JSON line to the instance audit log (d
 
 Events are also recorded for `delete`, `enable`, and `disable`. `geneos logs` follows the Java log (`tr-gateway.log`), not the audit file.
 
-Configure the audit log path per instance with `audit-log` (basename under the instance home), or set a default with `tr-gateway::audit-log-file` in the geneos configuration. When the file reaches 10 MiB it is rotated to `.1` (up to five files). Override size and retention with `tr-gateway::audit-max-bytes` and `tr-gateway::audit-max-files`.
+Configure the audit log path per instance with `audit-log` (basename under the instance home), or set a default with `tr-gateway::auditlogfile` in the geneos configuration. When the file reaches 10 MiB it is rotated to `.1` (up to five files). Override size and retention with `tr-gateway::audit-max-bytes` and `tr-gateway::audit-max-files`.
 
 ## Configuration
 

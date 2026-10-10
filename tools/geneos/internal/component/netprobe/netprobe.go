@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -36,7 +35,7 @@ import (
 
 const component = "netprobe"
 
-var Netprobe = geneos.Component{
+var Component = geneos.Component{
 	Name:         component,
 	Aliases:      []string{"probe", "netprobes", "probes"},
 	LegacyPrefix: "netp",
@@ -88,6 +87,7 @@ var Netprobe = geneos.Component{
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=netprobe.log`,
+		`auditlogfile=` + component + `-audit.log`,
 		`calogfile=collection-agent.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
@@ -105,16 +105,16 @@ var Netprobe = geneos.Component{
 	ApplyProfile: applyProfile,
 }
 
-type Netprobes instance.Instance
+type Netprobe instance.Instance
 
 // ensure that Netprobes satisfies geneos.Instance interface
-var _ geneos.Instance = (*Netprobes)(nil)
+var _ geneos.Instance = (*Netprobe)(nil)
+
+var netprobes sync.Map
 
 func init() {
-	Netprobe.Register(factory)
+	Component.Register(factory)
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -127,14 +127,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if n, ok := instances.Load(h.FullName(local)); ok {
-		if np, ok := n.(*Netprobes); ok {
+	if n, ok := netprobes.Load(h.FullName(local)); ok {
+		if np, ok := n.(*Netprobe); ok {
 			return np
 		}
 	}
 
-	i = &Netprobes{
-		Component:    &Netprobe,
+	i = &Netprobe{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -156,9 +156,9 @@ func factory(name string) (i geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Netprobes).Logger = instance.Logger(i)
-	i.(*Netprobes).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Netprobe).Logger = instance.Logger(i)
+	i.(*Netprobe).AuditLogger = instance.AuditLogger(i)
+	netprobes.Store(h.FullName(local), i)
 
 	return
 }
@@ -166,93 +166,90 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Netprobes) Type() *geneos.Component {
+func (i *Netprobe) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Netprobes) Name() string {
+func (i *Netprobe) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Netprobes) Home() string {
+func (i *Netprobe) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Netprobes) Host() *geneos.Host {
+func (i *Netprobe) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Netprobes) Log() *slog.Logger {
+func (i *Netprobe) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Netprobes) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Netprobe) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Netprobes) String() string {
+func (i *Netprobe) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Netprobes) Load() (err error) {
+func (i *Netprobe) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Netprobes) Unload() (err error) {
+func (i *Netprobe) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	netprobes.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Netprobes) Loaded() time.Time {
+func (i *Netprobe) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Netprobes) SetLoaded(t time.Time) {
+func (i *Netprobe) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Netprobes) Config() *config.Config {
+func (i *Netprobe) Config() *config.Config {
 	return i.Conf
 }
 
-func (i *Netprobes) SetConfig(cf *config.Config) {
+func (i *Netprobe) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Netprobe) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 	if port == 0 {
-		port = instance.NextFreePort(i.Host(), &Netprobe)
+		port = instance.NextFreePort(i.Host(), &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -269,11 +266,11 @@ func (i *Netprobes) Add(tmpl string, port uint16, noCerts bool) (err error) {
 }
 
 // Rebuild is not supported for Netprobes.
-func (i *Netprobes) Rebuild(initial bool) (changed bool, err error) {
+func (i *Netprobe) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
-func (i *Netprobes) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Netprobe) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -330,6 +327,6 @@ func (i *Netprobes) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
-func (i *Netprobes) Reload() (err error) {
+func (i *Netprobe) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

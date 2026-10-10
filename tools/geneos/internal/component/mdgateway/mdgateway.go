@@ -28,16 +28,15 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const component = "md-gateway"
+const name = "md-gateway"
 
-var MDGateway = geneos.Component{
-	Name:         component,
+var Component = geneos.Component{
+	Name:         name,
 	Aliases:      []string{"mdgateway", "mdgw"},
 	LegacyPrefix: "mdgw",
 
@@ -49,56 +48,56 @@ var MDGateway = geneos.Component{
 		"maven.extension=tar.gz",
 		"maven.groupId=com.itrsgroup.mdgateway",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "MD+Gateway", Nexus: component},
-	DownloadInfix: component,
+	DownloadBase:  geneos.DownloadBases{Default: "MD+Gateway", Nexus: name},
+	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "18000-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "ports"): "18000-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "jdk" "bin" "java"}}`,
 		`logback={{join "${config:install}" "${config:version}" "config" "logback.xml"}}`,
-		`logfile=` + component + `.log`,
-		`audit-log-file=` + component + `-audit.log`,
-		`setup={{join "${config:home}" "` + component + `.yaml"}}`,
-		`jar=lib/` + component + `.jar`,
+		`logfile=` + name + `.log`,
+		`auditlogfile=` + name + `-audit.log`,
+		`setup={{join "${config:home}" "` + name + `.yaml"}}`,
+		`jar=lib/` + name + `.jar`,
 		`main-class=com.itrsgroup.mdgateway.Main`,
 		`autostart=true`,
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
 	},
 	GetPID: pidCheckFn,
 }
 
-type MDGateways instance.Instance
+type MDGateway instance.Instance
 
 // ensure that MDGateway satisfies geneos.Instance interface
-var _ geneos.Instance = (*MDGateways)(nil)
+var _ geneos.Instance = (*MDGateway)(nil)
+
+var mdgateways sync.Map
 
 func init() {
-	MDGateway.Register(factory)
+	Component.Register(factory)
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -110,14 +109,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if s, ok := instances.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*MDGateways); ok {
+	if s, ok := mdgateways.Load(h.FullName(local)); ok {
+		if ss, ok := s.(*MDGateway); ok {
 			return ss
 		}
 	}
 
-	i = &MDGateways{
-		Component:    &MDGateway,
+	i = &MDGateway{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -128,101 +127,98 @@ func factory(name string) (i geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*MDGateways).Logger = instance.Logger(i)
-	i.(*MDGateways).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*MDGateway).Logger = instance.Logger(i)
+	i.(*MDGateway).AuditLogger = instance.AuditLogger(i)
+	mdgateways.Store(h.FullName(local), i)
 
 	return
 }
 
-func (i *MDGateways) Type() *geneos.Component {
+func (i *MDGateway) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *MDGateways) Name() string {
+func (i *MDGateway) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *MDGateways) Home() string {
+func (i *MDGateway) Home() string {
 	if i == nil {
 		return ""
 	}
 	return instance.Home(i)
 }
 
-func (i *MDGateways) Host() *geneos.Host {
+func (i *MDGateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *MDGateways) Log() *slog.Logger {
+func (i *MDGateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *MDGateways) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *MDGateway) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *MDGateways) String() string {
+func (i *MDGateway) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *MDGateways) Load() error {
+func (i *MDGateway) Load() error {
 	return instance.Read(i)
 }
 
-func (i *MDGateways) Unload() error {
+func (i *MDGateway) Unload() error {
 	if i == nil {
 		return nil
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	mdgateways.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return nil
 }
 
-func (i *MDGateways) Loaded() time.Time {
+func (i *MDGateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *MDGateways) SetLoaded(t time.Time) {
+func (i *MDGateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *MDGateways) Config() *config.Config {
+func (i *MDGateway) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *MDGateways) SetConfig(cf *config.Config) {
+func (i *MDGateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *MDGateways) Add(_ string, port uint16, noCerts bool) error {
+func (i *MDGateway) Add(_ string, port uint16, noCerts bool) error {
 	if i == nil {
 		return os.ErrInvalid
 	}
@@ -239,7 +235,7 @@ func (i *MDGateways) Add(_ string, port uint16, noCerts bool) error {
 
 // seedPackagedYAML copies config/{setup} from the installed package into the
 // instance home when the instance does not already have a setup file.
-func seedPackagedYAML(i *MDGateways) {
+func seedPackagedYAML(i *MDGateway) {
 	if i == nil {
 		return
 	}
@@ -259,10 +255,10 @@ func seedPackagedYAML(i *MDGateways) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditLog().Event("import", slog.Any("file", path.Base(setup)))
+	i.AuditEvent("import", slog.Any("file", path.Base(setup)))
 }
 
-func (i *MDGateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *MDGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -332,17 +328,17 @@ func (i *MDGateways) Command(skipFileCheck bool) (args, env []string, home strin
 	return
 }
 
-func (i *MDGateways) Reload() error {
+func (i *MDGateway) Reload() error {
 	return geneos.ErrNotSupported
 }
 
 // Rebuild is not supported for MDGateways.
-func (i *MDGateways) Rebuild(initial bool) (changed bool, err error) {
+func (i *MDGateway) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
 func pidCheckFn(arg any, cmdline []string) bool {
-	g, ok := arg.(*MDGateways)
+	g, ok := arg.(*MDGateway)
 	if !ok || g == nil {
 		return false
 	}

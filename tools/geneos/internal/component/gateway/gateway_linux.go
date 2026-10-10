@@ -24,7 +24,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-func (i *Gateways) Reload() (err error) {
+func (i *Gateway) Reload() (err error) {
 	if i == nil {
 		err = os.ErrInvalid
 		return

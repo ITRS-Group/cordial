@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -38,38 +37,38 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "san"
+const name = "san"
 
-var San = geneos.Component{
+var Component = geneos.Component{
 	Initialise:   initialise,
-	Name:         component,
+	Name:         name,
 	Aliases:      []string{"sans"},
-	LegacyPrefix: component,
+	LegacyPrefix: name,
 
-	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe, &minimal.Minimal, &fa2.FA2},
+	ParentType:   &netprobe.Component,
+	PackageTypes: []*geneos.Component{&netprobe.Component, &minimal.Component, &fa2.Component},
 	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	UsesKeyfiles: true,
 	Templates:    []geneos.Templates{{Filename: templateName, Content: template}},
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "7036,7100-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "ports"): "7036,7100-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -90,7 +89,7 @@ var San = geneos.Component{
 	},
 	Defaults: []string{
 		`binary={{if eq .pkgtype "fa2"}}fix-analyser2-{{end}}netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "netprobe" "` + component + `s" .name}}`,
+		`home={{join .root "netprobe" "` + name + `s" .name}}`,
 		`install={{join .root "packages" .pkgtype}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
@@ -117,10 +116,12 @@ var San = geneos.Component{
 	ApplyProfile: applyProfile,
 }
 
-type Sans instance.Instance
+type San instance.Instance
 
 // ensure that Sans satisfies geneos.Instance interface
-var _ geneos.Instance = (*Sans)(nil)
+var _ geneos.Instance = (*San)(nil)
+
+var sans sync.Map
 
 //go:embed templates/san.setup.xml.gotmpl
 var template []byte
@@ -128,7 +129,7 @@ var template []byte
 const templateName = "san.setup.xml.gotmpl"
 
 func init() {
-	San.Register(factory)
+	Component.Register(factory)
 }
 
 func initialise(r *geneos.Host, ct *geneos.Component) {
@@ -137,8 +138,6 @@ func initialise(r *geneos.Host, ct *geneos.Component) {
 		panic(fmt.Sprintf("failed to write default template for %s: %v", ct.Name, err))
 	}
 }
-
-var instances sync.Map
 
 // factory is the factory method for SANs.
 //
@@ -153,15 +152,15 @@ func factory(name string) (i geneos.Instance) {
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
-	s, ok := instances.Load(h.FullName(local))
+	s, ok := sans.Load(h.FullName(local))
 	if ok {
-		sn, ok := s.(*Sans)
+		sn, ok := s.(*San)
 		if ok {
 			return sn
 		}
 	}
-	i = &Sans{
-		Component:    &San,
+	i = &San{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -175,9 +174,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Sans).Logger = instance.Logger(i)
-	i.(*Sans).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*San).Logger = instance.Logger(i)
+	i.(*San).AuditLogger = instance.AuditLogger(i)
+	sans.Store(h.FullName(local), i)
 
 	return
 }
@@ -185,91 +184,88 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Sans) Type() *geneos.Component {
+func (i *San) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Sans) Name() string {
+func (i *San) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Sans) Home() string {
+func (i *San) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Sans) Host() *geneos.Host {
+func (i *San) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Sans) Log() *slog.Logger {
+func (i *San) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Sans) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *San) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Sans) String() string {
+func (i *San) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Sans) Load() (err error) {
+func (i *San) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Sans) Unload() (err error) {
+func (i *San) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	sans.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Sans) Loaded() time.Time {
+func (i *San) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Sans) SetLoaded(t time.Time) {
+func (i *San) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Sans) Config() *config.Config {
+func (i *San) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *Sans) SetConfig(cf *config.Config) {
+func (i *San) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Sans) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *San) Add(template string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
@@ -277,7 +273,7 @@ func (i *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 	cf := i.Config()
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &San)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -310,7 +306,7 @@ func (i *Sans) Add(template string, port uint16, noCerts bool) (err error) {
 // Rebuild the netprobe.setup.xml file
 //
 // we do a dance if there is a change in TLS setup and we use default ports
-func (i *Sans) Rebuild(initial bool) (changed bool, err error) {
+func (i *San) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
@@ -361,7 +357,7 @@ func (i *Sans) Rebuild(initial bool) (changed bool, err error) {
 	return changed || changedSetup, err
 }
 
-func (i *Sans) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *San) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {

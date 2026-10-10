@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -38,39 +37,39 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "ca3"
+const name = "ca3"
 
-var CA3 = geneos.Component{
-	Name:         component,
+var Component = geneos.Component{
+	Name:         name,
 	Aliases:      []string{"collection-agent", "ca3s", "collector"},
 	LegacyPrefix: "",
-	ParentType:   &netprobe.Netprobe,
-	PackageTypes: []*geneos.Component{&netprobe.Netprobe},
+	ParentType:   &netprobe.Component,
+	PackageTypes: []*geneos.Component{&netprobe.Component},
 	DownloadBase: geneos.DownloadBases{Default: "Netprobe", Nexus: "geneos-netprobe"},
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "9137-",
-		config.Join(component, "clean"): strings.Join([]string{
+		config.Join(name, "ports"): "9137-",
+		config.Join(name, "clean"): strings.Join([]string{
 			"collection-agent-*.log",
 		}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "purge"): strings.Join([]string{
 			"Workflow/",
 			"ca.pid.*",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "netprobe" "` + component + `s" .name}}`,
+		`home={{join .root "netprobe" "` + name + `s" .name}}`,
 		`install={{join .root "packages" "netprobe"}}`,
 		`version=active_prod`,
 		`plugins={{join .install .version "collection_agent" "plugins"}}`,
@@ -82,8 +81,8 @@ var CA3 = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join("netprobe", component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join("netprobe", name+"s"),
 		filepath.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
@@ -105,16 +104,16 @@ var initialFiles = []string{
 	"logback.xml",
 }
 
-type CA3s instance.Instance
+type CA3 instance.Instance
 
 // ensure that CA3s satisfies geneos.Instance interface
-var _ geneos.Instance = (*CA3s)(nil)
+var _ geneos.Instance = (*CA3)(nil)
 
 func init() {
-	CA3.Register(factory)
+	Component.Register(factory)
 }
 
-var instances sync.Map
+var ca3s sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -126,14 +125,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if c, ok := instances.Load(h.FullName(local)); ok {
-		if ca, ok := c.(*CA3s); ok {
+	if c, ok := ca3s.Load(h.FullName(local)); ok {
+		if ca, ok := c.(*CA3); ok {
 			return ca
 		}
 	}
 
-	i = &CA3s{
-		Component:    &CA3,
+	i = &CA3{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -143,9 +142,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*CA3s).Logger = instance.Logger(i)
-	i.(*CA3s).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*CA3).Logger = instance.Logger(i)
+	i.(*CA3).AuditLogger = instance.AuditLogger(i)
+	ca3s.Store(h.FullName(local), i)
 
 	return
 }
@@ -153,96 +152,93 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *CA3s) Type() *geneos.Component {
+func (i *CA3) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *CA3s) Name() string {
+func (i *CA3) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *CA3s) Home() string {
+func (i *CA3) Home() string {
 	return instance.Home(i)
 }
 
-func (i *CA3s) Host() *geneos.Host {
+func (i *CA3) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *CA3s) Log() *slog.Logger {
+func (i *CA3) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *CA3s) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *CA3) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *CA3s) String() string {
+func (i *CA3) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *CA3s) Load() (err error) {
+func (i *CA3) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *CA3s) Unload() (err error) {
+func (i *CA3) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	ca3s.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *CA3s) Loaded() time.Time {
+func (i *CA3) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *CA3s) SetLoaded(t time.Time) {
+func (i *CA3) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *CA3s) Config() *config.Config {
+func (i *CA3) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *CA3s) SetConfig(cf *config.Config) {
+func (i *CA3) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *CA3) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 	if port == 0 {
-		port = instance.NextFreePort(i.Host(), &CA3)
+		port = instance.NextFreePort(i.Host(), &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -269,11 +265,11 @@ func (i *CA3s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 
 // Rebuild is not supported for CA3 instances. It always returns false
 // and an ErrNotSupported error.
-func (i *CA3s) Rebuild(initial bool) (changed bool, err error) {
+func (i *CA3) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
-func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -326,14 +322,14 @@ func (i *CA3s) Command(skipFileCheck bool) (args, env []string, home string, err
 	return
 }
 
-func (i *CA3s) Reload() (err error) {
+func (i *CA3) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 func pidCheckFn(customArg any, cmdline []string) bool {
 	var jarOK, configOK bool
 
-	i, ok := customArg.(*CA3s)
+	i, ok := customArg.(*CA3)
 	if !ok {
 		return false
 	}

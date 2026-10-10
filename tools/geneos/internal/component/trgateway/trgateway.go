@@ -28,15 +28,14 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const component = "tr-gateway"
+const name = "tr-gateway"
 
-var TRGateway = geneos.Component{
-	Name:         component,
+var Component = geneos.Component{
+	Name:         name,
 	Aliases:      []string{"trgateway", "trgw"},
 	LegacyPrefix: "trgw",
 
@@ -49,56 +48,56 @@ var TRGateway = geneos.Component{
 		"maven.extension=tar.gz",
 		"maven.groupId=com.itrsgroup.trgateway",
 	},
-	DownloadBase:  geneos.DownloadBases{Default: "TR+Gateway", Nexus: component},
-	DownloadInfix: component,
+	DownloadBase:  geneos.DownloadBases{Default: "TR+Gateway", Nexus: name},
+	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "19000-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "ports"): "19000-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "jdk" "bin" "java"}}`,
 		`logback={{join "${config:install}" "${config:version}" "config" "logback.xml"}}`,
-		`logfile=` + component + `.log`,
-		`audit-log-file=` + component + `-audit.log`,
-		`setup={{join "${config:home}" "` + component + `.yaml"}}`,
-		`jar=lib/` + component + `.jar`,
+		`logfile=` + name + `.log`,
+		`auditlogfile=` + name + `-audit.log`,
+		`setup={{join "${config:home}" "` + name + `.yaml"}}`,
+		`jar=lib/` + name + `.jar`,
 		`main-class=com.itrsgroup.trgateway.Main`,
 		`autostart=true`,
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
 	},
 	GetPID: pidCheckFn,
 }
 
-type TRGateways instance.Instance
+type TRGateway instance.Instance
 
 // ensure that Trgateway satisfies geneos.Instance interface
-var _ geneos.Instance = (*TRGateways)(nil)
+var _ geneos.Instance = (*TRGateway)(nil)
+
+var trgateways sync.Map
 
 func init() {
-	TRGateway.Register(factory)
+	Component.Register(factory)
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -110,14 +109,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if s, ok := instances.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*TRGateways); ok {
+	if s, ok := trgateways.Load(h.FullName(local)); ok {
+		if ss, ok := s.(*TRGateway); ok {
 			return ss
 		}
 	}
 
-	i = &TRGateways{
-		Component:    &TRGateway,
+	i = &TRGateway{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -128,101 +127,98 @@ func factory(name string) (i geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*TRGateways).Logger = instance.Logger(i)
-	i.(*TRGateways).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*TRGateway).Logger = instance.Logger(i)
+	i.(*TRGateway).AuditLogger = instance.AuditLogger(i)
+	trgateways.Store(h.FullName(local), i)
 
 	return
 }
 
-func (i *TRGateways) Type() *geneos.Component {
+func (i *TRGateway) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *TRGateways) Name() string {
+func (i *TRGateway) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *TRGateways) Home() string {
+func (i *TRGateway) Home() string {
 	if i == nil {
 		return ""
 	}
 	return instance.Home(i)
 }
 
-func (i *TRGateways) Host() *geneos.Host {
+func (i *TRGateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *TRGateways) Log() *slog.Logger {
+func (i *TRGateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *TRGateways) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *TRGateway) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *TRGateways) String() string {
+func (i *TRGateway) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *TRGateways) Load() error {
+func (i *TRGateway) Load() error {
 	return instance.Read(i)
 }
 
-func (i *TRGateways) Unload() error {
+func (i *TRGateway) Unload() error {
 	if i == nil {
 		return nil
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	trgateways.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return nil
 }
 
-func (i *TRGateways) Loaded() time.Time {
+func (i *TRGateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *TRGateways) SetLoaded(t time.Time) {
+func (i *TRGateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *TRGateways) Config() *config.Config {
+func (i *TRGateway) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *TRGateways) SetConfig(cf *config.Config) {
+func (i *TRGateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *TRGateways) Add(_ string, port uint16, noCerts bool) error {
+func (i *TRGateway) Add(_ string, port uint16, noCerts bool) error {
 	if i == nil {
 		return os.ErrInvalid
 	}
@@ -239,7 +235,7 @@ func (i *TRGateways) Add(_ string, port uint16, noCerts bool) error {
 
 // seedPackagedYAML copies config/{setup} from the installed package into the
 // instance home when the instance does not already have a setup file.
-func seedPackagedYAML(i *TRGateways) {
+func seedPackagedYAML(i *TRGateway) {
 	if i == nil {
 		return
 	}
@@ -259,10 +255,10 @@ func seedPackagedYAML(i *TRGateways) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditLog().Event("import", slog.Any("file", path.Base(setup)))
+	i.AuditEvent("import", slog.Any("file", path.Base(setup)))
 }
 
-func (i *TRGateways) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -332,18 +328,18 @@ func (i *TRGateways) Command(skipFileCheck bool) (args, env []string, home strin
 	return
 }
 
-func (i *TRGateways) Reload() error {
+func (i *TRGateway) Reload() error {
 	return geneos.ErrNotSupported
 }
 
 // Rebuild is not implemented for TRGateways and always returns false,
 // geneos.ErrNotSupported.
-func (i *TRGateways) Rebuild(initial bool) (changed bool, err error) {
+func (i *TRGateway) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
 func pidCheckFn(arg any, cmdline []string) bool {
-	g, ok := arg.(*TRGateways)
+	g, ok := arg.(*TRGateway)
 	if !ok || g == nil {
 		return false
 	}

@@ -6,11 +6,11 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 )
 
 type NetprobeProfile struct {
-	profiles.Common `mapstructure:",squash"`
+	profile.Common `mapstructure:",squash"`
 }
 
 func applyProfile(pf *config.Config, name, key string) (err error) {
@@ -37,9 +37,9 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			panic("name empty")
 		}
 
-		vals := profiles.ApplyCommonParams(netprobe.Common)
+		vals := profile.ApplyCommonParams(netprobe.Common)
 
-		if err := profiles.ApplyInstance(ct, netprobe.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(ct, netprobe.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

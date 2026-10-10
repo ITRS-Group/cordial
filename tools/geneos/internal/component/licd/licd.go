@@ -28,35 +28,34 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "licd"
+const name = "licd"
 
-var Licd = geneos.Component{
-	Name:         component,
+var Component = geneos.Component{
+	Name:         name,
 	Aliases:      []string{"licds"},
-	LegacyPrefix: component,
+	LegacyPrefix: name,
 	DownloadBase: geneos.DownloadBases{Default: "Licence+Daemon", Nexus: "geneos-licd"},
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "7041,7100-",
-		config.Join(component, "clean"): strings.Join([]string{
+		config.Join(name, "ports"): "7041,7100-",
+		config.Join(name, "clean"): strings.Join([]string{
 			"reporting/",
 		}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -76,8 +75,8 @@ var Licd = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=licd.linux_64`,
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=licd.log`,
@@ -87,21 +86,21 @@ var Licd = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
 	},
 }
 
-type Licds instance.Instance
+type Licd instance.Instance
 
 // ensure that Licds satisfies geneos.Instance interface
-var _ geneos.Instance = (*Licds)(nil)
+var _ geneos.Instance = (*Licd)(nil)
 
 func init() {
-	Licd.Register(factory)
+	Component.Register(factory)
 }
 
-var instances sync.Map
+var licds sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -113,14 +112,14 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if l, ok := instances.Load(h.FullName(local)); ok {
-		if lc, ok := l.(*Licds); ok {
+	if l, ok := licds.Load(h.FullName(local)); ok {
+		if lc, ok := l.(*Licd); ok {
 			return lc
 		}
 	}
 
-	i = &Licds{
-		Component:    &Licd,
+	i = &Licd{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -131,9 +130,9 @@ func factory(name string) (i geneos.Instance) {
 
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Licds).Logger = instance.Logger(i)
-	i.(*Licds).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Licd).Logger = instance.Logger(i)
+	i.(*Licd).AuditLogger = instance.AuditLogger(i)
+	licds.Store(h.FullName(local), i)
 
 	return
 }
@@ -141,96 +140,93 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Licds) Type() *geneos.Component {
+func (i *Licd) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Licds) Name() string {
+func (i *Licd) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Licds) Home() string {
+func (i *Licd) Home() string {
 	if i == nil {
 		return ""
 	}
 	return instance.Home(i)
 }
 
-func (i *Licds) Host() *geneos.Host {
+func (i *Licd) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Licds) Log() *slog.Logger {
+func (i *Licd) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Licds) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Licd) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Licds) String() string {
+func (i *Licd) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Licds) Load() (err error) {
+func (i *Licd) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Licds) Unload() (err error) {
+func (i *Licd) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	licds.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Licds) Loaded() time.Time {
+func (i *Licd) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Licds) SetLoaded(t time.Time) {
+func (i *Licd) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Licds) Config() *config.Config {
+func (i *Licd) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *Licds) SetConfig(cf *config.Config) {
+func (i *Licd) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Licd) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Licd)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -246,7 +242,7 @@ func (i *Licds) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Licd) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -288,11 +284,11 @@ func (i *Licds) Command(skipFileCheck bool) (args, env []string, home string, er
 	return
 }
 
-func (i *Licds) Reload() (err error) {
+func (i *Licd) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 // Rebuild is not supported for Licds.
-func (i *Licds) Rebuild(initial bool) (changed bool, err error) {
+func (i *Licd) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }

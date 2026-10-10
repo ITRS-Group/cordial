@@ -29,17 +29,16 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "webserver"
+const name = "webserver"
 
-var Webserver = geneos.Component{
-	Name:                 component,
+var Component = geneos.Component{
+	Name:                 name,
 	Aliases:              []string{"web-server", "webservers", "webdashboard", "dashboards"},
 	LegacyPrefix:         "webs",
 	DownloadBase:         geneos.DownloadBases{Default: "Web+Dashboard", Nexus: "geneos-web-server"},
@@ -47,20 +46,20 @@ var Webserver = geneos.Component{
 	ArchiveLeaveFirstDir: true,
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "8443,8080-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "ports"): "8443,8080-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 			"webapps/",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -81,8 +80,8 @@ var Webserver = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=java`, // needed for 'ps' matching
-		`home={{join .root "` + component + `" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "` + name + `" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "JRE/bin/java"}}`,
 		`logdir=logs`,
@@ -94,22 +93,22 @@ var Webserver = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join(name, name+"s"),
 	},
 	GetPID: pidCheckFn,
 }
 
-type Webservers instance.Instance
+type Webserver instance.Instance
 
 // ensure that Webservers satisfies geneos.Instance interface
-var _ geneos.Instance = (*Webservers)(nil)
+var _ geneos.Instance = (*Webserver)(nil)
+
+var webservers sync.Map
 
 func init() {
-	Webserver.Register(factory)
+	Component.Register(factory)
 }
-
-var instances sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -120,16 +119,16 @@ func factory(name string) (i geneos.Instance) {
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
-	if w, ok := instances.Load(h.FullName(local)); ok {
-		if ws, ok := w.(*Webservers); ok {
+	if w, ok := webservers.Load(h.FullName(local)); ok {
+		if ws, ok := w.(*Webserver); ok {
 			return ws
 		}
 	}
 
-	i = &Webservers{
+	i = &Webserver{
 		Conf:         config.New(),
 		InstanceHost: h,
-		Component:    &Webserver,
+		Component:    &Component,
 	}
 
 	if err := instance.SetDefaults(i, local); err != nil {
@@ -137,9 +136,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Webservers).Logger = instance.Logger(i)
-	i.(*Webservers).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Webserver).Logger = instance.Logger(i)
+	i.(*Webserver).AuditLogger = instance.AuditLogger(i)
+	webservers.Store(h.FullName(local), i)
 
 	return
 }
@@ -160,97 +159,94 @@ var initialFiles = []string{
 // interface method set
 
 // Return the Component for an Instance
-func (i *Webservers) Type() *geneos.Component {
+func (i *Webserver) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *Webservers) Name() string {
+func (i *Webserver) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Webservers) Home() string {
+func (i *Webserver) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Webservers) Host() *geneos.Host {
+func (i *Webserver) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *Webservers) Log() *slog.Logger {
+func (i *Webserver) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Webservers) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Webserver) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Webservers) String() string {
+func (i *Webserver) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Webservers) Load() (err error) {
+func (i *Webserver) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Webservers) Unload() (err error) {
+func (i *Webserver) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	webservers.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Webservers) Loaded() time.Time {
+func (i *Webserver) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *Webservers) SetLoaded(t time.Time) {
+func (i *Webserver) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *Webservers) Config() *config.Config {
+func (i *Webserver) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *Webservers) SetConfig(cf *config.Config) {
+func (i *Webserver) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Webserver) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Webserver)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -281,7 +277,7 @@ func (i *Webservers) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return
 }
 
-func (i *Webservers) Rebuild(initial bool) (changed bool, err error) {
+func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
@@ -352,7 +348,7 @@ func (i *Webservers) Rebuild(initial bool) (changed bool, err error) {
 	return changed, err
 }
 
-func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -458,13 +454,13 @@ func (i *Webservers) Command(skipFileCheck bool) (args, env []string, home strin
 	return
 }
 
-func (i *Webservers) Reload() (err error) {
+func (i *Webserver) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 func pidCheckFn(customArg any, cmdline []string) bool {
 	var wdOK, jarOK bool
-	i, ok := customArg.(*Webservers)
+	i, ok := customArg.(*Webserver)
 	if !ok {
 		return false
 	}

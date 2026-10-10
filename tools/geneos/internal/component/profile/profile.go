@@ -29,31 +29,30 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/profiles"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 )
 
-const Name = "profile"
+const name = "profile"
 
-var Profile = geneos.Component{
-	Name:          "profile",
+var Component = geneos.Component{
+	Name:          name,
 	Aliases:       []string{"profiles"},
 	LegacyPrefix:  "pr",
 	DownloadBase:  geneos.DownloadBases{Default: "Fix+Analyser+Profile", Nexus: "geneos-profile"},
-	DownloadInfix: "profile",
+	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(Name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(Name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{}, ":"),
 	},
-	CleanList: config.Join(Name, "clean"),
-	PurgeList: config.Join(Name, "purge"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(Name, "clean"): Name + "cleanlist",
-		config.Join(Name, "purge"): Name + "purgelist",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{},
@@ -68,16 +67,16 @@ var Profile = geneos.Component{
 	},
 }
 
-type Profiles instance.Instance
+type Profile instance.Instance
 
 // ensure that Profiles satisfies geneos.Instance interface
-var _ geneos.Instance = (*Profiles)(nil)
+var _ geneos.Instance = (*Profile)(nil)
 
 func init() {
-	Profile.Register(factory)
+	Component.Register(factory)
 }
 
-var instances sync.Map
+var profiles sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	h, _, local := instance.ParseName(name)
@@ -85,14 +84,14 @@ func factory(name string) (i geneos.Instance) {
 	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return nil
 	}
-	if f, ok := instances.Load(h.FullName(local)); ok {
-		if fa, ok := f.(*Profiles); ok {
+	if f, ok := profiles.Load(h.FullName(local)); ok {
+		if fa, ok := f.(*Profile); ok {
 			return fa
 		}
 	}
 
-	i = &Profiles{
-		Component:    &Profile,
+	i = &Profile{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -102,9 +101,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Profiles).Logger = instance.Logger(i)
-	i.(*Profiles).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*Profile).Logger = instance.Logger(i)
+	i.(*Profile).AuditLogger = instance.AuditLogger(i)
+	profiles.Store(h.FullName(local), i)
 
 	return
 }
@@ -112,80 +111,80 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *Profiles) Type() *geneos.Component {
+func (i *Profile) Type() *geneos.Component {
 	return i.Component
 }
 
-func (i *Profiles) Name() string {
+func (i *Profile) Name() string {
 	if i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *Profiles) Home() string {
+func (i *Profile) Home() string {
 	return instance.Home(i)
 }
 
-func (i *Profiles) Host() *geneos.Host {
+func (i *Profile) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
-func (i *Profiles) Log() *slog.Logger {
+func (i *Profile) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
 
-func (i *Profiles) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+func (i *Profile) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *Profiles) String() string {
+func (i *Profile) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *Profiles) Load() (err error) {
+func (i *Profile) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *Profiles) Unload() (err error) {
-	instances.Delete(i.Name() + "@" + i.Host().String())
+func (i *Profile) Unload() (err error) {
+	profiles.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *Profiles) Loaded() time.Time {
+func (i *Profile) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
-func (i *Profiles) SetLoaded(t time.Time) {
+func (i *Profile) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
-func (i *Profiles) Config() *config.Config {
+func (i *Profile) Config() *config.Config {
 	return i.Conf
 }
 
-func (i *Profiles) SetConfig(cf *config.Config) {
+func (i *Profile) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Profiles) Add(tmpl string, port uint16, noCerts bool) (err error) {
-	pf, err := profiles.Load(cordial.ExecutableName(), config.FilePath(config.Get[string](i.Config(), "profiles")))
+func (i *Profile) Add(tmpl string, port uint16, noCerts bool) (err error) {
+	pf, err := profile.Load(cordial.ExecutableName(), config.FilePath(config.Get[string](i.Config(), "profiles")))
 	if err != nil {
 		return err
 	}
-	profiles.Apply(pf, i.Name())
+	i.Log().Info("applying profile", slog.String("profile", i.Name()))
+	if err = profile.Apply(pf, i.Name()); err != nil {
+		return err
+	}
 	// default config XML etc.
 	return nil
 }
 
-func (i *Profiles) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *Profile) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	home = i.Home()
@@ -208,12 +207,12 @@ func (i *Profiles) Command(skipFileCheck bool) (args, env []string, home string,
 }
 
 // Reload will flow down to the configured instances
-func (i *Profiles) Reload() (err error) {
+func (i *Profile) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 // Rebuild the profile from the configuration, which may trigger
 // rebuilds of any instances
-func (i *Profiles) Rebuild(initial bool) (changed bool, err error) {
+func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }

@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -36,32 +35,32 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-const component = "fa2"
+const name = "fa2"
 
-var FA2 = geneos.Component{
-	Name:          component,
+var Component = geneos.Component{
+	Name:          name,
 	Aliases:       []string{"fixanalyser", "fixanalyzer"},
-	LegacyPrefix:  component,
-	ParentType:    &netprobe.Netprobe,
+	LegacyPrefix:  name,
+	ParentType:    &netprobe.Component,
 	DownloadBase:  geneos.DownloadBases{Default: "Fix+Analyser+2+Netprobe", Nexus: "geneos-fixanalyser2-netprobe"},
 	DownloadInfix: "fixanalyser2-netprobe",
 
 	GlobalSettings: map[string]string{
-		config.Join(component, "ports"): "7030,7100-",
-		config.Join(component, "clean"): strings.Join([]string{}, ":"),
-		config.Join(component, "purge"): strings.Join([]string{
+		config.Join(name, "ports"): "7030,7100-",
+		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
 			"*.db",
 		}, ":"),
 	},
-	PortRange: config.Join(component, "ports"),
-	CleanList: config.Join(component, "clean"),
-	PurgeList: config.Join(component, "purge"),
+	PortRange: config.Join(name, "ports"),
+	CleanList: config.Join(name, "clean"),
+	PurgeList: config.Join(name, "purge"),
 	ConfigAliases: map[string]string{
-		config.Join(component, "ports"): component + "portrange",
-		config.Join(component, "clean"): component + "cleanlist",
-		config.Join(component, "purge"): component + "purgelist",
+		config.Join(name, "ports"): name + "portrange",
+		config.Join(name, "clean"): name + "cleanlist",
+		config.Join(name, "purge"): name + "purgelist",
 	},
 
 	LegacyParameters: map[string]string{
@@ -81,8 +80,8 @@ var FA2 = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=fix-analyser2-netprobe.linux_64`,
-		`home={{join .root "netprobe" "` + component + `s" .name}}`,
-		`install={{join .root "packages" "` + component + `"}}`,
+		`home={{join .root "netprobe" "` + name + `s" .name}}`,
+		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=fa2.log`,
@@ -92,8 +91,8 @@ var FA2 = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join("netprobe", component+"s"),
+		filepath.Join("packages", name),
+		filepath.Join("netprobe", name+"s"),
 		filepath.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
@@ -102,16 +101,16 @@ var FA2 = geneos.Component{
 	},
 }
 
-type FA2s instance.Instance
+type FA2 instance.Instance
 
 // ensure that FA2s satisfies geneos.Instance interface
-var _ geneos.Instance = (*FA2s)(nil)
+var _ geneos.Instance = (*FA2)(nil)
 
 func init() {
-	FA2.Register(factory)
+	Component.Register(factory)
 }
 
-var instances sync.Map
+var fa2s sync.Map
 
 func factory(name string) (i geneos.Instance) {
 	if name == "" {
@@ -124,13 +123,13 @@ func factory(name string) (i geneos.Instance) {
 		return nil
 	}
 
-	if f, ok := instances.Load(h.FullName(local)); ok {
-		if fa, ok := f.(*FA2s); ok {
+	if f, ok := fa2s.Load(h.FullName(local)); ok {
+		if fa, ok := f.(*FA2); ok {
 			return fa
 		}
 	}
-	i = &FA2s{
-		Component:    &FA2,
+	i = &FA2{
+		Component:    &Component,
 		Conf:         config.New(),
 		InstanceHost: h,
 	}
@@ -140,9 +139,9 @@ func factory(name string) (i geneos.Instance) {
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*FA2s).Logger = instance.Logger(i)
-	i.(*FA2s).AuditLogger = instance.AuditLogger(i)
-	instances.Store(h.FullName(local), i)
+	i.(*FA2).Logger = instance.Logger(i)
+	i.(*FA2).AuditLogger = instance.AuditLogger(i)
+	fa2s.Store(h.FullName(local), i)
 
 	return
 }
@@ -150,95 +149,93 @@ func factory(name string) (i geneos.Instance) {
 // interface method set
 
 // Return the Component for an Instance
-func (i *FA2s) Type() *geneos.Component {
+func (i *FA2) Type() *geneos.Component {
 	if i == nil {
 		return nil
 	}
 	return i.Component
 }
 
-func (i *FA2s) Name() string {
+func (i *FA2) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
 }
 
-func (i *FA2s) Home() string {
+func (i *FA2) Home() string {
 	return instance.Home(i)
 }
 
-func (i *FA2s) Host() *geneos.Host {
+func (i *FA2) Host() *geneos.Host {
 	if i == nil {
 		return nil
 	}
 	return i.InstanceHost
 }
 
-func (i *FA2s) Log() *slog.Logger {
+func (i *FA2) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
 	}
 	return i.Logger
 }
-func (i *FA2s) AuditLog() *logger.AuditLogger {
-	if i == nil {
-		return nil
-	}
-	return i.AuditLogger
+
+func (i *FA2) AuditEvent(event string, args ...any) {
+	instance.AuditEvent(i, event, args...)
 }
 
-func (i *FA2s) String() string {
+func (i *FA2) String() string {
 	return instance.DisplayName(i)
 }
 
-func (i *FA2s) Load() (err error) {
+func (i *FA2) Load() (err error) {
 	return instance.Read(i)
 }
 
-func (i *FA2s) Unload() (err error) {
+func (i *FA2) Unload() (err error) {
 	if i == nil {
 		return
 	}
-	instances.Delete(i.Name() + "@" + i.Host().String())
+	fa2s.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
-func (i *FA2s) Loaded() time.Time {
+func (i *FA2) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
 	return i.ConfigLoaded
 }
 
-func (i *FA2s) SetLoaded(t time.Time) {
+func (i *FA2) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
 	i.ConfigLoaded = t
 }
 
-func (i *FA2s) Config() *config.Config {
+func (i *FA2) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
 	return i.Conf
 }
 
-func (i *FA2s) SetConfig(cf *config.Config) {
+func (i *FA2) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
 	i.Conf = cf
 }
 
-func (i *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *FA2) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &FA2)
+		port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
 	if port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
@@ -254,7 +251,7 @@ func (i *FA2s) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	return nil
 }
 
-func (i *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err error) {
+func (i *FA2) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
 	if i == nil {
@@ -291,12 +288,12 @@ func (i *FA2s) Command(skipFileCheck bool) (args, env []string, home string, err
 	return
 }
 
-func (i *FA2s) Reload() (err error) {
+func (i *FA2) Reload() (err error) {
 	return geneos.ErrNotSupported
 }
 
 // Rebuild is not supported for FA2 instances. It always returns false
 // and an ErrNotSupported error.
-func (i *FA2s) Rebuild(initial bool) (changed bool, err error) {
+func (i *FA2) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
