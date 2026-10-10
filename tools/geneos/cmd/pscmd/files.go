@@ -76,12 +76,10 @@ func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error
 	files = make([]psInstanceFiles, 0, len(openFiles)+1)
 
 	files = append(files, psInstanceFiles{
-		psCommon: psCommon{
-			Type: ct,
-			Name: name,
-			Host: h,
-			PID:  pid,
-		},
+		Type:     ct,
+		Name:     name,
+		Host:     h,
+		PID:      pid,
 		FD:       -1,
 		Perms:    hs.Mode().Perm(),
 		Username: process.GetUsername(uid),
@@ -104,12 +102,10 @@ func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error
 				fdPerm += "w"
 			}
 			files = append(files, psInstanceFiles{
-				psCommon: psCommon{
-					Type: ct,
-					Name: name,
-					Host: h,
-					PID:  pid,
-				},
+				Type:     ct,
+				Name:     name,
+				Host:     h,
+				PID:      pid,
 				FD:       fd.FD,
 				FDPerms:  fdPerm,
 				Perms:    fd.Stat.Mode().Perm(),
