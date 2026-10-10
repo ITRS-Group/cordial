@@ -60,9 +60,11 @@ func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
 		l = l.WithGroup(group)
 	}
 	return l.With(
-		slog.String("host", i.Host().String()),
-		slog.String("component", i.Type().String()),
-		slog.String("instance", i.Name()),
+		slog.Group("instance",
+			slog.String("component", i.Type().String()),
+			slog.String("name", i.Name()),
+			slog.String("host", i.Host().String()),
+		),
 	)
 }
 
