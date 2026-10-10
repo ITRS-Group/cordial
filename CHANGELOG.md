@@ -1,5 +1,87 @@
 # Change Log
 
+## Version v1.30.0
+
+> [!NOTE]
+> **Released 2026-xx-xx** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+## Version v1.30.0 Highlights
+
+This release comes with significant new features for the `geneos` program.
+
+* The program now supports "_profiles_" for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to define its settings. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles also support `geneos deploy` and some dynamic configuration scenarios. Read more about them in `geneos help profiles`
+
+  To support more complex configuration scenarios, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
+
+  A number of "best practice" includes files are now embedded in the `geneos` program and the distribution.
+
+* A new `geneos adb` subsystem has been intriduced for working with Active Dashboard files. The first two commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
+
+* The `snapshot` command can now output the captured data in Geneos Toolkit formats.
+
+* Support for auditing events within the `geneos` program. 
+
+## Version v1.30.0 Changes
+
+* Updated to use Go 1.27.2 and update dependencies
+
+* `tools/geneos`
+
+  * The `geneos set` and `geneos unset` commands have been enhanced to support more complex configuration parameters, such as multiple managed entities for `san` components. These also require the updated templates included in the release. To update the templates used in an existing `geneos` managed environment, you should run `geneos init templates` after upgrading the binary.
+
+    For gateway components, include files (`--include`/`-i` options) can now be specified using pipe (`|`) symbols to denote include group hierarchies, which will work with the newer template included to. For example:
+    
+    ```shell
+    geneos set gateway EXAMPLE -i '100:Top-Level Group | Sub-Group | /path/to/include.xml'
+    ```
+ 
+    will result in an include file with priority 100 and the path given, being placed in two levels of include groups.
+
+    For self-announcing netprobes, using the updated template file, multiple managed entities can now be specified by using attributes, types and variables with names including a forward slash (`/`) to denote the name of the entity, e.g.
+
+    ```shell
+    geneos set san EXAMPLE -a 'Entity1/ATTRIBUTE=VALUE' -t 'Entity1/Level 2 - Basic Application' -v 'Entity1/logfile=/path/to/logfile'
+    ```
+
+    Additionally, managed entities are only included in the generated configuration if they have at least one type specified, as without types they would not have any monitoring configured by the gateway.
+
+  * Changes to template processing to support more complex configuration scenarios.
+
+  * Add predefined Geneos gateway include files to the binary for automated deployment to an `gateway/includes` directory, which can be referenced as `../../includes/...` in the main Gateway configuration.
+
+  * For the `geneos init` commands, add support for PFX/PKCS#12 certificate bundle passwords to be passed as environment variable `ITRS_CERTS_PASSWORD`
+
+  * The internals of the `geneos deploy` command have been refactored to share common code with `geneos add` via an internal package, and add support for profiles.
+
+  * The `geneos list` command now separates the base symlink name and package versionm for programattic output (e.g. CSV, JSON, Toolkit)
+
+  * The code to support log file viewing has been moved from the `geneos log` command to a shared internal package for reuse across the program.
+
+## Version v1.30.0 Fixes
+
+* `pkg/certs`
+
+  * Allow file permissions to be set on keystore files and set these to 0600 for `tools/geneos` sso-agent components.
+
+  * Correctly deal with certificate bundles that contain multiple root certificates.
+
+  * Support the expansion of a leading `~/` in file paths as the user's home directory.
+
+* `pkg/config`
+
+  * Fix the handling of deleted nested keys versus maps, as the underlying `viper` package does this badly.
+
+  * For PEM files, support the expansion of a leading `~/` in file paths as the user's home directory
+
+
+* `tools/geneos`
+
+  * Fix the `geneos set` command to correctly handle secure (encoded) variables.
+
+  * Fix `geneos tls export` for instances to only write the private key once.
+
+---
+
 ## Version v1.29.2
 
 > [!NOTE]
