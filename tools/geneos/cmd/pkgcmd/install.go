@@ -259,6 +259,10 @@ geneos install netprobe -b active_dev -U
 			installCmdUpdate = true
 		}
 
+		if installCmdSnapshot {
+			installCmdNexus = true
+		}
+
 		// base options
 		options := []geneos.PackageOption{
 			geneos.Basename(installCmdBase),
@@ -272,6 +276,8 @@ geneos install netprobe -b active_dev -U
 			geneos.Username(installCmdUsername),
 			geneos.DownloadOnly(installCmdDownloadOnly),
 			geneos.Headers(installCmdHeaders...),
+			geneos.UseNexus(installCmdNexus),
+			geneos.UseNexusSnapshots(installCmdSnapshot),
 		}
 
 		if installCmdDownloadOnly {
@@ -280,18 +286,8 @@ geneos install netprobe -b active_dev -U
 				archive = params[0]
 			}
 			log.Debug("downloading", slog.String("version", installCmdVersion), slog.String("ct", ct.String()), slog.String("archive", archive))
-			options = append(options,
-				geneos.Source(archive),
-			)
-			if installCmdSnapshot {
-				installCmdNexus = true
-				log.Debug("setting nexus snapshots")
-				options = append(options, geneos.UseNexusSnapshots())
-			}
-			if installCmdNexus {
-				log.Debug("setting nexus")
-				options = append(options, geneos.UseNexus())
-			}
+			options = append(options, geneos.Source(archive))
+
 			return Install(h, ct, options...)
 		}
 
@@ -324,14 +320,6 @@ geneos install netprobe -b active_dev -U
 		}
 
 		log.Debug("installing", slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname), slog.String("version", installCmdVersion))
-
-		if installCmdSnapshot {
-			installCmdNexus = true
-			options = append(options, geneos.UseNexusSnapshots())
-		}
-		if installCmdNexus {
-			options = append(options, geneos.UseNexus())
-		}
 
 		return Install(h, ct, options...)
 	},
