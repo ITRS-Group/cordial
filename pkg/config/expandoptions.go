@@ -22,6 +22,11 @@ import (
 	"sync"
 )
 
+type fnmap struct {
+	fn   func(configItems map[string]any, name string, trim bool, data ...any) (string, error)
+	data []any
+}
+
 type expandOptions struct {
 	cf                 *Config // the Config object is included in the options to allow for options that need to access configuration settings, such as decoder configs
 	defaultValue       any
@@ -29,16 +34,17 @@ type expandOptions struct {
 	expandNonStringCSV bool
 	expressions        bool
 	externalFuncMaps   bool
-	funcMaps           map[string]func(configItems map[string]any, name string, trim bool) (string, error)
-	initialValue       any
-	lookupTables       []map[string]string
-	noDecode           bool
-	noExpand           bool
-	promoteFrom        []string // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
-	replacements       []string
-	trimPrefix         bool
-	trimSpace          bool
-	useKeyFile         string
+	// funcMaps           map[string]func(configItems map[string]any, name string, trim bool) (string, error)
+	funcMaps     map[string]fnmap
+	initialValue any
+	lookupTables []map[string]string
+	noDecode     bool
+	noExpand     bool
+	promoteFrom  []string // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
+	replacements []string
+	trimPrefix   bool
+	trimSpace    bool
+	useKeyFile   string
 }
 
 // ExpandOption control the way configuration options undergo string
@@ -53,10 +59,10 @@ type ExpandOption func(*expandOptions)
 
 // use a normal map, protected with mutex and not sync.Map as this is
 // copied into a normal map later on
-var defaultFuncMaps = map[string]func(configItems map[string]any, name string, trim bool) (string, error){
-	"http":  fetchURL,
-	"https": fetchURL,
-	"file":  fetchFile,
+var defaultFuncMaps = map[string]fnmap{
+	"http":  fnmap{fn: fetchURL},
+	"https": fnmap{fn: fetchURL},
+	"file":  fnmap{fn: fetchFile},
 }
 var defaultFuncMapsMutex sync.Mutex
 
@@ -64,7 +70,7 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	e = &expandOptions{
 		cf:               c, // default to config c if not included in options
 		externalFuncMaps: true,
-		funcMaps:         map[string]func(configItems map[string]any, name string, trim bool) (string, error){},
+		funcMaps:         map[string]fnmap{},
 		replacements:     []string{},
 		trimSpace:        true,
 	}
@@ -85,7 +91,7 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	}
 
 	if e.expressions {
-		e.funcMaps["expr"] = expr
+		e.funcMaps["expr"] = fnmap{fn: expr}
 	}
 
 	if e.defaultValue == nil {
@@ -171,9 +177,9 @@ func LookupTables(values []map[string]string) ExpandOption {
 // so. The function should return an error if the prefix matches but the
 // value is invalid for any reason, such as a network error when
 // fetching a URL or a missing file when fetching from the file system.
-func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool) (string, error)) ExpandOption {
+func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool, data ...any) (string, error), data ...any) ExpandOption {
 	return func(e *expandOptions) {
-		e.funcMaps[prefix] = fn
+		e.funcMaps[prefix] = fnmap{fn: fn, data: data}
 	}
 }
 

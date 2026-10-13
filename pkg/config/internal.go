@@ -402,11 +402,11 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 			return
 		}
 		ci := c.allSettings()
-		if fn, ok := opts.funcMaps[fname]; ok {
+		if fnmap, ok := opts.funcMaps[fname]; ok {
 			if opts.trimPrefix {
-				value, err = fn(ci, arg, opts.trimSpace)
+				value, err = fnmap.fn(ci, arg, opts.trimSpace, fnmap.data...)
 			} else {
-				value, err = fn(ci, s, opts.trimSpace)
+				value, err = fnmap.fn(ci, s, opts.trimSpace, fnmap.data...)
 			}
 			return
 		}
@@ -959,7 +959,7 @@ func (c *Config) replaceStringParam(value string, options ...ExpandOption) strin
 // substitution in the URL, but is currently unused. The trim parameter
 // determines whether to trim whitespace from the retrieved content
 // before returning it as a string.
-func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
+func fetchURL(_ map[string]any, url string, trim bool, _ ...any) (s string, err error) {
 	resp, err := http.Get(url) // url includes the prefix
 	if err != nil {
 		return
@@ -986,7 +986,7 @@ func fetchURL(_ map[string]any, url string, trim bool) (s string, err error) {
 // The function also supports expanding the home directory if the path
 // starts with "~/". The trim parameter determines whether to trim
 // whitespace from the file contents before returning it as a string.
-func fetchFile(_ map[string]any, p string, trim bool) (s string, err error) {
+func fetchFile(_ map[string]any, p string, trim bool, _ ...any) (s string, err error) {
 	b, err := os.ReadFile(ResolveHome(strings.TrimPrefix(p, "file:")))
 	if err != nil {
 		return
@@ -1005,7 +1005,7 @@ func fetchFile(_ map[string]any, p string, trim bool) (s string, err error) {
 // is a map of environment variable names to values. If the expression
 // evaluates successfully then the result is returned as a string, with
 // optional trimming of whitespace.
-func expr(configItems map[string]any, expression string, trim bool) (s string, err error) {
+func expr(configItems map[string]any, expression string, trim bool, _ ...any) (s string, err error) {
 	vars := maps.Clone(configItems)
 	eval := goval.NewEvaluator()
 

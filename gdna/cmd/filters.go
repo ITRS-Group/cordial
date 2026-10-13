@@ -479,7 +479,7 @@ OUTER:
 func buildFilterSQL(cf *config.Config) config.ExpandOption {
 	// build a prefix "filters" that takes a table name to test and a list of filter categories,
 	// e.g. "${filter:gw:gateway,source}"
-	return config.Prefix("filters", func(_ map[string]any, s string, b bool) (r string, err error) {
+	return config.Prefix("filters", func(_ map[string]any, s string, b bool, _ ...any) (r string, err error) {
 		var clauses []string
 		args := strings.TrimPrefix(s, "filters:")
 		table, s, found := strings.Cut(args, ":")
