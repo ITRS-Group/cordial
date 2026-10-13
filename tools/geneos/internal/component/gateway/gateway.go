@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -42,8 +43,10 @@ const (
 	INSTANCEXML = "instance.setup.xml"
 )
 
+var log = logger.Logger
+
 var Component = geneos.Component{
-	Initialise:   initialise,
+	Initialise:   geneos.WriteTemplates,
 	Name:         name,
 	Aliases:      []string{"gateways"},
 	LegacyPrefix: "gate",
@@ -153,16 +156,6 @@ const instanceTemplateName = "gateway-instance.setup.xml.gotmpl"
 
 func init() {
 	Component.Register(factory)
-}
-
-func initialise(r *geneos.Host, ct *geneos.Component) {
-	// copy default template to directory
-	if err := r.WriteFile(r.PathTo(name, "templates", templateName), template, 0664); err != nil {
-		panic(fmt.Sprintf("%s initialise: %v", ct, err))
-	}
-	if err := r.WriteFile(r.PathTo(name, "templates", instanceTemplateName), instanceTemplate, 0664); err != nil {
-		panic(fmt.Sprintf("%s initialise: %v", ct, err))
-	}
 }
 
 // factory is the factory method for Gateways
@@ -286,32 +279,34 @@ func (i *Gateway) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Gateway) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *Gateway) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
 	cf := i.Config()
 
-	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Component)
+	opts := instance.EvalAddOptions(options...)
+
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(cf, "port", port)
+	config.Set(cf, "port", opts.Port)
 	config.Set(cf, cf.Join("config", "rebuild"), "initial")
 
 	cf.Default(cf.Join("config", "template"), templateName)
-	if template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
+	if opts.Template != "" {
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
 	config.Set(cf, "includes", make(map[int]string))
 
 	// create certs, report success only
-	if !noCerts {
+	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 

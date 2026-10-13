@@ -91,7 +91,7 @@ type Common struct {
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
 }
 
-// Apply applies the specified profile to the local configuration. It
+// Apply applies the profile name to the local configuration. It
 // iterates over all the components defined in the profile and applies
 // their respective profile settings by calling the component's
 // ApplyProfile function if it is defined.
@@ -169,9 +169,19 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
-func ApplyCommonParams(p Common) (vals values.Values) {
-	vals.Envs = p.Env
-	vals.Params = p.Params
+func ApplyCommonParams(pf *config.Config, p Common, lookup map[string]string) (vals values.Values) {
+	vals.Envs = pf.ExpandStringSlice(p.Env,
+		config.LookupTable(lookup),
+		config.Prefix("select", SelectPrefix),
+		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+	)
+	vals.Params = pf.ExpandStringSlice(p.Params,
+		config.LookupTable(lookup),
+		config.Prefix("select", SelectPrefix),
+		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+	)
 	return
 }
 
@@ -195,9 +205,11 @@ func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys 
 				port = uint16(pv)
 			}
 		}
-		i, err = instance.Add(geneos.LOCAL, ct, name, port, vals,
-			instance.CertBundle(common.CertBundle),
-			instance.CertBundlePassword(common.CertBundlePassword),
+		i, err = instance.Add(geneos.LOCAL, ct, name,
+			instance.WithValues(vals),
+			instance.WithCertBundle(common.CertBundle),
+			instance.WithCertBundlePassword(common.CertBundlePassword),
+			instance.WithPort(port),
 		)
 		if err != nil {
 			return err

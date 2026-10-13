@@ -240,18 +240,19 @@ func (i *Webserver) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Webserver) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Webserver) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
-	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Component)
+	opts := instance.EvalAddOptions(options...)
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(i.Config(), "port", port)
+	config.Set(i.Config(), "port", opts.Port)
 
 	dir, err := os.Getwd()
 	defer os.Chdir(dir)
@@ -270,7 +271,7 @@ func (i *Webserver) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
-	if !noCerts {
+	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 

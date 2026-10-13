@@ -28,10 +28,12 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -51,6 +53,8 @@ var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = values.Values{}
 var deployCmdProfiles string
+
+var flags *pflag.FlagSet
 
 func init() {
 	Cmd.AddCommand(deployCmd)
@@ -111,6 +115,7 @@ func init() {
 	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", values.HeadersOptionsText)
 
 	deployCmd.Flags().SortFlags = false
+	flags = deployCmd.Flags()
 }
 
 //go:embed _docs/deploy.md
@@ -209,6 +214,12 @@ var deployCmd = &cobra.Command{
 					return
 				}
 
+				if err = geneos.InitGlobalAudit(); err != nil {
+					log.Error("failed to initialize global audit", slog.Any("error", err))
+				}
+
+				logger.Audit()
+
 				// recreate LOCAL to load "geneos" and others
 				geneos.LOCAL = nil
 				geneos.LOCAL = geneos.NewHost(geneos.LOCALHOST)
@@ -292,6 +303,10 @@ var deployCmd = &cobra.Command{
 				defer clear(deployCmdPassword)
 			}
 
+			if deployCmdSnapshot {
+				deployCmdNexus = true
+			}
+
 			options := []geneos.PackageOption{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
@@ -302,19 +317,9 @@ var deployCmd = &cobra.Command{
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
 				geneos.Headers(deployCmdExtras.Headers...),
-			}
-			if deployCmdArchive != "" {
-				options = append(options,
-					geneos.Source(deployCmdArchive),
-				)
-			}
-
-			if deployCmdSnapshot {
-				deployCmdNexus = true
-				options = append(options, geneos.UseNexusSnapshots())
-			}
-			if deployCmdNexus {
-				options = append(options, geneos.UseNexus())
+				geneos.Source(deployCmdArchive),
+				geneos.UseNexus(deployCmdNexus),
+				geneos.UseNexusSnapshots(deployCmdSnapshot),
 			}
 
 			log.Debug("installing", slog.String("host", h.String()), slog.String("package", pkgct.String()))
@@ -330,15 +335,17 @@ var deployCmd = &cobra.Command{
 
 		deployCmdExtras.Params = params
 
-		i, err := instance.Add(h, ct, name, deployCmdPort, deployCmdExtras,
-			instance.TemplatePath(deployCmdTemplate),
+		i, err := instance.Add(h, ct, name,
+			instance.WithPort(deployCmdPort),
+			instance.WithValues(deployCmdExtras),
+			instance.WithTemplate(deployCmdTemplate),
 			instance.Base(deployCmdBase),
 			instance.Insecure(deployCmdInsecure),
-			instance.CertBundle(deployCmdInstanceBundle),
-			instance.CertBundlePassword(deployCmdBundlePassword),
-			instance.Keyfile(deployCmdKeyfile),
+			instance.WithCertBundle(deployCmdInstanceBundle),
+			instance.WithCertBundlePassword(deployCmdBundlePassword),
+			instance.WithKeyfile(deployCmdKeyfile),
 			instance.KeyfileCRC(deployCmdKeyfileCRC),
-			instance.Imports(deployCmdImportFiles),
+			instance.WithImports(deployCmdImportFiles),
 			instance.StartAfterAdd(deployCmdStart),
 		)
 		if err != nil {
@@ -425,6 +432,9 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 				defer clear(deployCmdPassword)
 			}
 
+			if deployCmdSnapshot {
+				deployCmdNexus = true
+			}
 			options := []geneos.PackageOption{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
@@ -435,19 +445,13 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 				geneos.Password(deployCmdPassword),
 				geneos.Username(deployCmdUsername),
 				geneos.Headers(deployCmdExtras.Headers...),
+				geneos.UseNexusSnapshots(deployCmdSnapshot),
+				geneos.UseNexus(deployCmdNexus),
 			}
 			if deployCmdArchive != "" {
 				options = append(options,
 					geneos.Source(deployCmdArchive),
 				)
-			}
-
-			if deployCmdSnapshot {
-				deployCmdNexus = true
-				options = append(options, geneos.UseNexusSnapshots())
-			}
-			if deployCmdNexus {
-				options = append(options, geneos.UseNexus())
 			}
 
 			log.Debug("installing", slog.String("host", h.String()), slog.String("package", pkgct.String()))
@@ -462,16 +466,19 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 
 			// TODO: pull in values from profiles per instance
 
-			i, err := instance.Add(h, ct, pi.Name, deployCmdPort, deployCmdExtras,
-				instance.TemplatePath(deployCmdTemplate),
+			i, err := instance.Add(h, ct, pi.Name,
+				instance.WithPort(deployCmdPort),
+				instance.WithValues(deployCmdExtras),
+				instance.WithTemplate(deployCmdTemplate),
 				instance.Base(deployCmdBase),
 				instance.Insecure(deployCmdInsecure),
-				instance.CertBundle(deployCmdInstanceBundle),
-				instance.CertBundlePassword(deployCmdBundlePassword),
-				instance.Keyfile(deployCmdKeyfile),
+				instance.WithCertBundle(deployCmdInstanceBundle),
+				instance.WithCertBundlePassword(deployCmdBundlePassword),
+				instance.WithKeyfile(deployCmdKeyfile),
 				instance.KeyfileCRC(deployCmdKeyfileCRC),
-				instance.Imports(deployCmdImportFiles),
+				instance.WithImports(deployCmdImportFiles),
 				instance.StartAfterAdd(deployCmdStart),
+				instance.WithFlags(flags),
 			)
 			if err != nil {
 				return err
@@ -481,16 +488,19 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 	}
 
 	// finally, install the profile instance
-	_, err = instance.Add(h, ct, name, deployCmdPort, deployCmdExtras,
-		instance.ProfilesPath(deployCmdProfiles),
+	_, err = instance.Add(h, ct, name,
+		instance.WithPort(deployCmdPort),
+		instance.WithValues(deployCmdExtras),
+		instance.WithProfiles(deployCmdProfiles),
 		instance.Base(deployCmdBase),
 		instance.Insecure(deployCmdInsecure),
-		instance.CertBundle(deployCmdInstanceBundle),
-		instance.CertBundlePassword(deployCmdBundlePassword),
-		instance.Keyfile(deployCmdKeyfile),
+		instance.WithCertBundle(deployCmdInstanceBundle),
+		instance.WithCertBundlePassword(deployCmdBundlePassword),
+		instance.WithKeyfile(deployCmdKeyfile),
 		instance.KeyfileCRC(deployCmdKeyfileCRC),
-		instance.Imports(deployCmdImportFiles),
+		instance.WithImports(deployCmdImportFiles),
 		instance.StartAfterAdd(deployCmdStart),
+		instance.WithFlags(flags),
 	)
 	if err != nil {
 		return err

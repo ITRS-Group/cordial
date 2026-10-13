@@ -19,6 +19,7 @@ package mdgateway
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 const name = "md-gateway"
@@ -218,18 +220,24 @@ func (i *MDGateway) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *MDGateway) Add(_ string, port uint16, noCerts bool) error {
+func (i *MDGateway) Add(options ...any) error {
 	if i == nil {
 		return os.ErrInvalid
 	}
-	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, i.Type())
+
+	opts := instance.EvalAddOptions(options...)
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.InstanceHost, i.Type())
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(i.Config(), "port", port)
+	config.Set(i.Config(), "port", opts.Port)
 	seedPackagedYAML(i)
+	// create certs, report success only
+	if !(opts.Insecure || opts.CertBundle != "") {
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+	}
 	return nil
 }
 

@@ -50,7 +50,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			panic("name empty")
 		}
 
-		vals := profile.ApplyCommonParams(gateway.Common)
+		vals := profile.ApplyCommonParams(pf, gateway.Common, lookup)
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 

@@ -19,9 +19,6 @@ package initcmd
 
 import (
 	_ "embed"
-	"fmt"
-	"log/slog"
-	"path"
 
 	"github.com/spf13/cobra"
 
@@ -37,7 +34,7 @@ func init() {
 var templatesCmdDescription string
 
 var templatesCmd = &cobra.Command{
-	Use:          "templates",
+	Use:          "templates [TYPE]",
 	Short:        "Initialise or overwrite templates",
 	Long:         templatesCmdDescription,
 	Aliases:      []string{"template"},
@@ -47,44 +44,12 @@ var templatesCmd = &cobra.Command{
 		cmd.CmdRequireHome: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		log := log.With("command", "init templates")
+		// log := log.With("command", "init templates")
 		ct, _, _, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
 		}
 
-		// none of the arguments can be a reserved type
-		if ct != nil {
-			log.Error("invalid arguments", slog.Any("args", ct.String()))
-			return geneos.ErrInvalidArgs
-		}
-
-		return initTemplates(geneos.LOCAL)
+		return geneos.WriteTemplates(geneos.LOCAL, ct)
 	},
-}
-
-func initTemplates(h *geneos.Host) (err error) {
-	for _, ct := range geneos.RealComponents() {
-		if len(ct.Templates) == 0 {
-			continue
-		}
-		templateDir := h.PathTo(ct, "templates")
-		h.MkdirAll(templateDir, 0775)
-
-		for _, t := range ct.Templates {
-			tmpl := t.Content
-			if initCmdGatewayTemplate != "" {
-				if tmpl, err = geneos.ReadAll(initCmdGatewayTemplate); err != nil {
-					return
-				}
-			}
-
-			if err = h.WriteFile(path.Join(templateDir, t.Filename), tmpl, 0664); err != nil {
-				return
-			}
-			fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
-		}
-	}
-
-	return
 }

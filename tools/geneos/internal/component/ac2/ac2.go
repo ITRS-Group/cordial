@@ -221,19 +221,22 @@ func (i *AC2) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-// Add created a new instance of AC2
-func (i *AC2) Add(tmpl string, port uint16, noCerts bool) (err error) {
+// Add create a new instance of AC2
+func (i *AC2) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
-	if port == 0 {
-		port = instance.NextFreePort(i.Host(), &Component)
+
+	opts := instance.EvalAddOptions(options...)
+
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.Host(), &Component)
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	config.Set(i.Config(), "port", port)
+	config.Set(i.Config(), "port", opts.Port)
 
 	baseDir := instance.BaseVersion(i)
 	dir, err := os.Getwd()
@@ -245,7 +248,7 @@ func (i *AC2) Add(tmpl string, port uint16, noCerts bool) (err error) {
 	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
-	if !noCerts {
+	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 	return

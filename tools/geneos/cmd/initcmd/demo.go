@@ -72,7 +72,7 @@ var demoCmd = &cobra.Command{
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(command, log, args, initCmdExtras)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return
 		}
@@ -103,7 +103,10 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	}
 	gatewayValues := initCmdExtras
 	gatewayValues.Params = []string{"options=-demo"}
-	if _, err = instance.Add(h, ct, "Demo Gateway@"+h.String(), port, gatewayValues); err != nil {
+	if _, err = instance.Add(h, ct, "Demo Gateway@"+h.String(),
+		instance.WithPort(port),
+		instance.WithValues(gatewayValues),
+	); err != nil {
 		return
 	}
 
@@ -123,7 +126,10 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if demoCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if _, err = instance.Add(h, netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, netprobeCT, probename+"@"+h.String(),
+		instance.WithPort(7036),
+		instance.WithValues(initCmdExtras),
+	); err != nil {
 		return
 	}
 
@@ -135,7 +141,10 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if initCmdInsecure {
 		port = 8080
 	}
-	if _, err = instance.Add(h, ct, "Demo Webserver@"+h.String(), port, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, ct, "Demo Webserver@"+h.String(),
+		instance.WithPort(port),
+		instance.WithValues(initCmdExtras),
+	); err != nil {
 		return
 	}
 
@@ -145,7 +154,9 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		if err = pkgcmd.Install(h, ct, options...); err != nil {
 			return
 		}
-		if _, err = instance.Add(h, ct, "Demo AC2@"+h.String(), 0, initCmdExtras); err != nil {
+		if _, err = instance.Add(h, ct, "Demo AC2@"+h.String(),
+			instance.WithValues(initCmdExtras),
+		); err != nil {
 			return
 		}
 	}

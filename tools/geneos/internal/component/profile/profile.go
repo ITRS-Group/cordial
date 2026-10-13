@@ -23,12 +23,15 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -36,6 +39,8 @@ import (
 )
 
 const name = "profile"
+
+var log = logger.Logger
 
 var Component = geneos.Component{
 	Name:          name,
@@ -171,12 +176,38 @@ func (i *Profile) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Profile) Add(tmpl string, port uint16, noCerts bool) (err error) {
+func (i *Profile) Add(options ...any) (err error) {
+	if i == nil {
+		return os.ErrInvalid
+	}
+
+	opts := instance.EvalAddOptions(options...)
+
 	pf, err := profile.Load(cordial.ExecutableName(), config.FilePath(config.Get[string](i.Config(), "profiles")))
 	if err != nil {
 		return err
 	}
-	i.Log().Info("applying profile", slog.String("profile", i.Name()))
+
+	// set a top-level "flags" key to allow `${flag:goval}` prefix
+	// support for profiles
+	if opts.Flags != nil {
+		flags := make(map[string]any)
+		// populate the flags map from opts.Flags
+		opts.Flags.VisitAll(func(f *pflag.Flag) {
+			switch f.Value.Type() {
+			case "bool":
+				flags[f.Name], _ = strconv.ParseBool(f.Value.String())
+			case "int", "int16", "int32", "int64":
+				flags[f.Name], _ = strconv.Atoi(f.Value.String())
+			case "uint", "uint16", "uint32", "uint64":
+				flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
+			default:
+				flags[f.Name] = f.Value.String()
+			}
+		})
+		config.Set(pf, "flags", flags)
+	}
+
 	if err = profile.Apply(pf, i.Name()); err != nil {
 		return err
 	}

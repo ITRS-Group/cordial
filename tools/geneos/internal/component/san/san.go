@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -39,8 +40,10 @@ import (
 
 const name = "san"
 
+var log = logger.Logger
+
 var Component = geneos.Component{
-	Initialise:   initialise,
+	Initialise:   geneos.WriteTemplates,
 	Name:         name,
 	Aliases:      []string{"sans"},
 	LegacyPrefix: name,
@@ -130,13 +133,6 @@ const templateName = "san.setup.xml.gotmpl"
 
 func init() {
 	Component.Register(factory)
-}
-
-func initialise(r *geneos.Host, ct *geneos.Component) {
-	// copy default template to directory
-	if err := r.WriteFile(r.PathTo(ct.ParentType, "templates", templateName), template, 0664); err != nil {
-		panic(fmt.Sprintf("failed to write default template for %s: %v", ct.Name, err))
-	}
 }
 
 // factory is the factory method for SANs.
@@ -265,26 +261,28 @@ func (i *San) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *San) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *San) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
+	opts := instance.EvalAddOptions(options...)
+
 	cf := i.Config()
 
-	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Component)
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	config.Set(cf, "port", port)
+	config.Set(cf, "port", opts.Port)
 	config.Set(cf, cf.Join("config", "rebuild"), "always")
 	config.Set(cf, cf.Join("config", "template"), i.Host().PathTo(i.Type(), "templates", templateName))
 
-	if template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
+	if opts.Template != "" {
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
@@ -294,7 +292,7 @@ func (i *San) Add(template string, port uint16, noCerts bool) (err error) {
 	config.Set(cf, "gateways", make(map[string]string))
 
 	// create certs, report success only
-	if !noCerts {
+	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 

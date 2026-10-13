@@ -24,8 +24,11 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
+	"github.com/DeRuina/timberjack"
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
@@ -53,12 +56,17 @@ var log = logger.Logger
 // them disabled
 const DisableExtension = "disabled"
 
-// Initialise a Geneos environment by creating a directory structure and
-// then it calls the initialisation functions for each component type
-// registered.
+// Initialise a Geneos environment on host h by creating a directory
+// structure and then it calls the initialisation functions for each
+// component type registered.
 //
 // If the directory is not empty and the Force() option is not passed
 // then nothing is changed
+//
+// The only options supported are:
+//
+//  geneos.UseRoot(dir string) // to set the root directory of the installation
+//  geneos.Force(force bool) // to force init if the directory already exists and is not empty
 func Initialise(h *Host, options ...PackageOption) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
@@ -115,7 +123,9 @@ func Initialise(h *Host, options ...PackageOption) (err error) {
 			continue
 		}
 		if ct.Initialise != nil {
-			ct.Initialise(h, ct)
+			if err := ct.Initialise(h, ct); err != nil {
+				log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
+			}
 		}
 	}
 
@@ -135,6 +145,32 @@ func Init(app string) {
 func LocalRoot() string {
 	return config.Get[string](config.Global(), cordial.ExecutableName(),
 		config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
+}
+
+// InitGlobalAudit initialises the global audit logging. It returns an
+// error if the audit directory cannot be created.
+func InitGlobalAudit() (err error) {
+	cf := config.Global()
+
+	// TODO: This doesn't work until the directory structure is built
+	defaultFile := filepath.Join(config.Get[string](cf, cordial.ExecutableName(), config.DefaultValue(os.TempDir())), "audit", "audit.log")
+	if err = os.MkdirAll(filepath.Dir(defaultFile), 0750); err != nil {
+		return
+	}
+
+	// initialise global audit logging after loading global config,
+	// which may contain defaults etc.
+	logger.InitGlobalAudit(&timberjack.Logger{
+		Filename:         config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(defaultFile)),
+		MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.DefaultValue(10))),
+		MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.DefaultValue(30))),
+		MaxBackups:       config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(config.DefaultValue(5))),
+		Compression:      config.Get[string](cf, cf.Join("audit", "compression"), config.DefaultValue(config.DefaultValue("gzip"))),
+		BackupTimeFormat: "20060102150405",
+		RotationInterval: time.Hour * 24 * 7,
+		RotateAt:         []string{"00:00"},
+	})
+	return nil
 }
 
 // SaveGlobalConfig saves the global configuration (in config.Global)

@@ -81,7 +81,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(command, log, args, initCmdExtras)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return
 		}
@@ -131,13 +131,19 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		return
 	}
 
-	if _, err = instance.Add(h, licdCT, initCmdName, 7041, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, licdCT, initCmdName,
+		instance.WithPort(7041),
+		instance.WithValues(initCmdExtras)); err != nil {
+
 		return
 	}
 	if err = cmd.ImportFiles(licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
-	if _, err = instance.Add(h, gatewayCT, initCmdName, 7038, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, gatewayCT, initCmdName,
+		instance.WithValues(initCmdExtras),
+		instance.WithPort(7038),
+	); err != nil {
 		return
 	}
 
@@ -145,10 +151,16 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	if allCmdMinimal {
 		probename = "minimal:" + probename
 	}
-	if _, err = instance.Add(h, netprobeCT, probename+"@"+h.String(), 7036, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, netprobeCT, probename+"@"+h.String(),
+		instance.WithValues(initCmdExtras),
+		instance.WithPort(7036),
+	); err != nil {
 		return
 	}
-	if _, err = instance.Add(h, webserverCT, initCmdName, 8443, initCmdExtras); err != nil {
+	if _, err = instance.Add(h, webserverCT, initCmdName,
+		instance.WithValues(initCmdExtras),
+		instance.WithPort(8443),
+	); err != nil {
 		return
 	}
 	if err = cmd.Start(nil, initCmdLogs, true, e); err != nil {

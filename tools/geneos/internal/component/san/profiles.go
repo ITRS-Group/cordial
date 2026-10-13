@@ -58,16 +58,50 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 		// does it already exist?
 		name := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
-		vals := profile.ApplyCommonParams(san.Common)
-		vals.Gateways = san.Gateways
-		vals.Types = san.Types
-		vals.Attributes = san.Attributes
-		vals.Variables = san.Variables
+		vals := profile.ApplyCommonParams(pf, san.Common, lookup)
+
+		vals.Gateways = make(map[string]string, len(san.Gateways))
+		for n, g := range san.Gateways {
+			vals.Gateways[n] = config.Expand[string](pf, g,
+				config.LookupTable(lookup),
+				config.Prefix("select", profile.SelectPrefix),
+				config.Prefix("replace", profile.ReplacePrefix),
+				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
+			)
+		}
+
+		vals.Types = pf.ExpandStringSlice(san.Types,
+			config.LookupTable(lookup),
+			config.Prefix("select", profile.SelectPrefix),
+			config.Prefix("replace", profile.ReplacePrefix),
+			config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
+		)
+
+		vals.Attributes = pf.ExpandStringSlice(san.Attributes,
+			config.LookupTable(lookup),
+			config.Prefix("select", profile.SelectPrefix),
+			config.Prefix("replace", profile.ReplacePrefix),
+			config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
+		)
+
+		// vals.Variables = san.Variables
+		for _, v := range san.Variables {
+			vals.Variables = append(vals.Variables, values.Variable{
+				Type: v.Type,
+				Name: v.Name,
+				Value: config.Expand[string](pf, v.Value,
+					config.LookupTable(lookup),
+					config.Prefix("select", profile.SelectPrefix),
+					config.Prefix("replace", profile.ReplacePrefix),
+					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
+				),
+			})
+		}
 
 		// now add managed-entities, prefixing each with the "name/"
 		for _, me := range san.ManagedEntities {
 			// start with clean values for each managed entity
-			if extraVals, err := processSANManagedEntity(me); err == nil {
+			if extraVals, err := processSANManagedEntity(pf, me); err == nil {
 				// merge into top-level values
 				vals.Attributes = append(vals.Attributes, extraVals.Attributes...)
 				vals.Types = append(vals.Types, extraVals.Types...)
@@ -82,7 +116,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	return
 }
 
-func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err error) {
+func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals values.Values, err error) {
 	entities := []ManagedEntity{entity}
 	names := entity.Match
 
@@ -142,6 +176,7 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 						config.LookupTable(lookup),
 						config.Prefix("select", profile.SelectPrefix),
 						config.Prefix("replace", profile.ReplacePrefix),
+						config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
 					),
 				}
 			}
@@ -150,6 +185,7 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 				config.LookupTable(lookup),
 				config.Prefix("select", profile.SelectPrefix),
 				config.Prefix("replace", profile.ReplacePrefix),
+				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
 			)
 
 			e := ManagedEntity{
@@ -158,11 +194,13 @@ func processSANManagedEntity(entity ManagedEntity) (vals values.Values, err erro
 					config.LookupTable(lookup),
 					config.Prefix("select", profile.SelectPrefix),
 					config.Prefix("replace", profile.ReplacePrefix),
+					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
 				),
 				Attributes: cf.ExpandStringSlice(entity.Attributes,
 					config.LookupTable(lookup),
 					config.Prefix("select", profile.SelectPrefix),
 					config.Prefix("replace", profile.ReplacePrefix),
+					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
 				),
 				Variables: variables,
 			}

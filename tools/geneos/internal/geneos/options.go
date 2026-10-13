@@ -115,12 +115,20 @@ func LocalOnly(local bool) PackageOption {
 
 // Source is the archive location or the specific release file. It can
 // be a directory, in which case that directory is used for the
-// appropriate archive file(s), a specific file or a URL to a
-// release. If the file is a URL, it is downloaded to the local archive
+// appropriate archive file(s), a specific file or a URL to a release.
+// If the file is a URL, it is downloaded to the local archive
 // directory, which defaults to `packages/downloads`.
-func Source(path string) PackageOption {
+//
+// If source is an empty string then a default value is used, pointing
+// to the `package/download` directory in the geneos installation
+// directory.
+func Source(source string) PackageOption {
 	return func(d *packageOptions) {
-		d.source = path
+		if source == "" {
+			d.source = path.Join(LocalRoot(), "packages", "downloads")
+			return
+		}
+		d.source = source
 	}
 }
 
@@ -219,17 +227,25 @@ func Password(password config.Secret) PackageOption {
 // downloads instead of the default download URL in the settings. This
 // also influences the way the remote path is searched and build, not
 // just the base URL.
-func UseNexus() PackageOption {
+func UseNexus(yes bool) PackageOption {
 	return func(d *packageOptions) {
-		d.downloadtype = "nexus"
+		if yes {
+			d.downloadtype = "nexus"
+		} else {
+			d.downloadtype = "resources"
+		}
 	}
 }
 
 // UseNexusSnapshots set the flag to use Nexus Snapshots rather than
 // Releases.
-func UseNexusSnapshots() PackageOption {
+func UseNexusSnapshots(yes bool) PackageOption {
 	return func(d *packageOptions) {
-		d.downloadbase = "snapshots"
+		if yes {
+			d.downloadbase = "snapshots"
+		} else {
+			d.downloadbase = "releases"
+		}
 	}
 }
 

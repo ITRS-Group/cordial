@@ -46,7 +46,12 @@ type Instance interface {
 	SetLoaded(time.Time)
 
 	// actions
-	Add(template string, port uint16, noCerts bool) error
+
+	// Add(template string, port uint16, noCerts bool) error Add takes a
+	// list of [instance.AddOption] but to avoid loops, we mark it up as
+	// `any`
+	Add(options ...any) error
+
 	Command(skipFileCheck bool) ([]string, []string, string, error)
 	Reload() (err error)
 	Rebuild(initial bool) (changed bool, err error)

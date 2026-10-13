@@ -40,7 +40,7 @@ import (
 const name = "netprobe-router"
 
 var Component = geneos.Component{
-	Initialise:   initialise,
+	Initialise:   geneos.WriteTemplates,
 	Name:         name,
 	Aliases:      []string{"netproberouter", "router"},
 	LegacyPrefix: "router",
@@ -111,12 +111,6 @@ const templateName = "router-config.yaml.gotmpl"
 
 func init() {
 	Component.Register(factory)
-}
-
-func initialise(r *geneos.Host, ct *geneos.Component) {
-	if err := r.WriteFile(r.PathTo(name, "templates", templateName), template, 0664); err != nil {
-		panic(fmt.Sprintf("%s initialise: %v", ct, err))
-	}
 }
 
 func factory(name string) (i geneos.Instance) {
@@ -246,26 +240,28 @@ func (i *Router) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
-func (i *Router) Add(template string, port uint16, noCerts bool) (err error) {
+func (i *Router) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 
+	opts := instance.EvalAddOptions(options...)
+
 	cf := i.Config()
 
-	if port == 0 {
-		port = instance.NextFreePort(i.InstanceHost, &Component)
+	if opts.Port == 0 {
+		opts.Port = instance.NextFreePort(i.InstanceHost, &Component)
 	}
-	if port == 0 {
+	if opts.Port == 0 {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
-	config.Set(i.Config(), "port", port)
+	config.Set(i.Config(), "port", opts.Port)
 
 	config.Set(cf, cf.Join("config", "rebuild"), "initial")
 
 	cf.Default(cf.Join("config", "template"), templateName)
-	if template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{template})
+	if opts.Template != "" {
+		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
 		config.Set(cf, cf.Join("config", "template"), filenames[0])
 	}
 
@@ -281,7 +277,7 @@ func (i *Router) Add(template string, port uint16, noCerts bool) (err error) {
 	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
-	if !noCerts {
+	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
 	}
 

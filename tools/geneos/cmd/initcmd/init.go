@@ -99,6 +99,7 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads (password prompted)")
 
 	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
+	initCmd.PersistentFlags().MarkDeprecated("gateway-template", "no longer supported")
 
 	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
 	initCmd.PersistentFlags().Var(&initCmdExtras.Headers, "header", values.HeadersOptionsText)
@@ -123,12 +124,13 @@ geneos init
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
 	},
+
 	// initialise a geneos installation
 	//
 	// if no directory given and not running as root and the last component of the user's
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
-	// XXX Call any registered initializer funcs from components
+	// TODO: Call any registered initializer funcs from components
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := log.With("command", "init")
 
@@ -146,7 +148,7 @@ geneos init
 		// merge params into args as there may be a directory path in there
 		args = append(args, params...)
 
-		options, err := initProcessArgs(command, log, args, initCmdExtras)
+		options, err := initProcessArgs(args, initCmdExtras)
 		if err != nil {
 			return err
 		}
@@ -230,32 +232,30 @@ var initTLSCmd = &cobra.Command{
 }
 
 // initProcessArgs works through the parsed arguments and returns a
-// geneos.GeneosOptions slice to be passed to worker functions
-func initProcessArgs(_ *cobra.Command, log *slog.Logger, args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
+// geneos.GeneosOptions slice to be passed to worker functions. extras
+// is a [values.Values] structure of which only the Headers are used, if
+// given.
+//
+// TODO: external values: initCmdVersion, initCmdForce, initCmdArchive, initCmdNexus, initCmdSnapshot, initCmdDLUsername
+func initProcessArgs(args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
 	var root string
+
+	if initCmdSnapshot {
+		initCmdNexus = true
+	}
 
 	options = []geneos.PackageOption{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
 		geneos.Force(initCmdForce),
-	}
-
-	if initCmdArchive != "" {
-		options = append(options,
-			geneos.Source(initCmdArchive),
-		)
+		geneos.Source(initCmdArchive),
+		geneos.UseNexus(initCmdNexus),
+		geneos.UseNexusSnapshots(initCmdSnapshot),
 	}
 
 	// if passed in extras, add any headers
 	if len(extras) > 0 {
 		options = append(options, geneos.Headers(extras[0].Headers...))
-	}
-
-	if initCmdNexus {
-		options = append(options, geneos.UseNexus())
-		if initCmdSnapshot {
-			options = append(options, geneos.UseNexusSnapshots())
-		}
 	}
 
 	// always have a home directory. the logic below is required in case
@@ -320,7 +320,6 @@ func initProcessArgs(_ *cobra.Command, log *slog.Logger, args []string, extras .
 			}
 		}
 		// cannot clear password as it's an arg to the options below. caller should clear
-		// defer clear(password)
 
 		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(password))
 	}
@@ -329,7 +328,7 @@ func initProcessArgs(_ *cobra.Command, log *slog.Logger, args []string, extras .
 }
 
 func initCommon() (err error) {
-	initTemplates(geneos.LOCAL)
+	geneos.WriteTemplates(geneos.LOCAL, nil)
 
 	if initCmdInsecure {
 		return

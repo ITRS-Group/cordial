@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
@@ -16,7 +17,7 @@ import (
 
 // Add add an instance of component type ct the the optional
 // extra configuration values extras
-func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras values.Values, options ...AddOption) (i geneos.Instance, err error) {
+func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption) (i geneos.Instance, err error) {
 	if ct == nil {
 		return nil, fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
 	}
@@ -66,9 +67,9 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 		return
 	}
 
-	if port > 0 {
-		if j, err := ByPort(i.Host(), port); err == nil {
-			return nil, fmt.Errorf("%w: port %d is already in use by %q", geneos.ErrInvalidArgs, port, j.String())
+	if opts.Port > 0 {
+		if j, err := ByPort(i.Host(), opts.Port); err == nil {
+			return nil, fmt.Errorf("%w: port %d is already in use by %q", geneos.ErrInvalidArgs, opts.Port, j.String())
 		}
 	}
 
@@ -77,8 +78,8 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 		return nil, resp.Err
 	}
 
-	if opts.certBundle != "" {
-		_, err = ImportCertificates(i, opts.certBundle, "", opts.certBundlePassword)
+	if opts.CertBundle != "" {
+		_, err = ImportCertificates(i, opts.CertBundle, "", opts.certBundlePassword)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +99,12 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	}
 
 	// call components specific Add()
-	if err = i.Add(opts.template, port, opts.insecure || opts.certBundle != ""); err != nil {
+	// if err = i.Add(opts.template, opts.port, opts.insecure || opts.certBundle != ""); err != nil {
+	var o []any
+	for _, opt := range options {
+		o = append(o, opt)
+	}
+	if err = i.Add(o...); err != nil {
 		log.Error("failed to add instance", slog.Any("error", err))
 		return nil, err
 	}
@@ -135,7 +141,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 	}
 
 	keyfile := config.Get[config.KeyFile](cf, "keyfile")
-	if ncf, err := values.Set(i, extras, keyfile); err == nil {
+	if ncf, err := values.Set(i, opts.values, keyfile); err == nil {
 		i.SetConfig(ncf)
 		cf = ncf
 	}
@@ -195,20 +201,33 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, port uint16, extras 
 }
 
 type addOptions struct {
-	template           string
-	certBundle         string
-	certBundlePassword config.Secret
 	base               string
-	insecure           bool
-	start              bool
-	logs               bool
+	CertBundle         string
+	certBundlePassword config.Secret
+	Flags              *pflag.FlagSet
+	imports            []string
+	Insecure           bool
 	keyfile            string
 	keyfileCRC         string
-	imports            []string
+	logs               bool
+	Port               uint16
 	profiles           string
+	start              bool
+	Template           string
+	values             values.Values
 }
 
 type AddOption func(*addOptions)
+
+func EvalAddOptions(options ...any) *addOptions {
+	var o []AddOption
+	for _, opt := range options {
+		if m, ok := opt.(AddOption); ok {
+			o = append(o, m)
+		}
+	}
+	return evalAddOptions(o...)
+}
 
 func evalAddOptions(opts ...AddOption) *addOptions {
 	o := &addOptions{
@@ -220,19 +239,19 @@ func evalAddOptions(opts ...AddOption) *addOptions {
 	return o
 }
 
-func TemplatePath(template string) AddOption {
+func WithTemplate(template string) AddOption {
 	return func(o *addOptions) {
-		o.template = template
+		o.Template = template
 	}
 }
 
-func CertBundle(bundle string) AddOption {
+func WithCertBundle(bundle string) AddOption {
 	return func(o *addOptions) {
-		o.certBundle = bundle
+		o.CertBundle = bundle
 	}
 }
 
-func CertBundlePassword(password config.Secret) AddOption {
+func WithCertBundlePassword(password config.Secret) AddOption {
 	return func(o *addOptions) {
 		o.certBundlePassword = password
 	}
@@ -246,7 +265,7 @@ func Base(base string) AddOption {
 
 func Insecure(insecure bool) AddOption {
 	return func(o *addOptions) {
-		o.insecure = insecure
+		o.Insecure = insecure
 	}
 }
 
@@ -262,7 +281,7 @@ func LogsAfterAdd(logs bool) AddOption {
 	}
 }
 
-func Keyfile(keyfile string) AddOption {
+func WithKeyfile(keyfile string) AddOption {
 	return func(o *addOptions) {
 		o.keyfile = keyfile
 	}
@@ -274,14 +293,32 @@ func KeyfileCRC(crc string) AddOption {
 	}
 }
 
-func Imports(imports []string) AddOption {
+func WithImports(imports []string) AddOption {
 	return func(o *addOptions) {
 		o.imports = imports
 	}
 }
 
-func ProfilesPath(profiles string) AddOption {
+func WithProfiles(profiles string) AddOption {
 	return func(o *addOptions) {
 		o.profiles = profiles
+	}
+}
+
+func WithFlags(flags *pflag.FlagSet) AddOption {
+	return func(o *addOptions) {
+		o.Flags = flags
+	}
+}
+
+func WithPort(port uint16) AddOption {
+	return func(o *addOptions) {
+		o.Port = port
+	}
+}
+
+func WithValues(values values.Values) AddOption {
+	return func(o *addOptions) {
+		o.values = values
 	}
 }

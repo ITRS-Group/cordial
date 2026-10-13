@@ -18,7 +18,6 @@ limitations under the License.
 package main
 
 import (
-	"embed"
 	"fmt"
 	"os"
 	"path"
@@ -66,9 +65,6 @@ import (
 
 var log = logger.Logger
 
-//go:embed includes
-var Includes embed.FS
-
 func init() {
 	// strip any whitespace from the embedded VERSION value as early as
 	// possible
@@ -79,9 +75,10 @@ func init() {
 }
 
 func main() {
-	// cordial.ExecutableName() returns a full resolved name, including
-	// following symlinks, and we want to know if the are being called
-	// through a symlink, so roll our own here
+	// We cannot call cordial.ExecutableName() as it returns a full
+	// resolved name, including following symlinks, and we want to know
+	// if the are being called through a symlink for command emulation,
+	// so roll our own here
 	execname := path.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the

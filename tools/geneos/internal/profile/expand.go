@@ -8,6 +8,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/maja42/goval"
+
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -21,7 +23,7 @@ import (
 // If the parameter is empty or not defined, an empty string is
 // returned. If parsing the PATTERN fails then no substitution is
 // performed.
-func ReplacePrefix(ci map[string]any, s string, trim bool) (result string, err error) {
+func ReplacePrefix(ci map[string]any, s string, trim bool, _ ...any) (result string, err error) {
 	s = strings.TrimPrefix(s, "replace:")
 	sep := s[len(s)-1:] // last character as separator
 	if sep == ":" || sep == "" {
@@ -80,7 +82,7 @@ func ReplacePrefix(ci map[string]any, s string, trim bool) (result string, err e
 // parameter is set but an empty string then it is treated as if it were
 // not set. To return a blank string if no parameter is set use
 // `${select:param:}` noting the colon just before the closing brace.
-func SelectPrefix(ci map[string]any, s string, trim bool) (result string, err error) {
+func SelectPrefix(ci map[string]any, s string, trim bool, _ ...any) (result string, err error) {
 	// const validSeparators = "+ /-"
 	var r strings.Builder
 
@@ -150,4 +152,32 @@ func SelectPrefix(ci map[string]any, s string, trim bool) (result string, err er
 	}
 
 	return def, nil
+}
+
+// Flag replaces a `flag:` prefix after evaluating the right hand side
+// by passing the string through goval with the provided flags (in
+// data[0] as variables, supporting bool, int, uint types and everything
+// else as strings). The expression is still evaluated, even if no flags
+// are provided. If the expression results in an error and empty string
+// is returned.
+func Flag(ci map[string]any, expr string, trim bool, data ...any) (result string, err error) {
+	var flags map[string]any
+	var ok bool
+
+	expr = strings.TrimPrefix(expr, "flag:")
+
+	if len(data) > 0 {
+		flags, ok = data[0].(map[string]any)
+		if !ok {
+			log.Debug("expected map[string]any for flag data", slog.String("type", fmt.Sprintf("%T", data[0])))
+		}
+	}
+
+	eval := goval.NewEvaluator()
+	res, err := eval.Evaluate(expr, flags, nil)
+	if err != nil {
+		log.Debug("error evaluating flag expression", slog.String("expr", expr), slog.Any("error", err))
+		return "", err
+	}
+	return fmt.Sprint(res), nil
 }
