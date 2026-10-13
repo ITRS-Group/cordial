@@ -166,7 +166,7 @@ func Expand[T string | []byte](c *Config, input string, options ...ExpandOption)
 	return expand[T](c, input, options...)
 }
 
-// ExpandStringSlice applies ExpandString to each member of the input
+// ExpandStringSlice applies [config.Expand] to each member of the input
 // slice.
 func (c *Config) ExpandStringSlice(input []string, options ...ExpandOption) []string {
 	c.rwmutex.RLock()
@@ -174,29 +174,30 @@ func (c *Config) ExpandStringSlice(input []string, options ...ExpandOption) []st
 	return c.expandStringSlice(input, options...)
 }
 
-// ExpandStringSlice applies ExpandString to each member of the input
+// ExpandStringSlice applies [config.Expand] to each member of the input
 // slice for the global configuration.
 func ExpandStringSlice(input []string, options ...ExpandOption) []string {
 	return global.ExpandStringSlice(input, options...)
 }
 
-// ExpandPassword expands the input string and returns a Secret. The
-// TrimSPace option is ignored.
+// ExpandPassword expands the input string using [config.Expand] and
+// returns a Secret. The TrimSPace option is ignored.
 func (c *Config) ExpandToPassword(input string, options ...ExpandOption) Secret {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return Secret(expand[[]byte](c, input, options...))
 }
 
-// ExpandToPassword expands the input string using the global
-// configuration and returns a Secret. The TrimSpace option is ignored.
-// This is a convenience wrapper around the method on the global Config.
+// ExpandToPassword expands the input string using [config.Expand] with
+// the global configuration and returns a Secret. The TrimSpace option
+// is ignored. This is a convenience wrapper around the method on the
+// global Config.
 func ExpandToPassword(input string, options ...ExpandOption) Secret {
 	return global.ExpandToPassword(input, options...)
 }
 
 // ExpandAllSettings returns all the settings from config structure c
-// applying ExpandString to all string values and all string slice
+// applying [config.Expand] to all string values and all string slice
 // values. Non-string types are left unchanged. Further types, e.g. maps
 // of strings, may be added in future releases.
 func (c *Config) ExpandAllSettings(options ...ExpandOption) (all map[string]any) {
