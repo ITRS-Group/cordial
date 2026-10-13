@@ -57,7 +57,6 @@ var RootComponent = Component{
 		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
 	},
 	Directories: []string{
-		"audit",
 		"packages/downloads",
 	},
 	CleanList: strings.Join([]string{
@@ -183,22 +182,24 @@ type Component struct {
 
 	// Functions
 
-	// Initialise a component. This is called after the directories
-	// have been created and the component is registered. It is called
-	// with the Host and the Component itself, so that it can create
-	// any files or directories that are not part of the initial
-	// directories.
-	// If this is nil then no initialisation is done.
-	Initialise func(*Host, *Component)
+	// Initialise a component, called if not nil. This is called after
+	// component directories have been created and the component is
+	// registered. It is called with the Host and the Component itself,
+	// so that it can create any files or directories that are not part
+	// of the initial directories. The component has to be passed from
+	// the caller otherwise there is a reference loop.
+	Initialise func(*Host, *Component) error
 
 	// New is the factory method for the component. It has to be added
-	// during initialisation to avoid loops
+	// during registration to avoid loops
 	New func(string) Instance
 
 	// GetPID returns the process ID of an instance - if nil a standard
 	// function for the OS type is used
 	GetPID func(arg any, cmdline []string) bool // if set, use this to get the PID of an instance
 
+	// ApplyProfile processes the profile name component key in the
+	// profile configuration pf
 	ApplyProfile func(pf *config.Config, name, key string) error
 }
 

@@ -25,12 +25,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"src.elv.sh/pkg/md"
@@ -83,29 +80,19 @@ func init() {
 		// initialise standard logging before loading global config
 		logger.Init(packageName)
 
-		cf, err := initGlobalConfig()
+		_, err := initGlobalConfig()
 		if err != nil {
 			log.Error("failed to initialize global config")
 
 		}
 
-		defaultFile := filepath.Join(config.Get[string](cf, cordial.ExecutableName(), config.DefaultValue(os.TempDir())), "audit", "audit.log")
-		if err = os.MkdirAll(filepath.Dir(defaultFile), 0755); err != nil {
-			log.Error("failed to create audit directory:", slog.Any("error", err), slog.String("directory", filepath.Dir(defaultFile)))
+		// if we are initialising and environment via init, deploy etc.
+		// then this is not run, do it in those
+		if geneos.LocalRoot() != "" {
+			if err := geneos.InitGlobalAudit(); err != nil {
+				log.Error("failed to initialize global audit", slog.Any("error", err))
+			}
 		}
-
-		// initialise global audit logging after loading global config,
-		// which may contain defaults etc.
-		logger.InitGlobalAudit(&timberjack.Logger{
-			Filename:         config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(defaultFile)),
-			MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.DefaultValue(10))),
-			MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.DefaultValue(30))),
-			MaxBackups:       config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(config.DefaultValue(5))),
-			Compression:      config.Get[string](cf, cf.Join("audit", "compression"), config.DefaultValue(config.DefaultValue("gzip"))),
-			BackupTimeFormat: "20060102150405",
-			RotationInterval: time.Hour * 24 * 7,
-			RotateAt:         []string{"00:00"},
-		})
 		geneos.Init(cordial.ExecutableName())
 	})
 
