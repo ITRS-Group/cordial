@@ -64,7 +64,7 @@ var rootCmd = &cobra.Command{
 				continue
 			}
 			defer r.Close()
-			log.Info("container log for %s open", slog.String("containerID", i.ID))
+			log.Info("container log open", slog.String("containerID", i.ID), slog.Any("names", i.Names))
 			wg.Add(1)
 			go func(i container.Summary) {
 				defer wg.Done()
