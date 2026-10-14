@@ -274,6 +274,8 @@ func (c *Config) AllKeys() (keys []string) {
 //
 // To return all the keys and values, use AllKeys to get the keys and
 // then Get to get the values for each key.
+//
+// Values are not expanded when retrieved using this function.
 func (c *Config) AllSettings() (value map[string]any) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
