@@ -59,12 +59,12 @@ type ExpandOption func(*expandOptions)
 
 // use a normal map, protected with mutex and not sync.Map as this is
 // copied into a normal map later on
-var defaultFuncMaps = map[string]fnmap{
-	"http":  fnmap{fn: fetchURL},
-	"https": fnmap{fn: fetchURL},
-	"file":  fnmap{fn: fetchFile},
-}
 var defaultFuncMapsMutex sync.Mutex
+var defaultFuncMaps = map[string]fnmap{
+	"http":  {fn: fetchURL},
+	"https": {fn: fetchURL},
+	"file":  {fn: fetchFile},
+}
 
 func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	e = &expandOptions{
