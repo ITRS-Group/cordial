@@ -79,7 +79,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 
 	if opts.CertBundle != "" {
-		_, err = ImportCertificates(i, opts.CertBundle, "", opts.certBundlePassword)
+		_, err = ImportCertificates(i, opts.CertBundle, "", opts.CertBundlePassword)
 		if err != nil {
 			return nil, err
 		}
@@ -94,12 +94,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		}
 	}
 
-	if ct.IsA("profile") && opts.profiles != "" {
-		config.Set(cf, "profiles", opts.profiles)
-	}
-
 	// call components specific Add()
-	// if err = i.Add(opts.template, opts.port, opts.insecure || opts.certBundle != ""); err != nil {
 	var o []any
 	for _, opt := range options {
 		o = append(o, opt)
@@ -109,18 +104,18 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		return nil, err
 	}
 
-	if opts.base != "active_prod" {
-		config.Set(cf, "version", opts.base)
+	if opts.Base != "active_prod" {
+		config.Set(cf, "version", opts.Base)
 	}
 
 	if ct.IsA("gateway") {
 		// override the instance generated keyfile if options given
 		var sharedPath string
-		if opts.keyfileCRC != "" {
-			crcFile := strings.TrimSuffix(opts.keyfileCRC, ".aes") + ".aes"
+		if opts.KeyfileCRC != "" {
+			crcFile := strings.TrimSuffix(opts.KeyfileCRC, ".aes") + ".aes"
 			sharedPath = i.Type().Shared(i.Host(), "keyfiles", crcFile)
-		} else if opts.keyfile != "" {
-			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), opts.keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
+		} else if opts.Keyfile != "" {
+			paths, _, err := geneos.ImportSharedKey(i.Host(), i.Type(), opts.Keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
 				return nil, err
 			}
@@ -141,7 +136,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 
 	keyfile := config.Get[config.KeyFile](cf, "keyfile")
-	if ncf, err := values.Set(i, opts.values, keyfile); err == nil {
+	if ncf, err := values.Set(i, opts.Values, keyfile); err == nil {
 		i.SetConfig(ncf)
 		cf = ncf
 	}
@@ -167,7 +162,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	i.Load()
 	i.Rebuild(true)
 
-	_ = ImportFiles(i, opts.imports...)
+	_ = ImportFiles(i, opts.Imports...)
 
 	// make sure base version link exists
 	if basename, found := config.Lookup[string](cf, "version"); found {
@@ -188,7 +183,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		i.AuditEvent("add")
 	}
 
-	if opts.start || opts.logs {
+	if opts.Start || opts.Logs {
 		if err = Start(i); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				err = nil
@@ -200,21 +195,24 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	return i, nil
 }
 
+// addOptions holds the options for adding a new instance. fields are
+// exported as they are accessed in component packages and other parts
+// of the code.
 type addOptions struct {
-	base               string
+	Base               string
 	CertBundle         string
-	certBundlePassword config.Secret
-	Flags              *pflag.FlagSet
-	imports            []string
+	CertBundlePassword config.Secret
+	Flags              *pflag.FlagSet // command flags as per command line, for `${flag:expr}` expansion
+	Imports            []string
 	Insecure           bool
-	keyfile            string
-	keyfileCRC         string
-	logs               bool
+	Keyfile            string
+	KeyfileCRC         string
+	Logs               bool
 	Port               uint16
-	profiles           string
-	start              bool
+	Profiles           *config.Config
+	Start              bool
 	Template           string
-	values             values.Values
+	Values             values.Values
 }
 
 type AddOption func(*addOptions)
@@ -231,7 +229,7 @@ func EvalAddOptions(options ...any) *addOptions {
 
 func evalAddOptions(opts ...AddOption) *addOptions {
 	o := &addOptions{
-		base: "active_prod",
+		Base: "active_prod",
 	}
 	for _, opt := range opts {
 		opt(o)
@@ -253,13 +251,13 @@ func WithCertBundle(bundle string) AddOption {
 
 func WithCertBundlePassword(password config.Secret) AddOption {
 	return func(o *addOptions) {
-		o.certBundlePassword = password
+		o.CertBundlePassword = password
 	}
 }
 
 func Base(base string) AddOption {
 	return func(o *addOptions) {
-		o.base = base
+		o.Base = base
 	}
 }
 
@@ -271,37 +269,37 @@ func Insecure(insecure bool) AddOption {
 
 func StartAfterAdd(start bool) AddOption {
 	return func(o *addOptions) {
-		o.start = start
+		o.Start = start
 	}
 }
 
 func LogsAfterAdd(logs bool) AddOption {
 	return func(o *addOptions) {
-		o.logs = logs
+		o.Logs = logs
 	}
 }
 
 func WithKeyfile(keyfile string) AddOption {
 	return func(o *addOptions) {
-		o.keyfile = keyfile
+		o.Keyfile = keyfile
 	}
 }
 
 func KeyfileCRC(crc string) AddOption {
 	return func(o *addOptions) {
-		o.keyfileCRC = crc
+		o.KeyfileCRC = crc
 	}
 }
 
 func WithImports(imports []string) AddOption {
 	return func(o *addOptions) {
-		o.imports = imports
+		o.Imports = imports
 	}
 }
 
-func WithProfiles(profiles string) AddOption {
+func WithProfiles(profiles *config.Config) AddOption {
 	return func(o *addOptions) {
-		o.profiles = profiles
+		o.Profiles = profiles
 	}
 }
 
@@ -319,6 +317,6 @@ func WithPort(port uint16) AddOption {
 
 func WithValues(values values.Values) AddOption {
 	return func(o *addOptions) {
-		o.values = values
+		o.Values = values
 	}
 }

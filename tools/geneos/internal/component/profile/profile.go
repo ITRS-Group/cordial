@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/pflag"
@@ -183,9 +182,10 @@ func (i *Profile) Add(options ...any) (err error) {
 
 	opts := instance.EvalAddOptions(options...)
 
-	pf, err := profile.Load(cordial.ExecutableName(), config.FilePath(config.Get[string](i.Config(), "profiles")))
-	if err != nil {
-		return err
+	pf := opts.Profiles
+	if pf == nil {
+		log.Error("no profiles configuration provided")
+		return os.ErrInvalid
 	}
 
 	// set a top-level "flags" key to allow `${flag:goval}` prefix
@@ -205,6 +205,8 @@ func (i *Profile) Add(options ...any) (err error) {
 				flags[f.Name] = f.Value.String()
 			}
 		})
+
+		// pass to profile eval
 		config.Set(pf, "flags", flags)
 	}
 

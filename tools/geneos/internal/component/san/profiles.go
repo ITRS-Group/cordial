@@ -59,42 +59,19 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 		name := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
 		vals := profile.ApplyCommonParams(pf, san.Common, lookup)
-
 		vals.Gateways = make(map[string]string, len(san.Gateways))
 		for n, g := range san.Gateways {
-			vals.Gateways[n] = config.Expand[string](pf, g,
-				config.LookupTable(lookup),
-				config.Prefix("select", profile.SelectPrefix),
-				config.Prefix("replace", profile.ReplacePrefix),
-				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-			)
+			vals.Gateways[n] = config.Expand[string](pf, g)
 		}
-
-		vals.Types = pf.ExpandStringSlice(san.Types,
-			config.LookupTable(lookup),
-			config.Prefix("select", profile.SelectPrefix),
-			config.Prefix("replace", profile.ReplacePrefix),
-			config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-		)
-
-		vals.Attributes = pf.ExpandStringSlice(san.Attributes,
-			config.LookupTable(lookup),
-			config.Prefix("select", profile.SelectPrefix),
-			config.Prefix("replace", profile.ReplacePrefix),
-			config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-		)
+		vals.Types = pf.ExpandStringSlice(san.Types)
+		vals.Attributes = pf.ExpandStringSlice(san.Attributes)
 
 		// vals.Variables = san.Variables
 		for _, v := range san.Variables {
 			vals.Variables = append(vals.Variables, values.Variable{
-				Type: v.Type,
-				Name: v.Name,
-				Value: config.Expand[string](pf, v.Value,
-					config.LookupTable(lookup),
-					config.Prefix("select", profile.SelectPrefix),
-					config.Prefix("replace", profile.ReplacePrefix),
-					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-				),
+				Type:  v.Type,
+				Name:  v.Name,
+				Value: config.Expand[string](pf, v.Value),
 			})
 		}
 
@@ -109,7 +86,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			}
 		}
 
-		if err := profile.ApplyInstance(ct, san.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, san.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}
@@ -159,52 +136,38 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 
 		entities = make([]ManagedEntity, len(instances))
 		for idx, i := range instances {
-			// TODO: get this passed down to the function - global lookup table
-			lookup := map[string]string{
-				"hostname": i.Host().String(),
-			}
-
 			cf := i.Config()
+
+			// set the default options for the instance configuration,
+			// which is used as a source of data for the managed entity
+			// loop below
+			lookup := map[string]string{
+				"hostname": geneos.LOCAL.String(),
+			}
+			cf.SetDefaultExpandOptions(
+				config.LookupTable(lookup),
+				config.Prefix("select", profile.SelectPrefix),
+				config.Prefix("replace", profile.ReplacePrefix),
+				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
+				config.NoDecode(true),
+			)
 
 			// build entity using lookup table for expansion, with custom functions
 			variables := make(values.Variables, len(entity.Variables))
 			for idx, v := range entity.Variables {
 				variables[idx] = values.Variable{
-					Type: v.Type,
-					Name: v.Name,
-					Value: config.Expand[string](cf, v.Value,
-						config.LookupTable(lookup),
-						config.Prefix("select", profile.SelectPrefix),
-						config.Prefix("replace", profile.ReplacePrefix),
-						config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-					),
+					Type:  v.Type,
+					Name:  v.Name,
+					Value: config.Expand[string](cf, v.Value),
 				}
 			}
 
-			name := config.Expand[string](cf, entity.Name,
-				config.LookupTable(lookup),
-				config.Prefix("select", profile.SelectPrefix),
-				config.Prefix("replace", profile.ReplacePrefix),
-				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-			)
-
 			e := ManagedEntity{
-				Name: name,
-				Types: cf.ExpandStringSlice(entity.Types,
-					config.LookupTable(lookup),
-					config.Prefix("select", profile.SelectPrefix),
-					config.Prefix("replace", profile.ReplacePrefix),
-					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-				),
-				Attributes: cf.ExpandStringSlice(entity.Attributes,
-					config.LookupTable(lookup),
-					config.Prefix("select", profile.SelectPrefix),
-					config.Prefix("replace", profile.ReplacePrefix),
-					config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-				),
-				Variables: variables,
+				Name:       config.Expand[string](cf, entity.Name),
+				Types:      cf.ExpandStringSlice(entity.Types),
+				Attributes: cf.ExpandStringSlice(entity.Attributes),
+				Variables:  variables,
 			}
-			// Variables:  entity.Variables,
 			entities[idx] = e
 		}
 	}

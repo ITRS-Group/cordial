@@ -340,11 +340,11 @@ func AllComponents() (cts []*Component) {
 }
 
 // RealComponents returns a slice of all registered components that are
-// not the root, sorted by name
+// not the root or profile, sorted by name
 func RealComponents() (cts []*Component) {
-	for _, c := range registeredComponents {
-		if c != &RootComponent {
-			cts = append(cts, c)
+	for _, ct := range registeredComponents {
+		if ct != &RootComponent && !ct.IsA("profile") {
+			cts = append(cts, ct)
 		}
 	}
 	slices.SortFunc(cts, func(i, j *Component) int { return strings.Compare(i.Name, j.Name) })

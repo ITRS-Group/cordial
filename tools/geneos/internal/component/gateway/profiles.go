@@ -54,7 +54,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 
-		if err := profile.ApplyInstance(ct, gateway.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, gateway.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

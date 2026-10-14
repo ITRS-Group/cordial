@@ -91,8 +91,8 @@ geneos add netprobe infraprobe12 --start --log
 		CmdGlobal:      "false",
 		CmdRequireHome: "true",
 	},
-	RunE: func(cmd *cobra.Command, _ []string) (err error) {
-		ct, names, params, err := FetchArgs(cmd)
+	RunE: func(command *cobra.Command, _ []string) (err error) {
+		ct, names, params, err := FetchArgs(command)
 		if err != nil {
 			return
 		}
@@ -113,6 +113,7 @@ geneos add netprobe infraprobe12 --start --log
 			instance.WithImports(addCmdImportFiles),
 			instance.StartAfterAdd(addCmdStart),
 			instance.LogsAfterAdd(addCmdLogs),
+			instance.WithProfiles(Profiles),
 		)
 		if addCmdLogs {
 			instance.FollowLog(i, instance.WithStderr(true)) // never returns

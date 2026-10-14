@@ -35,23 +35,41 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 )
 
 const (
 	packageName = "cordial"
 )
 
-var cfgFile string
+// local vars and flag
+var (
+	cfgFile      string
+	profilesFile string
+	debug        bool
+	quiet        bool
+	log          = logger.Logger
+)
 
-// Hostname is the cmd package global host selected ny the `--host`/`-H` option
-var Hostname string
+// exported vars
+var (
+	// "global" profiles configuration
+	Profiles *config.Config
 
-// UserKeyFile is the path to the user's key file. It starts as DefaultUserKeyFile but can be changed.
-var UserKeyFile = geneos.DefaultUserKeyfile
+	// Hostname is the cmd package global host selected ny the `--host`/`-H` option
+	Hostname string
 
-var debug, quiet bool
+	// UserKeyFile is the path to the user's key file. It starts as DefaultUserKeyFile but can be changed.
+	UserKeyFile = geneos.DefaultUserKeyfile
 
+	AllowRoot bool
+)
+
+// GeneosUnsetError is returned when no existing Geneos environment is
+// found. It is rendered through a simple markdown renderer for TTY
+// output.
 var GeneosUnsetError = errors.New(md.RenderString((strings.ReplaceAll(
 
 	`No existing Geneos environment found.
@@ -72,9 +90,6 @@ You can do one of the following:
 
 `, "|", "`")), &md.TTYCodec{Width: 76}))
 
-var AllowRoot bool
-var log = logger.Logger
-
 func init() {
 	cobra.OnInitialize(func() {
 		// initialise standard logging before loading global config
@@ -82,8 +97,14 @@ func init() {
 
 		_, err := initGlobalConfig()
 		if err != nil {
-			log.Error("failed to initialize global config")
+			log.Error("failed to initialize global config", slog.Any("error", err))
+		}
 
+		log.Debug("flags parsed?", slog.Bool("parsed", Cmd.Flags().Parsed()))
+
+		Profiles, err = profile.ReadConfig(profilesFile)
+		if err != nil {
+			log.Error("failed to initialize profiles config", slog.Any("error", err))
 		}
 
 		// if we are initialising and environment via init, deploy etc.
@@ -99,8 +120,32 @@ func init() {
 	config.DefaultKeyDelimiter("::")
 	config.ResetConfig(config.KeyDelimiter("::"))
 
-	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are $HOME/.config/"+cordial.ExecutableName()+".json, "+
+	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are "+
+		config.AbbreviateHome(
+			config.Path(cordial.ExecutableName(),
+				config.SkipSystemDir(),
+				config.SkipWorkingDir(),
+			),
+		)+
+		", "+
 		config.Path(cordial.ExecutableName(),
+			config.SkipUserConfDir(),
+			config.SkipWorkingDir())+
+		")")
+
+	Cmd.PersistentFlags().StringVar(&profilesFile, "profiles", "", "profiles configuration (defaults are "+
+		config.AbbreviateHome(
+			config.Path("profiles",
+				config.AppName(cordial.ExecutableName()),
+				config.Format("yaml"),
+				config.SkipSystemDir(),
+				config.SkipWorkingDir(),
+			),
+		)+
+		", "+
+		config.Path("profiles",
+			config.AppName(cordial.ExecutableName()),
+			config.Format("yaml"),
 			config.SkipUserConfDir(),
 			config.SkipWorkingDir())+
 		")")
@@ -209,9 +254,10 @@ geneos restart
 		ctx := context.WithValue(context.Background(), CmdKey, &CmdValType{})
 		command.SetContext(ctx)
 
-		// "manually" parse root flags so that legacy commands get conf
-		// file, debug etc.
-		command.Root().ParseFlags(args)
+		// boot-strap profile function map, no that flags are parsed
+		// set defaults for all profile expansion
+
+		profile.SetExpandOptions(command.Flags(), Profiles)
 
 		// check if user is root, and only proceed if conditions are met:
 		// * the command has the `allow-root` annotation set to "true", or
@@ -385,28 +431,4 @@ func initGlobalConfig() (cf *config.Config, err error) {
 	log.Debug("hosts loaded")
 
 	return
-}
-
-// RunE runs a command in a sub-package to avoid import loops. It is
-// named to align with the cobra struct member of the same name.
-//
-// The caller must have:
-//
-//	DisableFlagParsing: true,
-//
-// set in their command struct for flags to work. Then hook this
-// function like this in the command struct:
-//
-//	RunE: func(command *cobra.Command, args []string) (err error) {
-//	     return RunE(command.Root(), []string{"host", "ls"}, args)
-//	},
-func RunE(root *cobra.Command, path []string, args []string) (err error) {
-	alias, newargs, err := root.Find(append(path, args...))
-	if err != nil {
-		return
-	}
-	alias.ParseFlags(newargs)
-	ParseArgs(alias, newargs)
-
-	return alias.RunE(alias, alias.Flags().Args())
 }

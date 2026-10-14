@@ -29,8 +29,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -67,20 +69,69 @@ func Initialise(appName string) {
 	}
 }
 
-// LoadProfiles initializes the profiles by reading from the specified configuration file.
-// If the file does not exist, it creates a new one with default values.
-func Load(appName string, options ...config.FileOption) (pf *config.Config, err error) {
-	options = append(options,
-		config.AppName(appName),
+// ReadConfig reads the profiles configuration from the specified file.
+func ReadConfig(profilesFile string) (pf *config.Config, err error) {
+	pf, err = config.Read("profiles",
+		config.AppName(cordial.ExecutableName()),
+		config.FilePath(profilesFile),
 		config.Format("yaml"),
+		config.SkipWorkingDir(),
+		config.UseDefaults(false),
 		config.WithDefaults(profilesDefault, "yaml"),
 	)
-	pf, err = config.Read("profiles", options...)
 	if err != nil {
-		return
+		log.Error("error reading configuration", slog.Any("error", err))
+	}
+
+	configPath := config.Path("profiles",
+		config.AppName(cordial.ExecutableName()),
+		config.FilePath(profilesFile),
+		config.Format("yaml"),
+		config.SkipWorkingDir(),
+		config.UseDefaults(false),
+		config.WithDefaults(profilesDefault, "yaml"),
+	)
+
+	if configPath != "" {
+		log.Debug("profiles loaded", slog.String("from", configPath))
+	} else {
+		log.Debug("no profiles file found, using defaults")
 	}
 
 	return
+}
+
+// SetExpandOptions sets the default expansion options for the given
+// profile configuration based on the command's flags.
+func SetExpandOptions(flagset *pflag.FlagSet, pf *config.Config) {
+	flags := make(map[string]any)
+	// populate the flags map from flagset.Flags()
+	flagset.VisitAll(func(f *pflag.Flag) {
+		switch f.Value.Type() {
+		case "bool":
+			flags[f.Name], _ = strconv.ParseBool(f.Value.String())
+		case "int", "int16", "int32", "int64":
+			flags[f.Name], _ = strconv.Atoi(f.Value.String())
+		case "uint", "uint16", "uint32", "uint64":
+			flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
+		default:
+			flags[f.Name] = f.Value.String()
+		}
+	})
+
+	// pass to profile eval
+	config.Set(pf, "flags", flags)
+
+	lookup := map[string]string{
+		"hostname": geneos.LOCAL.String(),
+	}
+	pf.SetDefaultExpandOptions(
+		config.LookupTable(lookup),
+		config.Prefix("select", SelectPrefix),
+		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+		config.NoDecode(true),
+	)
 }
 
 type Common struct {
@@ -169,14 +220,14 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
-func ApplyCommonParams(pf *config.Config, p Common, lookup map[string]string) (vals values.Values) {
-	vals.Envs = pf.ExpandStringSlice(p.Env,
+func ApplyCommonParams(pf *config.Config, common Common, lookup map[string]string) (vals values.Values) {
+	vals.Envs = pf.ExpandStringSlice(common.Env,
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
 		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
 	)
-	vals.Params = pf.ExpandStringSlice(p.Params,
+	vals.Params = pf.ExpandStringSlice(common.Params,
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
@@ -187,10 +238,10 @@ func ApplyCommonParams(pf *config.Config, p Common, lookup map[string]string) (v
 
 // ApplyInstance applies the given common parameters and values to the
 // specified instance.
-func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
-	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
-
+func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
 	var i geneos.Instance
+
+	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
 
 	if len(instances) == 0 {
 		// create here
@@ -210,6 +261,7 @@ func ApplyInstance(ct *geneos.Component, common Common, name string, deleteKeys 
 			instance.WithCertBundle(common.CertBundle),
 			instance.WithCertBundlePassword(common.CertBundlePassword),
 			instance.WithPort(port),
+			instance.WithProfiles(pf),
 		)
 		if err != nil {
 			return err

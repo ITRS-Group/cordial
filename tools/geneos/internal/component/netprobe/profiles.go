@@ -39,7 +39,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 
 		vals := profile.ApplyCommonParams(pf, netprobe.Common, lookup)
 
-		if err := profile.ApplyInstance(ct, netprobe.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, netprobe.Common, name, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

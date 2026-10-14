@@ -52,7 +52,8 @@ var deployCmdPassword, deployCmdBundlePassword config.Secret
 var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = values.Values{}
-var deployCmdProfiles string
+
+// var deployCmdProfiles string
 
 var flags *pflag.FlagSet
 
@@ -103,7 +104,7 @@ func init() {
 
 	deployCmd.Flags().VarP(&deployCmdImportFiles, "import", "I", "import file(s) to instance. DEST defaults to the base\nname of the import source or if given it must be\nrelative to and below the instance directory\n(Repeat as required)")
 
-	deployCmd.Flags().StringVar(&deployCmdProfiles, "profiles", "", "Profile configuration file")
+	// deployCmd.Flags().StringVar(&deployCmdProfiles, "profiles", "", "Profile configuration file")
 
 	deployCmd.Flags().VarP(&deployCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
 	deployCmd.Flags().VarP(&deployCmdExtras.Includes, "include", "i", values.IncludeValuesOptionsText)
@@ -347,6 +348,7 @@ var deployCmd = &cobra.Command{
 			instance.KeyfileCRC(deployCmdKeyfileCRC),
 			instance.WithImports(deployCmdImportFiles),
 			instance.StartAfterAdd(deployCmdStart),
+			instance.WithProfiles(Profiles),
 		)
 		if err != nil {
 			return err
@@ -361,12 +363,10 @@ var deployCmd = &cobra.Command{
 	},
 }
 
-func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
+func deployProfile(h *geneos.Host, ct *geneos.Component, name string) (err error) {
 	// discover which components are in the profile
-	pf, err := profile.Load(cordial.ExecutableName(), config.FilePath(deployCmdProfiles))
-	if err != nil {
-		return err
-	}
+	pf := Profiles
+
 	instances := profile.ListComponents(h, pf, name)
 	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
 
@@ -479,6 +479,7 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 				instance.WithImports(deployCmdImportFiles),
 				instance.StartAfterAdd(deployCmdStart),
 				instance.WithFlags(flags),
+				instance.WithProfiles(Profiles),
 			)
 			if err != nil {
 				return err
@@ -491,7 +492,7 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) error {
 	_, err = instance.Add(h, ct, name,
 		instance.WithPort(deployCmdPort),
 		instance.WithValues(deployCmdExtras),
-		instance.WithProfiles(deployCmdProfiles),
+		instance.WithProfiles(Profiles),
 		instance.Base(deployCmdBase),
 		instance.Insecure(deployCmdInsecure),
 		instance.WithCertBundle(deployCmdInstanceBundle),
