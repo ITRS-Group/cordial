@@ -18,6 +18,7 @@ limitations under the License.
 package ssoagent
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -280,6 +281,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
+	cf := i.Config()
 	ssoconf := config.New()
 	if err = ssoconf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -288,16 +290,21 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 		return false, err
 	}
 
+	// rebuild the truststore, which should only include validation information such as root CAs
 	truststorePath := instance.HomeRel(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
 	truststorePassword := config.Get[config.Secret](ssoconf,
 		config.Join("server", "trust_store", "password"),
-		config.DefaultValue(config.Secret("changeit")),
+		config.DefaultValue(
+			config.Get[string](cf, cf.Join("env", "ITRS_SSO_TRUSTSTORE_PW"),
+				config.DefaultValue("changeit"),
+			),
+		),
 	)
 	defer clear(truststorePassword)
 
-	roots, err := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
-
-	// (re)build the truststore (typically config/keystore.db) but only if it's not the install-wide one, to avoid truncating it
+	// (re)build the truststore (typically config/keystore.db) but only
+	// if it's not the install-wide one, to avoid truncating it
+	roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
 	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(i.Host(), certs.KeystoreExtension) {
 		if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, roots...); err != nil {
 			return false, err
@@ -310,9 +317,17 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 		keystorePath := instance.HomeRel(i, ksl)
 		keystorePassword := config.Get[config.Secret](ssoconf,
 			config.Join("server", "key_store", "password"),
-			config.DefaultValue(config.Secret("changeit")),
+			config.DefaultValue(
+				config.Get[string](cf, cf.Join("env", "ITRS_SSO_KEYSTORE_PW"),
+					config.DefaultValue("changeit"),
+				),
+			),
 		)
 		defer clear(keystorePassword)
+
+		if truststorePath == keystorePath && !bytes.Equal(truststorePassword, keystorePassword) {
+			return false, fmt.Errorf("truststore and keystore paths are the same but passwords differ")
+		}
 
 		ks, err := certs.ReadKeystore(i.Host(), keystorePath, keystorePassword)
 		if err != nil {
