@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"path"
 	"regexp"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 	"github.com/itrs-group/cordial/pkg/logger"
@@ -37,25 +39,65 @@ func init() {
 		Entities:   optionSlice{"remove-all"},
 		Attributes: optionSlice{},
 		Samplers:   optionSlice{"keep"},
-		Types:      optionSlice{"keep"},
+		Types:      optionSlice{"remove-empty"},
 		Dataviews:  optionSlice{"keep"},
 	}
 
-	cleanCmd.Flags().BoolVarP(&cleanKeepAll, "keep-all", "k", false, "Keep all data not removed by other options (overrides defaults)")
+	cleanCmd.Flags().Var(&cleanOptions.Gateways, "gateway", "Gateway name updates. Default 'remove-all'")
 
-	cleanCmd.Flags().Var(&cleanOptions.Gateways, "gateway", "Gateway name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+	cleanCmd.Flags().Var(&cleanOptions.Probes, "probe", "Probe name updates. Default 'remove-all'")
 
-	cleanCmd.Flags().Var(&cleanOptions.Probes, "probe", "Probe name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+	cleanCmd.Flags().Var(&cleanOptions.Entities, "entity", "Entity name updates. Default 'remove-all'")
 
-	cleanCmd.Flags().Var(&cleanOptions.Entities, "entity", "Entity name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+	cleanCmd.Flags().Var(&cleanOptions.Samplers, "sampler", "Sampler name updates. Default 'keep'")
 
-	cleanCmd.Flags().Var(&cleanOptions.Attributes, "attribute", "Attribute updates. Can be repeated, applied in order given. Valid options:\n'remove:KEY[=VALUE]' | 'add:KEY=VALUE' | 'replace:KEY=VALUE' | 'remove-all'")
+	cleanCmd.Flags().Var(&cleanOptions.Dataviews, "dataview",
+		`Dataview name updates. Default 'keep'.
 
-	cleanCmd.Flags().Var(&cleanOptions.Samplers, "sampler", "Sampler name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+For the above xpath components the valid options, which can be
+repeated and are applied in the order given, are:
 
-	cleanCmd.Flags().Var(&cleanOptions.Types, "type", "Type name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+'remove-all'          - remove all names
+'keep'                - keep all names
+'remove:NAME'         - remove names matching NAME. NAME can be
+                        a glob (not regexp) pattern
+'set:ABC'             - set the name to ABC
+'replace:/P/R/'       - apply replacement R to names
+                        matching the regexp pattern R. The
+                        replacement is applied as many times as
+                        P matches
+`,
+	)
 
-	cleanCmd.Flags().Var(&cleanOptions.Dataviews, "dataview", "Dataview name updates. Can be repeated, applied in order given. Valid options:\n'remove-all' | 'keep' | 'remove:pattern' | 'set:ABC' | 'replace:/<pattern>/<replacement>/'")
+	cleanCmd.Flags().Var(&cleanOptions.Types, "type",
+
+		`Type updates. Default 'remove-empty'.
+
+As for xpath components above, but with the addtional options:
+
+'remove-empty'        - Remove types with an empty name
+'set-empty'           - Set types with an empty name. Note that
+                        this is different from no type.
+`)
+
+	cleanCmd.Flags().Var(&cleanOptions.Attributes, "attribute",
+		`Attribute updates.
+
+For each attribute, the valid options, which can be repeated and
+are applied in the order given, are:
+
+'remove:NAME[=VALUE]' - remove attribute NAME, optionally only
+                        those matching VALUE. Both KEY and VALUE
+                        can be glob (not regexp) patterns
+'add:NAME=VALUE'      - add attribute NAME with VALUE
+'replace:NAME=VALUE'  - replace attribute NAME with VALUE
+'replace:NAME=/P/R/'  - replace attribute NAME with
+                        the result of applying the regexp
+                        pattern P to replacement R. The
+                        replacement is applied as many times as
+                        P matches
+'remove-all'          - remove all attributes
+`)
 
 	// TODO: colour schemes for severities - later
 
@@ -64,9 +106,41 @@ func init() {
 	// --severity-ok-colour R,G,B (Int8Slice)
 	// --severity-undefined-colour R,G,B (Int8Slice)
 
-	cleanCmd.Flags().StringVar(&cleanFilter, "filter", "", "Filter for cleaning specific XPaths (applies glob patterns)")
+	cleanCmd.Flags().BoolVarP(&cleanKeepAll, "keep-all", "k", false, "Set default action for all the above to 'keep' or do nothing")
+
+	cleanCmd.Flags().StringVar(&cleanFilter, "filter", "", "Filter for matching XPaths, leaving others unchanged\n(applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name=\"LDN*\")]')")
 
 	cleanCmd.Flags().BoolVar(&cleanCmdKeepStartupData, "keep-startup-data", false, "Keep startup data (default is to remove)")
+
+	// don't show default values
+	cleanCmd.Flags().Lookup("gateway").DefValue = ""
+	cleanCmd.Flags().Lookup("probe").DefValue = ""
+	cleanCmd.Flags().Lookup("entity").DefValue = ""
+	cleanCmd.Flags().Lookup("attribute").DefValue = ""
+	cleanCmd.Flags().Lookup("sampler").DefValue = ""
+	cleanCmd.Flags().Lookup("type").DefValue = ""
+	cleanCmd.Flags().Lookup("dataview").DefValue = ""
+
+	// add aliases for flags if needed
+	cleanCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		switch name {
+		case "gateways":
+			name = "gateway"
+		case "probes":
+			name = "probe"
+		case "entities":
+			name = "entity"
+		case "attributes":
+			name = "attribute"
+		case "samplers":
+			name = "sampler"
+		case "types":
+			name = "type"
+		case "dataviews":
+			name = "dataview"
+		}
+		return pflag.NormalizedName(name)
+	})
 
 	cleanCmd.Flags().SortFlags = false
 }
@@ -79,9 +153,11 @@ var cleanCmd = &cobra.Command{
 	Long:         cleanCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
-		cmd.CmdAllowRoot:   "true",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAllowRoot:    "true",
+		cmd.CmdAuditCommand: "false",
+		cmd.CmdAuditActions: "false",
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
 		log = logger.Logger.With("command", "adb clean")
@@ -297,31 +373,25 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 				}
 
 				// updating the type name is more complicated
+
+				// first process it
 				var typ *string
 				if len(cleanOptions.Types) > 0 {
 					if xpp.Sampler != nil && xpp.Sampler.Type != nil {
-						t := updateNameFromOptions(*xpp.Sampler.Type, cleanOptions.Types)
-						typ = &t
+						typ = updateTypeNameFromOptions(*xpp.Sampler.Type, cleanOptions.Types)
 					} else {
-						t := updateNameFromOptions("", cleanOptions.Types)
-						typ = &t
+						typ = updateTypeNameFromOptions("", cleanOptions.Types)
 					}
 				}
 
-				if typ != nil {
-					if xpp.Sampler != nil {
-						if *typ == "" {
-							// if result is an empty string then remove it
-							xpp.Sampler.Type = nil
-						} else {
-							xpp.Sampler.Type = typ
-						}
-					} else if *typ != "" {
-						// only create a new sampler if the type is not
-						// empty
-						xpp.Sampler = &xpath.Sampler{
-							Type: typ,
-						}
+				// now apply the processed type to the sampler, but only if necessary
+				if xpp.Sampler != nil {
+					xpp.Sampler.Type = typ
+				} else if typ != nil {
+					// only create a new sampler if the type is not
+					// empty
+					xpp.Sampler = &xpath.Sampler{
+						Type: typ,
 					}
 				}
 
@@ -390,11 +460,61 @@ func updateNameFromOptions(name string, options optionSlice) string {
 	return name
 }
 
+// updateTypeNameFromOptions updates the given type name based on the
+// provided options. It supports options:
+//
+//	"remove-all" - remove types from all entries
+//	"remove-empty" - remove the type if the current name is an empty string
+//	"remove:pattern" - remove the type if it matches the given pattern
+//	"keep" - do nothing
+//	"set:ABC" - set the type to the specified value
+//	"set-empty" - set the type to an empty string
+//	"replace:/<pattern>/<replacement>/" - replace the type using the given replacement spec. note there is no way to remove the type for a specific pattern
+//
+// "keep" is the default behavior and just returns the existing value
+// unchanged.
+func updateTypeNameFromOptions(name string, options optionSlice) (result *string) {
+	// Implement the logic to update the name based on the provided options.
+	// This is a placeholder implementation.
+	for _, opt := range options {
+		switch {
+		case opt == "remove-all":
+			result = nil
+		case opt == "remove-empty":
+			if name == "" {
+				result = nil
+			}
+		case strings.HasPrefix(opt, "remove:"):
+			pattern := strings.TrimPrefix(opt, "remove:")
+			re, err := regexp.Compile(pattern)
+			if err == nil {
+				resultStr := re.ReplaceAllString(name, "")
+				result = &resultStr
+			}
+		case strings.HasPrefix(opt, "set:"):
+			resultStr := strings.TrimPrefix(opt, "set:")
+			result = &resultStr
+		case opt == "set-empty":
+			resultStr := ""
+			result = &resultStr
+		case strings.HasPrefix(opt, "replace:"):
+			spec := strings.TrimPrefix(opt, "replace:")
+			resultStr := replaceAll(name, spec)
+			result = &resultStr
+		case opt == "keep":
+			// do nothing, keep the current name
+		default:
+			// do nothing (keep)
+		}
+	}
+	return result
+}
+
 // updateAttributesFromOptions updates the given attribute map based on
 // the provided options. It supports options:
 //
 //	"remove-all" - remove all attributes by clearing the attribute map
-//	"remove:KEY[=VALUE]" - remove the attribute with the specified KEY and optional VALUE. If VALUE is provided, only remove the attribute if it matches the given VALUE.
+//	"remove:KEY[=VALUE]" - remove the attribute with KEY and optional VALUE. Both can be glob patterns. If VALUE is provided, only remove the attribute if it matches the given VALUE.
 //	"add:KEY=VALUE" - set the attribute with the specified KEY to the given VALUE
 //	"replace:KEY=VALUE" - replace the VALUE of the attribute KEY
 //	"replace:KEY=/pattern/replacement/" - replace the value of the attribute KEY using the given replacement spec
@@ -408,11 +528,16 @@ func updateAttributesFromOptions(attr map[string]string, options optionSlice) ma
 		case strings.HasPrefix(opt, "remove:"):
 			key, value, found := strings.Cut(strings.TrimPrefix(opt, "remove:"), "=")
 			if found {
-				if attr[key] == value {
-					delete(attr, key)
-				}
+				maps.DeleteFunc(attr, func(k string, v string) bool {
+					matchK, _ := path.Match(key, k)
+					matchV, _ := path.Match(value, v)
+					return matchK && matchV
+				})
 			} else {
-				delete(attr, key)
+				maps.DeleteFunc(attr, func(k string, _ string) bool {
+					match, _ := path.Match(key, k)
+					return match
+				})
 			}
 		case strings.HasPrefix(opt, "add:"):
 			key, value, found := strings.Cut(strings.TrimPrefix(opt, "add:"), "=")
