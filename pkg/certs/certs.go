@@ -322,9 +322,9 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 // certificate and slices of certificates (intermediates, roots) and
 // private keys found. Encrypted private keys and other types of blocks
 // are not supported and will be skipped. If there are no certificates
-// or private keys found then empty clients are returned without error.
+// or private keys found then empty values are returned without error.
 //
-// Unknown blocks are skipped.
+// Unknown PEM blocks are skipped.
 func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []PrivateKey, err error) {
 	var block *pem.Block
 

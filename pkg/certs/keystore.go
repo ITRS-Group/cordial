@@ -3,7 +3,6 @@ package certs
 import (
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
@@ -19,6 +18,13 @@ import (
 
 type KeyStore struct {
 	keystore.KeyStore
+}
+
+// NewKeyStore creates and returns a new KeyStore instance.
+func NewKeyStore() *KeyStore {
+	return &KeyStore{
+		keystore.New(),
+	}
 }
 
 // AddCertChainToKeyStore adds a private key and certificate chain to
@@ -47,75 +53,6 @@ func AddCertChainToKeyStore(h host.Host, path string, password config.Secret, al
 	k.DeleteEntry(alias)
 	k.AddKeystoreKey(alias, key, password, certChain...)
 	return k.WriteKeystore(h, path, password, 0600)
-}
-
-// AddRootsToTrustStore adds the given root certificates to the truststore
-// at the specified path on the given host. If the truststore does not
-// exist, it is created. If password is nil, "changeit" is used.
-//
-// Any existing entries with the same alias as a root certificate are
-// deleted before adding the new root certificates. Aliases are derived
-// from the Subject Common Name of each certificate.
-//
-// Any certificates that are not root CAs are ignored.
-func AddRootsToTrustStore(h host.Host, path string, password config.Secret, roots ...*x509.Certificate) error {
-	k, err := ReadKeystore(h,
-		path,
-		password,
-	)
-	if err != nil {
-		k = &KeyStore{
-			KeyStore: keystore.New(),
-		}
-	}
-
-	for _, cert := range roots {
-		if !IsValidRootCA(cert) {
-			continue
-		}
-		alias := cert.Subject.CommonName
-		k.DeleteEntry(alias)
-		if err = k.AddTrustedCertificate(alias, cert); err != nil {
-			return err
-		}
-	}
-
-	// write the updated truststore back to the host with appropriate
-	// permissions
-	if err = k.WriteKeystore(h, path, password, 0644); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// WriteTrustStore writes the given root certificates to a keystore at
-// the specified path on the given host. If password is nil, "changeit"
-// is used. Any certificates that are not valid root CAs are ignored.
-// Any existing file is overwritten.
-func WriteTrustStore(h host.Host, path string, password config.Secret, roots ...*x509.Certificate) error {
-	k := &KeyStore{
-		keystore.New(),
-	}
-
-	for _, cert := range roots {
-		if !IsValidRootCA(cert) {
-			continue
-		}
-		alias := cert.Subject.CommonName
-		k.DeleteEntry(alias)
-		if err := k.AddTrustedCertificate(alias, cert); err != nil {
-			return err
-		}
-	}
-
-	if password == nil {
-		password = config.Secret("changeit")
-	}
-
-	// a truststore is just a keystore with trusted certs, permissions
-	// are less restrictive then keystores that contain private keys
-	return k.WriteKeystore(h, path, password, 0644)
 }
 
 // ReadKeystore returns a keystore.
@@ -150,39 +87,35 @@ func ReadKeystore(h host.Host, path string, password config.Secret) (k *KeyStore
 	return
 }
 
-// UpdateCACertsFileFromTrustStore updates the CA bundle file at
-// caBundlePath with any root CA certificates found in the truststore at
-// truststorePath. If password is nil, "changeit" is used. It returns
-// updated true if the CA bundle file was updated.
-func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, truststorePassword config.Secret, caBundlePath string) (updated bool, err error) {
-	var roots []*x509.Certificate
+// ParseTrustedCertificate parses a trusted certificate from the
+// keystore entry tk.
+//
+// It returns an x509.Certificate instance or an error if parsing fails.
+func ParseTrustedCertificate(tk keystore.TrustedCertificateEntry) (*x509.Certificate, error) {
+	return x509.ParseCertificate(tk.Certificate.Content)
+}
 
-	if truststorePath == "" {
-		return false, fmt.Errorf("truststore path empty")
-	}
-
-	k, err := ReadKeystore(h, truststorePath, truststorePassword)
-	if err != nil {
-		return
-	}
-
-	for _, alias := range k.Aliases() {
-		if c, err := k.GetTrustedCertificateEntry(alias); err == nil {
-			cert, err := x509.ParseCertificate(c.Certificate.Content)
-			if err == nil && IsValidRootCA(cert) {
-				roots = append(roots, cert)
-			}
+// ParsePrivateKeyCertificates parses the certificate chain from a
+// private key entry in the keystore.
+//
+// It returns a slice of x509.Certificate instances or an error if
+// parsing any certificate fails.
+func ParsePrivateKeyCertificates(pk keystore.PrivateKeyEntry) (certs []*x509.Certificate, err error) {
+	for _, cert := range pk.CertificateChain {
+		parsed, err := x509.ParseCertificate(cert.Content)
+		if err != nil {
+			return nil, err
 		}
+		certs = append(certs, parsed)
 	}
-
-	return UpdateCACertsFiles(h, caBundlePath, roots...)
+	return certs, nil
 }
 
 // WriteKeystore writes the keystore to the given path with the given
-// permissions. If password is nil, "changeit" is used. If perms is 0,
-// 0600 is used.
+// permissions. If password is nil, "changeit" is used. If perms is 0 an
+// error is returned.
 func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secret, perms os.FileMode) (err error) {
-	if k == nil {
+	if k == nil || perms == 0 {
 		return os.ErrInvalid
 	}
 
@@ -191,9 +124,6 @@ func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secre
 		pw = password
 	}
 
-	if perms == 0 {
-		perms = 0600
-	}
 	w, err := h.Create(path, perms)
 	if err != nil {
 		return
@@ -203,24 +133,25 @@ func (k *KeyStore) WriteKeystore(h host.Host, path string, password config.Secre
 	return k.Store(w, pw)
 }
 
-// AddTrustedCertificate adds a trusted certificate to the keystore.
-func (k *KeyStore) AddTrustedCertificate(alias string, cert *x509.Certificate) (err error) {
-	if k == nil || alias == "" || cert == nil {
-		return os.ErrInvalid
+// WritePrivateKeyEntryAsPEM writes the private key entry as a PEM file
+// to the specified path on the host. The file is created with the given
+// permissions. Returns an error if writing fails.
+func WritePrivateKeyEntryAsPEM(h host.Host, path string, entry keystore.PrivateKeyEntry, perms os.FileMode) error {
+	w, err := h.Create(path, perms)
+	if err != nil {
+		return err
 	}
+	defer w.Close()
 
-	c := keystore.Certificate{
-		Type:    "X509",
-		Content: cert.Raw,
+	cs, err := ParsePrivateKeyCertificates(entry)
+	if err != nil {
+		return err
 	}
-	k.DeleteEntry(alias)
-	k.SetTrustedCertificateEntry(alias,
-		keystore.TrustedCertificateEntry{
-			CreationTime: cert.NotBefore,
-			Certificate:  c,
-		},
-	)
-	return
+	_, err = WriteCertificatesAndKeyTo(w, entry.PrivateKey, cs...)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // AddKeystoreKey adds a private key and certificates to the keystore.
@@ -255,6 +186,36 @@ func (k *KeyStore) AddKeystoreKey(alias string, key PrivateKey, password config.
 
 	k.DeleteEntry(alias)
 	return k.SetPrivateKeyEntry(alias, c, pw)
+}
+
+// ChangePassword changes the password of all private keys in the
+// keystore at the given path. It creates a new keystore file with the
+// updated password and replaces the old one.
+func ChangePassword(h host.Host, ks string, oldPassword, newPassword config.Secret) (err error) {
+	if h == nil || ks == "" {
+		return os.ErrInvalid
+	}
+
+	k, err := ReadKeystore(h, ks, oldPassword)
+	if err != nil {
+		return
+	}
+
+	// update all private keys
+	for _, alias := range k.Aliases() {
+		if entry, err := k.GetPrivateKeyEntry(alias, oldPassword); err == nil {
+			if err = k.SetPrivateKeyEntry(alias, entry, newPassword); err != nil {
+				return err
+			}
+		}
+	}
+
+	nks := ks + ".new"
+	err = k.WriteKeystore(h, nks, newPassword, 0600)
+	if err == nil {
+		err = h.Rename(nks, ks)
+	}
+	return
 }
 
 // readJCEKS attempts to read a JCEKS formatted keystore and convert it
