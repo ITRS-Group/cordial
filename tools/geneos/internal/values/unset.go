@@ -132,7 +132,7 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 // becomes empty, it deletes the key from the configuration.
 func unsetMapValue(i geneos.Instance, confKey string, key string) (changed bool) {
 	cf := i.Config()
-	value := config.Get[map[string]any](cf, confKey, config.NoDecode(true))
+	value := config.Get[map[string]any](cf, confKey, config.NoExpand())
 
 	if _, ok := value[key]; ok {
 		delete(value, key)
@@ -153,7 +153,7 @@ func unsetMapValue(i geneos.Instance, confKey string, key string) (changed bool)
 
 func deleteVariable(i geneos.Instance, confKey string, name string) (changed bool) {
 	cf := i.Config()
-	x, found := config.Lookup[any](cf, confKey, config.NoDecode(true))
+	x, found := config.Lookup[any](cf, confKey, config.NoExpand())
 	if !found {
 		return
 	}
@@ -183,7 +183,7 @@ func deleteVariable(i geneos.Instance, confKey string, name string) (changed boo
 // from the configuration.
 func unsetVariables(i geneos.Instance, confKey string, items UnsetVars) (changed bool) {
 	cf := i.Config()
-	x, found := config.Lookup[any](cf, confKey, config.NoDecode(true))
+	x, found := config.Lookup[any](cf, confKey, config.NoExpand())
 	if !found {
 		return
 	}
@@ -212,7 +212,7 @@ func unsetVariables(i geneos.Instance, confKey string, items UnsetVars) (changed
 
 func deleteSliceItem(i geneos.Instance, key string, item string) (changed bool) {
 	cf := i.Config()
-	values, found := config.Lookup[[]string](cf, key, config.NoDecode(true))
+	values, found := config.Lookup[[]string](cf, key, config.NoExpand())
 	if !found {
 		return
 	}
@@ -244,7 +244,7 @@ func deleteSliceItemFunc(i geneos.Instance, key string, item string, fn func(val
 	}
 
 	cf := i.Config()
-	values, found := config.Lookup[[]string](cf, key, config.NoDecode(true))
+	values, found := config.Lookup[[]string](cf, key, config.NoExpand())
 	if !found {
 		return
 	}
@@ -290,7 +290,7 @@ func unsetSliceFunc(i geneos.Instance, key string, items []string, fn func(value
 	}
 
 	cf := i.Config()
-	values, found := config.Lookup[[]string](cf, key, config.NoDecode(true))
+	values, found := config.Lookup[[]string](cf, key, config.NoExpand())
 	if !found {
 		return
 	}
@@ -330,7 +330,7 @@ func unsetMapFunc[M ~map[string]any](i geneos.Instance, key string, items []stri
 	}
 
 	cf := i.Config()
-	vals := config.Get[map[string]M](cf, key, config.NoDecode(true))
+	vals := config.Get[map[string]M](cf, key, config.NoExpand())
 
 	maps.DeleteFunc(vals, func(k string, v M) bool {
 		for _, i := range items {

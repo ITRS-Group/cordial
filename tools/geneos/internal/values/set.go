@@ -174,7 +174,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		// third, variables
 
 		// first migrate original vars
-		if vars, found := config.Lookup[any](cf, VARIABLES, config.NoDecode(true)); found {
+		if vars, found := config.Lookup[any](cf, VARIABLES, config.NoExpand()); found {
 			var changed bool
 			if vars, changed = NormaliseVars(vars); changed {
 				config.Set(cf, VARIABLES, vars)
@@ -225,7 +225,7 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 // If the value was changed, it returns true. Otherwise, it returns
 // false.
 func setMapValue[V any](i geneos.Instance, cf *config.Config, confKey string, key string, value V) (changed bool) {
-	s := config.Get[map[string]V](cf, confKey, config.NoDecode(true))
+	s := config.Get[map[string]V](cf, confKey, config.NoExpand())
 	if reflect.DeepEqual(s[key], value) {
 		return false
 	}
@@ -278,7 +278,7 @@ func setVariableValue(i geneos.Instance, cf *config.Config, confKey string, item
 
 	// save it back, over any existing variables with the same name
 	// (regardless of type), else just save
-	vars, found := config.Lookup[Variables](cf, confKey, config.NoDecode(true))
+	vars, found := config.Lookup[Variables](cf, confKey, config.NoExpand())
 	if !found {
 		config.Set(cf, confKey, []Variable{item})
 		return true
@@ -357,7 +357,7 @@ func setStringSliceValue(i geneos.Instance, cf *config.Config, confKey string, v
 		return
 	}
 
-	values := config.Get[[]string](cf, confKey, config.NoDecode(true))
+	values := config.Get[[]string](cf, confKey, config.NoExpand())
 	keysIdx := make(map[string]int, len(values))
 	for i, v := range values {
 		keysIdx[getKey(v)] = i
