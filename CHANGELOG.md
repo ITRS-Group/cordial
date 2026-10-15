@@ -57,6 +57,8 @@ This release comes with significant new features for the `geneos` program.
 
   * The code to support log file viewing has been moved from the `geneos log` command to a shared internal package for reuse across the program.
 
+  * Update `sso-agent` component suport to support passwords in (encoded) environment variables and correctly rebuild the configured keystore and to support changing the `ssl_alias` and passwords for the keystore and truststore as well as improved validation and error handling.
+
 ## Version v1.30.0 Fixes
 
 * `pkg/certs`
@@ -76,9 +78,12 @@ This release comes with significant new features for the `geneos` program.
 
 * `tools/geneos`
 
+  * Fix `geneos set` and `geneos unset` to not decode or expand existing values. Previously, encoded secrets were inadvertantly decoded, leading to visibility of plain text secrets. As an added benefit, previously expanded parameters will now be left unchanged, so that interpolated directory paths etc. will remain intact.
+
   * Fix the `geneos set` command to correctly handle secure (encoded) variables.
 
   * Fix `geneos tls export` for instances to only write the private key once.
+
 
 ---
 
