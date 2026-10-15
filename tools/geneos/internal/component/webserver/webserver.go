@@ -278,6 +278,13 @@ func (i *Webserver) Add(options ...any) (err error) {
 	return
 }
 
+// Rebuild updates the webserver configuration, including security
+// properties, truststore, and keystore. It returns a boolean indicating
+// if any changes were made and an error if the operation failed.
+//
+// To changes the keystore/truststore password, edit the
+// `security.properties` file and run rebuild. All the contents are
+// re-encrypted with the new password.
 func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
