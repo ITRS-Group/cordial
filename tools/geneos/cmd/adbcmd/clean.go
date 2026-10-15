@@ -430,7 +430,7 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 }
 
 // updateNameFromOptions updates the given name based on the provided
-// options. It supports options "remove-all", "remove:pattern", "keep", "set:ABC",
+// options. It supports options "remove-all", "remove:NAME", "keep", "set:ABC",
 // and "replace:/<pattern>/<replacement>/". "keep" is the default
 // behavior and just returns the existing value unchanged.
 func updateNameFromOptions(name string, options optionSlice) string {
@@ -442,9 +442,8 @@ func updateNameFromOptions(name string, options optionSlice) string {
 			name = ""
 		case strings.HasPrefix(opt, "remove:"):
 			pattern := strings.TrimPrefix(opt, "remove:")
-			re, err := regexp.Compile(pattern)
-			if err == nil {
-				name = re.ReplaceAllString(name, "")
+			if match, _ := path.Match(pattern, name); match {
+				name = ""
 			}
 		case strings.HasPrefix(opt, "set:"):
 			name = strings.TrimPrefix(opt, "set:")
@@ -465,7 +464,7 @@ func updateNameFromOptions(name string, options optionSlice) string {
 //
 //	"remove-all" - remove types from all entries
 //	"remove-empty" - remove the type if the current name is an empty string
-//	"remove:pattern" - remove the type if it matches the given pattern
+//	"remove:NAME" - remove the type if it matches the given NAME. NAME can be a glob (not regexp) pattern, e.g. "PROD*".
 //	"keep" - do nothing
 //	"set:ABC" - set the type to the specified value
 //	"set-empty" - set the type to an empty string
@@ -486,10 +485,8 @@ func updateTypeNameFromOptions(name string, options optionSlice) (result *string
 			}
 		case strings.HasPrefix(opt, "remove:"):
 			pattern := strings.TrimPrefix(opt, "remove:")
-			re, err := regexp.Compile(pattern)
-			if err == nil {
-				resultStr := re.ReplaceAllString(name, "")
-				result = &resultStr
+			if match, _ := path.Match(pattern, name); match {
+				result = nil
 			}
 		case strings.HasPrefix(opt, "set:"):
 			resultStr := strings.TrimPrefix(opt, "set:")
