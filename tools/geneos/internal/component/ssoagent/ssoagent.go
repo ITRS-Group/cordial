@@ -451,12 +451,20 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	// write the keystore here as the truststore *may* be different from the keystore
 	err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
 
-	roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
-	for _, cert := range roots {
-		if !certs.IsValidRootCA(cert) {
-			continue
+	// only add root CAs to the truststore if it is different from the
+	// default CA bundle, which could be a `cacerts` without an
+	// extension as well as `ca-bundle.db`
+	if strings.TrimSuffix(truststorePath, filepath.Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
+		roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
+		for _, cert := range roots {
+			if !certs.IsValidRootCA(cert) {
+				continue
+			}
+			// ignore errors, as this may be trying to write to a system file - just break out of the loop
+			if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert); err != nil {
+				break
+			}
 		}
-		certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert)
 	}
 
 	return true, err
@@ -518,19 +526,6 @@ func (i *SSOAgent) Command(skipFileCheck bool) (args, env []string, home string,
 
 	javaopts := strings.Fields(config.Get[string](cf, "java-options"))
 	args = append(args, javaopts...)
-
-	truststorePath := config.Get[string](ssoconf, config.Join("server", "trust_store", "location"))
-	truststorePassword := config.Get[config.Secret](ssoconf, config.Join("server", "trust_store", "password"))
-
-	if truststorePath != "" {
-		truststorePath = instance.HomeRel(i, truststorePath)
-		checks = append(checks, truststorePath)
-		args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
-		if truststorePassword != nil {
-			// the truststore password is optional but has to be in plain text on the command line
-			args = append(args, "-Djavax.net.ssl.trustStorePassword="+string(truststorePassword))
-		}
-	}
 
 	// -jar must appear after all options are set otherwise they are
 	// seen as arguments to the application
