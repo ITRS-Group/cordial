@@ -31,15 +31,13 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/pavlo-v-chernykh/keystore-go/v4"
-
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -93,6 +91,7 @@ var Component = geneos.Component{
 		`port=1180`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`autostart=true`,
+		`ssokeypath={{join "${config:home}" "ssokey.pem"}}`,
 	},
 
 	Directories: []string{
@@ -277,69 +276,115 @@ func (i *SSOAgent) Add(options ...any) (err error) {
 	return
 }
 
+// Rebuild updates the SSO agent configuration, including the truststore
+// and keystore. It returns a boolean indicating if any changes were
+// made and an error if the operation failed. In general the truststore
+// and keystore are the same file, and so the rebuild order, especially
+// if the password(s) change is important.
 func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
 	}
+
 	cf := i.Config()
-	ssoconf := config.New()
-	if err = ssoconf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
+
+	// read the SSO agent configuration from the conf/sso-agent.conf
+	// file as HOCON. The config must exist.
+	sf := config.New()
+	if err = sf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
 		return false, err
 	}
 
-	// rebuild the truststore, which should only include validation information such as root CAs
-	truststorePath := instance.HomeRel(i, config.Get[string](ssoconf, config.Join("server", "trust_store", "location")))
-	truststorePassword := config.Get[config.Secret](ssoconf,
-		config.Join("server", "trust_store", "password"),
-		config.DefaultValue(
-			config.Get[string](cf, cf.Join("env", "ITRS_SSO_TRUSTSTORE_PW"),
-				config.DefaultValue("changeit"),
-			),
-		),
-	)
-	defer clear(truststorePassword)
+	cfenv := config.Get[[]string](cf, cf.Join("env"), config.NoDecode(true))
+	env := make(map[string]string, len(cfenv))
 
-	// (re)build the truststore (typically config/keystore.db) but only
-	// if it's not the install-wide one, to avoid truncating it
-	roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
-	if len(roots) > 0 && truststorePath != "" && truststorePath != geneos.PathToCABundle(i.Host(), certs.KeystoreExtension) {
-		if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, roots...); err != nil {
-			return false, err
+	for _, e := range cfenv {
+		n, v, found := strings.Cut(e, "=")
+		if found {
+			env[n] = v
 		}
 	}
 
-	// (re)build the keystore (config/keystore.db) ensuring there is
-	// always an "ssokey".
-	if ksl, ok := config.Lookup[string](ssoconf, config.Join("server", "key_store", "location")); ok {
-		keystorePath := instance.HomeRel(i, ksl)
-		keystorePassword := config.Get[config.Secret](ssoconf,
-			config.Join("server", "key_store", "password"),
-			config.DefaultValue(
-				config.Get[string](cf, cf.Join("env", "ITRS_SSO_KEYSTORE_PW"),
-					config.DefaultValue("changeit"),
-				),
-			),
-		)
-		defer clear(keystorePassword)
-
-		if truststorePath == keystorePath && !bytes.Equal(truststorePassword, keystorePassword) {
-			return false, fmt.Errorf("truststore and keystore paths are the same but passwords differ")
+	// locate the truststore path and password
+	truststorePath := instance.HomeRel(i, config.Get[string](sf, config.Join("server", "trust_store", "location")))
+	truststorePassword, found := config.Lookup[config.Secret](sf, config.Join("server", "trust_store", "password"))
+	if !found {
+		// try to get the truststore password from the environment variable
+		if _, found = env["ITRS_SSO_TRUSTSTORE_PW"]; found {
+			truststorePassword = sf.ExpandToPassword(env["ITRS_SSO_TRUSTSTORE_PW"])
+		} else {
+			truststorePassword = config.Secret("changeit")
 		}
+	}
+	defer clear(truststorePassword)
 
-		ks, err := certs.ReadKeystore(i.Host(), keystorePath, keystorePassword)
+	keystorePath := instance.HomeRel(i, config.Get[string](sf, config.Join("server", "key_store", "location")))
+	keystorePassword, found := config.Lookup[config.Secret](sf, config.Join("server", "key_store", "password"))
+	if !found {
+		// try to get the keystore password from the environment variable
+		if _, found = env["ITRS_SSO_KEYSTORE_PW"]; found {
+			keystorePassword = sf.ExpandToPassword(env["ITRS_SSO_KEYSTORE_PW"])
+		} else {
+			keystorePassword = config.Secret("changeit")
+		}
+	}
+	defer clear(keystorePassword)
+
+	if truststorePath == keystorePath && !bytes.Equal(truststorePassword, keystorePassword) {
+		return false, fmt.Errorf("truststore and keystore paths are the same but passwords differ")
+	}
+
+	// at this point we have paths and passwords - rebuild using
+	// external files from instance config
+
+	ks := certs.NewKeyStore()
+
+	// first, ensure there is an `ssokey` in a new keystore, extracting
+	// one if the `ssokeypath` does not yet exist (for updates). If an
+	// existing keystore is not readable - perhaps the password has
+	// changed, a new one will be created and a new ssokey will be
+	// added.
+
+	sp := instance.PathTo(i, "ssokeypath")
+	ssokeypem, err := i.Host().ReadFile(sp)
+	if err == nil {
+		// parse existing PEM and add it to the new keystore
+		_, _, ssocerts, ssokeys, err := certs.DecodePEM(ssokeypem)
 		if err != nil {
-			// new, empty keystore
-			ks = &certs.KeyStore{
-				KeyStore: keystore.New(),
-			}
-			changed = true
+			return false, err
+		}
+		if len(ssokeys) == 0 || len(ssocerts) == 0 {
+			return false, fmt.Errorf("failed to decode ssokey PEM: incorrectly formatted certificate or private key")
 		}
 
-		// ensure there is always an "ssokey" in the keystore
-		if !slices.Contains(ks.Aliases(), "ssokey") {
+		i.Log().Debug("decoded ssokey PEM successfully", slog.String("ssokeypath", sp), slog.String("cert", ssocerts[0].Subject.CommonName))
+
+		// we check that the cert is an 'ssokey' and that one of the
+		// keys returned matches the cert
+		cert := ssocerts[0]
+		if cert.Subject.CommonName != "ssokey" {
+			return false, fmt.Errorf("ssokey certificate has incorrect CommonName: %s (must be 'ssokey')", cert.Subject.CommonName)
+		}
+
+		var idx int
+		if idx = certs.IndexPrivateKey(ssokeys, cert); idx == -1 {
+			return false, fmt.Errorf("no matching private key found for ssokey certificate")
+		}
+		key := ssokeys[idx]
+
+		if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
+			i.Log().Error("failed to add keystore key for ssoagent", slog.String("ssokeypath", sp), slog.String("error", err.Error()))
+			return false, err
+		}
+	} else {
+		// try to read the existing keystore and extract the ssokey if
+		// possible and then add to the new ks too
+		oldKs, err := certs.ReadKeystore(i.Host(), keystorePath, keystorePassword)
+		if err != nil {
+			// create new keystore if reading the existing one fails
 			cert, key, err := genkeypair()
 			if err != nil {
 				panic(fmt.Sprintf("failed to generate keypair for ssoagent: %v", err))
@@ -347,34 +392,74 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 			if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
 				panic(fmt.Sprintf("failed to add keystore key for ssoagent: %v", err))
 			}
-			changed = true
+			err = certs.WritePrivateKeyEntryAsPEM(i.Host(), instance.HomeRel(i, sp), keystore.PrivateKeyEntry{
+				CreationTime:     time.Now(),
+				PrivateKey:       []byte(key),
+				CertificateChain: []keystore.Certificate{{Type: "X509", Content: cert.Raw}},
+			}, 0600)
+			if err != nil {
+				return false, err
+			}
+		} else {
+			pk, err := oldKs.GetPrivateKeyEntry("ssokey", keystorePassword)
+			if err == nil {
+				// add to new ks
+				if err = ks.SetPrivateKeyEntry("ssokey", pk, keystorePassword); err != nil {
+					i.Log().Error("failed to add keystore key for ssoagent from existing keystore", slog.String("ssokeypath", sp), slog.String("error", err.Error()))
+					return false, err
+				}
+				err = certs.WritePrivateKeyEntryAsPEM(i.Host(), instance.HomeRel(i, sp), pk, 0600)
+				if err != nil {
+					return false, err
+				}
+			}
 		}
-
-		if changed {
-			err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
-		}
-
-		alias := config.Get[string](ssoconf, ssoconf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname()))
-
-		certChain, err := instance.ReadCertificates(i)
-		if err != nil {
-			return false, err
-		}
-		if len(certChain) == 0 {
-			return false, err
-		}
-		key, err := instance.ReadPrivateKey(i)
-		if err != nil {
-			return false, err
-		}
-		keystorePath = instance.HomeRel(i, keystorePath)
-		err = certs.AddCertChainToKeyStore(i.Host(), keystorePath, keystorePassword, alias, key, certChain...)
-		if err == nil {
-			changed = true
-		}
-		return changed, err
 	}
-	return false, nil
+
+	// next, add instance certs and private keys for TLS
+
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil {
+		return false, err
+	}
+	if len(certChain) == 0 {
+		return false, err
+	}
+
+	key, err := instance.ReadPrivateKey(i)
+	if err != nil {
+		return false, err
+	}
+
+	var ch []keystore.Certificate
+	for _, cert := range certChain {
+		ch = append(ch, keystore.Certificate{
+			Type:    "X509",
+			Content: cert.Raw,
+		})
+	}
+	ks.SetPrivateKeyEntry(
+		config.Get[string](sf, sf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname())),
+		keystore.PrivateKeyEntry{
+			CreationTime:     time.Now(),
+			PrivateKey:       []byte(key),
+			CertificateChain: ch,
+		},
+		keystorePassword,
+	)
+
+	// write the keystore here as the truststore *may* be different from the keystore
+	err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
+
+	roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
+	for _, cert := range roots {
+		if !certs.IsValidRootCA(cert) {
+			continue
+		}
+		certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert)
+	}
+
+	return true, err
 }
 
 // generate a keypair for ssoagent keystore with the alias "ssokey". This must be an RSA key
