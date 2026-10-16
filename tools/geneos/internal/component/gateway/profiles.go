@@ -44,17 +44,17 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	}
 
 	for _, gateway := range gateways {
-		name := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
+		instanceName := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
 
-		if name == "" {
+		if instanceName == "" {
 			panic("name empty")
 		}
 
-		vals := profile.ApplyCommonParams(pf, gateway.Common, lookup)
+		vals := profile.ApplyCommonParams(pf, name, gateway.Common, lookup)
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 
-		if err := profile.ApplyInstance(pf, ct, gateway.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, gateway.Common, instanceName, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

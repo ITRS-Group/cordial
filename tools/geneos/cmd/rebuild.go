@@ -60,7 +60,7 @@ var rebuildCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		instance.Do(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			var changed bool

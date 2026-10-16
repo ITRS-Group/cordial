@@ -117,7 +117,7 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, instance.CatInstance,
+			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, instance.CatInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
@@ -127,7 +127,7 @@ var logsCmd = &cobra.Command{
 				instance.ShowAuditLogs(logCmdAudit),
 			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
 		case logCmdFollow:
-			instance.FollowLogs(geneos.GetHost(Hostname), ct, names,
+			instance.FollowLogs(cmd, geneos.GetHost(Hostname), ct, names,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
@@ -137,7 +137,7 @@ var logsCmd = &cobra.Command{
 				instance.ShowAuditLogs(logCmdAudit),
 			) // never returns
 		default:
-			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, instance.TailInstance,
+			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, instance.TailInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),

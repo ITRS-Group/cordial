@@ -14,6 +14,8 @@ import (
 	"unicode"
 
 	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
@@ -45,7 +47,7 @@ func FollowLog(i geneos.Instance, options ...LogWatcherOptions) {
 
 // FollowLogs sets up watchers for logs and never returns. It is used by
 // both the logs command and the start command when --follow is set.
-func FollowLogs(h *geneos.Host, ct *geneos.Component, names []string, options ...LogWatcherOptions) {
+func FollowLogs(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, options ...LogWatcherOptions) {
 	// logCmdStderr = stderr
 	done := make(chan bool)
 	tails = watchLogs()
@@ -53,7 +55,7 @@ func FollowLogs(h *geneos.Host, ct *geneos.Component, names []string, options ..
 	for _, o := range options {
 		args = append(args, o)
 	}
-	Do(h, ct, names, FollowInstance, args...)
+	Do(cmd, h, ct, names, FollowInstance, args...)
 	<-done
 }
 

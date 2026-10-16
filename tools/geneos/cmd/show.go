@@ -108,7 +108,7 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdValidate {
-			instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
+			instance.Do(command, geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
 				responses.Prefix("### validation results for %s\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
@@ -117,14 +117,14 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdSetup {
-			instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
+			instance.Do(command, geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
 				responses.Prefix("<!-- configuration for %s -->\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
 			)
 			return
 		}
-		instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
+		instance.Do(command, geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
 		return
 	},
 }

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path"
 	"regexp"
@@ -153,99 +154,63 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 	return i.Host().Signal(int(pid), signal)
 }
 
-// Do calls function f for each matching instance and gathers the return
-// values into responses for handling by the caller. The functions are
-// executed in goroutines and must be concurrency safe.
+// Do calls function fn for each matching instance and gathers the
+// return values into responses for handling by the caller. The
+// functions are executed in goroutines and must be concurrency safe.
 //
-// The values are passed to each function called and must not be changes
+// The values are passed to each function called and must not be changed
 // by the called function. The called function should validate and cast
 // values for use.
 //
 // Do calls Instances() to resolve the names given to a list of matching
 // instances on host h (which can be geneos.ALL to look on all hosts)
 // and for type ct, which can be nil to look across all component types.
-func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
-	var wg sync.WaitGroup
-
-	instances := Instances(h, ct, MatchNames(names...))
-	rs = make(responses.GeneralResponses, len(instances))
-	ch := make(chan *responses.General, len(instances))
-
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-
-			resp := f(c, values...)
-			responses.Finished(resp)
-			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
-				c.AuditEvent("instance action", slog.Any("result", resp.Err))
-			}
-			ch <- resp
-		}(c)
-	}
-	wg.Wait()
-	close(ch)
-
-	for resp := range ch {
-		rs[resp.Instance.String()] = resp
-	}
-
-	return
-}
-
-// DoWithAudit calls function f for each matching instance and gathers
-// the return values into responses for handling by the caller. The
-// functions are executed in goroutines and must be concurrency safe.
 //
-// The values are passed to each function called and must not be changes
-// by the called function. The called function should validate and cast
-// values for use.
-//
-// DoWithAudit calls Instances() to resolve the names given to a list of
-// matching instances on host h (which can be geneos.ALL to look on all
-// hosts) and for type ct, which can be nil to look across all component
-// types.
-func DoWithAudit(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
-	var wg sync.WaitGroup
-
-	instances := Instances(h, ct, MatchNames(names...))
-	rs = make(responses.GeneralResponses, len(instances))
-	ch := make(chan *responses.General, len(instances))
-
-	for _, c := range instances {
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
-
-			resp := f(c, values...)
-			responses.Finished(resp)
-			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
-				c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
-			}
-			ch <- resp
-		}(c)
-	}
-	wg.Wait()
-	close(ch)
-
-	for resp := range ch {
-		rs[resp.Instance.String()] = resp
+// If the command annotations indicate that auditing is enabled, an
+// audit event will be generated for each instance function called and
+// the success or failure will be recorded in an attribute "result".
+func Do(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	if ct.IsA("profile") {
+		rs = make(responses.GeneralResponses)
+		for _, n := range names {
+			instances := Instances(h, nil, MatchParameters("profile="+n))
+			respmap := DoInstances(cmd, instances, fn, values...)
+			maps.Copy(rs, respmap)
+		}
+		return
 	}
 
-	return
+	return DoInstances(cmd, Instances(h, ct, MatchNames(names...)), fn, values...)
 }
 
 // DoSerial is a variant of Do that executes the function calls
 // serially. This is for use by functions that are not concurrency safe.
-func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	rs = make(responses.GeneralResponses)
+
+	if ct.IsA("profile") {
+		for _, n := range names {
+			instances := Instances(h, nil, MatchParameters("profile="+n))
+			for _, c := range instances {
+				resp := fn(c, values...)
+				responses.Finished(resp)
+				if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
+					c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+				}
+				rs[resp.Instance.String()] = resp
+			}
+		}
+		return
+	}
 
 	instances := Instances(h, ct, MatchNames(names...))
 
 	for _, c := range instances {
-		resp := f(c, values...)
+		resp := fn(c, values...)
 		responses.Finished(resp)
+		if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
+			c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+		}
 		rs[resp.Instance.String()] = resp
 	}
 
@@ -253,10 +218,10 @@ func DoSerial(h *geneos.Host, ct *geneos.Component, names []string, f func(geneo
 }
 
 // DoInstances is a variant of Do that takes a slice of instances
-// instead of looking them up by host, type and name. This is for use by
-// functions that have already looked up instances and want to call a
-// function on them concurrently.
-func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+// instead of performing a look-up up by host, type and name. This is
+// for use by functions that have already got the instances and need to
+// call a function on them concurrently.
+func DoInstances(cmd *cobra.Command, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
 	rs = make(responses.GeneralResponses, len(instances))
@@ -270,8 +235,11 @@ func DoInstances(instances []geneos.Instance, f func(geneos.Instance, ...any) *r
 		go func(c geneos.Instance) {
 			defer wg.Done()
 
-			resp := f(c, values...)
+			resp := fn(c, values...)
 			responses.Finished(resp)
+			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
+				c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+			}
 			ch <- resp
 		}(c)
 	}

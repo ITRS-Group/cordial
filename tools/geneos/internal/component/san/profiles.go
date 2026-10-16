@@ -32,11 +32,13 @@ type ManagedEntity struct {
 }
 
 func applyProfile(pf *config.Config, name, key string) (err error) {
+	var sans []SanProfile
+
 	ct := geneos.ParseComponent("san")
 
-	var sans []SanProfile
-	if err2 := pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand()); err2 != nil {
-		return fmt.Errorf("failed to unmarshal SANs: %w", err2)
+	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand())
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal SANs: %w", err)
 	}
 
 	// global lookup table, add values here as needed
@@ -56,9 +58,9 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 
 	for _, san := range sans {
 		// does it already exist?
-		name := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
+		instanceName := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
-		vals := profile.ApplyCommonParams(pf, san.Common, lookup)
+		vals := profile.ApplyCommonParams(pf, name, san.Common, lookup)
 		vals.Gateways = make(map[string]string, len(san.Gateways))
 		for n, g := range san.Gateways {
 			vals.Gateways[n] = config.Expand[string](pf, g)
@@ -86,7 +88,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			}
 		}
 
-		if err := profile.ApplyInstance(pf, ct, san.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, san.Common, instanceName, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

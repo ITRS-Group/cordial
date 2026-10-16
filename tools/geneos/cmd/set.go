@@ -121,7 +121,7 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		}
 
 		setCmdValues.Params = params
-		instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, setValues, setCmdValues).Report(os.Stdout)
+		instance.Do(cmd, geneos.GetHost(Hostname), ct, names, setValues, setCmdValues).Report(os.Stdout)
 		return
 	},
 }

@@ -28,9 +28,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/spf13/pflag"
+
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -213,6 +214,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	if err = profile.Apply(pf, i.Name()); err != nil {
 		return err
 	}
+
 	// default config XML etc.
 	return nil
 }

@@ -32,9 +32,10 @@ import (
 )
 
 type listCmdType struct {
-	Type      string `json:"type,omitempty"`
-	Name      string `json:"name,omitempty"`
-	Host      string `json:"host,omitempty"`
+	Type      string `json:"type"`
+	Name      string `json:"name"`
+	Host      string `json:"host"`
+	Profile   string `json:"profile,omitempty"`
 	Running   bool   `json:"running"`
 	Disabled  bool   `json:"disabled"`
 	Protected bool   `json:"protected"`
@@ -86,9 +87,9 @@ var listCmd = &cobra.Command{
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
-			resp := instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			headlines := make(map[string]string)
 			headlines["totalInstances"] = fmt.Sprintf("%d", len(resp))
 			for _, ct := range geneos.RealComponents() {
@@ -105,6 +106,7 @@ var listCmd = &cobra.Command{
 				"type",
 				"name",
 				"host",
+				"profile",
 				"autoStart",
 				"disabled",
 				"protected",
@@ -116,11 +118,12 @@ var listCmd = &cobra.Command{
 				"home",
 			}, nil, responses.AddHeadlines(headlines))
 		case listCmdCSV:
-			resp := instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			resp.Formatted(os.Stdout, "csv", []string{
 				"Type",
 				"Name",
 				"Host",
+				"Profile",
 				"AutoStart",
 				"Disabled",
 				"Protected",
@@ -134,10 +137,11 @@ var listCmd = &cobra.Command{
 				nil,
 			)
 		default:
-			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
+			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
 				"Type",
 				"Name",
 				"Host",
+				"Profile",
 				"Flags",
 				"Port",
 				"Version",
@@ -184,8 +188,9 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
+		config.Get[string](i.Config(), "profile", config.DefaultValue("-")),
 		flags,
-		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
+		config.Get[string](i.Config(), "port"),
 		fmt.Sprintf("%s:%s", base, underlying),
 		i.Home(),
 	})
@@ -227,12 +232,13 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
+		config.Get[string](i.Config(), "profile", config.DefaultValue("-")),
 		autostart,
 		disabled,
 		protected,
 		running,
 		tls,
-		fmt.Sprint(config.Get[uint16](i.Config(), "port")),
+		config.Get[string](i.Config(), "port"),
 		base,
 		underlying,
 		i.Home(),
@@ -254,6 +260,7 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),
+		Profile:   config.Get[string](i.Config(), "profile"),
 		Running:   running,
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),

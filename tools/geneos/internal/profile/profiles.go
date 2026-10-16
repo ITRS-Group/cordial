@@ -147,16 +147,16 @@ type Common struct {
 // their respective profile settings by calling the component's
 // ApplyProfile function if it is defined.
 func Apply(pf *config.Config, name string) error {
-	profile, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
+	components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 	if !found {
 		log.Error("profile not found", slog.String("profile", name))
 		return fmt.Errorf("profile %q not found", name)
 	}
 
-	for key := range profile {
+	for key := range components {
 		ct := geneos.ParseComponent(key)
 		if ct.ApplyProfile != nil {
-			slog.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
+			log.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
 			if err := ct.ApplyProfile(pf, name, key); err != nil {
 				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
@@ -220,7 +220,7 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
-func ApplyCommonParams(pf *config.Config, common Common, lookup map[string]string) (vals values.Values) {
+func ApplyCommonParams(pf *config.Config, name string, common Common, lookup map[string]string) (vals values.Values) {
 	vals.Envs = pf.ExpandStringSlice(common.Env,
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
@@ -233,6 +233,7 @@ func ApplyCommonParams(pf *config.Config, common Common, lookup map[string]strin
 		config.Prefix("replace", ReplacePrefix),
 		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
 	)
+	vals.Params = append(vals.Params, "profile="+name)
 	return
 }
 

@@ -31,15 +31,15 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 	deleteKeys := []string{}
 
 	for _, netprobe := range netprobes {
-		name := config.Expand[string](pf, netprobe.Name, config.LookupTable(lookup))
+		instanceName := config.Expand[string](pf, netprobe.Name, config.LookupTable(lookup))
 
-		if name == "" {
+		if instanceName == "" {
 			panic("name empty")
 		}
 
-		vals := profile.ApplyCommonParams(pf, netprobe.Common, lookup)
+		vals := profile.ApplyCommonParams(pf, name, netprobe.Common, lookup)
 
-		if err := profile.ApplyInstance(pf, ct, netprobe.Common, name, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, netprobe.Common, instanceName, deleteKeys, vals); err != nil {
 			return err
 		}
 	}

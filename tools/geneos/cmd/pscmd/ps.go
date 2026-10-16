@@ -96,7 +96,7 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
+		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
 			responses.IndentJSON(psCmdIndent),
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.IgnoreErr(os.ErrProcessDone),
@@ -136,7 +136,7 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			}
 		}
 
-		resps := instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
+		resps := instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
 
 		headlines := map[string]string{}
 
@@ -184,7 +184,7 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			columns = instanceCSVColumns
 		}
 
-		instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
+		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
 	}
 }
 

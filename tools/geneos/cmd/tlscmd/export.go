@@ -82,7 +82,7 @@ geneos tls export gateway mygateway
 		}
 
 		if len(names) > 0 || ct != nil {
-			instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
+			instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
 			return
 		}
 

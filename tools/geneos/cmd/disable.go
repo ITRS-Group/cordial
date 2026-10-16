@@ -61,7 +61,7 @@ var disableCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		instance.Do(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if instance.IsDisabled(i) {

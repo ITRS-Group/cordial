@@ -49,6 +49,9 @@
 							<enabled>
 								<data>true</data>
 							</enabled>
+							<saveLocation>
+								<data>fkm</data>
+							</saveLocation>
 						</persistentData>
 					</fkm>
 				</plugin>

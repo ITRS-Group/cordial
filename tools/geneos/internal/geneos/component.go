@@ -224,6 +224,9 @@ func (ct *Component) MarshalJSON() (b []byte, err error) {
 // IsA returns true is any of the names match the any of the names
 // defined in Aliases. The check is case-insensitive.
 func (ct *Component) IsA(names ...string) bool {
+	if ct == nil {
+		return false
+	}
 	for _, a := range append([]string{ct.Name}, ct.Aliases...) {
 		for _, b := range names {
 			if strings.EqualFold(a, b) {
