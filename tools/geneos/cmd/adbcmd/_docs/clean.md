@@ -1,6 +1,6 @@
 Clean ADB files, currently applicable only to dataitem XPaths in limited, but common, scenarios.
 
-Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify. The original file is saved with a `.bak` extension and a timestamp, the new file replaces the original.
+Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify. The original file is saved with a timestamp added before the `.adb` extension, the processed file replaces the original.
 
 If you use the `--keep-all`/`-k` flag, the default action for all elements will be `keep`, overriding the default behavior. This can be combined with `--filter` to selectively apply the modifications to specific XPaths and modifiers.
 

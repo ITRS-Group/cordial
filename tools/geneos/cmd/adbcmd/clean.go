@@ -10,6 +10,7 @@ import (
 	"maps"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -273,10 +274,15 @@ func cleanCommand(file string) (err error) {
 	w.Close()
 	zr.Close()
 
+	// back up original file with timestamp
 	ts := time.Now().Format("20060102150405")
-	os.Rename(file, file+"."+ts+".bak")
-	os.Rename(file+".cleaned", file)
-	return
+	ext := filepath.Ext(file)
+	pre := strings.TrimSuffix(file, ext)
+	if err = os.Rename(file, pre+"-"+ts+ext); err != nil {
+		// fail if we cannot backup file
+		return
+	}
+	return os.Rename(file+".cleaned", file)
 }
 
 // cleanActivedashboard processes an Activedashboard extension file,
