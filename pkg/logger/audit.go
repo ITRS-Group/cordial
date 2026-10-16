@@ -26,6 +26,9 @@ var auditLogger *AuditLogger
 // auditHandler holds the global audit handler.
 var auditHandler slog.Handler
 
+// initialise a unique audit event ID for this program execution
+var auditEventID = uuid.NewString()
+
 // NewAuditLogger creates a new audit logger with the specified options.
 // The logger writes to one or more destinations, depending on the
 // options provided, using a multi-destination handler. A global audit
@@ -55,25 +58,42 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 		handlers = append(handlers, auditHandler)
 	}
 
+	// set up our standard attributes
+
 	username, err := process.GetCurrentUsername()
 	if err != nil {
 		username = "unknown"
 	}
-	userattr := []any{
+
+	attrs := []any{
+		slog.String("event_id", auditEventID),
 		slog.String("username", username),
 	}
 
+	// if the login name differs from the current username, add it as an
+	// attribute
 	loginname, err := process.GetLoginName(-1)
 	if err != nil {
 		loginname = "unknown"
 	}
 
 	if username != loginname {
-		userattr = append(userattr, slog.String("login", loginname))
+		attrs = append(attrs, slog.String("login", loginname))
 	}
 	return &AuditLogger{
-		Logger: slog.New(slog.NewMultiHandler(handlers...)).With(userattr...),
+		Logger: slog.New(slog.NewMultiHandler(handlers...)).With(attrs...),
 	}
+}
+
+// ResetEventID generates a new unique audit event ID for the current
+// program execution. The event ID is used for all handlers in a single
+// audit logger.
+//
+// This function should be called whenever a new audit event ID is
+// required, for example, at the start of a new operation or
+// transaction.
+func ResetEventID() {
+	auditEventID = uuid.NewString()
 }
 
 func NewGlobalAuditLogger(global io.Writer) {
@@ -93,7 +113,6 @@ func Audit() *AuditLogger {
 // UUID, is also added to each log entry so that each program execution
 // can be identified.
 func newHandler(w io.Writer) slog.Handler {
-	u := uuid.NewString()
 	return slog.NewJSONHandler(w,
 		&slog.HandlerOptions{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -110,7 +129,7 @@ func newHandler(w io.Writer) slog.Handler {
 				return a
 			},
 		},
-	).WithAttrs([]slog.Attr{slog.String("event_id", u)})
+	)
 }
 
 // Event logs an audit event with the specified event name and optional
