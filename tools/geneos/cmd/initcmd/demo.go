@@ -53,8 +53,10 @@ var demoCmd = &cobra.Command{
 	Long:         demoCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAuditCommand: "always",
+		cmd.CmdAuditActions: "always",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := log.With("command", "init demo")
@@ -77,7 +79,7 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
+		if err = geneos.Initialise(command, geneos.LOCAL, options...); err != nil {
 			log.Error("initialise failed", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -86,11 +88,11 @@ var demoCmd = &cobra.Command{
 			return
 		}
 
-		return initDemo(geneos.LOCAL, options...)
+		return initDemo(command, geneos.LOCAL, options...)
 	},
 }
 
-func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
+func initDemo(command *cobra.Command, h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	empty := []string{}
 
 	ct := geneos.ParseComponent("gateway")
@@ -161,10 +163,10 @@ func initDemo(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 		}
 	}
 
-	if err = cmd.Start(nil, initCmdLogs, true, empty); err != nil {
+	if err = cmd.Start(command, nil, initCmdLogs, true, empty); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	pscmd.CommandPS(nil, empty, empty)
+	pscmd.CommandPS(command, nil, empty, empty)
 	return
 }

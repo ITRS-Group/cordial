@@ -97,6 +97,8 @@ var logsCmd = &cobra.Command{
 		CmdWildcardNames:        "true",
 		CmdAllowRoot:            "true",
 		CmdNonInstanceArgsError: "true",
+		CmdAuditCommand:         "never",
+		CmdAuditActions:         "never",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, _, err := FetchArgs(cmd)
@@ -115,7 +117,7 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.Do(geneos.GetHost(Hostname), ct, names, instance.CatInstance,
+			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, instance.CatInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
@@ -135,7 +137,7 @@ var logsCmd = &cobra.Command{
 				instance.ShowAuditLogs(logCmdAudit),
 			) // never returns
 		default:
-			instance.Do(geneos.GetHost(Hostname), ct, names, instance.TailInstance,
+			instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, instance.TailInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),

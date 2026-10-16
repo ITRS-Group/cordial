@@ -67,6 +67,8 @@ var restartCmd = &cobra.Command{
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdNonInstanceArgsError:  "true",
+		CmdAuditCommand:          "always",
+		CmdAuditActions:          "always",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		if restartCmdPort != 0 {
@@ -94,7 +96,7 @@ var restartCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Err = restartInstance(i)
 			return

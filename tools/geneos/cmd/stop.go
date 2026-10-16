@@ -57,8 +57,8 @@ var stopCmd = &cobra.Command{
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdNonInstanceArgsError:  "true",
-		CmdAuditCommand:          "true",
-		CmdAuditActions:          "true",
+		CmdAuditCommand:          "always",
+		CmdAuditActions:          "always",
 	},
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		if stopCmdPort != 0 {
@@ -89,7 +89,7 @@ var stopCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
 			return

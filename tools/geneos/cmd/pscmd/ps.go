@@ -70,13 +70,15 @@ var psCmd = &cobra.Command{
 		cmd.CmdWildcardNames:        "true",
 		cmd.CmdAllowRoot:            "true",
 		cmd.CmdNonInstanceArgsError: "true",
+		cmd.CmdAuditCommand:         "never",
+		cmd.CmdAuditActions:         "never",
 	},
 	Run: func(command *cobra.Command, _ []string) {
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
 		}
-		CommandPS(ct, names, params)
+		CommandPS(command, ct, names, params)
 	},
 }
 
@@ -88,13 +90,13 @@ type psCommon struct {
 }
 
 // CommandPS writes running instance information to STDOUT
-func CommandPS(ct *geneos.Component, names []string, params []string) {
+func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, params []string) {
 	// always start with a clean cache, in case this is called from init commands
 	process.ClearCache()
 
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
+		instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
 			responses.IndentJSON(psCmdIndent),
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.IgnoreErr(os.ErrProcessDone),
@@ -134,7 +136,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			}
 		}
 
-		resps := instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
+		resps := instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceCSV)
 
 		headlines := map[string]string{}
 
@@ -182,7 +184,7 @@ func CommandPS(ct *geneos.Component, names []string, params []string) {
 			columns = instanceCSVColumns
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
+		instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
 	}
 }
 

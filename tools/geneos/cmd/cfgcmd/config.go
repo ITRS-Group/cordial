@@ -41,8 +41,10 @@ var configCmd = &cobra.Command{
 	Long:         configCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAuditCommand: "never",
+		cmd.CmdAuditActions: "never",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

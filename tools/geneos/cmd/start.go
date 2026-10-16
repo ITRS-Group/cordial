@@ -97,7 +97,7 @@ var startCmd = &cobra.Command{
 		if ct != nil && len(origargs) > 1 {
 			autostart = true
 		}
-		return Start(ct, startCmdLogs, autostart, names)
+		return Start(cmd, ct, startCmdLogs, autostart, names)
 	},
 }
 
@@ -106,8 +106,8 @@ var startCmd = &cobra.Command{
 // flag to, well, watch logs while autostart is a flag to indicate if
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
-func Start(ct *geneos.Component, watchlogs bool, autostart bool, names []string) (err error) {
-	instance.Do(geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+func Start(command *cobra.Command, ct *geneos.Component, watchlogs bool, autostart bool, names []string) (err error) {
+	instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 		resp = responses.New[responses.General](i)
 		if instance.IsAutoStart(i) || autostart {
 			resp.Err = instance.Start(i,

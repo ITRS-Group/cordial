@@ -59,6 +59,8 @@ var commandCmd = &cobra.Command{
 		CmdAllowRoot:             "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdNonInstanceArgsError:  "true",
+		CmdAuditCommand:          "never",
+		CmdAuditActions:          "never",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
@@ -67,11 +69,11 @@ var commandCmd = &cobra.Command{
 			return err
 		}
 		if commandCmdJSON {
-			results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
+			results := instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
 			results.Report(os.Stdout, responses.IndentJSON(true))
 			return nil
 		}
-		results := instance.Do(geneos.GetHost(Hostname), ct, names, commandInstance)
+		results := instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, commandInstance)
 		results.Report(os.Stdout)
 		return
 	},

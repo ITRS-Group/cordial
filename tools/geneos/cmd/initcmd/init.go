@@ -121,8 +121,10 @@ geneos init
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAuditCommand: "always",
+		cmd.CmdAuditActions: "always",
 	},
 
 	// initialise a geneos installation
@@ -153,7 +155,7 @@ geneos init
 			return err
 		}
 
-		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
+		if err = geneos.Initialise(command, geneos.LOCAL, options...); err != nil {
 			log.Error("initialise failed", slog.Any("error", err))
 			os.Exit(1)
 		}

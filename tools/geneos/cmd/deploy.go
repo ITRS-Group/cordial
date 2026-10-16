@@ -131,8 +131,10 @@ var deployCmd = &cobra.Command{
 `,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:      "false",
-		CmdRequireHome: "false",
+		CmdGlobal:       "false",
+		CmdRequireHome:  "false",
+		CmdAuditCommand: "always",
+		CmdAuditActions: "always",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var name string
@@ -219,7 +221,21 @@ var deployCmd = &cobra.Command{
 					log.Error("failed to initialize global audit", slog.Any("error", err))
 				}
 
-				logger.Audit()
+				// force initialization of the global audit logger, and
+				// repeat the deploy event as the directory structure
+				// has just been built
+				var cmdLine strings.Builder
+				for _, a := range os.Args {
+					if strings.Contains(a, " ") {
+						cmdLine.WriteString(` "`)
+						cmdLine.WriteString(a)
+						cmdLine.WriteString(`"`)
+					} else {
+						cmdLine.WriteString(" ")
+						cmdLine.WriteString(a)
+					}
+				}
+				logger.Audit().Event(command.Name(), slog.String("command", strings.TrimSpace(cmdLine.String())))
 
 				// recreate LOCAL to load "geneos" and others
 				geneos.LOCAL = nil

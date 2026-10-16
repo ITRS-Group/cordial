@@ -54,9 +54,11 @@ var showCmd = &cobra.Command{
 	Long:         showCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
-		cmd.CmdAllowRoot:   "true",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAllowRoot:    "true",
+		cmd.CmdAuditCommand: "never",
+		cmd.CmdAuditActions: "never",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host

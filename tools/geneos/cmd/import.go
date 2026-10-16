@@ -83,7 +83,7 @@ geneos import gateway -c shared common_include.xml
 		if err != nil {
 			return
 		}
-		return ImportFiles(ct, names, params)
+		return ImportFiles(cmd, ct, names, params)
 	},
 }
 
@@ -91,7 +91,7 @@ geneos import gateway -c shared common_include.xml
 // without asking - use case is license files, setup files etc. backup /
 // history track older files (date/time?) no restart or reload of
 // components?
-func ImportFiles(ct *geneos.Component, args []string, params []string) (err error) {
+func ImportFiles(cmd *cobra.Command, ct *geneos.Component, args []string, params []string) (err error) {
 	if importCmdCommon != "" {
 		// ignore args, use ct & params
 		if ct == nil {
@@ -109,7 +109,7 @@ func ImportFiles(ct *geneos.Component, args []string, params []string) (err erro
 		return nil
 	}
 
-	instance.Do(geneos.GetHost(Hostname), ct, args, importInstance, params)
+	instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, args, importInstance, params)
 	return
 }
 

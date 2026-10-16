@@ -79,6 +79,8 @@ geneos aes ls -S gateway -H localhost -c
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
 		cmd.CmdAllowRoot:     "true",
+		cmd.CmdAuditCommand:  "never",
+		cmd.CmdAuditActions:  "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, _, err := cmd.FetchArgs(command)
@@ -94,7 +96,7 @@ geneos aes ls -S gateway -H localhost -c
 				results, _ := aesListSharedJSON(ct, h)
 				results.Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			} else {
-				instance.Do(h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+				instance.DoWithAudit(command, h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			}
 		case listCmdToolkit:
 			w := csv.NewWriter(os.Stdout)
@@ -111,7 +113,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(h, ct, names, aesListInstanceCSV).Report(w)
+				instance.DoWithAudit(command, h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		case listCmdCSV:
 			w := csv.NewWriter(os.Stdout)
@@ -127,7 +129,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(h, ct, names, aesListInstanceCSV).Report(w)
+				instance.DoWithAudit(command, h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		default:
 			columns := []string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"}
@@ -136,7 +138,7 @@ geneos aes ls -S gateway -H localhost -c
 				responses, _ := aesListShared(ct, h)
 				responses.Formatted(os.Stdout, "column", columns, nil)
 			} else {
-				instance.Do(h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
+				instance.DoWithAudit(command, h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
 			}
 		}
 		return

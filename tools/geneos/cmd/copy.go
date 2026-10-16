@@ -33,7 +33,6 @@ import (
 
 func init() {
 	Cmd.AddCommand(copyCmd)
-
 }
 
 //go:embed _docs/copy.md

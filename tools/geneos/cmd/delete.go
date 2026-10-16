@@ -57,8 +57,6 @@ var deleteCmd = &cobra.Command{
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
 		CmdNonInstanceArgsError:  "true",
-		CmdAuditCommand:          "true",
-		CmdAuditActions:          "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
 		ct, names, _, err := FetchArgs(command)
@@ -93,7 +91,6 @@ func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 				return
 			}
 		}
-		instance.AuditEvent(i, "delete")
 		if resp.Err = i.Host().RemoveAll(i.Home()); resp.Err != nil {
 			return
 		}

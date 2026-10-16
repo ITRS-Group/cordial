@@ -47,9 +47,11 @@ cat $(geneos home gateway example2)/gateway.txt
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdGlobal:      "false",
-		CmdRequireHome: "true",
-		CmdAllowRoot:   "true",
+		CmdGlobal:       "false",
+		CmdRequireHome:  "true",
+		CmdAllowRoot:    "true",
+		CmdAuditCommand: "never",
+		CmdAuditActions: "never",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {

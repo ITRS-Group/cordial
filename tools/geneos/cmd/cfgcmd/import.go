@@ -47,9 +47,11 @@ var importCmd = &cobra.Command{
 		cmd.CmdGlobal:        "true",
 		cmd.CmdRequireHome:   "true",
 		cmd.CmdWildcardNames: "true",
+		cmd.CmdAuditCommand:  "never",
+		cmd.CmdAuditActions:  "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		fmt.Println("not yet implemented")
+		fmt.Println("Please use the `restore` command instead")
 		return
 	},
 }

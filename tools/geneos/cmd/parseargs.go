@@ -155,26 +155,31 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// set audit configuration in the global configuration based on
 	// command annotations
 
-	if auditCommands, ok := c.Annotations[CmdAuditCommand]; ok {
-		cf := config.Global()
-		confKey := config.Join("audit", "commands")
+	cf := config.Global()
 
-		switch auditCommands {
-		case "always":
+	// set audit configuration for commands based on annotations.
+	// default (if the annotation is not defined) is same as "true",
+	// which can be overridden by the global audit setting.
+	auditCommands := c.Annotations[CmdAuditCommand]
+	confKey := config.Join("audit", "commands")
+	switch auditCommands {
+	case "always":
+		config.Set(cf, confKey, true)
+	case "never":
+		config.Set(cf, confKey, false)
+	case "", "true": // only true if the global audit setting is not already set
+		if !cf.IsSet(confKey) {
 			config.Set(cf, confKey, true)
-		case "never":
+		}
+	case "false": // only false if the global audit setting is not already set
+		if !cf.IsSet(confKey) {
 			config.Set(cf, confKey, false)
-		case "true":
-			if !cf.IsSet(confKey) {
-				config.Set(cf, confKey, true)
-			}
-		case "false":
-			if !cf.IsSet(confKey) {
-				config.Set(cf, confKey, false)
-			}
 		}
 	}
 
+	// if the result is true, then log the command as early as possible.
+	// this fails for environments that are being initialised, and there
+	// is a matching call in the `init` and `deploy` commands
 	if config.Get[bool](config.Global(), config.Join("audit", "commands")) {
 		defer func() {
 			var cmdLine strings.Builder
@@ -192,23 +197,23 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 		}()
 	}
 
-	if auditActions, ok := c.Annotations[CmdAuditActions]; ok {
-		cf := config.Global()
-		confKey := config.Join("audit", "actions")
-
-		switch auditActions {
-		case "always":
+	// set audit configuration for commands based on annotations.
+	// default (if the annotation is not defined) is same as "true",
+	// which can be overridden by the global audit setting.
+	auditActions := c.Annotations[CmdAuditActions]
+	confKey = config.Join("audit", "actions")
+	switch auditActions {
+	case "always":
+		config.Set(cf, confKey, true)
+	case "never":
+		config.Set(cf, confKey, false)
+	case "", "true": // only true if the global audit setting is not already set
+		if !cf.IsSet(confKey) {
 			config.Set(cf, confKey, true)
-		case "never":
+		}
+	case "false": // only false if the global audit setting is not already set
+		if !cf.IsSet(confKey) {
 			config.Set(cf, confKey, false)
-		case "true":
-			if !cf.IsSet(confKey) {
-				config.Set(cf, confKey, true)
-			}
-		case "false":
-			if !cf.IsSet(confKey) {
-				config.Set(cf, confKey, false)
-			}
 		}
 	}
 

@@ -60,9 +60,11 @@ var listCmd = &cobra.Command{
 	Aliases:      []string{"ls"},
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
-		cmd.CmdAllowRoot:   "true",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdAllowRoot:    "true",
+		cmd.CmdAuditCommand: "never",
+		cmd.CmdAuditActions: "never",
 	},
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		// log := cordial.Logger.With("command", "package list")

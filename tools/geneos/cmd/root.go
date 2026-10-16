@@ -108,11 +108,9 @@ func init() {
 		}
 
 		// if we are initialising and environment via init, deploy etc.
-		// then this is not run, do it in those
-		if geneos.LocalRoot() != "" {
-			if err := geneos.InitGlobalAudit(); err != nil {
-				log.Error("failed to initialize global audit", slog.Any("error", err))
-			}
+		// then this is not run, do it in those separately
+		if err := geneos.InitGlobalAudit(); err != nil {
+			log.Error("failed to initialize global audit", slog.Any("error", err))
 		}
 		geneos.Init(cordial.ExecutableName())
 	})
@@ -239,8 +237,10 @@ geneos restart
 `, "|", "`"),
 	// SilenceUsage: true,
 	Annotations: map[string]string{
-		CmdRequireHome: "true",
-		CmdAllowRoot:   "true",
+		CmdRequireHome:  "true",
+		CmdAllowRoot:    "true",
+		CmdAuditCommand: "never",
+		CmdAuditActions: "never",
 	},
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,

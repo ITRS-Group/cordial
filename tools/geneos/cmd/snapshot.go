@@ -117,11 +117,11 @@ var snapshotCmd = &cobra.Command{
 
 		switch {
 		case snapshotCmdFormat == "toolkit":
-			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkit, params)
+			resp = instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkit, params)
 		case snapshotCmdFormat == "toolkit-multi":
-			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkitMulti, params)
+			resp = instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, snapshotInstanceToolkitMulti, params)
 		default:
-			resp = instance.Do(geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
+			resp = instance.DoWithAudit(cmd, geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
 		}
 		resp.Report(os.Stdout, responses.IndentJSON(true))
 	},

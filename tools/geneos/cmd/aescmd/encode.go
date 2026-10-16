@@ -75,6 +75,7 @@ var encodeCmd = &cobra.Command{
 		cmd.CmdWildcardNames:         "true",
 		cmd.CmdNonInstanceArgsError:  "true",
 		cmd.CmdAllInstancesMustMatch: "true",
+		cmd.CmdAuditActions:          "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)
@@ -157,7 +158,7 @@ var encodeCmd = &cobra.Command{
 				defer clear(encodeCmdClientSecret)
 			}
 
-			instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+			instance.DoWithAudit(command, h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				if !i.Type().UsesKeyfiles {
 					return
@@ -248,7 +249,7 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		instance.DoWithAudit(command, h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {

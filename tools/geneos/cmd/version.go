@@ -48,9 +48,11 @@ var versionCmd = &cobra.Command{
 	SilenceUsage: true,
 	Version:      cordial.VERSION,
 	Annotations: map[string]string{
-		CmdGlobal:      "false",
-		CmdRequireHome: "false",
-		CmdAllowRoot:   "true",
+		CmdGlobal:       "false",
+		CmdRequireHome:  "false",
+		CmdAllowRoot:    "true",
+		CmdAuditCommand: "never",
+		CmdAuditActions: "never",
 	},
 	DisableFlagsInUseLine: true,
 	Run: func(cmd *cobra.Command, args []string) {

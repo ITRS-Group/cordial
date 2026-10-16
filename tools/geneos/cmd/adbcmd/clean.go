@@ -156,7 +156,7 @@ var cleanCmd = &cobra.Command{
 		cmd.CmdGlobal:       "false",
 		cmd.CmdRequireHome:  "false",
 		cmd.CmdAllowRoot:    "true",
-		cmd.CmdAuditCommand: "false",
+		cmd.CmdAuditCommand: "false", // no environmental effect
 		cmd.CmdAuditActions: "false",
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {

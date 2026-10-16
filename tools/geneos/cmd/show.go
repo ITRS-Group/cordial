@@ -83,6 +83,8 @@ var showCmd = &cobra.Command{
 		CmdWildcardNames:        "true",
 		CmdAllowRoot:            "true",
 		CmdNonInstanceArgsError: "true",
+		CmdAuditCommand:         "never",
+		CmdAuditActions:         "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		ct, names, _, err := FetchArgs(command)
@@ -106,7 +108,7 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdValidate {
-			instance.Do(geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
+			instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
 				responses.Prefix("### validation results for %s\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
@@ -115,14 +117,14 @@ var showCmd = &cobra.Command{
 		}
 
 		if showCmdSetup {
-			instance.Do(geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
+			instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
 				responses.Prefix("<!-- configuration for %s -->\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
 			)
 			return
 		}
-		instance.Do(geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
+		instance.DoWithAudit(command, geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
 		return
 	},
 }

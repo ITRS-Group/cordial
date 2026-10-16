@@ -43,7 +43,9 @@ var tlsCmd = &cobra.Command{
 	Long:         tlsCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdRequireHome: "true",
+		cmd.CmdRequireHome:  "true",
+		cmd.CmdAuditCommand: "never",
+		cmd.CmdAuditActions: "never",
 	},
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,

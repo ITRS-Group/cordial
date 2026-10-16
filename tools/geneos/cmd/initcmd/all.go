@@ -62,8 +62,10 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
+		cmd.CmdGlobal:       "false",
+		cmd.CmdRequireHome:  "false",
+		cmd.CmdAuditCommand: "always",
+		cmd.CmdAuditActions: "always",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := log.With("command", "init all")
@@ -86,7 +88,7 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		if err = geneos.Initialise(geneos.LOCAL, options...); err != nil {
+		if err = geneos.Initialise(command, geneos.LOCAL, options...); err != nil {
 			log.Error("initialise failed", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -95,11 +97,11 @@ sudo geneos init all -L /tmp/geneos-1.lic -u email@example.com myuser /opt/geneo
 			return
 		}
 
-		return initAll(geneos.LOCAL, options...)
+		return initAll(command, geneos.LOCAL, options...)
 	},
 }
 
-func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
+func initAll(command *cobra.Command, h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	e := []string{}
 
 	if initCmdName == "" {
@@ -137,7 +139,7 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 
 		return
 	}
-	if err = cmd.ImportFiles(licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
+	if err = cmd.ImportFiles(command, licdCT, []string{initCmdName}, []string{"geneos.lic=" + allCmdLicenseFile}); err != nil {
 		return
 	}
 	if _, err = instance.Add(h, gatewayCT, initCmdName,
@@ -163,10 +165,10 @@ func initAll(h *geneos.Host, options ...geneos.PackageOption) (err error) {
 	); err != nil {
 		return
 	}
-	if err = cmd.Start(nil, initCmdLogs, true, e); err != nil {
+	if err = cmd.Start(command, nil, initCmdLogs, true, e); err != nil {
 		return
 	}
 	time.Sleep(time.Second * 2)
-	pscmd.CommandPS(nil, e, e)
+	pscmd.CommandPS(command, nil, e, e)
 	return
 }

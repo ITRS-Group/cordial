@@ -89,6 +89,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 		cmd.CmdWildcardNames:         "true",
 		cmd.CmdNonInstanceArgsError:  "true",
 		cmd.CmdAllInstancesMustMatch: "true",
+		cmd.CmdAuditActions:          "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var ciphertext string
@@ -145,7 +146,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return err
 		}
 
-		instance.Do(geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		instance.DoWithAudit(command, geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {
