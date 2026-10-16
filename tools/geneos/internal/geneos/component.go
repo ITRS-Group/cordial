@@ -309,7 +309,7 @@ func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
 
 		if len(cts) == 0 {
 			for _, c := range registeredComponents {
-				if c == &RootComponent {
+				if c == &RootComponent || c.IsA("profile") {
 					continue
 				}
 				if !yield(c) {
@@ -320,7 +320,7 @@ func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
 		}
 
 		for _, c := range cts {
-			if c == &RootComponent {
+			if c == &RootComponent || c.IsA("profile") {
 				continue
 			}
 			if !yield(c) {
