@@ -113,8 +113,19 @@ func Start(i geneos.Instance, opts ...any) error {
 
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	if !so.skipAudit {
+		var cmdLine strings.Builder
+		for _, a := range cmd.Args {
+			if strings.Contains(a, " ") {
+				cmdLine.WriteString(` "`)
+				cmdLine.WriteString(a)
+				cmdLine.WriteString(`"`)
+			} else {
+				cmdLine.WriteString(" ")
+				cmdLine.WriteString(a)
+			}
+		}
 		args := []any{
-			slog.String("command", cmd.String()),
+			slog.String("command", strings.TrimSpace(cmdLine.String())),
 			slog.Int("pid", pid),
 		}
 		i.AuditEvent("start", args...)
