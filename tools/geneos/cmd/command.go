@@ -103,7 +103,7 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 	}
 	lines = append(lines,
 		"command line:",
-		fmt.Sprint("\t", cmdLine.String()),
+		fmt.Sprint("\t", strings.TrimSpace(cmdLine.String())),
 		"",
 		"working directory:",
 		fmt.Sprint("\t", cmd.Dir),
