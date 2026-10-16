@@ -2,7 +2,6 @@ package logger
 
 import (
 	"io"
-	"os"
 )
 
 // audit options for the audit logger
@@ -10,15 +9,12 @@ import (
 type AuditOption func(*auditOptions)
 
 type auditOptions struct {
-	global         io.Writer
-	w              io.Writer
-	timestampField *string // nil means the default timestamp field name will be used, empty string means the timestamp field will be omitted
+	global io.Writer
+	w      io.Writer
 }
 
 func evalAuditOptions(options ...AuditOption) *auditOptions {
-	opts := &auditOptions{
-		global: os.Stderr,
-	}
+	opts := &auditOptions{}
 	for _, o := range options {
 		o(opts)
 	}

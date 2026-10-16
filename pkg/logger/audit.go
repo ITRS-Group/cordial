@@ -3,9 +3,10 @@ package logger
 import (
 	"io"
 	"log/slog"
-	"os"
 
+	"github.com/google/uuid"
 	"github.com/itrs-group/cordial/pkg/process"
+	"github.com/labstack/gommon/log"
 )
 
 // provides a set of audit logger functions, including initialisation and formatting
@@ -46,15 +47,13 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 		)
 	}
 
-	// build the global audit handler if necessary
-	if auditHandler == nil {
-		var w io.Writer = os.Stderr
-		if opts.global != nil {
-			w = opts.global
-		}
-		InitGlobalAudit(w)
+	// add the global audit handler, either a new one or use existing if not nil
+	if opts.global != nil {
+		auditHandler = newHandler(opts.global)
+		handlers = append(handlers, auditHandler)
+	} else if auditHandler != nil {
+		handlers = append(handlers, auditHandler)
 	}
-	handlers = append(handlers, auditHandler)
 
 	username, err := process.GetCurrentUsername()
 	if err != nil {
@@ -77,6 +76,10 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 	}
 }
 
+func NewGlobalAuditLogger(global io.Writer) {
+	auditLogger = NewAuditLogger(GlobalWriter(global))
+}
+
 func Audit() *AuditLogger {
 	if auditLogger == nil {
 		auditLogger = NewAuditLogger()
@@ -84,11 +87,13 @@ func Audit() *AuditLogger {
 	return auditLogger
 }
 
-func InitGlobalAudit(w io.Writer) {
-	auditHandler = newHandler(w)
-}
-
+// newHandler creates a new slog.Handler for the audit logger, wrapping
+// the provided writer. it renames "time" to "timestamp", "level" is
+// removed, and "msg" to "event". An "event_id" attribute, a random
+// UUID, is also added to each log entry so that each program execution
+// can be identified.
 func newHandler(w io.Writer) slog.Handler {
+	u := uuid.NewString()
 	return slog.NewJSONHandler(w,
 		&slog.HandlerOptions{
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
@@ -105,17 +110,15 @@ func newHandler(w io.Writer) slog.Handler {
 				return a
 			},
 		},
-	)
+	).WithAttrs([]slog.Attr{slog.String("event_id", u)})
 }
 
 // Event logs an audit event with the specified event name and optional
-// arguments.
-//
-// If the audit logger is not initialized, a global audit logger will be
-// created automatically.
+// arguments. If the AuditLogger is nil, the event will not be logged.
 func (a *AuditLogger) Event(event string, args ...any) {
 	if a == nil {
-		panic("audit logger is not initialized")
+		log.Debug("audit logger is not initialized")
+		return
 	}
 	a.Info(event, args...)
 }

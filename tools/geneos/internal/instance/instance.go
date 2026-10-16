@@ -30,7 +30,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/DeRuina/timberjack"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/cobra"
@@ -47,84 +46,6 @@ type Instance struct {
 	ConfigLoaded time.Time           `json:"-"`
 	Logger       *slog.Logger        `json:"-"`
 	AuditLogger  *logger.AuditLogger `json:"-"`
-}
-
-var log = logger.Logger
-
-// Logger returns a logger with the instance name, host and type in the
-// context. The logger is configured with the "logger" prefix and an
-// indent, and is set to the Info level.
-func Logger(i geneos.Instance, groups ...string) (l *slog.Logger) {
-	l = slog.New(logger.LogHandler)
-	for _, group := range groups {
-		l = l.WithGroup(group)
-	}
-	return l.With(
-		slog.Group("instance",
-			slog.String("component", i.Type().String()),
-			slog.String("name", i.Name()),
-			slog.String("host", i.Host().String()),
-		),
-	)
-}
-
-// AuditLogger returns an audit logger with the instance name, host and
-// type in the context. Optional configuration to customize the audit
-// logger can be provided through the instance's config under the
-// `audit` key. The following sub-keys are supported (with their
-// defaults):
-//
-//   - `file` - Default is `TYPE-audit.log` relative to the working directory
-//   - `max-size` MiB - Default is `10`
-//   - `max-age` days - Default is `30`
-//   - `max-backups` - Default is `5`
-//   - `compression` - Default is `gzip`
-//
-// Defaults are first taken from the global config keys of the same
-// name, if they are defined.
-//
-// NOTE: This only writes instance audit logs on LOCALHOST, for remote
-// instances it will only write to any global audit destination
-func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
-	if i.Host().IsLocalhost() == false {
-		return logger.NewAuditLogger()
-	}
-
-	cf := i.Config()
-
-	auditwriter := &timberjack.Logger{
-		Filename:         AuditFilepath(i),
-		MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(10)))),
-		MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(30)))),
-		MaxBackups:       config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(config.Get[int](cf, cf.Join("audit", "max-backups"), config.DefaultValue(5)))),
-		Compression:      config.Get[string](cf, cf.Join("audit", "compression"), config.DefaultValue(config.Get[bool](cf, cf.Join("audit", "compression"), config.DefaultValue("gzip")))),
-		BackupTimeFormat: "20060102150405",
-		RotationInterval: time.Hour * 24 * 7,
-		RotateAt:         []string{"00:00"},
-	}
-
-	return logger.NewAuditLogger(logger.AuditWriter(auditwriter))
-}
-
-func AuditFilepath(i geneos.Instance) string {
-	cf := i.Config()
-	return HomeRel(i, config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(i.Type().String()+"-audit.log")))
-}
-
-func AuditEvent(i geneos.Instance, event string, args ...any) {
-	if i == nil {
-		return
-	}
-	auditLogger := AuditLogger(i)
-	attrs := []any{
-		slog.Group("instance",
-			slog.String("component", i.Type().String()),
-			slog.String("name", i.Name()),
-			slog.String("host", i.Host().String()),
-		),
-	}
-	attrs = append(attrs, args...)
-	auditLogger.Event(event, attrs...)
 }
 
 // IsA returns true if instance i has a type that is component of one of
@@ -257,6 +178,9 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 
 			resp := f(c, values...)
 			responses.Finished(resp)
+			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
+				c.AuditEvent("instance action", slog.Any("result", resp.Err))
+			}
 			ch <- resp
 		}(c)
 	}
@@ -285,10 +209,6 @@ func Do(h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Inst
 func DoWithAudit(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, f func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
-	if cmd.Annotations[geneos.CmdAuditCommand] == "true" {
-		logger.Audit().Event(cmd.Name())
-	}
-
 	instances := Instances(h, ct, MatchNames(names...))
 	rs = make(responses.GeneralResponses, len(instances))
 	ch := make(chan *responses.General, len(instances))
@@ -300,7 +220,7 @@ func DoWithAudit(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names
 
 			resp := f(c, values...)
 			responses.Finished(resp)
-			if cmd.Annotations[geneos.CmdAuditActions] == "true" {
+			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
 				c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
 			}
 			ch <- resp

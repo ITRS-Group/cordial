@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/spf13/cobra"
 )
 
 // Useful errors for the package to return
@@ -65,9 +66,9 @@ const DisableExtension = "disabled"
 //
 // The only options supported are:
 //
-//  geneos.UseRoot(dir string) // to set the root directory of the installation
-//  geneos.Force(force bool) // to force init if the directory already exists and is not empty
-func Initialise(h *Host, options ...PackageOption) (err error) {
+//	geneos.UseRoot(dir string) // to set the root directory of the installation
+//	geneos.Force(force bool) // to force init if the directory already exists and is not empty
+func Initialise(cmd *cobra.Command, h *Host, options ...PackageOption) (err error) {
 	opts := evalOptions(options...)
 	if opts.geneosdir == "" {
 		log.Error("homedir not set")
@@ -116,6 +117,23 @@ func Initialise(h *Host, options ...PackageOption) (err error) {
 		LOCAL = nil
 		LOCAL = NewHost(LOCALHOST)
 		h = LOCAL
+
+		// initialise the global audit logger and log the original command
+		if err = InitGlobalAudit(); err != nil {
+			log.Error("failed to initialize global audit", slog.Any("error", err))
+		}
+		var cmdLine strings.Builder
+		for _, a := range os.Args {
+			if strings.Contains(a, " ") {
+				cmdLine.WriteString(` "`)
+				cmdLine.WriteString(a)
+				cmdLine.WriteString(`"`)
+			} else {
+				cmdLine.WriteString(" ")
+				cmdLine.WriteString(a)
+			}
+		}
+		logger.Audit().Event(cmd.Name(), slog.String("command", strings.TrimSpace(cmdLine.String())))
 	}
 
 	for _, ct := range AllComponents() {
@@ -152,15 +170,20 @@ func LocalRoot() string {
 func InitGlobalAudit() (err error) {
 	cf := config.Global()
 
-	// TODO: This doesn't work until the directory structure is built
-	defaultFile := filepath.Join(config.Get[string](cf, cordial.ExecutableName(), config.DefaultValue(os.TempDir())), "audit", "audit.log")
+	// TODO: This doesn't work until the directory structure is built,
+	// but do not error
+	if LocalRoot() == "" {
+		return nil
+	}
+
+	defaultFile := filepath.Join(LocalRoot(), "audit", "audit.log")
 	if err = os.MkdirAll(filepath.Dir(defaultFile), 0750); err != nil {
 		return
 	}
 
 	// initialise global audit logging after loading global config,
 	// which may contain defaults etc.
-	logger.InitGlobalAudit(&timberjack.Logger{
+	logger.NewGlobalAuditLogger(&timberjack.Logger{
 		Filename:         config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(defaultFile)),
 		MaxSize:          config.Get[int](cf, cf.Join("audit", "max-size"), config.DefaultValue(config.DefaultValue(10))),
 		MaxAge:           config.Get[int](cf, cf.Join("audit", "max-age"), config.DefaultValue(config.DefaultValue(30))),
