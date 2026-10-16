@@ -71,7 +71,7 @@ Each operational event is appended as one JSON line to the instance audit log (d
 
 Events are also recorded for `delete`, `enable`, and `disable`. `geneos logs` follows the Java log (`md-gateway.log`), not the audit file.
 
-Configure the audit log path per instance with `audit-log` (basename under the instance home), or set a default with `md-gateway::audit-log-file` in the geneos configuration. When the file reaches 10 MiB it is rotated to `.1` (up to five files). Override size and retention with `md-gateway::audit-max-bytes` and `md-gateway::audit-max-files`.
+Configure the audit log path per instance with `audit-log` (basename under the instance home), or set a default with `md-gateway::auditlogfile` in the geneos configuration. When the file reaches 10 MiB it is rotated to `.1` (up to five files). Override size and retention with `md-gateway::audit-max-bytes` and `md-gateway::audit-max-files`.
 
 The archive also contains `geneos/md-gateway-rules.xml` for a Geneos Gateway include; that file is not used by this component.
 
@@ -101,9 +101,10 @@ geneos md-gateway
 ### Options
 
 ```text
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

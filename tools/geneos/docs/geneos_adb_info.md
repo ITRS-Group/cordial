@@ -14,10 +14,11 @@ geneos adb info [PATH...] [flags]
 ### Options
 
 ```text
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -X, --show-xpaths     Show a list of XPaths rather than totals for element values
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -X, --show-xpaths       Show a list of XPaths rather than totals for element values
 ```
 
 ## SEE ALSO

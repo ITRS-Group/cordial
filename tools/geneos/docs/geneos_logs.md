@@ -25,18 +25,20 @@ geneos logs [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -f, --follow          Follow file
-  -n, --lines int       Lines to tail (default 10)
-  -c, --cat             Output whole file
-  -E, --stderr          Show STDERR output files
-  -N, --no-stdout       Do not show STDOUT log files
-  -X, --no-headers      Do not show log file headers, useful for --match/-g output
-  -C, --ca              Include Collection Agent log for Netprobe instances
-  -g, --match string    Match lines with STRING
-  -v, --ignore string   Match lines without STRING
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -f, --follow            Follow file
+  -n, --lines int         Lines to tail (default 10)
+  -c, --cat               Output whole file
+  -E, --console           Show console (stdout/stderr) output files
+  -N, --no-normal         Do NOT show normal instance log files
+  -X, --no-headers        Do not show log file headers, useful for --match/-g output
+  -C, --ca                Include Collection Agent log for Netprobe instances
+  -A, --audit             Show only audit log files
+  -g, --match string      Match lines with STRING
+  -v, --ignore string     Match lines without STRING
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

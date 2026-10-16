@@ -37,24 +37,25 @@ geneos backup [flags] [all] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -o, --output string   Write to "DEST". Without a destination filename the command creates
-                        a file in the current directory with a name based on the contents of the
-                        archive. If DEST is a directory or has a "/" suffix then the file is
-                        written to that directory using the same naming format as if no file was
-                        given. Directories are created as required.
-  -D, --datetime        Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names
-  -z, --compress type   Compression type. One of `gzip`, `bzip2` or `none`. (default "gzip")
-  -s, --size string     Skip files larger than this size unless --all is used. Accepts suffixes
-                        with common scale units such as K, M, G with both B and iB units,
-                        e.g. "2MiB". "0" (zero) means no limit to file sizes. (default "2MiB")
-  -A, --all             Include all files except AES key files, certificates and private keys.
-      --shared          Include per-component shared directories from outside instance directories.
-                        
-      --aes             Include AES key files.
-      --tls             Include certificates, private keys and certificate chains.
-      --allow-root      allow running as root (not recommended)
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -o, --output string     Write to "DEST". Without a destination filename the command creates
+                          a file in the current directory with a name based on the contents of the
+                          archive. If DEST is a directory or has a "/" suffix then the file is
+                          written to that directory using the same naming format as if no file was
+                          given. Directories are created as required.
+  -D, --datetime          Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names
+  -z, --compress type     Compression type. One of `gzip`, `bzip2` or `none`. (default "gzip")
+  -s, --size string       Skip files larger than this size unless --all is used. Accepts suffixes
+                          with common scale units such as K, M, G with both B and iB units,
+                          e.g. "2MiB". "0" (zero) means no limit to file sizes. (default "2MiB")
+  -A, --all               Include all files except AES key files, certificates and private keys.
+      --shared            Include per-component shared directories from outside instance directories.
+                          
+      --aes               Include AES key files.
+      --tls               Include certificates, private keys and certificate chains.
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

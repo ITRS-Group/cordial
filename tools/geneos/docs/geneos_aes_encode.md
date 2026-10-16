@@ -56,8 +56,9 @@ geneos aes encode [flags] [TYPE] [NAME...]
   -S, --client-secret SECRET   Client Secret for --app-key, prompted if not set
   -a, --app-key-file string    App-key filename, if saving per instance, otherwise defaults to STDOUT
       --allow-root             allow running as root (not recommended)
-  -G, --config string          config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -G, --config string          config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME          Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string        profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

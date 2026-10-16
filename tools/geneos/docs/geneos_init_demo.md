@@ -61,14 +61,14 @@ geneos init demo [flags] [USERNAME] [DIRECTORY]
   -S, --snapshots                        Download from nexus snapshots. Requires -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string                  Username for downloads (password prompted)
-  -w, --gateway-template string          A gateway template file
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)
       --allow-root                       allow running as root (not recommended)
-  -G, --config string                    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

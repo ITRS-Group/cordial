@@ -21,6 +21,7 @@ geneos incident query [FLAGS] [flags]
   -f, --format string       output format: "csv" or "json" (default "csv")
       --allow-root          allow running as root (not recommended)
   -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

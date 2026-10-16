@@ -15,12 +15,13 @@ geneos command [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root       allow running as root (not recommended)
-  -G, --config string    config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -e, --env NAME=VALUE   Extra environment variable (Repeat as required)
-  -x, --extras string    Extra args passed to process, split on spaces and quoting ignored
-  -H, --host HOSTNAME    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -j, --json             JSON formatted output
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -e, --env NAME=VALUE    Extra environment variable (Repeat as required)
+  -x, --extras string     Extra args passed to process, split on spaces and quoting ignored
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -j, --json              JSON formatted output
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

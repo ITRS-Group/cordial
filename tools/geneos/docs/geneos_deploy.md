@@ -121,7 +121,6 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       name of the import source or if given it must be
                                       relative to and below the instance directory
                                       (Repeat as required)
-      --profiles string               Profile configuration file
   -e, --env NAME=VALUE                Environment variable for instance start-up in the format NAME=VALUE
                                       (Repeat as required)
   -i, --include PRIORITY:[PATH|URL]   An include file in the format PRIORITY:[PATH|URL]
@@ -137,8 +136,9 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
       --allow-root                    allow running as root (not recommended)
-  -G, --config string                 config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

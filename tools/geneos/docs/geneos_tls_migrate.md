@@ -39,10 +39,11 @@ geneos tls migrate [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-      --allow-root      allow running as root (not recommended)
-  -c, --check           check if instance is already migrated
-  -G, --config string   config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME   Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --allow-root        allow running as root (not recommended)
+  -c, --check             check if instance is already migrated
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

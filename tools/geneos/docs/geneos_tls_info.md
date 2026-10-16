@@ -54,8 +54,9 @@ geneos tls info [PATH...] [flags]
       --connect-file string   Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
   -r, --roots roots           Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
       --allow-root            allow running as root (not recommended)
-  -G, --config string         config file (defaults are $HOME/.config/docs.json, /etc/docs/docs.json)
+  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
