@@ -307,6 +307,7 @@ geneos install netprobe -b active_dev -U
 					}
 					pkg := config.Get[string](i.Config(), "pkgtype")
 					if pkg != "" && pkg == ct.String() {
+						// TODO: this does nothing, fix it
 						instances = append(instances, i)
 						continue
 					}
@@ -336,41 +337,72 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOpti
 
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
+			// each instance of ct may use a different package type
+			// ("pkgtype"), so we have to collect them and loop the
+			// install over all the actuall package types
+			cts := make(map[string]struct{})
+
 			if !ctSet && !installCmdAllTypes {
 				// check for existing packages of type ct or, if this is
 				// a new installation, then instances that may not have
 				// anything installed yet
-				v, err := geneos.GetReleases(h, ct)
-				if err != nil {
+
+				// first get all packages for the instances that match
+				instances := instance.Instances(h, ct)
+				if len(instances) == 0 {
+					continue
+				}
+				for _, i := range instances {
+					if pct, found := config.Lookup[string](i.Config(), "pkgtype"); found {
+						cts[pct] = struct{}{}
+						continue
+					} else {
+						cts[ct.String()] = struct{}{}
+					}
+				}
+
+				// now loop over the actual components installed
+				tv := 0
+				for c := range cts {
+					ct := geneos.ParseComponent(c)
+
+					v, err := geneos.GetReleases(h, ct)
+					if err != nil {
+						return err
+					}
+					tv = tv + len(v)
+
+				}
+				if tv == 0 {
+					continue
+				}
+			} else {
+				cts[ct.String()] = struct{}{}
+			}
+
+			// at this point cts is a slice of all required components,
+			// which may be more than the one in the original loop
+			for c := range cts {
+				ct := geneos.ParseComponent(c)
+
+				if err = ct.MakeDirs(h); err != nil {
 					return err
 				}
-
-				i := instance.AllInstanceNames(h, ct)
-				if len(i) == 0 {
-					continue
+				if err = geneos.Install(h, ct, options...); err != nil {
+					if errors.Is(err, fs.ErrExist) {
+						err = nil
+						installed++
+						continue
+					}
+					if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" {
+						err = nil
+						installed++
+						continue
+					}
+					return err
 				}
-
-				if len(v) == 0 && len(i) == 0 {
-					continue
-				}
+				installed++
 			}
-			if err = ct.MakeDirs(h); err != nil {
-				return err
-			}
-			if err = geneos.Install(h, ct, options...); err != nil {
-				if errors.Is(err, fs.ErrExist) {
-					err = nil
-					installed++
-					continue
-				}
-				if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" {
-					err = nil
-					installed++
-					continue
-				}
-				return err
-			}
-			installed++
 		}
 	}
 	if installed == 0 {

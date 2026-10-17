@@ -82,7 +82,19 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	if ct.DownloadParams == nil {
 		v.Set("os", os)
 
-		if opts.version != "latest" {
+		// special handling for el8 platform and versions less than 7.12, for everything else just don't use el8 platform ID
+		if platform == "el8" {
+			if opts.version != "latest" && CompareVersion(opts.version, "7.12") < 0 {
+				log.Error("cannot download specific version for this platform before 7.12 - please download manually", slog.String("platform", platform))
+				err = ErrInvalidArgs
+				return
+			}
+			if opts.version == "latest" {
+				v.Set("title", os+"-"+arch)
+			} else {
+				v.Set("title", opts.version)
+			}
+		} else if opts.version != "latest" {
 			if platform != "" {
 				log.Error("cannot download specific version for this platform - please download manually", slog.String("platform", platform))
 				err = ErrInvalidArgs
@@ -302,7 +314,7 @@ func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string,
 	if ct.DownloadParamsNexus == nil {
 		v.Set("maven.groupId", "com.itrsgroup.geneos")
 		v.Set("maven.extension", "tar.gz")
-		if platform != "" {
+		if platform != "" && opts.version != "latest" && CompareVersion(opts.version, "7.12") < 0 {
 			v.Set("maven.classifier", platform+"-"+os+"-"+arch)
 		} else {
 			v.Set("maven.classifier", os+"-"+arch)
