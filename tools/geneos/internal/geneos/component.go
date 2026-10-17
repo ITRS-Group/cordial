@@ -46,8 +46,9 @@ var RootComponent = Component{
 	Aliases:      []string{"any"},
 	DownloadBase: DownloadBases{Default: "", Nexus: ""},
 	GlobalSettings: map[string]string{
-		// Root URL for all downloads of software archives
-		// hardwire delimiters because config may not be initialised for config.Join()
+		// Root URL for all downloads of software archives hardwire
+		// delimiters because config may not be initialised for
+		// config.Join()
 		"download::url": defaultURL,
 
 		// Path List separated additions to the reserved names list, over and above
