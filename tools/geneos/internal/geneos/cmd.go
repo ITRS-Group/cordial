@@ -1,5 +1,9 @@
 package geneos
 
+import (
+	"strings"
+)
+
 // Command annotation types for command behaviour
 //
 // Annotations must be read-only.
@@ -43,29 +47,26 @@ const (
 	// annotation to "true" for all commands.
 	CmdAllowRoot = "allowroot"
 
-	// CmdAuditCommand and CmdAuditActions are used for auditing
-	// purposes. Their values are set in global config vars for the
-	// duration of the command. If these global configuration values
-	// already exist then they are not changed.
-	//
-	// see:
-	//     config.Get(config.Global(), config.Join("audit", "commands"))
-	//     config.Get(config.Global(), config.Join("audit", "actions"))
-
-	// CmdAuditCommand is used to enable auditing the primary command.
-	// To audit the resulting actions use CmdAuditActions. The default
-	// value comes from the global configuration. Valid values are
-	// "always" or "never", to override the global configuration, or
+	// CmdAuditCommand is used to enable auditing of the primary
+	// command. To audit the resulting actions use CmdAuditActions. The
+	// default value comes from the global configuration. Valid values
+	// are "always" or "never", to override the global configuration, or
 	// "true" or "false" to set a default if there is no global
 	// configuration.
+	//
+	// [SetAuditCommands] and [AuditCommands] should be
+	// used to set and test the desired auditing behavior.
 	CmdAuditCommand = "auditcommand"
 
-	// CmdAuditActions is used to enable auditing of all the resulting
+	// CmdAuditActions is used to enable auditing of the resulting
 	// actions. To audit the primary command triggering the actions use
 	// CmdAuditCommand. The default value comes from the global
 	// configuration. Valid values are "always" or "never", to override
 	// the global configuration, or "true" or "false" to set a default
 	// if there is no global configuration.
+	//
+	// [SetAuditActions] and [AuditActions] should be used
+	// to set and test the desired auditing behavior.
 	CmdAuditActions = "auditactions"
 
 	// CmdProfileTrigger is a booleanused to specify if the command
@@ -73,3 +74,20 @@ const (
 	// automatically apply profiles when specific conditions are met.
 	CmdProfileTrigger = "profiletrigger"
 )
+
+// QuotedCmdLine returns the command line as a single string with
+// arguments containing spaces quoted.
+func QuotedCmdLine(args []string) string {
+	var cmdLine strings.Builder
+	for _, a := range args {
+		if strings.Contains(a, " ") {
+			cmdLine.WriteString(` "`)
+			cmdLine.WriteString(a)
+			cmdLine.WriteString(`"`)
+		} else {
+			cmdLine.WriteString(" ")
+			cmdLine.WriteString(a)
+		}
+	}
+	return strings.TrimSpace(cmdLine.String())
+}

@@ -95,9 +95,12 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					}
 
 					var cname strings.Builder
-					cname.WriteString(name + " " + child.Name())
+					cname.WriteString(name)
+					cname.WriteString(" ")
+					cname.WriteString(child.Name())
 					for _, alias := range child.Aliases {
-						cname.WriteString(" / " + alias)
+						cname.WriteString(" / ")
+						cname.WriteString(alias)
 					}
 					link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
 					fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname.String(), linkHandler(link), child.Short)
@@ -129,9 +132,12 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					hadChildren = false
 				}
 				var cname strings.Builder
-				cname.WriteString(name + " " + child.Name())
+				cname.WriteString(name)
+				cname.WriteString(" ")
+				cname.WriteString(child.Name())
 				for _, alias := range child.Aliases {
-					cname.WriteString(" / " + alias)
+					cname.WriteString(" / ")
+					cname.WriteString(alias)
 				}
 				link := strings.ReplaceAll(name+" "+child.Name()+".md", " ", "_")
 				fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname.String(), linkHandler(link), child.Short)

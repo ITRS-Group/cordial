@@ -171,8 +171,8 @@ func (i *MDGateway) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *MDGateway) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *MDGateway) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *MDGateway) String() string {
@@ -263,7 +263,7 @@ func seedPackagedYAML(i *MDGateway) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditEvent("import", slog.Any("file", path.Base(setup)))
+	i.AuditEvent("import", nil, slog.Any("file", path.Base(setup)))
 }
 
 func (i *MDGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {

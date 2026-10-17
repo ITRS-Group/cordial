@@ -217,7 +217,7 @@ geneos uninstall --version 7.4.2
 				for _, release := range removeReleases {
 					for _, c := range restart[version] {
 						c.Log().Debug("stopping")
-						instance.Stop(c, true, false)
+						instance.Stop(c, instance.WithStopForce(true))
 						stopped = append(stopped, c)
 					}
 					// remove the release

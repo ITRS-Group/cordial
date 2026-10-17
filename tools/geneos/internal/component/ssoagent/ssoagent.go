@@ -193,8 +193,8 @@ func (i *SSOAgent) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *SSOAgent) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *SSOAgent) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *SSOAgent) String() string {

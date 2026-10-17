@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"log/slog"
 	"time"
 
 	"github.com/DeRuina/timberjack"
@@ -64,16 +65,22 @@ func AuditFilepath(i geneos.Instance) string {
 }
 
 // AuditEvent writes an audit event for the given instance with the
-// specified event name and optional arguments. It is intended to be
-// called from each instance package as the underlying function for
-// `i.AuditEvent()` and should not be called directly.
-func AuditEvent(i geneos.Instance, event string, args ...any) {
+// specified event name, the error result of the event ("success" if
+// nil), and optional arguments. It is intended to be called from each
+// instance package as the underlying function for `i.AuditEvent()` and
+// should not be called directly.
+func AuditEvent(i geneos.Instance, result error, event string, args ...any) {
 	if i == nil {
 		return
 	}
 	auditLogger := AuditLogger(i)
 	attrs := []any{
 		LogGroup(i),
+	}
+	if result != nil {
+		attrs = append(attrs, slog.Any("result", result))
+	} else {
+		attrs = append(attrs, slog.Any("result", "success"))
 	}
 	attrs = append(attrs, args...)
 	auditLogger.Event(event, attrs...)

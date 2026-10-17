@@ -175,8 +175,8 @@ func (i *Licd) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Licd) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Licd) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Licd) String() string {

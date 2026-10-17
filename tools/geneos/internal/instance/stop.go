@@ -27,42 +27,46 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// Stop an instance
+// Stop an instance. Options must be [StopOption] types but the
+// signature will accept 'any' to avoid import loops from the geneos
+// package.
 //
-// TODO: check for managed CAs and wait for those too
-func Stop(i geneos.Instance, force, kill bool, opts ...any) (err error) {
-	options := []StopOption{}
-	for _, o := range opts {
+// TODO: check for managed CAs and wait for those too.
+func Stop(i geneos.Instance, options ...any) (err error) {
+	var stoppedPID int
+
+	stopOptions := []StopOption{}
+	for _, o := range options {
 		if option, ok := o.(StopOption); ok {
-			options = append(options, option)
+			stopOptions = append(stopOptions, option)
 		}
 	}
-	so := evalStopOptions(options...)
-	if !force && IsProtected(i) {
+	opts := evalStopOptions(stopOptions...)
+
+	if !opts.force && IsProtected(i) {
 		return geneos.ErrProtected
 	}
 
 	wasRunning := IsRunning(i)
-	var stoppedPID int
 	if wasRunning {
 		stoppedPID, _ = GetPID(i)
 	}
-	defer func() {
-		if err == nil && wasRunning && !so.skipAudit {
+	if err == nil && wasRunning && !opts.skipAudit {
+		defer func() {
 			args := []any{}
 			if stoppedPID > 0 {
 				args = append(args, slog.Int("pid", stoppedPID))
 			}
-			i.AuditEvent("stop", args...)
-		}
-	}()
+			i.AuditEvent("stop", nil, args...)
+		}()
+	}
 
 	if !wasRunning {
 		i.Log().Debug("not running")
 		return os.ErrProcessDone
 	}
 
-	if !kill {
+	if !opts.kill {
 		if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
 			return nil
 		}
@@ -95,6 +99,8 @@ func Stop(i geneos.Instance, force, kill bool, opts ...any) (err error) {
 }
 
 type stopOptions struct {
+	force     bool
+	kill      bool
 	skipAudit bool
 }
 
@@ -106,6 +112,18 @@ func evalStopOptions(options ...StopOption) *stopOptions {
 		opt(so)
 	}
 	return so
+}
+
+func WithStopForce(force bool) StopOption {
+	return func(so *stopOptions) {
+		so.force = force
+	}
+}
+
+func WithStopKill(kill bool) StopOption {
+	return func(so *stopOptions) {
+		so.kill = kill
+	}
 }
 
 // WithoutStopAudit suppresses the operational audit log entry for this stop.

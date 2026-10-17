@@ -184,8 +184,8 @@ func (i *CA3) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *CA3) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *CA3) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *CA3) String() string {

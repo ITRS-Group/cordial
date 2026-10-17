@@ -32,8 +32,10 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// Start runs the instance.
-func Start(i geneos.Instance, opts ...any) error {
+// Start runs the instance. Options must be [StartOption] types but the
+// signature will accept 'any' to avoid import loops from the geneos
+// package.
+func Start(i geneos.Instance, options ...any) error {
 	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
@@ -41,6 +43,15 @@ func Start(i geneos.Instance, opts ...any) error {
 	if IsDisabled(i) {
 		return geneos.ErrDisabled
 	}
+
+	// filter out only StartOption types from the options slice
+	startOptions := []StartOption{}
+	for _, o := range options {
+		if option, ok := o.(StartOption); ok {
+			startOptions = append(startOptions, option)
+		}
+	}
+	so := evalStartOptions(startOptions...)
 
 	// changing users is not supported
 	username := i.Host().Username()
@@ -59,14 +70,7 @@ func Start(i geneos.Instance, opts ...any) error {
 		return fmt.Errorf("%q %w", binary, err)
 	}
 
-	options := []StartOption{}
-	for _, o := range opts {
-		if option, ok := o.(StartOption); ok {
-			options = append(options, option)
-		}
-	}
-	so := evalStartOptions(options...)
-	cmd, err := BuildCmd(i, false, options...)
+	cmd, err := BuildCmd(i, false, startOptions...)
 	if err != nil {
 		return err
 	}
@@ -113,22 +117,11 @@ func Start(i geneos.Instance, opts ...any) error {
 
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	if !so.skipAudit {
-		var cmdLine strings.Builder
-		for _, a := range cmd.Args {
-			if strings.Contains(a, " ") {
-				cmdLine.WriteString(` "`)
-				cmdLine.WriteString(a)
-				cmdLine.WriteString(`"`)
-			} else {
-				cmdLine.WriteString(" ")
-				cmdLine.WriteString(a)
-			}
-		}
 		args := []any{
-			slog.String("command", strings.TrimSpace(cmdLine.String())),
+			slog.String("command", geneos.QuotedCmdLine(cmd.Args)),
 			slog.Int("pid", pid),
 		}
-		i.AuditEvent("start", args...)
+		i.AuditEvent("start", nil, args...)
 	}
 	return nil
 }

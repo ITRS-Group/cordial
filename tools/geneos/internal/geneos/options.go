@@ -27,29 +27,29 @@ import (
 // packageOptions defines the internal options for various operations in
 // the geneos package
 type packageOptions struct {
-	archive      io.ReadCloser
-	archivename  string
-	archivesize  int64
-	basename     string
-	doupdate     bool
-	downloadbase string
-	downloadonly bool
-	downloadtype string
-	force        bool
-	geneosdir    string
-	headers      []string
-	host         *Host
-	localOnly    bool
-	nosave       bool
-	override     string
-	password     config.Secret
-	platformId   string
-	restart      []Instance
-	source       string
-	start        func(Instance, ...any) error
-	stop         func(Instance, bool, bool, ...any) error
-	username     string
-	version      string
+	archive         io.ReadCloser
+	archivename     string
+	archivesize     int64
+	basename        string
+	doupdate        bool
+	downloadbase    string
+	downloadonly    bool
+	downloadtype    string
+	geneosdir       string
+	headers         []string
+	host            *Host
+	localOnly       bool
+	nosave          bool
+	override        bool
+	overrideVersion string
+	password        config.Secret
+	platformId      string
+	restart         []Instance
+	source          string
+	start           func(Instance, ...any) error
+	stop            func(Instance, ...any) error
+	username        string
+	version         string
 }
 
 // PackageOption can be passed to various function and influence
@@ -132,11 +132,11 @@ func Source(source string) PackageOption {
 	}
 }
 
-// Force ignores existing directories or files and also overrides
+// Override ignores existing directories or files and also overrides
 // protection for running instances in upgrades
-func Force(force bool) PackageOption {
+func Override(force bool) PackageOption {
 	return func(d *packageOptions) {
-		d.force = force
+		d.override = force
 	}
 }
 
@@ -144,7 +144,7 @@ func Force(force bool) PackageOption {
 // available
 func OverrideVersion(version string) PackageOption {
 	return func(d *packageOptions) {
-		d.override = version
+		d.overrideVersion = version
 	}
 }
 
@@ -170,7 +170,7 @@ func StartFunc(fn func(Instance, ...any) error) PackageOption {
 
 // StopFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StopFunc(fn func(Instance, bool, bool, ...any) error) PackageOption {
+func StopFunc(fn func(Instance, ...any) error) PackageOption {
 	return func(d *packageOptions) {
 		d.stop = fn
 	}

@@ -41,6 +41,7 @@ type General struct {
 	Duration   time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
 	ResultText []string      // free format text output, typically for human consumption
 	Completed  []string      // simple past tense verbs of completed actions, e.g. "stopped", "started" etc.
+	Audited    bool          // whether the action has been audited
 	Err        error         // error from command, if any
 	Value      any           // arbitrary value (typically for JSON output)
 	Values     []any         // arbitrary values (typically for JSON output), which are merged into a single slice when merging responses

@@ -172,8 +172,8 @@ func (i *AC2) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *AC2) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *AC2) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *AC2) String() string {

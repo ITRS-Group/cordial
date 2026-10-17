@@ -171,8 +171,8 @@ func (i *TRGateway) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *TRGateway) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *TRGateway) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *TRGateway) String() string {
@@ -265,7 +265,7 @@ func seedPackagedYAML(i *TRGateway) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditEvent("import", slog.Any("file", path.Base(setup)))
+	i.AuditEvent("import", nil, slog.Any("file", path.Base(setup)))
 }
 
 func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {

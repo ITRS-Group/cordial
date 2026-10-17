@@ -87,6 +87,7 @@ var restartCmd = &cobra.Command{
 			instance.DoInstances(cmd, instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				resp.Err = restartInstance(i)
+				resp.Audited = true
 				return
 			}).Report(os.Stdout)
 			return
@@ -99,6 +100,7 @@ var restartCmd = &cobra.Command{
 		instance.Do(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Err = restartInstance(i)
+			resp.Audited = true
 			return
 		}).Report(os.Stdout)
 
@@ -116,7 +118,7 @@ func restartInstance(i geneos.Instance) error {
 	if instance.IsRunning(i) {
 		oldPid, _ = instance.GetPID(i)
 	}
-	err := instance.Stop(i, restartCmdForce, restartCmdKill, instance.WithoutStopAudit())
+	err := instance.Stop(i, instance.WithStopForce(restartCmdForce), instance.WithStopKill(restartCmdKill), instance.WithoutStopAudit())
 	if err == nil || restartCmdAll {
 		err = instance.Start(i,
 			instance.StartingExtras(restartCmdExtras),
@@ -132,7 +134,7 @@ func restartInstance(i geneos.Instance) error {
 		if newPid, pidErr := instance.GetLivePID(i); pidErr == nil && newPid > 0 {
 			args = append(args, slog.Int("newPid", newPid))
 		}
-		i.AuditEvent("restart", args...)
+		i.AuditEvent("restart", nil, args...)
 	}
 	return err
 }

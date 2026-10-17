@@ -76,29 +76,26 @@ const (
 	// annotation to "true" for all commands.
 	CmdAllowRoot = geneos.CmdAllowRoot
 
-	// CmdAuditCommand and CmdAuditActions are used for auditing
-	// purposes. Their values are set in global config vars for the
-	// duration of the command. If these global configuration values
-	// already exist then they are not changed.
-	//
-	// see:
-	//     config.Get(config.Global(), config.Join("audit", "commands"))
-	//     config.Get(config.Global(), config.Join("audit", "actions"))
-
-	// CmdAuditCommand is used to enable auditing the primary command.
-	// To audit the resulting actions use CmdAuditActions. The default
-	// value comes from the global configuration. Valid values are
-	// "always" or "never", to override the global configuration, or
+	// CmdAuditCommand is used to enable auditing of the primary
+	// command. To audit the resulting actions use CmdAuditActions. The
+	// default value comes from the global configuration. Valid values
+	// are "always" or "never", to override the global configuration, or
 	// "true" or "false" to set a default if there is no global
 	// configuration.
+	//
+	// [geneos.SetAuditCommands] and [geneos.AuditCommands] should be
+	// used to set and test the desired auditing behavior.
 	CmdAuditCommand = geneos.CmdAuditCommand
 
-	// CmdAuditActions is used to enable auditing of all the resulting
+	// CmdAuditActions is used to enable auditing of the resulting
 	// actions. To audit the primary command triggering the actions use
 	// CmdAuditCommand. The default value comes from the global
 	// configuration. Valid values are "always" or "never", to override
 	// the global configuration, or "true" or "false" to set a default
 	// if there is no global configuration.
+	//
+	// [geneos.SetAuditActions] and [geneos.AuditActions] should be used
+	// to set and test the desired auditing behavior.
 	CmdAuditActions = geneos.CmdAuditActions
 
 	// CmdProfileTrigger is a booleanused to specify if the command
@@ -164,37 +161,24 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	confKey := config.Join("audit", "commands")
 	switch auditCommands {
 	case "always":
-		config.Set(cf, confKey, true)
+		geneos.SetAuditCommands(true)
 	case "never":
-		config.Set(cf, confKey, false)
+		geneos.SetAuditCommands(false)
 	case "", "true": // only true if the global audit setting is not already set
 		if !cf.IsSet(confKey) {
-			config.Set(cf, confKey, true)
+			geneos.SetAuditCommands(true)
 		}
 	case "false": // only false if the global audit setting is not already set
 		if !cf.IsSet(confKey) {
-			config.Set(cf, confKey, false)
+			geneos.SetAuditCommands(false)
 		}
 	}
 
 	// if the result is true, then log the command as early as possible.
 	// this fails for environments that are being initialised, and there
 	// is a matching call in the `init` and `deploy` commands
-	if config.Get[bool](config.Global(), config.Join("audit", "commands")) {
-		defer func() {
-			var cmdLine strings.Builder
-			for _, a := range os.Args {
-				if strings.Contains(a, " ") {
-					cmdLine.WriteString(` "`)
-					cmdLine.WriteString(a)
-					cmdLine.WriteString(`"`)
-				} else {
-					cmdLine.WriteString(" ")
-					cmdLine.WriteString(a)
-				}
-			}
-			logger.Audit().Event(c.Name(), slog.String("command", strings.TrimSpace(cmdLine.String())))
-		}()
+	if geneos.AuditCommands() {
+		logger.Audit().Event(c.Name(), slog.String("command", geneos.QuotedCmdLine(os.Args)))
 	}
 
 	// set audit configuration for commands based on annotations.
@@ -204,16 +188,16 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	confKey = config.Join("audit", "actions")
 	switch auditActions {
 	case "always":
-		config.Set(cf, confKey, true)
+		geneos.SetAuditActions(true)
 	case "never":
-		config.Set(cf, confKey, false)
+		geneos.SetAuditActions(false)
 	case "", "true": // only true if the global audit setting is not already set
 		if !cf.IsSet(confKey) {
-			config.Set(cf, confKey, true)
+			geneos.SetAuditActions(true)
 		}
 	case "false": // only false if the global audit setting is not already set
 		if !cf.IsSet(confKey) {
-			config.Set(cf, confKey, false)
+			geneos.SetAuditActions(false)
 		}
 	}
 

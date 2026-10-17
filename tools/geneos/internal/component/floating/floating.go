@@ -185,8 +185,8 @@ func (i *Floating) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Floating) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Floating) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Floating) String() string {

@@ -191,8 +191,8 @@ func (i *Router) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Router) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Router) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Router) String() string {

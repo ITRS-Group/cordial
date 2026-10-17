@@ -32,6 +32,7 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/go-version"
+
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -352,7 +353,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 			if c.Type() != ct && config.Get[string](c.Config(), "pkgtype") != ct.String() {
 				continue
 			}
-			if err = opts.stop(c, opts.force, false); err == nil {
+			if err = opts.stop(c, opts.override); err == nil {
 				// only restart instances that we stopped, regardless of success of install/update
 				restarted = append(restarted, c)
 				defer opts.start(c)
@@ -367,7 +368,7 @@ func update(h *Host, ct *Component, options ...PackageOption) (err error) {
 		return err
 	}
 	for _, c := range restarted {
-		c.AuditEvent("update", slog.String("version", version), slog.String("base", opts.basename))
+		c.AuditEvent("update", nil, slog.String("version", version), slog.String("base", opts.basename))
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
 	return nil

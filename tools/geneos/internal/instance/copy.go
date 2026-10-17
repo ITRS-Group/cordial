@@ -124,7 +124,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	if opts.move {
 		if IsRunning(src) {
-			if err = Stop(src, true, false); err == nil {
+			if err = Stop(src, WithStopForce(true)); err == nil {
 				stopped = true
 				// defer a call to restart the original if not "done"
 				defer func(i geneos.Instance) {

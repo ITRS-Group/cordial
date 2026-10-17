@@ -21,7 +21,6 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -90,20 +89,9 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 		return
 	}
 
-	var cmdLine strings.Builder
-	for _, a := range cmd.Args {
-		if strings.Contains(a, " ") {
-			cmdLine.WriteString(` "`)
-			cmdLine.WriteString(a)
-			cmdLine.WriteString(`"`)
-		} else {
-			cmdLine.WriteString(" ")
-			cmdLine.WriteString(a)
-		}
-	}
 	lines = append(lines,
 		"command line:",
-		fmt.Sprint("\t", strings.TrimSpace(cmdLine.String())),
+		fmt.Sprint("\t", geneos.QuotedCmdLine(cmd.Args)),
 		"",
 		"working directory:",
 		fmt.Sprint("\t", cmd.Dir),

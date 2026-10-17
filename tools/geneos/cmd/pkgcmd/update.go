@@ -141,9 +141,11 @@ geneos package update netprobe --version 5.13.2
 		return geneos.Update(h, ct,
 			geneos.Version(version),
 			geneos.Basename(updateCmdBase),
-			geneos.Force(true),
+			geneos.Override(true),
 			geneos.Restart(instances...),
 			geneos.StartFunc(instance.Start),
-			geneos.StopFunc(instance.Stop))
+			geneos.StopFunc(func(i geneos.Instance, _ ...any) error {
+				return instance.Stop(i, instance.WithStopForce(updateCmdForce))
+			}))
 	},
 }

@@ -249,7 +249,7 @@ func initProcessArgs(args []string, extras ...values.Values) (options []geneos.P
 	options = []geneos.PackageOption{
 		geneos.Version(initCmdVersion),
 		geneos.Basename("active_prod"),
-		geneos.Force(initCmdForce),
+		geneos.Override(initCmdForce),
 		geneos.Source(initCmdArchive),
 		geneos.UseNexus(initCmdNexus),
 		geneos.UseNexusSnapshots(initCmdSnapshot),

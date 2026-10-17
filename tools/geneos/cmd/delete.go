@@ -78,7 +78,7 @@ func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if deleteCmdStop {
 		if i.Type() != &geneos.RootComponent {
-			if err := instance.Stop(i, true, false); err != nil && !errors.Is(err, os.ErrProcessDone) {
+			if err := instance.Stop(i, instance.WithStopForce(true)); err != nil && !errors.Is(err, os.ErrProcessDone) {
 				resp.Err = err
 				return
 			}
@@ -87,7 +87,7 @@ func deleteInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	if !instance.IsRunning(i) || deleteCmdForce {
 		if instance.IsRunning(i) {
-			if resp.Err = instance.Stop(i, true, false); resp.Err != nil {
+			if resp.Err = instance.Stop(i, instance.WithStopForce(true)); resp.Err != nil {
 				return
 			}
 		}

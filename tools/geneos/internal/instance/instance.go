@@ -194,8 +194,9 @@ func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []
 			for _, c := range instances {
 				resp := fn(c, values...)
 				responses.Finished(resp)
-				if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
-					c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+				if geneos.AuditActions() && !resp.Audited {
+					c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+					resp.Audited = true
 				}
 				rs[resp.Instance.String()] = resp
 			}
@@ -208,8 +209,9 @@ func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []
 	for _, c := range instances {
 		resp := fn(c, values...)
 		responses.Finished(resp)
-		if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
-			c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+		if geneos.AuditActions() && !resp.Audited {
+			c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+			resp.Audited = true
 		}
 		rs[resp.Instance.String()] = resp
 	}
@@ -237,8 +239,9 @@ func DoInstances(cmd *cobra.Command, instances []geneos.Instance, fn func(geneos
 
 			resp := fn(c, values...)
 			responses.Finished(resp)
-			if config.Get[bool](c.Config(), config.Join("audit", "actions")) {
-				c.AuditEvent(cmd.Name(), slog.Any("result", resp.Err))
+			if geneos.AuditActions() && !resp.Audited {
+				c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+				resp.Audited = true
 			}
 			ch <- resp
 		}(c)
@@ -620,8 +623,8 @@ func ParseName(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct 
 
 func ImportFiles(i geneos.Instance, files ...string) (err error) {
 	for _, item := range files {
-		var dest string
-		dest, err = geneos.ImportSource(i.Host(), i.Home(), item)
+		var dest, source string
+		dest, source, err = geneos.ImportSource(i.Host(), i.Home(), item)
 		if err != nil {
 			return
 		}
@@ -636,8 +639,7 @@ func ImportFiles(i geneos.Instance, files ...string) (err error) {
 		if dest != setupBase && dest != path.Base(setup) && dest != setup {
 			continue
 		}
-		// TODO: check callers for audit
-		i.AuditEvent("import", slog.String("file", dest))
+		i.AuditEvent("import", err, slog.String("source", source), slog.String("file", dest))
 	}
 	return
 }

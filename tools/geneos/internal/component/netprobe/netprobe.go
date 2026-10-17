@@ -198,8 +198,8 @@ func (i *Netprobe) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Netprobe) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Netprobe) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Netprobe) String() string {

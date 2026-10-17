@@ -221,21 +221,10 @@ var deployCmd = &cobra.Command{
 					log.Error("failed to initialize global audit", slog.Any("error", err))
 				}
 
-				// force initialization of the global audit logger, and
-				// repeat the deploy event as the directory structure
-				// has just been built
-				var cmdLine strings.Builder
-				for _, a := range os.Args {
-					if strings.Contains(a, " ") {
-						cmdLine.WriteString(` "`)
-						cmdLine.WriteString(a)
-						cmdLine.WriteString(`"`)
-					} else {
-						cmdLine.WriteString(" ")
-						cmdLine.WriteString(a)
-					}
-				}
-				logger.Audit().Event(command.Name(), slog.String("command", strings.TrimSpace(cmdLine.String())))
+				// force initialization of the global audit logger by
+				// logging an event, and repeat the deploy event as the
+				// directory structure has just been built
+				logger.Audit().Event(command.Name(), slog.String("command", geneos.QuotedCmdLine(os.Args)))
 
 				// recreate LOCAL to load "geneos" and others
 				geneos.LOCAL = nil

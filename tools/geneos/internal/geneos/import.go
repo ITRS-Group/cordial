@@ -55,7 +55,7 @@ import (
 //
 // TODO: add templating option - perhaps ImportFileTemplated() - to run
 // through text/template with given data (e.g. instance config)
-func ImportSource(h *Host, dir, item string) (filename string, err error) {
+func ImportSource(h *Host, dir, item string) (filename, source string, err error) {
 	// host must be valid and not `ALL`
 	if h == nil || h == ALL {
 		err = ErrInvalidArgs
@@ -80,19 +80,19 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	if st, err := h.Stat(dir); err != nil {
 		if !errors.Is(err, fs.ErrNotExist) {
 			log.Debug("dir check failed", slog.Any("error", err))
-			return "", err
+			return "", "", err
 		}
 
 		// try and create it
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			log.Debug("failed to create dir, skipping", slog.String("dir", dir), slog.Any("error", err))
-			return "", err
+			return "", "", err
 		}
 	} else {
 		if !st.IsDir() {
 			err = ErrInvalidArgs
 			log.Debug("dir is not a directory, skipping", slog.String("dir", dir), slog.Any("error", err))
-			return "", err
+			return "", "", err
 		}
 	}
 
@@ -174,19 +174,19 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 	dst = path.Join(dir, dst)
 	filename = path.Base(dst)
 
-	// test for same source and dest, return err
+	// test for same source and dest, return err. only on localhost.
 	if h.IsLocalhost() {
 		item = config.ResolveHome(item)
 		sfi, err := h.Stat(item)
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 		dfi, err := h.Stat(dst)
 		if err == nil {
 			if os.SameFile(sfi, dfi) {
 				// same
 				fmt.Printf("import skipped, source and destination are the same file: %q\n", item)
-				return filename, ErrExists
+				return filename, "", ErrExists
 			}
 		}
 	}
@@ -212,7 +212,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 		backuppath = dst + "." + time.Now().UTC().Format("20060102150405") + ".old"
 		// datetime := time.Now().UTC().Format("20060102150405")
 		if err = h.Rename(dst, backuppath); err != nil {
-			return filename, err
+			return filename, source, err
 		}
 	}
 
@@ -222,7 +222,7 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 			// try and restore backup
 			_ = h.Rename(backuppath, dst)
 		}
-		return
+		return filename, source, err
 	}
 	defer cf.Close()
 
@@ -231,11 +231,11 @@ func ImportSource(h *Host, dir, item string) (filename string, err error) {
 			// try and restore backup
 			_ = h.Rename(backuppath, dst)
 		}
-		return
+		return filename, source, err
 	}
 	fmt.Printf("imported %q to %s:%s\n", item, h.String(), dst)
 
-	return
+	return filename, source, nil
 }
 
 // import directory from local source directory to dir on host h
@@ -313,7 +313,7 @@ func ImportCommons(h *Host, ct *Component, common string, params []string) (file
 	dir := h.PathTo(ct, common)
 	for _, source := range params {
 		var filename string
-		if filename, err = ImportSource(h, dir, source); err != nil && err != ErrExists {
+		if filename, _, err = ImportSource(h, dir, source); err != nil && err != ErrExists {
 			return
 		}
 		filenames = append(filenames, filename)

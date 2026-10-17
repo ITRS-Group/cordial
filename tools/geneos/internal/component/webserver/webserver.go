@@ -191,8 +191,8 @@ func (i *Webserver) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Webserver) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Webserver) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Webserver) String() string {

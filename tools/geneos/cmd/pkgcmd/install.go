@@ -31,6 +31,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -150,7 +151,7 @@ geneos install netprobe -b active_dev -U
 			options := []geneos.PackageOption{
 				geneos.Basename(installCmdBase),
 				geneos.DoUpdate(installCmdUpdate || installCmdForce),
-				geneos.Force(installCmdForce),
+				geneos.Override(installCmdForce),
 				geneos.LocalOnly(true),
 				geneos.NoSave(true),
 				geneos.OverrideVersion(installCmdOverride),
@@ -191,9 +192,6 @@ geneos install netprobe -b active_dev -U
 							version += "+" + platform
 						}
 					}
-				case geneos.IsDir(source):
-					// use as is
-					break
 				case geneos.IsFile(source):
 					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
@@ -216,9 +214,12 @@ geneos install netprobe -b active_dev -U
 						log.Debug("ct and file ct do not match, skipping", slog.String("ct", ct.String()), slog.String("file_ct", nct.String()))
 						continue
 					}
+				case geneos.IsDir(source):
+					// use as is
 				default:
 					// if none of the above, skip
 					log.Debug("skipping")
+					continue
 				}
 
 				options = append(options, geneos.Version(version))
@@ -267,7 +268,7 @@ geneos install netprobe -b active_dev -U
 		options := []geneos.PackageOption{
 			geneos.Basename(installCmdBase),
 			geneos.DoUpdate(installCmdUpdate || installCmdForce),
-			geneos.Force(installCmdForce),
+			geneos.Override(installCmdForce),
 			geneos.LocalOnly(installCmdLocal),
 			geneos.NoSave(installCmdNoSave || installCmdLocal),
 			geneos.Version(installCmdVersion),
@@ -316,7 +317,9 @@ geneos install netprobe -b active_dev -U
 			options = append(options,
 				geneos.Restart(instances...),
 				geneos.StartFunc(instance.Start),
-				geneos.StopFunc(instance.Stop))
+				geneos.StopFunc(func(i geneos.Instance, _ ...any) error {
+					return instance.Stop(i, instance.WithStopForce(installCmdForce))
+				}))
 		}
 
 		log.Debug("installing", slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname), slog.String("version", installCmdVersion))

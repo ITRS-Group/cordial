@@ -67,7 +67,7 @@ var enableCmd = &cobra.Command{
 			}
 			if resp.Err = instance.Enable(i); resp.Err == nil {
 				resp.Completed = append(resp.Completed, "enabled")
-				i.AuditEvent("enable")
+				i.AuditEvent("enable", nil)
 				if enableCmdStart {
 					resp.Err = instance.Start(i)
 					return

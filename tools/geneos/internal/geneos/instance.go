@@ -31,8 +31,10 @@ type Instance interface {
 	// Log returns a logger for the instance
 	Log() *slog.Logger
 
-	// AuditEvent logs an audit event for the instance
-	AuditEvent(event string, args ...any)
+	// AuditEvent logs an audit event for the instance. In general this
+	// is a call to [instance.AuditEvent] through the interface for the
+	// component.
+	AuditEvent(event string, result error, args ...any)
 
 	// String returns the display name of the instance in the form `TYPE
 	// NAME` for local instances and `TYPE NAME@HOST` for those on

@@ -186,8 +186,8 @@ func (i *Minimal) Log() *slog.Logger {
 	return i.Logger
 }
 
-func (i *Minimal) AuditEvent(event string, args ...any) {
-	instance.AuditEvent(i, event, args...)
+func (i *Minimal) AuditEvent(event string, result error, args ...any) {
+	instance.AuditEvent(i, result, event, args...)
 }
 
 func (i *Minimal) String() string {

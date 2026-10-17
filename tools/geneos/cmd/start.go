@@ -84,6 +84,7 @@ var startCmd = &cobra.Command{
 					instance.StartingExtras(startCmdExtras),
 					instance.StartingEnvs(startCmdEnvs),
 				)
+				resp.Audited = true
 				return
 			}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
 			return
@@ -114,6 +115,7 @@ func Start(command *cobra.Command, ct *geneos.Component, watchlogs bool, autosta
 				instance.StartingExtras(startCmdExtras),
 				instance.StartingEnvs(startCmdEnvs),
 			)
+			resp.Audited = true
 		}
 		return
 	}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))

@@ -74,11 +74,14 @@ var stopCmd = &cobra.Command{
 				fmt.Printf("no instances using port %d found\n", stopCmdPort)
 				return
 			}
-			instance.DoInstances(cmd, instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
-				resp = responses.New[responses.General](i)
-				resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
-				return
-			}).Report(os.Stdout,
+			instance.DoInstances(cmd, instances,
+				func(i geneos.Instance, a ...any) (resp *responses.General) {
+					resp = responses.New[responses.General](i)
+					resp.Err = instance.Stop(i, instance.WithStopForce(stopCmdForce), instance.WithStopKill(stopCmdKill))
+					resp.Audited = true
+					return
+				},
+			).Report(os.Stdout,
 				responses.ShowTimes(),
 				responses.TimingFormat("%s stopped in %.2fs\n"),
 			)
@@ -91,7 +94,8 @@ var stopCmd = &cobra.Command{
 		}
 		instance.Do(cmd, geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
-			resp.Err = instance.Stop(i, stopCmdForce, stopCmdKill)
+			resp.Err = instance.Stop(i, instance.WithStopForce(stopCmdForce), instance.WithStopKill(stopCmdKill))
+			resp.Audited = true
 			return
 		}).Report(os.Stdout,
 			responses.ShowTimes(),

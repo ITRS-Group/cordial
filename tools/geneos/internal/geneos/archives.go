@@ -204,7 +204,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 
 	opts := evalOptions(options...)
 
-	if opts.override == "" {
+	if opts.overrideVersion == "" {
 		var ctFromFile *Component
 		ctFromFile, version, platform, suffix, err = FilenameToComponentVersion(ct, filename)
 		if err != nil {
@@ -232,7 +232,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 			return
 		}
 	} else {
-		ct, version, err = OverrideToComponentVersion(opts.override)
+		ct, version, err = OverrideToComponentVersion(opts.overrideVersion)
 		if err != nil {
 			return "", err
 		}
