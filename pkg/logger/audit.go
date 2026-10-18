@@ -111,7 +111,9 @@ func Audit() *AuditLogger {
 // the provided writer. it renames "time" to "timestamp", "level" is
 // removed, and "msg" to "event". An "event_id" attribute, a random
 // UUID, is also added to each log entry so that each program execution
-// can be identified.
+// can be identified. All custom (not time, message etc.) string
+// attributes are checked for sensitive information and redacted if
+// necessary.
 func newHandler(w io.Writer) slog.Handler {
 	return slog.NewJSONHandler(w,
 		&slog.HandlerOptions{
@@ -125,6 +127,11 @@ func newHandler(w io.Writer) slog.Handler {
 				case slog.MessageKey:
 					a.Key = "event"
 					return a
+				default:
+					// for all other attributes, check for redactable strings in a.Value
+					if a.Value.Kind() == slog.KindString {
+						a.Value = slog.StringValue(Redact(a.Value.String()))
+					}
 				}
 				return a
 			},
