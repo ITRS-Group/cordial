@@ -28,6 +28,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -118,7 +119,7 @@ func Start(i geneos.Instance, options ...any) error {
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	if !so.skipAudit {
 		args := []any{
-			slog.String("command", geneos.QuotedCmdLine(cmd.Args)),
+			logger.CommandLine("command", cmd.Args),
 			slog.Int("pid", pid),
 		}
 		i.AuditEvent("start", nil, args...)

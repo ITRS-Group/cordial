@@ -1,9 +1,5 @@
 package geneos
 
-import (
-	"strings"
-)
-
 // Command annotation types for command behaviour
 //
 // Annotations must be read-only.
@@ -74,20 +70,3 @@ const (
 	// automatically apply profiles when specific conditions are met.
 	CmdProfileTrigger = "profiletrigger"
 )
-
-// QuotedCmdLine returns the command line as a single string with
-// arguments containing spaces quoted.
-func QuotedCmdLine(args []string) string {
-	var cmdLine strings.Builder
-	for _, a := range args {
-		if strings.Contains(a, " ") {
-			cmdLine.WriteString(` "`)
-			cmdLine.WriteString(a)
-			cmdLine.WriteString(`"`)
-		} else {
-			cmdLine.WriteString(" ")
-			cmdLine.WriteString(a)
-		}
-	}
-	return strings.TrimSpace(cmdLine.String())
-}

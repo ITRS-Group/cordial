@@ -224,7 +224,7 @@ var deployCmd = &cobra.Command{
 				// force initialization of the global audit logger by
 				// logging an event, and repeat the deploy event as the
 				// directory structure has just been built
-				logger.Audit().Event(command.Name(), slog.String("command", geneos.QuotedCmdLine(os.Args)))
+				logger.Audit().Event(command.Name(), logger.CommandLine("command", os.Args))
 
 				// recreate LOCAL to load "geneos" and others
 				geneos.LOCAL = nil

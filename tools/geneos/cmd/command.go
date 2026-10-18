@@ -24,6 +24,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -91,7 +92,7 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 
 	lines = append(lines,
 		"command line:",
-		fmt.Sprint("\t", geneos.QuotedCmdLine(cmd.Args)),
+		fmt.Sprint("\t", logger.QuotedCmdLine(cmd.Args)),
 		"",
 		"working directory:",
 		fmt.Sprint("\t", cmd.Dir),
@@ -100,7 +101,7 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 	)
 
 	for _, e := range cmd.Environ() {
-		lines = append(lines, fmt.Sprint("\t", e))
+		lines = append(lines, fmt.Sprint("\t", logger.Redact(e)))
 	}
 	lines = append(lines, "")
 	resp.ResultText = lines

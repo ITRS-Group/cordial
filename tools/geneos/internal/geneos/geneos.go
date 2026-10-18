@@ -123,7 +123,7 @@ func Initialise(cmd *cobra.Command, h *Host, options ...PackageOption) (err erro
 		// force initialization of the global audit logger by
 		// logging an event, and repeat the init event as the
 		// directory structure has just been built
-		logger.Audit().Event(cmd.Name(), slog.String("command", QuotedCmdLine(os.Args)))
+		logger.Audit().Event(cmd.Name(), logger.CommandLine("command", os.Args))
 	}
 
 	for _, ct := range AllComponents() {

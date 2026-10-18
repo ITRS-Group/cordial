@@ -178,7 +178,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// this fails for environments that are being initialised, and there
 	// is a matching call in the `init` and `deploy` commands
 	if geneos.AuditCommands() {
-		logger.Audit().Event(c.Name(), slog.String("command", geneos.QuotedCmdLine(os.Args)))
+		logger.Audit().Event(c.Name(), logger.CommandLine("command", os.Args))
 	}
 
 	// set audit configuration for commands based on annotations.
