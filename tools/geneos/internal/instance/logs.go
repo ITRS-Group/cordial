@@ -59,6 +59,21 @@ func FollowLogs(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names 
 	<-done
 }
 
+// FollowInstanceLogs sets up watchers for logs and never returns.
+func FollowInstanceLogs(instances []geneos.Instance, options ...LogWatcherOptions) {
+	// logCmdStderr = stderr
+	done := make(chan bool)
+	tails = watchLogs()
+	args := []any{}
+	for _, o := range options {
+		args = append(args, o)
+	}
+	for _, i := range instances {
+		FollowInstance(i, args...)
+	}
+	<-done
+}
+
 func TailInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 	options := []LogWatcherOptions{}
@@ -155,8 +170,9 @@ func logCatInstanceFile(i geneos.Instance, logfile string, kind string, opts log
 	return
 }
 
-// add local logs to a watcher list for remote logs, spawn a go routine
-// for each log, watch using stat etc. and output changes
+// FollowInstanceLogs follows the logs for a given instance. It sets up
+// watchers for the instance's logs and handles new log entries as they
+// appear.
 func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 	options := []LogWatcherOptions{}

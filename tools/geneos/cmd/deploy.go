@@ -259,7 +259,7 @@ var deployCmd = &cobra.Command{
 
 		if ct.IsA("profile") {
 			deployCmdExtras.Params = params
-			return deployProfile(command, h, ct, name)
+			return deployProfile(h, ct, name)
 		}
 
 		// create required component directories, for pkg type, speculatively
@@ -368,7 +368,7 @@ var deployCmd = &cobra.Command{
 	},
 }
 
-func deployProfile(command *cobra.Command, h *geneos.Host, ct *geneos.Component, name string) (err error) {
+func deployProfile(h *geneos.Host, ct *geneos.Component, name string) (err error) {
 	// discover which components are in the profile
 	pf := Profiles
 
@@ -513,12 +513,7 @@ func deployProfile(command *cobra.Command, h *geneos.Host, ct *geneos.Component,
 	}
 
 	if deployCmdLogs {
-		// build a slice of all installed instances and followlogs()
-		names := []string{}
-		for _, i := range installed {
-			names = append(names, instance.IDString(i))
-		}
-		instance.FollowLogs(command, nil, nil, names, instance.WithStderr(true)) // never returns
+		instance.FollowInstanceLogs(installed, instance.WithStderr(true))
 	}
 
 	return nil
