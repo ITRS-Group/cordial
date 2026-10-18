@@ -167,15 +167,6 @@ func MergeResponse(r1, r2 *General) (resp *General) {
 
 	resp.Values = append(r1.Values, r2.Values...)
 
-	// switch {
-	// case r1.Summary != "" && r2.Summary != "":
-	// 	resp.Details = append(resp.Details, r1.Summary, r2.Summary)
-	// case r1.Summary != "":
-	// 	resp.Summary = r1.Summary
-	// case r2.Summary != "":
-	// 	resp.Summary = r2.Summary
-	// }
-
 	r1.ResultText = append(r1.ResultText, r2.ResultText...)
 	return
 }

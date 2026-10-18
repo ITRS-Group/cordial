@@ -21,6 +21,9 @@ import (
 // The response struct field used is Rows for table rows and headlines
 // should be passed in as a responses.ReporterOption with
 // responses.AddHeadlines()
+//
+// Formatted does not redact any of it's output. The caller should
+// handle any necessary redaction.
 func (responses GeneralResponses) Formatted(w io.Writer, format string, headings []string, prequel [][]string, options ...any) (err error) {
 	writerOptions := make([]Option, 0, len(options))
 	reporterOptions := make([]any, 0, len(options))

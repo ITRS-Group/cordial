@@ -15,6 +15,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/reporter"
 )
 
@@ -69,19 +70,22 @@ OUTER:
 
 		switch w := writer.(type) {
 		case *reporter.TabWriterReporter:
-			rows = append(rows, resp.Dataview.Table...)
+			var tableData [][]string
+			for _, t := range resp.Dataview.Table {
+				tableData = append(tableData, logger.RedactSlice(t))
+			}
+			rows = append(rows, tableData...)
 		case *tabwriter.Writer:
-			// if resp.Summary != "" {
-			// 	fmt.Fprintf(w, "%s\n", resp.Summary)
-			// }
 			for _, line := range resp.ResultText {
 				if line != "" {
-					fmt.Fprintf(w, "%s\n", line)
+					fmt.Fprintf(w, "%s\n", logger.Redact(line))
 				}
 			}
 		case *csv.Writer:
-			w.WriteAll(resp.Dataview.Table)
-			// w.WriteAll(resp.Rows) // WriteAll calls Flush()
+			for _, s := range resp.Dataview.Table {
+				w.Write(logger.RedactSlice(s))
+			}
+			w.Flush()
 		case io.Writer:
 			// json from values, a bit painful - fix later if Values is
 			// not nil then format - but no merging, yet. Use Formatted
@@ -94,7 +98,8 @@ OUTER:
 					j.SetIndent("    ", "    ")
 				}
 				j.Encode(resp.Values)
-				b.WriteTo(w)
+				log.Debug("redacting")
+				w.Write(logger.RedactJSON(b.Bytes()))
 				continue
 			}
 
@@ -125,7 +130,7 @@ OUTER:
 								j.Encode(s.Index(i).Interface())
 								if b.Len() > 1 {
 									b.Truncate(b.Len() - 1)
-									b.WriteTo(w)
+									w.Write(logger.RedactJSON(b.Bytes()))
 								}
 							}
 						}
@@ -143,12 +148,12 @@ OUTER:
 
 						if b.Len() > 1 {
 							b.Truncate(b.Len() - 1)
-							b.WriteTo(w)
+							w.Write(logger.RedactJSON(b.Bytes()))
 						}
 					}
 				} else {
 					fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-					fmt.Fprintf(w, "%s", resp.Value)
+					fmt.Fprint(w, logger.Redact(fmt.Sprintf("%s", resp.Value)))
 					fmt.Fprint(w, opts.suffix)
 				}
 			}
@@ -259,23 +264,26 @@ func (resp General) Report(writer any, options ...Option) {
 
 	switch w := writer.(type) {
 	case *reporter.TabWriterReporter:
-		w.UpdateTable(w.Columns, resp.Dataview.Table)
-		// w.UpdateTable(w.Columns, resp.Rows)
+		var tableData [][]string
+		for _, t := range resp.Dataview.Table {
+			tableData = append(tableData, logger.RedactSlice(t))
+		}
+		w.UpdateTable(w.Columns, tableData)
 		w.Render()
 		w.Close()
 	case *tabwriter.Writer:
-		// if resp.Summary != "" {
-		// 	fmt.Fprintf(w, "%s\n", resp.Summary)
-		// }
 		for _, line := range resp.ResultText {
 			if line != "" {
-				fmt.Fprintf(w, "%s\n", line)
+				fmt.Fprintf(w, "%s\n", logger.Redact(line))
 			}
 		}
 		w.Flush()
 	case *csv.Writer:
-		w.WriteAll(resp.Dataview.Table)
-		// w.WriteAll(resp.Rows) // WriteAll calls Flush()
+		for _, s := range resp.Dataview.Table {
+			w.Write(logger.RedactSlice(s))
+		}
+		w.Flush()
+		// w.WriteAll(resp.Dataview.Table)
 	case io.Writer:
 		if resp.Value != nil && (opts.outputFields == 0 || opts.outputFields&outputFieldValue != 0) {
 			if opts.asJSON {
@@ -284,10 +292,10 @@ func (resp General) Report(writer any, options ...Option) {
 					log.Error("failed to marshal value to JSON", slog.Any("error", err))
 					return
 				}
-				fmt.Fprint(w, string(b))
+				w.Write(logger.RedactJSON(b))
 			} else {
 				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-				fmt.Fprintf(w, "%s", resp.Value)
+				fmt.Fprint(w, logger.Redact(fmt.Sprintf("%s", resp.Value)))
 				fmt.Fprint(w, opts.suffix)
 			}
 		}
