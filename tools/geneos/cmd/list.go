@@ -87,9 +87,9 @@ var listCmd = &cobra.Command{
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+			instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
-			resp := instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			headlines := make(map[string]string)
 			headlines["totalInstances"] = fmt.Sprintf("%d", len(resp))
 			for _, ct := range geneos.RealComponents() {
@@ -118,7 +118,7 @@ var listCmd = &cobra.Command{
 				"home",
 			}, nil, responses.AddHeadlines(headlines))
 		case listCmdCSV:
-			resp := instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			resp.Formatted(os.Stdout, "csv", []string{
 				"Type",
 				"Name",
@@ -137,7 +137,7 @@ var listCmd = &cobra.Command{
 				nil,
 			)
 		default:
-			instance.Do(cmd, geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
+			instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
 				"Type",
 				"Name",
 				"Host",

@@ -104,7 +104,7 @@ geneos tls import /path/to/file.pem
 		}
 
 		if ct == nil && len(names) == 0 {
-			return geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword)
+			return geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput)
 		}
 
 		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
@@ -147,7 +147,7 @@ geneos tls import /path/to/file.pem
 			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
+		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 		return nil
 	},
 }

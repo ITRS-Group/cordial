@@ -438,7 +438,7 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	// minimum TLS version - from instance, global or 1.2 as a default
-	minTLS := config.Get[string](cf,
+	if minTLS, found := config.Lookup[string](cf,
 		cf.Join(TLSBASE, MINVERSION),
 		config.DefaultValue(
 			config.Get[string](
@@ -447,13 +447,13 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 				config.DefaultValue("1.2"),
 			),
 		),
-	)
-	if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
-		env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
-	} else {
-		args = append(args, "-minTLSversion", minTLS)
+	); found {
+		if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
+			env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
+		} else {
+			args = append(args, "-minTLSversion", minTLS)
+		}
 	}
-
 	return
 }
 

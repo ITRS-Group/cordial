@@ -226,7 +226,7 @@ geneos backup all
 
 		// contents is a list of files so that instances do not duplicate shared contents
 		var contents []string
-		resp := instance.Do(command, h, ct, names, getInstanceFilePaths, &contents)
+		resp := instance.Do(command.Name(), h, ct, names, getInstanceFilePaths, &contents)
 
 		out2 := os.Stderr
 		if archive != "-" {

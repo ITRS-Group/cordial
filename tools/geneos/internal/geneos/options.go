@@ -20,45 +20,52 @@ package geneos
 import (
 	"io"
 	"path"
+	"slices"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// packageOptions defines the internal options for various operations in
+// geneosOptions defines the internal options for various operations in
 // the geneos package
-type packageOptions struct {
-	archive         io.ReadCloser
-	archivename     string
-	archivesize     int64
-	basename        string
-	doupdate        bool
-	downloadbase    string
-	downloadonly    bool
-	downloadtype    string
-	geneosdir       string
-	headers         []string
-	host            *Host
-	localOnly       bool
-	nosave          bool
-	override        bool
-	overrideVersion string
-	password        config.Secret
-	platformId      string
-	restart         []Instance
-	source          string
-	start           func(Instance, ...any) error
-	stop            func(Instance, ...any) error
-	username        string
-	version         string
+type geneosOptions struct {
+	archive               io.ReadCloser
+	archivename           string
+	archivesize           int64
+	basename              string
+	components            []*Component
+	doupdate              bool
+	downloadbase          string
+	downloadonly          bool
+	downloadtype          string
+	geneosdir             string
+	headers               []string
+	host                  *Host
+	insecure              bool
+	localOnly             bool
+	nosave                bool
+	override              bool
+	overrideVersion       string
+	password              config.Secret
+	platformId            string
+	promptRootDir         func(string, ...any) (string, error)
+	restart               []Instance
+	signingBundle         string
+	signingBundlePassword config.Secret
+	signingBundlePrompt   func(bool, int, ...string) (config.Secret, error)
+	source                string
+	start                 func(Instance, ...any) error
+	stop                  func(Instance, ...any) error
+	username              string
+	version               string
 }
 
-// PackageOption can be passed to various function and influence
+// GeneosOption can be passed to various function and influence
 // behaviour related to download, unpacking and using release packages
-type PackageOption func(*packageOptions)
+type GeneosOption func(*geneosOptions)
 
-func evalOptions(options ...PackageOption) (d *packageOptions) {
+func evalOptions(options ...GeneosOption) (d *geneosOptions) {
 	// defaults
-	d = &packageOptions{
+	d = &geneosOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
 		source:       path.Join(LocalRoot(), "packages", "downloads"),
@@ -67,6 +74,17 @@ func evalOptions(options ...PackageOption) (d *packageOptions) {
 	for _, opt := range options {
 		opt(d)
 	}
+
+	// make sure the components are unique
+	slices.SortFunc(d.components, func(a, b *Component) int {
+		if a.Name < b.Name {
+			return -1
+		} else if a.Name > b.Name {
+			return 1
+		}
+		return 0
+	})
+	d.components = slices.Compact(d.components)
 
 	// only check username if the source is a valid URL, and not a file
 	if IsURL(d.source) && d.username == "" {
@@ -79,36 +97,75 @@ func evalOptions(options ...PackageOption) (d *packageOptions) {
 	return
 }
 
+func ForComponent(component *Component) GeneosOption {
+	return func(d *geneosOptions) {
+		if component == nil {
+			return
+		}
+		d.components = append(d.components, component)
+	}
+}
+
+func Insecure(insecure bool) GeneosOption {
+	return func(d *geneosOptions) {
+		d.insecure = insecure
+	}
+}
+
+func SigningBundle(signingBundle string) GeneosOption {
+	return func(d *geneosOptions) {
+		d.signingBundle = signingBundle
+	}
+}
+
+func SigningBundlePassword(signingBundlePassword config.Secret) GeneosOption {
+	return func(d *geneosOptions) {
+		d.signingBundlePassword = signingBundlePassword
+	}
+}
+
+func SigningBundlePrompt(prompt func(bool, int, ...string) (config.Secret, error)) GeneosOption {
+	return func(d *geneosOptions) {
+		d.signingBundlePrompt = prompt
+	}
+}
+
+func RootDirPrompt(prompt func(string, ...any) (string, error)) GeneosOption {
+	return func(d *geneosOptions) {
+		d.promptRootDir = prompt
+	}
+}
+
 // DownloadOnly prevents the unarchiving of the selected packages.
 // Downloads are stored in the directory given to Source() or the
 // default `packages/download` directory. NoSave and DownloadOnly
 // are mutually exclusive.
-func DownloadOnly(download bool) PackageOption {
-	return func(d *packageOptions) {
+func DownloadOnly(download bool) GeneosOption {
+	return func(d *geneosOptions) {
 		d.downloadonly = download
 	}
 }
 
 // Onto sets the destination host for the installation. This is
 // used to determine the OS and architecture required for any download.
-func Onto(host *Host) PackageOption {
-	return func(po *packageOptions) {
+func Onto(host *Host) GeneosOption {
+	return func(po *geneosOptions) {
 		po.host = host
 	}
 }
 
 // NoSave stops downloads from being saved in the archive directory.
 // NoSave and DownloadOnly are mutually exclusive.
-func NoSave(nosave bool) PackageOption {
-	return func(d *packageOptions) {
+func NoSave(nosave bool) GeneosOption {
+	return func(d *geneosOptions) {
 		d.nosave = nosave
 	}
 }
 
 // LocalOnly uses only existing archives and prevents attempts to
 // download releases
-func LocalOnly(local bool) PackageOption {
-	return func(d *packageOptions) {
+func LocalOnly(local bool) GeneosOption {
+	return func(d *geneosOptions) {
 		d.localOnly = local
 	}
 }
@@ -122,8 +179,8 @@ func LocalOnly(local bool) PackageOption {
 // If source is an empty string then a default value is used, pointing
 // to the `package/download` directory in the geneos installation
 // directory.
-func Source(source string) PackageOption {
-	return func(d *packageOptions) {
+func Source(source string) GeneosOption {
+	return func(d *geneosOptions) {
 		if source == "" {
 			d.source = path.Join(LocalRoot(), "packages", "downloads")
 			return
@@ -134,44 +191,44 @@ func Source(source string) PackageOption {
 
 // Override ignores existing directories or files and also overrides
 // protection for running instances in upgrades
-func Override(force bool) PackageOption {
-	return func(d *packageOptions) {
+func Override(force bool) GeneosOption {
+	return func(d *geneosOptions) {
 		d.override = force
 	}
 }
 
 // OverrideVersion forces a specific version to be used and fails if not
 // available
-func OverrideVersion(version string) PackageOption {
-	return func(d *packageOptions) {
+func OverrideVersion(version string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.overrideVersion = version
 	}
 }
 
 // Restart sets the instances to be restarted around the update
-func Restart(instance ...Instance) PackageOption {
-	return func(d *packageOptions) {
+func Restart(instance ...Instance) GeneosOption {
+	return func(d *geneosOptions) {
 		d.restart = append(d.restart, instance...)
 	}
 }
 
 // DoUpdate sets the option to also do an update after an install
-func DoUpdate(update bool) PackageOption {
-	return func(d *packageOptions) { d.doupdate = update }
+func DoUpdate(update bool) GeneosOption {
+	return func(d *geneosOptions) { d.doupdate = update }
 }
 
 // StartFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StartFunc(fn func(Instance, ...any) error) PackageOption {
-	return func(d *packageOptions) {
+func StartFunc(fn func(Instance, ...any) error) GeneosOption {
+	return func(d *geneosOptions) {
 		d.start = fn
 	}
 }
 
 // StopFunc sets the start function to call for each instance given in
 // Restart(). It is required to avoid import loops.
-func StopFunc(fn func(Instance, ...any) error) PackageOption {
-	return func(d *packageOptions) {
+func StopFunc(fn func(Instance, ...any) error) GeneosOption {
+	return func(d *geneosOptions) {
 		d.stop = fn
 	}
 }
@@ -179,46 +236,46 @@ func StopFunc(fn func(Instance, ...any) error) PackageOption {
 // Version sets the desired version number, defaults to "latest" in most
 // cases. The version number is in the form `[GA]X.Y.Z` (or `RA` for
 // snapshots)
-func Version(version string) PackageOption {
-	return func(d *packageOptions) {
+func Version(version string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.version = version
 	}
 }
 
 // Basename sets the package binary basename, defaults to active_prod,
 // for symlinks for update.
-func Basename(basename string) PackageOption {
-	return func(d *packageOptions) {
+func Basename(basename string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.basename = basename
 	}
 }
 
 // SetPlatformID sets the (Linux) platform ID from the OS release info.
 // Currently used to distinguish RHEL8/9 releases from others.
-func SetPlatformID(platform string) PackageOption {
-	return func(d *packageOptions) {
+func SetPlatformID(platform string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.platformId = platform
 	}
 }
 
 // UseRoot sets the Geneos installation home directory (aka `geneos` in
 // the settings)
-func UseRoot(root string) PackageOption {
-	return func(d *packageOptions) {
+func UseRoot(root string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.geneosdir = root
 	}
 }
 
 // Username is the remote access username for downloads
-func Username(username string) PackageOption {
-	return func(d *packageOptions) {
+func Username(username string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.username = username
 	}
 }
 
 // Password is the remote access password for downloads
-func Password(password config.Secret) PackageOption {
-	return func(d *packageOptions) {
+func Password(password config.Secret) GeneosOption {
+	return func(d *geneosOptions) {
 		d.password = password
 	}
 }
@@ -227,8 +284,8 @@ func Password(password config.Secret) PackageOption {
 // downloads instead of the default download URL in the settings. This
 // also influences the way the remote path is searched and build, not
 // just the base URL.
-func UseNexus(yes bool) PackageOption {
-	return func(d *packageOptions) {
+func UseNexus(yes bool) GeneosOption {
+	return func(d *geneosOptions) {
 		if yes {
 			d.downloadtype = "nexus"
 		} else {
@@ -239,8 +296,8 @@ func UseNexus(yes bool) PackageOption {
 
 // UseNexusSnapshots set the flag to use Nexus Snapshots rather than
 // Releases.
-func UseNexusSnapshots(yes bool) PackageOption {
-	return func(d *packageOptions) {
+func UseNexusSnapshots(yes bool) GeneosOption {
+	return func(d *geneosOptions) {
 		if yes {
 			d.downloadbase = "snapshots"
 		} else {
@@ -253,8 +310,8 @@ func UseNexusSnapshots(yes bool) PackageOption {
 // passing to URL requests. The NAME=VALUE is decomposed just before the
 // request so that the order the headers are added as options is
 // preserved. A header in the wrong format is ignored.
-func Headers(header ...string) PackageOption {
-	return func(d *packageOptions) {
+func Headers(header ...string) GeneosOption {
+	return func(d *geneosOptions) {
 		d.headers = append(d.headers, header...)
 	}
 }
@@ -263,8 +320,8 @@ func Headers(header ...string) PackageOption {
 // after calling OpenArchive() to test availability of the archive and
 // then pass the archive to the installation function. If the archive is
 // nil then it is ignored and the source option is used instead.
-func UseArchive(archive io.ReadCloser, name string, size int64) PackageOption {
-	return func(d *packageOptions) {
+func UseArchive(archive io.ReadCloser, name string, size int64) GeneosOption {
+	return func(d *geneosOptions) {
 		d.archive = archive
 		d.archivename = name
 		d.archivesize = size

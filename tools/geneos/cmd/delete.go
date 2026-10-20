@@ -63,7 +63,7 @@ var deleteCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		instance.Do(command, geneos.GetHost(Hostname), ct, names, deleteInstance).Report(os.Stdout)
+		instance.Do(command.Name(), geneos.GetHost(Hostname), ct, names, deleteInstance).Report(os.Stdout)
 		return nil
 	},
 }

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -57,6 +58,19 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 	for _, v := range listening {
 		ports[uint16(v)] = struct{}{}
 	}
+	return
+}
+
+// CheckPort checks if the given port is in use by the specified instance.
+// Returns true if the port is in use, false otherwise. Returns an error
+// if the instance's PID cannot be determined.
+func CheckPort(i geneos.Instance, port uint16) (inUse bool, err error) {
+	pid, err := GetLivePID(i)
+	if err != nil {
+		return
+	}
+	ports := process.ListeningPorts(i.Host(), pid)
+	inUse = slices.Contains(ports, int(port))
 	return
 }
 

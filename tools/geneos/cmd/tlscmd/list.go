@@ -152,7 +152,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 		if listCmdIndent {
 			listJSONEncoder.SetIndent("", "    ")
 		}
-		results := instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
+		results := instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
 				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.General{
@@ -219,7 +219,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 				})
 			}
 		}
-		resp := instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
+		resp := instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
 		resp.Report(listCSVWriter)
 
 		// add headlines
@@ -277,7 +277,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
+		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
 			os.Stdout,
 			"csv",
 			[]string{
@@ -319,7 +319,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -344,7 +344,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 		if listCmdIndent {
 			listJSONEncoder.SetIndent("", "    ")
 		}
-		results := instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
+		results := instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertJSON)
 		if listCmdAll {
 			if rootCert != nil {
 				results[cordial.ExecutableName()+" "+geneos.RootCABasename] = &responses.General{
@@ -451,7 +451,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		resp := instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
+		resp := instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
 		resp.Report(listCSVWriter)
 
 		// add headlines
@@ -539,7 +539,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
+		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
 
 	default:
 		var prequel [][]string
@@ -583,7 +583,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command, geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{

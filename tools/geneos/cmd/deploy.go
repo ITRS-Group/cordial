@@ -25,15 +25,12 @@ import (
 	"log/slog"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -184,118 +181,48 @@ var deployCmd = &cobra.Command{
 			name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
 		}
 
-		// check and initialise installation directory
-		if h.IsLocalhost() {
-			if geneos.LocalRoot() == "" {
-				// make best guess
-				if deployCmdGeneosHome == "" {
-					var input, root string
-					if root, err = config.UserHomeDir(); err != nil {
-						log.Warn("cannot find user home directory", slog.Any("error", err))
-					}
-					if path.Base(root) != cordial.ExecutableName() {
-						root = path.Join(root, cordial.ExecutableName())
-					}
-					if input, err = config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
-						if strings.TrimSpace(input) != "" {
-							log.Debug("set root to", slog.String("root", input))
-							root = input
-						}
-					}
-					err = nil
-					if path.Base(root) == cordial.ExecutableName() {
-						deployCmdGeneosHome = root
-					} else {
-						deployCmdGeneosHome = path.Join(root, cordial.ExecutableName())
-					}
-				}
+		// if no local root ...
+		if h.IsLocalhost() && geneos.LocalRoot() == "" {
+			geneos.Initialise(command.Name(), h,
+				// top-level options
+				geneos.UseRoot(deployCmdGeneosHome),
+				geneos.RootDirPrompt(config.ReadUserInputLine),
+				geneos.Override(true), // deploy can be repeated on existing installs
+				geneos.ForComponent(pkgct),
+				geneos.ForComponent(ct),
 
-				// create base install
-				deployCmdGeneosHome, _ = h.Abs(deployCmdGeneosHome)
-				config.Set(config.Global(), cordial.ExecutableName(), deployCmdGeneosHome)
-				if err = geneos.SaveGlobalConfig(cordial.ExecutableName()); err != nil {
-					return
-				}
-
-				if err = geneos.InitGlobalAudit(); err != nil {
-					log.Error("failed to initialize global audit", slog.Any("error", err))
-				}
-
-				// force initialization of the global audit logger by
-				// logging an event, and repeat the deploy event as the
-				// directory structure has just been built
-				logger.Audit().Event(command.Name(), logger.CommandLine("command", os.Args))
-
-				// recreate LOCAL to load "geneos" and others
-				geneos.LOCAL = nil
-				geneos.LOCAL = geneos.NewHost(geneos.LOCALHOST)
-				h = geneos.LOCAL
-			}
-		} else {
-			basedir := config.Get[string](h.Config, cordial.ExecutableName())
-			if deployCmdGeneosHome != "" && deployCmdGeneosHome != basedir {
-				fmt.Printf("Geneos location given with --geneos/-D must be the same as configured for remote host %s\n", h)
-				return nil
-			}
-		}
-
-		// make root component directories, in case this is first instance
-		if err = geneos.RootComponent.MakeDirs(h); err != nil {
-			return
-		}
-
-		// TLS, after directories exist
-		if !deployCmdInsecure {
-			if deployCmdSigningBundle != "" {
-				if err = geneos.TLSImportBundle(deployCmdSigningBundle, "", deployCmdBundlePassword); err != nil {
-					return
-				}
-			} else {
-				if err = geneos.TLSInit(h.Hostname(), false, certs.DefaultKeyType); err != nil {
-					return
-				}
-			}
+				// TLS options
+				geneos.Insecure(deployCmdInsecure),
+				geneos.SigningBundle(deployCmdSigningBundle),
+				geneos.SigningBundlePassword(deployCmdBundlePassword),
+				geneos.SigningBundlePrompt(config.ReadPasswordInput),
+			)
 		}
 
 		if ct.IsA("profile") {
 			deployCmdExtras.Params = params
-			return deployProfile(h, ct, name)
-		}
-
-		// create required component directories, for pkg type, speculatively
-		if err = pkgct.MakeDirs(h); err != nil {
-			return err
-		}
-
-		// deploy templates if component requires them, do not overwrite
-		// existing
-		//
-		// templates are based on real component type (e.g. san and not fa2)
-		if ct != nil && len(ct.Templates) != 0 {
-			templateDir := h.PathTo(ct, "templates")
-			h.MkdirAll(templateDir, 0775)
-
-			// TODO: loop and single config makes no sense
-			for _, t := range ct.Templates {
-				tmpl := t.Content
-				output := path.Join(templateDir, t.Filename)
-				if _, err := h.Stat(output); err == nil {
-					continue
-				}
-				if deployCmdTemplate != "" {
-					if tmpl, err = geneos.ReadAll(deployCmdTemplate); err != nil {
-						return
-					}
-				}
-				if err = h.WriteFile(output, tmpl, 0664); err != nil {
-					return
-				}
-				fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
-			}
+			return profile.DeployProfile(h, name,
+				profile.WithArchive(deployCmdArchive),
+				profile.WithBase(deployCmdBase),
+				profile.WithCertBundle(deployCmdInstanceBundle),
+				profile.WithCertBundlePassword(deployCmdBundlePassword),
+				profile.WithExtras(deployCmdExtras),
+				profile.WithFlags(flags),
+				profile.WithFollowLogs(deployCmdLogs),
+				profile.WithImportFiles(deployCmdImportFiles),
+				profile.WithInsecure(deployCmdInsecure),
+				profile.WithLocal(deployCmdLocal),
+				profile.WithNexus(deployCmdNexus),
+				profile.WithNoSave(deployCmdNoSave),
+				profile.WithPassword(deployCmdPassword),
+				profile.WithPort(deployCmdPort),
+				profile.WithSnapshot(deployCmdSnapshot),
+				profile.WithUsername(deployCmdUsername),
+				profile.WithVersion(deployCmdVersion),
+			)
 		}
 
 		// Package installation
-
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug("version", slog.String("version", version))
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
@@ -313,7 +240,7 @@ var deployCmd = &cobra.Command{
 				deployCmdNexus = true
 			}
 
-			options := []geneos.PackageOption{
+			options := []geneos.GeneosOption{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
 				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName())),
@@ -353,7 +280,6 @@ var deployCmd = &cobra.Command{
 			instance.KeyfileCRC(deployCmdKeyfileCRC),
 			instance.WithImports(deployCmdImportFiles),
 			instance.StartAfterAdd(deployCmdStart),
-			instance.WithProfiles(Profiles),
 		)
 		if err != nil {
 			return err
@@ -440,7 +366,7 @@ func deployProfile(h *geneos.Host, ct *geneos.Component, name string) (err error
 			if deployCmdSnapshot {
 				deployCmdNexus = true
 			}
-			options := []geneos.PackageOption{
+			options := []geneos.GeneosOption{
 				geneos.Version(deployCmdVersion),
 				geneos.Basename(deployCmdBase),
 				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName())),

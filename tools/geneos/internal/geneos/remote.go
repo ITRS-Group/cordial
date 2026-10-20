@@ -24,7 +24,7 @@ import (
 // GeneosOptions supported are PlatformID, UseNexus, UseSnapshots,
 // Version, Username and Password. PlatformID and Version cannot be set
 // at the same time.
-func openRemoteArchive(ct *Component, options ...PackageOption) (filename string, resp *http.Response, err error) {
+func openRemoteArchive(ct *Component, options ...GeneosOption) (filename string, resp *http.Response, err error) {
 	var source string
 
 	opts := evalOptions(options...)
@@ -65,7 +65,7 @@ func openRemoteArchive(ct *Component, options ...PackageOption) (filename string
 	return
 }
 
-func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
+func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
 	// cannot fetch partial versions for OSes with platformID set - restriction on download search interface
 	platform := getPlatformId(opts.platformId)
 
@@ -288,7 +288,7 @@ func openRemoteDefaultArchive(ct *Component, opts *packageOptions) (source strin
 	return
 }
 
-func openRemoteNexusArchive(ct *Component, opts *packageOptions) (source string, resp *http.Response, err error) {
+func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
 	os := config.Get[string](opts.host.Config, "os")
 	arch := osMap[config.Get[string](opts.host.Config, "arch")]
 

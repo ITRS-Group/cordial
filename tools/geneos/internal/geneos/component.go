@@ -200,8 +200,9 @@ type Component struct {
 	GetPID func(arg any, cmdline []string) bool // if set, use this to get the PID of an instance
 
 	// ApplyProfile processes the profile name component key in the
-	// profile configuration pf
-	ApplyProfile func(pf *config.Config, name, key string) error
+	// profile configuration pf. Components that do not need special
+	// handling should use [profile.ApplyCommonProfile]
+	ApplyProfile func(ct *Component, pf *config.Config, name, key string) error
 }
 
 // String returns the stringified name of ct. If ct is nil then return

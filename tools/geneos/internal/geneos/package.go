@@ -136,7 +136,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 // Install a Geneos software release. The destination host h and the
 // component type ct must be given. options controls behaviour like
 // local only and restarts of affected instances.
-func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
+func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	var archive io.ReadCloser
 	var filename string
 	var filesize int64
@@ -201,7 +201,7 @@ func Install(h *Host, ct *Component, options ...PackageOption) (err error) {
 //
 // The basename defaults to `active_prod` unless option
 // geneos.Basename() is passed. No other options are supported.
-func CheckBasename(h *Host, ct *Component, options ...PackageOption) (exists bool, err error) {
+func CheckBasename(h *Host, ct *Component, options ...GeneosOption) (exists bool, err error) {
 	if h == ALL || ct == nil {
 		return false, ErrInvalidArgs
 	}
@@ -251,7 +251,7 @@ func CheckBasename(h *Host, ct *Component, options ...PackageOption) (exists boo
 // the base link exists then the force option must be used to update it,
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
-func Update(h *Host, ct *Component, options ...PackageOption) (err error) {
+func Update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	// before updating a specific type on a specific host, loop
 	// through related types, hosts and components. continue to
 	// other items if a single update fails?
@@ -272,7 +272,7 @@ func Update(h *Host, ct *Component, options ...PackageOption) (err error) {
 
 // update is the core function and must be called with non-wild ct and
 // host
-func update(h *Host, ct *Component, options ...PackageOption) (err error) {
+func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	if ct == nil || h == ALL {
 		return ErrInvalidArgs
 	}

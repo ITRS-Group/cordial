@@ -109,7 +109,7 @@ func ImportFiles(cmd *cobra.Command, ct *geneos.Component, args []string, params
 		return nil
 	}
 
-	instance.Do(cmd, geneos.GetHost(Hostname), ct, args, importInstance, params)
+	instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, args, importInstance, params)
 	return
 }
 

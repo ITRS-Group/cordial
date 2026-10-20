@@ -33,7 +33,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
-	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -169,23 +168,27 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // If the command annotations indicate that auditing is enabled, an
 // audit event will be generated for each instance function called and
 // the success or failure will be recorded in an attribute "result".
-func Do(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	if ct.IsA("profile") {
 		rs = make(responses.GeneralResponses)
 		for _, n := range names {
 			instances := Instances(h, nil, MatchParameters("profile="+n))
-			respmap := DoInstances(cmd, instances, fn, values...)
+			respmap := DoInstances(event, instances, fn, values...)
 			maps.Copy(rs, respmap)
 		}
 		return
 	}
 
-	return DoInstances(cmd, Instances(h, ct, MatchNames(names...)), fn, values...)
+	return DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 }
 
 // DoSerial is a variant of Do that executes the function calls
 // serially. This is for use by functions that are not concurrency safe.
-func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+//
+// If the command annotations indicate that auditing is enabled, an
+// audit event will be generated for each instance function called and
+// the success or failure will be recorded in an attribute "result".
+func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	rs = make(responses.GeneralResponses)
 
 	if ct.IsA("profile") {
@@ -195,7 +198,7 @@ func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []
 				resp := fn(c, values...)
 				responses.Finished(resp)
 				if geneos.AuditActions() && !resp.Audited {
-					c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+					c.AuditEvent(event, resp.Err)
 					resp.Audited = true
 				}
 				rs[resp.Instance.String()] = resp
@@ -210,7 +213,7 @@ func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []
 		resp := fn(c, values...)
 		responses.Finished(resp)
 		if geneos.AuditActions() && !resp.Audited {
-			c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+			c.AuditEvent(event, resp.Err)
 			resp.Audited = true
 		}
 		rs[resp.Instance.String()] = resp
@@ -223,7 +226,11 @@ func DoSerial(cmd *cobra.Command, h *geneos.Host, ct *geneos.Component, names []
 // instead of performing a look-up up by host, type and name. This is
 // for use by functions that have already got the instances and need to
 // call a function on them concurrently.
-func DoInstances(cmd *cobra.Command, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+//
+// If the command annotations indicate that auditing is enabled, an
+// audit event will be generated for each instance function called and
+// the success or failure will be recorded in an attribute "result".
+func DoInstances(event string, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
 	rs = make(responses.GeneralResponses, len(instances))
@@ -240,7 +247,7 @@ func DoInstances(cmd *cobra.Command, instances []geneos.Instance, fn func(geneos
 			resp := fn(c, values...)
 			responses.Finished(resp)
 			if geneos.AuditActions() && !resp.Audited {
-				c.AuditEvent(cmd.Name(), resp.Err, slog.Any("result", resp.Err))
+				c.AuditEvent(event, resp.Err)
 				resp.Audited = true
 			}
 			ch <- resp

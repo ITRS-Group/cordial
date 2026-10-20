@@ -96,7 +96,7 @@ geneos aes ls -S gateway -H localhost -c
 				results, _ := aesListSharedJSON(ct, h)
 				results.Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			} else {
-				instance.Do(command, h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+				instance.Do(command.Name(), h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			}
 		case listCmdToolkit:
 			w := csv.NewWriter(os.Stdout)
@@ -113,7 +113,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(command, h, ct, names, aesListInstanceCSV).Report(w)
+				instance.Do(command.Name(), h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		case listCmdCSV:
 			w := csv.NewWriter(os.Stdout)
@@ -129,7 +129,7 @@ geneos aes ls -S gateway -H localhost -c
 			if listCmdShared {
 				aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(command, h, ct, names, aesListInstanceCSV).Report(w)
+				instance.Do(command.Name(), h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		default:
 			columns := []string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"}
@@ -138,7 +138,7 @@ geneos aes ls -S gateway -H localhost -c
 				responses, _ := aesListShared(ct, h)
 				responses.Formatted(os.Stdout, "column", columns, nil)
 			} else {
-				instance.Do(command, h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
+				instance.Do(command.Name(), h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
 			}
 		}
 		return

@@ -148,7 +148,7 @@ geneos install netprobe -b active_dev -U
 			// use ct as a filter, if set
 
 			// base options
-			options := []geneos.PackageOption{
+			options := []geneos.GeneosOption{
 				geneos.Basename(installCmdBase),
 				geneos.DoUpdate(installCmdUpdate || installCmdForce),
 				geneos.Override(installCmdForce),
@@ -265,7 +265,7 @@ geneos install netprobe -b active_dev -U
 		}
 
 		// base options
-		options := []geneos.PackageOption{
+		options := []geneos.GeneosOption{
 			geneos.Basename(installCmdBase),
 			geneos.DoUpdate(installCmdUpdate || installCmdForce),
 			geneos.Override(installCmdForce),
@@ -331,7 +331,7 @@ geneos install netprobe -b active_dev -U
 
 // Install installs the given component type on the given host, using the
 // given options. If ct is nil, then all component types are installed.
-func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.PackageOption) (err error) {
+func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.GeneosOption) (err error) {
 	installed := 0
 	ctSet := ct != nil
 

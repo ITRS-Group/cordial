@@ -63,7 +63,7 @@ var osMap = map[string]string{
 //
 // LocalOnly()
 // DownloadOnly()
-func OpenArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, filename string, filesize int64, err error) {
+func OpenArchive(ct *Component, options ...GeneosOption) (body io.ReadCloser, filename string, filesize int64, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
@@ -199,7 +199,7 @@ func OpenArchive(ct *Component, options ...PackageOption) (body io.ReadCloser, f
 // unarchive unpacks the gzipped archive passed as an io.Reader on the
 // host given for the component. If there is an error then the caller
 // must close the io.Reader
-func unarchive(h *Host, ct *Component, archive io.Reader, filename string, filesize int64, options ...PackageOption) (dest string, err error) {
+func unarchive(h *Host, ct *Component, archive io.Reader, filename string, filesize int64, options ...GeneosOption) (dest string, err error) {
 	var version, platform, suffix string
 
 	opts := evalOptions(options...)

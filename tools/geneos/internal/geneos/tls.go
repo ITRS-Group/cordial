@@ -212,7 +212,7 @@ func readSigningPrivateKey() (key certs.PrivateKey, err error) {
 // then these are written to the user's app config directory along with
 // the root certificate. The ca-bundle is updated with the root
 // certificate.
-func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundlePassword config.Secret) (err error) {
+func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundlePassword config.Secret, signingBundlePrompt func(bool, int, ...string) (config.Secret, error)) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
@@ -222,12 +222,15 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 	var certBundle *certs.CertificateBundle
 
 	if path.Ext(signingBundleSource) == ".pfx" || path.Ext(signingBundleSource) == ".p12" {
-		if len(signingBundlePassword) == 0 {
-			signingBundlePassword, err = config.ReadPasswordInput(false, 0, "Password")
+		if signingBundlePrompt != nil && len(signingBundlePassword) == 0 {
+			signingBundlePassword, err = signingBundlePrompt(false, 0, "Password")
 			if err != nil {
 				return err
 			}
 			defer clear(signingBundlePassword)
+		}
+		if len(signingBundlePassword) == 0 {
+			return errors.New("password required for P12/PFX signing bundle")
 		}
 		certBundle, err = certs.P12ToCertBundle(signingBundleSource, signingBundlePassword)
 		if err != nil {
