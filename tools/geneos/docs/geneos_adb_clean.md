@@ -2,7 +2,7 @@
 
 Clean ADB files, currently applicable only to dataitem XPaths in limited, but common, scenarios.
 
-Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify. The original file is saved with a `.bak` extension and a timestamp, the new file replaces the original.
+Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify. The original file is saved with a timestamp added before the `.adb` extension, the processed file replaces the original.
 
 If you use the `--keep-all`/`-k` flag, the default action for all elements will be `keep`, overriding the default behavior. This can be combined with `--filter` to selectively apply the modifications to specific XPaths and modifiers.
 
@@ -42,58 +42,65 @@ geneos adb clean [flags] [PATH...]
 ### Options
 
 ```text
-      --gateway OPTION      Gateway name updates. Default 'remove-all'
-      --probe OPTION        Probe name updates. Default 'remove-all'
-      --entity OPTION       Entity name updates. Default 'remove-all'
-      --sampler OPTION      Sampler name updates. Default 'keep'
-      --dataview OPTION     Dataview name updates. Default 'keep'.
-                            
-                            For the above xpath components the valid options, which can be
-                            repeated and are applied in the order given, are:
-                            
-                            'remove-all'          - remove all names
-                            'keep'                - keep all names
-                            'remove:NAME'         - remove names matching NAME. NAME can be
-                                                    a glob (not regexp) pattern
-                            'set:ABC'             - set the name to ABC
-                            'replace:/P/R/'       - apply replacement R to names
-                                                    matching the regexp pattern R. The
-                                                    replacement is applied as many times as
-                                                    P matches
-                            
-      --type OPTION         Type updates. Default 'remove-empty'.
-                            
-                            As for xpath components above, but with the addtional options:
-                            
-                            'remove-empty'        - Remove types with an empty name
-                            'set-empty'           - Set types with an empty name. Note that
-                                                    this is different from no type.
-                            
-      --attribute OPTION    Attribute updates.
-                            
-                            For each attribute, the valid options, which can be repeated and
-                            are applied in the order given, are:
-                            
-                            'remove:NAME[=VALUE]' - remove attribute NAME, optionally only
-                                                    those matching VALUE. Both KEY and VALUE
-                                                    can be glob (not regexp) patterns
-                            'add:NAME=VALUE'      - add attribute NAME with VALUE
-                            'replace:NAME=VALUE'  - replace attribute NAME with VALUE
-                            'replace:NAME=/P/R/'  - replace attribute NAME with
-                                                    the result of applying the regexp
-                                                    pattern P to replacement R. The
-                                                    replacement is applied as many times as
-                                                    P matches
-                            'remove-all'          - remove all attributes
-                            
-  -k, --keep-all            Set default action for all the above to 'keep' or do nothing
-      --filter string       Filter for matching XPaths, leaving others unchanged
-                            (applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name="LDN*")]')
-      --keep-startup-data   Keep startup data (default is to remove)
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --gateway OPTION            Gateway name updates. Default 'remove-all'
+      --probe OPTION              Probe name updates. Default 'remove-all'
+      --entity OPTION             Entity name updates. Default 'remove-all'
+      --sampler OPTION            Sampler name updates. Default 'keep'
+      --dataview OPTION           Dataview name updates. Default 'keep'.
+                                  
+                                  For the above xpath components the valid options, which can be
+                                  repeated and are applied in the order given, are:
+                                  
+                                  'remove-all'          - remove all names
+                                  'keep'                - keep all names
+                                  'remove:NAME'         - remove names matching NAME. NAME can be
+                                                          a glob (not regexp) pattern
+                                  'set:ABC'             - set the name to ABC
+                                  'replace:/P/R/'       - apply replacement R to names
+                                                          matching the regexp pattern R. The
+                                                          replacement is applied as many times as
+                                                          P matches
+                                  
+      --type OPTION               Type updates. Default 'remove-empty'.
+                                  
+                                  As for xpath components above, but with the addtional options:
+                                  
+                                  'remove-empty'        - Remove types with an empty name
+                                  'set-empty'           - Set types with an empty name. Note that
+                                                          this is different from no type.
+                                  
+      --attribute OPTION          Attribute updates.
+                                  
+                                  For each attribute, the valid options, which can be repeated and
+                                  are applied in the order given, are:
+                                  
+                                  'remove:NAME[=VALUE]' - remove attribute NAME, optionally only
+                                                          those matching VALUE. Both KEY and VALUE
+                                                          can be glob (not regexp) patterns
+                                  'add:NAME=VALUE'      - add attribute NAME with VALUE
+                                  'replace:NAME=VALUE'  - replace attribute NAME with VALUE
+                                  'replace:NAME=/P/R/'  - replace attribute NAME with
+                                                          the result of applying the regexp
+                                                          pattern P to replacement R. The
+                                                          replacement is applied as many times as
+                                                          P matches
+                                  'remove-all'          - remove all attributes
+                                  
+  -k, --keep-all                  Set default action for all the above to 'keep' or do nothing
+      --filter-xpath string       Filter for matching XPaths, leaving others unchanged
+                                  (applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name="LDN*")]')
+      --filter-gateway string     Filter for matching gateways, leaving others unchanged
+      --filter-probe string       Filter for matching probes, leaving others unchanged
+      --filter-entity string      Filter for matching entities, leaving others unchanged
+      --filter-attribute string   Filter for matching attributes, leaving others unchanged
+      --filter-sampler string     Filter for matching samplers, leaving others unchanged
+      --filter-type string        Filter for matching types, leaving others unchanged
+      --filter-dataview string    Filter for matching dataviews, leaving others unchanged
+      --keep-startup-data         Keep startup data (default is to remove)
+      --allow-root                allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

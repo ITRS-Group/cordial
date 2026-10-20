@@ -28,7 +28,19 @@ var cleanCmdDescription string
 
 var cleanKeepAll, cleanCmdKeepStartupData bool
 var cleanOptions cleaningOptions
-var cleanFilter string
+
+type filterType struct {
+	XPath      string
+	Gateway    string
+	Probe      string
+	Entity     string
+	Attributes optionSlice
+	Sampler    string
+	Type       string
+	Dataview   string
+}
+
+var filters filterType = filterType{}
 
 func init() {
 	adbCmd.AddCommand(cleanCmd)
@@ -109,7 +121,19 @@ are applied in the order given, are:
 
 	cleanCmd.Flags().BoolVarP(&cleanKeepAll, "keep-all", "k", false, "Set default action for all the above to 'keep' or do nothing")
 
-	cleanCmd.Flags().StringVar(&cleanFilter, "filter", "", "Filter for matching XPaths, leaving others unchanged\n(applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name=\"LDN*\")]')")
+	cleanCmd.Flags().StringVar(&filters.XPath, "filter-xpath", "", "Filter for matching XPaths, leaving others unchanged\n(applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name=\"LDN*\")]')")
+	cleanCmd.Flags().StringVar(&filters.Gateway, "filter-gateway", "", "Filter for matching gateways")
+	cleanCmd.Flags().StringVar(&filters.Probe, "filter-probe", "", "Filter for matching probes")
+	cleanCmd.Flags().StringVar(&filters.Entity, "filter-entity", "", "Filter for matching entities")
+	cleanCmd.Flags().StringVar(&filters.Sampler, "filter-sampler", "", "Filter for matching samplers")
+	cleanCmd.Flags().StringVar(&filters.Type, "filter-type", "", "Filter for matching types")
+	cleanCmd.Flags().StringVar(&filters.Dataview, "filter-dataview", "",
+		`Filter for matching dataviews
+
+All the above filters support glob patterns (not regular expressions).
+`,
+	)
+	cleanCmd.Flags().Var(&filters.Attributes, "filter-attribute", "Filter for matching attributes in the form `NAME=VALUE` where\nVALUE should be '*' if you want to match any value. Can be repeated.")
 
 	cleanCmd.Flags().BoolVar(&cleanCmdKeepStartupData, "keep-startup-data", false, "Keep startup data (default is to remove)")
 
@@ -121,6 +145,7 @@ are applied in the order given, are:
 	cleanCmd.Flags().Lookup("sampler").DefValue = ""
 	cleanCmd.Flags().Lookup("type").DefValue = ""
 	cleanCmd.Flags().Lookup("dataview").DefValue = ""
+	cleanCmd.Flags().Lookup("filter-attribute").DefValue = ""
 
 	// add aliases for flags if needed
 	cleanCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
@@ -146,7 +171,7 @@ are applied in the order given, are:
 	cleanCmd.Flags().SortFlags = false
 }
 
-var cleanFilterXPath *xpath.XPath
+var cleanFilterXPath *xpath.XPath = &xpath.XPath{}
 
 var cleanCmd = &cobra.Command{
 	Use:          "clean [flags] [PATH...]",
@@ -193,11 +218,53 @@ var cleanCmd = &cobra.Command{
 			cleanOptions.Dataviews = cleanOptions.Dataviews[1:]
 		}
 
-		if cleanFilter != "" {
-			cleanFilterXPath, err = xpath.Parse(cleanFilter)
+		if filters.XPath != "" {
+			cleanFilterXPath, err = xpath.Parse(filters.XPath)
 			if err != nil {
 				return fmt.Errorf("invalid filter XPath: %w", err)
 			}
+		}
+
+		// these have to be evaluated in order as ResolveTo() will
+		// remove items to the right of the element passed
+
+		if filters.Gateway != "" {
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Gateway{Name: filters.Gateway})
+		}
+
+		if filters.Probe != "" {
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Probe{Name: filters.Probe})
+		}
+
+		if filters.Entity != "" {
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Entity{Name: filters.Entity})
+		}
+
+		if len(filters.Attributes) > 0 {
+			if cleanFilterXPath.Entity == nil {
+				cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Entity{})
+			}
+			for _, a := range filters.Attributes {
+				name, value, found := strings.Cut(a, "=")
+				if !found {
+					value = "*"
+				}
+				cleanFilterXPath.Entity.Attributes[name] = value
+			}
+		}
+
+		if filters.Sampler != "" {
+			log.Debug("Setting Sampler filter", slog.String("Sampler", filters.Sampler))
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Sampler{Name: filters.Sampler})
+		}
+
+		if filters.Type != "" {
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Sampler{})
+			cleanFilterXPath.Sampler.Type = &filters.Type
+		}
+
+		if filters.Dataview != "" {
+			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Dataview{Name: filters.Dataview})
 		}
 
 		for _, file := range paths {

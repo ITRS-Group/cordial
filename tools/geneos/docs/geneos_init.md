@@ -56,15 +56,13 @@ None of these commands should have any side-effects but others will. These may n
 ## Usage
 
 ```text
-geneos init [flags] [DIRECTORY]
+geneos init [PROFILE] [flags] [DIRECTORY]
 ```
 
 ## Commands
 
 | Command / Aliases | Description |
 |-------|-------|
-| [`geneos init all`](geneos_init_all.md)	 | Initialise a more complete Geneos environment |
-| [`geneos init demo`](geneos_init_demo.md)	 | Initialise a Geneos Demo environment |
 | [`geneos init templates / template`](geneos_init_templates.md)	 | Initialise or overwrite templates |
 
 ### Options
@@ -72,6 +70,10 @@ geneos init [flags] [DIRECTORY]
 ```text
   -R, --restore PATH                     Restore from backup file PATH
   -X, --no-install                       Don't install any releases after restore
+  -M, --minimal                          use a minimal Netprobe release
+  -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
+                                         (Repeat as required, gateway only)
+  -L, --licence string                   Licence file location (default "geneos.lic")
   -l, --log                              Follow logs after starting instance(s)
   -F, --force                            Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname

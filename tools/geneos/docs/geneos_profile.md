@@ -5,7 +5,7 @@ A `profile` is a pseudo-component representing a Geneos profile instance.
 ## Usage
 
 ```text
-geneos profile
+geneos profile [name]
 ```
 
 ### Options

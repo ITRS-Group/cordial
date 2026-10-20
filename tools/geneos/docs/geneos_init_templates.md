@@ -44,4 +44,4 @@ geneos init templates [TYPE] [flags]
 
 ## SEE ALSO
 
-* [geneos init](geneos_init.md)	 - Initialise The Installation
+* [geneos init](geneos_init.md)	 - Initialise a Geneos installation

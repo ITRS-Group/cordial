@@ -25,7 +25,7 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos config`](geneos_config.md)	 | Configure Command Behaviour |
 | [`geneos host`](geneos_host.md)	 | Remote Host Operations |
 | [`geneos incident`](geneos_incident.md)	 | Commands for working with incidents |
-| [`geneos init`](geneos_init.md)	 | Initialise The Installation |
+| [`geneos init`](geneos_init.md)	 | Initialise a Geneos installation |
 | [`geneos package`](geneos_package.md)	 | Package Operations |
 | [`geneos tls`](geneos_tls.md)	 | TLS Certificate Operations |
 
