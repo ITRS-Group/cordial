@@ -25,7 +25,7 @@ This release comes with significant new features for the `geneos` program, and s
 
 ## Version v1.30.0 Changes
 
-* Updated to use Go 1.27.2 and update dependencies
+* Updated to use Go 1.27.3 and update dependencies
 
 * `tools/geneos`
 
