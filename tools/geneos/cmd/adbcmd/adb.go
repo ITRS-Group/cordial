@@ -20,11 +20,14 @@ package adbcmd
 
 import (
 	_ "embed"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 )
+
+var log *slog.Logger
 
 func init() {
 	cmd.Cmd.AddCommand(adbCmd)

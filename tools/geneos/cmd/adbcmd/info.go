@@ -24,8 +24,6 @@ import (
 var infoCmdDescription string
 var infoCmdShowXPaths bool
 
-var log *slog.Logger
-
 func init() {
 	infoCmd.Flags().BoolVarP(&infoCmdShowXPaths, "show-xpaths", "X", false, "Show a list of XPaths rather than totals for element values")
 
