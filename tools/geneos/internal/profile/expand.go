@@ -22,7 +22,6 @@ func SetExpandOptions(pf *config.Config, flagset *pflag.FlagSet) {
 	flags := make(map[string]any)
 	// populate the flags map from flagset.Flags()
 	flagset.VisitAll(func(f *pflag.Flag) {
-		log.Debug("processing flag", slog.String("name", f.Name), slog.String("value", f.Value.String()), slog.String("type", f.Value.Type()))
 		switch f.Value.Type() {
 		case "bool":
 			flags[f.Name], _ = strconv.ParseBool(f.Value.String())
