@@ -173,8 +173,8 @@ func init() {
 			c.Usage()
 			fmt.Println("")
 			fmt.Println("💡 Use the `help` command to get more detailed help, instead of the `-h` flag, e.g. `" + strings.Replace(c.CommandPath(), cordial.ExecutableName(), cordial.ExecutableName()+" help", 1) + "`")
-
 		} else {
+			// the help function gets no args
 			helpfunc(c, []string{})
 		}
 	})
@@ -257,7 +257,7 @@ geneos restart
 		// boot-strap profile function map, no that flags are parsed
 		// set defaults for all profile expansion
 
-		profile.SetExpandOptions(command.Flags(), Profiles)
+		profile.SetExpandOptions(Profiles, command.Flags())
 
 		// check if user is root, and only proceed if conditions are met:
 		// * the command has the `allow-root` annotation set to "true", or

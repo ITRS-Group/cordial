@@ -103,6 +103,8 @@ var Component = geneos.Component{
 		"netprobe/netprobes_shared",
 		"netprobe/shared",
 	},
+
+	ApplyProfile: applyProfile,
 }
 
 type Floating instance.Instance

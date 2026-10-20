@@ -31,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 // Start runs the instance. Options must be [StartOption] types but the
@@ -43,6 +44,22 @@ func Start(i geneos.Instance, options ...any) error {
 
 	if IsDisabled(i) {
 		return geneos.ErrDisabled
+	}
+
+	if i.Type().IsA("profile") {
+		// start all the instances labelled with the profile
+		DoInstances("start",
+			Instances(i.Host(), nil, MatchParameters("profile="+i.Name())),
+			func(i geneos.Instance, _ ...any) (resp *responses.General) {
+				resp = responses.New[responses.General](i)
+				if IsAutoStart(i) {
+					resp.Err = Start(i, options...)
+					resp.Audited = true
+				}
+				return
+			},
+		).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+		return nil
 	}
 
 	// filter out only StartOption types from the options slice

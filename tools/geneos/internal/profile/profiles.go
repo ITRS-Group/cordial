@@ -32,7 +32,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -43,6 +42,8 @@ var log = logger.Logger
 
 //go:embed "profiles.defaults.yaml"
 var profilesDefault []byte
+
+var Profiles *config.Config
 
 // Initialise sets up the profiles.yaml  file in the user's
 // configuration directory, creating it from embedded defaults if it
@@ -70,6 +71,7 @@ func Initialise(appName string) {
 }
 
 // ReadConfig reads the profiles configuration from the specified file.
+// Also sets the global Profiles variable.
 func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 	pf, err = config.Read("profiles",
 		config.AppName(cordial.ExecutableName()),
@@ -98,40 +100,8 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 		log.Debug("no profiles file found, using defaults")
 	}
 
+	Profiles = pf
 	return
-}
-
-// SetExpandOptions sets the default expansion options for the given
-// profile configuration based on the command's flags.
-func SetExpandOptions(flagset *pflag.FlagSet, pf *config.Config) {
-	flags := make(map[string]any)
-	// populate the flags map from flagset.Flags()
-	flagset.VisitAll(func(f *pflag.Flag) {
-		switch f.Value.Type() {
-		case "bool":
-			flags[f.Name], _ = strconv.ParseBool(f.Value.String())
-		case "int", "int16", "int32", "int64":
-			flags[f.Name], _ = strconv.Atoi(f.Value.String())
-		case "uint", "uint16", "uint32", "uint64":
-			flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
-		default:
-			flags[f.Name] = f.Value.String()
-		}
-	})
-
-	// pass to profile eval
-	config.Set(pf, "flags", flags)
-
-	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
-	}
-	pf.SetDefaultExpandOptions(
-		config.LookupTable(lookup),
-		config.Prefix("select", SelectPrefix),
-		config.Prefix("replace", ReplacePrefix),
-		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
-		config.NoDecode(true),
-	)
 }
 
 type Common struct {
@@ -140,6 +110,7 @@ type Common struct {
 	Params             []string          `yaml:"params,omitempty"`
 	CertBundle         string            `yaml:"cert-bundle,omitempty,omitemtpy"` // path or PEM
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
+	Imports            []string          `yaml:"imports,omitempty"`
 }
 
 // Apply applies the profile name to the local configuration. It
@@ -154,10 +125,14 @@ func Apply(pf *config.Config, name string) error {
 	}
 
 	for key := range components {
+		if key == "description" {
+			// skip embedded documentation
+			continue
+		}
 		ct := geneos.ParseComponent(key)
 		if ct.ApplyProfile != nil {
 			log.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
-			if err := ct.ApplyProfile(pf, name, key); err != nil {
+			if err := ct.ApplyProfile(ct, pf, name, key); err != nil {
 				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
 		}
@@ -220,7 +195,7 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 //
 // Envs and Options are straight forward, but cert-bundle will require
 // special handling.
-func ApplyCommonParams(pf *config.Config, name string, common Common, lookup map[string]string) (vals values.Values) {
+func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup map[string]string) (vals values.Values) {
 	vals.Envs = pf.ExpandStringSlice(common.Env,
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
@@ -228,6 +203,12 @@ func ApplyCommonParams(pf *config.Config, name string, common Common, lookup map
 		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
 	)
 	vals.Params = pf.ExpandStringSlice(common.Params,
+		config.LookupTable(lookup),
+		config.Prefix("select", SelectPrefix),
+		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+	)
+	common.Imports = pf.ExpandStringSlice(common.Imports,
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
@@ -263,6 +244,7 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name 
 			instance.WithCertBundlePassword(common.CertBundlePassword),
 			instance.WithPort(port),
 			instance.WithProfiles(pf),
+			instance.WithImports(common.Imports),
 		)
 		if err != nil {
 			return err
@@ -298,12 +280,50 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name 
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
 
+		if err = instance.ImportFiles(i, common.Imports...); err != nil {
+			i.Log().Error("failed to import files", slog.Any("error", err))
+		}
+
 		// always force a rebuild, even for those instances marked as "initial"
 		i.Rebuild(true)
 	}
 
-	if !instance.IsRunning(i) {
-		return instance.Start(i)
-	}
+	// if !instance.IsRunning(i) {
+	// 	return instance.Start(i)
+	// }
 	return nil
+}
+
+// ApplyCommonProfile applies the common profile to the given component.
+// It can be used for component types that do not need special handling.
+func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
+	var commons []Common
+
+	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &commons, config.NoExpand()); err != nil {
+		return fmt.Errorf("failed to unmarshal common profile %q for component %q: %w", name, ct.Name, err)
+	}
+
+	// global lookup table, add values here as needed
+	lookup := map[string]string{
+		"hostname": geneos.LOCAL.String(),
+	}
+
+	// build param key delete list
+	deleteKeys := []string{}
+
+	for _, common := range commons {
+		instanceName := config.Expand[string](pf, common.Name, config.LookupTable(lookup))
+
+		if instanceName == "" {
+			panic("name empty")
+		}
+
+		vals := ApplyCommonParams(pf, name, &common, lookup)
+
+		if err := ApplyInstance(pf, ct, common, instanceName, deleteKeys, vals); err != nil {
+			return err
+		}
+	}
+
+	return
 }

@@ -7,7 +7,7 @@
 
 ## Version v1.30.0 Highlights
 
-This release comes with significant new features for the `geneos` program.
+This release comes with significant new features for the `geneos` program, and some minor breaking changes. Please read this changelog carefully before upgrading.
 
 * The program now supports "_profiles_" for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to define its settings. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles also support `geneos deploy` and some dynamic configuration scenarios. Read more about them in `geneos help profiles`
 
@@ -19,13 +19,19 @@ This release comes with significant new features for the `geneos` program.
 
 * The `snapshot` command can now output the captured data in Geneos Toolkit formats.
 
-* Support for auditing events within the `geneos` program. 
+* Support for auditing events within the `geneos` program. Audit logs are now created for global and per-instance events.
+
+* Most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
 ## Version v1.30.0 Changes
 
 * Updated to use Go 1.27.2 and update dependencies
 
 * `tools/geneos`
+
+  * For RHEL8/UBI8 packages `geneos package install` will now fetch releases 7.12 and later without the `-el8` suffix. If you specify a version below 7.12 on the command line then the previous restrcition will still return an error as the download site URLs cannot handle a mix of version and platform. For 7.12+ and "latest" the platform identifier is not used and so will work as expected.
+
+  * **Breaking Change** - For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object (Go "map") to an array (Go "slice") so that you can now specify multiple gateways on the same host. In general this will be transparent to you unless you add or remove a gateway from a SAN instance using `geneos set/unset NAME -g host:port` - in which case you MUST update all the gateways as the original list will be deleted on change.
 
   * The `geneos set` and `geneos unset` commands have been enhanced to support more complex configuration parameters, such as multiple managed entities for `san` components. These also require the updated templates included in the release. To update the templates used in an existing `geneos` managed environment, you should run `geneos init templates` after upgrading the binary.
 
@@ -45,7 +51,7 @@ This release comes with significant new features for the `geneos` program.
 
     Additionally, managed entities are only included in the generated configuration if they have at least one type specified, as without types they would not have any monitoring configured by the gateway.
 
-  * Changes to template processing to support more complex configuration scenarios.
+  * Changes to template processing to support more complex configuration scenarios, like the one above.
 
   * Add predefined Geneos gateway include files to the binary for automated deployment to an `gateway/includes` directory, which can be referenced as `../../includes/...` in the main Gateway configuration.
 
@@ -58,6 +64,8 @@ This release comes with significant new features for the `geneos` program.
   * The code to support log file viewing has been moved from the `geneos log` command to a shared internal package for reuse across the program.
 
   * Update `sso-agent` component suport to support passwords in (encoded) environment variables and correctly rebuild the configured keystore and to support changing the `ssl_alias` and passwords for the keystore and truststore as well as improved validation and error handling.
+
+  * Both `webserver` and `sso-agent` have had special support for external, Java command-line truststores removed. This does not affect the component specific functionality which uses specific configuration files. If you need to use additional truststores, you should configure them using the `options` parameters for instances.
 
 ## Version v1.30.0 Fixes
 
@@ -75,15 +83,13 @@ This release comes with significant new features for the `geneos` program.
 
   * For PEM files, support the expansion of a leading `~/` in file paths as the user's home directory
 
-
 * `tools/geneos`
 
   * Fix `geneos set` and `geneos unset` to not decode or expand existing values. Previously, encoded secrets were inadvertantly decoded, leading to visibility of plain text secrets. As an added benefit, previously expanded parameters will now be left unchanged, so that interpolated directory paths etc. will remain intact.
 
   * Fix the `geneos set` command to correctly handle secure (encoded) variables.
 
-  * Fix `geneos tls export` for instances to only write the private key once.
-
+  * Fix `geneos tls export` for instances to only write out the private key once.
 
 ---
 

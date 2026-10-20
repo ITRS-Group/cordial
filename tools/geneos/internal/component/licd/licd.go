@@ -31,6 +31,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -89,6 +90,8 @@ var Component = geneos.Component{
 		filepath.Join("packages", name),
 		filepath.Join(name, name+"s"),
 	},
+
+	ApplyProfile: profile.ApplyCommonProfile,
 }
 
 type Licd instance.Instance

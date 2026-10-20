@@ -6,12 +6,51 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/maja42/goval"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
+
+// SetExpandOptions sets the default expansion options for the given
+// profile configuration based on the command's flags.
+func SetExpandOptions(pf *config.Config, flagset *pflag.FlagSet) {
+	flags := make(map[string]any)
+	// populate the flags map from flagset.Flags()
+	flagset.VisitAll(func(f *pflag.Flag) {
+		log.Debug("processing flag", slog.String("name", f.Name), slog.String("value", f.Value.String()), slog.String("type", f.Value.Type()))
+		switch f.Value.Type() {
+		case "bool":
+			flags[f.Name], _ = strconv.ParseBool(f.Value.String())
+		case "int", "int16", "int32", "int64":
+			flags[f.Name], _ = strconv.Atoi(f.Value.String())
+		case "uint", "uint16", "uint32", "uint64":
+			flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
+		case "HOSTNAME:PORT": // values.Gateways
+			flags[f.Name] = f.Value.String()
+		default:
+			flags[f.Name] = f.Value.String()
+		}
+	})
+
+	// pass to profile eval
+	config.Set(pf, "flags", flags)
+
+	lookup := map[string]string{
+		"hostname": geneos.LOCAL.String(),
+	}
+	pf.SetDefaultExpandOptions(
+		config.LookupTable(lookup),
+		config.Prefix("select", SelectPrefix),
+		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+		config.NoDecode(true),
+	)
+}
 
 // Expand* function custom prefix functions
 

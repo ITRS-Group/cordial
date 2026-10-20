@@ -20,9 +20,7 @@ type GatewayProfile struct {
 	Variables      []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(pf *config.Config, name, key string) (err error) {
-	ct := geneos.ParseComponent("gateway")
-
+func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
 	var gateways []GatewayProfile
 
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
@@ -50,7 +48,7 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 			panic("name empty")
 		}
 
-		vals := profile.ApplyCommonParams(pf, name, gateway.Common, lookup)
+		vals := profile.ApplyCommonParams(pf, name, &gateway.Common, lookup)
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 

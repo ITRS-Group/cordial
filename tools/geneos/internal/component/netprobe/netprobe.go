@@ -30,6 +30,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -102,7 +103,7 @@ var Component = geneos.Component{
 		filepath.Join(component, "netprobes_shared"),
 		filepath.Join(component, "shared"),
 	},
-	ApplyProfile: applyProfile,
+	ApplyProfile: profile.ApplyCommonProfile,
 }
 
 type Netprobe instance.Instance

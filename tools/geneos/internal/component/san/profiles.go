@@ -3,6 +3,7 @@ package san
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -14,7 +15,7 @@ import (
 
 type SanProfile struct {
 	profile.Common  `mapstructure:",squash"`
-	Gateways        map[string]string `yaml:"gateways,omitempty"`
+	Gateways        []string          `yaml:"gateways,omitempty"`
 	Types           []string          `yaml:"types,omitempty"`
 	Attributes      values.NameValues `yaml:"attributes,omitempty"`
 	Variables       []values.Variable `yaml:"variables,omitempty"`
@@ -31,10 +32,8 @@ type ManagedEntity struct {
 	Variables  []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(pf *config.Config, name, key string) (err error) {
+func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
 	var sans []SanProfile
-
-	ct := geneos.ParseComponent("san")
 
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand())
 	if err != nil {
@@ -60,10 +59,12 @@ func applyProfile(pf *config.Config, name, key string) (err error) {
 		// does it already exist?
 		instanceName := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
 
-		vals := profile.ApplyCommonParams(pf, name, san.Common, lookup)
-		vals.Gateways = make(map[string]string, len(san.Gateways))
-		for n, g := range san.Gateways {
-			vals.Gateways[n] = config.Expand[string](pf, g)
+		vals := profile.ApplyCommonParams(pf, name, &san.Common, lookup)
+
+		// expand all elements of gateways, join with commas and split again to catch already expanded values
+		for gw := range strings.SplitSeq(strings.Join(pf.ExpandStringSlice(san.Gateways), ","), ",") {
+			// san.Gateways expands to a map of host:port
+			vals.Gateways = append(vals.Gateways, gw)
 		}
 		vals.Types = pf.ExpandStringSlice(san.Types)
 		vals.Attributes = pf.ExpandStringSlice(san.Attributes)

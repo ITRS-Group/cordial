@@ -21,7 +21,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"iter"
 	"log/slog"
+	"maps"
 	"os"
 	"path"
 	"slices"
@@ -324,6 +326,30 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 				}
 
 				m[values.MANAGED_ENTITIES] = entities
+			}
+		}
+
+		gws, ok := m[values.GATEWAYS]
+		if ok {
+			// convert gateways map or slice to an iter.seq2 for the template
+			switch gateways := gws.(type) {
+			case map[string]any:
+				m[values.GATEWAYS] = maps.All(gateways)
+			case []any:
+				m[values.GATEWAYS] = iter.Seq2[string, string](func(yield func(string, string) bool) {
+					for _, gateway := range gateways {
+						gatewayStr, ok := gateway.(string)
+						if !ok {
+							continue
+						}
+						hostname, port, _ := strings.Cut(gatewayStr, ":")
+						if !yield(hostname, port) {
+							return
+						}
+					}
+				})
+			default:
+				log.Debug("Unknown gateways format", slog.Any("gateways", gws), slog.String("type", fmt.Sprintf("%T", gws)))
 			}
 		}
 	}

@@ -20,23 +20,26 @@ package values
 import "strings"
 
 // gateway - name:port
-type Gateways map[string]string
+type Gateways []string
 
 const GatewaysOptionstext = "A gateway connection in the format HOSTNAME:PORT\n(Repeat as required, san and floating only)"
 
 func (i *Gateways) String() string {
-	return ""
+	if i == nil {
+		return ""
+	}
+	var parts []string
+	for _, gw := range *i {
+		parts = append(parts, gw)
+	}
+	return strings.Join(parts, ",")
 }
 
 func (i *Gateways) Set(value string) error {
 	if *i == nil {
 		*i = Gateways{}
 	}
-	host, port, found := strings.Cut(value, ":")
-	if !found {
-		port = "7039"
-	}
-	(*i)[host] = port
+	*i = append(*i, value)
 	return nil
 }
 

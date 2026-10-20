@@ -1,3 +1,5 @@
+Note: The `geneos init demo` command has now been replaced by the `geneos init` command with the profile name `demo`. The information below still applies to the new usage.
+
 The `geneos init demo` command is used to initialise a Geneos Demo environment.
 
 Without any arguments the command initialises a directory called `geneos` under your user's home directory (unless the user's home directory ends in `geneos` in which case it uses that directly), downloads the latest release archives and creates a Gateway instance using the name `Demo Gateway` (with embedded space) as required for Demo licensing, as Netprobe and a Webserver.

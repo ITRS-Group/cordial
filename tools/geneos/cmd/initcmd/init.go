@@ -20,41 +20,48 @@ package initcmd
 
 import (
 	_ "embed"
-	"errors"
-	"fmt"
-	"io/fs"
 	"log/slog"
 	"os"
-	"os/user"
-	"path"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 const archiveOptionsText = "Directory of releases for installation"
 
-var initCmdLogs, initCmdInsecure, initCmdForce, initCmdNexus, initCmdSnapshot bool
-var initCmdRestore, initCmdArchive string
-var initCmdName, initCmdSigningBundle, initCmdImportKey, initCmdGatewayTemplate, initCmdVersion string
-var initCmdDLUsername string
-var initCmdNoInstall, initCmdTLS bool
-var initCmdBundlePassword config.Secret
+type initCmdOptions struct {
+	Archive               string
+	DLUsername            string
+	Extras                values.Values
+	Force                 bool
+	GatewayTemplate       string
+	ImportKey             string
+	Insecure              bool
+	LicenseFile           string
+	Logs                  bool
+	Minimal               bool
+	Name                  string
+	Nexus                 bool
+	NoInstall             bool
+	Restore               string
+	SigningBundle         string
+	SigningBundlePassword config.Secret
+	Snapshot              bool
+	TLS                   bool
+	Version               string
+}
 
-// initCmdExtras is shared between all `init` commands as they share common
-// flags (for now)
-var initCmdExtras = values.Values{}
+var initOptions = initCmdOptions{}
 
 var log = logger.Logger
 
@@ -66,43 +73,48 @@ func init() {
 
 	// common flags, need checking
 
-	initCmd.Flags().StringVarP(&initCmdRestore, "restore", "R", "", "Restore from backup file `PATH`")
-	initCmd.Flags().BoolVarP(&initCmdNoInstall, "no-install", "X", false, "Don't install any releases after restore")
+	initCmd.Flags().StringVarP(&initOptions.Restore, "restore", "R", "", "Restore from backup file `PATH`")
+	initCmd.Flags().BoolVarP(&initOptions.NoInstall, "no-install", "X", false, "Don't install any releases after restore")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdLogs, "log", "l", false, "Follow logs after starting instance(s)")
-	initCmd.PersistentFlags().BoolVarP(&initCmdForce, "force", "F", false, "Ignore existing directories and files and overwrite")
-	initCmd.PersistentFlags().StringVarP(&initCmdName, "name", "n", "", "Use name for instances and configurations instead of the hostname")
+	// flags from old 'demo' and 'all'
+	initCmd.Flags().BoolVarP(&initOptions.Minimal, "minimal", "M", false, "use a minimal Netprobe release")
+	initCmd.Flags().VarP(&initOptions.Extras.Includes, "include", "i", values.IncludeValuesOptionsText)
+	initCmd.Flags().StringVarP(&initOptions.LicenseFile, "licence", "L", "geneos.lic", "Licence file location")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdTLS, "tls", "T", false, "Create internal certificates for TLS support")
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Logs, "log", "l", false, "Follow logs after starting instance(s)")
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Force, "force", "F", false, "Ignore existing directories and files and overwrite")
+	initCmd.PersistentFlags().StringVarP(&initOptions.Name, "name", "n", "", "Use name for instances and configurations instead of the hostname")
+
+	initCmd.PersistentFlags().BoolVarP(&initOptions.TLS, "tls", "T", false, "Create internal certificates for TLS support")
 	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdSigningBundle, "signing-bundle", "C", "", "signing bundle in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
+	initCmd.PersistentFlags().StringVarP(&initOptions.SigningBundle, "signing-bundle", "C", "", "signing bundle in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
 
 	// set a default from env, if available. can be in expandable format
 	if p, ok := os.LookupEnv("ITRS_CERTS_PASSWORD"); ok {
-		initCmdBundlePassword = config.ExpandToPassword(p)
+		initOptions.SigningBundlePassword = config.ExpandToPassword(p)
 	}
-	initCmd.PersistentFlags().Var(&initCmdBundlePassword, "signing-bundle-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
+	initCmd.PersistentFlags().Var(&initOptions.SigningBundlePassword, "signing-bundle-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
 
-	initCmd.PersistentFlags().BoolVarP(&initCmdInsecure, "insecure", "", false, "Do not create internal certificates for TLS support")
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Insecure, "insecure", "", false, "Do not create internal certificates for TLS support")
 
 	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
 	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
 
 	// initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdArchive, "archive", "A", "", archiveOptionsText)
-	initCmd.PersistentFlags().BoolVarP(&initCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
-	initCmd.PersistentFlags().BoolVarP(&initCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
+	initCmd.PersistentFlags().StringVarP(&initOptions.Archive, "archive", "A", "", archiveOptionsText)
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Nexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Snapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdVersion, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
-	initCmd.PersistentFlags().StringVarP(&initCmdDLUsername, "username", "u", "", "Username for downloads (password prompted)")
+	initCmd.PersistentFlags().StringVarP(&initOptions.Version, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
+	initCmd.PersistentFlags().StringVarP(&initOptions.DLUsername, "username", "u", "", "Username for downloads (password prompted)")
 
-	initCmd.PersistentFlags().StringVarP(&initCmdGatewayTemplate, "gateway-template", "w", "", "A gateway template file")
+	initCmd.PersistentFlags().StringVarP(&initOptions.GatewayTemplate, "gateway-template", "w", "", "A gateway template file")
 	initCmd.PersistentFlags().MarkDeprecated("gateway-template", "no longer supported")
 
-	initCmd.PersistentFlags().VarP(&initCmdExtras.Envs, "env", "e", values.EnvsOptionsText)
-	initCmd.PersistentFlags().Var(&initCmdExtras.Headers, "header", values.HeadersOptionsText)
+	initCmd.PersistentFlags().VarP(&initOptions.Extras.Envs, "env", "e", values.EnvsOptionsText)
+	initCmd.PersistentFlags().Var(&initOptions.Extras.Headers, "header", values.HeadersOptionsText)
 
 	initCmd.PersistentFlags().SortFlags = false
 	initCmd.Flags().SortFlags = false
@@ -112,9 +124,9 @@ func init() {
 var longDescription string
 
 var initCmd = &cobra.Command{
-	Use:     "init [flags] [DIRECTORY]",
+	Use:     "init [PROFILE] [flags] [DIRECTORY]",
 	GroupID: cmd.CommandGroupSubsystems,
-	Short:   "Initialise The Installation",
+	Short:   "Initialise a Geneos installation",
 	Long:    longDescription,
 	Example: strings.ReplaceAll(`
 geneos init
@@ -133,7 +145,7 @@ geneos init
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
 	// TODO: Call any registered initializer funcs from components
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, allargs []string) (err error) {
 		log := log.With("command", "init")
 
 		ct, args, params, err := cmd.FetchArgs(command)
@@ -147,72 +159,58 @@ geneos init
 			return geneos.ErrInvalidArgs
 		}
 
-		// merge params into args as there may be a directory path in there
-		args = append(args, params...)
+		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)
 
-		options, err := initProcessArgs(args, initCmdExtras)
-		if err != nil {
-			return err
-		}
+		// treat args as profile names
+		for _, p := range args {
+			root := ""
+			if len(args) > 0 {
+				root = args[0]
+			}
 
-		if err = geneos.Initialise(command, geneos.LOCAL, options...); err != nil {
-			log.Error("initialise failed", slog.Any("error", err))
-			os.Exit(1)
-		}
+			if err = geneos.Initialise(command.Name(), geneos.LOCAL,
+				geneos.UseRoot(root),
+				geneos.RootDirPrompt(config.ReadUserInputLine),
+				geneos.Version(initOptions.Version),
+				geneos.Basename("active_prod"),
+				geneos.Override(initOptions.Force),
+				geneos.Source(initOptions.Archive),
+				geneos.UseNexus(initOptions.Nexus),
+				geneos.UseNexusSnapshots(initOptions.Snapshot),
+				geneos.Headers(initOptions.Extras.Headers...),
 
-		if initCmdRestore != "" {
-			if err = restore.Restore(initCmdRestore,
-				restore.Host(geneos.LOCAL),
-				restore.Shared(true),
-				restore.ProgressTo(os.Stdout),
+				geneos.Insecure(initOptions.Insecure),
+				geneos.SigningBundle(initOptions.SigningBundle),
+				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
+				geneos.SigningBundlePrompt(config.ReadPasswordInput),
 			); err != nil {
-				log.Error("failed to restore from backup file", slog.Any("error", err))
+				log.Error("initialise failed", slog.Any("error", err))
 				os.Exit(1)
 			}
 
-			installed := 0
-
-			if !initCmdNoInstall {
-				for ct := range ct.OrList() {
-					log.Debug("checking for releases for", slog.Any("component", ct.String()))
-					v := instance.AllInstanceNames(geneos.LOCAL, ct)
-
-					log.Debug("found releases for", slog.Any("component", ct.String()), slog.Any("releases", v))
-					if len(v) == 0 {
-						continue
-					}
-
-					if err = ct.MakeDirs(geneos.LOCAL); err != nil {
-						return err
-					}
-
-					if err = geneos.Install(geneos.LOCAL, ct, options...); err != nil {
-						if errors.Is(err, fs.ErrExist) {
-							err = nil
-							installed++
-							continue
-						}
-						if errors.Is(err, fs.ErrNotExist) && initCmdVersion != "latest" {
-							err = nil
-							installed++
-							continue
-						}
-						return err
-					}
-					installed++
-				}
-
-				if installed == 0 {
-					return fmt.Errorf("no matching release installed")
-				}
+			err = profile.DeployProfile(geneos.LOCAL, p,
+				profile.WithExtras(initOptions.Extras),
+				profile.WithFlags(command.Flags()),
+				profile.WithInsecure(initOptions.Insecure),
+				profile.WithArchive(initOptions.Archive),
+				profile.WithNexus(initOptions.Nexus),
+				profile.WithSnapshot(initOptions.Snapshot),
+				profile.WithVersion(initOptions.Version),
+				profile.WithUsername(initOptions.DLUsername),
+				profile.WithStartAfterAdd(true),
+				profile.WithFollowLogs(initOptions.Logs),
+			)
+			if err != nil {
+				log.Error("deploy profile failed", slog.Any("error", err))
+				os.Exit(1)
 			}
 		}
 
-		if err = initCommon(); err != nil {
-			return
-		}
+		// wait a moment to allow processes to start and then run ps
+		time.Sleep(time.Second * 2)
+		pscmd.CommandPS(command, nil, nil, nil)
 
-		return
+		return nil
 	},
 }
 
@@ -231,114 +229,4 @@ var initTLSCmd = &cobra.Command{
 	DisableFlagParsing:    true,
 	DisableFlagsInUseLine: true,
 	Run:                   cmd.RunPlaceholder,
-}
-
-// initProcessArgs works through the parsed arguments and returns a
-// geneos.GeneosOptions slice to be passed to worker functions. extras
-// is a [values.Values] structure of which only the Headers are used, if
-// given.
-//
-// TODO: external values: initCmdVersion, initCmdForce, initCmdArchive, initCmdNexus, initCmdSnapshot, initCmdDLUsername
-func initProcessArgs(args []string, extras ...values.Values) (options []geneos.PackageOption, err error) {
-	var root string
-
-	if initCmdSnapshot {
-		initCmdNexus = true
-	}
-
-	options = []geneos.PackageOption{
-		geneos.Version(initCmdVersion),
-		geneos.Basename("active_prod"),
-		geneos.Override(initCmdForce),
-		geneos.Source(initCmdArchive),
-		geneos.UseNexus(initCmdNexus),
-		geneos.UseNexusSnapshots(initCmdSnapshot),
-	}
-
-	// if passed in extras, add any headers
-	if len(extras) > 0 {
-		options = append(options, geneos.Headers(extras[0].Headers...))
-	}
-
-	// always have a home directory. the logic below is required in case
-	// the user look-up and the environment variable look-up both fail
-	// (which can happen when the users are in an external directory and
-	// the program is built fully static)
-	homedir := "/"
-	if u, err := user.Current(); err == nil {
-		homedir = u.HomeDir
-	} else {
-		home, ok := os.LookupEnv("HOME")
-		if ok {
-			homedir = home
-		}
-	}
-
-	switch len(args) {
-	case 0:
-		// default home + geneos, but check with user if it's an
-		// interactive session
-		root = homedir
-		if path.Base(homedir) != cordial.ExecutableName() {
-			root = path.Join(homedir, cordial.ExecutableName())
-		}
-		if input, err := config.ReadUserInputLine("Geneos Directory (default %q): ", root); err == nil {
-			if strings.TrimSpace(input) != "" {
-				log.Debug("set root to", slog.Any("root", input))
-				root = input
-			}
-		}
-		err = nil
-	case 1: // home = abs path
-		if !path.IsAbs(args[0]) {
-			log.Error("Home directory must be absolute path", slog.Any("path", args[0]))
-			os.Exit(1)
-		}
-		root = path.Clean(args[0])
-	default:
-		log.Error("too many args", slog.Any("args", args))
-		os.Exit(1)
-	}
-
-	log.Debug("using root", slog.Any("root", root))
-	options = append(options, geneos.UseRoot(root))
-
-	cf := config.Global()
-	// download authentication
-	if initCmdDLUsername == "" {
-		initCmdDLUsername = config.Get[string](cf, cf.Join("download", "username"))
-	}
-
-	var password config.Secret
-
-	if initCmdDLUsername != "" {
-		password = config.Get[config.Secret](cf, cf.Join("download", "password"))
-
-		if len(password) == 0 {
-			password, err = config.ReadPasswordInput(false, 0)
-			if err == config.ErrNotInteractive {
-				err = fmt.Errorf("%w and password required", err)
-				return
-			}
-		}
-		// cannot clear password as it's an arg to the options below. caller should clear
-
-		options = append(options, geneos.Username(initCmdDLUsername), geneos.Password(password))
-	}
-
-	return
-}
-
-func initCommon() (err error) {
-	geneos.WriteTemplates(geneos.LOCAL, nil)
-
-	if initCmdInsecure {
-		return
-	}
-
-	if initCmdSigningBundle != "" {
-		return geneos.TLSImportBundle(initCmdSigningBundle, initCmdImportKey, initCmdBundlePassword)
-	}
-
-	return geneos.TLSInit(geneos.LOCALHOST, true, certs.DefaultKeyType)
 }

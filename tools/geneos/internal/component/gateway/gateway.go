@@ -337,26 +337,33 @@ func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 		return false, fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
+	// gateways are special in that they can listen on two ports, so
+	// don't change ports if the configured port is one of the default
+	// ports (7038 or 7039) and the other is in use by the same process
 	secure := instance.IsTLSCapable(i)
-
-	if secure && config.Get[uint16](cf, "port") == 7039 {
-		if _, ok := ports[7038]; !ok {
-			i.Log().Debug("found port 7038 free, switching to it for secure gateway")
-			config.Set[uint16](cf, "port", 7038)
-		} else {
-			i.Log().Debug("found port 7038 in use, switching to next free port for secure gateway")
-			config.Set(cf, "port", nextport)
+	port := config.Get[uint16](cf, "port")
+	if secure && port == 7039 {
+		if inUse, _ := instance.CheckPort(i, 7038); !inUse {
+			if _, ok := ports[7038]; !ok {
+				i.Log().Debug("found port 7038 free, switching to it for secure gateway")
+				config.Set[uint16](cf, "port", 7038)
+			} else {
+				i.Log().Debug("found port 7038 in use, switching to next free port for secure gateway")
+				config.Set(cf, "port", nextport)
+			}
+			changed = true
 		}
-		changed = true
-	} else if !secure && config.Get[uint16](cf, "port") == 7038 {
-		if _, ok := ports[7039]; !ok {
-			i.Log().Debug("found port 7039 free, switching to it for non-secure gateway")
-			config.Set[uint16](cf, "port", 7039)
-		} else {
-			i.Log().Debug("found port 7039 in use, switching to next free port for non-secure gateway")
-			config.Set(cf, "port", nextport)
+	} else if !secure && port == 7038 {
+		if inUse, _ := instance.CheckPort(i, 7039); !inUse {
+			if _, ok := ports[7039]; !ok {
+				i.Log().Debug("found port 7039 free, switching to it for non-secure gateway")
+				config.Set[uint16](cf, "port", 7039)
+			} else {
+				i.Log().Debug("found port 7039 in use, switching to next free port for non-secure gateway")
+				config.Set(cf, "port", nextport)
+			}
+			changed = true
 		}
-		changed = true
 	}
 
 	// always rebuild an instance template

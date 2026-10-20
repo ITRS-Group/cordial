@@ -1,3 +1,5 @@
+Note: The `geneos init all` command has now been replaced by the `geneos init` command with the profile name `all`. The information below still applies to the new usage.
+
 Initialise a typical Geneos installation.
 
 This command initialises a Geneos installation by:

@@ -96,8 +96,8 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 	// gateways are only valid for SAN and floating types
 
 	if ct.IsA("san", "floating") {
-		for k, v := range values.Gateways {
-			setMapValue(i, cf, GATEWAYS, k, v)
+		for _, v := range values.Gateways {
+			setStringSliceValue(i, cf, GATEWAYS, v)
 		}
 	}
 
