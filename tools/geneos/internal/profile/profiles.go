@@ -191,35 +191,23 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 }
 
 // ApplyCommonParams applies the common parameters from the
-// [profiles.Common] struct. These are currently `Envs` and `Params`.
-//
-// Envs and Options are straight forward, but cert-bundle will require
-// special handling.
+// [profiles.Common] struct returning a [values.Values] structure and
+// updating in-place any common parameters that need expansion.
 func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup map[string]string) (vals values.Values) {
-	vals.Envs = pf.ExpandStringSlice(common.Env,
-		config.LookupTable(lookup),
-		config.Prefix("select", SelectPrefix),
-		config.Prefix("replace", ReplacePrefix),
-		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
-	)
-	vals.Params = pf.ExpandStringSlice(common.Params,
-		config.LookupTable(lookup),
-		config.Prefix("select", SelectPrefix),
-		config.Prefix("replace", ReplacePrefix),
-		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
-	)
-	common.Imports = pf.ExpandStringSlice(common.Imports,
-		config.LookupTable(lookup),
-		config.Prefix("select", SelectPrefix),
-		config.Prefix("replace", ReplacePrefix),
-		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
-	)
+	vals.Envs = pf.ExpandStringSlice(common.Env)
+	vals.Params = pf.ExpandStringSlice(common.Params)
 	vals.Params = append(vals.Params, "profile="+name)
+
+	common.Imports = pf.ExpandStringSlice(common.Imports)
+	common.CertBundle = config.Expand[string](pf, common.CertBundle)
+	common.CertBundlePassword = pf.ExpandToPassword(string(common.CertBundlePassword))
+
 	return
 }
 
 // ApplyInstance applies the given common parameters and values to the
-// specified instance.
+// specified instance. Parameters listed in deleteKeys are removed from
+// the instance configuration before applying new values.
 func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
 	var i geneos.Instance
 

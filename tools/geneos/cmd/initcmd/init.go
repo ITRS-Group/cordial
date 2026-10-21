@@ -22,6 +22,8 @@ import (
 	_ "embed"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -161,13 +163,38 @@ geneos init
 
 		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)
 
+		// find an absolute path in args, set it as root and remove it
+		// from args. if more that one is found, the last one takes
+		// precedence. if none found, the Initialise function will
+		// determine the root directory.
+		var root string
+		args = slices.DeleteFunc(args, func(a string) bool {
+			if filepath.IsAbs(a) {
+				root = a
+				return true
+			}
+			return false
+		})
+
+		if len(args) == 0 {
+			// init basics
+			if err = geneos.Initialise(command.Name(), geneos.LOCAL,
+				geneos.UseRoot(root),
+				geneos.RootDirPrompt(config.ReadUserInputLine),
+				geneos.Override(initOptions.Force),
+
+				geneos.Insecure(initOptions.Insecure),
+				geneos.SigningBundle(initOptions.SigningBundle),
+				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
+				geneos.SigningBundlePrompt(config.ReadPasswordInput),
+			); err != nil {
+				log.Error("initialise failed", slog.Any("error", err))
+			}
+			return
+		}
+
 		// treat args as profile names
 		for _, p := range args {
-			root := ""
-			if len(args) > 0 {
-				root = args[0]
-			}
-
 			if err = geneos.Initialise(command.Name(), geneos.LOCAL,
 				geneos.UseRoot(root),
 				geneos.RootDirPrompt(config.ReadUserInputLine),

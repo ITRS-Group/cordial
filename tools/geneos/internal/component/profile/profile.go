@@ -23,16 +23,14 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/spf13/pflag"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
@@ -183,33 +181,16 @@ func (i *Profile) Add(options ...any) (err error) {
 
 	opts := instance.EvalAddOptions(options...)
 
-	pf := opts.Profiles
+	// pick up the profile config, which is set in cmd but we can't
+	// import that here
+	pf := cmd.Profiles
 	if pf == nil {
 		log.Error("no profiles configuration provided")
 		return os.ErrInvalid
 	}
 
-	// set a top-level "flags" key to allow `${flag:goval}` prefix
-	// support for profiles
-	if opts.Flags != nil {
-		flags := make(map[string]any)
-		// populate the flags map from opts.Flags
-		opts.Flags.VisitAll(func(f *pflag.Flag) {
-			switch f.Value.Type() {
-			case "bool":
-				flags[f.Name], _ = strconv.ParseBool(f.Value.String())
-			case "int", "int16", "int32", "int64":
-				flags[f.Name], _ = strconv.Atoi(f.Value.String())
-			case "uint", "uint16", "uint32", "uint64":
-				flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
-			default:
-				flags[f.Name] = f.Value.String()
-			}
-		})
-
-		// pass to profile eval
-		config.Set(pf, "flags", flags)
-	}
+	// update flags from saved set ?
+	config.Set(i.Config(), "flags", profile.PflagSetToMap(opts.Flags))
 
 	if err = profile.Apply(pf, i.Name()); err != nil {
 		return err
@@ -249,5 +230,14 @@ func (i *Profile) Reload() (err error) {
 // Rebuild the profile from the configuration, which may trigger
 // rebuilds of any instances
 func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
-	return false, geneos.ErrNotSupported
+	cf := i.Config()
+	pf := cmd.Profiles
+
+	flags := config.Get[map[string]any](cf, "flags")
+	profile.SetExpandOptions(pf, flags)
+	if err = profile.Apply(pf, i.Name()); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }

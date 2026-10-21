@@ -2,6 +2,7 @@ package san
 
 import (
 	"fmt"
+	"log/slog"
 	"path"
 	"strings"
 
@@ -66,8 +67,14 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 			// san.Gateways expands to a map of host:port
 			vals.Gateways = append(vals.Gateways, gw)
 		}
+
 		vals.Types = pf.ExpandStringSlice(san.Types)
-		vals.Attributes = pf.ExpandStringSlice(san.Attributes)
+
+		log.Info("attributes", slog.Any("attrs", san.Attributes))
+		for attr := range strings.SplitSeq(config.Expand[string](pf, san.Attributes.String()), ",") {
+			log.Info("expanded attribute", slog.String("attr", attr))
+			vals.Attributes = append(vals.Attributes, attr)
+		}
 
 		// vals.Variables = san.Variables
 		for _, v := range san.Variables {
@@ -81,11 +88,10 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 		// now add managed-entities, prefixing each with the "name/"
 		for _, me := range san.ManagedEntities {
 			// start with clean values for each managed entity
-			if extraVals, err := processSANManagedEntity(pf, me); err == nil {
-				// merge into top-level values
-				vals.Attributes = append(vals.Attributes, extraVals.Attributes...)
-				vals.Types = append(vals.Types, extraVals.Types...)
-				vals.Variables = append(vals.Variables, extraVals.Variables...)
+			if entityVals, err := processSANManagedEntity(pf, me); err == nil {
+				vals.Attributes = append(vals.Attributes, entityVals.Attributes...)
+				vals.Types = append(vals.Types, entityVals.Types...)
+				vals.Variables = append(vals.Variables, entityVals.Variables...)
 			}
 		}
 
@@ -114,6 +120,7 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			return vals, geneos.ErrNotExist
 		}
 
+		log.Debug("foreach", slog.Any("names", names))
 		// now ignore instances that match the ignore patterns
 		if len(entity.Ignore) > 0 {
 			filtered := make([]string, 0, len(names))
@@ -147,6 +154,7 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			lookup := map[string]string{
 				"hostname": geneos.LOCAL.String(),
 			}
+			// set default expand options for the instance configuration
 			cf.SetDefaultExpandOptions(
 				config.LookupTable(lookup),
 				config.Prefix("select", profile.SelectPrefix),
@@ -165,10 +173,16 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 				}
 			}
 
+			var attrs values.NameValues
+			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String()), ",") {
+				log.Info("expanded attribute", slog.String("attr", attr))
+				attrs = append(attrs, attr)
+			}
+
 			e := ManagedEntity{
 				Name:       config.Expand[string](cf, entity.Name),
 				Types:      cf.ExpandStringSlice(entity.Types),
-				Attributes: cf.ExpandStringSlice(entity.Attributes),
+				Attributes: attrs,
 				Variables:  variables,
 			}
 			entities[idx] = e

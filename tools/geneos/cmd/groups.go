@@ -25,13 +25,13 @@ const (
 	CommandGroupConfig      = "config"
 	CommandGroupComponents  = "components"
 	CommandGroupCredentials = "credentials"
-	CommandGroupIncludes    = "includes"
-	CommandGroupManage      = "manage"
-	CommandGroupOther       = "other"
-	CommandGroupProcess     = "process"
-	CommandGroupProfile     = "profile"
-	CommandGroupSubsystems  = "subsystems"
-	CommandGroupView        = "view"
+	// CommandGroupIncludes    = "includes"
+	CommandGroupManage  = "manage"
+	CommandGroupOther   = "other"
+	CommandGroupProcess = "process"
+	// CommandGroupProfile     = "profile"
+	CommandGroupSubsystems = "subsystems"
+	CommandGroupView       = "view"
 )
 
 func init() {
@@ -63,16 +63,16 @@ func init() {
 		ID:    CommandGroupOther,
 		Title: "Miscellaneous",
 	})
-	Cmd.AddGroup(&cobra.Group{
-		ID:    CommandGroupIncludes,
-		Title: "Includes",
-	})
+	// Cmd.AddGroup(&cobra.Group{
+	// 	ID:    CommandGroupIncludes,
+	// 	Title: "Includes",
+	// })
 	Cmd.AddGroup(&cobra.Group{
 		ID:    CommandGroupComponents,
 		Title: "Component Types",
 	})
-	Cmd.AddGroup(&cobra.Group{
-		ID:    CommandGroupProfile,
-		Title: "Profile Components",
-	})
+	// Cmd.AddGroup(&cobra.Group{
+	// 	ID:    CommandGroupProfile,
+	// 	Title: "Profile Components",
+	// })
 }

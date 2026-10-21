@@ -42,7 +42,7 @@ func init() {
 // profileHelpCmd represents the profile component
 var profileHelpCmd = &cobra.Command{
 	Use:                   "profile [name]",
-	GroupID:               cmd.CommandGroupProfile,
+	GroupID:               cmd.CommandGroupComponents,
 	Short:                 "Profile",
 	Long:                  profileDescription,
 	SilenceUsage:          true,

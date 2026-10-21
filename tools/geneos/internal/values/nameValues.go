@@ -17,6 +17,8 @@ limitations under the License.
 
 package values
 
+import "strings"
+
 // attribute - name=value
 type NameValues []string
 
@@ -25,7 +27,7 @@ const EnvsOptionsText = "Environment variable for instance start-up in the forma
 const HeadersOptionsText = "HTTP header in the format NAME=VALUE\n(Repeat as required)"
 
 func (i *NameValues) String() string {
-	return ""
+	return strings.Join(*i, ",")
 }
 
 func (i *NameValues) Set(value string) error {

@@ -16,11 +16,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-// SetExpandOptions sets the default expansion options for the given
-// profile configuration based on the command's flags.
-func SetExpandOptions(pf *config.Config, flagset *pflag.FlagSet) {
+func PflagSetToMap(flagset *pflag.FlagSet) map[string]any {
 	flags := make(map[string]any)
-	// populate the flags map from flagset.Flags()
 	flagset.VisitAll(func(f *pflag.Flag) {
 		switch f.Value.Type() {
 		case "bool":
@@ -29,12 +26,19 @@ func SetExpandOptions(pf *config.Config, flagset *pflag.FlagSet) {
 			flags[f.Name], _ = strconv.Atoi(f.Value.String())
 		case "uint", "uint16", "uint32", "uint64":
 			flags[f.Name], _ = strconv.ParseUint(f.Value.String(), 10, 64)
-		case "HOSTNAME:PORT": // values.Gateways
-			flags[f.Name] = f.Value.String()
 		default:
 			flags[f.Name] = f.Value.String()
 		}
 	})
+	return flags
+}
+
+// SetExpandOptions sets the default expansion options for the given
+// profile configuration based on the command's flags.
+func SetExpandOptions(pf *config.Config, flags map[string]any) {
+	if flags == nil {
+		flags = make(map[string]any)
+	}
 
 	// pass to profile eval
 	config.Set(pf, "flags", flags)
