@@ -30,7 +30,7 @@ func dialGateway(cf *config.Config) (gw *commands.Connection, err error) {
 
 	u := &url.URL{
 		Scheme: "http",
-		Host:   fmt.Sprintf("%s:%d", config.Get[string](cf, "gateway.host"), config.Get[uint16](cf, cf.Join("gateway", "port"))),
+		Host:   fmt.Sprintf("%s:%d", config.Get[string](cf, cf.Join("gateway", "host")), config.Get[uint16](cf, cf.Join("gateway", "port"))),
 	}
 
 	if config.Get[bool](cf, cf.Join("gateway", "use-tls")) {
