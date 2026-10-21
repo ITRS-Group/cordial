@@ -32,6 +32,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 
+	"github.com/itrs-group/cordial/tools/geneos/includes"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -45,8 +46,14 @@ const (
 
 var log = logger.Logger
 
+func initialise(h *geneos.Host, ct *geneos.Component) (err error) {
+	geneos.WriteTemplates(h, ct)
+	includes.Update(h, "", false)
+	return nil
+}
+
 var Component = geneos.Component{
-	Initialise:   geneos.WriteTemplates,
+	Initialise:   initialise,
 	Name:         name,
 	Aliases:      []string{"gateways"},
 	LegacyPrefix: "gate",
