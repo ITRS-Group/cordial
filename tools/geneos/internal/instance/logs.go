@@ -75,6 +75,10 @@ func FollowInstanceLogs(instances []geneos.Instance, options ...LogWatcherOption
 
 func TailInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
+	if i.Type().IsA("profile") {
+		resp.Err = geneos.ErrNotSupported
+		return
+	}
 	options := []LogWatcherOptions{}
 	for _, arg := range args {
 		if o, ok := arg.(LogWatcherOptions); ok {
@@ -129,6 +133,10 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string, opts lo
 
 func CatInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
+	if i.Type().IsA("profile") {
+		resp.Err = geneos.ErrNotSupported
+		return
+	}
 	options := []LogWatcherOptions{}
 	for _, arg := range args {
 		if o, ok := arg.(LogWatcherOptions); ok {
@@ -174,6 +182,10 @@ func logCatInstanceFile(i geneos.Instance, logfile string, kind string, opts log
 // appear.
 func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
+	if i.Type().IsA("profile") {
+		resp.Err = geneos.ErrNotSupported
+		return
+	}
 	options := []LogWatcherOptions{}
 	for _, arg := range args {
 		if o, ok := arg.(LogWatcherOptions); ok {
