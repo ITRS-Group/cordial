@@ -48,6 +48,7 @@ var moveCmd = &cobra.Command{
 		CmdRequireHome:   "true",
 		CmdWildcardNames: "true",
 		CmdKeepHosts:     "true",
+		CmdAuditActions:  "false",
 	},
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
