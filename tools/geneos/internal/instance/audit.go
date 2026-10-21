@@ -37,7 +37,11 @@ import (
 // NOTE: This only writes instance audit logs on LOCALHOST, for remote
 // instances it will only write to any global audit destination
 func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
-	if i.Host().IsLocalhost() == false {
+	if i == nil {
+		return logger.NewAuditLogger()
+	}
+
+	if i.Host() != nil && i.Host().IsLocalhost() == false {
 		return logger.NewAuditLogger()
 	}
 
@@ -60,6 +64,9 @@ func AuditLogger(i geneos.Instance) (l *logger.AuditLogger) {
 // AuditFilepath returns the file path for the audit log of the given
 // instance.
 func AuditFilepath(i geneos.Instance) string {
+	if i == nil {
+		return ""
+	}
 	cf := i.Config()
 	return HomeRel(i, config.Get[string](cf, cf.Join("audit", "file"), config.DefaultValue(i.Type().String()+"-audit.log")))
 }
@@ -70,10 +77,18 @@ func AuditFilepath(i geneos.Instance) string {
 // instance package as the underlying function for `i.AuditEvent()` and
 // should not be called directly.
 func AuditEvent(i geneos.Instance, result error, event string, args ...any) {
+	var auditLogger *logger.AuditLogger
+
 	if i == nil {
 		return
 	}
-	auditLogger := AuditLogger(i)
+
+	// if the instance does not exist, log the event without instance-specific context
+	if len(Instances(i.Host(), i.Type(), MatchNames(i.Name()))) == 0 {
+		auditLogger = AuditLogger(nil)
+	} else {
+		auditLogger = AuditLogger(i)
+	}
 	attrs := []any{
 		LogGroup(i),
 	}

@@ -170,7 +170,8 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // the success or failure will be recorded in an attribute "result".
 func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	if ct.IsA("profile") {
-		rs = make(responses.GeneralResponses)
+		// action the profile, then all the component instances
+		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 		for _, n := range names {
 			instances := Instances(h, nil, MatchParameters("profile="+n))
 			respmap := DoInstances(event, instances, fn, values...)
@@ -192,13 +193,14 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 	rs = make(responses.GeneralResponses)
 
 	if ct.IsA("profile") {
+		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 		for _, n := range names {
 			instances := Instances(h, nil, MatchParameters("profile="+n))
-			for _, c := range instances {
-				resp := fn(c, values...)
+			for _, i := range instances {
+				resp := fn(i, values...)
 				responses.Finished(resp)
 				if geneos.AuditActions() && !resp.Audited {
-					c.AuditEvent(event, resp.Err)
+					i.AuditEvent(event, resp.Err)
 					resp.Audited = true
 				}
 				rs[resp.Instance.String()] = resp
