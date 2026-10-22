@@ -29,6 +29,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 
@@ -190,6 +191,9 @@ geneos init
 			); err != nil {
 				log.Error("initialise failed", slog.Any("error", err))
 			}
+			if profile.Initialise(cordial.ExecutableName()) {
+				log.Debug("profiles configuration written")
+			}
 			return
 		}
 
@@ -213,6 +217,9 @@ geneos init
 			); err != nil {
 				log.Error("initialise failed", slog.Any("error", err))
 				os.Exit(1)
+			}
+			if profile.Initialise(cordial.ExecutableName()) {
+				log.Debug("profiles configuration written")
 			}
 
 			err = profile.DeployProfile(geneos.LOCAL, p,

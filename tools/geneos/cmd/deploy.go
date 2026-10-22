@@ -197,6 +197,9 @@ var deployCmd = &cobra.Command{
 				geneos.SigningBundlePassword(deployCmdBundlePassword),
 				geneos.SigningBundlePrompt(config.ReadPasswordInput),
 			)
+			if profile.Initialise(cordial.ExecutableName()) {
+				log.Debug("profiles configuration written")
+			}
 		}
 
 		if ct.IsA("profile") {

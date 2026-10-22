@@ -100,8 +100,6 @@ func init() {
 			log.Error("failed to initialize global config", slog.Any("error", err))
 		}
 
-		log.Debug("flags parsed?", slog.Bool("parsed", Cmd.Flags().Parsed()))
-
 		Profiles, err = profile.ReadConfig(profilesFile)
 		if err != nil {
 			log.Error("failed to initialize profiles config", slog.Any("error", err))
@@ -411,6 +409,10 @@ func initGlobalConfig() (cf *config.Config, err error) {
 
 	if configPath != "" {
 		log.Debug("configuration loaded", slog.String("path", configPath))
+		// make sure there's a profile config, once we know the config can be loaded
+		if profile.Initialise(cordial.ExecutableName()) {
+			log.Debug("profiles file created")
+		}
 	} else {
 		log.Debug("no configuration file found, using defaults and environment variables")
 	}
