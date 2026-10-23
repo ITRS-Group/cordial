@@ -159,8 +159,14 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 
 	opts := evalOptions(options...)
 
-	archive, filename, filesize, err = OpenArchive(ct, options...)
+	archive, filename, filesize, err = OpenArchive(h, ct, options...)
 	if err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			ctFromFile, version, platform, _, _ := FilenameToComponentVersion(ct, filename)
+			fmt.Printf("%s release on %s %q already installed from %s\n", ctFromFile, h, version+"+"+platform, filename)
+			// log.Error("release already installed", slog.String("host", h.String()), slog.String("component", ctFromFile.String()), slog.String("version", version+platform), slog.String("source", filename))
+			return
+		}
 		if errors.Is(err, fs.ErrNotExist) {
 			if IsURL(opts.source) {
 				return
@@ -179,9 +185,11 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 		return
 	}
 
-	if dest, err := unarchive(h, ct, archive, filename, filesize, options...); err != nil {
+	if _, err := unarchive(h, ct, archive, filename, filesize, options...); err != nil {
 		if errors.Is(err, fs.ErrExist) {
-			fmt.Printf("%s release on %s %q version already installed in %s\n", ct, h, opts.version, dest)
+			ctFromFile, version, platform, _, _ := FilenameToComponentVersion(ct, filename)
+			fmt.Printf("%s release on %s %q already installed from %s\n", ctFromFile, h, version+"+"+platform, filename)
+			// log.Error("release already installed", slog.String("host", h.String()), slog.String("component", ctFromFile.String()), slog.String("version", version+platform), slog.String("source", filename))
 			if opts.doupdate {
 				return Update(h, ct, options...)
 			}

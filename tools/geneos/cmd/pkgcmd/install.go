@@ -373,9 +373,6 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.GeneosOptio
 					tv = tv + len(v)
 
 				}
-				if tv == 0 {
-					continue
-				}
 			} else {
 				cts[ct.String()] = struct{}{}
 			}

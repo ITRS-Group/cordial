@@ -63,7 +63,7 @@ var osMap = map[string]string{
 //
 // LocalOnly()
 // DownloadOnly()
-func OpenArchive(ct *Component, options ...GeneosOption) (body io.ReadCloser, filename string, filesize int64, err error) {
+func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadCloser, filename string, filesize int64, err error) {
 	var resp *http.Response
 
 	opts := evalOptions(options...)
@@ -141,6 +141,13 @@ func OpenArchive(ct *Component, options ...GeneosOption) (body io.ReadCloser, fi
 	// else try one of the built-in download methods
 	if filename, resp, err = openRemoteArchive(ct, options...); err != nil {
 		return
+	}
+
+	ctFromFile, version, _, _, _ := FilenameToComponentVersion(ct, filename)
+	basedir := h.PathTo("packages", ctFromFile.String(), version)
+
+	if _, err = h.Stat(basedir); err == nil {
+		return nil, filename, 0, fs.ErrExist
 	}
 
 	LOCAL.MkdirAll(opts.source, 0775)
