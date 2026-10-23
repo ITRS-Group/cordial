@@ -16,7 +16,7 @@ type FloatingProfile struct {
 	Gateways       []string `yaml:"gateways,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
+func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var floatings []FloatingProfile
 
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &floatings, config.NoExpand())
@@ -30,7 +30,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 	}
 
 	// build param key delete list
-	deleteKeys := []string{
+	clearKeys := []string{
 		values.GATEWAYS,
 		values.ENVIRONMENT,
 	}
@@ -47,7 +47,12 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 			vals.Gateways = append(vals.Gateways, gw)
 		}
 
-		if err := profile.ApplyInstance(pf, ct, floating.Common, instanceName, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, instanceName,
+			profile.ClearKeys(clearKeys),
+			profile.WithCommon(floating.Common),
+			profile.WithValues(vals),
+			profile.Rebuild(forceRebuild),
+		); err != nil {
 			return err
 		}
 	}

@@ -20,7 +20,7 @@ type GatewayProfile struct {
 	Variables      []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
+func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var gateways []GatewayProfile
 
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
@@ -33,7 +33,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 	}
 
 	// build param key delete list
-	deleteKeys := []string{
+	clearKeys := []string{
 		"licdsecure",
 		"licdport",
 		values.INCLUDES,
@@ -52,7 +52,12 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 
-		if err := profile.ApplyInstance(pf, ct, gateway.Common, instanceName, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, instanceName,
+			profile.ClearKeys(clearKeys),
+			profile.WithCommon(gateway.Common),
+			profile.WithValues(vals),
+			profile.Rebuild(forceRebuild),
+		); err != nil {
 			return err
 		}
 	}

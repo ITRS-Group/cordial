@@ -20,7 +20,9 @@ package profile
 import (
 	_ "embed"
 	"fmt"
+	"maps"
 	"os"
+	"slices"
 
 	"github.com/spf13/cobra"
 	"src.elv.sh/pkg/md"
@@ -34,14 +36,17 @@ import (
 var profileDescription string
 
 func init() {
-	cmd.Cmd.AddCommand(profileHelpCmd)
+	cmd.Cmd.AddCommand(profileCmd)
+	profileCmd.AddCommand(profileListCmd)
+	profileCmd.AddCommand(profileExtractCmd)
 
-	profileHelpCmd.SetHelpFunc(profileHelp)
+	profileCmd.SetHelpFunc(profileHelp)
 }
 
-// profileHelpCmd represents the profile component
-var profileHelpCmd = &cobra.Command{
-	Use:                   "profile [name]",
+// profileCmd represents the profile component
+var profileCmd = &cobra.Command{
+	Use:                   "profile",
+	Aliases:               []string{"profiles"},
 	GroupID:               cmd.CommandGroupComponents,
 	Short:                 "Profile",
 	Long:                  profileDescription,
@@ -69,7 +74,7 @@ func profileHelp(command *cobra.Command, _ []string) {
 		name := args[0]
 		components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 		if found {
-			if desc, ok := components["description"].(string); ok {
+			if desc, ok := components["_description"].(string); ok {
 				fmt.Println(md.RenderString(desc, &md.TTYCodec{Width: 76}))
 			}
 			return
@@ -79,4 +84,41 @@ func profileHelp(command *cobra.Command, _ []string) {
 	// no profile name is given, just display the general help text
 	command.SetHelpFunc(nil)
 	command.Help()
+}
+
+//go:embed _docs/list.md
+var profileListDescription string
+
+var profileListCmd = &cobra.Command{
+	Use:                   "list",
+	Aliases:               []string{"ls"},
+	Short:                 "List available profiles",
+	Long:                  profileListDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run: func(command *cobra.Command, args []string) {
+		pf := cmd.Profiles
+		profiles, found := config.Lookup[map[string]any](pf, "profiles")
+		if found {
+			for _, name := range slices.Sorted(maps.Keys(profiles)) {
+				fields := config.Get[map[string]any](pf, pf.Join("profiles", name))
+				fmt.Printf("%s: %s\n", name, fields["_short"])
+			}
+		}
+	},
+}
+
+//go:embed _docs/extract.md
+var profileExtractDescription string
+
+var profileExtractCmd = &cobra.Command{
+	Use:                   "extract",
+	Aliases:               []string{"update"},
+	Short:                 "Extract the embedded profile configuration",
+	Long:                  profileExtractDescription,
+	SilenceUsage:          true,
+	DisableFlagsInUseLine: true,
+	Run: func(command *cobra.Command, args []string) {
+		return
+	},
 }

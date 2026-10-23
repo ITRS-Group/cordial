@@ -202,7 +202,7 @@ type Component struct {
 	// ApplyProfile processes the profile name component key in the
 	// profile configuration pf. Components that do not need special
 	// handling should use [profile.ApplyCommonProfile]
-	ApplyProfile func(ct *Component, pf *config.Config, name, key string) error
+	ApplyProfile func(ct *Component, pf *config.Config, name, key string, forceRebuild bool) error
 }
 
 // String returns the stringified name of ct. If ct is nil then return

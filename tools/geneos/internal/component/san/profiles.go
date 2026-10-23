@@ -33,7 +33,7 @@ type ManagedEntity struct {
 	Variables  []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
+func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var sans []SanProfile
 
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand())
@@ -47,7 +47,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 	}
 
 	// build param key delete list
-	deleteKeys := []string{
+	clearKeys := []string{
 		values.GATEWAYS,
 		values.ATTRIBUTES,
 		values.TYPES,
@@ -70,9 +70,9 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 
 		vals.Types = pf.ExpandStringSlice(san.Types)
 
-		log.Info("attributes", slog.Any("attrs", san.Attributes))
+		log.Debug("attributes", slog.Any("attrs", san.Attributes))
 		for attr := range strings.SplitSeq(config.Expand[string](pf, san.Attributes.String()), ",") {
-			log.Info("expanded attribute", slog.String("attr", attr))
+			log.Debug("expanded attribute", slog.String("attr", attr))
 			vals.Attributes = append(vals.Attributes, attr)
 		}
 
@@ -95,7 +95,12 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 			}
 		}
 
-		if err := profile.ApplyInstance(pf, ct, san.Common, instanceName, deleteKeys, vals); err != nil {
+		if err := profile.ApplyInstance(pf, ct, instanceName,
+			profile.ClearKeys(clearKeys),
+			profile.WithCommon(san.Common),
+			profile.WithValues(vals),
+			profile.Rebuild(forceRebuild),
+		); err != nil {
 			return err
 		}
 	}
@@ -104,7 +109,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string) (er
 
 func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals values.Values, err error) {
 	entities := []ManagedEntity{entity}
-	names := entity.Match
+	// names := entity.Match
 
 	ct := geneos.ParseComponent(entity.ForEach)
 
@@ -115,12 +120,13 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			match = entity.Match
 		}
 
-		names, err = instance.Match(geneos.LOCAL, ct, false, true, match...)
+		names, err := instance.Match(geneos.LOCAL, ct, false, true, match...)
 		if err != nil {
 			return vals, geneos.ErrNotExist
 		}
 
-		log.Debug("foreach", slog.Any("names", names))
+		log.Debug("for-each", slog.Any("matched", names))
+
 		// now ignore instances that match the ignore patterns
 		if len(entity.Ignore) > 0 {
 			filtered := make([]string, 0, len(names))
@@ -156,6 +162,8 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			}
 			// set default expand options for the instance configuration
 			cf.SetDefaultExpandOptions(
+				config.ExternalLookups(false),
+				config.Expressions(true),
 				config.LookupTable(lookup),
 				config.Prefix("select", profile.SelectPrefix),
 				config.Prefix("replace", profile.ReplacePrefix),
@@ -175,7 +183,7 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 
 			var attrs values.NameValues
 			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String()), ",") {
-				log.Info("expanded attribute", slog.String("attr", attr))
+				log.Debug("expanded attribute", slog.String("attr", attr))
 				attrs = append(attrs, attr)
 			}
 

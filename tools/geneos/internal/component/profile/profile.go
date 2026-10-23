@@ -192,7 +192,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	// update flags from saved set ?
 	config.Set(i.Config(), "flags", profile.PflagSetToMap(opts.Flags))
 
-	if err = profile.Apply(pf, i.Name()); err != nil {
+	if err = profile.Apply(pf, i.Name(), true); err != nil {
 		return err
 	}
 
@@ -235,7 +235,7 @@ func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 
 	flags := config.Get[map[string]any](cf, "flags")
 	profile.SetExpandOptions(pf, flags)
-	if err = profile.Apply(pf, i.Name()); err != nil {
+	if err = profile.Apply(pf, i.Name(), false); err != nil {
 		return false, err
 	}
 

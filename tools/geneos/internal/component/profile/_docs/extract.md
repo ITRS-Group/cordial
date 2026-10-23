@@ -1,0 +1,1 @@
+Extract embedded profile configuration
