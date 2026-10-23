@@ -147,7 +147,6 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	_, err = instance.Add(h, geneos.ParseComponent("profile"), name,
 		instance.WithPort(opts.port),
 		instance.WithValues(opts.extras),
-		instance.WithProfiles(pf),
 		instance.Base(opts.base),
 		instance.Insecure(opts.insecure),
 		instance.WithCertBundle(opts.certBundle),
@@ -157,6 +156,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 		instance.WithImports(opts.importFiles),
 		instance.StartAfterAdd(opts.startAfterAdd),
 		instance.WithFlags(opts.flags),
+		instance.WithProfiles(pf),
 	)
 
 	if err != nil {

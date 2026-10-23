@@ -583,12 +583,14 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		}
 	}
 
-	// remove duplicates in the slice of names without changing order
+	// remove duplicates in the slice of names without changing order.
+	// this is unlike [slices.Compact] which preserves order but removes
+	// consecutive duplicates only.
 	newNames := []string{}
-	mapNames := map[string]bool{}
+	mapNames := make(map[string]struct{}, len(names))
 	for _, n := range names {
 		if _, ok := mapNames[n]; !ok {
-			mapNames[n] = true
+			mapNames[n] = struct{}{}
 			newNames = append(newNames, n)
 		}
 	}

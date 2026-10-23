@@ -48,7 +48,7 @@ var Profiles *config.Config
 // Initialise sets up the profiles.yaml  file in the user's
 // configuration directory, creating it from embedded defaults if it
 // does not already exist.
-func Initialise(appName string) {
+func Initialise(appName string) (written bool) {
 	profilesPath, err := config.UserConfigPath(appName, "profiles.yaml")
 	if err != nil {
 		log.Error("failed to get user config path", slog.Any("err", err))
@@ -61,13 +61,13 @@ func Initialise(appName string) {
 			log.Error("failed to create profiles file", slog.Any("err", err))
 			return
 		}
+		return true
 	} else if err != nil {
 		log.Error("failed to stat profiles file", slog.Any("err", err))
-		return
 	} else if st.IsDir() {
 		log.Error("profiles path is a directory", slog.String("path", profilesPath))
-		return
 	}
+	return
 }
 
 // ReadConfig reads the profiles configuration from the specified file.
@@ -117,22 +117,22 @@ type Common struct {
 // iterates over all the components defined in the profile and applies
 // their respective profile settings by calling the component's
 // ApplyProfile function if it is defined.
-func Apply(pf *config.Config, name string) error {
+func Apply(pf *config.Config, name string, forceRebuild bool) error {
 	components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 	if !found {
 		log.Error("profile not found", slog.String("profile", name))
 		return fmt.Errorf("profile %q not found", name)
 	}
 
-	for key := range components {
-		if key == "description" {
-			// skip embedded documentation
+	for component := range components {
+		if strings.HasPrefix(component, "_") {
+			// skip underscored items (like _short and _description)
 			continue
 		}
-		ct := geneos.ParseComponent(key)
+		ct := geneos.ParseComponent(component)
 		if ct.ApplyProfile != nil {
 			log.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
-			if err := ct.ApplyProfile(ct, pf, name, key); err != nil {
+			if err := ct.ApplyProfile(ct, pf, name, component, forceRebuild); err != nil {
 				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
 		}
@@ -202,37 +202,41 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 	common.CertBundle = config.Expand[string](pf, common.CertBundle)
 	common.CertBundlePassword = pf.ExpandToPassword(string(common.CertBundlePassword))
 
+	// expand any other common parameters as needed
+
 	return
 }
 
 // ApplyInstance applies the given common parameters and values to the
-// specified instance. Parameters listed in deleteKeys are removed from
+// specified instance. Parameters listed in clearKeys are removed from
 // the instance configuration before applying new values.
-func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name string, deleteKeys []string, vals values.Values) (err error) {
+func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, options ...ProfileOption) (err error) {
 	var i geneos.Instance
+
+	opts := evaluateOptions(options...)
 
 	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
 
 	if len(instances) == 0 {
 		// create here
 		var port uint16
-		if len(vals.Params) > 0 {
-			pos := slices.IndexFunc(vals.Params, func(e string) bool {
+		if len(opts.vals.Params) > 0 {
+			pos := slices.IndexFunc(opts.vals.Params, func(e string) bool {
 				return strings.HasPrefix(e, "port=")
 			})
 			if pos >= 0 {
-				p := strings.TrimPrefix(vals.Params[pos], "port=")
+				p := strings.TrimPrefix(opts.vals.Params[pos], "port=")
 				pv, _ := strconv.Atoi(p)
 				port = uint16(pv)
 			}
 		}
 		i, err = instance.Add(geneos.LOCAL, ct, name,
-			instance.WithValues(vals),
-			instance.WithCertBundle(common.CertBundle),
-			instance.WithCertBundlePassword(common.CertBundlePassword),
+			instance.WithValues(opts.vals),
+			instance.WithCertBundle(opts.common.CertBundle),
+			instance.WithCertBundlePassword(opts.common.CertBundlePassword),
 			instance.WithPort(port),
 			instance.WithProfiles(pf),
-			instance.WithImports(common.Imports),
+			instance.WithImports(opts.common.Imports),
 		)
 		if err != nil {
 			return err
@@ -249,16 +253,16 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name 
 		keyfile := config.Get[config.KeyFile](cf, "keyfile")
 
 		// Reset existing configuration for this instance before applying new values
-		for _, key := range deleteKeys {
+		for _, key := range opts.clearKeys {
 			config.Delete(cf, key)
 		}
 
-		if ncf, err := values.Set(i, vals, keyfile); err == nil {
+		if ncf, err := values.Set(i, opts.vals, keyfile); err == nil {
 			i.SetConfig(ncf)
 		}
 
-		if common.CertBundle != "" {
-			_, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
+		if opts.common.CertBundle != "" {
+			_, err := instance.ImportCertificates(i, opts.common.CertBundle, "", opts.common.CertBundlePassword)
 			if err != nil {
 				i.Log().Error("failed to import certificates", slog.Any("error", err))
 			}
@@ -268,23 +272,19 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, common Common, name 
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
 
-		if err = instance.ImportFiles(i, common.Imports...); err != nil {
+		if err = instance.ImportFiles(i, opts.common.Imports...); err != nil {
 			i.Log().Error("failed to import files", slog.Any("error", err))
 		}
 
-		// always force a rebuild, even for those instances marked as "initial"
-		i.Rebuild(true)
+		i.Rebuild(opts.rebuild)
 	}
 
-	// if !instance.IsRunning(i) {
-	// 	return instance.Start(i)
-	// }
 	return nil
 }
 
 // ApplyCommonProfile applies the common profile to the given component.
 // It can be used for component types that do not need special handling.
-func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key string) (err error) {
+func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var commons []Common
 
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &commons, config.NoExpand()); err != nil {
@@ -297,7 +297,7 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 	}
 
 	// build param key delete list
-	deleteKeys := []string{}
+	clearKeys := []string{}
 
 	for _, common := range commons {
 		instanceName := config.Expand[string](pf, common.Name, config.LookupTable(lookup))
@@ -308,7 +308,12 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 
 		vals := ApplyCommonParams(pf, name, &common, lookup)
 
-		if err := ApplyInstance(pf, ct, common, instanceName, deleteKeys, vals); err != nil {
+		if err := ApplyInstance(pf, ct, instanceName,
+			ClearKeys(clearKeys),
+			WithCommon(common),
+			WithValues(vals),
+			Rebuild(forceRebuild),
+		); err != nil {
 			return err
 		}
 	}

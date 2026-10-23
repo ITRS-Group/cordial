@@ -17,11 +17,13 @@ limitations under the License.
 
 package values
 
+import "strings"
+
 // Filename fulfils the Var interface for pflag Varp()
 type Filename []string
 
 func (i *Filename) String() string {
-	return ""
+	return strings.Join(*i, ",")
 }
 
 func (i *Filename) Set(value string) error {

@@ -47,6 +47,8 @@ func SetExpandOptions(pf *config.Config, flags map[string]any) {
 		"hostname": geneos.LOCAL.String(),
 	}
 	pf.SetDefaultExpandOptions(
+		config.ExternalLookups(false),
+		config.Expressions(true),
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
@@ -57,14 +59,15 @@ func SetExpandOptions(pf *config.Config, flags map[string]any) {
 
 // Expand* function custom prefix functions
 
-// ReplacePrefix supports the "replace" prefix. It takes a strings with
-// four components of the form: `${replace:param:/PATTERN/TEXT/}` (where
-// the `/` can be any character except ':', but is then solely used to
-// separate the pattern and the replacement text and must be the last
-// character before the closing `}`) and runs regexp.ReplaceAllString().
-// If the parameter is empty or not defined, an empty string is
-// returned. If parsing the PATTERN fails then no substitution is
-// performed.
+// ReplacePrefix supports the "replace" prefix. It accepts a string with
+// four components of the form: `${replace:params:/PATTERN/TEXT/}`
+// (where the `/` can be any character except ':', but is then solely
+// used to separate the pattern and the replacement text and must be the
+// last character before the closing `}`) and runs
+// regexp.ReplaceAllString(). If the parameter is empty or not defined,
+// an empty string is returned. params can be a list of parameter names
+// separated by colons, the first non-empty parameter will be used. If
+// parsing the PATTERN fails then no substitution is performed.
 func ReplacePrefix(ci map[string]any, s string, trim bool, _ ...any) (result string, err error) {
 	s = strings.TrimPrefix(s, "replace:")
 	sep := s[len(s)-1:] // last character as separator

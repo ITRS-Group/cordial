@@ -17,13 +17,15 @@ limitations under the License.
 
 package values
 
+import "strings"
+
 // attribute - name=value
 type Types []string
 
 const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
 
 func (i *Types) String() string {
-	return ""
+	return strings.Join(*i, ",")
 }
 
 func (i *Types) Set(value string) error {

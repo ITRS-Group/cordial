@@ -43,14 +43,17 @@ type Variables []Variable
 
 const VarsOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
 
-// String returns the default value for Variables, which is an empty
-// string. This is required to implement the pflag.Value interface, but
-// Variables does not have a meaningful string representation, so we
-// return an empty string. The actual values are stored in the map and
-// can be accessed directly. The Set method is used to populate the map
-// from the command line input.
+// String returns the default value for Variables, which is list of
+// comma-separated variable definitions in the form [TYPE:]NAME=VALUE.
 func (v *Variables) String() string {
-	return ""
+	if len(*v) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, variable := range *v {
+		parts = append(parts, variable.Type+":"+variable.Name+"="+variable.Value)
+	}
+	return strings.Join(parts, ",")
 }
 
 // Set parses a variable in the format [TYPE:]NAME=VALUE and adds it to
