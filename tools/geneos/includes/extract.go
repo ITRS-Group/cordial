@@ -145,6 +145,9 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	for _, conf := range confs {
 		p := h.Join(dir, conf)
 		_, err := h.Stat(p)
+		if err == nil {
+			log.Debug("Config file already exists", slog.String("file", p))
+		}
 		if errors.Is(err, fs.ErrNotExist) {
 			// write the file
 			src, err := IncludesFS.Open(conf)
