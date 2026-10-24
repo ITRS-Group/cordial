@@ -115,7 +115,7 @@ geneos aes new -S gateway
 					return err
 				}
 				for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-					instance.Do(command.Name(), h, ct, names, aesNewSetInstanceShared, crc).Report(os.Stdout)
+					instance.Do(command.CommandPath(), h, ct, names, aesNewSetInstanceShared, crc).Report(os.Stdout)
 				}
 			}
 		} else if newCmdUpdate {
@@ -126,7 +126,7 @@ geneos aes new -S gateway
 			h := geneos.GetHost(cmd.Hostname)
 
 			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				instance.Do(command.Name(), h, ct, names, aesNewSetInstance, kv).Report(os.Stdout)
+				instance.Do(command.CommandPath(), h, ct, names, aesNewSetInstance, kv).Report(os.Stdout)
 			}
 		} else {
 			fmt.Print(kv.String())

@@ -69,7 +69,7 @@ var migrateCmd = &cobra.Command{
 		// run them serially to avoid concurrent writes to the file. If
 		// this becomes a bottleneck we can look at locking the file or
 		// batching the updates.
-		instance.DoSerial(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
+		instance.DoSerial(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
 		return
 	},
 }

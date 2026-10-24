@@ -27,7 +27,7 @@ var auditLogger *AuditLogger
 var auditHandler slog.Handler
 
 // initialise a unique audit event ID for this program execution
-var auditEventID = uuid.NewString()
+var auditCommandID = uuid.NewString()
 
 // NewAuditLogger creates a new audit logger with the specified options.
 // The logger writes to one or more destinations, depending on the
@@ -66,7 +66,7 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 	}
 
 	attrs := []any{
-		slog.String("event_id", auditEventID),
+		slog.String("command_id", auditCommandID),
 		slog.String("username", username),
 	}
 
@@ -93,7 +93,7 @@ func NewAuditLogger(options ...AuditOption) *AuditLogger {
 // required, for example, at the start of a new operation or
 // transaction.
 func ResetEventID() {
-	auditEventID = uuid.NewString()
+	auditCommandID = uuid.NewString()
 }
 
 func NewGlobalAuditLogger(global io.Writer) {

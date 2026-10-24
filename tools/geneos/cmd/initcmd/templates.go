@@ -50,6 +50,6 @@ var templatesCmd = &cobra.Command{
 			return
 		}
 
-		return geneos.WriteTemplates(geneos.LOCAL, ct)
+		return geneos.WriteTemplates(geneos.LOCAL, ct, true)
 	},
 }

@@ -146,7 +146,7 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return err
 		}
 
-		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {

@@ -5,6 +5,7 @@ package profile
 import (
 	"fmt"
 	"log/slog"
+	"maps"
 	"regexp"
 	"strconv"
 	"strings"
@@ -34,14 +35,15 @@ func PflagSetToMap(flagset *pflag.FlagSet) map[string]any {
 }
 
 // SetExpandOptions sets the default expansion options for the given
-// profile configuration based on the command's flags.
-func SetExpandOptions(pf *config.Config, flags map[string]any) {
+// profile configuration based on the command's flags and arguments.
+// Arguments, to be used, nmust be in the form `name=value`..
+func SetExpandOptions(pf *config.Config, flags map[string]any, args []string) {
 	if flags == nil {
 		flags = make(map[string]any)
 	}
 
 	// pass to profile eval
-	config.Set(pf, "flags", flags)
+	config.Set(pf, pf.Join("config", "options"), flags)
 
 	lookup := map[string]string{
 		"hostname": geneos.LOCAL.String(),
@@ -52,7 +54,7 @@ func SetExpandOptions(pf *config.Config, flags map[string]any) {
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
-		config.Prefix("flag", Flag, config.Get[map[string]any](pf, "flags")),
+		config.Prefix("option", Option, config.Get[map[string]any](pf, pf.Join("config", "options")), args),
 		config.NoDecode(true),
 	)
 }
@@ -199,30 +201,49 @@ func SelectPrefix(ci map[string]any, s string, trim bool, _ ...any) (result stri
 	return def, nil
 }
 
-// Flag replaces a `flag:` prefix after evaluating the right hand side
-// by passing the string through goval with the provided flags (in
-// data[0] as variables, supporting bool, int, uint types and everything
-// else as strings). The expression is still evaluated, even if no flags
-// are provided. If the expression results in an error and empty string
-// is returned.
-func Flag(ci map[string]any, expr string, trim bool, data ...any) (result string, err error) {
-	var flags map[string]any
-	var ok bool
+// Option replaces a `option:` prefix after evaluating each expression
+// on the the right hand side, separated by ':' and returning the first
+// evaluated result that is not empty anddoes not produce an error. by
+// passing the string through goval with the provided options (in
+// options) as variables, supporting bool, int, uint types and
+// everything else as strings. The expression is still evaluated, even
+// if no options are provided. If the expression results in an error and
+// empty string is returned.
+//
+// options can be a map[string]any or a []string of the form
+// "name=value".
+//
+// To return a default value use a quoted final expression like
+// `${option:expr1:expr2:"default"}`
+func Option(ci map[string]any, exprs string, trim bool, options ...any) (result string, err error) {
+	var data = make(map[string]any)
 
-	expr = strings.TrimPrefix(expr, "flag:")
+	exprs = strings.TrimPrefix(exprs, "option:")
 
-	if len(data) > 0 {
-		flags, ok = data[0].(map[string]any)
-		if !ok {
-			log.Debug("expected map[string]any for flag data", slog.String("type", fmt.Sprintf("%T", data[0])))
+	for _, d := range options {
+		switch v := d.(type) {
+		case map[string]any:
+			maps.Copy(data, v)
+		case []string:
+			for _, s := range v {
+				name, value, found := strings.Cut(s, "=")
+				if found {
+					data[name] = value
+				}
+			}
 		}
 	}
 
-	eval := goval.NewEvaluator()
-	res, err := eval.Evaluate(expr, flags, nil)
-	if err != nil {
-		log.Debug("error evaluating flag expression", slog.String("expr", expr), slog.Any("error", err))
-		return "", err
+	for _, expr := range strings.Split(exprs, ":") {
+		eval := goval.NewEvaluator()
+		res, err := eval.Evaluate(expr, data, nil)
+		if err != nil {
+			log.Debug("error evaluating option expression", slog.String("expr", exprs), slog.Any("error", err))
+			return "", err
+		}
+		if res != nil && fmt.Sprint(res) != "" {
+			return fmt.Sprint(res), nil
+		}
 	}
-	return fmt.Sprint(res), nil
+	return "", nil
 }

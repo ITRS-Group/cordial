@@ -16,9 +16,9 @@ profiles:
         params:
           - port=7041
         imports:
-          - geneos.lic=${flag:licence}
+          - geneos.lic=${option:licence}
     netprobe:
-      - name: ${flag:minimal?"minimal:":""}localhost
+      - name: ${option:minimal?"minimal:":""}localhost
     webserver:
       - name: ${hostname}
 
@@ -111,13 +111,13 @@ profiles:
           Configuration |
           ../../includes/config/config.level2.basic-application.xml
     netprobe:
-      - name: ${flag:minimal?"minimal:":""}localhost
+      - name: ${option:minimal?"minimal:":""}localhost
         params:
           - port=7036
     webserver:
       - name: Demo Webserver
         params:
-          - port=${flag:insecure?8080:8443}
+          - port=${option:insecure?8080:8443}
   
   motm:
     _short: "MOTM profile"
@@ -156,17 +156,13 @@ profiles:
       The original options are stored in the profile configuration so
       that they are reused when the profile is rebuilt.
     sans:
-      - name: ${flag:minimal?"minimal:":""}${hostname}-motm
-        cert-bundle: ${flag:signing-bundle!=""?signing-bundle:""}
-        cert-bundle-password: ${flag:certs-password!=""?certs-password:""}
-        env:
-          # - JAVA_HOME=/usr/lib/jvm/java-11-openjdk
+      - name: ${option:minimal?"minimal:":""}${hostname}-motm
         gateways:
-          - ${flag:gateway}
+          - ${option:gateway}
         params:
           # - options=example
         attributes:
-          - ${flag:attribute}
+          - ${option:attribute}
         types:
           - Level 0 - Geneos
           - Level 0 - Geneos Extras
@@ -175,7 +171,7 @@ profiles:
           - for-each: gateway
             name: ${replace:gatewayname:name:/ /_/} Gateway
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - GATEWAY=${config:name}
             types:
               - Level 0 - Load Monitoring
@@ -185,7 +181,7 @@ profiles:
           - for-each: netprobe
             name: ${config:name} Netprobe
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - NETPROBE=${config:name}
             types:
               - Level 2 - Basic Application
@@ -201,7 +197,7 @@ profiles:
           - for-each: minimal
             name: ${config:name} Netprobe
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - NETPROBE=${config:name}
             types:
               - Level 2 - Basic Application
@@ -214,7 +210,7 @@ profiles:
           - for-each: fileagent
             name: ${config:name} Fileagent
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - FILEAGENT=${config:name}
             types:
               - Level 2 - Basic Application
@@ -227,7 +223,7 @@ profiles:
           - for-each: licd
             name: ${config:name} Licd
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - LICD=${config:name}
             types:
               - Level 2 - Basic Application
@@ -240,7 +236,7 @@ profiles:
           - for-each: webserver
             name: ${config:name} Webserver
             attributes:
-              - ${flag:attribute}
+              - ${option:attribute}
               - WEBSERVER=${config:name}
             types:
               - Level 2 - Basic Application
@@ -286,4 +282,4 @@ profiles:
             Configuration |
             ../../includes/config/config.level2.geneos.xml
     netprobes:
-      - name: ${flag:minimal?"minimal:":""}${hostname}-motm
+      - name: ${option:minimal?"minimal:":""}${hostname}-motm

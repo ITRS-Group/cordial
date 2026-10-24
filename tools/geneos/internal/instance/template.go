@@ -331,6 +331,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 		gws, ok := m[values.GATEWAYS]
 		if ok {
+			log.Debug("processing gateways", slog.String("type", fmt.Sprintf("%T", gws)), slog.Any("value", gws))
 			// convert gateways map or slice to an iter.seq2 for the template
 			switch gateways := gws.(type) {
 			case map[string]any:
@@ -343,6 +344,15 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 							continue
 						}
 						hostname, port, _ := strings.Cut(gatewayStr, ":")
+						if !yield(hostname, port) {
+							return
+						}
+					}
+				})
+			case []string:
+				m[values.GATEWAYS] = iter.Seq2[string, string](func(yield func(string, string) bool) {
+					for _, gateway := range gateways {
+						hostname, port, _ := strings.Cut(gateway, ":")
 						if !yield(hostname, port) {
 							return
 						}

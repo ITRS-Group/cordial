@@ -121,10 +121,22 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			}
 
 			// TODO: pull in values from profiles per instance
+			if err := ct.MakeDirs(h); err != nil {
+				continue
+			}
+			if ct.Initialise != nil {
+				if err := ct.Initialise(h, ct, false); err != nil {
+					log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
+				}
+			}
+			// clear any command line parameters, they should only come from the config
+			extras := opts.extras
+			extras.Params = []string{}
+			extras.SecureParams = values.SecureValues{}
 
 			i, err := instance.Add(h, ct, pi.Name,
 				instance.WithPort(opts.port),
-				instance.WithValues(opts.extras),
+				instance.WithValues(extras),
 				instance.WithTemplate(opts.template),
 				instance.Base(opts.base),
 				instance.Insecure(opts.insecure),

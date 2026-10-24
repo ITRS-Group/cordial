@@ -158,7 +158,7 @@ var encodeCmd = &cobra.Command{
 				defer clear(encodeCmdClientSecret)
 			}
 
-			instance.Do(command.Name(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+			instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				if !i.Type().UsesKeyfiles {
 					return
@@ -249,7 +249,7 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(command.Name(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {

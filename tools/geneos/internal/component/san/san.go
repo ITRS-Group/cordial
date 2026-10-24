@@ -289,14 +289,12 @@ func (i *San) Add(options ...any) (err error) {
 	config.Set(cf, "types", []string{})
 	config.Set(cf, "attributes", make(map[string]string))
 	config.Set(cf, "variables", make(map[string]string))
-	config.Set(cf, "gateways", make(map[string]string))
+	config.Set(cf, "gateways", []string{})
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
-
-	// s.Rebuild(true)
 
 	return nil
 }

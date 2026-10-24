@@ -186,7 +186,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			continue
 		}
 		if ct.Initialise != nil {
-			if err := ct.Initialise(h, ct); err != nil {
+			if err := ct.Initialise(h, ct, opts.override); err != nil {
 				log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
 			}
 		}

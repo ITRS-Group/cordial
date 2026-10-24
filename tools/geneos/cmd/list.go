@@ -87,9 +87,9 @@ var listCmd = &cobra.Command{
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
-			resp := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			headlines := make(map[string]string)
 			headlines["totalInstances"] = fmt.Sprintf("%d", len(resp))
 			for _, ct := range geneos.RealComponents() {
@@ -118,7 +118,7 @@ var listCmd = &cobra.Command{
 				"home",
 			}, nil, responses.AddHeadlines(headlines))
 		case listCmdCSV:
-			resp := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
+			resp := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			resp.Formatted(os.Stdout, "csv", []string{
 				"Type",
 				"Name",
@@ -137,7 +137,7 @@ var listCmd = &cobra.Command{
 				nil,
 			)
 		default:
-			instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
+			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
 				"Type",
 				"Name",
 				"Host",
@@ -157,6 +157,8 @@ var listCmd = &cobra.Command{
 
 func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
+
+	cf := i.Config()
 
 	var flags string
 
@@ -188,9 +190,9 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
-		config.Get[string](i.Config(), "profile", config.DefaultValue("-")),
+		config.Get[string](cf, cf.Join("config", "profile"), config.DefaultValue("-")),
 		flags,
-		config.Get[string](i.Config(), "port"),
+		config.Get[string](cf, "port"),
 		fmt.Sprintf("%s:%s", base, underlying),
 		i.Home(),
 	})
@@ -199,6 +201,8 @@ func listInstancePlain(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
+
+	cf := i.Config()
 
 	running := "N"
 	disabled := "N"
@@ -232,13 +236,13 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
-		config.Get[string](i.Config(), "profile", config.DefaultValue("-")),
+		config.Get[string](cf, cf.Join("config", "profile"), config.DefaultValue("-")),
 		autostart,
 		disabled,
 		protected,
 		running,
 		tls,
-		config.Get[string](i.Config(), "port"),
+		config.Get[string](cf, "port"),
 		base,
 		underlying,
 		i.Home(),
@@ -250,6 +254,8 @@ func listInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
+	cf := i.Config()
+
 	var running bool
 	if instance.IsRunning(i) {
 		running = true
@@ -260,13 +266,13 @@ func listInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 		Type:      i.Type().String(),
 		Name:      i.Name(),
 		Host:      i.Host().String(),
-		Profile:   config.Get[string](i.Config(), "profile"),
+		Profile:   config.Get[string](cf, cf.Join("config", "profile")),
 		Running:   running,
 		Disabled:  instance.IsDisabled(i),
 		Protected: instance.IsProtected(i),
 		AutoStart: instance.IsAutoStart(i),
 		TLS:       len(secureArgs) > 0,
-		Port:      config.Get[uint16](i.Config(), "port"),
+		Port:      config.Get[uint16](cf, "port"),
 		Base:      base,
 		Version:   underlying,
 		Home:      i.Home(),

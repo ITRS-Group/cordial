@@ -346,7 +346,8 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	// if we get here from a package install then that will have already
 	// been filtered for "force" in the caller
 	if existing == version {
-		fmt.Printf("%s release on %s %q already %q\n", ct, h, opts.basename, version)
+		log.Debug("release already installed", slog.String("host", h.String()), slog.String("component", ct.String()), slog.String("basename", opts.basename), slog.String("version", version))
+		// fmt.Printf("%s release on %s %q already %q\n", ct, h, opts.basename, version)
 		return nil
 	}
 

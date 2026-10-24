@@ -68,7 +68,7 @@ var migrateCmd = &cobra.Command{
 				log.Error("migrating old executables failed", slog.Any("error", err))
 			}
 		}
-		instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)
+		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)
 		return
 	},
 }

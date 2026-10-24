@@ -60,7 +60,7 @@ var rebuildCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			var changed bool

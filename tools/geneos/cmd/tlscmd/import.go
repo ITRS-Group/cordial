@@ -147,7 +147,7 @@ geneos tls import /path/to/file.pem
 			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
+		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 		return nil
 	},
 }

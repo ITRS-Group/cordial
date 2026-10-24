@@ -58,7 +58,7 @@ var newCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(command.Name(), geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Report(os.Stdout)
+		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, newInstanceCert).Report(os.Stdout)
 		return
 	},
 }

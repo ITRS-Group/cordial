@@ -179,7 +179,7 @@ geneos init
 
 		if len(args) == 0 {
 			// init basics
-			if err = geneos.Initialise(command.Name(), geneos.LOCAL,
+			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
 				geneos.UseRoot(root),
 				geneos.RootDirPrompt(config.ReadUserInputLine),
 				geneos.Override(initOptions.Force),
@@ -199,7 +199,7 @@ geneos init
 
 		// treat args as profile names
 		for _, p := range args {
-			if err = geneos.Initialise(command.Name(), geneos.LOCAL,
+			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
 				geneos.UseRoot(root),
 				geneos.RootDirPrompt(config.ReadUserInputLine),
 				geneos.Version(initOptions.Version),

@@ -189,7 +189,7 @@ type Component struct {
 	// so that it can create any files or directories that are not part
 	// of the initial directories. The component has to be passed from
 	// the caller otherwise there is a reference loop.
-	Initialise func(*Host, *Component) error
+	Initialise func(h *Host, ct *Component, override bool) error
 
 	// New is the factory method for the component. It has to be added
 	// during registration to avoid loops

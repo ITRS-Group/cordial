@@ -69,11 +69,11 @@ var commandCmd = &cobra.Command{
 			return err
 		}
 		if commandCmdJSON {
-			results := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
+			results := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
 			results.Report(os.Stdout, responses.IndentJSON(true))
 			return nil
 		}
-		results := instance.Do(cmd.Name(), geneos.GetHost(Hostname), ct, names, commandInstance)
+		results := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstance)
 		results.Report(os.Stdout)
 		return
 	},

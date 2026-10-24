@@ -234,7 +234,7 @@ func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	pf := cmd.Profiles
 
 	flags := config.Get[map[string]any](cf, "flags")
-	profile.SetExpandOptions(pf, flags)
+	profile.SetExpandOptions(pf, flags, nil)
 	if err = profile.Apply(pf, i.Name(), false); err != nil {
 		return false, err
 	}

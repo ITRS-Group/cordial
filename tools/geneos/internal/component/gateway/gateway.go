@@ -46,8 +46,8 @@ const (
 
 var log = logger.Logger
 
-func initialise(h *geneos.Host, ct *geneos.Component) (err error) {
-	geneos.WriteTemplates(h, ct)
+func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error) {
+	geneos.WriteTemplates(h, ct, override)
 	includes.Update(h, "", false)
 	return nil
 }

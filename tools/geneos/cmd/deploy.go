@@ -183,7 +183,7 @@ var deployCmd = &cobra.Command{
 
 		// if no local root ...
 		if h.IsLocalhost() && geneos.LocalRoot() == "" {
-			geneos.Initialise(command.Name(), h,
+			geneos.Initialise(command.CommandPath(), h,
 				// top-level options
 				geneos.UseRoot(deployCmdGeneosHome),
 				geneos.RootDirPrompt(config.ReadUserInputLine),

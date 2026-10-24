@@ -85,7 +85,13 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		}
 	}
 
-	// includes are only valid for gateways
+	if ct.IsA("profile") {
+		// add values to "flags"
+
+		// load existing from profile as map
+
+		//
+	}
 
 	if ct.IsA("gateway") {
 		for k, v := range values.Includes {

@@ -191,12 +191,12 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 }
 
 // ApplyCommonParams applies the common parameters from the
-// [profiles.Common] struct returning a [values.Values] structure and
+// [profile.Common] struct returning a [values.Values] structure and
 // updating in-place any common parameters that need expansion.
 func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup map[string]string) (vals values.Values) {
 	vals.Envs = pf.ExpandStringSlice(common.Env)
 	vals.Params = pf.ExpandStringSlice(common.Params)
-	vals.Params = append(vals.Params, "profile="+name)
+	vals.Params = append(vals.Params, pf.Join("config", "profile")+"="+name)
 
 	common.Imports = pf.ExpandStringSlice(common.Imports)
 	common.CertBundle = config.Expand[string](pf, common.CertBundle)
@@ -230,8 +230,12 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, options
 				port = uint16(pv)
 			}
 		}
+		// clear params, they should only come from config not command line
+		vals := opts.vals
+		vals.Params = []string{}
+		vals.SecureParams = values.SecureValues{}
 		i, err = instance.Add(geneos.LOCAL, ct, name,
-			instance.WithValues(opts.vals),
+			instance.WithValues(vals),
 			instance.WithCertBundle(opts.common.CertBundle),
 			instance.WithCertBundlePassword(opts.common.CertBundlePassword),
 			instance.WithPort(port),
