@@ -27,13 +27,13 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
-	github.com/labstack/echo/v4 v4.16.0
+	github.com/labstack/echo/v4 v4.16.2
 	github.com/labstack/gommon v0.5.0
 	github.com/lestrrat-go/strftime v1.2.0
 	github.com/maja42/goval v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
-	github.com/pkg/sftp v1.13.11
+	github.com/pkg/sftp v1.13.12
 	github.com/schollz/progressbar/v3 v3.19.1
 	github.com/skeema/knownhosts v1.3.3
 	github.com/spf13/afero v1.15.0
@@ -52,7 +52,7 @@ require (
 	golang.org/x/sys v0.49.0
 	golang.org/x/term v0.47.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.60.1
+	modernc.org/sqlite v1.61.0
 	software.sslmate.com/src/go-pkcs12 v0.7.4
 	src.elv.sh v0.21.0
 )
