@@ -96,7 +96,7 @@ The stages in the migration process are:
 
 * Update instance confirmation parameters to use their new names
 
-  All TLS parameters are now under a `tls` hierarchy, and while `certificate` and `privatekey` have retained their base names (but as `tls::certificate` and `tls::privatekey` respectively), the `chain-file` parameter is no longer used and has been replaced by `tls::ca-bundle` instead. The previous `use-chain` parameter is also no longer used and instead a `tls::verify` parameter, with the opposite meaning, has been introduced. 
+  All TLS parameters are now under a `tls` hierarchy, and while `certificate` and `privatekey` have retained their base names (but as `tls.certificate` and `tls.privatekey` respectively), the `chain-file` parameter is no longer used and has been replaced by `tls.ca-bundle` instead. The previous `use-chain` parameter is also no longer used and instead a `tls.verify` parameter, with the opposite meaning, has been introduced. 
 
 ### `geneos tls info` / `geneos tls inspect` _New in v1.26.0_
 

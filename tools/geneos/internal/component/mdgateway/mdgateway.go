@@ -263,7 +263,7 @@ func seedPackagedYAML(i *MDGateway) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditEvent("import", nil, slog.Any("file", path.Base(setup)))
+	i.AuditEvent("action/import", nil, slog.Any("file", path.Base(setup)))
 }
 
 func (i *MDGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {

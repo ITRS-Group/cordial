@@ -377,7 +377,7 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 		return err
 	}
 	for _, c := range restarted {
-		c.AuditEvent("update", nil, slog.String("version", version), slog.String("base", opts.basename))
+		c.AuditEvent("action/update", nil, slog.String("version", version), slog.String("base", opts.basename))
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
 	return nil

@@ -105,7 +105,7 @@ func NewCertificate(i geneos.Instance, options ...certs.TemplateOption) (resp *r
 // WriteCertificateAndKey writes the certificates and, if given, the
 // private key to the instance i using standard file names and updates
 // the instance configuration. It will set the instance
-// `tls::certificate` and, when given a key, the `tls::privatekey`
+// `tls.certificate` and, when given a key, the `tls.privatekey`
 // parameters and clear any values in the old style `certificate` and
 // `privatekey` parameters. It does not write the instance
 // configuration, expecting the caller to do so after any other updates.
@@ -125,7 +125,7 @@ func WriteCertificateAndKey(i geneos.Instance, key certs.PrivateKey, certChain .
 // WriteCertificateBundle writes the certificate, key and trust chain to
 // the instance. It returns a boolean indicating if the trust chain was
 // updated and any error encountered. If the trust chain is updated, the
-// instance configuration `tls::ca-bundle` parameter is also updated.
+// instance configuration `tls.ca-bundle` parameter is also updated.
 func WriteCertificateBundle(i geneos.Instance, bundle *certs.CertificateBundle) (trustChainUpdated bool, err error) {
 	if i == nil || i.Type() == nil || bundle == nil {
 		return false, geneos.ErrInvalidArgs

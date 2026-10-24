@@ -113,8 +113,8 @@ func init() {
 		geneos.Init(cordial.ExecutableName())
 	})
 
-	config.DefaultKeyDelimiter("::")
-	config.ResetConfig(config.KeyDelimiter("::"))
+	// config.DefaultKeyDelimiter("::")
+	// config.ResetConfig(config.KeyDelimiter("::"))
 
 	Cmd.PersistentFlags().StringVarP(&cfgFile, "config", "G", "", "config file (defaults are "+
 		config.AbbreviateHome(

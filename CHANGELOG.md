@@ -9,15 +9,20 @@
 
 This release comes with significant new features for the `geneos` program, and some minor breaking changes. Please read this changelog carefully before upgrading.
 
+>[!IMPORTANT]
+>**Breaking Changes**
+>1. The custom configuration delimiter `::` has been reverted to the more standard `.` except for some special cases, list host and IP keys in `geneos` remote host configs. Please note the change when updating existing configuration files and scripts that reference these keys.
+>1. For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways.
+
 * The program now supports "_profiles_" for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to define its settings. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles also support `geneos deploy` and some dynamic configuration scenarios. Read more about them in `geneos help profiles`
 
   To support more complex configuration scenarios, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
 
-  A number of "best practice" includes files are now embedded in the `geneos` program and the distribution.
+  A number of _best practice_ includes files are now embedded in the `geneos` program and the distribution.
 
-* A new `geneos adb` subsystem has been intriduced for working with Active Dashboard files. The first two commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
+* A new `geneos adb` subsystem has been introduced for working with Active Dashboard files. The first two commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
 
-* The `snapshot` command can now output the captured data in Geneos Toolkit formats.
+* The `snapshot` command can now output the captured data in Geneos Toolkit formats, allowing the import of data from a Gateway without the need to configure Gateway Sharing. This is especially useful when only a Netprobe is co-located with the source gateway which does not allow remote connections. 
 
 * Support for auditing events within the `geneos` program. Audit logs are now created for global and per-instance events.
 

@@ -77,7 +77,7 @@ var migrateCmd = &cobra.Command{
 // migrateInstanceTLS migrates the TLS configuration of an instance to
 // the new layout
 //
-// If a `tls::certificate` parameter is already set then the instance is
+// If a `tl.certificate` parameter is already set then the instance is
 // assumed to have already been migrated and no action is taken.
 //
 // For Java keystore/truststore based instances (sso-agent, webserver)
@@ -278,8 +278,8 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	}
 	config.Set(cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), geneos.PathToCABundlePEM(i.Host()))
 
-	// only set tls::verify to false if `use-chain` is not set or false.
-	// If tls::verify is not set, the default is `true`
+	// only set tls.verify to false if `use-chain` is not set or false.
+	// If tls.verify is not set, the default is `true`
 	if usechain, ok := config.Lookup[bool](cf, instance.USECHAIN); !ok || !usechain {
 		config.Set(cf, cf.Join(instance.TLSBASE, instance.TLSVERIFY), false)
 	}

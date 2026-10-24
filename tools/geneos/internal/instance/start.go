@@ -38,6 +38,12 @@ import (
 // signature will accept 'any' to avoid import loops from the geneos
 // package.
 func Start(i geneos.Instance, options ...any) error {
+	if i == nil {
+		return fmt.Errorf("instance is nil")
+	}
+
+	cf := i.Config()
+
 	if IsRunning(i) {
 		return geneos.ErrRunning
 	}
@@ -49,7 +55,7 @@ func Start(i geneos.Instance, options ...any) error {
 	if i.Type().IsA("profile") {
 		// start all the instances labelled with the profile
 		DoInstances("start",
-			Instances(i.Host(), nil, MatchParameters("profile="+i.Name())),
+			Instances(i.Host(), nil, MatchParameters(cf.Join("config", "profile")+"="+i.Name())),
 			func(i geneos.Instance, _ ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				if IsAutoStart(i) {
@@ -139,7 +145,7 @@ func Start(i geneos.Instance, options ...any) error {
 			logger.CommandLine("command", cmd.Args),
 			slog.Int("pid", pid),
 		}
-		i.AuditEvent("start", nil, args...)
+		i.AuditEvent("action/start", nil, args...)
 	}
 	return nil
 }

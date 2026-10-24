@@ -393,12 +393,12 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	// look for:
-	//   tls::certificate 		--> -ssl-certificate
-	//   tls::privatekey  		--> -ssl-certificate-key
-	//   tls::certchain   		--> -ssl-certificate-chain (--initial), ignored later
-	//   tls::verify			--> if set but no chain, use Geneos global roots
-	//   tls::minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
-	//   tls::ca-bundle 		--> -ssl-certificate-chain (--final)
+	//   tls.certificate 		--> -ssl-certificate
+	//   tls.privatekey  		--> -ssl-certificate-key
+	//   tls.certchain   		--> -ssl-certificate-chain (--initial), ignored later
+	//   tls.verify			--> if set but no chain, use Geneos global roots
+	//   tls.minimumversion 	--> -minTLSversion (default 1.2) or MIN_TLS_VERSION env var for Netprobe
+	//   tls.ca-bundle 		--> -ssl-certificate-chain (--final)
 
 	if cert := PathTo(i, config.Join(TLSBASE, CERTIFICATE)); cert != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "fileagent", "licd") {

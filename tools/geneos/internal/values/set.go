@@ -86,9 +86,9 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 	}
 
 	if ct.IsA("profile") {
-		// add values to "flags"
+		// add values to "config.options"
 
-		// load existing from profile as map
+		// load existing from profile as map from "config.options"
 
 		//
 	}

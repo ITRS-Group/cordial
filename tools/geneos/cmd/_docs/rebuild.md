@@ -1,10 +1,10 @@
-The `rebuild` command will rebuild all matching instances whose TYPE supports templates for configuration file depending on the `config::rebuild` setting for each instance.
+The `rebuild` command will rebuild all matching instances whose TYPE supports templates for configuration file depending on the `config.rebuild` setting for each instance.
 
-The values for the `config::rebuild` option are: `never`, `initial` and `always`. The default value depends on the TYPE; For Gateways it is `initial` and for SANs and Floating Netprobes it is `always`.
+The values for the `config.rebuild` option are: `never`, `initial` and `always`. The default value depends on the TYPE; For Gateways it is `initial` and for SANs and Floating Netprobes it is `always`.
 
-You can force a rebuild for an instance that has the `config::rebuild` set to `initial` by using the `--force`/`-F` option. Instances with a `never` setting are never rebuilt.
+You can force a rebuild for an instance that has the `config.rebuild` set to `initial` by using the `--force`/`-F` option. Instances with a `never` setting are never rebuilt.
 
-To change this use something like `geneos set gateway MyGateway config::rebuild=always`
+To change this use something like `geneos set gateway MyGateway config.rebuild=always`
 
 Instances will not normally update their settings when the configuration file changes, although there are options for both Gateways and Netprobes to do this, so you can trigger a configuration reload with the `--reload`/`-r` option. This will send the appropriate signal to matching instances regardless of the underlying configuration being updated or not.
 

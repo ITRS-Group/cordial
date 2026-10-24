@@ -18,13 +18,14 @@ The subsystems below group related functions together and have their own sub-com
 
 ## Subsystems
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos adb`](geneos_adb.md)	 | ADB File Operations |
 | [`geneos aes`](geneos_aes.md)	 | AES256 Key File Operations |
 | [`geneos config`](geneos_config.md)	 | Configure Command Behaviour |
 | [`geneos host`](geneos_host.md)	 | Remote Host Operations |
 | [`geneos incident`](geneos_incident.md)	 | Commands for working with incidents |
+| [`geneos includes / include`](geneos_includes.md)	 | Manage includes |
 | [`geneos init`](geneos_init.md)	 | Initialise a Geneos installation |
 | [`geneos package`](geneos_package.md)	 | Package Operations |
 | [`geneos tls`](geneos_tls.md)	 | TLS Certificate Operations |
@@ -105,17 +106,9 @@ The subsystems below group related functions together and have their own sub-com
 
 ---
 
-## Includes
-
-| Command | Description |
-|-------|-------|
-| [`geneos includes`](geneos_includes.md)	 | Includes |
-
----
-
 ## Component Types
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
 | [`geneos ac2`](geneos_ac2.md)	 | Active Console 2 |
 | [`geneos ca3`](geneos_ca3.md)	 | Collection Agent 3 |
@@ -127,19 +120,12 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos md-gateway`](geneos_md-gateway.md)	 | MD Gateway |
 | [`geneos minimal`](geneos_minimal.md)	 | Minimal Netprobes |
 | [`geneos netprobe`](geneos_netprobe.md)	 | Netprobes |
+| [`geneos profile / profiles`](geneos_profile.md)	 | Profile |
 | [`geneos router`](geneos_router.md)	 | Netprobe Router |
 | [`geneos san`](geneos_san.md)	 | Self-Announcing Netprobes |
 | [`geneos sso-agent`](geneos_sso-agent.md)	 | SSO Agent |
 | [`geneos tr-gateway`](geneos_tr-gateway.md)	 | TR Gateway |
 | [`geneos webserver`](geneos_webserver.md)	 | Web Dashboard Servers |
-
----
-
-## Profile Components
-
-| Command | Description |
-|-------|-------|
-| [`geneos profile`](geneos_profile.md)	 | Profile |
 
 ### Options
 

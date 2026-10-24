@@ -201,24 +201,20 @@ func SelectPrefix(ci map[string]any, s string, trim bool, _ ...any) (result stri
 	return def, nil
 }
 
-// Option replaces a `option:` prefix after evaluating each expression
-// on the the right hand side, separated by ':' and returning the first
-// evaluated result that is not empty anddoes not produce an error. by
+// Option replaces a `option:` prefix after evaluating the expression on
+// the the right hand side and returning the result and/or any error. by
 // passing the string through goval with the provided options (in
 // options) as variables, supporting bool, int, uint types and
 // everything else as strings. The expression is still evaluated, even
 // if no options are provided. If the expression results in an error and
-// empty string is returned.
+// no valid result can be obtained, an empty string is returned.
 //
 // options can be a map[string]any or a []string of the form
 // "name=value".
-//
-// To return a default value use a quoted final expression like
-// `${option:expr1:expr2:"default"}`
-func Option(ci map[string]any, exprs string, trim bool, options ...any) (result string, err error) {
+func Option(ci map[string]any, expr string, trim bool, options ...any) (result string, err error) {
 	var data = make(map[string]any)
 
-	exprs = strings.TrimPrefix(exprs, "option:")
+	expr = strings.TrimPrefix(expr, "option:")
 
 	for _, d := range options {
 		switch v := d.(type) {
@@ -234,16 +230,11 @@ func Option(ci map[string]any, exprs string, trim bool, options ...any) (result 
 		}
 	}
 
-	for _, expr := range strings.Split(exprs, ":") {
-		eval := goval.NewEvaluator()
-		res, err := eval.Evaluate(expr, data, nil)
-		if err != nil {
-			log.Debug("error evaluating option expression", slog.String("expr", exprs), slog.Any("error", err))
-			return "", err
-		}
-		if res != nil && fmt.Sprint(res) != "" {
-			return fmt.Sprint(res), nil
-		}
+	eval := goval.NewEvaluator()
+	res, err := eval.Evaluate(expr, data, nil)
+	if err != nil {
+		log.Debug("error evaluating option expression", slog.String("expr", expr), slog.Any("error", err))
+		return "", err
 	}
-	return "", nil
+	return fmt.Sprint(res), nil
 }

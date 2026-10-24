@@ -14,13 +14,13 @@ Note: In a future `cordial` release the configuration file may move to a YAML fo
 
 (Default: Created from template)
 
-When a Gateway instance is created, a simple `gateway.setup.xml` file is created using the template file `${GENEOS_HOME}/gateway/templates/gateway.setup.xml.gotmpl`. This file is used as the setup file for the Gateway and is passed to the Gateway using the `-setup` option. The default template can be changed, per instance, by setting the `config::template` parameter. See the `config::rebuild` and `config::template` parameters below for more details.
+When a Gateway instance is created, a simple `gateway.setup.xml` file is created using the template file `${GENEOS_HOME}/gateway/templates/gateway.setup.xml.gotmpl`. This file is used as the setup file for the Gateway and is passed to the Gateway using the `-setup` option. The default template can be changed, per instance, by setting the `config.template` parameter. See the `config.rebuild` and `config.template` parameters below for more details.
 
 #### `instance.setup.xml`
 
 (Default: Created from template)
 
-An `instance.setup.xml` file is created in the Gateway instance directory. This file is built using the template file `${GENEOS_HOME}/gateway/templates/instance.setup.xml.gotmpl` and is "included" by the `gateway.setup.xml` file and contains settings synthesised from the instance configuration. This file is always updated when using the `geneos set`, `geneos unset` and `geneos rebuild` commands, regardless of the `config::rebuild` parameter. If you add environment variables to the instance configuration then they are added to the `instance.setup.xml` file as variables with names of the form `_ENV_VAR_NAME` and string values. For example, if you set an environment variable of `FOO=BAR` then a variable named `_ENV_FOO` with value `BAR` is created in the `instance.setup.xml` file. Any variables you add to the instance configuration using `geneos set gateway GATEWAY -v type:name=value` are also added to the `instance.setup.xml` file as variables with their specified names, types and values. For example, if you set a variable of `NAME=VALUE` with type `string` then a variable named `NAME` with value `VALUE` and type `string` is created in the `instance.setup.xml` file. This behaviour can be customised by setting the `config::template` parameter to use a different template that does not include these variables or includes them in a different way.
+An `instance.setup.xml` file is created in the Gateway instance directory. This file is built using the template file `${GENEOS_HOME}/gateway/templates/instance.setup.xml.gotmpl` and is "included" by the `gateway.setup.xml` file and contains settings synthesised from the instance configuration. This file is always updated when using the `geneos set`, `geneos unset` and `geneos rebuild` commands, regardless of the `config.rebuild` parameter. If you add environment variables to the instance configuration then they are added to the `instance.setup.xml` file as variables with names of the form `_ENV_VAR_NAME` and string values. For example, if you set an environment variable of `FOO=BAR` then a variable named `_ENV_FOO` with value `BAR` is created in the `instance.setup.xml` file. Any variables you add to the instance configuration using `geneos set gateway GATEWAY -v type:name=value` are also added to the `instance.setup.xml` file as variables with their specified names, types and values. For example, if you set a variable of `NAME=VALUE` with type `string` then a variable named `NAME` with value `VALUE` and type `string` is created in the `instance.setup.xml` file. This behaviour can be customised by setting the `config.template` parameter to use a different template that does not include these variables or includes them in a different way.
 
 ### Instance Parameters
 
@@ -63,8 +63,8 @@ The parameters described below are specific to the Gateway component.
 
   An optional additional port to listen on for non-TLS connections. This allows the Gateway to support both TLS and non-TLS connections at the same time.
 
-* `snapshot::username` (Default: Unset)
-* `snapshot::password` (Default: Unset)
+* `snapshot.username` (Default: Unset)
+* `snapshot.password` (Default: Unset)
 
   Optional username and password for the `snapshot` command to use when connecting to the Gateway REST API. These are used as defaults for the `snapshot` command and can be overridden on the command line by the `--user`/`-u` option. If these parameters are not set and no credentials can be found in the credentials file then the user will be prompted for a username and password when running the `snapshot` command.
 
@@ -72,15 +72,15 @@ The parameters described below are specific to the Gateway component.
 
 When creating a new Gateway instance two XML setup files are created.
 
-An `instance.setup.xml` include file is created and contains settings synthesised from the instance configuration. It is always updated when using the `geneos rebuild` command. This file is rebuilt regardless of the `config::rebuild` parameter.
+An `instance.setup.xml` include file is created and contains settings synthesised from the instance configuration. It is always updated when using the `geneos rebuild` command. This file is rebuilt regardless of the `config.rebuild` parameter.
 
-A default `gateway.setup.xml` file is also created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config::rebuild` to `never`.
+A default `gateway.setup.xml` file is also created from the template(s) installed in the `gateway/templates` directory. By default this file is only created once but can be re-created using the `rebuild` command with the `-F` option if required. In turn this can also be protected against by setting the Gateway configuration setting `config.rebuild` to `never`.
 
-* `config::rebuild` (Default: `initial`)
+* `config.rebuild` (Default: `initial`)
 
   The `rebuild` parameter controls how the instance responds to the `geneos rebuild` command. See below for more details.
 
-* `config::template` (Default: `gateway.setup.xml.gotmpl`)
+* `config.template` (Default: `gateway.setup.xml.gotmpl`)
 
   The `template` parameter controls which template file is used to build the gateway setup file when `geneos rebuild` is run.
 
@@ -88,7 +88,7 @@ A default `gateway.setup.xml` file is also created from the template(s) installe
 
   A list of include files to be used when building the Gateway setup file from templates.
 
-  Gateways support the setting of Include files for use in templated configurations. These are set similarly to the `-e` parameters:
+  Gateways support the setting of include files for use in templated configurations. These are set similarly to the `-e` parameters:
 
   ```text
   geneos set gateway example2 -i 100:/path/to/include

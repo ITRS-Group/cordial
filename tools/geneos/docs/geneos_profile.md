@@ -5,8 +5,15 @@ A `profile` is a pseudo-component representing a Geneos profile instance.
 ## Usage
 
 ```text
-geneos profile [name]
+geneos profile
 ```
+
+## Commands
+
+| Command / Aliases | Description |
+|-------|-------|
+| [`geneos profile extract / update`](geneos_profile_extract.md)	 | Extract the embedded profile configuration |
+| [`geneos profile list / ls`](geneos_profile_list.md)	 | List available profiles |
 
 ### Options
 

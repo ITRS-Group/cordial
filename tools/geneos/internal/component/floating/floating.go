@@ -301,7 +301,7 @@ func (i *Floating) Rebuild(initial bool) (changed bool, err error) {
 	}
 	return instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(i, "config::template"),
+		instance.FileOf(i, cf.Join("config", "template")),
 		template,
 		0664,
 	)

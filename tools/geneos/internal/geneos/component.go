@@ -49,7 +49,7 @@ var RootComponent = Component{
 		// Root URL for all downloads of software archives hardwire
 		// delimiters because config may not be initialised for
 		// config.Join()
-		"download::url": defaultURL,
+		"download.url": defaultURL,
 
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by FindComponent()
@@ -175,7 +175,7 @@ type Component struct {
 	PurgeList string
 
 	// ConfigAliases maps new configuration parameters to the original
-	// names, e.g. "netprobe::ports" -> "netprobeportrange"
+	// names, e.g. "netprobe.ports" -> "netprobeportrange"
 	//
 	// We can use this to support older geneos.json config while
 	// migrating

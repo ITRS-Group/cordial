@@ -310,7 +310,7 @@ func (i *Router) Rebuild(initial bool) (changed bool, cerr error) {
 
 	return instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(i, "config::template"),
+		instance.FileOf(i, cf.Join("config", "template")),
 		template,
 		0664,
 	)

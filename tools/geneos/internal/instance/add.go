@@ -177,13 +177,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 
 	if port, found := config.Lookup[uint16](cf, "port"); found {
 		fmt.Printf("%s added, port %d\n", i, port)
-		i.AuditEvent("add", nil, slog.Int("port", int(port)))
+		i.AuditEvent("action/add", nil, slog.Int("port", int(port)))
 	} else {
 		fmt.Printf("%s added\n", i)
-		i.AuditEvent("add", nil)
+		i.AuditEvent("action/add", nil)
 	}
 
 	if opts.Start || opts.Logs {
+		i.Log().Debug("starting instance after add")
 		if err = Start(i); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				err = nil

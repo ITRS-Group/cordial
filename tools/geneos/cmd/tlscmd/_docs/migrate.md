@@ -18,12 +18,12 @@ The instance parameters are updated as follows:
 
 | Old Parameter         | New Parameter              | Des                                                                     |
 | --------------------- | -------------------------- | ----------------------------------------------------------------------- |
-| `certificate`         | `tls::certificate`         | Path to the instance certificate file                                   |
-| `privatekey`          | `tls::privatekey`          | Path to the instance private key file                                   |
-| `certchain`           | `tls::ca-bundle`           | Path to the CA bundle file, defaults to the global `ca-bundle.pem` file |
-| `usechain`            | `tls::verify`              | If set to false then no certificate verification is performed           |
-| `truststore`          | `tls::truststore`          | Path to the truststore file (for webserver only)                        |
-| `truststore-password` | `tls::truststore-password` | Password for the truststore file (for webserver only)                   |
-| n/a                   | `tls::minimumversion`      | Sets the minimum TLS version for connections                            |
+| `certificate`         | `tls.certificate`         | Path to the instance certificate file                                   |
+| `privatekey`          | `tls.privatekey`          | Path to the instance private key file                                   |
+| `certchain`           | `tls.ca-bundle`           | Path to the CA bundle file, defaults to the global `ca-bundle.pem` file |
+| `usechain`            | `tls.verify`              | If set to false then no certificate verification is performed           |
+| `truststore`          | `tls.truststore`          | Path to the truststore file (for webserver only)                        |
+| `truststore-password` | `tls.truststore-password` | Password for the truststore file (for webserver only)                   |
+| n/a                   | `tls.minimumversion`      | Sets the minimum TLS version for connections                            |
 
 Each component type will use the above parameters as appropriate. For example, the `truststore` and `truststore-password` parameters are only applicable to the `webserver` component.

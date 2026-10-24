@@ -265,7 +265,7 @@ func seedPackagedYAML(i *TRGateway) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditEvent("import", nil, slog.Any("file", path.Base(setup)))
+	i.AuditEvent("action/import", nil, slog.Any("file", path.Base(setup)))
 }
 
 func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {

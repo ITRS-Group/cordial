@@ -24,7 +24,7 @@ The parameters described below are specific to the SAN component.
 
 * `setup` (Default: `${config:home}/san.setup.xml`)
 
-  The SAN setup file. This is generated from the template file defined in `config::template` when `geneos rebuild` is run (see below). It can be edited manually but any changes will be lost when `geneos rebuild` is run again. Either set `config::rebuild` to `never` or change the template file or use the `geneos set` command to change configuration parameters that are used in the template file.
+  The SAN setup file. This is generated from the template file defined in `config.template` when `geneos rebuild` is run (see below). It can be edited manually but any changes will be lost when `geneos rebuild` is run again. Either set `config.rebuild` to `never` or change the template file or use the `geneos set` command to change configuration parameters that are used in the template file.
 
 * `calogfile` (Default: `collection_agent.log`)
 
@@ -44,11 +44,11 @@ When creating a new SAN a new setup file (`netprobe.setup.xml`) is created in th
 
 The following parameters control how, and if, this file is rebuilt automatically and which template to use in this case:
 
-* `config::rebuild` (Default: `always`)
+* `config.rebuild` (Default: `always`)
 
   The `rebuild` parameter controls how the instance responds to the `geneos rebuild` command. See below for more details.
 
-* `config::template` (Default: `san.setup.xml.gotmpl`)
+* `config.template` (Default: `san.setup.xml.gotmpl`)
 
   The `template` parameter controls which template file is used to build the SAN setup file when `geneos rebuild` is run.
 
@@ -58,9 +58,9 @@ The following structured parameters are used in the default `san.setup.xml.gotmp
 
   The list of Gateway instances that this SAN will attempt to connect to. When setting these values the format is `HOSTNAME:PORT`. If the SAN is configured to support TLS then the connection to the Gateway(s) will be set to use if any of the following are true:
 
-  * A `tls::secure` parameter is set to `true`.
-  * A `tls::ca-bundle` is specified.
-  * A `tls::verify` parameter is set to `true`.
+  * A `tls.secure` parameter is set to `true`.
+  * A `tls.ca-bundle` is specified.
+  * A `tls.verify` parameter is set to `true`.
   * A `certchain` is specified.
   
 * `attributes` (Default: Empty)

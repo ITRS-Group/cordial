@@ -180,7 +180,7 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 
 	resp = responses.MergeResponse(resp, instance.Write(i))
 	if resp.Err == nil {
-		i.AuditEvent("set", nil, slog.String("values", fmt.Sprintf("%+v", v)))
+		i.AuditEvent("action/set", nil, slog.String("values", fmt.Sprintf("%+v", v)))
 	}
 	return
 }

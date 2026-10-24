@@ -80,9 +80,9 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 
 * `port` (Default: First available from `7038-7039,7100-`)
 
-  The default port to listen on. The actual default is selected from the first available port in the range defined in `gateway::ports` in the program settings. If TLS is enabled, which is the default, then the base port is 7038 and 7039 is not selected. If TLS is not enabled then the base port is 7039. If you have multiple Gateways running on the same server then the `geneos add` and `geneos deploy` commands, amongst others, will automatically select the next available port in the range.
+  The default port to listen on. The actual default is selected from the first available port in the range defined in `gateway.ports` in the program settings. If TLS is enabled, which is the default, then the base port is 7038 and 7039 is not selected. If TLS is not enabled then the base port is 7039. If you have multiple Gateways running on the same server then the `geneos add` and `geneos deploy` commands, amongst others, will automatically select the next available port in the range.
 
-  The port range is defined in the top-level configuration as `gateway::ports` and defaults to `7038-7039,7100-`. You can change this using `geneos config set TYPE::ports="..."`. See the `geneos config` command for more details.
+  The port range is defined in the top-level configuration as `gateway.ports` and defaults to `7038-7039,7100-`. You can change this using `geneos config set TYPE.ports="..."`. See the `geneos config` command for more details.
 
 * `autostart` (Default: `true`)
 
@@ -100,15 +100,15 @@ In the examples below, `${GENEOS_HOME}` is the directory of the Geneos installat
 
 ### TLS Parameters
 
-* `tls::certificate` (Default: `${config:home}/gateway.pem`)
-* `tls::privatekey` (Default: `${config:home}/gateway.key`)
-* `tls::verify` (Default: `false`)
-* `tls::ca-bundle` (Default: `${GENEOS_HOME}/tls/ca-bundle.pem`)
-* `tls::minimumversion` (Default: `1.2`)
+* `tls.certificate` (Default: `${config:home}/gateway.pem`)
+* `tls.privatekey` (Default: `${config:home}/gateway.key`)
+* `tls.verify` (Default: `false`)
+* `tls.ca-bundle` (Default: `${GENEOS_HOME}/tls/ca-bundle.pem`)
+* `tls.minimumversion` (Default: `1.2`)
 
-These parameters control TLS for the Gateway. TLS is enabled by default with the certificate and private key files in the instance home directory. If `tls::verify` is set to `true` then the Gateway will verify the remote endpoints it connects to, using the trusted roots in `tls::ca-bundle`. If `tls::verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
+These parameters control TLS for the Gateway. TLS is enabled by default with the certificate and private key files in the instance home directory. If `tls.verify` is set to `true` then the Gateway will verify the remote endpoints it connects to, using the trusted roots in `tls.ca-bundle`. If `tls.verify` is set to `true` but the `tls.ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
 
-If `tls::verify` is set to `true` but the `tls::ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
+If `tls.verify` is set to `true` but the `tls.ca-bundle` file does not exist then the verification chain is set to an appropriate system default, which is seleected from a list of defaults for typical Linux systems.
 
 Deprecated parameters for TLS are also supported for backwards compatibility but should not be used in new configurations. If you are upgrading from an older version of `cordial` there is a `geneos tls migrate` command to help you. These deprecated parameters are (top-level pparameters, not under `tls`):
 

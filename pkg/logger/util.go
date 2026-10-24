@@ -13,7 +13,12 @@ const redactedPlaceholder = "[REDACTED]"
 // credentials in log messages. It captures the key and the value
 // separately so that the value can be replaced with a redacted
 // placeholder.
-var redactRE = regexp.MustCompile(`(?i)([\w-]*(password|secret|token|apikey|[_-]key|credential)(?:[ =>]+))([^\s"'<]+|"[^"]*"|'[^']*|<[^<]+>)`)
+//
+// Note that because Go regexps do not allow zero-width look-arounds,
+// and `key` is a common parameter name, this regular expression only
+// matches `apikey` and `_key` specifically, and will not match other
+// occurrences of `key` on its own.
+var redactRE = regexp.MustCompile(`(?i)([\w-]*(password|secret|token|apikey|_key|credential)(?:[ =>]+))([^\s"'<]+|"[^"]*"|'[^']*|<[^<]+>)`)
 
 // redactEncsRE is a regular expression used to identify Geneos specific
 // encoded strings

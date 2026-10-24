@@ -200,7 +200,7 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 				resp := fn(i, values...)
 				responses.Finished(resp)
 				if geneos.AuditActions() && !resp.Audited {
-					i.AuditEvent(event, resp.Err)
+					i.AuditEvent("action/"+event, resp.Err)
 					resp.Audited = true
 				}
 				rs[resp.Instance.String()] = resp
@@ -215,7 +215,7 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 		resp := fn(c, values...)
 		responses.Finished(resp)
 		if geneos.AuditActions() && !resp.Audited {
-			c.AuditEvent(event, resp.Err)
+			c.AuditEvent("action/"+event, resp.Err)
 			resp.Audited = true
 		}
 		rs[resp.Instance.String()] = resp
@@ -249,7 +249,7 @@ func DoInstances(event string, instances []geneos.Instance, fn func(geneos.Insta
 			resp := fn(c, values...)
 			responses.Finished(resp)
 			if geneos.AuditActions() && !resp.Audited {
-				c.AuditEvent(event, resp.Err)
+				c.AuditEvent("action/"+event, resp.Err)
 				resp.Audited = true
 			}
 			ch <- resp
@@ -650,7 +650,7 @@ func ImportFiles(i geneos.Instance, files ...string) (err error) {
 		if dest != setupBase && dest != path.Base(setup) && dest != setup {
 			continue
 		}
-		i.AuditEvent("import", err, slog.String("source", source), slog.String("file", dest))
+		i.AuditEvent("action/import", err, slog.String("source", source), slog.String("file", dest))
 	}
 	return
 }

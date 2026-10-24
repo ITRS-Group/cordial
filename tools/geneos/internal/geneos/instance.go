@@ -33,7 +33,9 @@ type Instance interface {
 
 	// AuditEvent logs an audit event for the instance. In general this
 	// is a call to [instance.AuditEvent] through the interface for the
-	// component.
+	// component. All events should be prefixed with "action/" to
+	// indicate that they are an code-initiated action rather than a
+	// command invocation.
 	AuditEvent(event string, result error, args ...any)
 
 	// String returns the display name of the instance in the form `TYPE

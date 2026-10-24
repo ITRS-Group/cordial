@@ -179,6 +179,8 @@ func (i *Profile) Add(options ...any) (err error) {
 		return os.ErrInvalid
 	}
 
+	cf := i.Config()
+
 	opts := instance.EvalAddOptions(options...)
 
 	// pick up the profile config, which is set in cmd but we can't
@@ -190,7 +192,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	}
 
 	// update flags from saved set ?
-	config.Set(i.Config(), "flags", profile.PflagSetToMap(opts.Flags))
+	config.Set(cf, cf.Join("config", "options"), profile.PflagSetToMap(opts.Flags))
 
 	if err = profile.Apply(pf, i.Name(), true); err != nil {
 		return err
@@ -233,7 +235,7 @@ func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
 	pf := cmd.Profiles
 
-	flags := config.Get[map[string]any](cf, "flags")
+	flags := config.Get[map[string]any](cf, cf.Join("config", "options"))
 	profile.SetExpandOptions(pf, flags, nil)
 	if err = profile.Apply(pf, i.Name(), false); err != nil {
 		return false, err

@@ -94,7 +94,7 @@ func InitHosts(app string) {
 func NewHost(name string, options ...any) (h *Host) {
 	h = &Host{
 		Host:   host.NewLocal(),
-		Config: config.New(),
+		Config: config.New(config.KeyDelimiter("::")),
 		hidden: false,
 		loaded: true,
 	}
@@ -125,7 +125,7 @@ func NewHost(name string, options ...any) (h *Host) {
 		// or bootstrap, but NOT save a new one, with only the name set
 		h = &Host{
 			Host:   host.NewSSHRemote(name, options...),
-			Config: config.New(),
+			Config: config.New(config.KeyDelimiter("::")),
 			hidden: false,
 			loaded: false,
 		}
@@ -462,6 +462,7 @@ func LoadHostConfig() {
 		config.FilePath(confFile),
 		config.UseDefaults(false),
 		config.SkipWorkingDir(),
+		config.KeyDelimiter("::"),
 	)
 	if err != nil {
 		log.Error("failed to read host configuration", slog.Any("error", err))
@@ -470,7 +471,9 @@ func LoadHostConfig() {
 	hosts = sync.Map{}
 
 	for name, hostval := range config.Get[map[string]any](h, "hosts") {
-		v := config.New()
+		v := config.New(
+			config.KeyDelimiter("::"),
+		)
 
 		switch m := hostval.(type) {
 		case map[string]any:
@@ -503,7 +506,9 @@ func LoadHostConfig() {
 
 // SaveHostConfig writes the current hosts to the users hosts configuration file
 func SaveHostConfig() error {
-	n := config.New()
+	n := config.New(
+		config.KeyDelimiter("::"),
+	)
 
 	hosts.Range(func(k, v any) bool {
 		name := k.(string)

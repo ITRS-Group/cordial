@@ -3,6 +3,7 @@ package logger
 import (
 	"io"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -125,7 +126,12 @@ func newHandler(w io.Writer) slog.Handler {
 				case slog.LevelKey:
 					return slog.Attr{}
 				case slog.MessageKey:
-					a.Key = "event"
+					if strings.HasPrefix(a.Value.String(), "action/") {
+						a.Value = slog.StringValue(strings.TrimPrefix(a.Value.String(), "action/"))
+						a.Key = "action"
+					} else {
+						a.Key = "command"
+					}
 					return a
 				default:
 					// for all other attributes, check for redactable strings in a.Value

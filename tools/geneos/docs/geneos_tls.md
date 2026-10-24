@@ -8,14 +8,14 @@ Commands allow for initialisation, create and renewal of certificates as well as
 
 Each instance typically uses the following parameters:
 
-* `tls::certificate` - the path to a certificate file in PEM format
-* `tls::privatekey` - the path to a private key file for the certificate above
-* `tls::ca-bundle` - the path to a file containing one or more PEM formatted certificates that form a trust chain
-* `tls::verify` - a boolean parameter that controls the use of the chain file above
+* `tls.certificate` - the path to a certificate file in PEM format
+* `tls.privatekey` - the path to a private key file for the certificate above
+* `tls.ca-bundle` - the path to a file containing one or more PEM formatted certificates that form a trust chain
+* `tls.verify` - a boolean parameter that controls the use of the chain file above
 
-Those components which may offer TLS support on listening ports will do so if the `tls::certificate` and `tls::privatekey` parameters are defined. The contents of the files are not validated and are passed to the undelying Geneos binaries as-is. If the files do not exist or are not valid then the component will fail to start.
+Those components which may offer TLS support on listening ports will do so if the `tls.certificate` and `tls.privatekey` parameters are defined. The contents of the files are not validated and are passed to the undelying Geneos binaries as-is. If the files do not exist or are not valid then the component will fail to start.
 
-Those components that act as clients and connect to servers, Geneos or otherwise, will validate the connection based on the `tls::ca-bundle` and `tls::verify` settings. If these are not set or the file does not exist then the connection is still established using TLS but is not verified to be using a trusted certificate.
+Those components that act as clients and connect to servers, Geneos or otherwise, will validate the connection based on the `tls.ca-bundle` and `tls.verify` settings. If these are not set or the file does not exist then the connection is still established using TLS but is not verified to be using a trusted certificate.
 
 Please refer to the component documentation (e.g. `geneos help gateway`) for more details on how TLS is used for that component.
 

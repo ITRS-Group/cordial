@@ -36,6 +36,6 @@ The audit feature can be configured through the Geneos environment settings. Thi
 
 Two levels of configuration are available, global and per-instance. Instance settings override global settings for the specific instance they apply to. The options and names are the same for both, as follows:
 
-- `audit::filename` - Specifies the file path where audit records are stored.
-- `audit::max-size` - Specifies the maximum size of the audit log file before it is rotated.
+- `audit.filename` - Specifies the file path where audit records are stored.
+- `audit.max-size` - Specifies the maximum size of the audit log file before it is rotated.
 

@@ -407,7 +407,7 @@ func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 
 	changedSetup, err := instance.ExecuteTemplate(i,
 		setup,
-		instance.FileOf(i, "config::template"),
+		instance.FileOf(i, cf.Join("config", "template")),
 		template,
 		0664,
 	)
