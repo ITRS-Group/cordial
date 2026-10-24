@@ -416,10 +416,10 @@ func ExpandOnSave(options ...ExpandOption) FileOption {
 	}
 }
 
-// DefaultExpandOptions sets defaults to all subsequent calls to
+// SetDefaultExpandOptions sets defaults to all subsequent calls to
 // functions that perform configuration expansion. These defaults can be
-// reset by calling DefaultExpandOptions with no arguments.
-func DefaultExpandOptions(options ...ExpandOption) FileOption {
+// reset by calling SetDefaultExpandOptions with no arguments.
+func SetDefaultExpandOptions(options ...ExpandOption) FileOption {
 	return func(fo *fileOptions) {
 		fo.expandOptions = options
 	}

@@ -59,7 +59,7 @@ type ActionGroup struct {
 func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool {
 	agcf := config.New(
 		config.DefaultsFrom(cf),
-		config.DefaultExpandOptions(
+		config.SetDefaultExpandOptions(
 			config.Prefix("match", matchPrefix),
 			config.Prefix("nomatch", noMatchPrefix),
 			config.Prefix("replace", replacePrefix),

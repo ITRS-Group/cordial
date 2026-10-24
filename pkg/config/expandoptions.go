@@ -101,6 +101,15 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	return
 }
 
+// DefaultExpandOptions returns the default set of ExpandOptions. This
+// allows duplication to another Config object.
+func (c *Config) DefaultExpandOptions() (options []ExpandOption) {
+	defaultFuncMapsMutex.Lock()
+	defer defaultFuncMapsMutex.Unlock()
+	options = append(options, c.defaultExpandOptions...)
+	return
+}
+
 // SetDefaultExpandOptions sets defaults to all subsequent calls to
 // functions that perform configuration expansion. These defaults can be
 // reset by calling SetDefaultExpandOptions with no arguments.

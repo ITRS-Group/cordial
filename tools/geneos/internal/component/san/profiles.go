@@ -154,22 +154,9 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 		for idx, i := range instances {
 			cf := i.Config()
 
-			// set the default options for the instance configuration,
-			// which is used as a source of data for the managed entity
-			// loop below
-			lookup := map[string]string{
-				"hostname": geneos.LOCAL.String(),
-			}
 			// set default expand options for the instance configuration
-			cf.SetDefaultExpandOptions(
-				config.ExternalLookups(false),
-				config.Expressions(true),
-				config.LookupTable(lookup),
-				config.Prefix("select", profile.SelectPrefix),
-				config.Prefix("replace", profile.ReplacePrefix),
-				config.Prefix("flag", profile.Flag, config.Get[map[string]any](pf, "flags")),
-				config.NoDecode(true),
-			)
+			// based on the profile
+			cf.SetDefaultExpandOptions(pf.DefaultExpandOptions()...)
 
 			// build entity using lookup table for expansion, with custom functions
 			variables := make(values.Variables, len(entity.Variables))
