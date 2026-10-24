@@ -131,7 +131,6 @@ var defaults []byte
 
 func initConfig() {
 	var err error
-	// config.DefaultKeyDelimiter("::")
 
 	opts := []config.FileOption{
 		config.AppName("geneos"),

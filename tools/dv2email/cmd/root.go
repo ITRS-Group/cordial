@@ -87,7 +87,6 @@ func initConfig() {
 		logger.LogLevel.Set(slog.LevelInfo)
 	}
 
-	// config.DefaultKeyDelimiter("::")
 	if config.AppConfigDir() == "" {
 		log.Warn("no user config dir found", slog.Any("error", config.ErrNoUserConfigDir))
 	}
