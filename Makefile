@@ -29,7 +29,6 @@ build:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
 
 base: build
-# 	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-ubuntu .
 	docker build --tag cordial --tag cordial:$(VERSION) --target cordial-run-debian .
 
 gdna:
