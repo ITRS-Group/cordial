@@ -40,6 +40,29 @@ import (
 // responsibility to write the configuration after calling this
 // function.
 func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
+	ct := i.Type()
+	cf := i.Config()
+
+	if ct.IsA("profile") {
+		// remove values from "config.options"
+		options := config.Get[map[string]string](cf, cf.Join("config", "options"))
+
+		changed = unsetProfile("gateway", ":", unset.Gateways, options) || changed
+		changed = unsetProfile("env", "=", unset.Envs, options) || changed
+		changed = unsetProfile("attribute", "=", unset.Attributes, options) || changed
+		changed = unsetProfile("include", ":", unset.Includes, options) || changed
+		changed = unsetProfile("type", "", unset.Types, options) || changed
+		changed = unsetProfile("param", "", unset.Keys, options) || changed
+
+		changed = unsetProfile2("variable", ":", "=", unset.Variables, options) || changed
+
+		if changed {
+			config.Set(cf, cf.Join("config", "options"), options)
+		}
+
+		return changed
+	}
+
 	for _, k := range unset.Gateways {
 		changed = unsetMapValue(i, GATEWAYS, k) || changed
 	}
@@ -124,6 +147,50 @@ func Unset(i geneos.Instance, unset UnsetConfigValues) (changed bool) {
 		}
 	}
 
+	return
+}
+
+func unsetProfile(key, split string, vals []string, options map[string]string) (changed bool) {
+	if vals != nil {
+		values := strings.Split(options[key], ",")
+		for _, g := range vals {
+			values = slices.DeleteFunc(values, func(value string) bool {
+				match := strings.HasPrefix(value, g+split)
+				changed = match || changed
+				return match
+			})
+		}
+		options[key] = strings.Join(values, ",")
+	}
+	return
+}
+
+func unsetProfile2(key, split, split2 string, vals []string, options map[string]string) (changed bool) {
+	if vals != nil {
+		values := strings.Split(options[key], ",")
+		// rejoin adjacent values where the comma was escaped by `\,`
+		for i := 0; i < len(values)-1; i++ {
+			for strings.HasSuffix(values[i], "\\") && i < len(values)-1 {
+				values[i] = strings.TrimSuffix(values[i], "\\") + "," + values[i+1]
+				values = append(values[:i+1], values[i+2:]...)
+			}
+		}
+		for _, g := range vals {
+			values = slices.DeleteFunc(values, func(value string) bool {
+				a, b, found := strings.Cut(value, split)
+				if found {
+					value = b
+				} else {
+					value = a
+				}
+
+				match := strings.HasPrefix(value, g+split2)
+				changed = match || changed
+				return match
+			})
+		}
+		options[key] = strings.Join(values, ",")
+	}
 	return
 }
 

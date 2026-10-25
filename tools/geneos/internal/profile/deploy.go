@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"path"
 
-	"github.com/spf13/pflag"
-
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -100,7 +98,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				geneos.OverrideVersion(opts.override),
 				geneos.Password(opts.password),
 				geneos.Username(opts.username),
-				geneos.Headers(opts.extras.Headers...),
+				geneos.Headers(opts.vals.Headers...),
 				geneos.UseNexusSnapshots(opts.snapshot),
 				geneos.UseNexus(opts.nexus),
 			}
@@ -130,7 +128,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				}
 			}
 			// clear any command line parameters, they should only come from the config
-			extras := opts.extras
+			extras := opts.vals
 			extras.Params = []string{}
 			extras.SecureParams = values.SecureValues{}
 
@@ -158,7 +156,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	// finally, install the profile instance
 	_, err = instance.Add(h, geneos.ParseComponent("profile"), name,
 		instance.WithPort(opts.port),
-		instance.WithValues(opts.extras),
+		instance.WithValues(opts.vals),
 		instance.Base(opts.base),
 		instance.Insecure(opts.insecure),
 		instance.WithCertBundle(opts.certBundle),
@@ -181,174 +179,4 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	}
 
 	return nil
-}
-
-type profileDeployOptions struct {
-	archive            string
-	base               string
-	certBundle         string
-	certBundlePassword config.Secret
-	extras             values.Values
-	flags              *pflag.FlagSet
-	followLogs         bool
-	importFiles        []string
-	insecure           bool
-	keyfile            string
-	keyfileCRC         string
-	local              bool
-	nexus              bool
-	noSave             bool
-	override           string
-	password           config.Secret
-	port               uint16
-	snapshot           bool
-	startAfterAdd      bool
-	template           string
-	username           string
-	version            string
-}
-
-type ProfileDeployOption func(*profileDeployOptions)
-
-func evaluateProfileDeployOptions(options ...ProfileDeployOption) *profileDeployOptions {
-	pf := &profileDeployOptions{
-		base:    "active_prod",
-		version: "latest",
-	}
-	for _, opt := range options {
-		opt(pf)
-	}
-	return pf
-}
-
-func WithPort(port uint16) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.port = port
-	}
-}
-
-func WithExtras(extras values.Values) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.extras = extras
-	}
-}
-
-func WithBase(base string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.base = base
-	}
-}
-
-func WithInsecure(insecure bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.insecure = insecure
-	}
-}
-
-func WithCertBundle(certBundle string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.certBundle = certBundle
-	}
-}
-
-func WithCertBundlePassword(certBundlePassword config.Secret) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.certBundlePassword = certBundlePassword
-	}
-}
-
-func WithKeyfile(keyfile string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.keyfile = keyfile
-	}
-}
-
-func WithKeyfileCRC(keyfileCRC string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.keyfileCRC = keyfileCRC
-	}
-}
-
-func WithImportFiles(importFiles []string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.importFiles = importFiles
-	}
-}
-
-func WithStartAfterAdd(startAfterAdd bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.startAfterAdd = startAfterAdd
-	}
-}
-
-func WithTemplate(template string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.template = template
-	}
-}
-
-func WithVersion(version string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.version = version
-	}
-}
-
-func WithUsername(username string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.username = username
-	}
-}
-
-func WithPassword(password config.Secret) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.password = password
-	}
-}
-
-func WithLocal(local bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.local = local
-	}
-}
-
-func WithNexus(nexus bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.nexus = nexus
-	}
-}
-
-func WithSnapshot(snapshot bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.snapshot = snapshot
-	}
-}
-
-func WithOverride(override string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.override = override
-	}
-}
-
-func WithArchive(archive string) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.archive = archive
-	}
-}
-
-func WithNoSave(noSave bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.noSave = noSave
-	}
-}
-
-func WithFlags(flags *pflag.FlagSet) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.flags = flags
-	}
-}
-
-func WithFollowLogs(followLogs bool) ProfileDeployOption {
-	return func(o *profileDeployOptions) {
-		o.followLogs = followLogs
-	}
 }

@@ -31,7 +31,6 @@ import (
 	"slices"
 	"strings"
 	"text/template"
-	"time"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -72,7 +71,6 @@ func Read(i geneos.Instance) (err error) {
 		return os.ErrInvalid
 	}
 
-	start := time.Now()
 	h := i.Host()
 	home := Home(i)
 
@@ -138,7 +136,6 @@ func Read(i geneos.Instance) (err error) {
 		i.SetLoaded(st.ModTime())
 	}
 
-	i.Log().Debug("read config", slog.String("file", used), slog.Duration("duration", time.Since(start)))
 	return nil
 }
 

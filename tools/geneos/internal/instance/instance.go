@@ -173,7 +173,7 @@ func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn f
 		// action the profile, then all the component instances
 		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 		for _, n := range names {
-			instances := Instances(h, nil, MatchParameters("profile="+n))
+			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
 			respmap := DoInstances(event, instances, fn, values...)
 			maps.Copy(rs, respmap)
 		}
@@ -195,7 +195,7 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 	if ct.IsA("profile") {
 		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 		for _, n := range names {
-			instances := Instances(h, nil, MatchParameters("profile="+n))
+			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
 			for _, i := range instances {
 				resp := fn(i, values...)
 				responses.Finished(resp)

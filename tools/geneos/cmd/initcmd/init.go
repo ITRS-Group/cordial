@@ -223,7 +223,7 @@ geneos init
 			}
 
 			err = profile.DeployProfile(geneos.LOCAL, p,
-				profile.WithExtras(initOptions.Extras),
+				profile.WithValues(initOptions.Extras),
 				profile.WithFlags(command.Flags()),
 				profile.WithInsecure(initOptions.Insecure),
 				profile.WithArchive(initOptions.Archive),

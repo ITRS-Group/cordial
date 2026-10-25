@@ -20,6 +20,7 @@ package values
 import (
 	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
@@ -29,6 +30,69 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
+
+func setProfile(key, split string, vals []string, options map[string]string) (changed bool) {
+	if vals != nil {
+		values := strings.Split(options[key], ",")
+		for _, g := range vals {
+			// remove any existing value that matches the prefix of g before appending it
+			values = slices.DeleteFunc(values, func(value string) bool {
+				value, _, _ = strings.Cut(value, split)
+				return strings.HasPrefix(g, value+split)
+			})
+			values = append(values, g)
+			changed = true
+		}
+		slices.Sort(values)
+		options[key] = strings.Join(values, ",")
+	}
+	return
+}
+
+func setProfile2(key, split1, split2 string, vals []Variable, options map[string]string) (changed bool) {
+	if vals != nil {
+		values := strings.Split(options[key], ",")
+		for _, v := range vals {
+			// remove any existing value that matches the prefix of g before appending it
+			values = slices.DeleteFunc(values, func(value string) bool {
+				_, val, found := strings.Cut(value, split1)
+				if !found {
+					return false
+				}
+				return strings.HasPrefix(val, v.Name+split2)
+			})
+			values = append(values, v.Type+split1+v.Name+split2+v.Value)
+			changed = true
+		}
+		options[key] = strings.Join(values, ",")
+	}
+	return
+}
+
+func setProfile3(key, split string, vals map[string]string, options map[string]string) (changed bool) {
+	if vals != nil {
+		nvals := make(map[string]string)
+		for _, v := range strings.Split(options[key], ",") {
+			k, v, found := strings.Cut(v, split)
+			if !found {
+				continue
+			}
+			nvals[k] = v
+		}
+
+		// merge and overwrite existing values with the new ones from vals
+		maps.Copy(nvals, vals)
+
+		var pairs []string
+		for k, v := range nvals {
+			pairs = append(pairs, k+split+v)
+		}
+		slices.Sort(pairs)
+
+		options[key] = strings.Join(pairs, ",")
+	}
+	return
+}
 
 // Set applies the settings in values to instance i and returns a new
 // config structure with the updated parameters applied. The existing
@@ -44,6 +108,26 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 	// create a new config and merge the instance config into it later
 	cf = config.New()
 	cf.MergeConfigMap(i.Config().AllSettings())
+
+	if ct.IsA("profile") {
+		var changed bool
+		options := config.Get[map[string]string](cf, cf.Join("config", "options"))
+
+		changed = setProfile("gateway", ":", values.Gateways, options)
+		changed = setProfile("env", "=", values.Envs, options) || changed
+		changed = setProfile("attribute", "=", values.Attributes, options) || changed
+		changed = setProfile("type", "", values.Types, options) || changed
+		changed = setProfile("param", "", values.Params, options) || changed
+
+		changed = setProfile2("variable", ":", "=", values.Variables, options) || changed
+
+		changed = setProfile3("include", ":", values.Includes, options) || changed
+
+		if changed {
+			config.Set(cf, cf.Join("config", "options"), options)
+		}
+		return cf, nil
+	}
 
 	// set parameters, valid for all instance types
 	if err = cf.SetKeyValuePairs(values.Params...); err != nil {
@@ -83,14 +167,6 @@ func Set(i geneos.Instance, values Values, keyfile config.KeyFile) (cf *config.C
 		for _, s := range secrets {
 			setStringSliceValue(i, cf, ENVIRONMENT, s)
 		}
-	}
-
-	if ct.IsA("profile") {
-		// add values to "config.options"
-
-		// load existing from profile as map from "config.options"
-
-		//
 	}
 
 	if ct.IsA("gateway") {

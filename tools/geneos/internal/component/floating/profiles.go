@@ -47,12 +47,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 			vals.Gateways = append(vals.Gateways, gw)
 		}
 
-		if err := profile.ApplyInstance(pf, ct, instanceName,
-			profile.ClearKeys(clearKeys),
-			profile.WithCommon(floating.Common),
-			profile.WithValues(vals),
-			profile.Rebuild(forceRebuild),
-		); err != nil {
+		if err := profile.ApplyInstance(pf, ct, instanceName, floating.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

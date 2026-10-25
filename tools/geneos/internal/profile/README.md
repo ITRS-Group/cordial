@@ -68,17 +68,17 @@ The following are supported:
 - `${env:NAME}`
   Expands to the value of the environment variable NAME
 
-- `${flag:EXPR}`
+- `${option:EXPR}`
   Expands to the value of the `goval` expression which can use all the command line flags as well as configuration items as variables. For example, to use the value given to the `--port` flag:
 
   ```yaml
-  - port=${flag:port}
+  - port=${option:port}
   ```
 
   Or, for a more complex expression which checks the `--insecure` flag:
 
   ```yaml
-  - port=${flag:insecure?8080:8443}
+  - port=${option:insecure?8080:8443}
   ```
 
   Note that only those command-line flags that have been defined and passed to the program will be available for use in the `flag` expansion macros. You cannot add arbitrary flags for use in the expression. This may change in a future release.
@@ -93,7 +93,7 @@ The following are supported:
   ```
 
 - `${expr:EXPRESSION}`
-  Expands to the result of evaluating the `goval` expression `EXPRESSION`. All configuration items (as for `${config:...}`) and environment variables (as for `${env:...}`) are available as variables within the expression. See `${flag:...}` for similar support for command line flags.
+  Expands to the result of evaluating the `goval` expression `EXPRESSION`. All configuration items (as for `${config:...}`) and environment variables (as for `${env:...}`) are available as variables within the expression. See `${option:...}` for similar support for command line flags.
 
 - `${replace:params:/PATTERN/TEXT/}`
   Performs a regular expression replacement on the first non-empty configuration parameter specified in `params`. The `PATTERN` is the regular expression to match, and `TEXT` is the replacement text. The separator `/` can be any character except `:`, but must be used consistently to separate the pattern and the replacement text. 
@@ -128,7 +128,6 @@ These are common parameters that can be defined for any instance type within a p
       - port=7039
       - host=localhost
   ```
-
 
 ### Gateway Specific Parameters
 
@@ -290,3 +289,13 @@ A Self-Announcing Netrobe (SAN) component can be configured with one or more man
 ### Floating Netprobe Specific Parameters
 
 - `gateways`
+  A list of gateways that the SAN should connect to. Each gateway should be in the form `HOST:PORT`. This is typically specified as:
+
+  ```yaml
+  gateways:
+    - ${flag:gateway}
+  ```
+
+  Here, the command line option `--gateway` is used to specify the gateway to connect to and can be repeated. The value is processed and if there are multiple values on the command line, they are all included in the list of gateways. Also, if no gateways are specified on the command line, the `geneos` command will use `localhost:7038` or `localhost:7039` as the default gateway, depending on TLS being enabled or not, respectively.
+
+  The choice of using TLS (secure) connections or not is determined by the SAN template and the configuration of the gateways specified. The logic, at the time of writing, in Go template format is:

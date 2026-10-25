@@ -31,6 +31,8 @@ func PflagSetToMap(flagset *pflag.FlagSet) map[string]any {
 			flags[f.Name] = f.Value.String()
 		}
 	})
+	// demove debug, if it exists
+	delete(flags, "debug")
 	return flags
 }
 
@@ -41,6 +43,8 @@ func SetExpandOptions(pf *config.Config, flags map[string]any, args []string) {
 	if flags == nil {
 		flags = make(map[string]any)
 	}
+
+	delete(flags, "debug") // remove debug flag as it is not needed for profile expansion
 
 	// pass to profile eval
 	config.Set(pf, pf.Join("config", "options"), flags)

@@ -95,12 +95,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 			}
 		}
 
-		if err := profile.ApplyInstance(pf, ct, instanceName,
-			profile.ClearKeys(clearKeys),
-			profile.WithCommon(san.Common),
-			profile.WithValues(vals),
-			profile.Rebuild(forceRebuild),
-		); err != nil {
+		if err := profile.ApplyInstance(pf, ct, instanceName, san.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

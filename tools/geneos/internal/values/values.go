@@ -51,7 +51,7 @@ type Values struct {
 	// Params are key=value pairs set directly in the configuration
 	// after checking, keys must be unique but can be hierarchical using
 	// the config delimiter. These are valid for all instance types.
-	Params []string
+	Params NameValues
 
 	// SecureParams parameters name[=value] where value will be prompted
 	// for if not supplied and are encoded with a keyfile. These are
@@ -107,12 +107,11 @@ type UnsetConfigValues struct {
 	Includes UnsetValues
 
 	// for SANs only
-	//
 	Gateways UnsetValues
-	//
+
 	// name of entity to remove
 	Entities UnsetValues
-	//
+
 	// these can be prefixed with an optional entity name and a '/' as
 	// for set
 	Attributes UnsetValues

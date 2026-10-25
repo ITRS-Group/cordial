@@ -122,11 +122,14 @@ profiles:
   motm:
     _short: "MOTM profile"
     _description: |
-      The `motm` profile is used for the MOTM component setup. It
-      includes default settings for gateways, netprobes, and webservers
-      specific to the MOTM environment.
+      The `motm` profile supports the creation of a Monitor Of The
+      Monitors satellite system setup. The profile installs a
+      Self-Announcing netprobe which is dynamically configured to report
+      the status or all Geneos components on the host to cental MOTM
+      gateways.
 
-      To set-up Motitoring-Of-The-Monitoring using this profile, run the following command:
+      To set-up Motitoring-Of-The-Monitoring using this profile, run the
+      following command:
 
       ```bash
       $ geneos deploy profile motm [OPTIONS]
@@ -142,10 +145,12 @@ profiles:
         applicable only to PKCS#12/PFX bundles.
 
         - `--attribute`: An attribute to be applied to the managed
-        entities. Can be repeated.
+        entities. Can be repeated s many times as required. Each geneos
+        component is also automatically assigned an attribute in the
+        form `GATEWAY=GatewayName`.
         
         - `--gateway`: The name and port of the gateway (HOST:PORT) to
-        connect to. Can be repeated.
+        connect to. Can be repeated as many times as required.
 
       When deployed the profile installs one Self-Announcing Netprobe
       with a configuration built based on other Geneos components
@@ -155,96 +160,108 @@ profiles:
 
       The original options are stored in the profile configuration so
       that they are reused when the profile is rebuilt.
-    sans:
-      - name: ${option:minimal?"minimal:":""}${hostname}-motm
-        gateways:
-          - ${option:gateway}
-        params:
-          # - options=example
-        attributes:
-          - ${option:attribute}
-        types:
-          - Level 0 - Geneos
-          - Level 0 - Geneos Extras
-          - Level 1 - Infrastructure
-        managed-entities:
-          - for-each: gateway
-            name: ${replace:gatewayname:name:/ /_/} Gateway
-            attributes:
-              - ${option:attribute}
-              - GATEWAY=${config:name}
-            types:
-              - Level 0 - Load Monitoring
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Gateway
+    san:
+      name: ${option:minimal?"minimal:":""}${hostname}-MOTM-SAN
+      gateways: ${option:gateway}
+      attributes: ${option:attribute}
+      types:
+        - Level 0 - Geneos
+        - Level 0 - Geneos Extras
+        - Level 1 - Infrastructure
+      managed-entities:
+        - for-each: gateway
+          name: ${replace:gatewayname:name:/ /_/} Gateway
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Gateway
+            - GATEWAY=${config:name}
+          types:
+            - Level 0 - Load Monitoring
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Gateway
+          variables:
+            - type: string
+              name: gatewayName
+              value: ${config:gatewayname}
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
+            - type: string
+              name: consolelogfile
+              value: ${config:home}/gateway.txt
 
-          - for-each: netprobe
-            name: ${config:name} Netprobe
-            attributes:
-              - ${option:attribute}
-              - NETPROBE=${config:name}
-            types:
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Netprobe
-            variables:
-              - type: string
-                name: logfile
-                value: ${config:home}/${config:logfile}
-              - type: string
-                name: calogfile
-                value: ${config:home}/${config:calogfile}
+        - for-each: netprobe
+          name: ${config:name} Netprobe
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Netprobe
+            - NETPROBE=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Netprobe
+          variables:
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
+            - type: string
+              name: calogfile
+              value: ${config:home}/${config:calogfile}
 
-          - for-each: minimal
-            name: ${config:name} Netprobe
-            attributes:
-              - ${option:attribute}
-              - NETPROBE=${config:name}
-            types:
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Netprobe
-            variables:
-              - type: string
-                name: logfile
-                value: ${config:home}/${config:logfile}
+        - for-each: minimal
+          name: ${config:name} Netprobe
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Netprobe
+            - NETPROBE=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Netprobe
+          variables:
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
 
-          - for-each: fileagent
-            name: ${config:name} Fileagent
-            attributes:
-              - ${option:attribute}
-              - FILEAGENT=${config:name}
-            types:
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Fileagent
-            variables:
-              - type: string
-                name: logfile
-                value: ${config:home}/${config:logfile}
+        - for-each: fileagent
+          name: ${config:name} Fileagent
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Fileagent
+            - FILEAGENT=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Fileagent
+          variables:
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
 
-          - for-each: licd
-            name: ${config:name} Licd
-            attributes:
-              - ${option:attribute}
-              - LICD=${config:name}
-            types:
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Licd
-            variables:
-              - type: string
-                name: logfile
-                value: ${config:home}/${config:logfile}
+        - for-each: licd
+          name: ${config:name} Licd
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Licd
+            - LICD=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Licd
+          variables:
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
 
-          - for-each: webserver
-            name: ${config:name} Webserver
-            attributes:
-              - ${option:attribute}
-              - WEBSERVER=${config:name}
-            types:
-              - Level 2 - Basic Application
-              - Level 2 - Geneos Webserver
-            variables:
-              - type: string
-                name: logfile
-                value: ${config:home}/${config:logfile}
+        - for-each: webserver
+          name: ${config:name} Webserver
+          attributes:
+            - ${option:attribute}
+            - COMPONENT=Webserver
+            - WEBSERVER=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 2 - Geneos Webserver
+          variables:
+            - type: string
+              name: logfile
+              value: ${config:home}/${config:logfile}
 
   motm-gateway:
     _short: "MOTM gateway profile"
@@ -282,4 +299,5 @@ profiles:
             Configuration |
             ../../includes/config/config.level2.geneos.xml
     netprobes:
-      - name: ${option:minimal?"minimal:":""}${hostname}-motm
+      - name: ${option:minimal?"minimal:":""}${hostname}-MOTM-Probe
+

@@ -170,10 +170,14 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 
 	for key, value := range components {
 		for _, component := range value {
+			p := key
 			name := config.Expand[string](pf, component.Name)
 			cf := pf.Sub(pf.Join("profiles", name, key, name))
 
-			p := key
+			ct := geneos.ParseComponent(key)
+			if ct.ParentType != nil {
+				p = ct.ParentType.String()
+			}
 			if pkg, _, found := strings.Cut(name, ":"); found {
 				p = pkg
 			}
@@ -209,38 +213,37 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 
 // ApplyInstance applies the given common parameters and values to the
 // specified instance. Parameters listed in clearKeys are removed from
-// the instance configuration before applying new values.
-func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, options ...ProfileOption) (err error) {
+// the instance configuration before applying new values. The
+// forceRebuild flag determines whether the instance should be rebuilt
+// after applying changes.
+func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
 	var i geneos.Instance
-
-	opts := evaluateOptions(options...)
 
 	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
 
 	if len(instances) == 0 {
 		// create here
 		var port uint16
-		if len(opts.vals.Params) > 0 {
-			pos := slices.IndexFunc(opts.vals.Params, func(e string) bool {
+		if len(vals.Params) > 0 {
+			pos := slices.IndexFunc(vals.Params, func(e string) bool {
 				return strings.HasPrefix(e, "port=")
 			})
 			if pos >= 0 {
-				p := strings.TrimPrefix(opts.vals.Params[pos], "port=")
+				p := strings.TrimPrefix(vals.Params[pos], "port=")
 				pv, _ := strconv.Atoi(p)
 				port = uint16(pv)
 			}
 		}
 		// clear params, they should only come from config not command line
-		vals := opts.vals
 		vals.Params = []string{}
 		vals.SecureParams = values.SecureValues{}
 		i, err = instance.Add(geneos.LOCAL, ct, name,
 			instance.WithValues(vals),
-			instance.WithCertBundle(opts.common.CertBundle),
-			instance.WithCertBundlePassword(opts.common.CertBundlePassword),
+			instance.WithCertBundle(common.CertBundle),
+			instance.WithCertBundlePassword(common.CertBundlePassword),
 			instance.WithPort(port),
 			instance.WithProfiles(pf),
-			instance.WithImports(opts.common.Imports),
+			instance.WithImports(common.Imports),
 		)
 		if err != nil {
 			return err
@@ -257,16 +260,16 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, options
 		keyfile := config.Get[config.KeyFile](cf, "keyfile")
 
 		// Reset existing configuration for this instance before applying new values
-		for _, key := range opts.clearKeys {
+		for _, key := range clearKeys {
 			config.Delete(cf, key)
 		}
 
-		if ncf, err := values.Set(i, opts.vals, keyfile); err == nil {
+		if ncf, err := values.Set(i, vals, keyfile); err == nil {
 			i.SetConfig(ncf)
 		}
 
-		if opts.common.CertBundle != "" {
-			_, err := instance.ImportCertificates(i, opts.common.CertBundle, "", opts.common.CertBundlePassword)
+		if common.CertBundle != "" {
+			_, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
 			if err != nil {
 				i.Log().Error("failed to import certificates", slog.Any("error", err))
 			}
@@ -276,11 +279,11 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, options
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
 
-		if err = instance.ImportFiles(i, opts.common.Imports...); err != nil {
+		if err = instance.ImportFiles(i, common.Imports...); err != nil {
 			i.Log().Error("failed to import files", slog.Any("error", err))
 		}
 
-		i.Rebuild(opts.rebuild)
+		i.Rebuild(forceRebuild)
 	}
 
 	return nil
@@ -312,12 +315,7 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 
 		vals := ApplyCommonParams(pf, name, &common, lookup)
 
-		if err := ApplyInstance(pf, ct, instanceName,
-			ClearKeys(clearKeys),
-			WithCommon(common),
-			WithValues(vals),
-			Rebuild(forceRebuild),
-		); err != nil {
+		if err := ApplyInstance(pf, ct, instanceName, common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

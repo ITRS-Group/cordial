@@ -51,7 +51,11 @@ func (v *Variables) String() string {
 	}
 	var parts []string
 	for _, variable := range *v {
-		parts = append(parts, variable.Type+":"+variable.Name+"="+variable.Value)
+		// escape commas in the value to ensure correct parsing later,
+		// remove trailing backslashes that may interfere with parsing
+		escapedValue := strings.ReplaceAll(variable.Value, ",", "\\,")
+		escapedValue = strings.TrimRight(escapedValue, "\\")
+		parts = append(parts, variable.Type+":"+variable.Name+"="+escapedValue)
 	}
 	return strings.Join(parts, ",")
 }

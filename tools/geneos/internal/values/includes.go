@@ -32,7 +32,14 @@ const IncludeValuesOptionsText = "An include file in the format `PRIORITY:[PATH|
 
 // String is the string method for the IncludeValues type
 func (i *Includes) String() string {
-	return ""
+	if *i == nil {
+		return ""
+	}
+	var parts []string
+	for k, v := range *i {
+		parts = append(parts, k+":"+v)
+	}
+	return strings.Join(parts, ",")
 }
 
 func (i *Includes) Set(value string) error {
