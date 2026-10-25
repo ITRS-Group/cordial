@@ -72,6 +72,6 @@ func QuotedCmdLine(args []string) string {
 // CommandLine returns a slog.Attr representing the command line with
 // the given name and arguments. It redacts sensitive information using
 // the [Redact] function.
-func CommandLine(name string, args []string) slog.Attr {
-	return slog.String(name, QuotedCmdLine(args))
+func CommandLine(args []string) slog.Attr {
+	return slog.String("commandline", QuotedCmdLine(args))
 }

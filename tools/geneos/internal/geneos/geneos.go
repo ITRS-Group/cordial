@@ -161,7 +161,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 		if err = InitGlobalAudit(); err != nil {
 			log.Error("failed to initialize global audit", slog.Any("error", err))
 		}
-		logger.Audit().Event(event, logger.CommandLine("commandline", os.Args))
+		logger.Audit().Event(event, logger.CommandLine(os.Args))
 	}
 
 	// 4. import or initialise certs

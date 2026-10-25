@@ -142,7 +142,7 @@ func Start(i geneos.Instance, options ...any) error {
 	fmt.Printf("%s started with PID %d\n", i, pid)
 	if !so.skipAudit {
 		args := []any{
-			logger.CommandLine("command", cmd.Args),
+			logger.CommandLine(cmd.Args),
 			slog.Int("pid", pid),
 		}
 		i.AuditEvent("action/start", nil, args...)
