@@ -170,13 +170,24 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // the success or failure will be recorded in an attribute "result".
 func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	if ct.IsA("profile") {
-		// action the profile, then all the component instances
-		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
+		rs = make(responses.GeneralResponses)
+
+		// check we can action, check for protected instances and profile
+
+		// action instances first, stop on error
 		for _, n := range names {
 			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
 			respmap := DoInstances(event, instances, fn, values...)
 			maps.Copy(rs, respmap)
+			for _, resp := range respmap {
+				if resp.Err != nil {
+					return
+				}
+			}
 		}
+		// if we reached here, all instance actions succeeded, now action the profile itself
+		profileResp := DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
+		maps.Copy(rs, profileResp)
 		return
 	}
 
