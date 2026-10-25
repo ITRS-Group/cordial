@@ -30,12 +30,12 @@ import (
 
 // Config structure
 type Config struct {
-	config               *config
-	rwmutex              *sync.RWMutex // mutex to protect concurrent access to the above viper
-	configType           string        // The type of configuration file loaded ("rc", "json", "yaml" etc) - this is not the same as the config type used for unmarshalling, which is determined by the file extension or SetConfigType() call and is stored in viper.ConfigType()
-	defaultExpandOptions []ExpandOption
-	delimiter            string
-	appUserConfDir       string
+	config               *config        // the config structure associated with this Config instance, defaults to global
+	rwmutex              *sync.RWMutex  // mutex to protect concurrent access to the above viper
+	configType           string         // The type of configuration file loaded ("rc", "json", "yaml" etc) - this is not the same as the config type used for unmarshalling, which is determined by the file extension or SetConfigType() call and is stored in viper.ConfigType()
+	defaultExpandOptions []ExpandOption // the default set of expansion options to be used for this Config instance
+	delimiter            string         // the delimiter used for nested configuration keys, typically "."
+	appUserConfDir       string         // the directory path for the user's application-specific configuration files
 }
 
 // global is the default configuration container for non-method callers

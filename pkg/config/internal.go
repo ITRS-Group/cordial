@@ -157,21 +157,36 @@ func expand[T string | []byte](c *Config, input string, options ...ExpandOption)
 		input = fmt.Sprint(opts.initialValue)
 	}
 
-	value = _expand(input, func(s T) (r T) {
-		if bytes.HasPrefix([]byte(s), []byte("enc:")) {
-			if opts.noDecode {
-				// return original string after restoring surrounding
-				// ${...}
-				return T(fmt.Sprint(`${`, s, `}`))
-			}
-			return expandEncoded(c, s[4:], options...)
-		}
-		str, _ := c.expandRawString(string(s), options...)
-		return T(str)
-	})
+	if opts.loop == 0 {
+		opts.loop = 1
+	}
 
-	if opts.trimSpace {
-		value = T(strings.TrimSpace(string(value)))
+	// loop up to opts.loop iterations to prevent infinite recursion
+	// when expanding configuration values that reference other
+	// configuration items.
+	for i := 0; i < opts.loop; i++ {
+		value = _expand(input, func(s T) (r T) {
+			if bytes.HasPrefix([]byte(s), []byte("enc:")) {
+				if opts.noDecode {
+					// return original string after restoring surrounding
+					// ${...}
+					return T(fmt.Sprint(`${`, s, `}`))
+				}
+				return expandEncoded(c, s[4:], options...)
+			}
+
+			str, _ := c.expandRawString(string(s), options...)
+			return T(str)
+		})
+
+		if opts.trimSpace {
+			value = T(strings.TrimSpace(string(value)))
+		}
+		// if the value has not changed after the expansion, we can break early
+		if string(value) == input {
+			break
+		}
+		input = string(value)
 	}
 
 	if len(value) == 0 && !isZero(opts.defaultValue) {
@@ -275,11 +290,11 @@ func splitEncFields(enc string) (keyfiles, ciphertext string) {
 }
 
 // expandRawString is the internal function that expands the string s
-// using the same rules and options as [Expand] but treats the
-// whole of s as if it were wrapped in '${...}'. The function does most
-// of the core work for configuration expansion but is also exported for
-// use without the decoration required for configuration values,
-// allowing use against command line flag values, for example.
+// using the same rules and options as [Expand] but treats the whole of
+// s as if it were wrapped in '${...}'. The function does most of the
+// core work for configuration expansion but is also exported for use
+// without the decoration required for configuration values, allowing
+// use against command line flag values, for example.
 //
 // With the ExpandNonStringToCSV() or ExpandNonStringToJSON() options,
 // if the item to be expanded is a configuration value (either `config:`
@@ -302,7 +317,6 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 			ci := c.allSettings()
 			return fetchFile(ci, s, opts.trimSpace)
 		}
-		return
 
 	// if the string is either a `config:` or a plain reference to a
 	// config item, i.e. no colon
@@ -312,7 +326,8 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 		if strings.HasPrefix(s, "config:") || strings.Contains(s, c.delimiter) {
 			s = strings.TrimPrefix(s, "config:")
 			if !opts.expandNonString {
-				// this call to GetString() must NOT be recursive
+				// this call to GetString() must NOT be recursive,
+				// opts.loop is ignored here
 				value = c.config.GetString(s)
 				if opts.trimSpace {
 					value = strings.TrimSpace(value)
@@ -381,8 +396,6 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 			value = strings.TrimSpace(value)
 		}
 
-		return
-
 	// if the string is an environment variable reference then try to
 	// resolve it
 	case strings.HasPrefix(s, "env:"):
@@ -390,25 +403,17 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 		if opts.trimSpace {
 			value = strings.TrimSpace(value)
 		}
-		return
 
 	default:
 		// check for any registered functions and call that with the
 		// whole of the config string. there must be a ":" here, else
 		// the above test would have picked it up. it is up to the
 		// function called to trim whitespace, if required.
-		fname, arg, found := strings.Cut(s, ":")
-		if !found {
-			return
-		}
-		ci := c.allSettings()
-		if fnmap, ok := opts.funcMaps[fname]; ok {
-			if opts.trimPrefix {
-				value, err = fnmap.fn(ci, arg, opts.trimSpace, fnmap.data...)
-			} else {
+		if fname, _, found := strings.Cut(s, ":"); found {
+			ci := c.allSettings()
+			if fnmap, ok := opts.funcMaps[fname]; ok {
 				value, err = fnmap.fn(ci, s, opts.trimSpace, fnmap.data...)
 			}
-			return
 		}
 	}
 
@@ -417,7 +422,7 @@ func (c *Config) expandRawString(s string, options ...ExpandOption) (value strin
 
 func _expand[T string | []byte](s string, mapping func(T) T) T {
 	var buf []byte
-	// // ${} is all ASCII, so bytes are fine for this operation.
+	// `${...}`` is all ASCII, so bytes are fine for this operation.
 	i := 0
 
 	for j := 0; j < len(s); j++ {

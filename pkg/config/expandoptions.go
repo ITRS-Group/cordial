@@ -28,23 +28,23 @@ type fnmap struct {
 }
 
 type expandOptions struct {
-	cf                 *Config // the Config object is included in the options to allow for options that need to access configuration settings, such as decoder configs
-	defaultValue       any
-	expandNonString    bool
-	expandNonStringCSV bool
-	expressions        bool
-	externalFuncMaps   bool
-	// funcMaps           map[string]func(configItems map[string]any, name string, trim bool) (string, error)
-	funcMaps     map[string]fnmap
-	initialValue any
-	lookupTables []map[string]string
-	noDecode     bool
-	noExpand     bool
-	promoteFrom  []string // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
-	replacements []string
-	trimPrefix   bool
-	trimSpace    bool
-	useKeyFile   string
+	cf                 *Config             // the Config object is included in the options to allow for options that need to access configuration settings, such as decoder configs
+	defaultValue       any                 // the default value to be used if no other value is found during expansion
+	expandNonString    bool                // whether to attempt expansion on non-string values, such as integers or booleans
+	expandNonStringCSV bool                // whether to attempt expansion on non-string values that are represented as comma-separated values (CSV)
+	expressions        bool                // whether to enable expression evaluation during expansion
+	externalFuncMaps   bool                // whether to include the default external function maps (http, https, file) during expansion
+	funcMaps           map[string]fnmap    // the set of function maps available for expansion, keyed by function name
+	initialValue       any                 // the initial value to be used for expansion before any other processing
+	lookupTables       []map[string]string // a list of lookup tables to be used during expansion, in order of precedence
+	loop               int                 // the maximum number of iterations to perform during expansion to prevent infinite loops, default 10
+	noDecode           bool                // whether to skip decoding of values during expansion
+	noExpand           bool                // whether to skip expansion entirely
+	promoteFrom        []string            // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
+	replacements       []string            // a list of string replacements to apply during expansion
+	trimPrefix         bool                // whether to trim the prefix from the expanded value
+	trimSpace          bool                // whether to trim leading and trailing whitespace from the expanded value
+	useKeyFile         string              // the path to a key file to be used for decryption during expansion
 }
 
 // ExpandOption control the way configuration options undergo string
@@ -71,6 +71,7 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 		cf:               c, // default to config c if not included in options
 		externalFuncMaps: true,
 		funcMaps:         map[string]fnmap{},
+		loop:             10, // default maximum number of iterations during expansion
 		replacements:     []string{},
 		trimSpace:        true,
 	}
@@ -210,18 +211,6 @@ func Expressions(yes bool) ExpandOption {
 	}
 }
 
-// TrimPrefix enables the removal of the prefix from the string passed
-// to expansion functions. If this is not set then URLs can be passed
-// as-is since the prefix is part of the URL. If set then URLs would
-// need the schema explicitly added after the prefix. Using this option
-// allows standard function like [strings.ToUpper] to be used without
-// additional wrappers.
-func TrimPrefix() ExpandOption {
-	return func(e *expandOptions) {
-		e.trimPrefix = true
-	}
-}
-
 // TrimSpace enables the removal of leading and trailing spaces on all
 // values in an expansion. The default is `true`. If a default
 // value is given using the Default() then this is never trimmed.
@@ -321,5 +310,14 @@ func ExpandNonStringToJSON() ExpandOption {
 func PromoteFrom(names ...string) ExpandOption {
 	return func(eo *expandOptions) {
 		eo.promoteFrom = names
+	}
+}
+
+// Loop sets the maximum number of iterations to perform during expansion
+// to prevent infinite loops when expanding configuration values that
+// reference other configuration items. The default value is 10.
+func Loop(max int) ExpandOption {
+	return func(eo *expandOptions) {
+		eo.loop = max
 	}
 }
