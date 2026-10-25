@@ -215,7 +215,7 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 // specified instance. Parameters listed in clearKeys are removed from
 // the instance configuration before applying new values. The
 // forceRebuild flag determines whether the instance should be rebuilt
-// after applying changes.
+// after applying changes if it's config.rebuild is not set to always..
 func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
 	var i geneos.Instance
 

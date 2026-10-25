@@ -72,6 +72,10 @@ This release comes with significant new features for the `geneos` program, and s
 
   * Both `webserver` and `sso-agent` have had special support for external, Java command-line truststores removed. This does not affect the component specific functionality which uses specific configuration files. If you need to use additional truststores, you should configure them using the `options` parameters for instances.
 
+* `pkg/config`
+
+  * Add support for looped expansion of configuration values (up to 10 times by default to prevent infinite recursion). This means that now configuration values that reference other configuration items will be repeatedly expanded up to a specified number of iterations. There is a small chance this will change existing behaviour of user-maintained configuration files if they rely on single-pass expansion.
+
 ## Version v1.30.0 Fixes
 
 * `pkg/certs`
