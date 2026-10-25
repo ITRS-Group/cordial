@@ -69,11 +69,12 @@ var snapshotCmd = &cobra.Command{
 	Long:         snapshotCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		// CmdComponent:   "gateway",
 		CmdGlobal:                "false",
 		CmdRequireHome:           "true",
 		CmdWildcardNames:         "true",
 		CmdAllInstancesMustMatch: "true",
+		CmdAuditCommand:          "false",
+		CmdAuditActions:          "false",
 	},
 	Run: func(cmd *cobra.Command, _ []string) {
 		var err error
