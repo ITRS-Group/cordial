@@ -120,8 +120,6 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			return vals, geneos.ErrNotExist
 		}
 
-		log.Debug("for-each", slog.Any("matched", names))
-
 		// now ignore instances that match the ignore patterns
 		if len(entity.Ignore) > 0 {
 			filtered := make([]string, 0, len(names))
@@ -165,7 +163,6 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 
 			var attrs values.NameValues
 			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String()), ",") {
-				log.Debug("expanded attribute", slog.String("attr", attr))
 				attrs = append(attrs, attr)
 			}
 
