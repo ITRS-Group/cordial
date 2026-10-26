@@ -45,6 +45,23 @@ var profilesDefault []byte
 
 var Profiles *config.Config
 
+// IncludeFlags defines the list of command-line flags that should be
+// included when expanding profile options and also saved in the profile
+// configuration. This ensures that only relevant flags are considered
+// during profile processing, avoiding unintended overrides from
+// unrelated flags.
+var IncludeFlags = []string{
+	"attribute",
+	"base",
+	"env",
+	"gateway",
+	"include",
+	"insecure",
+	"minimal",
+	"type",
+	"variable",
+}
+
 // Initialise sets up the profiles.yaml  file in the user's
 // configuration directory, creating it from embedded defaults if it
 // does not already exist.

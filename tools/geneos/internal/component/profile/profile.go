@@ -192,7 +192,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	}
 
 	// update flags from saved set ?
-	confOpts := profile.PflagSetToMap(opts.Flags)
+	confOpts := profile.PflagSetToMap(opts.Flags, profile.IncludeFlags...)
 	for _, v := range opts.Values.Params {
 		name, value, found := strings.Cut(v, "=")
 		if found {

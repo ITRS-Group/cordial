@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,9 +18,29 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
-func PflagSetToMap(flagset *pflag.FlagSet) map[string]any {
+// PflagSetToMap converts a pflag.FlagSet into a map[string]any, parsing
+// the flag values according to their types. Only include flags that
+// match the glob patterns in the include args. If unspecified, all
+// flags are included.
+func PflagSetToMap(flagset *pflag.FlagSet, include ...string) map[string]any {
 	flags := make(map[string]any)
 	flagset.VisitAll(func(f *pflag.Flag) {
+		includeFlag := false
+		if len(include) == 0 {
+			includeFlag = true
+		} else {
+			for _, pattern := range include {
+				matched, _ := path.Match(pattern, f.Name)
+				if matched {
+					includeFlag = true
+					break
+				}
+			}
+		}
+		if !includeFlag {
+			return
+		}
+
 		switch f.Value.Type() {
 		case "bool":
 			flags[f.Name], _ = strconv.ParseBool(f.Value.String())
@@ -31,6 +52,7 @@ func PflagSetToMap(flagset *pflag.FlagSet) map[string]any {
 			flags[f.Name] = f.Value.String()
 		}
 	})
+
 	// demove debug, if it exists
 	delete(flags, "debug")
 	return flags
