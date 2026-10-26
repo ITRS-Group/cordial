@@ -28,6 +28,7 @@ var cleanCmdDescription string
 
 var cleanKeepAll, cleanCmdKeepStartupData bool
 var cleanOptions cleaningOptions
+var cleanCmdOutput string
 
 type filterType struct {
 	XPath      string
@@ -55,6 +56,15 @@ func init() {
 		Types:      optionSlice{"remove-empty"},
 		Dataviews:  optionSlice{"keep"},
 	}
+
+	cleanCmd.Flags().StringVarP(&cleanCmdOutput, "output", "o", "",
+
+		`Specify the output `+"`directory`"+` for cleaned ADB files.
+If not specified, the cleaned files will replace the
+original files in place and a backup of the original
+will be created with a timestamp added before the ".adb"
+extension.
+`)
 
 	cleanCmd.Flags().Var(&cleanOptions.Gateways, "gateway", "Gateway name updates. Default 'remove-all'")
 
@@ -268,7 +278,7 @@ var cleanCmd = &cobra.Command{
 		}
 
 		for _, file := range paths {
-			if err = cleanCommand(file); err != nil {
+			if err = cleanCommand(file, cleanCmdOutput); err != nil {
 				log.Error("Failed to clean file", "file", file, "error", err)
 			}
 		}
@@ -280,20 +290,30 @@ var cleanCmd = &cobra.Command{
 // cleanCommand processes a single Activedashboard file, creating a
 // cleaned version with updated XPaths and optionally keeping startup
 // data (any `.dbo` files in the archive).
-func cleanCommand(file string) (err error) {
+func cleanCommand(file, outputDir string) (err error) {
+	dest := file
+
+	// create output directory if specified, or fail
+	if outputDir != "" {
+		if err := os.MkdirAll(outputDir, 0775); err != nil {
+			return err
+		}
+		dest = filepath.Join(outputDir, filepath.Base(file))
+	}
+
 	zr, err := zip.OpenReader(file)
 	if err != nil {
 		return
 	}
 	defer zr.Close()
 
-	w, err := os.Create(file + ".cleaned")
+	w, err := os.Create(dest + ".cleaned")
 	if err != nil {
 		return
 	}
 	// must close before remove on Windows, so put the remove on the
 	// defer stack first
-	defer os.Remove(file + ".cleaned")
+	defer os.Remove(dest + ".cleaned")
 	defer w.Close()
 
 	zw := zip.NewWriter(w)
@@ -341,15 +361,35 @@ func cleanCommand(file string) (err error) {
 	w.Close()
 	zr.Close()
 
-	// back up original file with timestamp
-	ts := time.Now().Format("20060102150405")
-	ext := filepath.Ext(file)
-	pre := strings.TrimSuffix(file, ext)
-	if err = os.Rename(file, pre+"-"+ts+ext); err != nil {
-		// fail if we cannot backup file
-		return
+	backup := true
+	if outputDir != "" {
+		absOutDir, err := filepath.Abs(outputDir)
+		if err != nil {
+			return err
+		}
+		srcDir, err := filepath.Abs(filepath.Dir(file))
+		if err != nil {
+			return err
+		}
+
+		// if the source and dest directories are different, no backup is needed
+		if absOutDir != srcDir {
+			backup = false
+		}
 	}
-	return os.Rename(file+".cleaned", file)
+
+	if backup {
+		// back up original file with timestamp
+		ts := time.Now().Format("20060102150405")
+		ext := filepath.Ext(file)
+		pre := strings.TrimSuffix(file, ext)
+		if err = os.Rename(file, pre+"-"+ts+ext); err != nil {
+			// fail if we cannot backup file
+			return
+		}
+	}
+
+	return os.Rename(dest+".cleaned", dest)
 }
 
 // cleanActivedashboard processes an Activedashboard extension file,
