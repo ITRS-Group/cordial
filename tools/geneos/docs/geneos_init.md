@@ -77,7 +77,6 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -l, --log                              Follow logs after starting instance(s)
   -F, --force                            Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname
-  -T, --tls                              Create internal certificates for TLS support
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -86,7 +85,7 @@ geneos init [PROFILE] [flags] [DIRECTORY]
       --insecure                         Do not create internal certificates for TLS support
   -A, --archive string                   Directory of releases for installation
   -N, --nexus                            Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -S, --snapshots                        Download from nexus snapshots. Requires -N
+  -S, --snapshots                        Download from nexus snapshots. Implies -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string                  Username for downloads (password prompted)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE

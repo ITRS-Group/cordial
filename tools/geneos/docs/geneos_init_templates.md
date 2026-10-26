@@ -36,8 +36,7 @@ geneos init templates [TYPE] [flags]
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
-  -S, --snapshots                        Download from nexus snapshots. Requires -N
-  -T, --tls                              Create internal certificates for TLS support
+  -S, --snapshots                        Download from nexus snapshots. Implies -N
   -u, --username string                  Username for downloads (password prompted)
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
