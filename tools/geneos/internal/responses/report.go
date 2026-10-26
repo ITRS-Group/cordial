@@ -57,14 +57,13 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 
 	startedJSON := false
 
-OUTER:
 	for _, k := range slices.Sorted(maps.Keys(responses)) {
 		resp := responses[k]
 		if resp.Err != nil && opts.skiponerr {
-			for _, i := range opts.ignoreerr {
-				if errors.Is(resp.Err, i) {
-					continue OUTER
-				}
+			if slices.ContainsFunc(opts.ignoreerr, func(i error) bool {
+				return errors.Is(resp.Err, i)
+			}) {
+				continue
 			}
 		}
 

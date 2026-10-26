@@ -50,6 +50,18 @@ var Profiles *config.Config
 // configuration. This ensures that only relevant flags are considered
 // during profile processing, avoiding unintended overrides from
 // unrelated flags.
+//
+// Currently they are:
+//
+//	"attribute"
+//	"base"
+//	"env"
+//	"gateway"
+//	"include"
+//	"insecure"
+//	"minimal"
+//	"type"
+//	"variable"
 var IncludeFlags = []string{
 	"attribute",
 	"base",

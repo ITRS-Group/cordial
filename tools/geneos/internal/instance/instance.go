@@ -168,30 +168,41 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 // If the command annotations indicate that auditing is enabled, an
 // audit event will be generated for each instance function called and
 // the success or failure will be recorded in an attribute "result".
-func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	if ct.IsA("profile") {
 		rs = make(responses.GeneralResponses)
 
-		// check we can action, check for protected instances and profile
-
-		// action instances first, stop on error
 		for _, n := range names {
+			// action instances first, stop on error
 			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
-			respmap := DoInstances(event, instances, fn, values...)
+			respmap := DoInstances(action, instances, fn, values...)
 			maps.Copy(rs, respmap)
+
+			// quit early if any instance returned an error
 			for _, resp := range respmap {
 				if resp.Err != nil {
 					return
 				}
 			}
+
+			// do profile after instances
+			p, err := Get(ct, n)
+			if err != nil {
+				log.Debug("failed to get profile %s: %v", n, err)
+				return
+			}
+			resp := fn(p, values...)
+			responses.Finished(resp)
+			if geneos.AuditActions() && !resp.Audited {
+				p.AuditEvent("action/"+action, resp.Err)
+				resp.Audited = true
+			}
+			rs["_"+p.String()] = resp
 		}
-		// if we reached here, all instance actions succeeded, now action the profile itself
-		profileResp := DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
-		maps.Copy(rs, profileResp)
 		return
 	}
 
-	return DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
+	return DoInstances(action, Instances(h, ct, MatchNames(names...)), fn, values...)
 }
 
 // DoSerial is a variant of Do that executes the function calls
@@ -200,22 +211,41 @@ func Do(event string, h *geneos.Host, ct *geneos.Component, names []string, fn f
 // If the command annotations indicate that auditing is enabled, an
 // audit event will be generated for each instance function called and
 // the success or failure will be recorded in an attribute "result".
-func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	rs = make(responses.GeneralResponses)
 
 	if ct.IsA("profile") {
-		rs = DoInstances(event, Instances(h, ct, MatchNames(names...)), fn, values...)
 		for _, n := range names {
+
+			// the instances
 			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
 			for _, i := range instances {
 				resp := fn(i, values...)
 				responses.Finished(resp)
 				if geneos.AuditActions() && !resp.Audited {
-					i.AuditEvent("action/"+event, resp.Err)
+					i.AuditEvent("action/"+action, resp.Err)
 					resp.Audited = true
 				}
-				rs[resp.Instance.String()] = resp
+				rs[i.String()] = resp
 			}
+
+			// do profile after instances
+			p, err := Get(ct, n)
+			if err != nil {
+				log.Debug("failed to get profile %s: %v", n, err)
+				continue
+			}
+			resp := fn(p, values...)
+			responses.Finished(resp)
+			if geneos.AuditActions() && !resp.Audited {
+				p.AuditEvent("action/"+action, resp.Err)
+				resp.Audited = true
+			}
+			rs["_"+p.String()] = resp
+			if resp.Err != nil {
+				return
+			}
+
 		}
 		return
 	}
@@ -226,10 +256,10 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 		resp := fn(c, values...)
 		responses.Finished(resp)
 		if geneos.AuditActions() && !resp.Audited {
-			c.AuditEvent("action/"+event, resp.Err)
+			c.AuditEvent("action/"+action, resp.Err)
 			resp.Audited = true
 		}
-		rs[resp.Instance.String()] = resp
+		rs[c.String()] = resp
 	}
 
 	return
@@ -243,7 +273,7 @@ func DoSerial(event string, h *geneos.Host, ct *geneos.Component, names []string
 // If the command annotations indicate that auditing is enabled, an
 // audit event will be generated for each instance function called and
 // the success or failure will be recorded in an attribute "result".
-func DoInstances(event string, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+func DoInstances(action string, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
 
 	rs = make(responses.GeneralResponses, len(instances))
@@ -260,7 +290,7 @@ func DoInstances(event string, instances []geneos.Instance, fn func(geneos.Insta
 			resp := fn(c, values...)
 			responses.Finished(resp)
 			if geneos.AuditActions() && !resp.Audited {
-				c.AuditEvent("action/"+event, resp.Err)
+				c.AuditEvent("action/"+action, resp.Err)
 				resp.Audited = true
 			}
 			ch <- resp
