@@ -24,7 +24,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -49,8 +48,6 @@ var deployCmdPassword, deployCmdBundlePassword config.Secret
 var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = values.Values{}
-
-// var deployCmdProfiles string
 
 var flags *pflag.FlagSet
 
@@ -113,7 +110,6 @@ func init() {
 	deployCmd.Flags().Var(&deployCmdExtras.Headers, "header", values.HeadersOptionsText)
 
 	deployCmd.Flags().SortFlags = false
-	flags = deployCmd.Flags()
 }
 
 //go:embed _docs/deploy.md
@@ -210,7 +206,7 @@ var deployCmd = &cobra.Command{
 				profile.WithCertBundle(deployCmdInstanceBundle),
 				profile.WithCertBundlePassword(deployCmdBundlePassword),
 				profile.WithValues(deployCmdExtras),
-				profile.WithFlags(flags),
+				profile.WithFlags(command.Flags()),
 				profile.WithFollowLogs(deployCmdLogs),
 				profile.WithImportFiles(deployCmdImportFiles),
 				profile.WithInsecure(deployCmdInsecure),
@@ -295,155 +291,4 @@ var deployCmd = &cobra.Command{
 
 		return
 	},
-}
-
-func deployProfile(h *geneos.Host, ct *geneos.Component, name string) (err error) {
-	// discover which components are in the profile
-	pf := Profiles
-
-	instances := profile.ListComponents(h, pf, name)
-	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
-
-	installed := []geneos.Instance{}
-	for _, pi := range instances {
-		ct := geneos.ParseComponent(pi.Component)
-		if ct == nil {
-			log.Debug("unknown component type", slog.String("component", pi.Component))
-			continue
-		}
-
-		pkgct := geneos.ParseComponent(pi.Package)
-
-		if pkgct == nil {
-			log.Debug("unknown package component type", slog.String("package", pi.Package))
-			continue
-		}
-
-		// create required component directories, for pkg type, speculatively
-		if err = pkgct.MakeDirs(h); err != nil {
-			return err
-		}
-
-		// deploy templates if component requires them, do not overwrite
-		// existing
-		//
-		// templates are based on real component type (e.g. san and not fa2)
-		if len(ct.Templates) != 0 {
-			templateDir := h.PathTo(ct, "templates")
-			h.MkdirAll(templateDir, 0775)
-
-			// TODO: loop and single config makes no sense
-			for _, t := range ct.Templates {
-				tmpl := t.Content
-				output := path.Join(templateDir, t.Filename)
-				if _, err := h.Stat(output); err == nil {
-					continue
-				}
-				if t, ok := config.Lookup[string](pi.Config, "template"); ok {
-					if tmpl, err = geneos.ReadAll(t); err != nil {
-						continue
-					}
-				}
-				if err = h.WriteFile(output, tmpl, 0664); err != nil {
-					continue
-				}
-				fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
-			}
-		}
-
-		// Package installation
-
-		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
-		log.Debug("version", slog.String("component", pkgct.String()), slog.String("version", version))
-		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
-			if !deployCmdLocal && deployCmdUsername != "" && deployCmdPassword == nil {
-				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
-				if err == config.ErrNotInteractive {
-					err = fmt.Errorf("%w and password required", err)
-					continue
-				}
-				// ok to defer clear here as the options are used before returning to caller
-				defer clear(deployCmdPassword)
-			}
-
-			if deployCmdSnapshot {
-				deployCmdNexus = true
-			}
-			options := []geneos.GeneosOption{
-				geneos.Version(deployCmdVersion),
-				geneos.Basename(deployCmdBase),
-				geneos.UseRoot(config.Get[string](h.Config, cordial.ExecutableName())),
-				geneos.LocalOnly(deployCmdLocal),
-				geneos.NoSave(deployCmdNoSave || deployCmdLocal),
-				geneos.OverrideVersion(deployCmdOverride),
-				geneos.Password(deployCmdPassword),
-				geneos.Username(deployCmdUsername),
-				geneos.Headers(deployCmdExtras.Headers...),
-				geneos.UseNexusSnapshots(deployCmdSnapshot),
-				geneos.UseNexus(deployCmdNexus),
-			}
-			if deployCmdArchive != "" {
-				options = append(options,
-					geneos.Source(deployCmdArchive),
-				)
-			}
-
-			log.Debug("installing", slog.String("host", h.String()), slog.String("package", pkgct.String()))
-
-			if err = geneos.Install(h, pkgct, options...); err != nil {
-				if errors.Is(err, fs.ErrExist) {
-					err = nil
-				} else {
-					continue
-				}
-			}
-
-			// TODO: pull in values from profiles per instance
-
-			i, err := instance.Add(h, ct, pi.Name,
-				instance.WithPort(deployCmdPort),
-				instance.WithValues(deployCmdExtras),
-				instance.WithTemplate(deployCmdTemplate),
-				instance.Base(deployCmdBase),
-				instance.Insecure(deployCmdInsecure),
-				instance.WithCertBundle(deployCmdInstanceBundle),
-				instance.WithCertBundlePassword(deployCmdBundlePassword),
-				instance.WithKeyfile(deployCmdKeyfile),
-				instance.KeyfileCRC(deployCmdKeyfileCRC),
-				instance.WithImports(deployCmdImportFiles),
-				instance.StartAfterAdd(deployCmdStart),
-				instance.WithFlags(flags),
-				instance.WithProfiles(Profiles),
-			)
-			if err != nil {
-				return err
-			}
-			installed = append(installed, i)
-		}
-	}
-
-	// finally, install the profile instance
-	_, err = instance.Add(h, ct, name,
-		instance.WithPort(deployCmdPort),
-		instance.WithValues(deployCmdExtras),
-		instance.WithProfiles(Profiles),
-		instance.Base(deployCmdBase),
-		instance.Insecure(deployCmdInsecure),
-		instance.WithCertBundle(deployCmdInstanceBundle),
-		instance.WithCertBundlePassword(deployCmdBundlePassword),
-		instance.WithKeyfile(deployCmdKeyfile),
-		instance.KeyfileCRC(deployCmdKeyfileCRC),
-		instance.WithImports(deployCmdImportFiles),
-		instance.StartAfterAdd(deployCmdStart),
-		instance.WithFlags(flags),
-	)
-	if err != nil {
-		return err
-	}
-
-	if deployCmdLogs {
-		instance.FollowInstanceLogs(installed, instance.WithStderr(true))
-	}
-
-	return nil
 }
