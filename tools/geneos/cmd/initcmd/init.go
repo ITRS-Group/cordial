@@ -89,7 +89,7 @@ func init() {
 	initCmd.PersistentFlags().StringVarP(&initOptions.Name, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 
 	initCmd.PersistentFlags().BoolVarP(&initOptions.TLS, "tls", "T", false, "Create internal certificates for TLS support")
-	initCmd.Flags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
+	initCmd.PersistentFlags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
 
 	initCmd.PersistentFlags().StringVarP(&initOptions.SigningBundle, "signing-bundle", "C", "", "signing bundle in PEM or PFX/PKCS#12 format.\nUse a dash ('-') to be prompted for PEM from console.\nPFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension")
 
@@ -108,7 +108,7 @@ func init() {
 
 	initCmd.PersistentFlags().StringVarP(&initOptions.Archive, "archive", "A", "", archiveOptionsText)
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Nexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires ITRS internal credentials")
-	initCmd.PersistentFlags().BoolVarP(&initOptions.Snapshot, "snapshots", "S", false, "Download from nexus snapshots. Requires -N")
+	initCmd.PersistentFlags().BoolVarP(&initOptions.Snapshot, "snapshots", "S", false, "Download from nexus snapshots. Implies -N")
 
 	initCmd.PersistentFlags().StringVarP(&initOptions.Version, "version", "V", "latest", "Download matching `VERSION`, defaults to latest. Doesn't work for EL8 archives.")
 	initCmd.PersistentFlags().StringVarP(&initOptions.DLUsername, "username", "u", "", "Username for downloads (password prompted)")
