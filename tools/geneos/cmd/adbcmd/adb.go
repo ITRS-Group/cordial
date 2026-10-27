@@ -38,6 +38,7 @@ var adbCmdDescription string
 
 var adbCmd = &cobra.Command{
 	Use:          "adb",
+	Aliases:      []string{"dashboard", "dashboards"},
 	GroupID:      cmd.CommandGroupSubsystems,
 	Short:        "ADB File Operations",
 	Long:         adbCmdDescription,
