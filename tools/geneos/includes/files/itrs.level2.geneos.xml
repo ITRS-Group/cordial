@@ -1,20 +1,25 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.4.2-250625/gateway.xsd">
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-10-25 13:13:28 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<types>
 		<typeGroup name="Geneos">
-			<type name="Gateway Host">
+			<type disabled="true" name="Gateway Host">
 				<samplerInclude ref="Gateway Process"/>
 				<samplerInclude ref="Gateway Log"/>
 			</type>
-			<type name="Licd Host">
+			<type disabled="true" name="Licd Host">
 				<samplerInclude ref="Licd Process"/>
 				<samplerInclude ref="Licd Log"/>
+			</type>
+			<type name="Level 2 - Geneos Gateway">
+				<samplerInclude ref="Level 2 - Geneos Gateway Logs"/>
+				<samplerInclude ref="Level 2 - Geneos Gateway Process"/>
 			</type>
 		</typeGroup>
 	</types>
 	<samplers>
 		<samplerGroup name="Geneos">
-			<sampler name="Geneos Processes">
+			<sampler disabled="true" name="Geneos Processes">
 				<var-group>
 					<data>Geneos</data>
 				</var-group>
@@ -29,7 +34,7 @@
 					</processes>
 				</plugin>
 			</sampler>
-			<sampler name="Geneos Logs">
+			<sampler disabled="true" name="Geneos Logs">
 				<var-group>
 					<data>Geneos</data>
 				</var-group>
@@ -60,7 +65,7 @@
 	</samplers>
 	<samplerIncludes>
 		<samplerIncludeGroup name="Geneos">
-			<samplerInclude name="Gateway Process">
+			<samplerInclude disabled="true" name="Gateway Process">
 				<sampler ref="Geneos Processes"/>
 				<plugin>
 					<processes>
@@ -72,7 +77,7 @@
 					</processes>
 				</plugin>
 			</samplerInclude>
-			<samplerInclude name="Licd Process">
+			<samplerInclude disabled="true" name="Licd Process">
 				<sampler ref="Geneos Processes"/>
 				<plugin>
 					<processes>
@@ -84,7 +89,7 @@
 					</processes>
 				</plugin>
 			</samplerInclude>
-			<samplerInclude name="Netprobe Process">
+			<samplerInclude disabled="true" name="Netprobe Process">
 				<sampler ref="Geneos Processes"/>
 				<plugin>
 					<processes>
@@ -96,7 +101,7 @@
 					</processes>
 				</plugin>
 			</samplerInclude>
-			<samplerInclude name="Gateway Log">
+			<samplerInclude disabled="true" name="Gateway Log">
 				<sampler ref="Geneos Logs"/>
 				<plugin>
 					<fkm>
@@ -113,7 +118,7 @@
 					</fkm>
 				</plugin>
 			</samplerInclude>
-			<samplerInclude name="Netprobe Log">
+			<samplerInclude disabled="true" name="Netprobe Log">
 				<sampler ref="Geneos Logs"/>
 				<plugin>
 					<fkm>
@@ -130,7 +135,7 @@
 					</fkm>
 				</plugin>
 			</samplerInclude>
-			<samplerInclude name="Licd Log">
+			<samplerInclude disabled="true" name="Licd Log">
 				<sampler ref="Geneos Logs"/>
 				<plugin>
 					<fkm>
@@ -145,6 +150,39 @@
 							</file>
 						</files>
 					</fkm>
+				</plugin>
+			</samplerInclude>
+			<samplerInclude name="Level 2 - Geneos Gateway Logs">
+				<sampler ref="Logs"/>
+				<plugin>
+					<fkm>
+						<files>
+							<file>
+								<source>
+									<processDescriptor ref="Geneos Gateway"/>
+								</source>
+							</file>
+							<file>
+								<source>
+									<filename>
+										<var ref="consolelogfile"/>
+									</filename>
+								</source>
+							</file>
+						</files>
+					</fkm>
+				</plugin>
+			</samplerInclude>
+			<samplerInclude name="Level 2 - Geneos Gateway Process">
+				<sampler ref="Processes"/>
+				<plugin>
+					<processes>
+						<processes>
+							<process>
+								<processDescriptor ref="Geneos Gateway"/>
+							</process>
+						</processes>
+					</processes>
 				</plugin>
 			</samplerInclude>
 		</samplerIncludeGroup>
@@ -330,6 +368,30 @@
 					<logFile>
 						<var ref="_geneosHome"/>
 						<data>/licd/licds/perm/licd.log</data>
+					</logFile>
+				</processDescriptor>
+			</processDescriptorGroup>
+			<processDescriptorGroup name="Geneos">
+				<processDescriptor name="Geneos Gateway">
+					<alias>
+						<data>Geneos Gateway</data>
+					</alias>
+					<ID>
+						<searchString>
+							<data>gateway2.linux_64.*</data>
+							<var ref="gatewayName"/>
+						</searchString>
+					</ID>
+					<start>
+						<data>/usr/local/bin/geneos start gateway </data>
+						<var ref="gatewayName"/>
+					</start>
+					<stop>
+						<data>/usr/local/bin/geneos stop gateway </data>
+						<var ref="gatewayName"/>
+					</stop>
+					<logFile>
+						<var ref="logfile"/>
 					</logFile>
 				</processDescriptor>
 			</processDescriptorGroup>

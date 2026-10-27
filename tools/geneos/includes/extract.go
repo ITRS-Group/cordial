@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -19,18 +20,19 @@ import (
 )
 
 const (
-	IncludePattern = "itrs.*.xml"
-	ConfigPattern  = "config.*.xml"
+	IncludePattern = "files/itrs.*.xml"
+	ConfigPattern  = "files/config.*.xml"
 )
 
 //go:embed _docs/extract.md
 var includeExtractCmdDescription string
 
-var includeExtractCmdForce bool
+var includeExtractCmdUpdate, includeExtractCmdForce bool
 
 func init() {
 	includesCmd.AddCommand(includesExtractCmd)
 
+	includesExtractCmd.Flags().BoolVarP(&includeExtractCmdUpdate, "update", "U", false, "Update version links for existing include files")
 	includesExtractCmd.Flags().BoolVarP(&includeExtractCmdForce, "force", "F", false, "Overwrite existing files")
 }
 
@@ -52,6 +54,12 @@ var includesExtractCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if includeExtractCmdUpdate {
+			err = Update(h, "", includeExtractCmdForce)
+			if err != nil {
+				return err
+			}
+		}
 		return nil
 	},
 }
@@ -64,11 +72,13 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	ct := geneos.ParseComponent("gateway")
 	version := cordial.VERSION
 
+	fmt.Println("Extracting include files for version", version)
+
 	// check for an existing directory and only proceed if --force is given
 	dir := h.PathTo(ct, "includes", version)
 	st, _ := h.Stat(dir)
 	if st != nil && !override {
-		log.Debug("includes directory already exists", slog.String("directory", dir))
+		fmt.Println("includes directory already exists at", dir, "and --force not specified, skipping extraction")
 		return nil
 	}
 	if err = h.MkdirAll(dir, 0755); err != nil {
@@ -78,13 +88,20 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	// extract includes matching pattern from Includes FS
 	// backup existing includes if different from the source (implementation would go here)
 	incs, err := fs.Glob(IncludesFS, IncludePattern)
+	if err != nil {
+		return err
+	}
+	if len(incs) == 0 {
+		fmt.Println("No include files found matching:", IncludePattern)
+		return nil
+	}
 
 	for _, inc := range incs {
 		efi, err := fs.Stat(IncludesFS, inc)
 		if err != nil {
 			continue
 		}
-		p := h.Join(dir, inc)
+		p := h.Join(dir, filepath.Base(inc))
 		fi, err := h.Stat(p)
 		if err == nil {
 			if efi.Size() == fi.Size() {
@@ -101,7 +118,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 				defer f2h.Close()
 				if compareContents(f1h, f2h) {
 					// contents are the same, skip
-					log.Debug("Skipping identical include file", slog.String("include", inc))
+					fmt.Println("Skipping existing unchanged include file", p)
 					continue
 				}
 			}
@@ -111,6 +128,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 			if err := h.Rename(p, backupPath); err != nil {
 				return err
 			}
+			fmt.Println("Backed up existing include file to", backupPath)
 		} else if errors.Is(err, fs.ErrNotExist) {
 			// file does not exist, handle accordingly
 		}
@@ -120,6 +138,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 			continue
 		}
 		defer src.Close()
+
 		dst, err := h.Create(p, 0444)
 		if err != nil {
 			continue
@@ -129,6 +148,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 		if err != nil {
 			continue
 		}
+		fmt.Println("Extracted include file", p)
 	}
 
 	// now extract config files that do not exist
@@ -143,7 +163,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 		return err
 	}
 	for _, conf := range confs {
-		p := h.Join(dir, conf)
+		p := h.Join(dir, filepath.Base(conf))
 		_, err := h.Stat(p)
 		if err == nil {
 			log.Debug("Config file already exists", slog.String("file", p))
