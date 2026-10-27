@@ -40,6 +40,7 @@ type Gateway struct {
 	Compatibility        int                   `xml:"compatibility,attr"`
 	XMLNs                string                `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
 	XSI                  string                `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
+	Comment              string                `xml:",comment"`
 	Probes               *Probes               `xml:"probes"`
 	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
 	Types                *Types                `xml:"types,omitempty"`
@@ -52,6 +53,7 @@ type Gateway struct {
 
 type OperatingEnvironment struct {
 	XMLName      xml.Name `xml:"operatingEnvironment"`
+	Comment      string   `xml:",comment"`
 	GatewayID    int      `xml:"gatewayId"`
 	GatewayName  string   `xml:"gatewayName"`
 	SecurePort   int      `xml:"listenPorts>secure>listenPort,omitempty"`
@@ -60,6 +62,7 @@ type OperatingEnvironment struct {
 
 type Dataview struct {
 	Name      string            `xml:"name,attr"`
+	Comment   string            `xml:",comment"`
 	Additions DataviewAdditions `xml:"additions,omitempty" yaml:",omitempty"`
 }
 
