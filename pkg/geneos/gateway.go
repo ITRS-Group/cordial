@@ -41,6 +41,7 @@ type Gateway struct {
 	XMLNs                string                `xml:"xmlns:xsi,attr"`                     // http://www.w3.org/2001/XMLSchema-instance
 	XSI                  string                `xml:"xsi:noNamespaceSchemaLocation,attr"` // http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd
 	Comment              string                `xml:",comment"`
+	Includes             *Includes             `xml:"includes,omitempty"`
 	Probes               *Probes               `xml:"probes"`
 	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
 	Types                *Types                `xml:"types,omitempty"`
