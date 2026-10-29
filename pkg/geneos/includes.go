@@ -47,7 +47,7 @@ type Include struct {
 	XMLName        xml.Name               `xml:"include"`
 	Disabled       bool                   `xml:"disabled,attr,omitempty"`
 	Priority       int                    `xml:"priority"`
-	Required       bool                   `xml:"required"`
+	Required       *bool                  `xml:"required"`
 	Location       string                 `xml:"location"`
 	ReloadInterval *int                   `xml:"reloadInterval,omitempty"`
 	ActiveTime     string                 `xml:"activeTime,omitempty"`
