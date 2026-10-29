@@ -212,6 +212,9 @@ func (i *Gateway) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name returns the name of the gateway instance as specified in its
+// configuration. This may be different to the `gatewayname` used by the
+// Gateway itself.
 func (i *Gateway) Name() string {
 	if i == nil || i.Conf == nil {
 		return ""
