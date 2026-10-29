@@ -68,7 +68,7 @@ func Update(h *geneos.Host, version string, override bool) (err error) {
 	_, err = h.Stat(dir)
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
 		if version == cordial.VERSION {
-			fmt.Println("Version directory does not exist, extracting includes for version", version)
+			log.Debug("Version directory does not exist, extracting includes for version", slog.String("version", version))
 			err = Extract(h, override)
 			if err != nil {
 				log.Error("failed to extract includes", slog.String("version", version), slog.Any("error", err))
