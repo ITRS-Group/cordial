@@ -7,18 +7,18 @@
 
 ## Version v1.30.0 Highlights
 
-This release comes with significant new features for the `geneos` program, and some minor breaking changes. Please read this changelog carefully before upgrading.
+This release comes with significant new features for the `geneos` program, and some minor breaking changes. Please read this changelog carefully before upgrading. For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
 
 >[!IMPORTANT]
 >**Breaking Changes**
->1. The custom configuration delimiter `::` has been reverted to the more standard `.` except for some special cases, list host and IP keys in `geneos` remote host configs. Please note the change when updating existing configuration files and scripts that reference these keys.
+>1. The custom configuration delimiter `::` has been reverted to the more standard `.` except for some special cases, like domain name and IP keys in `geneos` remote host configs. Please note this change when updating existing configuration files and scripts that reference these keys.
 >1. For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways.
 
-* The program now supports "_profiles_" for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to define its settings. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles also support `geneos deploy` and some dynamic configuration scenarios. Read more about them in `geneos help profiles`
+* The `geneos`program now supports _profiles_ for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to control the creation and management of other components. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles are also supported by `geneos deploy` and many other commands. Read more about them in `geneos help profiles`
 
-  To support more complex configuration scenarios, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
+  As part of the new profiles feature, and to support more complex configuration scenarios, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
 
-  A number of _best practice_ includes files are now embedded in the `geneos` program and the distribution.
+* A new `geneos includes` subsystem has been introduced. A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` program and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
 
 * A new `geneos adb` subsystem has been introduced for working with Active Dashboard files. The first two commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
 
