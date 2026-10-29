@@ -123,9 +123,11 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				continue
 			}
 			if ct.Initialise != nil {
-				if err := ct.Initialise(h, ct, false); err != nil {
-					log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
-				}
+				ct.InitialiseOnce.Do(func() {
+					if err := ct.Initialise(h, ct, false); err != nil {
+						log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
+					}
+				})
 			}
 			// clear any command line parameters, they should only come from the config
 			extras := opts.vals

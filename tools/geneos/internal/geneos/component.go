@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -190,6 +191,11 @@ type Component struct {
 	// of the initial directories. The component has to be passed from
 	// the caller otherwise there is a reference loop.
 	Initialise func(h *Host, ct *Component, override bool) error
+
+	// InitialiseOnce ensures that the Initialise function is only
+	// called once per component, even if multiple initialisation
+	// attempts are made.
+	InitialiseOnce sync.Once
 
 	// New is the factory method for the component. It has to be added
 	// during registration to avoid loops
