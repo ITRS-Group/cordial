@@ -20,7 +20,7 @@ The subsystems below group related functions together and have their own sub-com
 
 | Command / Aliases | Description |
 |-------|-------|
-| [`geneos adb`](geneos_adb.md)	 | ADB File Operations |
+| [`geneos adb / dashboard / dashboards`](geneos_adb.md)	 | ADB File Operations |
 | [`geneos aes`](geneos_aes.md)	 | AES256 Key File Operations |
 | [`geneos config`](geneos_config.md)	 | Configure Command Behaviour |
 | [`geneos host`](geneos_host.md)	 | Remote Host Operations |
