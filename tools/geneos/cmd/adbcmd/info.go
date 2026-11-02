@@ -108,7 +108,7 @@ func infoCommand(file string) (err error) {
 			gws := slices.Sorted(maps.Keys(gateways))
 			for _, name := range gws {
 				if name == "" {
-					fmt.Println("  <empty>: ", gateways[name])
+					fmt.Println("  <no name>: ", gateways[name])
 				} else {
 					fmt.Printf("  %q: %d\n", name, gateways[name])
 				}
@@ -118,7 +118,7 @@ func infoCommand(file string) (err error) {
 			fmt.Printf("Probes: %d\n", len(probes))
 			for _, name := range ps {
 				if name == "" {
-					fmt.Println("  <empty>: ", probes[name])
+					fmt.Println("  <no name>: ", probes[name])
 				} else {
 					fmt.Printf("  %q: %d\n", name, probes[name])
 				}
@@ -128,7 +128,7 @@ func infoCommand(file string) (err error) {
 			fmt.Printf("Entities: %d\n", len(entities))
 			for _, name := range mes {
 				if name == "" {
-					fmt.Println("  <empty>: ", entities[name])
+					fmt.Println("  <no name>: ", entities[name])
 				} else {
 					fmt.Printf("  %q: %d\n", name, entities[name])
 				}
@@ -138,7 +138,7 @@ func infoCommand(file string) (err error) {
 			fmt.Printf("Attributes: %d\n", len(attributes))
 			for _, name := range attrs {
 				if name == "" {
-					fmt.Println("  <empty>: ", len(attributes[name]))
+					fmt.Println("  <no name>: ", len(attributes[name]))
 				} else {
 					fmt.Printf("  %q: %d\n", name, len(attributes[name]))
 					for values := range attributes[name] {
@@ -151,7 +151,7 @@ func infoCommand(file string) (err error) {
 			fmt.Printf("Samplers: %d\n", len(samplers))
 			for _, name := range ss {
 				if name == "" {
-					fmt.Println("  <empty>: ", samplers[name])
+					fmt.Println("  <no name>: ", samplers[name])
 				} else {
 					fmt.Printf("  %q: %d\n", name, samplers[name])
 				}
@@ -171,7 +171,7 @@ func infoCommand(file string) (err error) {
 			fmt.Printf("Dataviews: %d\n", len(dataviews))
 			for _, name := range dvs {
 				if name == "" {
-					fmt.Println("  <empty>: ", dataviews[name])
+					fmt.Println("  <no name>: ", dataviews[name])
 				} else {
 					fmt.Printf("  %q: %d\n", name, dataviews[name])
 				}
@@ -286,6 +286,55 @@ func processLine(line string) {
 			return
 		}
 		dataitems := strings.Split(ds.URLTarget, "dataitem(")
+		if len(dataitems) == 0 {
+			return
+		}
+		// throw away the first empty element resulting from the split
+		dataitems = dataitems[1:]
+		for i, d := range dataitems {
+			dataitems[i] = strings.TrimSuffix(d, ")")
+		}
+		for _, di := range dataitems {
+			xpaths[di]++
+			xp, err := xpath.Parse(di)
+			if err != nil {
+				log.Error("Failed to parse DataitemXpath", slog.Any("error", err), slog.String("DataitemXpath", di))
+			} else {
+				log.Debug("Parsed DataitemXpath", slog.String("DataitemXpath", di), slog.Any("XPath", xp))
+				if xp.Gateway != nil {
+					gateways[xp.Gateway.Name]++
+					if xp.Probe != nil {
+						probes[xp.Probe.Name]++
+						if xp.Entity != nil {
+							entities[xp.Entity.Name]++
+							for name, value := range xp.Entity.Attributes {
+								if _, ok := attributes[name]; !ok {
+									attributes[name] = make(map[string]int)
+								}
+								attributes[name][value]++
+							}
+							if xp.Sampler != nil {
+								samplers[xp.Sampler.Name]++
+								if xp.Sampler.Type != nil {
+									t := *xp.Sampler.Type
+									types[t]++
+								}
+								if xp.Dataview != nil {
+									dataviews[xp.Dataview.Name]++
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	case geneosURLClass:
+		var gu geneosURL
+		if err := unmarshalLineToStruct(line, &gu); err != nil {
+			fmt.Println("Error parsing GeneosURL line:", err)
+			return
+		}
+		dataitems := strings.Split(gu.URLTarget, "dataitem(")
 		if len(dataitems) == 0 {
 			return
 		}

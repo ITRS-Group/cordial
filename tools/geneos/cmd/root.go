@@ -30,7 +30,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"src.elv.sh/pkg/md"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -70,7 +69,7 @@ var (
 // GeneosUnsetError is returned when no existing Geneos environment is
 // found. It is rendered through a simple markdown renderer for TTY
 // output.
-var GeneosUnsetError = errors.New(md.RenderString((strings.ReplaceAll(
+var GeneosUnsetError = errors.New(RenderHelpMarkdownTTY(strings.ReplaceAll(
 
 	`No existing Geneos environment found.
 
@@ -88,7 +87,7 @@ You can do one of the following:
 
     export GENEOS_HOME=/PATH
 
-`, "|", "`")), &md.TTYCodec{Width: 76}))
+`, "|", "`"), 76))
 
 func init() {
 	cobra.OnInitialize(func() {
@@ -344,7 +343,7 @@ geneos restart
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the RootCmd.
 func Execute() {
-	cordial.RenderHelpAsMD(Cmd)
+	installGeneosMarkdownHelp(Cmd)
 
 	err := Cmd.Execute()
 	if err != nil {

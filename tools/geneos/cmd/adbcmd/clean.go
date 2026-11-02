@@ -26,7 +26,7 @@ import (
 //go:embed _docs/clean.md
 var cleanCmdDescription string
 
-var cleanKeepAll, cleanCmdKeepStartupData bool
+var cleanCmdKeepAll, cleanCmdKeepStartupData, cleanCmdSkipModifiers, cleanCmdSkipLinks bool
 var cleanOptions cleaningOptions
 var cleanCmdOutput string
 
@@ -129,8 +129,6 @@ are applied in the order given, are:
 	// --severity-ok-colour R,G,B (Int8Slice)
 	// --severity-undefined-colour R,G,B (Int8Slice)
 
-	cleanCmd.Flags().BoolVarP(&cleanKeepAll, "keep-all", "k", false, "Set default action for all the above to 'keep' or do nothing")
-
 	cleanCmd.Flags().StringVar(&filters.XPath, "filter-xpath", "", "Filter for matching XPaths, leaving others unchanged\n(applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name=\"LDN*\")]')")
 	cleanCmd.Flags().StringVar(&filters.Gateway, "filter-gateway", "", "Filter for matching gateways")
 	cleanCmd.Flags().StringVar(&filters.Probe, "filter-probe", "", "Filter for matching probes")
@@ -143,8 +141,11 @@ are applied in the order given, are:
 All the above filters support glob patterns (not regular expressions).
 `,
 	)
-	cleanCmd.Flags().Var(&filters.Attributes, "filter-attribute", "Filter for matching attributes in the form `NAME=VALUE` where\nVALUE should be '*' if you want to match any value. Can be repeated.")
+	cleanCmd.Flags().Var(&filters.Attributes, "filter-attribute", "Filter for matching attributes in the form `NAME=VALUE` where\nVALUE should be '*' if you want to match any value. Can be repeated.\n")
 
+	cleanCmd.Flags().BoolVarP(&cleanCmdKeepAll, "keep-all", "k", false, "Set default action for all processing actions to 'keep' or do nothing")
+	cleanCmd.Flags().BoolVar(&cleanCmdSkipModifiers, "skip-modifiers", false, "Skip processing of modifier elements")
+	cleanCmd.Flags().BoolVar(&cleanCmdSkipLinks, "skip-links", false, "Skip processing of link elements")
 	cleanCmd.Flags().BoolVar(&cleanCmdKeepStartupData, "keep-startup-data", false, "Keep startup data (default is to remove)")
 
 	// don't show default values
@@ -201,7 +202,11 @@ var cleanCmd = &cobra.Command{
 			return fmt.Errorf("no dashboard files given on command line")
 		}
 
-		if cleanKeepAll {
+		if cleanCmdSkipModifiers && cleanCmdSkipLinks {
+			return fmt.Errorf("cannot skip both modifiers and links")
+		}
+
+		if cleanCmdKeepAll {
 			cleanOptions.Gateways[0] = "keep"
 			cleanOptions.Probes[0] = "keep"
 			cleanOptions.Entities[0] = "keep"
@@ -402,8 +407,14 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 		switch {
 		// both these classes have the URLTarget in field 4
 		case strings.HasPrefix(line, dataItemExprNodeClass), strings.HasPrefix(line, dataItemSeverityNodeClass):
-			// split into fields, manually for now - we can't marshal
-			// yet, so just split and reassemble
+			// skip if told to, else process normally
+			if cleanCmdSkipModifiers {
+				break
+			}
+
+			// split into fields, manually for now - we can't re-marshal
+			// yet, so just split and reassemble rather than unmarshal
+			// like info does
 			parts := strings.Split(line, string(fieldSeparator))
 
 			// parts[4] may have multiple dataitem() values
@@ -416,10 +427,13 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 				}
 			}
 
+			modifierChanged := false
 			for i, xp := range dataitems {
 				xpp, err := xpath.Parse(xp)
 				if err != nil {
-					log.Error("Failed to parse DataitemXpath", slog.Any("error", err), slog.String("DataitemXpath", xp))
+					log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", xp))
+					dataitems[i] = "dataitem(" + xp + ")"
+					continue
 				}
 
 				// filter here
@@ -429,103 +443,63 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 					continue
 				}
 
-				if xpp.Gateway != nil {
-					xpp.Gateway.Name = updateNameFromOptions(xpp.Gateway.Name, cleanOptions.Gateways)
-				} else if len(cleanOptions.Gateways) > 0 {
-					name := updateNameFromOptions("", cleanOptions.Gateways)
-					if name != "" {
-						xpp.Gateway = &xpath.Gateway{Name: name}
-					}
+				originalPath := xpp.String()
+				xpp = updateDataitemXpath(xpp, cleanOptions)
+				updatedPath := xpp.String()
+				if updatedPath != originalPath {
+					modifierChanged = true
 				}
-
-				if xpp.Probe != nil {
-					xpp.Probe.Name = updateNameFromOptions(xpp.Probe.Name, cleanOptions.Probes)
-				} else if len(cleanOptions.Probes) > 0 {
-					name := updateNameFromOptions("", cleanOptions.Probes)
-					if name != "" {
-						xpp.Probe = &xpath.Probe{Name: name}
-					}
-				}
-
-				if xpp.Entity != nil {
-					xpp.Entity.Name = updateNameFromOptions(xpp.Entity.Name, cleanOptions.Entities)
-				} else if len(cleanOptions.Entities) > 0 {
-					name := updateNameFromOptions("", cleanOptions.Entities)
-					if name != "" {
-						xpp.Entity = &xpath.Entity{Name: name}
-					}
-				}
-
-				// update attributes, checking if entity exists etc.
-				if len(cleanOptions.Attributes) > 0 {
-					var attr map[string]string
-					if xpp.Entity != nil {
-						attr = xpp.Entity.Attributes
-					}
-					attr = updateAttributesFromOptions(attr, cleanOptions.Attributes)
-					if xpp.Entity != nil {
-						// override, even if resulting map is empty
-						xpp.Entity.Attributes = attr
-					} else {
-						if len(attr) > 0 {
-							// entity does not exist, create it with the updated attributes
-							xpp.Entity = &xpath.Entity{
-								Attributes: attr,
-							}
-						}
-					}
-				}
-
-				// update sampler name first, if required - types below
-				if xpp.Sampler != nil {
-					xpp.Sampler.Name = updateNameFromOptions(xpp.Sampler.Name, cleanOptions.Samplers)
-				} else if len(cleanOptions.Samplers) > 0 {
-					xpp.Sampler = &xpath.Sampler{
-						Name: updateNameFromOptions("", cleanOptions.Samplers),
-					}
-				}
-
-				// updating the type name is more complicated
-
-				// first process it
-				var typ *string
-				if len(cleanOptions.Types) > 0 {
-					if xpp.Sampler != nil && xpp.Sampler.Type != nil {
-						typ = updateTypeNameFromOptions(*xpp.Sampler.Type, cleanOptions.Types)
-					} else {
-						typ = updateTypeNameFromOptions("", cleanOptions.Types)
-					}
-				}
-
-				// now apply the processed type to the sampler, but only if necessary
-				if xpp.Sampler != nil {
-					xpp.Sampler.Type = typ
-				} else if typ != nil {
-					// only create a new sampler if the type is not
-					// empty
-					xpp.Sampler = &xpath.Sampler{
-						Type: typ,
-					}
-				}
-
-				if xpp.Dataview != nil {
-					xpp.Dataview.Name = updateNameFromOptions(xpp.Dataview.Name, cleanOptions.Dataviews)
-				} else if len(cleanOptions.Dataviews) > 0 {
-					name := updateNameFromOptions("", cleanOptions.Dataviews)
-					if name != "" {
-						xpp.Dataview = &xpath.Dataview{Name: name}
-					}
-				}
-
-				dataitems[i] = "dataitem(" + xpp.String() + ")"
+				dataitems[i] = "dataitem(" + updatedPath + ")"
 			}
 
 			parts[4] = strings.Join(dataitems, "")
-			parts[5] = EMPTY_STRING
+			if modifierChanged {
+				parts[5] = EMPTY_STRING
+			}
 
 			// join it back up
 			line = strings.Join(parts, string(fieldSeparator))
 
+		case strings.HasPrefix(line, geneosURLClass):
+			var gu geneosURL
+
+			// skip if told to, else process normally
+			if cleanCmdSkipLinks {
+				break
+			}
+			if err := unmarshalLineToStruct(line, &gu); err != nil {
+				fmt.Println("Error parsing GeneosURL line:", err)
+				break
+			}
+			if !strings.HasPrefix(gu.URLTarget, "dataitem(") {
+				// ignore other URL types
+				break
+			}
+
+			di := strings.TrimSuffix(strings.TrimPrefix(gu.URLTarget, "dataitem("), ")")
+			xp, err := xpath.Parse(di)
+			if err != nil {
+				log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", gu.URLTarget))
+				break
+			}
+
+			// filter here
+			if cleanFilterXPath != nil && !xp.Match(cleanFilterXPath) {
+				log.Debug("Skipping DataitemXpath due to filter", slog.String("DataitemXpath", xp.String()), slog.String("Filter", cleanFilterXPath.String()))
+				break
+			}
+
+			// update here
+			xp = updateDataitemXpath(xp, cleanOptions)
+
+			// reconstruct the URLTarget with the cleaned dataitems
+			// reconstruct the line with the updated URLTarget
+			line = strings.Join([]string{
+				gu.Class,
+				gu.Version,
+				"dataitem(" + xp.String() + ")",
+				gu.Name,
+			}, "~") + "~"
 		default:
 			// skip all other lines, leave them as-is
 		}
@@ -540,6 +514,81 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 		return fmt.Errorf("error reading Activedashboard file: %v", err)
 	}
 	return
+}
+
+func updateDataitemXpath(xpp *xpath.XPath, opts cleaningOptions) *xpath.XPath {
+	if xpp.Gateway != nil {
+		xpp.Gateway.Name = updateNameFromOptions(xpp.Gateway.Name, opts.Gateways)
+	} else if len(opts.Gateways) > 0 {
+		name := updateNameFromOptions("", opts.Gateways)
+		if name != "" {
+			xpp.Gateway = &xpath.Gateway{Name: name}
+		}
+	}
+
+	if xpp.Probe != nil {
+		xpp.Probe.Name = updateNameFromOptions(xpp.Probe.Name, opts.Probes)
+	} else if len(opts.Probes) > 0 {
+		name := updateNameFromOptions("", opts.Probes)
+		if name != "" {
+			xpp.Probe = &xpath.Probe{Name: name}
+		}
+	}
+
+	if xpp.Entity != nil {
+		xpp.Entity.Name = updateNameFromOptions(xpp.Entity.Name, opts.Entities)
+	} else if len(opts.Entities) > 0 {
+		name := updateNameFromOptions("", opts.Entities)
+		if name != "" {
+			xpp.Entity = &xpath.Entity{Name: name}
+		}
+	}
+
+	// Attribute actions do not create a Managed Entity. Set the entity first.
+	if len(opts.Attributes) > 0 && xpp.Entity != nil {
+		xpp.Entity.Attributes = updateAttributesFromOptions(xpp.Entity.Attributes, opts.Attributes)
+	}
+
+	// update sampler name first, if required - types below
+	if xpp.Sampler != nil {
+		xpp.Sampler.Name = updateNameFromOptions(xpp.Sampler.Name, opts.Samplers)
+	} else if len(opts.Samplers) > 0 {
+		xpp.Sampler = &xpath.Sampler{
+			Name: updateNameFromOptions("", opts.Samplers),
+		}
+	}
+
+	// updating the type name is more complicated
+
+	// first process it
+	var typ *string
+	if xpp.Sampler != nil {
+		typ = xpp.Sampler.Type
+	}
+	if len(opts.Types) > 0 {
+		typ = updateTypeNameFromOptions(typ, opts.Types)
+	}
+
+	// now apply the processed type to the sampler, but only if necessary
+	if xpp.Sampler != nil {
+		xpp.Sampler.Type = typ
+	} else if typ != nil {
+		// only create a new sampler if the type is not
+		// empty
+		xpp.Sampler = &xpath.Sampler{
+			Type: typ,
+		}
+	}
+
+	if xpp.Dataview != nil {
+		xpp.Dataview.Name = updateNameFromOptions(xpp.Dataview.Name, opts.Dataviews)
+	} else if len(opts.Dataviews) > 0 {
+		name := updateNameFromOptions("", opts.Dataviews)
+		if name != "" {
+			xpp.Dataview = &xpath.Dataview{Name: name}
+		}
+	}
+	return xpp
 }
 
 // updateNameFromOptions updates the given name based on the provided
@@ -585,21 +634,25 @@ func updateNameFromOptions(name string, options optionSlice) string {
 //
 // "keep" is the default behavior and just returns the existing value
 // unchanged.
-func updateTypeNameFromOptions(name string, options optionSlice) (result *string) {
-	// Implement the logic to update the name based on the provided options.
-	// This is a placeholder implementation.
+func updateTypeNameFromOptions(input *string, options optionSlice) (result *string) {
+	if input != nil {
+		name := *input
+		result = &name
+	}
 	for _, opt := range options {
 		switch {
 		case opt == "remove-all":
 			result = nil
 		case opt == "remove-empty":
-			if name == "" {
+			if result != nil && *result == "" {
 				result = nil
 			}
 		case strings.HasPrefix(opt, "remove:"):
-			pattern := strings.TrimPrefix(opt, "remove:")
-			if match, _ := path.Match(pattern, name); match {
-				result = nil
+			if result != nil {
+				pattern := strings.TrimPrefix(opt, "remove:")
+				if match, _ := path.Match(pattern, *result); match {
+					result = nil
+				}
 			}
 		case strings.HasPrefix(opt, "set:"):
 			resultStr := strings.TrimPrefix(opt, "set:")
@@ -608,9 +661,11 @@ func updateTypeNameFromOptions(name string, options optionSlice) (result *string
 			resultStr := ""
 			result = &resultStr
 		case strings.HasPrefix(opt, "replace:"):
-			spec := strings.TrimPrefix(opt, "replace:")
-			resultStr := replaceAll(name, spec)
-			result = &resultStr
+			if result != nil {
+				spec := strings.TrimPrefix(opt, "replace:")
+				resultStr := replaceAll(*result, spec)
+				result = &resultStr
+			}
 		case opt == "keep":
 			// do nothing, keep the current name
 		default:
@@ -652,6 +707,9 @@ func updateAttributesFromOptions(attr map[string]string, options optionSlice) ma
 		case strings.HasPrefix(opt, "add:"):
 			key, value, found := strings.Cut(strings.TrimPrefix(opt, "add:"), "=")
 			if found {
+				if attr == nil {
+					attr = make(map[string]string)
+				}
 				attr[key] = value
 			}
 		case strings.HasPrefix(opt, "replace:"):
