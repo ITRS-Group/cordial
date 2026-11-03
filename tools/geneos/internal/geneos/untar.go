@@ -96,17 +96,11 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 			dirtimes = append(dirtimes, dirtime{Name: fullpath, Modified: hdr.ModTime})
 
 		case tar.TypeSymlink, tar.TypeGNULongLink:
-			if path.IsAbs(hdr.Linkname) {
-				err = fmt.Errorf("archive contains absolute symlink target")
-				return
+			target := h.ToSlash(hdr.Linkname)
+			if !h.IsAbs(hdr.Linkname) {
+				target = strings.TrimSuffix(h.ToSlash(path.Dir(fullpath)), "/") + "/" + target
 			}
-			if _, err = CleanRelativePath(path.Join(path.Dir(name), hdr.Linkname)); err != nil {
-				err = fmt.Errorf("archive contains symlink target outside install directory")
-				return
-			}
-			target := path.Clean(path.Join(path.Dir(name), hdr.Linkname))
 			if err = rejectSymlinkPath(h, dir, target); err != nil {
-				err = fmt.Errorf("archive symlink target traverses an existing symlink: %w", err)
 				return
 			}
 			if _, err = h.Stat(fullpath); err != nil {
@@ -136,22 +130,115 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 }
 
 func rejectSymlinkPath(h *Host, root, relative string) error {
-	current := root
-	for _, element := range strings.Split(relative, "/") {
-		if element == "" || element == "." {
+	root, err := h.Abs(root)
+	if err != nil {
+		return err
+	}
+	resolvedRoot, err := resolveArchivePath(h, root)
+	if err != nil {
+		return err
+	}
+	candidate := relative
+	if !h.IsAbs(candidate) {
+		candidate = h.Join(root, candidate)
+	}
+	resolvedCandidate, err := resolveArchivePath(h, candidate)
+	if err != nil {
+		return err
+	}
+	if !pathWithinRoot(h, resolvedRoot, resolvedCandidate) {
+		return fmt.Errorf("path %q resolves outside extraction root %q", relative, resolvedRoot)
+	}
+	return nil
+}
+
+func resolveArchivePath(h *Host, name string) (string, error) {
+	if !h.IsAbs(name) {
+		var err error
+		name, err = h.Abs(name)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	volume := h.VolumeName(name)
+	filesystemRoot := "/"
+	if volume != "" {
+		filesystemRoot = strings.TrimRight(h.ToSlash(volume), "/") + "/"
+	}
+	remaining := h.ToSlash(name)
+	if volume != "" {
+		remaining = strings.TrimPrefix(remaining, h.ToSlash(volume))
+	}
+	components := strings.Split(strings.TrimLeft(remaining, "/"), "/")
+	current := filesystemRoot
+	symlinkCount := 0
+
+	for len(components) > 0 {
+		component := components[0]
+		components = components[1:]
+		switch component {
+		case "", ".":
+			continue
+		case "..":
+			if current != filesystemRoot {
+				current = h.ToSlash(h.Dir(current))
+			}
 			continue
 		}
-		current = path.Join(current, element)
-		info, err := h.Lstat(current)
+
+		next := path.Join(current, component)
+		info, err := h.Lstat(next)
 		if errors.Is(err, fs.ErrNotExist) {
+			current = next
 			continue
 		}
 		if err != nil {
-			return err
+			return "", err
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("path %q traverses a symlink", current)
+		if info.Mode()&os.ModeSymlink == 0 {
+			current = next
+			continue
 		}
+
+		symlinkCount++
+		if symlinkCount > 255 {
+			return "", fmt.Errorf("too many symlinks while resolving %q", name)
+		}
+		target, err := h.Readlink(next)
+		if err != nil {
+			return "", err
+		}
+		target = h.ToSlash(target)
+		if h.IsAbs(target) {
+			targetVolume := h.VolumeName(target)
+			current = "/"
+			if targetVolume != "" {
+				current = strings.TrimRight(h.ToSlash(targetVolume), "/") + "/"
+				target = strings.TrimPrefix(target, h.ToSlash(targetVolume))
+			}
+			target = strings.TrimLeft(target, "/")
+		} else {
+			current = h.ToSlash(h.Dir(next))
+		}
+		components = append(strings.Split(target, "/"), components...)
 	}
-	return nil
+
+	return path.Clean(current), nil
+}
+
+func pathWithinRoot(h *Host, root, candidate string) bool {
+	root = path.Clean(h.ToSlash(root))
+	candidate = path.Clean(h.ToSlash(candidate))
+	if h.OS() == "windows" {
+		root = strings.ToLower(root)
+		candidate = strings.ToLower(candidate)
+	}
+	if candidate == root {
+		return true
+	}
+	if root == "/" {
+		return strings.HasPrefix(candidate, "/")
+	}
+	return strings.HasPrefix(candidate, strings.TrimSuffix(root, "/")+"/")
 }
