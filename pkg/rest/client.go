@@ -113,10 +113,13 @@ func (c *Client) Do(ctx context.Context, method string, endpoint any, request an
 	case http.MethodPut:
 		return c.Put(ctx, endpoint, request, response)
 	case http.MethodDelete:
-		return c.Delete(ctx, endpoint.(string), request)
+		e, ok := endpoint.(string)
+		if !ok {
+			return nil, errors.ErrUnsupported
+		}
+		return c.Delete(ctx, e, request)
 	default:
-		err = errors.ErrUnsupported
-		return
+		return nil, errors.ErrUnsupported
 	}
 }
 
@@ -132,9 +135,12 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 	case string:
 		dest = c.BaseURL.JoinPath(e)
 	case *url.URL:
+		if e == nil {
+			return nil, errors.ErrUnsupported
+		}
 		dest = c.BaseURL.ResolveReference(e)
 	default:
-		err = errors.ErrUnsupported
+		return nil, errors.ErrUnsupported
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", dest.String(), nil)
 	if err != nil {
@@ -198,9 +204,12 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	case string:
 		dest = c.BaseURL.JoinPath(e)
 	case *url.URL:
+		if e == nil {
+			return nil, errors.ErrUnsupported
+		}
 		dest = c.BaseURL.ResolveReference(e)
 	default:
-		err = errors.ErrUnsupported
+		return nil, errors.ErrUnsupported
 	}
 	r, body := encodeBody(request)
 	req, err := http.NewRequestWithContext(ctx, "POST", dest.String(), r)
@@ -248,9 +257,12 @@ func (c *Client) Put(ctx context.Context, endpoint any, request any, response an
 	case string:
 		dest = c.BaseURL.JoinPath(e)
 	case *url.URL:
+		if e == nil {
+			return nil, errors.ErrUnsupported
+		}
 		dest = c.BaseURL.ResolveReference(e)
 	default:
-		err = errors.ErrUnsupported
+		return nil, errors.ErrUnsupported
 	}
 	r, body := encodeBody(request)
 	req, err := http.NewRequestWithContext(ctx, "PUT", dest.String(), r)

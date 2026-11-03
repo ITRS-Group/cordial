@@ -134,24 +134,24 @@ func ReadKeyValues(r io.Reader) (kv *KeyValues, err error) {
 		case "salt":
 			// ignore
 		case "key":
-			key, err := hex.DecodeString(value)
-			if err != nil {
-				return nil, err
+			decodedKey, decodeErr := hex.DecodeString(value)
+			if decodeErr != nil {
+				return nil, decodeErr
 			}
-			if len(key) != len(kv.key) {
-				err = errors.New("invalid key length")
+			if len(decodedKey) != len(kv.key) {
+				return nil, errors.New("invalid key length")
 			}
-			copy(kv.key[:], key)
+			copy(kv.key[:], decodedKey)
 			gotkey = true
 		case "iv":
-			iv, err := hex.DecodeString(value)
-			if err != nil {
-				return nil, err
+			decodedIV, decodeErr := hex.DecodeString(value)
+			if decodeErr != nil {
+				return nil, decodeErr
 			}
-			if len(iv) != len(kv.iv) {
-				err = errors.New("invalid iv length")
+			if len(decodedIV) != len(kv.iv) {
+				return nil, errors.New("invalid iv length")
 			}
-			copy(kv.iv[:], iv)
+			copy(kv.iv[:], decodedIV)
 			gotiv = true
 		default:
 			err = fmt.Errorf("unknown entry in file: %q", key)
