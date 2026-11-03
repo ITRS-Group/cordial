@@ -20,6 +20,7 @@ limitations under the License.
 package profile
 
 import (
+	"bytes"
 	_ "embed"
 	"errors"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -43,7 +45,18 @@ var log = logger.Logger
 //go:embed "profiles.defaults.yaml"
 var profilesDefault []byte
 
-// EmbeddedDefaults returns a copy of the embedded profile configuration.
+func init() {
+	tmpl := template.Must(template.New("profiles.defaults.yaml").Funcs(template.FuncMap{
+		"version": func() string { return cordial.VERSION },
+	}).Parse(string(profilesDefault)))
+	var rendered bytes.Buffer
+	if err := tmpl.Execute(&rendered, nil); err != nil {
+		panic(fmt.Errorf("render embedded profile defaults: %w", err))
+	}
+	profilesDefault = rendered.Bytes()
+}
+
+// EmbeddedDefaults returns a copy of the rendered embedded profile configuration.
 func EmbeddedDefaults() []byte {
 	return slices.Clone(profilesDefault)
 }

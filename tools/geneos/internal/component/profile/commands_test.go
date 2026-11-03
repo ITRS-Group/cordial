@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	profileconfig "github.com/itrs-group/cordial/tools/geneos/internal/profile"
 )
 
 func TestValidateProfileListFormat(t *testing.T) {
@@ -63,6 +65,28 @@ func TestExtractProfileConfigUnchangedWhenIdentical(t *testing.T) {
 	}
 	if changed || backup != "" {
 		t.Fatalf("extractProfileConfig() = (%q, %t), want unchanged", backup, changed)
+	}
+}
+
+func TestExtractProfileConfigRenderedDefaults(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "profiles.yaml")
+	defaults := profileconfig.EmbeddedDefaults()
+	if bytes.Contains(defaults, []byte("{{version}}")) {
+		t.Fatal("extract defaults contain an unrendered version template")
+	}
+	if err := os.WriteFile(filename, []byte("version: previous\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	backup, changed, err := extractProfileConfig(filename, defaults, time.Now())
+	if err != nil || !changed || backup == "" {
+		t.Fatalf("extractProfileConfig() = (%q, %t, %v), want backup and changed", backup, changed, err)
+	}
+	if contents, err := os.ReadFile(filename); err != nil || !bytes.Equal(contents, defaults) {
+		t.Fatalf("extracted profiles = %q, err = %v; want rendered defaults", contents, err)
+	}
+	backup, changed, err = extractProfileConfig(filename, profileconfig.EmbeddedDefaults(), time.Now())
+	if err != nil || changed || backup != "" {
+		t.Fatalf("second extractProfileConfig() = (%q, %t, %v), want unchanged", backup, changed, err)
 	}
 }
 

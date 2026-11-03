@@ -2,10 +2,13 @@ package profile_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
@@ -28,6 +31,46 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
+
+func TestEmbeddedDefaultsVersion(t *testing.T) {
+	defaults := profile.EmbeddedDefaults()
+	if strings.Contains(string(defaults), "{{version}}") {
+		t.Fatal("embedded defaults contain an unrendered version template")
+	}
+	pf := config.New(config.WithDefaults(defaults, "yaml"))
+	if got := config.Get[string](pf, "version"); got != strings.TrimSpace(cordial.VERSION) {
+		t.Fatalf("embedded version = %q, want %q", got, cordial.VERSION)
+	}
+	defaults[0] = '!'
+	if profile.EmbeddedDefaults()[0] == '!' {
+		t.Fatal("EmbeddedDefaults returned shared mutable bytes")
+	}
+}
+
+func TestInitialiseRenderedDefaults(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	const appName = "geneos-profile-test"
+	filename, err := config.UserConfigPath(appName, "profiles.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if !profile.Initialise(appName) {
+		t.Fatal("Initialise did not create the user profiles file")
+	}
+	contents, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != string(profile.EmbeddedDefaults()) {
+		t.Fatal("Initialise did not write the rendered embedded defaults")
+	}
+	if profile.Initialise(appName) {
+		t.Fatal("Initialise rewrote an existing user profiles file")
+	}
+}
 
 func TestComponentProfileEntryPoints(t *testing.T) {
 	for _, component := range geneos.RealComponents() {
