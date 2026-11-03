@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -69,7 +70,8 @@ var protectCmd = &cobra.Command{
 			}
 			protect, ok := params[0].(bool)
 			if !ok {
-				panic("wrong param")
+				resp.Err = fmt.Errorf("expected bool parameter, got %T", params[0])
+				return
 			}
 
 			config.Set(cf, "protected", protect)

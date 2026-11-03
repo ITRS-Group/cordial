@@ -184,8 +184,14 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 
 	if w, ok := writer.(*reporter.TabWriterReporter); ok {
 		w.UpdateTable(w.Columns, rows)
-		w.Render()
-		w.Close()
+		if err := w.Render(); err != nil {
+			slog.Error("render response table failed", slog.Any("error", err))
+			return
+		}
+		if err := w.Close(); err != nil {
+			slog.Error("close response table failed", slog.Any("error", err))
+			return
+		}
 	}
 
 	if w, ok := writer.(*tabwriter.Writer); ok {
@@ -268,8 +274,14 @@ func (resp General) Report(writer any, options ...Option) {
 			tableData = append(tableData, logger.RedactSlice(t))
 		}
 		w.UpdateTable(w.Columns, tableData)
-		w.Render()
-		w.Close()
+		if err := w.Render(); err != nil {
+			slog.Error("render response table failed", slog.Any("error", err))
+			return
+		}
+		if err := w.Close(); err != nil {
+			slog.Error("close response table failed", slog.Any("error", err))
+			return
+		}
 	case *tabwriter.Writer:
 		for _, line := range resp.ResultText {
 			if line != "" {

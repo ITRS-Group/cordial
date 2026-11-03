@@ -137,7 +137,8 @@ func factory(name string) (i geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(i, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
+		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
+		return nil
 	}
 	// set the home dir based on where it might be, default to one above
 	config.Set(i.Config(), "home", instance.Home(i))
@@ -402,10 +403,10 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 			// create new keystore if reading the existing one fails
 			cert, key, err := genkeypair()
 			if err != nil {
-				panic(fmt.Sprintf("failed to generate keypair for ssoagent: %v", err))
+				return false, fmt.Errorf("failed to generate keypair for ssoagent: %w", err)
 			}
 			if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
-				panic(fmt.Sprintf("failed to add keystore key for ssoagent: %v", err))
+				return false, fmt.Errorf("failed to add keystore key for ssoagent: %w", err)
 			}
 			err = certs.WritePrivateKeyEntryAsPEM(i.Host(), instance.HomeRel(i, sp), keystore.PrivateKeyEntry{
 				CreationTime:     time.Now(),

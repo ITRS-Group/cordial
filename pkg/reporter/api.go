@@ -202,13 +202,15 @@ func (a *APIReporter) Reset(report Report) error {
 }
 
 // Render TODO: Document its behavior, inputs, and effects.
-func (a *APIReporter) Render() {
+func (a *APIReporter) Render() error {
 	// do nothing
+	return nil
 }
 
 // Close TODO: Document its behavior, inputs, and effects.
-func (a *APIReporter) Close() {
+func (a *APIReporter) Close() error {
 	// do nothing
+	return nil
 }
 
 // Extension TODO: Document its behavior, inputs, and effects.

@@ -96,23 +96,29 @@ func (t *ToolkitReporter) Reset(report Report) (err error) {
 }
 
 // Render TODO: Document its behavior, inputs, and effects.
-func (t *ToolkitReporter) Render() {
+func (t *ToolkitReporter) Render() error {
 	t.c.WriteAll(t.table)
 	t.c.Flush()
+	if err := t.c.Error(); err != nil {
+		return err
+	}
 	for name, value := range t.headlines {
-		fmt.Fprintf(t.w, "<!>%s,%s\n", name, value)
+		if _, err := fmt.Fprintf(t.w, "<!>%s,%s\n", name, value); err != nil {
+			return err
+		}
 	}
 	t.table = [][]string{}
 	t.headlines = map[string]string{}
-
+	return nil
 }
 
 // Close will call Close on the writer if it has a Close method
-func (t *ToolkitReporter) Close() {
+func (t *ToolkitReporter) Close() error {
 
 	if c, ok := t.w.(io.Closer); ok {
-		c.Close()
+		return c.Close()
 	}
+	return nil
 }
 
 // Extension TODO: Document its behavior, inputs, and effects.

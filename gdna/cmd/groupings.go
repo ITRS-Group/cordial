@@ -142,7 +142,7 @@ var addGroupCmd = &cobra.Command{
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
 		); err != nil {
-			panic(err)
+			return err
 		}
 
 		// find existing group, update, write back
@@ -185,7 +185,7 @@ var addGroupCmd = &cobra.Command{
 			if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
 				&allocations,
 			); err != nil {
-				panic(err)
+				return err
 			}
 
 			// find existing group, update, write back
@@ -298,7 +298,7 @@ var removeGroupCmd = &cobra.Command{
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
 			&groups,
 		); err != nil {
-			panic(err)
+			return err
 		}
 
 		log.Debug("groups loaded", slog.Any("groups", groups))
@@ -386,7 +386,7 @@ var listGroupCmd = &cobra.Command{
 			if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 				&groups,
 			); err != nil {
-				panic(err)
+				return err
 			}
 
 			log.Debug("groups loaded", slog.Any("groups", groups), slog.Int("count", len(groups)))
@@ -410,9 +410,7 @@ var listGroupCmd = &cobra.Command{
 			})
 		}
 		r.UpdateTable([]string{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"}, rows)
-		r.Render()
-
-		return
+		return r.Render()
 	},
 }
 
@@ -452,7 +450,7 @@ OUTER:
 		if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
 			&groups,
 		); err != nil {
-			panic(err)
+			return err
 		}
 
 		// check for defaults
@@ -572,7 +570,7 @@ OUTER:
 		if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
 			&allocations,
 		); err != nil {
-			panic(err)
+			return err
 		}
 
 		// check for defaults

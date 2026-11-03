@@ -138,7 +138,8 @@ func snapshotInstanceJSON(i geneos.Instance, params ...any) (resp *responses.Gen
 
 	paths, ok := params[0].([]string)
 	if !ok {
-		panic("wrong type")
+		resp.Err = fmt.Errorf("expected []string parameter, got %T", params[0])
+		return
 	}
 
 	// values := []any{}
@@ -180,7 +181,8 @@ func snapshotInstanceToolkit(i geneos.Instance, params ...any) (resp *responses.
 
 	paths, ok := params[0].([]string)
 	if !ok {
-		panic("wrong type")
+		resp.Err = fmt.Errorf("expected []string parameter, got %T", params[0])
+		return
 	}
 
 	dataviews, err := instance.SnapshotDataviews(i, paths,
@@ -233,7 +235,8 @@ func snapshotInstanceToolkitMulti(i geneos.Instance, params ...any) (resp *respo
 
 	paths, ok := params[0].([]string)
 	if !ok {
-		panic("wrong type")
+		resp.Err = fmt.Errorf("expected []string parameter, got %T", params[0])
+		return
 	}
 
 	dataviews, err := instance.SnapshotDataviews(i, paths,

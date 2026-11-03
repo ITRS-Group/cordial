@@ -57,7 +57,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		return
 	}
 	if i == nil {
-		panic("instance is nil")
+		return nil, fmt.Errorf("create instance %q: factory returned nil", name)
 	}
 	cf := i.Config()
 

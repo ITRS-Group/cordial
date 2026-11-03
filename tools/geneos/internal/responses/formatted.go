@@ -106,6 +106,5 @@ RESPONSES:
 	r.AddHeadlines(opts.headlines)
 
 	r.UpdateTable(headings, rows)
-	r.Render()
-	return nil
+	return r.Render()
 }

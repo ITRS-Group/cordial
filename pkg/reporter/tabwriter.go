@@ -46,7 +46,9 @@ func newTabWriterReporter(_ string, w io.Writer, _ ...any) (Reporter, error) {
 
 // Prepare initialises the TabWriterReporter.
 func (t *TabWriterReporter) Prepare(report Report) error {
-	t.Render()
+	if err := t.Render(); err != nil {
+		return err
+	}
 
 	t.Report = report
 	return nil
@@ -76,23 +78,28 @@ func (t *TabWriterReporter) Reset(report Report) error {
 }
 
 // Render writes the table to the tabwriter.
-func (t *TabWriterReporter) Render() {
+func (t *TabWriterReporter) Render() error {
 	if len(t.Columns) > 0 {
-		t.writer.Write([]byte(strings.Join(t.Columns, "\t") + "\n"))
+		if _, err := t.writer.Write([]byte(strings.Join(t.Columns, "\t") + "\n")); err != nil {
+			return err
+		}
 	}
 
 	for _, row := range t.rows {
-		t.writer.Write([]byte(strings.Join(row, "\t") + "\n"))
+		if _, err := t.writer.Write([]byte(strings.Join(row, "\t") + "\n")); err != nil {
+			return err
+		}
 	}
 
-	t.writer.Flush()
+	return t.writer.Flush()
 }
 
 // Close releases resources for TabWriterReporter.
-func (t *TabWriterReporter) Close() {
+func (t *TabWriterReporter) Close() error {
 	if t.writer != nil {
-		t.writer.Flush()
+		return t.writer.Flush()
 	}
+	return nil
 }
 
 // Extension returns the file extension for TabWriterReporter.

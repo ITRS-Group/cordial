@@ -202,7 +202,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 
 	keys := kh.HostKeys(dest)
 	if len(keys) == 0 {
-		panic(fmt.Sprintf("no public key found for %s", dest))
+		return nil, fmt.Errorf("no public key found for %s", dest)
 	}
 
 	if agentClient := sshConnectAgent(); agentClient != nil {
@@ -226,7 +226,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 	}
 	client, err = ssh.Dial("tcp", dest, config)
 	if err != nil && knownhosts.IsHostKeyChanged(err) {
-		panic(fmt.Sprintf("host key has changed for %s", dest))
+		return nil, fmt.Errorf("host key has changed for %s: %w", dest, err)
 	}
 	return
 }

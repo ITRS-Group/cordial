@@ -149,8 +149,12 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		reporter.HeadlineCSSClass("gdna-headlines"),
 	)
 	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
-	r.Render()
-	r.Close()
+	if err = r.Render(); err != nil {
+		return
+	}
+	if err = r.Close(); err != nil {
+		return
+	}
 	log.Debug("text+HTML report complete", slog.Int("bytes", data.HTMLBodyPart.Len()))
 
 	data.TextBodyPart = &bytes.Buffer{}
@@ -158,8 +162,12 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
 	)
 	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
-	r.Render()
-	r.Close()
+	if err = r.Render(); err != nil {
+		return
+	}
+	if err = r.Close(); err != nil {
+		return
+	}
 	log.Debug("TEXT+html report complete", slog.Int("bytes", data.TextBodyPart.Len()))
 
 	var contents []string
@@ -191,8 +199,12 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.HeadlineCSSClass("gdna-headlines"),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Render()
-			r.Close()
+			if err = r.Render(); err != nil {
+				return
+			}
+			if err = r.Close(); err != nil {
+				return
+			}
 			log.Debug("HTML report complete", slog.Int("bytes", data.HTMLAttachment.Len()))
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
@@ -214,8 +226,12 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
 			)
 			runReports(ctx, cf, tx, r, reports, -1)
-			r.Render()
-			r.Close()
+			if err = r.Render(); err != nil {
+				return
+			}
+			if err = r.Close(); err != nil {
+				return
+			}
 			log.Debug("XLSX report complete", slog.Int("bytes", data.XLSXAttachment.Len()))
 		default:
 		}

@@ -277,7 +277,7 @@ func (x *XLSXReporter) UpdateTable(columns []string, rows [][]string) {
 	}
 }
 
-func (x *XLSXReporter) setSheetData() {
+func (x *XLSXReporter) setSheetData() error {
 	for sheetname, sheet := range x.sheets {
 		// render headlines first, updating rowOffset as we go if "vertical"
 		switch x.headlines {
@@ -344,17 +344,17 @@ func (x *XLSXReporter) setSheetData() {
 		// render main table
 		columnsCell, err := excelize.CoordinatesToCellName(1, 1+sheet.rowOffset, false)
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("format column header cell for sheet %q: %w", sheetname, err)
 		}
 		if err = x.x.SetSheetRow(sheetname, columnsCell, &sheet.columns); err != nil {
-			return
+			return err
 		}
 
 		for rownum, rowname := range sheet.rowOrder {
 			cellsString := sheet.rows[rowname]
 			cells := stringsToCells(cellsString)
 			if err = x.x.SetSheetRow(sheetname, fmt.Sprintf("A%d", 2+rownum+sheet.rowOffset), &cells); err != nil {
-				return
+				return err
 			}
 
 			// update styles
@@ -374,21 +374,23 @@ func (x *XLSXReporter) setSheetData() {
 		}
 		x.x.SetRowStyle(sheetname, 1+sheet.rowOffset, 1+sheet.rowOffset, x.topHeading)
 	}
+	return nil
 }
 
-func (x *XLSXReporter) setColumnWidths() {
+func (x *XLSXReporter) setColumnWidths() error {
 	for sheetname, sheet := range x.sheets {
 		// set column widths
 		for i, c := range sheet.columnWidths {
 			col, err := excelize.ColumnNumberToName(i + 1)
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("format column width for sheet %q: %w", sheetname, err)
 			}
 			if err = x.x.SetColWidth(sheetname, col, col, c); err != nil {
-				return
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (x *XLSXReporter) freezePanes() {
@@ -481,19 +483,28 @@ func (x *XLSXReporter) AddHeadlines(headlines map[string]string) {
 }
 
 // Render TODO: Document its behavior, inputs, and effects.
-func (x *XLSXReporter) Render() {
-	x.setSheetData()
-	x.applyConditionalFormat()
-	x.setColumnWidths()
+func (x *XLSXReporter) Render() error {
+	if err := x.setSheetData(); err != nil {
+		return fmt.Errorf("write report sheet data: %w", err)
+	}
+	if err := x.applyConditionalFormat(); err != nil {
+		return fmt.Errorf("apply report conditional formatting: %w", err)
+	}
+	if err := x.setColumnWidths(); err != nil {
+		return fmt.Errorf("set report column widths: %w", err)
+	}
 	x.freezePanes()
-	x.x.Write(x.w, excelize.Options{
+	if err := x.x.Write(x.w, excelize.Options{
 		Password: string(x.password),
-	})
+	}); err != nil {
+		return fmt.Errorf("write XLSX report: %w", err)
+	}
+	return nil
 }
 
 // Close TODO: Document its behavior, inputs, and effects.
-func (x *XLSXReporter) Close() {
-	x.x.Close()
+func (x *XLSXReporter) Close() error {
+	return x.x.Close()
 }
 
 // Extension TODO: Document its behavior, inputs, and effects.
@@ -539,7 +550,7 @@ func stringsToCells(rowStrings []string) (row []any) {
 
 // apply conditional formatting to all sheets as part of the render
 // process
-func (x *XLSXReporter) applyConditionalFormat() {
+func (x *XLSXReporter) applyConditionalFormat() error {
 	for sheetname, sheet := range x.sheets {
 		// conditional formats apply to columns of table data, so create
 		// the format from the config then apply to range
@@ -604,11 +615,11 @@ func (x *XLSXReporter) applyConditionalFormat() {
 				i := slices.Index(sheet.columns, t)
 				if i == -1 {
 					log.Warn("unknown column name, skipping conditional formatting for sheet", slog.String("column", t), slog.String("sheet", sheetname))
-					return
+					return nil
 				}
 				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
 				if err != nil {
-					panic(err)
+					return fmt.Errorf("format conditional-format cell for sheet %q: %w", sheetname, err)
 				}
 				// make the column *only* absolute
 				firstcell = "$" + firstcell
@@ -630,15 +641,15 @@ func (x *XLSXReporter) applyConditionalFormat() {
 				i := slices.Index(sheet.columns, col)
 				if i == -1 {
 					log.Warn("unknown column name, skipping conditional formatting for sheet", slog.String("column", col), slog.String("sheet", sheetname))
-					return
+					return nil
 				}
 				firstcell, err := excelize.CoordinatesToCellName(i+1, 2+sheet.rowOffset, false)
 				if err != nil {
-					panic(err)
+					return fmt.Errorf("format conditional-format start cell for sheet %q: %w", sheetname, err)
 				}
 				lastcell, err := excelize.CoordinatesToCellName(i+1, 1+sheet.rowOffset+rows, false)
 				if err != nil {
-					panic(err)
+					return fmt.Errorf("format conditional-format end cell for sheet %q: %w", sheetname, err)
 				}
 				refs = append(refs, firstcell+":"+lastcell)
 			}
@@ -646,6 +657,7 @@ func (x *XLSXReporter) applyConditionalFormat() {
 			x.setConditionalFormat(sheetname, formula, format, refs...)
 		}
 	}
+	return nil
 }
 
 func (x *XLSXReporter) setConditionalFormat(sheetname, formula, format string, refs ...string) {

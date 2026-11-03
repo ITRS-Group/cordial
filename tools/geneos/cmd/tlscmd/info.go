@@ -390,9 +390,7 @@ var infoCmd = &cobra.Command{
 			rp.AddHeadline("totalExpiring30days", strconv.FormatInt(totalExpiring30days, 10))
 		}
 
-		rp.Render()
-
-		return
+		return rp.Render()
 	},
 }
 

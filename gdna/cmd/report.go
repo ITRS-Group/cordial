@@ -276,8 +276,14 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			return
 		}
 	}
-	defer r.Close()
-	defer r.Render()
+	defer func() {
+		if renderErr := r.Render(); renderErr != nil {
+			err = errors.Join(err, renderErr)
+		}
+		if closeErr := r.Close(); closeErr != nil {
+			err = errors.Join(err, closeErr)
+		}
+	}()
 
 	return runReports(ctx, cf, tx, r, reports, maxreports)
 }

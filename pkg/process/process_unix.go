@@ -121,7 +121,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	var scClkTck int64
 
 	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
-		panic("pstats must be a pointer to a struct")
+		return pstats, fmt.Errorf("pstats must be a pointer to a struct")
 	}
 
 	if h.IsLocalhost() {

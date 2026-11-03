@@ -46,7 +46,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 		instanceName := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
 
 		if instanceName == "" {
-			panic("name empty")
+			return fmt.Errorf("profile %q contains an empty gateway name", name)
 		}
 
 		vals := profile.ApplyCommonParams(pf, name, &gateway.Common, lookup)

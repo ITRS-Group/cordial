@@ -46,10 +46,10 @@ type Reporter interface {
 	Reset(report Report) error
 
 	// Render writes the current report to the destination selected with Prepare()
-	Render()
+	Render() error
 
 	// Close releases any resources for the whole reporter
-	Close()
+	Close() error
 
 	// Extension returns the file extension appropriate for this reporter type
 	Extension() string

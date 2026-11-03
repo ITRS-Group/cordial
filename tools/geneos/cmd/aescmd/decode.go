@@ -155,7 +155,8 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			}
 			ciphertext, ok := params[0].(string)
 			if !ok {
-				panic("wrong type")
+				resp.Err = fmt.Errorf("expected ciphertext string, got %T", params[0])
+				return
 			}
 			i.Log().Debug("trying to decode for instance")
 			if !i.Type().UsesKeyfiles {

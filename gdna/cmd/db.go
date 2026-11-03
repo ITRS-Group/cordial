@@ -371,7 +371,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 
 		if len(fields) < len(colNames) {
 			line, _ := c.FieldPos(0)
-			panic(fmt.Sprintf("number of fields in CSV at line %d is less than headings for %s", line, source))
+			return fmt.Errorf("number of fields in CSV at line %d is less than headings for %s", line, source)
 		}
 
 		values := make(map[string]string, len(colNames))

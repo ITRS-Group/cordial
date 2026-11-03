@@ -267,7 +267,8 @@ var encodeCmd = &cobra.Command{
 
 			secret, ok := params[0].(config.Secret)
 			if !ok {
-				panic("wrong type")
+				resp.Err = fmt.Errorf("expected secret, got %T", params[0])
+				return
 			}
 			e, err := keyfile.Encode(host.Localhost, secret, encodeCmdExpandable)
 			if err != nil {

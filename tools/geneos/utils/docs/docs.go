@@ -20,6 +20,7 @@ limitations under the License.
 package main
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -75,7 +76,8 @@ func main() {
 		os.MkdirAll(d.dir, 0775)
 		d.command.Use = "geneos"
 		if err := GenMarkdownTree(d.command, d.dir); err != nil {
-			panic(err)
+			slog.Error("generate command documentation", "directory", d.dir, "error", err)
+			os.Exit(1)
 		}
 	}
 }

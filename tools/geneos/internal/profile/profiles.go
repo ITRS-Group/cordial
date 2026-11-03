@@ -342,7 +342,7 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 		instanceName := config.Expand[string](pf, common.Name, config.LookupTable(lookup))
 
 		if instanceName == "" {
-			panic("name empty")
+			return fmt.Errorf("profile %q contains an empty instance name", name)
 		}
 
 		vals := ApplyCommonParams(pf, name, &common, lookup)

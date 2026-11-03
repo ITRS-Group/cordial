@@ -210,7 +210,8 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Gener
 
 	merge, ok := params[0].(bool)
 	if !ok {
-		panic("wrong type")
+		resp.Err = fmt.Errorf("expected bool parameter, got %T", params[0])
+		return
 	}
 
 	setup := config.Get[string](i.Config(), "setup")

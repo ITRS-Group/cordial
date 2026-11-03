@@ -89,12 +89,12 @@ type CommandResponse struct {
 // A Connection defines the REST command connection details to a Geneos
 // Gateway.
 type Connection struct {
-	baseURL            *url.URL
-	authType           int
-	username           string
-	password           config.Secret
-// TODO: Revisit unused field sso; restore it only when needed.
-// 	sso                SSOAuth
+	baseURL  *url.URL
+	authType int
+	username string
+	password config.Secret
+	// TODO: Revisit unused field sso; restore it only when needed.
+	// 	sso                SSOAuth
 	insecureSkipVerify bool
 	timeout            time.Duration
 	rrurls             []*url.URL
@@ -242,7 +242,10 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 	}
 	raw.Target = command.Target
 
-	response = cookResponse(raw)
+	response, err = cookResponse(raw)
+	if err != nil {
+		return
+	}
 	if response.Status == "error" {
 		err = fmt.Errorf("%s: %v", response.Status, response.Stderr)
 		return
@@ -252,7 +255,7 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 
 // Convert a raw response into a structured one where the interleaved
 // stream messages are concatenated into strings for each stream
-func cookResponse(raw CommandResponseRaw) (cr CommandResponse) {
+func cookResponse(raw CommandResponseRaw) (cr CommandResponse, err error) {
 	cr = CommandResponse{
 		Status:   raw.Status,
 		Dataview: raw.Dataview,
@@ -275,7 +278,7 @@ func cookResponse(raw CommandResponseRaw) (cr CommandResponse) {
 			case "execLog":
 				cr.ExecLog += strings.TrimSpace(v) + "\n"
 			default:
-				panic(fmt.Sprintf("unknown response stream %q", k))
+				return cr, fmt.Errorf("unknown response stream %q", k)
 			}
 		}
 	}

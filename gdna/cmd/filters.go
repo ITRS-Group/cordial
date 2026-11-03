@@ -179,7 +179,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
 	); err != nil {
-		panic(err)
+		return err
 	}
 	var newnames []string
 	for _, name := range names {
@@ -288,7 +288,7 @@ func removeFilter(filterType, category string, names []string) (err error) {
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
 	); err != nil {
-		panic(err)
+		return err
 	}
 
 	var newnames []string
@@ -337,7 +337,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
 		); err != nil {
-			panic(err)
+			return err
 		}
 
 		for _, filter := range filters {
@@ -350,8 +350,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 			})
 		}
 		r.UpdateTable([]string{"name", "timeUpdated", "username", "comment", "origin"}, rows)
-		r.Render()
-		return
+		return r.Render()
 	}
 
 	var rows [][]string
@@ -360,7 +359,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
 		); err != nil {
-			panic(err)
+			return err
 		}
 		for _, filter := range filters {
 			rows = append(rows, []string{
@@ -376,8 +375,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	}
 
 	r.UpdateTable([]string{"category:name", "category", "name", "timeUpdated", "username", "comment", "origin"}, rows)
-	r.Render()
-	return
+	return r.Render()
 }
 
 // process the filters from the on-disk file and recreate the reporting
@@ -420,7 +418,7 @@ OUTER:
 
 		var x []*Filter
 		if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x); err != nil {
-			panic(err)
+			return err
 		}
 		// if nothing on-disk then load any defaults
 		if len(x) == 0 {

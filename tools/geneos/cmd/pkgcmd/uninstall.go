@@ -122,7 +122,7 @@ geneos uninstall --version 7.4.2
 					}
 					files, err := filepath.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
 					if err != nil {
-						panic(err)
+						return fmt.Errorf("find cached packages for %s: %w", ct, err)
 					}
 					if len(files) == 0 {
 						fmt.Printf("cannot find any cached downloads to remove in %q\n", h.PathTo("packages", "downloads", "*"+pattern+"*"))

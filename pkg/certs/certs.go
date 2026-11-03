@@ -37,9 +37,9 @@ import (
 
 const (
 	// PEMExtension TODO: Describe its purpose and intended use.
-	PEMExtension      = ".pem"
+	PEMExtension = ".pem"
 	// KEYExtension TODO: Describe its purpose and intended use.
-	KEYExtension      = ".key"
+	KEYExtension = ".key"
 	// KeystoreExtension TODO: Describe its purpose and intended use.
 	KeystoreExtension = ".db"
 )
@@ -82,7 +82,7 @@ func CreateCertificate(template, parent *x509.Certificate, signingKey PrivateKey
 
 	key, pub, err = GenerateKey(keytype)
 	if err != nil {
-		panic(err)
+		return nil, nil, fmt.Errorf("generate private key: %w", err)
 	}
 
 	// add a subject key identifier if missing. this is optional but

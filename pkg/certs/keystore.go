@@ -3,6 +3,7 @@ package certs
 import (
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -246,25 +247,25 @@ func readJCEKS(h host.Host, path string, password config.Secret) (k *KeyStore, e
 	for _, p := range jk.ListPrivateKeys() {
 		key, certs, err := jk.GetPrivateKeyAndCerts(p, pw)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("read private key %q: %w", p, err)
 		}
 		pkcs8key, err := x509.MarshalPKCS8PrivateKey(key)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("marshal private key %q: %w", p, err)
 		}
 
 		if err = k.AddKeystoreKey(p, PrivateKey(pkcs8key), password, certs...); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("add private key %q: %w", p, err)
 		}
 	}
 
 	for _, c := range jk.ListCerts() {
 		cert, err := jk.GetCert(c)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("read certificate %q: %w", c, err)
 		}
 		if err = k.AddTrustedCertificate(c, cert); err != nil {
-			panic(err)
+			return nil, fmt.Errorf("add trusted certificate %q: %w", c, err)
 		}
 	}
 

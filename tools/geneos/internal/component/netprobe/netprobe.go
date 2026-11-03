@@ -149,12 +149,14 @@ func factory(name string) (i geneos.Instance) {
 		case "netprobe", "minimal", "fa2":
 			config.Set(i.Config(), "pkgtype", ct.Name)
 		default:
-			panic(fmt.Sprintf("invalid pkgtype for netprobe: %s", ct.Name))
+			slog.Error("invalid package type for netprobe", slog.String("pkgtype", ct.Name))
+			return nil
 		}
 	}
 
 	if err := instance.SetDefaults(i, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
+		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
+		return nil
 	}
 
 	// set the home dir based on where it might be, default to one above

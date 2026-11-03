@@ -193,7 +193,8 @@ func factory(name string) (i geneos.Instance) {
 	}
 
 	if err := instance.SetDefaults(i, local); err != nil {
-		panic(fmt.Sprintf("%s setDefaults(): %v", i, err))
+		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
+		return nil
 	}
 
 	// set the home dir based on where it might be, default to one above

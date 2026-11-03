@@ -101,7 +101,9 @@ func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter,
 // Prepare TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Prepare(report Report) (err error) {
 	// flush any existing data
-	fr.Render()
+	if err = fr.Render(); err != nil {
+		return
+	}
 
 	// reset
 	*fr = FormattedReporter{
@@ -192,7 +194,7 @@ func (fr *FormattedReporter) Reset(report Report) (err error) {
 
 // Render sends the collected report data to the underlying table.Writer
 // as on table of headlines and another or table data
-func (fr *FormattedReporter) Render() {
+func (fr *FormattedReporter) Render() error {
 	var err error
 
 	if fr.z != nil || fr.format != "csv" {
@@ -226,7 +228,7 @@ func (fr *FormattedReporter) Render() {
 						Modified: time.Now(),
 					})
 					if err != nil {
-						panic(err)
+						return fmt.Errorf("create report headlines archive entry: %w", err)
 					}
 				} else if fr.rendered {
 					fmt.Fprintln(fr.w)
@@ -235,7 +237,9 @@ func (fr *FormattedReporter) Render() {
 				fr.t.SetOutputMirror(w)
 				fr.renderFunc()
 				if fr.z != nil {
-					fr.z.Flush()
+					if err = fr.z.Flush(); err != nil {
+						return fmt.Errorf("flush report headlines archive entry: %w", err)
+					}
 				}
 				fr.rendered = true
 			}
@@ -281,7 +285,7 @@ func (fr *FormattedReporter) Render() {
 				Modified: time.Now(),
 			})
 			if err != nil {
-				panic(err)
+				return fmt.Errorf("create report archive entry: %w", err)
 			}
 		} else if fr.rendered {
 			fmt.Fprintln(fr.w)
@@ -289,32 +293,38 @@ func (fr *FormattedReporter) Render() {
 		fr.t.SetOutputMirror(w)
 		fr.renderFunc()
 		if fr.z != nil {
-			fr.z.Flush()
+			if err = fr.z.Flush(); err != nil {
+				return fmt.Errorf("flush report archive entry: %w", err)
+			}
 		}
 		fr.rendered = true
 	}
+	return nil
 }
 
 // Close TODO: Document its behavior, inputs, and effects.
-func (fr *FormattedReporter) Close() {
+func (fr *FormattedReporter) Close() error {
 	if fr.format == "html" {
-		fr.w.Write([]byte(fr.htmlpostscript))
+		if _, err := fr.w.Write([]byte(fr.htmlpostscript)); err != nil {
+			return fmt.Errorf("write report HTML postscript: %w", err)
+		}
 	}
 
 	if fr.z != nil {
 		// close the ZIP, create the directory entries
 		err := fr.z.Close()
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("close report archive: %w", err)
 		}
 	}
 
 	if c, ok := fr.w.(io.Closer); ok {
 		err := c.Close()
 		if err != nil {
-			panic(err)
+			return fmt.Errorf("close report output: %w", err)
 		}
 	}
+	return nil
 }
 
 // Extension TODO: Document its behavior, inputs, and effects.
