@@ -10,8 +10,6 @@ The `geneos` command is Cordial's command-line tool for managing ITRS Geneos. It
 - [Usage examples](USAGE.md) for sample operations
 - [Documentation index](DOCUMENTATION.md) to find other guides
 
-> This source tree identifies itself as `v1.30.0-beta`. Profiles, includes, and Gateway snapshot features in this release are previews and may change. See the [changelog](../../CHANGELOG.md) for release details.
-
 ## Why use the `geneos` command?
 
 - **One operational interface:** Manage Geneos components and packages through consistent commands across hosts.
@@ -288,7 +286,10 @@ flowchart LR
     subgraph Packages
       direction LR
       packages ---> packages/downloads[downloads]
-      packages ---> packages/gateway[gateway]
+      packages ---> packageGateway[gateway]
+      packageGateway --> gatewayActiveProd[active_prod symlink]
+      packageGateway --> gatewayPackageVersion[7.12.0]
+      gatewayActiveProd -.->|points to| gatewayPackageVersion
       packages ---> packages/netprobe[netprobe]
       packages ---> packages/licd[licd]
       packages ---> packages/webserver[webserver]
@@ -298,9 +299,12 @@ flowchart LR
       direction LR
       gateway ----> gateway/gateways[gateways]
       gateway ---> gateway/shared[shared] & gateway/config[config] & gateway/templates[templates]
-      gateway ---> gateway/includes[includes]
-        gateway/includes ---> gateway/includes/v1.30.0[v1.30.0] & gateway/includes/config[config]
-        gateway/includes/v1.30.0 ---> gateway/includes/v1.30.0/itrs.level1.infrastructure.xml[itrs.level1.infrastructure.xml]
+      gateway ---> gatewayIncludes[includes]
+      gatewayIncludes --> gatewayIncludeLink[itrs.level1.infrastructure.xml symlink]
+      gatewayIncludes --> gatewayIncludeVersion[v1.30.0]
+      gatewayIncludes --> gatewayIncludeConfig[config templates]
+      gatewayIncludeVersion --> gatewayIncludeFile[itrs.level1.infrastructure.xml]
+      gatewayIncludeLink -.->|points to| gatewayIncludeFile
         gateway/gateways ---> gateway/gateways/example1[example1]
         gateway/gateways ---> gateway/gateways/example2[example2]
         gateway/gateways ---> gateway/gateways/example3[...]
