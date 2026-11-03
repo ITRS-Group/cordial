@@ -33,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -40,6 +41,7 @@ const name = "ca3"
 
 // Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
+	ApplyProfile: profile.ApplyCommonProfile,
 	Name:         name,
 	Aliases:      []string{"collection-agent", "ca3s", "collector"},
 	LegacyPrefix: "",

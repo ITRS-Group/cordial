@@ -34,6 +34,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -41,6 +42,7 @@ const name = "netprobe-router"
 
 // Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
+	ApplyProfile: profile.ApplyCommonProfile,
 	Initialise:   geneos.WriteTemplates,
 	Name:         name,
 	Aliases:      []string{"netproberouter", "router"},

@@ -32,6 +32,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -39,6 +40,7 @@ const name = "ac2"
 
 // Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
+	ApplyProfile: profile.ApplyCommonProfile,
 	Name:         name,
 	Aliases:      []string{"active-console", "activeconsole"},
 	LegacyPrefix: "",
