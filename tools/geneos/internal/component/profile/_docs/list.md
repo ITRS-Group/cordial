@@ -1,1 +1,1 @@
-List the available profiles
+List available profiles with their descriptions and the configuration file they came from. The default `column` format prints a readable table. Use `--format` (`-f`) to select `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`. `pretty` outputs indented JSON. If no profile file is selected, `From` is `internal defaults`.

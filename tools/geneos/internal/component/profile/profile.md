@@ -30,6 +30,8 @@ The supplied configuration is [internal/profile/profiles.defaults.yaml](../../pr
    geneos profile list
    ```
 
+    The list includes each profile's description and its source file. Use `--format` (`-f`) to choose `column` (the default), `table`, `csv`, `json`, `pretty` (indented JSON), or `toolkit` output.
+
 2. Read the help for a named profile:
 
    ```bash
@@ -159,7 +161,7 @@ Choose ports that are free on the host. The Gateway's internal name, `gatewaynam
 
 | Key | Meaning |
 | --- | --- |
-| `_short` | Short description shown by `geneos profile list`. |
+| `_short` | Description shown by `geneos profile list`. |
 | `_description` | Markdown description shown by `geneos profile --help NAME`. |
 
 Keys that start with `_` are not treated as component entries. The top-level `version` in the supplied file identifies that configuration example; it does not select the software release to install. Use deployment options for release selection.

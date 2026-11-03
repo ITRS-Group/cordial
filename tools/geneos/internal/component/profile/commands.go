@@ -20,6 +20,7 @@ package profile
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"maps"
 	"os"
 	"slices"
@@ -29,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 //go:embed profile.md
@@ -65,11 +67,10 @@ func profileHelp(command *cobra.Command, _ []string) {
 	// pull out profile name from the command-line arguments
 	args := os.Args[3:]
 
-	if len(args) > 0 {
+	if pf := cmd.Profiles; pf != nil && len(args) > 0 {
 		// check if the profile exists and has a description
 		// display the description as help text
 		// (implementation would go here)
-		pf := cmd.Profiles
 		name := args[0]
 		components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 		if found {
@@ -81,12 +82,17 @@ func profileHelp(command *cobra.Command, _ []string) {
 	}
 
 	// no profile name is given, just display the general help text
-	command.SetHelpFunc(nil)
-	command.Help()
+	if command.Long != "" {
+		command.Println(command.Long)
+		command.Println()
+	}
+	command.Print(command.UsageString())
 }
 
 //go:embed _docs/list.md
 var profileListDescription string
+
+var profileListCmdFormat string
 
 var profileListCmd = &cobra.Command{
 	Use:                   "list",
@@ -95,16 +101,58 @@ var profileListCmd = &cobra.Command{
 	Long:                  profileListDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
-	Run: func(command *cobra.Command, args []string) {
+	RunE: func(command *cobra.Command, args []string) error {
+		if err := validateProfileListFormat(profileListCmdFormat); err != nil {
+			return err
+		}
 		pf := cmd.Profiles
 		profiles, found := config.Lookup[map[string]any](pf, "profiles")
-		if found {
-			for _, name := range slices.Sorted(maps.Keys(profiles)) {
-				fields := config.Get[map[string]any](pf, pf.Join("profiles", name))
-				fmt.Printf("%s: %s\n", name, fields["_short"])
-			}
+		if !found {
+			profiles = map[string]any{}
 		}
+		source := pf.ConfigFileUsed()
+		if source == "" {
+			source = "internal defaults"
+		}
+		return formatProfileList(os.Stdout, profiles, source, profileListCmdFormat)
 	},
+}
+
+func init() {
+	profileListCmd.Flags().StringVarP(&profileListCmdFormat, "format", "f", "column", "Specify the output format: column, csv, json, pretty, table or toolkit")
+}
+
+func validateProfileListFormat(format string) error {
+	switch format {
+	case "column", "csv", "json", "pretty", "table", "toolkit":
+		return nil
+	default:
+		return fmt.Errorf("invalid format %q: must be one of column, csv, json, pretty, table or toolkit", format)
+	}
+}
+
+func formatProfileList(w io.Writer, profiles map[string]any, source, format string) error {
+	headings := []string{"Profile", "Description", "From"}
+	result := make(responses.GeneralResponses, len(profiles))
+	for _, name := range slices.Sorted(maps.Keys(profiles)) {
+		fields, _ := profiles[name].(map[string]any)
+		description := fmt.Sprint(fields["_short"])
+		if fields["_short"] == nil {
+			description = ""
+		}
+		result[name] = &responses.General{
+			Value: map[string]string{
+				"profile":     name,
+				"description": description,
+				"from":        source,
+			},
+			Dataview: &responses.Dataview{Table: [][]string{{name, description, source}}},
+		}
+	}
+	if format == "pretty" {
+		return result.Formatted(w, "json", headings, nil, responses.IndentJSON(true))
+	}
+	return result.Formatted(w, format, headings, nil)
 }
 
 //go:embed _docs/extract.md
