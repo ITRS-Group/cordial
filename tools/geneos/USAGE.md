@@ -1,8 +1,8 @@
-# Using `geneos` to Manage Geneos
+# Using the `geneos` Command to Manage Geneos
 
 This guide gives examples of common commands you will likely use day-to-day to manage your Geneos installation.
 
-You should already have installed the `geneos` program in a location that makes it simple to run from the command line. If, however, you still need to do this, please see the [README](README.md) or [INSTALL](INSTALL.md) guides. You will also find details of how to [Adopt An Existing Installation](README.md#adopting-an-existing-installation) in the README guide, if you have a Geneos installation that uses `gatewayctl` and related shell script commands.
+You should already have installed the `geneos` command-line tool in a location that makes it easy to run. For installation steps, see the [README](README.md) or [INSTALL](INSTALL.md) guides. The README also explains how to [adopt an existing installation](README.md#adopting-an-existing-installation) managed with `gatewayctl` or related scripts.
 
 <!-- TOC -->
 
@@ -53,7 +53,7 @@ You should already have installed the `geneos` program in a location that makes 
 
 Let's start with some core commands, but first let's take a short look at the typical command line.
 
-> 💡Most commands will accept a similar set of optional arguments. The normal format is:
+> **Command format:** Most commands accept these optional arguments:
 >
 >  ```bash
 >  geneos COMMAND [flags] [TYPE] [NAME...]
@@ -84,7 +84,7 @@ netprobe  localhost            localhost  PA    7036  active_prod:6.5.0         
 san       hdci-ecr1adh01a      localhost  A     7103  netprobe/active_prod:6.5.0  /opt/geneos/netprobe/sans/hdci-ecr1adh01a
 ```
 
-> 💡 You can also change this output to CSV or JSON formats, for further processing. For all commands you can use the `--help` or `-h` flag to any command to see the options available.
+> **Output formats:** You can also select CSV or JSON. Use `--help` or `-h` to see the available options.
 
 Above you can see these columns:
 
@@ -113,7 +113,7 @@ netprobe  localhost            localhost  1016     [7036]       peter  peter  20
 san       hdci-ecr1adh01a      localhost  1028     []           peter  peter  2023-11-15T11:31:06Z  netprobe/active_prod:6.5.0  /opt/geneos/netprobe/sans/hdci-ecr1adh01a
 ```
 
-> 💡 As for the `list` command, you can also change this output to CSV or JSON formats, for further processing.
+> **Output formats:** As with `list`, you can select CSV or JSON output for further processing.
 
 The output looks similar to the `list` / `ls` command but with some important differences. Notably the `Ports` column contains the actual TCP ports the running process is listening on and these might not be the same as those that may be configured - knowing this can be important in some situations.
 
@@ -126,7 +126,7 @@ The first three - `Type`, `Name` and `Host` - and last two columns - `Version` a
 | `User` and `Group` | The User and Group of the user running the process |
 | `Starttime` | The process start time |
 
-> 💡You can also limit the results by giving additional arguments on the command line, for example:
+> **Filter results:** Add a component type or instance name to limit the results, for example:
 
 ```bash
 geneos ps gateway
@@ -137,7 +137,8 @@ geneos ps "LDN*"
 
 You can control instances using the three commands `geneos start`, `geneos stop` and `geneos restart`. Each command does what the name suggests.
 
-> 💡 It's important to realise that if you don't specify a `TYPE` or instance `NAMEs` then commands will operate on all matching instances. This is especially important with these three commands and you can, unintentionally, affect instances that you didn't intend to change.
+> [!CAUTION]
+> Without a `TYPE` or instance `NAME`, these commands can affect all matching instances. Specify the target before starting, stopping, or restarting components.
 
 While there are a variety of options to these commands, all visible with the `--help`/`-h` flag, it is worth mentioning these:
 
@@ -151,11 +152,11 @@ While there are a variety of options to these commands, all visible with the `--
 
 ## Managing Software Releases
 
-The `geneos` program includes commands to help manage the installed releases for each component type. These commands are all found in the `geneos package` sub-system.
+The `geneos` command includes commands to manage installed releases for each component type. These are grouped under `geneos package`.
 
 As you have seen, each instance is of a specific component type. Each of these component types is associated with a software release available on the [ITRS Downloads](https://resources.itrsgroup.com/downloads) site. To allow you to manage which version is used for which instance we use the concept of a symbolic "base version". In most cases you will see this listed as the default, `active_prod`.
 
-> 💡️ Installed releases are **only** related to their component types and not individual instances. You manage packages _per component_ and with the symbolic _base version_. Each instance then uses a base version, and most commonly all share the same one, per component. All of the commands below only work with components and base versions, not instances.
+> **Package model:** Releases are managed per component type and symbolic base version, not per instance. Each instance refers to a base version; instances of the same type commonly share one.
 
 ### `geneos package list`
 
@@ -171,7 +172,7 @@ gateway    localhost  6.4.0                        2023-09-01T08:08:15Z  /opt/ge
 gateway    localhost  5.14.3          current      2023-09-05T11:02:15Z  /opt/geneos/packages/gateway/5.14.3
 ```
 
-> 💡 You can also output this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
+> **Output formats:** You can select CSV or JSON for further processing. Run `geneos help package list` to see available options.
 
 In the output above you will see the following columns:
 
@@ -186,9 +187,9 @@ In the output above you will see the following columns:
 
 ### `geneos package install`
 
-With this command you can download and install Geneos releases from the command line, without a web browser, and then copy files between systems as long as you can reach the download site from the server you are working on. You may need to configure details for your corporate web proxy - you can read more about this in the `geneos` documentation by following this link or running [`geneos help package install`](https://github.com/ITRS-Group/cordial/blob/main/tools/geneos/docs/geneos_package_install.md).
+With this command you can download and install Geneos releases from the command line, without a web browser, and then copy files between systems as long as you can reach the download site from the server you are working on. You may need to configure your corporate web proxy; see the package-install command documentation or run `geneos help package install` for details.
 
-💡The `geneos package install` command will not, by default, change any running instance - it will only download and install releases. To also update which release version an instance uses you must also either use additional flags, such as `--update` or use the `geneos package update` command.
+**Note:** By default, `geneos package install` downloads and installs releases without changing which version running instances use. To change the active version, use `--update` or run `geneos package update`.
 
 To download ITRS software you must have a registered account and use these to access the releases. `geneos package install` can accept your user name with the `--username EMAIL` / `-u EMAIL` flag and will then prompt you for your password, or you can use the `geneos login` command to securely save your credentials in an encrypted file.
 
@@ -226,7 +227,7 @@ Once you know the version and symbolic base name for the component you want, the
 $ geneos package update gateway -V 6.6.0 -b dev
 ```
 
-> 💡 Remember that all of the `geneos package` commands work on component types and base versions and not on individual instances.
+> **Package scope:** `geneos package` commands operate on component types and base versions, not individual instances.
 
 Any Gateway instance that uses the symbolic base `dev` will be stopped, the link updated and the same instances started. If any of the instances are protected then the command will stop and not update the link or stop any of the other matching instances. This is one of the uses for the protected label. If you are sure you want to update, then also supply the `--force`/`-F` flag:
 
@@ -234,7 +235,7 @@ Any Gateway instance that uses the symbolic base `dev` will be stopped, the link
 geneos package update gateway -V 6.6.0 -b dev --force
 ```
 
-> 💡️ The update will still stop even if the protected instances are not running. The protected label is not just to prevent the instance being stopped but also changed.
+> **Caution:** The update is blocked if a protected instance uses the base version, even when that instance is not running. Protection prevents changes as well as stops.
 
 ### `geneos package uninstall`
 
@@ -256,7 +257,7 @@ removed gateway release 5.14.3 from ubuntu:/opt/geneos/packages/gateway
 removed gateway release 6.3.1 from ubuntu:/opt/geneos/packages/gateway
 ```
 
->💡Like for many other commands, if an instance is labelled protected then no action will be taken without the `--force`/`-F` flag.
+> **Protected instances:** The command skips protected instances unless you use `--force`/`-F`.
 
 ## Managing Instances
 
@@ -354,7 +355,7 @@ Unless you used the `--makecerts`/`-C` option for the initialisation of TLS supp
 $ geneos tls init
 ```
 
-💡Once your TLS sub-system is initialised all subsequently created **new** instances will have their own certificate and private key, but no existing instances will be updated. To create certificates and keys for existing instances use the `geneos tls new` after initialisation.
+**Note:** After TLS is initialized, newly created instances receive a certificate and private key. Existing instances are unchanged; use `geneos tls new` to create certificates for them.
 
 When run, the command creates a root certificate and key as well as a signing certificate and key, both pairs of files in your `${HOME}/.config/geneos` directory. The root certificate is only used to sign itself and the 2nd level signing certificate. It is this signing, or intermediate, certificate that is used to sign instance certificates. The command also creates a global chain file which contains both certificates, for verification of instance certificates by components.
 
@@ -395,7 +396,7 @@ licd      perm                 localhost  28378669   "2024-10-18 00:00:00 +0000 
 netprobe  localhost            localhost  28378669   "2024-10-18 00:00:00 +0000 UTC"  "geneos netprobe localhost"       true  
 ```
 
-> 💡 You can also choose to have this information in CSV or JSON formats, for further processing. Use the `--help` or `-h` flag to any command to see the options available.
+> **Output formats:** You can select CSV or JSON for further processing. Run `geneos help tls list` to see available options.
 
 Just like the `geneos list` command for instances themselves, you can see columns for the component type, the instance name and the host. The other columns are:
 
@@ -457,7 +458,7 @@ It's also possible to see the whole log file with the `--cat` or `-c` flag, to "
 
 ### `geneos show`
 
-The `geneos show` command will display various aspects of instance configurations. Without other options it will output the configuration (used by `geneos` to manage the instance, not the component specific configuration) in a JSON format. This configuration included the values of all parameters as well as metadata about the instance itself, e.g.:
+The `geneos show` command displays instance configuration. By default, it outputs the JSON configuration that the `geneos` command uses to manage the instance, rather than the component's Geneos configuration file. This output includes parameter values and instance metadata, for example:
 
 ```bash
 $ geneos show gateway "Demo Gateway"
@@ -506,7 +507,7 @@ The underlying configuration file may actually contain variable values in some p
             "libpaths": "${config:install}/${config:version}/lib64:/usr/lib64",
 ```
 
-💡 Note that the use of `config:` prefix in the variables instead of `configuration:` to match the displayed output is a side effect of how the `geneos show` command synthesises the `instance` and `configuration` elements, and the real ("raw") values are whatever is output by `--raw`.
+**Note:** The `config:` prefix in displayed variables reflects how `geneos show` combines instance and configuration data. Use `--raw` to inspect the values stored in the configuration file.
 
 The `geneos show` command can also be used to display the component configuration file, if there is one, with the `--setup`/`-s` option as well as the Gateway specific merged configuration using the `--merge`/`-m` option and more. See the [full documentation](/tools/geneos/docs/geneos_show.md) for the command for more details.
 
@@ -543,7 +544,7 @@ You can manage Geneos instances across multiple Linux servers transparently usin
 
 The `geneos host` feature works by using SSH to connect remote servers, using public/private keys for password-less access, typically through a local SSH Agent to safely hold your credentials, or through locally encrypted username/password credentials. You should use `ssh-agent` where possible, and this should be implemented on your local system / desktop for the appropriate security. While beyond the scope of this guide, it is worth noting that all modern Windows desktops support the OpenSSH Agent as a service, but it is disabled by default.
 
-You will have seen in earlier examples the `Host` column in the outputs of `geneos list` and `geneos status`. This is the `geneos` label for each host and not the server hostname - but they could be the same. `localhost` and `all` as reserved names. When referring to a specific instance you can use the format `NAME@HOST`, where `NAME` is the instance name and `HOST` is the host label. If you do not specify one or the other then this is treated as a wildcard and means either all instance on `HOST` or `NAME` on all hosts, respectively. In addition to this name format you can also limit commands to specific hosts using the `--host HOST` or `-H HOST` option, as some commands may not accept instance names, such as the `geneos package` sub-system.
+You will have seen the `Host` column in the output of `geneos list` and `geneos status`. This is the host label used by the `geneos` command, not necessarily the server hostname. `localhost` and `all` are reserved names. Use `NAME@HOST` to identify a specific instance. If you omit either name or host, that part of the match is treated as a wildcard. You can also use `--host HOST` or `-H HOST` to limit commands that do not accept instance names, such as commands in the `geneos package` subsystem.
 
 ### `geneos host list`
 
@@ -572,7 +573,7 @@ All of these examples will add a remote host, but with different options.
 
 This command adds a remote host called `server1` using the same host name and uses the default SSH port 22 and the user name of the one running the command. Authentication will assume and SSH Agent as no password is given. The remote Geneos installation will be located in the user's home directory using the same rules as for a local installation, i.e. if the user name is `geneos` then directly in the home directory, otherwise in a sub-directory called `geneos`.
 
-> 💡More strictly, the directory should match the command name, so if you have renamed `geneos` to something else then that user name will be checked or a sub-directory with that name will be used.
+> More strictly, the directory should match the executable name. If you have renamed the `geneos` executable, the matching user name or a subdirectory with that name will be used.
 
 2. `geneos host add ssh://server2.example.com`
 
@@ -588,7 +589,7 @@ This command is similar to 1. above but will prompt for a password which is stor
 
 ## AES256 Encrypted Secrets and Credential Storage
 
-Geneos Gateways support customer AES256 key files for the transparent encryption and decryption of passwords in configuration files. These key file can also be used with Toolkit samplers to support Secure Environment Variables. All instances created by `geneos` also get a new key file unless you have specified an existing one in advance. 
+Geneos Gateways support customer AES256 key files for the transparent encryption and decryption of passwords in configuration files. These key files can also be used with Toolkit samplers to support Secure Environment Variables. All instances created by the `geneos` command also get a new key file unless you have specified an existing one in advance.
   
 ### `geneos aes new`
 
@@ -625,7 +626,7 @@ Protecting an instance also prevents accidental deletion and other impacting cha
 
 You can see which instances are currently protected using the `geeneos list` command; the `Flags` column will show a `P` for each protected instance.
 
-> 💡 There is no `geneos unprotect` command and this is intentional. Instead there is an `--unprotect` or `-U` to this command to reverse it's affects.
+> **Unprotect an instance:** There is no separate `geneos unprotect` command. Use `geneos protect --unprotect` or `-U` to remove protection.
 
 ### `geneos disable` and `geneos enable`
 

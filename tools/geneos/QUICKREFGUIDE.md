@@ -1,6 +1,6 @@
-# `geneos` Quick Reference Guide
+# Quick Reference for the `geneos` Command
 
-This is your cheat sheet for the most common `geneos` commands.
+This is a quick reference for common commands provided by the `geneos` command-line tool.
 
 ## Essential Commands
 
@@ -122,7 +122,7 @@ geneos start gateway MyGW -l        # Start and immediately follow logs
 |---------|-------------|
 | `geneos help` | Main help screen |
 | `geneos help COMMAND` | Help for specific command |
-| `geneos COMPONENT help` | Component-specific help |
+| `geneos help COMPONENT` | Component-specific help |
 | `geneos help \| grep TERM` | Search help for term |
 
 ## Subsystems
@@ -136,19 +136,14 @@ geneos start gateway MyGW -l        # Start and immediately follow logs
 | `package` | Software management | `geneos package list` |
 | `tls` | Certificate management | `geneos tls list` |
 
-## Emergency Commands
+## Operational diagnostics
 
 ```bash
-geneos ps                            # What's running?
-geneos stop --force                 # Emergency stop all
-geneos logs --lines 100             # Last 100 log lines
-geneos command gateway MyGW         # Show startup command
-geneos show gateway MyGW --raw      # Raw configuration
+geneos ps
+geneos logs --lines 100
+geneos command gateway MyGW
+geneos show gateway MyGW --raw
 ```
 
----
-
-💡 **Tip**: Use quotes around wildcards to prevent shell expansion: `geneos ps 'prod*'`  
-🔧 **Pro Tip**: Add `-l` to start commands to immediately see logs: `geneos start MyGW -l`  
-📖 **More Help**: For detailed examples, see the [User Guide](USER_GUIDE.md)
+Quote wildcard patterns to prevent the shell from expanding them before `geneos` receives them, for example: `geneos ps 'prod*'`. Add `-l` to a start command to follow logs. See the [User Guide](USER_GUIDE.md) for workflow examples.
 

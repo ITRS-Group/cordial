@@ -1,36 +1,39 @@
-# `geneos`
+# Installing the `geneos` Command
 
-## Installation
+## Install
 
-### Download the binary
+### Download a pre-built binary
 
-You can download a pre-built binary version (for Linux on amd64 only) from [this link](https://github.com/itrs-group/cordial/releases/latest/download/geneos) or like this:
+The latest pre-built binary is for Linux x86-64. On common Linux distributions such as Ubuntu, Debian, and RHEL, use a user-owned directory such as `~/.local/bin` or `~/bin` and add it to your `PATH`:
 
 ```bash
-curl -OL https://github.com/itrs-group/cordial/releases/latest/download/geneos
-chmod 555 geneos
-sudo mv geneos /usr/local/bin/
+mkdir -p "$HOME/.local/bin"
+curl --fail --location --output "$HOME/.local/bin/geneos" https://github.com/itrs-group/cordial/releases/latest/download/geneos
+chmod 0755 "$HOME/.local/bin/geneos"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### Build from source
 
-To build from source you must have [Go](https://go.dev) 1.21.5 or later installed.
+The current source requires [Go](https://go.dev) 1.27.3 or later.
 
-#### One line installation
+#### Install with Go
 
 ```bash
 go install github.com/itrs-group/cordial/tools/geneos@latest
 ```
 
-Make sure that the `geneos` program is in your normal `PATH` - or that $HOME/go/bin is if you used the method above - to make things simpler.
+Ensure the `geneos` executable is on your `PATH`. If you used `go install`, add `$HOME/go/bin` to your `PATH`.
 
-#### Download from github and build manually
+#### Clone and build manually
 
-Make sure you do not have an existing file or directory called `cordial` and then:
+Clone the repository, build the command from its module directory, and install the binary:
 
 ```bash
-github clone https://github.com/itrs-group/cordial.git
-cd cordial/cmd/geneos
-go build
-sudo mv geneos /usr/local/bin
+git clone https://github.com/itrs-group/cordial.git
+cd cordial/tools/geneos
+go build -o geneos .
+mkdir -p "$HOME/.local/bin"
+install -m 0755 geneos "$HOME/.local/bin/geneos"
+export PATH="$HOME/.local/bin:$PATH"
 ```

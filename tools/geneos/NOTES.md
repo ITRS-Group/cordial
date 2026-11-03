@@ -1,12 +1,12 @@
-# Notes
+# Developer Notes
 
-This information needs to be somewhere. Saved in this file for now.
+Working notes on the `geneos` command's directory layout and instance properties. This file is incomplete; verify details against current command documentation before relying on them.
 
 ## Directory Layout
 
-The `geneos` configuration setting or the environment variable
-`ITRS_HOME` points to the base directory for all subsequent operations.
-The layout follows that of the original `gatewayctl` etc.
+The `geneos` root configuration key or the `ITRS_HOME` environment variable
+points to the base directory used by the command. The layout follows the
+conventions of the earlier `gatewayctl` tools.
 
 Directory structure / hierarchy / layout is as follows:
 
@@ -162,16 +162,15 @@ working directories for the individual processes. Taking an example
 gateway called `Gateway1` the path will be:
 `${ITRS_HOME}/gateway/gateways/Gateway1`.
 
-This directory will be the working directory of the process and also
-contain an `.rc` configuration file - if using the legacy scripts (e.g.
-`gatewayctl`) - or a `.json` configuration file - if using the `geneos`
-utility - as well as a `.txt` file to capture the `STDOUT` and `STDERR`
-of the process.
+This directory is the process working directory. It contains an `.rc`
+configuration file for legacy scripts such as `gatewayctl`, or a `.json`
+configuration file managed by the `geneos` command, along with a `.txt`
+file for captured `STDOUT` and `STDERR` output.
 
 There will also be an XML setup file and so on.
 
 
-## `geneos` Components
+## Instance properties managed by the command
 
 ### Instance Properties
 
@@ -191,7 +190,7 @@ There will also be an XML setup file and so on.
 | `options`     | `TYPEOpts`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Additional command-line options to be used as part of the command line to start the instance of the component TYPE. |
 | `port`        | `TYPEport`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Listening port used by the instance. |
 | `program`     | `TYPEExec`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Absolute path to the binary file used to run the instance of the component TYPE. |
-| `user`        | `TYPEUser`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | User owning the instance. |
+| `user`        | `TYPEUser`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Expected OS account on the target host; must match the invoking user locally or configured SSH user remotely. Does not switch users. |
 | `version`     | `TYPEBase`    | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | Version as either the name of the directory holding the component TYPE's binaries or the name of the symlink pointing to that directory. |
 | Gateway Specific: |
 | `gatewayname` | n/a *         | ❌ | ✔ | ❌ | ❌ | ❌ | ❌ | ❌ | Name of the gateway instance. This can be different to the instance name. |

@@ -1,10 +1,10 @@
-# `geneos` User Guide
+# User Guide for the `geneos` Command
 
-Welcome to the `geneos` command-line tool! This guide will help you get started and become proficient with managing your Geneos environment.
+Use this guide to manage Geneos with the `geneos` command. It covers common administration workflows, remote hosts, security, and troubleshooting.
 
 ## Table of Contents
 
-- [What is geneos?](#what-is-geneos)
+- [What is the geneos command?](#what-is-the-geneos-command)
 - [Quick Start](#quick-start)
 - [Your First 5 Minutes](#your-first-5-minutes)
 - [Essential Workflows](#essential-workflows)
@@ -13,16 +13,16 @@ Welcome to the `geneos` command-line tool! This guide will help you get started 
 - [Troubleshooting](#troubleshooting)
 - [Reference](#reference)
 
-## What is geneos?
+## What is the `geneos` command?
 
-The `geneos` command-line tool is your one-stop solution for managing ITRS Geneos environments. It replaces older tools like `gatewayctl` and `netprobectl` with a unified, modern interface that makes Geneos administration easier and more intuitive.
+The `geneos` command-line tool provides one interface for managing ITRS Geneos environments. It replaces older tools such as `gatewayctl` and `netprobectl` and supports consistent administration across hosts.
 
-### Key Benefits
+### Operational benefits
 
-- **Unified Management**: One tool for all Geneos components (Gateways, Netprobes, Licence Daemons, etc.)
-- **Remote Operations**: Manage instances across multiple servers from a single location
-- **Automation-Friendly**: Designed for scripting and integration with automation tools
-- **Legacy Compatible**: Can work with existing installations and emulate older commands
+- **Consistent management:** Manage Gateways, Netprobes, Licence Daemons, and other components through one command-line interface.
+- **Remote operations:** Manage instances across configured hosts from one location.
+- **Repeatable workflows:** Use commands in scripts and automation.
+- **Compatibility:** Adopt existing installations and use supported legacy command aliases.
 
 ### What You Can Do
 
@@ -37,20 +37,22 @@ The `geneos` command-line tool is your one-stop solution for managing ITRS Geneo
 
 ### Installation
 
+On Linux, use a per-user binary directory such as `~/.local/bin` or `~/bin` and add it to your `PATH`.
+
 #### Option 1: Download Pre-built Binary (Recommended)
 ```bash
 # Download the latest version
-mkdir -p ${HOME}/bin && cd ${HOME}/bin
-curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
-chmod +x ./geneos
+mkdir -p "$HOME/.local/bin"
+curl --fail --location --output "$HOME/.local/bin/geneos" https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
+chmod 0755 "$HOME/.local/bin/geneos"
 
-# Add to PATH (add this to your ~/.bashrc or ~/.profile)
-export PATH="$HOME/bin:$PATH"
+# Add to PATH for this session; add this line to your shell startup file to keep it
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 #### Option 2: Build from Source
 ```bash
-# Requires Go 1.21.5 or later
+# Requires Go 1.27.3 or later
 go install github.com/itrs-group/cordial/tools/geneos@latest
 ```
 
@@ -66,7 +68,7 @@ geneos --help
 If you have an existing Geneos installation:
 
 ```bash
-# Tell geneos where your Geneos installation is (if needed)
+# Tell the geneos command where your Geneos installation is (if needed)
 geneos config set geneos=/path/to/geneos  # typically /opt/itrs
 
 # List existing instances (safe, read-only)
@@ -233,6 +235,13 @@ geneos backup gateway MyGW
 geneos import licd mylicense.lic
 ```
 
+> [!CAUTION]
+> This backup example includes the instance configuration. Shared directories, AES key files, and instance certificates and private keys are excluded by default. Add `--shared`, `--aes`, or `--tls` only when the backup needs those files; these options are explicit opt-ins to prevent accidental export of potentially confidential data. Protect any archive that contains them.
+
+```bash
+geneos backup gateway MyGW --shared --aes --tls
+```
+
 ### Certificate Management
 
 ```bash
@@ -323,10 +332,10 @@ geneos revert -X
 which geneos
 
 # If not, add to PATH
-export PATH="$HOME/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Make permanent by adding to ~/.bashrc
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 ```
 
 #### "Cannot find Geneos installation"

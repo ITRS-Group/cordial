@@ -1,151 +1,147 @@
-# Getting Started with `geneos`
+# Getting Started with the `geneos` Command
 
-This guide gets you up and running with the `geneos` command in under 10 minutes.
+Use this guide to install the `geneos` command, connect it to an existing installation, or deploy a demo environment.
 
-## What is `geneos`?
+## Install
 
-`geneos` is a modern command-line tool that replaces older Geneos management scripts (`gatewayctl`, `netprobectl`, etc.) with a single, unified interface for managing your entire Geneos environment.
+### Download a pre-built binary
 
-## Installation (2 minutes)
+For Linux x86-64, download the latest binary to a user-owned directory such as `~/.local/bin` or `~/bin` and add it to your `PATH`:
 
-### Option 1: Download Binary (Recommended)
 ```bash
-# Download and install
-mkdir -p ${HOME}/bin
-curl -OL https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
-chmod +x geneos
-mv geneos ${HOME}/bin/
-
-# Add to your PATH (choose one)
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc  # Bash
-echo 'export PATH="$HOME/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc    # Zsh
+mkdir -p "$HOME/.local/bin"
+curl --fail --location --output "$HOME/.local/bin/geneos" https://github.com/ITRS-Group/cordial/releases/latest/download/geneos
+chmod 0755 "$HOME/.local/bin/geneos"
+export PATH="$HOME/.local/bin:$PATH"
+geneos version
 ```
 
-### Option 2: Build from Source
+Add the `PATH` update to your shell's startup file to keep it in future sessions. Use `~/bin` instead if that is your preferred user binary directory.
+
+### Install from source
+
+Install the latest released command with Go:
+
 ```bash
 go install github.com/itrs-group/cordial/tools/geneos@latest
 ```
 
-### Verify
+Ensure `$HOME/go/bin` is on your `PATH`, then verify the installation:
+
 ```bash
 geneos version
 ```
 
-## First Time Setup (3 minutes)
+## First-time setup
 
-### If You Have Existing Geneos
+### Use an existing installation
+
+Point the command to the Geneos root directory, which contains `packages`, `gateway`, and related directories:
+
 ```bash
-# Point geneos to your installation
-geneos config set geneos=/opt/itrs  # or wherever your Geneos is installed
-
-# Check what's already there
-geneos list    # See all configured instances  
-geneos ps      # See what's currently running
+geneos config set geneos=/opt/itrs
+geneos list
+geneos ps
 ```
 
-### If You're Starting Fresh
-```bash
-# Create a demo environment (requires ITRS account)
-geneos init demo -u your-email@example.com
+### Deploy a demo environment
 
-# This creates and starts a complete Geneos environment
+The demo profile downloads Geneos releases, so you need an ITRS download account. Supply your account name with `-u`; the command prompts for your password:
+
+```bash
+geneos init demo -u user@example.com
 ```
 
-## Essential Commands (5 minutes)
+Follow the prompts to select an installation directory. After deployment, check the configured and running instances:
 
-### Viewing Your Environment
 ```bash
-geneos list              # Show all instances
-geneos ps                # Show running instances only
-geneos ps gateways       # Show only gateways
-geneos logs -f           # Follow logs for all components
+geneos list
+geneos ps
 ```
 
-### Starting and Stopping
-```bash
-geneos start             # Start all instances
-geneos stop              # Stop all instances
-geneos restart           # Restart all instances
+If the instances are not running, start the profile with `geneos start profile demo`.
 
-geneos start gateway MyGW    # Start specific instance
-geneos stop netprobe "prod*" # Stop all netprobes matching pattern
+## Common workflows
+
+### Review the environment
+
+```bash
+geneos list
+geneos ps
+geneos logs --lines 20
 ```
 
-### Getting Information
+### Start and stop instances
+
 ```bash
-geneos show gateway MyGW     # Show configuration
-geneos command gateway MyGW  # Show startup command
-geneos home gateway MyGW     # Show instance directory
+geneos start gateway MyGateway
+geneos stop netprobe 'prod*'
+geneos restart gateway MyGateway
 ```
 
-### Getting Help
+### Inspect an instance
+
 ```bash
-geneos help              # Main help
-geneos help start        # Help for start command
-geneos gateway help      # Help for gateway component
+geneos show gateway MyGateway
+geneos command gateway MyGateway
+geneos home gateway MyGateway
 ```
 
-## Common Workflows
+### Add components
 
-### Daily Health Check
 ```bash
-geneos ps                           # Are my services running?
-geneos logs --lines 20             # Any recent errors?
+geneos add gateway MyGateway -p 7040
+geneos start gateway MyGateway -l
+geneos add netprobe MyProbe -g localhost:7039
+geneos start netprobe MyProbe -l
 ```
 
-### Adding a New Gateway
+### Manage software releases
+
 ```bash
-geneos add gateway MyNewGW -p 7040  # Create with port 7040
-geneos start gateway MyNewGW -l     # Start and follow logs
+geneos package list
+geneos package install gateway
+geneos package update
 ```
 
-### Adding a Netprobe
-```bash
-geneos add netprobe MyProbe -g localhost:7039  # Connect to gateway
-geneos start netprobe MyProbe -l               # Start and follow logs
-```
-
-### Software Updates
-```bash
-geneos package list                 # See available software
-geneos package install gateway     # Install latest gateway
-geneos package update              # Update all components
-```
-
-## What's Next?
-
-- **Learn More**: Read the [User Guide](USER_GUIDE.md) for detailed workflows
-- **Get Help**: Use `geneos help` or `geneos help COMMAND` anytime
-- **Advanced Features**: Explore remote management with `geneos host help`
-- **Automation**: Check out scripting examples in the [Usage Guide](USAGE.md)
-
-## Quick Reference
+## Quick reference
 
 | Task | Command |
-|------|---------|
-| List everything | `geneos list` |
-| Show running only | `geneos ps` |
-| Start all | `geneos start` |
-| Stop all | `geneos stop` |
-| Follow logs | `geneos logs -f` |
-| Get help | `geneos help` |
-| Add gateway | `geneos add gateway NAME -p PORT` |
-| Add netprobe | `geneos add netprobe NAME -g HOST:PORT` |
+| --- | --- |
+| List configured instances | `geneos list` |
+| Show running instances | `geneos ps` |
+| Start or stop instances | `geneos start` / `geneos stop` |
+| Follow logs | `geneos logs --follow` |
+| Add a Gateway | `geneos add gateway NAME -p PORT` |
+| Add a Netprobe | `geneos add netprobe NAME -g HOST:PORT` |
+| Get command help | `geneos help COMMAND` |
 
 ## Troubleshooting
 
-**Command not found?**
-- Check your PATH: `echo $PATH`
-- Verify installation: `which geneos`
+### Command not found
 
-**Can't find Geneos installation?**
-- Set the path: `geneos config set geneos=/path/to/geneos`
+Check that the installation directory is on your `PATH`:
 
-**Instance won't start?**
-- Check logs: `geneos logs INSTANCE_NAME`
-- Verify config: `geneos show INSTANCE_NAME`
+```bash
+command -v geneos
+```
 
-**Need more help?**
-- Run `geneos help`
-- Check the [User Guide](USER_GUIDE.md)
-- View [Troubleshooting section](USER_GUIDE.md#troubleshooting)
+### Geneos installation not found
+
+Set the Geneos root to the directory containing `packages`, `gateway`, and related component directories:
+
+```bash
+geneos config set geneos=/opt/itrs
+```
+
+### Instance will not start
+
+Check its status, logs, and configuration:
+
+```bash
+geneos ps TYPE NAME
+geneos logs TYPE NAME
+geneos show TYPE NAME
+```
+
+For further assistance, run `geneos help` or see the [User Guide](USER_GUIDE.md) and its [troubleshooting section](USER_GUIDE.md#troubleshooting).

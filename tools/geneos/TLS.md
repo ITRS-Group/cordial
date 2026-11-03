@@ -1,13 +1,11 @@
-# `tools/geneos` TLS Certificate Management Changes
+# TLS Certificate Migration Notes
 
-This document describes the changes to the way that the `geneos` tools manages TLS certificates and associated files for secure communication starting from cordial release v1.26.0.
+This guide describes the TLS certificate layout introduced in Cordial v1.26.0. It is intended for administrators migrating an existing Geneos installation from an earlier layout. New deployments use TLS by default; review these migration steps before upgrading an installation that already uses TLS.
 
->[!IMPORTANT]
->Please read this document carefully and in full before upgrading to v1.26.0 or later, especially if you are already using TLS certificates for secure communication between Geneos components.
->
->You should ensure you have a backup of your existing Geneos installation before migrating to the new layout. Note that many commands, such as `geneos tls renew` will automatically migrate instances to the new layout as part of their operation.
+> [!IMPORTANT]
+> Back up your existing Geneos installation before migrating certificates. Some commands, including `geneos tls renew`, can migrate an instance as part of their operation.
 
-In most cases it should be enough to simply run:
+For many pre-v1.26.0 installations, the following commands create a backup, migrate TLS files, and restart Geneos components:
 
 ```bash
 geneos backup --shared --tls --aes all
@@ -15,21 +13,22 @@ geneos tls migrate
 geneos restart
 ```
 
-This will create a `geneos.tar.gz` backup file in the current directory and then migrate your existing TLS certificates to the new layout. Finally it will restart all Geneos components to pick up the changes.
+> [!CAUTION]
+> `geneos backup` excludes shared directories, AES key files, and instance certificates and private keys by default. The `--shared`, `--aes`, and `--tls` flags are explicit opt-ins because these files may contain confidential configuration, key material, or private keys. Include them only when needed, and protect the resulting archive.
 
-**PLEASE** read the rest of this document at least once before proceeding.
+The backup is written to `geneos.tar.gz` in the current directory. Review the sections below to understand how the migration affects your certificate files and trust configuration.
 
 ## Overview
 
-Until the v1.26.0 release, the `geneos` tool did not manage TLS certificates in line with industry best practice..
+Before v1.26.0, the `geneos` command used a different layout for TLS certificates and related files.
 
-The `geneos tls` subsystem (and other related commands) now create and manage TLS certificates in a more standard and uniform way. The changes includes:
+The v1.26.0 changes standardised certificate creation and management:
 
-* **ENABLED BY DEFAULT** - Secure connections between Geneos components will be enabled by default. As administrator you can disabled this behaviour using an `--insecure` flag on the relevant commands. This only applies to new installations of Geneos. Existing installations that upgrade to v1.26.0 or later will continue work without TLS if it was not already enabled.
+* **TLS by default:** New installations use secure connections unless you pass `--insecure`. Upgrading an existing installation does not enable TLS if it was not already configured.
 
-* **COMMAND SYNTAX CHANGES** - Many command have been updated to better support the new TLS layout and options and flags have changed, been renamed or removed completely. Please take time to familiarise yourself with the changes before upgrading to v1.26.0 or later. This applies to not just the `geneos tls` subsystem but also commands like `geneos deploy` and more.
+* **Command changes:** TLS-related options changed in `geneos tls` and other commands, including `geneos deploy`. Check the current command help before using older scripts.
 
-* Unless you, the administrator, provide your own certificates, private keys and trusted CA bundles, `geneos` will create a private PKI for you automatically. It will create a root CA certificate, an intermediate signing certificate, instance certificates and private keys for each component that requires one. Connections will be verified using a trusted CA bundle that can include other trusted CA certificates as well as the root CA certificate created by `geneos`. This last feature is important when connecting to external endpoints from Geneos, such as databases, web endpoints, IAMs for SSO etc.
+* **Private PKI:** Unless you provide certificates, private keys, and trusted CA bundles, the `geneos` command creates a root CA, an intermediate signing certificate, and instance certificates and keys where required. The trust bundle can include the private root CA and other trusted authorities used by external services.
 
 * All instance certificate files now include the leaf certificate and the intermediate signing certificate. This is to ensure that TLS clients can validate the full trust chain. This is commonly referred to with filenames such as `fullchain.pem` in tools like `certbot` and for common web servers like `nginx`. Note that the root CA certificate is not included in instance certificate files as it is not required for validation by TLS clients as they will only trust root CA certificates that they already have in their trusted CA bundle.
 
@@ -38,6 +37,10 @@ The `geneos tls` subsystem (and other related commands) now create and manage TL
 * Geneos components acting at clients will verify server certificates by default. This can be disabled on a per-instance basis if required.
 
 * The `geneos tls migrate` command is provided to help you migrate existing TLS certificates, private keys and trusted CA bundles from previous versions of Geneos to the new TLS certificate management system.
+
+## Protect private keys
+
+PEM is an encoding format, not encryption. X.509 certificates and certificate chains contain public information and can be shared with peers that need to verify a connection. A PEM file or bundle may also contain a private key; anyone who obtains that key may be able to impersonate the component while its certificate is trusted. Check bundle contents before exporting or sharing them, restrict private-key access to the Geneos service account, and protect backups that contain keys. If a private key is exposed, replace it and update affected instances and trust configurations.
 
 ## References
 
@@ -66,7 +69,7 @@ If you need to renew the signing certificate use the new option to the `geneos t
 
 ### `geneos backup`
 
-The `geneos backup` command has been updated to include the TLS CA bundle files in the backup when given both the `--shared` and ``-tls` flags. This ensures that all TLS certificates, private keys, and trusted CA bundles are included in the backup, allowing for a more complete restoration of the Geneos environment if required.
+Use `--tls` to include instance certificate and private key files. When backing up component shared directories, use `--shared` as well. These flags are not enabled by default so that backups do not export sensitive files without an explicit decision.
 
 Note that the root CA and signing certificates that are used for leaf certificate creation are not included in the backup as these are considered part of the Geneos installation itself rather than the configuration. To back these up use the `geneos tls export` command but also note that this will not include the root private key for security reasons.
 
