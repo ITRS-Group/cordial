@@ -17,6 +17,7 @@ import (
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 const (
@@ -38,6 +39,7 @@ func init() {
 
 var includesExtractCmd = &cobra.Command{
 	Use:          "extract",
+	Args:         cobra.NoArgs,
 	Short:        "Extract includes",
 	Long:         includeExtractCmdDescription,
 	SilenceUsage: true,
@@ -72,6 +74,8 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	ct := geneos.ParseComponent("gateway")
 	version := cordial.VERSION
 
+	resp := responses.New[responses.General](nil)
+
 	fmt.Println("Extracting include files for version", version)
 
 	// check for an existing directory and only proceed if --force is given
@@ -79,7 +83,7 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	st, _ := h.Stat(dir)
 	if st != nil && !override {
 		fmt.Println("includes directory already exists at", dir, "and --force not specified, skipping extraction")
-		return nil
+		return fmt.Errorf("includes directory already exists at %s and --force not specified", dir)
 	}
 	if err = h.MkdirAll(dir, 0755); err != nil {
 		return err
@@ -89,17 +93,19 @@ func Extract(h *geneos.Host, override bool) (err error) {
 	// backup existing includes if different from the source (implementation would go here)
 	incs, err := fs.Glob(IncludesFS, IncludePattern)
 	if err != nil {
+		resp.Err = err
 		return err
 	}
 	if len(incs) == 0 {
 		fmt.Println("No include files found matching:", IncludePattern)
+		resp.Err = fmt.Errorf("no include files found matching: %s", IncludePattern)
 		return nil
 	}
 
 	for _, inc := range incs {
 		efi, err := fs.Stat(IncludesFS, inc)
 		if err != nil {
-			continue
+			return fmt.Errorf("failed to inspect embedded include %q: %w", inc, err)
 		}
 		p := h.Join(dir, filepath.Base(inc))
 		fi, err := h.Stat(p)
@@ -108,15 +114,17 @@ func Extract(h *geneos.Host, override bool) (err error) {
 				// compare contents
 				f1h, err := IncludesFS.Open(inc)
 				if err != nil {
-					continue
+					return fmt.Errorf("failed to open embedded include %q: %w", inc, err)
 				}
-				defer f1h.Close()
 				f2h, err := h.Open(p)
 				if err != nil {
-					continue
+					f1h.Close()
+					return fmt.Errorf("failed to open existing include %q: %w", p, err)
 				}
-				defer f2h.Close()
-				if compareContents(f1h, f2h) {
+				same := compareContents(f1h, f2h)
+				f1h.Close()
+				f2h.Close()
+				if same {
 					// contents are the same, skip
 					fmt.Println("Skipping existing unchanged include file", p)
 					continue
@@ -129,26 +137,18 @@ func Extract(h *geneos.Host, override bool) (err error) {
 				return err
 			}
 			fmt.Println("Backed up existing include file to", backupPath)
+			resp.Completed = append(resp.Completed, fmt.Sprintf("backed up %s", p))
 		} else if errors.Is(err, fs.ErrNotExist) {
 			// file does not exist, handle accordingly
+		} else {
+			return fmt.Errorf("failed to inspect include path %q: %w", p, err)
 		}
-		// write the file
-		src, err := IncludesFS.Open(inc)
-		if err != nil {
-			continue
-		}
-		defer src.Close()
-
-		dst, err := h.Create(p, 0444)
-		if err != nil {
-			continue
-		}
-		defer dst.Close()
-		_, err = io.Copy(dst, src)
-		if err != nil {
-			continue
+		if err := copyIncludeFile(IncludesFS, inc, h, p, 0444); err != nil {
+			return fmt.Errorf("failed to extract include %q: %w", inc, err)
 		}
 		fmt.Println("Extracted include file", p)
+		resp.Completed = append(resp.Completed, fmt.Sprintf("extracted %s", p))
+
 	}
 
 	// now extract config files that do not exist
@@ -167,27 +167,34 @@ func Extract(h *geneos.Host, override bool) (err error) {
 		_, err := h.Stat(p)
 		if err == nil {
 			log.Debug("Config file already exists", slog.String("file", p))
-		}
-		if errors.Is(err, fs.ErrNotExist) {
-			// write the file
-			src, err := IncludesFS.Open(conf)
-			if err != nil {
-				continue
+		} else if errors.Is(err, fs.ErrNotExist) {
+			if err := copyIncludeFile(IncludesFS, conf, h, p, 0664); err != nil {
+				return fmt.Errorf("failed to extract config include %q: %w", conf, err)
 			}
-			defer src.Close()
-			dst, err := h.Create(p, 0664)
-			if err != nil {
-				continue
-			}
-			defer dst.Close()
-			_, err = io.Copy(dst, src)
-			if err != nil {
-				continue
-			}
+		} else {
+			return fmt.Errorf("failed to inspect config include path %q: %w", p, err)
 		}
 	}
 
 	return nil
+}
+
+func copyIncludeFile(sourceFS fs.FS, source string, h *geneos.Host, destination string, mode fs.FileMode) (err error) {
+	src, err := sourceFS.Open(source)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := h.Create(destination, mode)
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(dst, src); err != nil {
+		dst.Close()
+		return err
+	}
+	return dst.Close()
 }
 
 const chunkSize = 4096

@@ -2,7 +2,10 @@ package includes
 
 import (
 	_ "embed"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"net/http"
@@ -21,6 +24,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	geneosxml "github.com/itrs-group/cordial/pkg/geneos"
 
+	genecmd "github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -36,7 +40,7 @@ var versionedDirs = []string{
 	"includes",
 }
 
-var includesListCmdAll bool
+var includesListCmdAll, includesListCmdLong bool
 var includesListCmdNoRemote bool
 var includesListCmdFormat string
 
@@ -53,27 +57,48 @@ func init() {
 	includeListCmd.MarkFlagsMutuallyExclusive("gateway", "version", "include")
 
 	includeListCmd.Flags().BoolVarP(&includesListCmdAll, "all", "a", false, "List all include files, including those in versioned directories")
+	includeListCmd.Flags().BoolVarP(&includesListCmdLong, "long", "l", false, "Long format with extra information")
 	includeListCmd.Flags().BoolVarP(&includesListCmdNoRemote, "no-remote", "n", false, "Exclude remote include files lookups")
-	includeListCmd.Flags().StringVarP(&includesListCmdFormat, "format", "f", "column", "Specify the output format for the include list. Supported formats are 'column', 'csv', 'table' and 'toolkit'.")
+	includeListCmd.Flags().StringVarP(&includesListCmdFormat, "format", "f", "column", "Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'.")
 }
 
 var includeListCmd = &cobra.Command{
-	Use:     "list",
-	Aliases: []string{"ls"},
-	Short:   "List all available include files",
-	Long:    includesListCmdDescription,
-	Run: func(cmd *cobra.Command, args []string) {
-		// validate flags
-		if includesListCmdFormat != "column" && includesListCmdFormat != "csv" && includesListCmdFormat != "toolkit" && includesListCmdFormat != "table" {
-			fmt.Fprintf(os.Stderr, "Invalid format: %s\n", includesListCmdFormat)
-			os.Exit(1)
+	Use:          "list",
+	Aliases:      []string{"ls"},
+	Short:        "List all available include files",
+	Long:         includesListCmdDescription,
+	SilenceUsage: true,
+	Annotations: map[string]string{
+		geneos.CmdGlobal:               "true",
+		geneos.CmdRequireHome:          "true",
+		geneos.CmdWildcardNames:        "true", // only for filtering --gateway view
+		geneos.CmdAllowRoot:            "true",
+		geneos.CmdNonInstanceArgsError: "true",
+		geneos.CmdAuditCommand:         "never",
+		geneos.CmdAuditActions:         "never",
+	},
+	RunE: func(command *cobra.Command, _ []string) error {
+		if _, _, _, err := genecmd.FetchArgs(command); err != nil {
+			return err
+		}
+		if err := validateIncludesListFormat(includesListCmdFormat); err != nil {
+			return err
 		}
 		if !includesListCmdByGateway && !includesListCmdByVersion && !includesListCmdByInclude {
 			includesListCmdByInclude = true
 		}
 
-		listIncludes(geneos.LOCAL)
+		return listIncludes(geneos.GetHost(genecmd.Hostname))
 	},
+}
+
+func validateIncludesListFormat(format string) error {
+	switch format {
+	case "column", "csv", "json", "pretty", "table", "toolkit":
+		return nil
+	default:
+		return fmt.Errorf("invalid format %q: must be one of column, csv, json, pretty, toolkit or table", format)
+	}
 }
 
 type includeFile struct {
@@ -81,9 +106,10 @@ type includeFile struct {
 	Version  string
 	FileInfo os.FileInfo
 	ModTime  time.Time // for remotes, this represents the modification time of the include file on the remote location; for local files, it represents the local modification time
-	Size     int64     // for remotes, this represents the size of the include file on the remote location; for local files, it represents the local file size
+	Size     *int64    // nil when size metadata is unavailable; a pointer to zero is a known empty file
 	Remote   bool      // Location is a remote URL
 	Local    bool      // Location is in or under the gateway home directory
+	Shared   bool      // Location is in a shared include directory
 }
 
 type gatewayInclude struct {
@@ -98,15 +124,27 @@ type gatewayInclude struct {
 	Disabled       bool   // list of disables associated with this include
 }
 
+var versionColumns = []string{"Version", "Files", "Modified", "Size", "Path"}
+var versionColumnsLong = []string{"Version", "Files", "Version", "Perms", "Owner", "LastModified", "Size", "Path"}
+
+var includeColumns = []string{"File", "Copies", "Gateways", "Flags", "LastModified", "Size", "Location"}
+var includeColumnsLong = []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Location"}
+
+var gatewayColumns = []string{"Gateway", "File", "Priority", "Flags", "Reload", "LastModified", "Size", "Location"}
+var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Location"}
+
 // listIncludes lists all available include files for the specified host, taking
 // into account the command-line flags for filtering and formatting. It
 // supports listing by gateway, by version, or by shared include files,
 // and can optionally exclude remote include files if the --no-remote
 // flag is set.
-func listIncludes(h *geneos.Host) {
+func listIncludes(h *geneos.Host) (err error) {
 	root := h.PathTo("gateway")
 
-	versionDirs, versionedIncludes := getVersionedIncludes(h, root)
+	versionDirs, versionedIncludes, err := getVersionedIncludes(h, root)
+	if err != nil {
+		return err
+	}
 
 	if includesListCmdByVersion {
 		resps := responses.GeneralResponses{}
@@ -119,31 +157,54 @@ func listIncludes(h *geneos.Host) {
 			d := h.Join(root, v)
 			fi, err := h.Stat(d)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get file info for %s: %v\n", d, err)
-				os.Exit(1)
+				return fmt.Errorf("failed to get file info for %s: %w", d, err)
 			}
 			// first, list current symlinks
 			resp := responses.New[responses.General](nil)
-			resp.Dataview.Table = append(resp.Dataview.Table, []string{
-				"current",
-				fmt.Sprintf("%d", len(vinc)),
-				"-",
-				fi.ModTime().Format(time.RFC3339),
-				"-",
-				d,
-			})
+			if includesListCmdLong {
+				resp.Dataview.Table = append(resp.Dataview.Table, []string{
+					"current",
+					fmt.Sprintf("%d", len(vinc)),
+					"-",
+					"-", // perms
+					"-", // owner
+					fi.ModTime().Format(time.RFC3339),
+					"-",
+					d,
+				})
+			} else {
+				resp.Dataview.Table = append(resp.Dataview.Table, []string{
+					"current",
+					fmt.Sprintf("%d", len(vinc)),
+					fi.ModTime().Format(time.RFC3339),
+					"-",
+					d,
+				})
+			}
 			resps["current"] = resp
 
 			if includesListCmdAll {
 				for _, f := range vinc {
-					resp.Dataview.Table = append(resp.Dataview.Table, []string{
-						"current # " + filepath.Base(f.Path),
-						"-",
-						f.Version,
-						f.ModTime.Format(time.RFC3339),
-						humanize.Bytes(uint64(f.Size)),
-						f.Path,
-					})
+					if includesListCmdLong {
+						resp.Dataview.Table = append(resp.Dataview.Table, []string{
+							"current # " + filepath.Base(f.Path),
+							"-",
+							f.Version,
+							f.FileInfo.Mode().String(), // perms
+							"-",                        // owner
+							f.ModTime.Format(time.RFC3339),
+							includeSizeString(f),
+							f.Path,
+						})
+					} else {
+						resp.Dataview.Table = append(resp.Dataview.Table, []string{
+							"current # " + filepath.Base(f.Path),
+							"-",
+							f.ModTime.Format(time.RFC3339),
+							includeSizeString(f),
+							f.Path,
+						})
+					}
 				}
 			}
 		}
@@ -152,14 +213,12 @@ func listIncludes(h *geneos.Host) {
 			resp := responses.New[responses.General](nil)
 			fi, err := v.Info()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to get file info for %s: %v\n", v.Name(), err)
-				os.Exit(1)
+				return fmt.Errorf("failed to get file info for %s: %w", v.Name(), err)
 			}
 			version := v.Name()
-			files, err := os.ReadDir(h.Join(root, "includes", version))
+			files, err := h.ReadDir(h.Join(root, "includes", version))
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Failed to read includes directory for version %s: %v\n", version, err)
-				os.Exit(1)
+				return fmt.Errorf("failed to read includes directory for version %s: %w", version, err)
 			}
 			count := 0
 			for _, f := range files {
@@ -167,31 +226,55 @@ func listIncludes(h *geneos.Host) {
 					count++
 				}
 			}
-			resp.Dataview.Table = append(resp.Dataview.Table, []string{
-				version,
-				fmt.Sprintf("%d", count),
-				"-",
-				fi.ModTime().Format(time.RFC3339),
-				"-",
-				h.Join(root, "includes", version),
-			})
+			if includesListCmdLong {
+				resp.Dataview.Table = append(resp.Dataview.Table, []string{
+					version,
+					fmt.Sprintf("%d", count),
+					"-",
+					fi.Mode().String(), // perms
+					"-",                // owner
+					fi.ModTime().Format(time.RFC3339),
+					"-",
+					h.Join(root, "includes", version),
+				})
+			} else {
+				resp.Dataview.Table = append(resp.Dataview.Table, []string{
+					version,
+					fmt.Sprintf("%d", count),
+					fi.ModTime().Format(time.RFC3339),
+					"-",
+					h.Join(root, "includes", version),
+				})
+			}
 
 			if includesListCmdAll {
 				for _, f := range files {
 					if !f.IsDir() && filepath.Ext(f.Name()) == ".xml" {
 						fi, err := f.Info()
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "Failed to get file info for %s: %v\n", f.Name(), err)
-							os.Exit(1)
+							return fmt.Errorf("failed to get file info for %s: %w", f.Name(), err)
 						}
-						resp.Dataview.Table = append(resp.Dataview.Table, []string{
-							version + " # " + f.Name(),
-							"-",
-							"-",
-							fi.ModTime().Format(time.RFC3339),
-							humanize.Bytes(uint64(fi.Size())),
-							h.Join(root, "includes", version, f.Name()),
-						})
+						size := fi.Size()
+						if includesListCmdLong {
+							resp.Dataview.Table = append(resp.Dataview.Table, []string{
+								version + " # " + f.Name(),
+								"-",
+								"-",
+								fi.Mode().String(), // perms
+								"-",                // owner
+								fi.ModTime().Format(time.RFC3339),
+								includeSizeString(includeFile{FileInfo: fi, Size: &size}),
+								h.Join(root, "includes", version, f.Name()),
+							})
+						} else {
+							resp.Dataview.Table = append(resp.Dataview.Table, []string{
+								version + " # " + f.Name(),
+								"-",
+								fi.ModTime().Format(time.RFC3339),
+								includeSizeString(includeFile{FileInfo: fi, Size: &size}),
+								h.Join(root, "includes", version, f.Name()),
+							})
+						}
 					}
 				}
 			}
@@ -199,18 +282,35 @@ func listIncludes(h *geneos.Host) {
 			resps[v.Name()] = resp
 		}
 
-		resps.Formatted(os.Stdout, includesListCmdFormat, []string{"Version", "Files", "Version", "Modified", "Size", "Path"}, nil)
-		return
+		columns := versionColumns
+		if includesListCmdLong {
+			columns = versionColumnsLong
+		}
+		return formatIncludeResponses(os.Stdout, resps, columns)
 	}
 
-	sharedIncludes := getSharedIncludes(h, root)
+	sharedIncludes, err := getSharedIncludes(h, root)
+	if err != nil {
+		return err
+	}
 	gatewayIncludes, includesByPath := getGatewayIncludes(h, versionedIncludes)
 
-	// update includes with shared includes that are not local
+	// update includesByPath with shared and versioned includes
+	sharedPaths := make(map[string]struct{}, len(sharedIncludes))
 	for _, inc := range sharedIncludes {
-		if inc.Local {
-			continue
+		includesByPath[inc.Path] = inc
+		sharedPaths[inc.Path] = struct{}{}
+	}
+	for name, gatewayList := range gatewayIncludes {
+		for i := range gatewayList {
+			if _, ok := sharedPaths[gatewayList[i].Path]; ok {
+				gatewayList[i].Shared = true
+			}
 		}
+		gatewayIncludes[name] = gatewayList
+	}
+
+	for _, inc := range versionedIncludes {
 		includesByPath[inc.Path] = inc
 	}
 
@@ -239,9 +339,6 @@ func listIncludes(h *geneos.Host) {
 		gatewayCount := make(map[string]int)
 		for _, si := range gatewayIncludes {
 			for _, p := range si {
-				if p.Local {
-					continue
-				}
 				gatewayCount[p.Path]++
 			}
 		}
@@ -253,136 +350,57 @@ func listIncludes(h *geneos.Host) {
 
 		resps := responses.GeneralResponses{}
 		for path, inc := range includesByPath {
-			if inc.Local {
+			if inc.Local && !includesListCmdAll {
 				continue
 			}
 			base := filepath.Base(path)
 			paths := basenameMap[base]
 			if len(paths) > 1 {
 				total := 0
-				// add sub-enries for each base name here
+				// Add a row for each include that shares this basename.
 				for idx, p := range paths {
-					var perms fs.FileMode
-					var permStr string
-					var modtime time.Time
-					var modStr string
-					var size string
-
 					inc, ok := includesByPath[p]
 					if !ok {
-						fmt.Printf("Include not found for path: %s\n", p)
-						continue
+						return fmt.Errorf("include not found for path %q", p)
 					}
-					if inc.FileInfo != nil {
-						perms = inc.FileInfo.Mode().Perm()
-						permStr = perms.String()
-					}
-
-					if !inc.ModTime.IsZero() {
-						modtime = inc.ModTime
-						modStr = modtime.Format(time.RFC3339)
-					}
-
-					if inc.Size != 0 {
-						if includesListCmdFormat == "column" {
-							size = humanize.Bytes(uint64(inc.Size))
-						} else {
-							size = fmt.Sprintf("%d", inc.Size)
-						}
-					}
-
 					count := gatewayCount[p]
 					key := fmt.Sprintf("%s # %d", base, idx+1)
-					resp := responses.New[responses.General](nil)
-					resp.Dataview.Table = append(resp.Dataview.Table, []string{
-						key,
-						"",
-						fmt.Sprintf("%d", count),
-						renderFlags(inc),
-						inc.Version,
-						permStr,
-						modStr,
-						size,
-						p,
-					})
+					resp := responses.New(nil)
+					resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(key, "", count, inc, p, includesListCmdLong))
 					total += count
 					resps[key] = resp
 				}
-				// add a top-level entry
 
-				resp := responses.New[responses.General](nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, []string{
-					base,
-					fmt.Sprintf("%d", len(paths)),
-					fmt.Sprintf("%d", total),
-					"-",
-					"",
-					"",
-					"",
-					"",
-					"",
-				})
+				// Add a summary row for the basename shared by these files.
+				resp := responses.New(nil)
+				resp.Dataview.Table = append(resp.Dataview.Table, includeSummaryRow(base, len(paths), total, includesListCmdLong))
 				resps[base] = resp
 			} else {
-				var perms fs.FileMode
-				var permStr string
-				var modtime time.Time
-				var modStr string
-				var size string
-
-				if inc.FileInfo != nil {
-					perms = inc.FileInfo.Mode().Perm()
-					permStr = perms.String()
-				}
-
-				if !inc.ModTime.IsZero() {
-					modtime = inc.ModTime
-					modStr = modtime.Format(time.RFC3339)
-				}
-
-				if inc.Size != 0 {
-					if includesListCmdFormat == "column" {
-						size = humanize.Bytes(uint64(inc.Size))
-					} else {
-						size = fmt.Sprintf("%d", inc.Size)
-					}
-				}
-
 				count := gatewayCount[path]
-				resp := responses.New[responses.General](nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, []string{
-					base,
-					"1",
-					fmt.Sprintf("%d", count),
-					renderFlags(inc),
-					inc.Version,
-					permStr,
-					modStr,
-					size,
-					path,
-				})
+				resp := responses.New(nil)
+				resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(base, "1", count, inc, path, includesListCmdLong))
 				resps[base] = resp
 			}
 
 		}
-		resps.Formatted(os.Stdout, includesListCmdFormat, []string{"Include", "Copies", "Gateways", "Flags", "Version", "Perms", "ModTime", "Size", "Path"}, nil)
-		return
+		columns := includeColumns
+		if includesListCmdLong {
+			columns = includeColumnsLong
+		}
+		return formatIncludeResponses(os.Stdout, resps, columns)
 	}
 
 	if includesListCmdByGateway {
 		// build responses.GeneralReponses and call Formatted to output
 		resps := responses.GeneralResponses{}
-		gatewaysColumns := []string{"Gateway", "Include", "Priority", "Flags", "Version", "Reload", "Perms", "ModTime", "Size", "Location"}
+		columns := gatewayColumns
+		if includesListCmdLong {
+			columns = gatewayColumnsLong
+		}
 
 		for gwname, si := range gatewayIncludes {
 			for _, p := range si {
 				var resp *responses.General
-				var flags, permStr, modStr string
-				var perms fs.FileMode
-				var modtime time.Time
-				var size string
-				var reload string
-
 				if p.Local && !includesListCmdAll {
 					continue
 				}
@@ -390,49 +408,14 @@ func listIncludes(h *geneos.Host) {
 				if resps[gwname] != nil {
 					resp = resps[gwname]
 				} else {
-					resp = responses.New[responses.General](p.Gateway)
+					resp = responses.New(nil)
 					resps[gwname] = resp
 				}
 
-				flags = renderGatewayFlags(p)
+				resp.Dataview.Table = append(resp.Dataview.Table, gatewayIncludeRow(gwname, p, includesListCmdLong))
 
-				if p.FileInfo != nil {
-					perms = p.FileInfo.Mode().Perm()
-					permStr = perms.String()
-				}
-
-				if !p.ModTime.IsZero() {
-					modtime = p.ModTime
-					modStr = modtime.Format(time.RFC3339)
-				}
-
-				if p.Size != 0 {
-					if includesListCmdFormat == "column" {
-						size = humanize.Bytes(uint64(p.Size))
-					} else {
-						size = fmt.Sprintf("%d", p.Size)
-					}
-				}
-
-				if p.ReloadInterval != nil {
-					reload = fmt.Sprintf("%ds", *p.ReloadInterval)
-				}
-
-				resp.Dataview.Table = append(resp.Dataview.Table, []string{
-					gwname,
-					filepath.Base(p.Location),
-					fmt.Sprintf("%d", p.Priority),
-					flags,
-					p.Version,
-					reload,
-					permStr,
-					modStr,
-					size,
-					p.Location,
-				})
-
-				// sort rows by priority (index 2 - check if changed later)
-				pri := slices.Index(gatewaysColumns, "Priority")
+				// Priority is the third column in both output schemas.
+				pri := slices.Index(columns, "Priority")
 				sort.Slice(resp.Dataview.Table, func(i, j int) bool {
 					pi, _ := strconv.Atoi(resp.Dataview.Table[i][pri])
 					pj, _ := strconv.Atoi(resp.Dataview.Table[j][pri])
@@ -443,11 +426,142 @@ func listIncludes(h *geneos.Host) {
 			}
 		}
 
-		resps.Formatted(os.Stdout, includesListCmdFormat, gatewaysColumns, nil)
+		return formatIncludeResponses(os.Stdout, resps, columns)
 	}
+	return nil
+}
+
+func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, columns []string) error {
+	if includesListCmdFormat != "json" && includesListCmdFormat != "pretty" {
+		return result.Formatted(w, includesListCmdFormat, columns, nil)
+	}
+
+	rows := make([]map[string]any, 0)
+	for _, key := range slices.Sorted(maps.Keys(result)) {
+		response := result[key]
+		if response == nil || response.Err != nil || response.Dataview == nil {
+			continue
+		}
+		for _, row := range response.Dataview.Table {
+			item := make(map[string]any, len(columns))
+			for index, column := range columns {
+				if index >= len(row) {
+					break
+				}
+				if column == "Owner" {
+					continue
+				}
+				value := includeJSONValue(column, row[index])
+				if column == "Copies" && value == 0 {
+					continue
+				}
+				if text, ok := value.(string); ok && text == "" {
+					continue
+				}
+				name := strings.ToLower(column[:1]) + column[1:]
+				item[name] = value
+			}
+			rows = append(rows, item)
+		}
+	}
+
+	encoder := json.NewEncoder(w)
+	encoder.SetEscapeHTML(false)
+	if includesListCmdFormat == "pretty" {
+		encoder.SetIndent("", "    ")
+	}
+	return encoder.Encode(rows)
+}
+
+func includeJSONValue(column, value string) any {
+	switch column {
+	case "Copies", "Files", "Gateways", "Priority":
+		if column == "Copies" && value == "" {
+			return 0
+		}
+		if number, err := strconv.Atoi(value); err == nil {
+			return number
+		}
+	case "Size":
+		if value == "" || value == "-" {
+			return int64(-1)
+		}
+		if size, err := strconv.ParseInt(value, 10, 64); err == nil {
+			return size
+		}
+		return int64(-1)
+	}
+	return value
+}
+
+func includeSizeString(include includeFile) string {
+	if include.Size == nil {
+		if includesListCmdFormat == "json" || includesListCmdFormat == "pretty" {
+			return "-1"
+		}
+		return ""
+	}
+	if includesListCmdFormat == "column" {
+		return humanize.Bytes(uint64(*include.Size))
+	}
+	return fmt.Sprintf("%d", *include.Size)
+}
+
+func includeFileRow(name, copies string, gatewayCount int, include includeFile, location string, long bool) []string {
+	modified := ""
+	if !include.ModTime.IsZero() {
+		modified = include.ModTime.Format(time.RFC3339)
+	}
+	size := includeSizeString(include)
+	if !long {
+		return []string{name, copies, fmt.Sprintf("%d", gatewayCount), renderFlags(include), modified, size, location}
+	}
+
+	permissions := ""
+	if include.FileInfo != nil {
+		permissions = include.FileInfo.Mode().Perm().String()
+	}
+	return []string{name, copies, fmt.Sprintf("%d", gatewayCount), renderFlags(include), include.Version, permissions, "", modified, size, location}
+}
+
+func includeSummaryRow(name string, copies, gatewayCount int, long bool) []string {
+	row := []string{name, fmt.Sprintf("%d", copies), fmt.Sprintf("%d", gatewayCount), "", "", "", ""}
+	if long {
+		row = []string{name, fmt.Sprintf("%d", copies), fmt.Sprintf("%d", gatewayCount), "", "", "", "", "", "", ""}
+	}
+	return row
+}
+
+func gatewayIncludeRow(gateway string, include gatewayInclude, long bool) []string {
+	name := filepath.Base(include.Location)
+	if len(include.Groups) > 0 {
+		name = strings.Join(append(slices.Clone(include.Groups), name), "/")
+	}
+	modified := ""
+	if !include.ModTime.IsZero() {
+		modified = include.ModTime.Format(time.RFC3339)
+	}
+	size := includeSizeString(include.includeFile)
+	reload := ""
+	if include.ReloadInterval != nil {
+		reload = fmt.Sprintf("%ds", *include.ReloadInterval)
+	}
+	row := []string{gateway, name, fmt.Sprintf("%d", include.Priority), renderGatewayFlags(include), reload, modified, size, include.Location}
+	if !long {
+		return row
+	}
+	permissions := ""
+	if include.FileInfo != nil {
+		permissions = include.FileInfo.Mode().Perm().String()
+	}
+	return []string{gateway, name, fmt.Sprintf("%d", include.Priority), renderGatewayFlags(include), include.Version, reload, permissions, "", modified, size, include.Location}
 }
 
 func renderFlags(p includeFile) (flags string) {
+	if p.Shared {
+		flags += "S"
+	}
+
 	// gateway local include (not shared)
 	if p.Local {
 		flags += "L"
@@ -523,13 +637,11 @@ var includeDirs = []string{
 // specified gateway directory on the given host. It traverses the
 // predefined include directories and collects all XML files, returning
 // them as a slice of directory entries.
-func getSharedIncludes(h *geneos.Host, gwDir string) (includes []includeFile) {
+func getSharedIncludes(h *geneos.Host, gwDir string) (includes []includeFile, err error) {
 	for _, dir := range includeDirs {
 		root := h.Join(gwDir, dir)
-		h.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
+		err = h.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			var modtime time.Time
-			var size int64
-			// var mode fs.FileMode
 
 			if err != nil {
 				return err
@@ -543,27 +655,33 @@ func getSharedIncludes(h *geneos.Host, gwDir string) (includes []includeFile) {
 			}
 
 			fi, err := d.Info()
-			if err == nil {
-				modtime = fi.ModTime()
-				size = fi.Size()
-				// mode = fi.Mode()
+			if err != nil {
+				return err
 			}
+			modtime = fi.ModTime()
+			size := fi.Size()
 			includes = append(includes, includeFile{
 				Path:     h.Join(root, path),
 				FileInfo: fi,
 				ModTime:  modtime,
-				Size:     size,
-				// Mode:     mode,
+				Size:     &size,
+				Shared:   true,
 			})
 			return nil
 		})
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	return includes
+	return includes, nil
 }
 
-func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, versioned []includeFile) {
+func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, versioned []includeFile, err error) {
 	for _, dir := range versionedDirs {
-		h.WalkDir(h.Join(root, dir), func(path string, ent fs.DirEntry, err error) error {
+		err = h.WalkDir(h.Join(root, dir), func(path string, ent fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -598,12 +716,13 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 				if err != nil {
 					return err
 				}
+				size := fi.Size()
 				versioned = append(versioned, includeFile{
 					Path:     p,
 					Version:  v,
 					FileInfo: fi,
 					ModTime:  fi.ModTime(),
-					Size:     fi.Size(),
+					Size:     &size,
 				})
 			} else {
 				if filepath.Ext(ent.Name()) != ".xml" {
@@ -615,18 +734,25 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 				if err != nil {
 					return err
 				}
+				size := fi.Size()
 				versioned = append(versioned, includeFile{
 					Path:     p,
 					Version:  "", // no version since it's not symlinked
 					FileInfo: fi,
 					ModTime:  fi.ModTime(),
-					Size:     fi.Size(),
+					Size:     &size,
 				})
 			}
 			return nil
 		})
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, nil, err
+		}
 	}
-	return
+	return versions, versioned, nil
 }
 
 // getGatewayIncludes retrieves the list of includes for each gateway
@@ -645,7 +771,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile) (includesByGate
 		var fullpath string
 		var fi fs.FileInfo
 		var modtime time.Time
-		var size int64
+		var size *int64
 		var reload *int
 
 		g, err := instance.ReadGatewaySetup(gw)
@@ -670,7 +796,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile) (includesByGate
 					}
 					if cl := resp.Header.Get("Content-Length"); cl != "" {
 						if s, err := strconv.ParseInt(cl, 10, 64); err == nil {
-							size = s
+							size = &s
 						}
 					}
 				}
@@ -685,7 +811,8 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile) (includesByGate
 			fi, _ = h.Stat(fullpath)
 			if fi != nil {
 				modtime = fi.ModTime()
-				size = fi.Size()
+				sizeValue := fi.Size()
+				size = &sizeValue
 			}
 		}
 
@@ -740,7 +867,7 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 		var local, remote bool
 		var fi fs.FileInfo
 		var modtime time.Time
-		var size int64
+		var size *int64
 		var version string
 
 		// leave inc.Location unchanged, for inclusion later
@@ -760,7 +887,7 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 					}
 					if cl := resp.Header.Get("Content-Length"); cl != "" {
 						if s, err := strconv.ParseInt(cl, 10, 64); err == nil {
-							size = s
+							size = &s
 						}
 					}
 				}
@@ -789,7 +916,8 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 
 		if fi != nil {
 			modtime = fi.ModTime()
-			size = fi.Size()
+			sizeValue := fi.Size()
+			size = &sizeValue
 		}
 
 		result[gw.Name()] = append(result[gw.Name()], gatewayInclude{

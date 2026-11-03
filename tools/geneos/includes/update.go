@@ -7,7 +7,9 @@ import (
 	"io/fs"
 	"log/slog"
 	"path/filepath"
+	"strings"
 
+	goversion "github.com/hashicorp/go-version"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
@@ -31,6 +33,7 @@ func init() {
 
 var includesUpdateCmd = &cobra.Command{
 	Use:          "update",
+	Args:         cobra.NoArgs,
 	Short:        "Update includes",
 	Long:         includeUpdateCmdDescription,
 	SilenceUsage: true,
@@ -52,18 +55,22 @@ var includesUpdateCmd = &cobra.Command{
 }
 
 // Update updates the include file symlinks for the given host,
-// optionally overriding existing files. If version is not empty then us
-// that version directory.
+// optionally overriding existing files. If version is not empty then
+// use that version directory.
 func Update(h *geneos.Host, version string, override bool) (err error) {
 	ct := geneos.ParseComponent("gateway")
 	if version == "" {
 		version = cordial.VERSION
 	}
+	version = strings.TrimSpace(version)
+	if _, err := goversion.NewVersion(version); err != nil {
+		return fmt.Errorf("invalid include version %q: %w", version, err)
+	}
 
 	fmt.Println("Updating include file links to version", version)
 
-	// first check if version directory exists, and if it does not and
-	// is the current version then extract
+	// first check if the desired version directory exists, and if it
+	// does not and matches the current embedded version then extract
 	dir := h.PathTo(ct, "includes", version)
 	_, err = h.Stat(dir)
 	if err != nil && errors.Is(err, fs.ErrNotExist) {
@@ -95,20 +102,26 @@ func Update(h *geneos.Host, version string, override bool) (err error) {
 
 		newname := h.PathTo(ct, "includes", ent.Name())
 		oldname := h.Join(version, ent.Name())
-		// check if newname is already a link to the same file
-		linkTarget, err := h.Readlink(newname)
-		if err == nil && linkTarget == oldname {
-			fmt.Println("Symlink already up-to-date", newname, "->", oldname)
-			continue
-		}
-
-		if err = h.Remove(newname); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			fmt.Println("Failed to remove old link", newname, ":", err)
-			return err
+		info, statErr := h.Lstat(newname)
+		if statErr == nil {
+			if info.Mode()&fs.ModeSymlink != 0 {
+				linkTarget, readlinkErr := h.Readlink(newname)
+				if readlinkErr == nil && linkTarget == oldname {
+					fmt.Println("Symlink already up-to-date", newname, "->", oldname)
+					continue
+				}
+			}
+			if !override {
+				return fmt.Errorf("include path %q already exists and --force was not specified", newname)
+			}
+			if err = h.Remove(newname); err != nil {
+				return fmt.Errorf("failed to remove existing include path %q: %w", newname, err)
+			}
+		} else if !errors.Is(statErr, fs.ErrNotExist) {
+			return fmt.Errorf("failed to inspect include path %q: %w", newname, statErr)
 		}
 		if err = h.Symlink(oldname, newname); err != nil {
-			fmt.Println("Failed to create symlink", newname, "->", oldname, ":", err)
-			return err
+			return fmt.Errorf("failed to create symlink %q -> %q: %w", newname, oldname, err)
 		}
 		fmt.Println("Updated symlink", newname, "->", oldname)
 	}
