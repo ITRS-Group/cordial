@@ -38,6 +38,7 @@ import (
 
 const name = "minimal"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"netprobe-mini", "netprobe-minimal", "mini-netprobe"},
@@ -104,6 +105,7 @@ var Component = geneos.Component{
 	ApplyProfile: profile.ApplyCommonProfile,
 }
 
+// Minimal TODO: Describe its purpose and intended use.
 type Minimal instance.Instance
 
 // ensure that minimals satisfies geneos.Instance interface
@@ -161,6 +163,7 @@ func (i *Minimal) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -168,6 +171,7 @@ func (i *Minimal) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Home() string {
 	if i == nil {
 		return ""
@@ -175,6 +179,7 @@ func (i *Minimal) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -182,6 +187,7 @@ func (i *Minimal) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -189,18 +195,22 @@ func (i *Minimal) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Unload() (err error) {
 	if i == nil {
 		return
@@ -210,6 +220,7 @@ func (i *Minimal) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -217,6 +228,7 @@ func (i *Minimal) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -224,6 +236,7 @@ func (i *Minimal) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -231,6 +244,7 @@ func (i *Minimal) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -238,6 +252,7 @@ func (i *Minimal) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -261,6 +276,7 @@ func (i *Minimal) Add(options ...any) (err error) {
 	return nil
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -311,6 +327,7 @@ func (i *Minimal) Command(skipFileCheck bool) (args, env []string, home string, 
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Minimal) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

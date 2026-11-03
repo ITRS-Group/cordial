@@ -337,13 +337,14 @@ func deleteSliceItemFunc(i geneos.Instance, key string, item string, fn func(val
 	return
 }
 
-// unsetSlice removes the specified items from the slice stored under
-// the given configuration key. It returns true if any changes were
-// made. If the slice becomes empty, it deletes the key from the
-// configuration.
-func unsetSlice(i geneos.Instance, key string, items []string) (changed bool) {
-	return unsetSliceFunc(i, key, items, func(a, b string) bool { return a == b })
-}
+// TODO: Revisit unused declaration unsetSlice; restore it only when needed.
+// // unsetSlice removes the specified items from the slice stored under
+// // the given configuration key. It returns true if any changes were
+// // made. If the slice becomes empty, it deletes the key from the
+// // configuration.
+// func unsetSlice(i geneos.Instance, key string, items []string) (changed bool) {
+// 	return unsetSliceFunc(i, key, items, func(a, b string) bool { return a == b })
+// }
 
 // unsetSliceFunc removes the specified items from the slice stored
 // under the given configuration key, using the comparison function `fn`
@@ -425,10 +426,12 @@ func unsetMapFunc[M ~map[string]any](i geneos.Instance, key string, items []stri
 // unset Var flags take just the key, either a name or a priority for include files
 type UnsetValues []string
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *UnsetValues) String() string {
 	return ""
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *UnsetValues) Set(value string) error {
 	// discard any values accidentally passed with '=value'
 	value, _, _ = strings.Cut(value, "=")
@@ -436,16 +439,20 @@ func (i *UnsetValues) Set(value string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *UnsetValues) Type() string {
 	return "SETTING"
 }
 
+// UnsetVars TODO: Describe its purpose and intended use.
 type UnsetVars []string
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *UnsetVars) String() string {
 	return ""
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *UnsetVars) Set(value string) error {
 	// trim any values accidentally passed with '=value'
 	value, _, _ = strings.Cut(value, "=")
@@ -454,6 +461,7 @@ func (i *UnsetVars) Set(value string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *UnsetVars) Type() string {
 	return "SETTING"
 }

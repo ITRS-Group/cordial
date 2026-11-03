@@ -17,6 +17,7 @@ limitations under the License.
 
 package certs
 
+// CreateCertOption TODO: Describe its purpose and intended use.
 type CreateCertOption func(*createCertOptions) error
 
 type createCertOptions struct {
@@ -33,6 +34,7 @@ func evalCreateCertOptions(opts ...CreateCertOption) (*createCertOptions, error)
 	return o, nil
 }
 
+// WithKeyType TODO: Document its behavior, inputs, and effects.
 func WithKeyType(keytype KeyType) CreateCertOption {
 	return func(o *createCertOptions) error {
 		o.keytype = keytype

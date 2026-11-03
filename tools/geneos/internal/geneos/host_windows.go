@@ -6,6 +6,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// SetWindowsReleaseEnv TODO: Document its behavior, inputs, and effects.
 func (h *Host) SetWindowsReleaseEnv(osinfo map[string]string) (err error) {
 	v := windows.RtlGetVersion()
 

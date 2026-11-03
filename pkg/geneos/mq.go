@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// MQChannelPlugin TODO: Describe its purpose and intended use.
 type MQChannelPlugin struct {
 	XMLName      xml.Name      `xml:"mq-channel" json:"-" yaml:"-"`
 	Connection   *MQConnection `xml:"connection,omitempty"`
@@ -27,10 +28,12 @@ type MQChannelPlugin struct {
 	Columns      []string      `xml:"columns>column,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *MQChannelPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// MQQInfoPlugin TODO: Describe its purpose and intended use.
 type MQQInfoPlugin struct {
 	XMLName         xml.Name             `xml:"mq-qinfo" json:"-" yaml:"-"`
 	Queuemanager    *Value               `xml:"queueManager"`
@@ -39,10 +42,12 @@ type MQQInfoPlugin struct {
 	HideUnavailable *SingleLineStringVar `xml:"hideUnavailable,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *MQQInfoPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// MQQueuePlugin TODO: Describe its purpose and intended use.
 type MQQueuePlugin struct {
 	XMLName      xml.Name      `xml:"mq-queue" json:"-" yaml:"-"`
 	Connection   *MQConnection `xml:"connection,omitempty"`
@@ -51,20 +56,24 @@ type MQQueuePlugin struct {
 	Columns      []string      `xml:"columns>column,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *MQQueuePlugin) String() string {
 	return p.XMLName.Local
 }
 
+// MQConnection TODO: Describe its purpose and intended use.
 type MQConnection struct {
 	MQServer       *SingleLineStringVar `xml:"mqServer,omitempty"`
 	MQChannelTable *SingleLineStringVar `xml:"mqChannelTable,omitempty"`
 }
 
+// MQChannel TODO: Describe its purpose and intended use.
 type MQChannel struct {
 	Matches    *SingleLineStringVar `xml:"matches,omitempty"`
 	StartsWith *SingleLineStringVar `xml:"startsWith,omitempty"`
 }
 
+// MQQueue TODO: Describe its purpose and intended use.
 type MQQueue struct {
 	Matches    *SingleLineStringVar `xml:"matches,omitempty"`
 	StartsWith *SingleLineStringVar `xml:"startsWith,omitempty"`

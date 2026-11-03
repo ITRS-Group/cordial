@@ -17,6 +17,7 @@ limitations under the License.
 
 package host
 
+// ProcessOption TODO: Describe its purpose and intended use.
 type ProcessOption func(*processOptions)
 
 type processOptions struct {
@@ -35,6 +36,7 @@ func evalProcessOptions(options ...ProcessOption) (d *processOptions) {
 	return
 }
 
+// ProcessErrfile TODO: Document its behavior, inputs, and effects.
 func ProcessErrfile(errfile string) ProcessOption {
 	return func(po *processOptions) {
 		po.errfile = errfile
@@ -48,12 +50,14 @@ func ProcessDetach() ProcessOption {
 	}
 }
 
+// ProcessAllowCoreDumps TODO: Document its behavior, inputs, and effects.
 func ProcessAllowCoreDumps() ProcessOption {
 	return func(po *processOptions) {
 		po.allowCoreDumps = true
 	}
 }
 
+// ProcessCPUAffinity TODO: Document its behavior, inputs, and effects.
 func ProcessCPUAffinity(cpus ...int) ProcessOption {
 	return func(po *processOptions) {
 		po.cpuAffinity = cpus

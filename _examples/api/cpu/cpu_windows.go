@@ -35,6 +35,7 @@ type cpustat struct {
 
 var log = cordial.Logger
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p *CPUSampler) DoSample() (err error) {
 	log.Debug("called")
 	laststats := p.cpustats

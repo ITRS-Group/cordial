@@ -82,6 +82,7 @@ func NewXMLRPCClient(endpoint string, options ...Option) (c APIClient, err error
 
 // Interface methods
 
+// Healthy TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) Healthy() bool {
 	ok, err := c.GatewayConnected()
 	if err != nil || !ok {
@@ -90,52 +91,64 @@ func (c *XMLRPCClient) Healthy() bool {
 	return true
 }
 
+// CreateDataview TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) CreateDataview(entity, sampler, name string) error {
 	viewName, groupHeading, _ := strings.Cut(name, "-")
 	return c.CreateView(entity, sampler, viewName, groupHeading)
 }
 
+// UpdateDataview TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) UpdateDataview(entity, sampler, name string, values [][]string) error {
 	return c.UpdateEntireTable(entity, sampler, name, values)
 }
 
+// DeleteDataview TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) DeleteDataview(entity, sampler, name string) error {
 	viewName, groupHeading, _ := strings.Cut(name, "-")
 	return c.RemoveView(entity, sampler, viewName, groupHeading)
 }
 
+// CreateRow TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) CreateRow(entity, sampler, view, name string) (err error) {
 	return c.AddTableRow(entity, sampler, view, name)
 }
 
+// UpdateRow TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) UpdateRow(entity, sampler, view, name string, values []string) (err error) {
 	return c.UpdateTableRow(entity, sampler, view, name, append([]string{name}, values...))
 }
 
+// DeleteRow TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) DeleteRow(entity, sampler, view, name string) (err error) {
 	return c.RemoveTableRow(entity, sampler, view, name)
 }
 
+// CreateColumn TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) CreateColumn(entity, sampler, view, name string) (err error) {
 	return c.AddTableColumn(entity, sampler, view, name)
 }
 
+// CreateHeadline TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) CreateHeadline(entity, sampler, view, name string) (err error) {
 	return c.AddHeadline(entity, sampler, view, name)
 }
 
+// DeleteHeadline TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) DeleteHeadline(entity, sampler, view, name string) (err error) {
 	return c.RemoveHeadline(entity, sampler, view, name)
 }
 
+// CreateStream TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) CreateStream(entity, sampler, name string) (err error) {
 	return errors.ErrUnsupported
 }
 
+// UpdateStream TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) UpdateStream(entity, sampler, name string, message any) (err error) {
 	return c.AddMessage(entity, sampler, name, fmt.Sprint(message))
 }
 
+// DataviewExists TODO: Document its behavior, inputs, and effects.
 func (c *XMLRPCClient) DataviewExists(entity, sampler, name string) (bool, error) {
 	return c.ViewExists(entity, sampler, name)
 }

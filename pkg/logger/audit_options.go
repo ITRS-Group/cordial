@@ -6,6 +6,7 @@ import (
 
 // audit options for the audit logger
 
+// AuditOption TODO: Describe its purpose and intended use.
 type AuditOption func(*auditOptions)
 
 type auditOptions struct {
@@ -21,6 +22,7 @@ func evalAuditOptions(options ...AuditOption) *auditOptions {
 	return opts
 }
 
+// GlobalWriter TODO: Document its behavior, inputs, and effects.
 func GlobalWriter(w io.Writer) AuditOption {
 	return func(opts *auditOptions) {
 		opts.global = w

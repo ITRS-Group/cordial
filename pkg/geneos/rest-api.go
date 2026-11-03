@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// RESTAPIPlugin TODO: Describe its purpose and intended use.
 type RESTAPIPlugin struct {
 	XMLName xml.Name `xml:"rest-api" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *RESTAPIPlugin) String() string {
 	return p.XMLName.Local
 }

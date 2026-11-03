@@ -22,15 +22,18 @@ import "strings"
 // Filename fulfils the Var interface for pflag Varp()
 type Filename []string
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Filename) String() string {
 	return strings.Join(*i, ",")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *Filename) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *Filename) Type() string {
 	return "[DEST=]PATH|URL"
 }

@@ -39,6 +39,7 @@ import (
 	"github.com/fatih/color"
 )
 
+// Handler TODO: Describe its purpose and intended use.
 type Handler struct {
 	mu             *sync.Mutex
 	w              io.Writer
@@ -80,10 +81,12 @@ func NewHandler(options ...HandlerOption) (handler slog.Handler) {
 	}
 }
 
+// Enabled TODO: Document its behavior, inputs, and effects.
 func (h *Handler) Enabled(_ context.Context, level slog.Level) bool {
 	return level >= h.level.Level()
 }
 
+// Handle TODO: Document its behavior, inputs, and effects.
 func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 	buf := make([]byte, 0, 1024)
 	if !r.Time.IsZero() {
@@ -119,6 +122,7 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 	return err
 }
 
+// WithAttrs TODO: Document its behavior, inputs, and effects.
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) == 0 {
 		return h
@@ -137,6 +141,7 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &h2
 }
 
+// WithGroup TODO: Document its behavior, inputs, and effects.
 func (h *Handler) WithGroup(name string) slog.Handler {
 	if name == "" {
 		return h
@@ -154,17 +159,21 @@ var timeFormat = "2006-01-02T15:04:05.000Z07:00"
 var (
 	grey       = color.New(color.FgHiBlack).SprintFunc()
 	boldWhite  = color.New(color.FgWhite).Add(color.Bold).SprintFunc()
-	red        = color.New(color.FgRed).SprintFunc()
+// TODO: Revisit unused declaration red; restore it only when needed.
+// 	red        = color.New(color.FgRed).SprintFunc()
 	boldRed    = color.New(color.FgRed).Add(color.Bold).SprintFunc()
 	cyan       = color.New(color.FgCyan).SprintFunc()
-	boldCyan   = color.New(color.FgCyan).Add(color.Bold).SprintFunc()
+// TODO: Revisit unused declaration boldCyan; restore it only when needed.
+// 	boldCyan   = color.New(color.FgCyan).Add(color.Bold).SprintFunc()
 	magenta    = color.New(color.FgMagenta).SprintFunc()
 	yellow     = color.New(color.FgYellow).SprintFunc()
 	boldYellow = color.New(color.FgYellow).Add(color.Bold).SprintFunc()
 	green      = color.New(color.FgGreen).SprintFunc()
 	boldGreen  = color.New(color.FgGreen).Add(color.Bold).SprintFunc()
-	blue       = color.New(color.FgBlue).SprintFunc()
-	boldBlue   = color.New(color.FgBlue).Add(color.Bold).SprintFunc()
+// TODO: Revisit unused declaration blue; restore it only when needed.
+// 	blue       = color.New(color.FgBlue).SprintFunc()
+// TODO: Revisit unused declaration boldBlue; restore it only when needed.
+// 	boldBlue   = color.New(color.FgBlue).Add(color.Bold).SprintFunc()
 )
 
 func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []byte {

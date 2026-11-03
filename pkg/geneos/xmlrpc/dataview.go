@@ -94,6 +94,7 @@ func (d Dataview) UpdateTable(columns []string, values ...[]string) (err error) 
 	return d.updateEntireTable(d.entityName, d.samplerName, d.String(), table)
 }
 
+// RowExists TODO: Document its behavior, inputs, and effects.
 func (d Dataview) RowExists(rowname string) bool {
 	if !d.Exists() {
 		return false
@@ -102,6 +103,7 @@ func (d Dataview) RowExists(rowname string) bool {
 	return exists
 }
 
+// AddRow TODO: Document its behavior, inputs, and effects.
 func (d Dataview) AddRow(rowname string) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -110,6 +112,7 @@ func (d Dataview) AddRow(rowname string) (err error) {
 	return d.addTableRow(d.entityName, d.samplerName, d.String(), rowname)
 }
 
+// UpdateRow TODO: Document its behavior, inputs, and effects.
 func (d Dataview) UpdateRow(rowname string, args ...any) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -122,6 +125,7 @@ func (d Dataview) UpdateRow(rowname string, args ...any) (err error) {
 	return d.updateTableRow(d.entityName, d.samplerName, d.String(), rowname, s)
 }
 
+// RowNames TODO: Document its behavior, inputs, and effects.
 func (d Dataview) RowNames() (rownames []string, err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -130,11 +134,13 @@ func (d Dataview) RowNames() (rownames []string, err error) {
 	return d.getRowNames(d.entityName, d.samplerName, d.String())
 }
 
+// RowNamesOlderThan TODO: Document its behavior, inputs, and effects.
 func (d Dataview) RowNamesOlderThan(datetime time.Time) (rownames []string, err error) {
 	unixtime := datetime.Unix()
 	return d.getRowNamesOlderThan(d.entityName, d.samplerName, d.String(), unixtime)
 }
 
+// CountRows TODO: Document its behavior, inputs, and effects.
 func (d Dataview) CountRows() (int, error) {
 	if !d.Exists() {
 		err := err_dataview_exists
@@ -143,6 +149,7 @@ func (d Dataview) CountRows() (int, error) {
 	return d.getRowCount(d.entityName, d.samplerName, d.String())
 }
 
+// RemoveRow TODO: Document its behavior, inputs, and effects.
 func (d Dataview) RemoveRow(rowname string) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -151,6 +158,7 @@ func (d Dataview) RemoveRow(rowname string) (err error) {
 	return d.removeTableRow(d.entityName, d.samplerName, d.String(), rowname)
 }
 
+// ColumnExists TODO: Document its behavior, inputs, and effects.
 func (d Dataview) ColumnExists(column string) bool {
 	if !d.Exists() {
 		return false
@@ -159,6 +167,7 @@ func (d Dataview) ColumnExists(column string) bool {
 	return exists
 }
 
+// AddColumn TODO: Document its behavior, inputs, and effects.
 func (d Dataview) AddColumn(column string) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -169,6 +178,7 @@ func (d Dataview) AddColumn(column string) (err error) {
 
 // You cannot remove an existing column. You have to recreate the Dataview
 
+// ColumnNames TODO: Document its behavior, inputs, and effects.
 func (d Dataview) ColumnNames() (columnnames []string, err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -177,6 +187,7 @@ func (d Dataview) ColumnNames() (columnnames []string, err error) {
 	return d.getColumnNames(d.entityName, d.samplerName, d.String())
 }
 
+// CountColumns TODO: Document its behavior, inputs, and effects.
 func (d Dataview) CountColumns() (int, error) {
 	if !d.Exists() {
 		err := err_dataview_exists
@@ -188,6 +199,7 @@ func (d Dataview) CountColumns() (int, error) {
 // create and optional populate headline
 // this is also the entry point to update the value of a headline
 
+// Headline TODO: Document its behavior, inputs, and effects.
 func (d Dataview) Headline(headline string, args ...string) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -210,6 +222,7 @@ func (d Dataview) Headline(headline string, args ...string) (err error) {
 	return
 }
 
+// HeadlineExists TODO: Document its behavior, inputs, and effects.
 func (d Dataview) HeadlineExists(headline string) bool {
 	if !d.Exists() {
 		return false
@@ -218,6 +231,7 @@ func (d Dataview) HeadlineExists(headline string) bool {
 	return exists
 }
 
+// CountHeadlines TODO: Document its behavior, inputs, and effects.
 func (d Dataview) CountHeadlines() (int, error) {
 	if !d.Exists() {
 		err := err_dataview_exists
@@ -226,6 +240,7 @@ func (d Dataview) CountHeadlines() (int, error) {
 	return d.getHeadlineCount(d.entityName, d.samplerName, d.String())
 }
 
+// HeadlineNames TODO: Document its behavior, inputs, and effects.
 func (d Dataview) HeadlineNames() (headlinenames []string, err error) {
 	if !d.Exists() {
 		err = err_dataview_exists
@@ -234,6 +249,7 @@ func (d Dataview) HeadlineNames() (headlinenames []string, err error) {
 	return d.getHeadlineNames(d.entityName, d.samplerName, d.String())
 }
 
+// RemoveHeadline TODO: Document its behavior, inputs, and effects.
 func (d Dataview) RemoveHeadline(headline string) (err error) {
 	if !d.Exists() {
 		err = err_dataview_exists

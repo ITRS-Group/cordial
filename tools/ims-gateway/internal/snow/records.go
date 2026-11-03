@@ -51,11 +51,13 @@ type snowResult struct {
 	Status string `json:"status,omitempty"`
 }
 
+// TableQuery TODO: Describe its purpose and intended use.
 type TableQuery struct {
 	Enabled        bool     `mapstructure:"enabled"`
 	ResponseFields []string `mapstructure:"fields"`
 }
 
+// TableStates TODO: Describe its purpose and intended use.
 type TableStates struct {
 	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
 	Remove      []string          `mapstructure:"remove,omitempty"`
@@ -64,12 +66,14 @@ type TableStates struct {
 	Filter      []string          `mapstructure:"filter,omitempty"`
 }
 
+// TableResponses TODO: Describe its purpose and intended use.
 type TableResponses struct {
 	Created string `mapstructure:"created,omitempty"`
 	Updated string `mapstructure:"updated,omitempty"`
 	Failed  string `mapstructure:"failed,omitempty"`
 }
 
+// TableData TODO: Describe its purpose and intended use.
 type TableData struct {
 	Name          string                     `mapstructure:"name,omitempty"`
 	Search        string                     `mapstructure:"search,omitempty"`

@@ -17,6 +17,7 @@ limitations under the License.
 
 package main
 
+// EMailConfig TODO: Describe its purpose and intended use.
 type EMailConfig map[string]string
 
 func main() {

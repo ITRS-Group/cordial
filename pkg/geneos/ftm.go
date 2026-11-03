@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// FTMPlugin TODO: Describe its purpose and intended use.
 type FTMPlugin struct {
 	XMLName                    xml.Name         `xml:"ftm" json:"-" yaml:"-"`
 	Files                      []FTMFile        `xml:"files>file"`
@@ -31,10 +32,12 @@ type FTMPlugin struct {
 	SizeUnit                   string           `xml:"sizeUnit"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *FTMPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// FTMFile TODO: Describe its purpose and intended use.
 type FTMFile struct {
 	XMLName         xml.Name             `xml:"file" json:"-" yaml:"-"`
 	Path            *SingleLineStringVar `xml:"path"`
@@ -48,24 +51,29 @@ type FTMFile struct {
 	Alias            *SingleLineStringVar `xml:"alias"`
 }
 
+// MonitoringPeriodAlias TODO: Describe its purpose and intended use.
 type MonitoringPeriodAlias struct {
 	Alias string `xml:"periodAlias"`
 }
 
+// MonitoringPeriodStart TODO: Describe its purpose and intended use.
 type MonitoringPeriodStart struct {
 	PeriodStart *Value `xml:"periodStartTime,omitempty"`
 }
 
+// FTMAdditionalPaths TODO: Describe its purpose and intended use.
 type FTMAdditionalPaths struct {
 	Paths []*SingleLineStringVar `xml:"additionalPath"`
 }
 
+// FTMHolidaysVars TODO: Describe its purpose and intended use.
 type FTMHolidaysVars struct {
 	XMLName xml.Name               `xml:"holidaysVar" json:"-" yaml:"-"`
 	Holiday []*SingleLineStringVar `xml:"holiday,omitempty"`
 	Day     *FTMWeekdays           `xml:"day,omitempty"`
 }
 
+// FTMWeekdays TODO: Describe its purpose and intended use.
 type FTMWeekdays struct {
 	Monday    bool `xml:"monday"`
 	Tuesday   bool `xml:"tuesday"`

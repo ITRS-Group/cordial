@@ -20,15 +20,12 @@ package cmd
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"database/sql"
 	"encoding/csv"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,82 +34,83 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
-	source = config.ResolveHome(source)
-	u, err := url.Parse(source)
-	if err != nil {
-		return nil, err
-	}
-
-	switch u.Scheme {
-	case "https":
-		log.Debug("reading data from", slog.String("src", source))
-		tr := &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify")),
-			},
-		}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   config.Get[time.Duration](cf, cf.Join("gdna", "licd-timeout")),
-		}
-		u = u.JoinPath(DetailsPath)
-		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode > 299 {
-			resp.Body.Close()
-			return nil, fmt.Errorf("server returned %s", resp.Status)
-		}
-		return resp.Body, nil
-	case "http":
-		log.Debug("reading data from", slog.String("src", source))
-		tr := &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-		}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   config.Get[time.Duration](cf, "gdna.licd-timeout"),
-		}
-		u = u.JoinPath(DetailsPath)
-		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode > 299 {
-			resp.Body.Close()
-			return nil, fmt.Errorf("server returned %s", resp.Status)
-		}
-		return resp.Body, nil
-	default:
-		var s os.FileInfo
-
-		log.Debug("reading data from file", slog.String("src", source))
-
-		source = config.ResolveHome(source)
-		s, err = os.Stat(source)
-		if err != nil {
-			return nil, err
-		}
-		if s.IsDir() {
-			return nil, os.ErrInvalid // geneos.ErrIsADirectory
-		}
-		log.Debug("reading from file", slog.String("src", source), slog.String("modtime", s.ModTime().UTC().Format(time.RFC3339)))
-		source, _ = filepath.Abs(source)
-		source = filepath.ToSlash(source)
-		return os.Open(source)
-	}
-}
+// TODO: Revisit unused declaration openSource; restore it only when needed.
+// func openSource(ctx context.Context, source string) (io.ReadCloser, error) {
+// 	source = config.ResolveHome(source)
+// 	u, err := url.Parse(source)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+//
+// 	switch u.Scheme {
+// 	case "https":
+// 		log.Debug("reading data from", slog.String("src", source))
+// 		tr := &http.Transport{
+// 			Proxy: http.ProxyFromEnvironment,
+// 			TLSClientConfig: &tls.Config{
+// 				InsecureSkipVerify: config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify")),
+// 			},
+// 		}
+// 		client := &http.Client{
+// 			Transport: tr,
+// 			Timeout:   config.Get[time.Duration](cf, cf.Join("gdna", "licd-timeout")),
+// 		}
+// 		u = u.JoinPath(DetailsPath)
+// 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		resp, err := client.Do(req)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		if resp.StatusCode > 299 {
+// 			resp.Body.Close()
+// 			return nil, fmt.Errorf("server returned %s", resp.Status)
+// 		}
+// 		return resp.Body, nil
+// 	case "http":
+// 		log.Debug("reading data from", slog.String("src", source))
+// 		tr := &http.Transport{
+// 			Proxy: http.ProxyFromEnvironment,
+// 		}
+// 		client := &http.Client{
+// 			Transport: tr,
+// 			Timeout:   config.Get[time.Duration](cf, "gdna.licd-timeout"),
+// 		}
+// 		u = u.JoinPath(DetailsPath)
+// 		req, err := http.NewRequestWithContext(ctx, "GET", u.String(), nil)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		resp, err := client.Do(req)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		if resp.StatusCode > 299 {
+// 			resp.Body.Close()
+// 			return nil, fmt.Errorf("server returned %s", resp.Status)
+// 		}
+// 		return resp.Body, nil
+// 	default:
+// 		var s os.FileInfo
+//
+// 		log.Debug("reading data from file", slog.String("src", source))
+//
+// 		source = config.ResolveHome(source)
+// 		s, err = os.Stat(source)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		if s.IsDir() {
+// 			return nil, os.ErrInvalid // geneos.ErrIsADirectory
+// 		}
+// 		log.Debug("reading from file", slog.String("src", source), slog.String("modtime", s.ModTime().UTC().Format(time.RFC3339)))
+// 		source, _ = filepath.Abs(source)
+// 		source = filepath.ToSlash(source)
+// 		return os.Open(source)
+// 	}
+// }
 
 // readLicdReport tries to read the three CSV sections from the latest
 // (lexically) licd report file from path into memory. this format is

@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 )
 
+// ResultsResponse TODO: Describe its purpose and intended use.
 type ResultsResponse struct {
 	Fields  []string `json:"fields,omitempty"`
 	Results results  `json:"results,omitempty"`

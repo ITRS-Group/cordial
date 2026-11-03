@@ -21,12 +21,14 @@ import (
 	"encoding/xml"
 )
 
+// ManagedEntities TODO: Describe its purpose and intended use.
 type ManagedEntities struct {
 	XMLName             xml.Name             `xml:"managedEntities" json:"-" yaml:"-"`
 	Entities            []ManagedEntity      `xml:"managedEntity,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
 	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
 }
 
+// ManagedEntityGroup TODO: Describe its purpose and intended use.
 type ManagedEntityGroup struct {
 	XMLName             xml.Name `xml:"managedEntityGroup" json:"-" yaml:"-"`
 	Name                string   `xml:"name,attr"`
@@ -36,6 +38,7 @@ type ManagedEntityGroup struct {
 	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
 }
 
+// ManagedEntity TODO: Describe its purpose and intended use.
 type ManagedEntity struct {
 	XMLName           xml.Name        `xml:"managedEntity" json:"-" yaml:"-"`
 	Name              string          `xml:"name,attr"`
@@ -48,6 +51,7 @@ type ManagedEntity struct {
 	Samplers          []SamplerRef `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 }
 
+// ManagedEntityInfo TODO: Describe its purpose and intended use.
 type ManagedEntityInfo struct {
 	Attributes       []Attribute     `xml:"attribute,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"attribute"`
 	RemoveTypes      *RemoveTypes    `xml:"removeTypes,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -57,27 +61,32 @@ type ManagedEntityInfo struct {
 	ResolvedSamplers map[string]bool `xml:"-" json:",omitempty" yaml:",omitempty"` // map of "type:sampler" that exist at this point
 }
 
+// RemoveTypes TODO: Describe its purpose and intended use.
 type RemoveTypes struct {
 	XMLName xml.Name  `xml:"removeTypes" json:"-" yaml:"-"`
 	Types   []TypeRef `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 }
 
+// RemoveSamplers TODO: Describe its purpose and intended use.
 type RemoveSamplers struct {
 	XMLName  xml.Name          `xml:"removeSamplers" json:"-" yaml:"-"`
 	Samplers []SamplerWithType `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// AddTypes TODO: Describe its purpose and intended use.
 type AddTypes struct {
 	XMLName xml.Name         `xml:"addTypes" json:"-" yaml:"-"`
 	Types   []TypeRefWithEnv `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 }
 
+// SamplerWithType TODO: Describe its purpose and intended use.
 type SamplerWithType struct {
 	XMLName xml.Name `xml:"sampler" json:"-" yaml:"-"`
 	Sampler string   `xml:"ref,attr"`
 	Type    TypeRef  `xml:"type"`
 }
 
+// Attribute TODO: Describe its purpose and intended use.
 type Attribute struct {
 	XMLName xml.Name `xml:"attribute" json:"-" yaml:"-"`
 	Name    string   `xml:"name,attr"`
@@ -89,11 +98,13 @@ func (a Attribute) GetKey() string {
 	return a.Name
 }
 
+// TypeRef TODO: Describe its purpose and intended use.
 type TypeRef struct {
 	XMLName xml.Name `xml:"type" json:"-" yaml:"-"`
 	Type    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
 }
 
+// TypeRefWithEnv TODO: Describe its purpose and intended use.
 type TypeRefWithEnv struct {
 	XMLName     xml.Name        `xml:"type" json:"-" yaml:"-"`
 	Type        string          `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`

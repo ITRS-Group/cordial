@@ -36,6 +36,7 @@ import (
 var snowMutex sync.RWMutex
 var snowConnection *Connection
 
+// InitializeConnection TODO: Document its behavior, inputs, and effects.
 func InitializeConnection(vc *config.Config) *Connection {
 	var err error
 
@@ -108,6 +109,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 	return snowConnection
 }
 
+// AssembleRequest TODO: Document its behavior, inputs, and effects.
 func AssembleRequest(snow TransitiveConnection, table string) (req *http.Request, err error) {
 	snowMutex.RLock()
 	defer snowMutex.RUnlock()

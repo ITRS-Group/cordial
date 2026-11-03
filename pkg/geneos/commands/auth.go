@@ -40,7 +40,8 @@ type SSOAuth struct {
 
 // AuthSSO is a placeholder for future SSO authentication
 func AuthSSO() {
-	const endpoint = "/rest/authorize"
+// TODO: Revisit unused declaration endpoint; restore it only when needed.
+// 	const endpoint = "/rest/authorize"
 
 }
 

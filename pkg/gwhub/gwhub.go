@@ -21,11 +21,13 @@ type Hub struct {
 // underlying HTTP response
 var ErrServerError = errors.New("error from server (HTTP Status > 299)")
 
+// New creates a Hub client using the supplied REST client options.
 func New(options ...rest.Option) *Hub {
 	c := rest.NewClient(options...)
 	return &Hub{Client: c}
 }
 
+// Ping checks whether the GW Hub service is reachable.
 func (hub *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
 	return hub.Get(ctx, PingEndpoint, nil, nil)
 }
@@ -88,7 +90,9 @@ func ParseDuration(isoDuration string) (time.Duration, error) {
 }
 
 const (
-	Day  = 24 * time.Hour
+	// Day is the duration of one day, used when converting Hub durations.
+	Day = 24 * time.Hour
+	// Week is the duration of one week, used when converting Hub durations.
 	Week = 7 * Day
 )
 

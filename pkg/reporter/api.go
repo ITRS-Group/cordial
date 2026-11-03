@@ -173,12 +173,14 @@ func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 	_ = a.dv.UpdateTable(columns, rows...)
 }
 
+// AddHeadline TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) AddHeadline(name, value string) {
 	if a.dv != nil {
 		a.dv.Headline(name, value)
 	}
 }
 
+// AddHeadlines TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) AddHeadlines(headlines map[string]string) {
 	if a.dv != nil {
 		for name, value := range headlines {
@@ -187,6 +189,7 @@ func (a *APIReporter) AddHeadlines(headlines map[string]string) {
 	}
 }
 
+// Reset TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) Reset(report Report) error {
 	if a == nil || a.conn == nil {
 		return nil
@@ -198,14 +201,17 @@ func (a *APIReporter) Reset(report Report) error {
 	return nil
 }
 
+// Render TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) Render() {
 	// do nothing
 }
 
+// Close TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) Close() {
 	// do nothing
 }
 
+// Extension TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) Extension() string {
 	return "xmlrpc"
 }

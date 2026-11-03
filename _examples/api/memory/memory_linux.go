@@ -14,6 +14,7 @@ import (
 
 var log = cordial.Logger
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p *MemorySampler) DoSample() error {
 	log.Debug("called")
 

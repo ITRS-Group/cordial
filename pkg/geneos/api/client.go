@@ -54,6 +54,7 @@ type roundTripper struct {
 	transport http.RoundTripper
 }
 
+// RoundTrip TODO: Document its behavior, inputs, and effects.
 func (r *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return r.transport.RoundTrip(req)
 }
@@ -61,6 +62,7 @@ func (r *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 // compile time check for interface validity
 var _ http.RoundTripper = (*roundTripper)(nil)
 
+// Stream TODO: Describe its purpose and intended use.
 type Stream struct {
 	client  APIClient
 	entity  string
@@ -68,6 +70,7 @@ type Stream struct {
 	stream  string
 }
 
+// OpenStream TODO: Document its behavior, inputs, and effects.
 func OpenStream(c APIClient, entity, sampler, stream string) (s *Stream, err error) {
 	s = &Stream{
 		client:  c,
@@ -78,6 +81,7 @@ func OpenStream(c APIClient, entity, sampler, stream string) (s *Stream, err err
 	return
 }
 
+// Write TODO: Document its behavior, inputs, and effects.
 func (s *Stream) Write(data []byte) (n int, err error) {
 	if err = s.client.UpdateStream(s.entity, s.sampler, s.stream, string(data)); err != nil {
 		return

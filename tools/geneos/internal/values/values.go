@@ -98,6 +98,7 @@ type Values struct {
 	Headers NameValues
 }
 
+// UnsetConfigValues TODO: Describe its purpose and intended use.
 type UnsetConfigValues struct {
 	// for all components
 	Keys UnsetValues

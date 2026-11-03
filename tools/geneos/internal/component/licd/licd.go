@@ -37,6 +37,7 @@ import (
 
 const name = "licd"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"licds"},
@@ -94,6 +95,7 @@ var Component = geneos.Component{
 	ApplyProfile: profile.ApplyCommonProfile,
 }
 
+// Licd TODO: Describe its purpose and intended use.
 type Licd instance.Instance
 
 // ensure that Licds satisfies geneos.Instance interface
@@ -150,6 +152,7 @@ func (i *Licd) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -157,6 +160,7 @@ func (i *Licd) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Home() string {
 	if i == nil {
 		return ""
@@ -164,6 +168,7 @@ func (i *Licd) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -171,6 +176,7 @@ func (i *Licd) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -178,18 +184,22 @@ func (i *Licd) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Licd) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Licd) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Unload() (err error) {
 	if i == nil {
 		return
@@ -199,6 +209,7 @@ func (i *Licd) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -206,6 +217,7 @@ func (i *Licd) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Licd) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -213,6 +225,7 @@ func (i *Licd) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -220,6 +233,7 @@ func (i *Licd) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Licd) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -227,6 +241,7 @@ func (i *Licd) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -250,6 +265,7 @@ func (i *Licd) Add(options ...any) (err error) {
 	return nil
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -292,6 +308,7 @@ func (i *Licd) Command(skipFileCheck bool) (args, env []string, home string, err
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Licd) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

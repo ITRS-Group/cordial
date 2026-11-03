@@ -51,6 +51,7 @@ func init() {
 	addGroupCmd.Flags().StringVar(&addGroupAllocationToken, "token", "server", "token to allocate")
 }
 
+// Group TODO: Describe its purpose and intended use.
 type Group struct {
 	Name      string     `mapstructure:"name"`
 	Patterns  []string   `mapstructure:"patterns"`
@@ -60,6 +61,7 @@ type Group struct {
 	Timestamp *time.Time `mapstructure:"timestamp,omitempty"`
 }
 
+// Allocation TODO: Describe its purpose and intended use.
 type Allocation struct {
 	Name       string     `mapstructure:"name"`
 	Token      string     `mapstructure:"token"`

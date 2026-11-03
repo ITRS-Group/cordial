@@ -40,15 +40,24 @@ const (
 	// under the TLSBASE path. The old parameters are still supported
 	// for backwards compatibility.
 
+	// CERTIFICATE TODO: Describe its purpose and intended use.
 	CERTIFICATE         = "certificate"
+	// PRIVATEKEY TODO: Describe its purpose and intended use.
 	PRIVATEKEY          = "privatekey"
+	// TLSVERIFY TODO: Describe its purpose and intended use.
 	TLSVERIFY           = "verify"
+	// CABUNDLE TODO: Describe its purpose and intended use.
 	CABUNDLE            = "ca-bundle"
+	// MINVERSION TODO: Describe its purpose and intended use.
 	MINVERSION          = "minimumversion"
+	// TRUSTSTORE TODO: Describe its purpose and intended use.
 	TRUSTSTORE          = "truststore"
+	// TRUSTSTORE_PASSWORD TODO: Describe its purpose and intended use.
 	TRUSTSTORE_PASSWORD = "truststore-password"
 
+	// CERTCHAIN TODO: Describe its purpose and intended use.
 	CERTCHAIN = "certchain" // deprecated, old parameter
+	// USECHAIN TODO: Describe its purpose and intended use.
 	USECHAIN  = "use-chain" // deprecated, old parameter
 )
 
@@ -239,6 +248,7 @@ func ReadLeafCertificate(i geneos.Instance, ext ...string) (cert *x509.Certifica
 	return nil, geneos.ErrNotExist
 }
 
+// ReadCertificatesWithKey TODO: Document its behavior, inputs, and effects.
 func ReadCertificatesWithKey(i geneos.Instance, ext ...string) (certChain []*x509.Certificate, key certs.PrivateKey, err error) {
 	certChain, err = ReadCertificates(i, ext...)
 	if err != nil {

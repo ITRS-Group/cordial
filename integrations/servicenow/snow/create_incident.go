@@ -23,8 +23,10 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// IncidentFields TODO: Describe its purpose and intended use.
 type IncidentFields map[string]string
 
+// CreateIncident TODO: Document its behavior, inputs, and effects.
 func CreateIncident(vc *config.Config, sys_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
 	var result resultDetail

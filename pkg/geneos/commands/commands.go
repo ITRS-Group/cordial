@@ -93,7 +93,8 @@ type Connection struct {
 	authType           int
 	username           string
 	password           config.Secret
-	sso                SSOAuth
+// TODO: Revisit unused field sso; restore it only when needed.
+// 	sso                SSOAuth
 	insecureSkipVerify bool
 	timeout            time.Duration
 	rrurls             []*url.URL

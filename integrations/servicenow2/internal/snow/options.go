@@ -30,6 +30,7 @@ type reqOptions struct {
 	sysID   string
 }
 
+// Option TODO: Describe its purpose and intended use.
 type Option func(*reqOptions)
 
 func evalReqOptions(options ...Option) (opts *reqOptions) {
@@ -40,24 +41,28 @@ func evalReqOptions(options ...Option) (opts *reqOptions) {
 	return
 }
 
+// Limit TODO: Document its behavior, inputs, and effects.
 func Limit(limit int) Option {
 	return func(ro *reqOptions) {
 		ro.limit = fmt.Sprintf("%d", limit)
 	}
 }
 
+// Fields TODO: Document its behavior, inputs, and effects.
 func Fields(fields string) Option {
 	return func(ro *reqOptions) {
 		ro.fields = fields
 	}
 }
 
+// Offset TODO: Document its behavior, inputs, and effects.
 func Offset(offset string) Option {
 	return func(ro *reqOptions) {
 		ro.offset = offset
 	}
 }
 
+// Query TODO: Document its behavior, inputs, and effects.
 func Query(query string) Option {
 	return func(ro *reqOptions) {
 		ro.query = query
@@ -71,6 +76,7 @@ func Display(display string) Option {
 	}
 }
 
+// SysID TODO: Document its behavior, inputs, and effects.
 func SysID(sysID string) Option {
 	return func(ro *reqOptions) {
 		ro.sysID = sysID

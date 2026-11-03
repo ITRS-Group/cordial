@@ -41,17 +41,21 @@ var addCmdPassword config.Secret
 var addCmdKeyfile config.KeyFile
 var addCmdPrivateKeyfiles PrivateKeyFiles
 
+// PrivateKeyFiles TODO: Describe its purpose and intended use.
 type PrivateKeyFiles []string
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *PrivateKeyFiles) String() string {
 	return ""
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *PrivateKeyFiles) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *PrivateKeyFiles) Type() string {
 	return "PATH"
 }

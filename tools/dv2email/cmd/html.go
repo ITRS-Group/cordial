@@ -20,36 +20,35 @@ package cmd
 import (
 	"html/template"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/aymerick/douceur/inliner"
 	"github.com/wneessen/go-mail"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
-func createHTML(_ *config.Config, data any, htmlTemplate string, inlineCSS bool) (html string, err error) {
-	ht, err := template.New("dataview").Parse(htmlTemplate)
-	if err != nil {
-		return
-	}
-
-	var body strings.Builder
-	err = ht.Execute(&body, data)
-	if err != nil {
-		return
-	}
-
-	if inlineCSS {
-		html, err = inliner.Inline(body.String())
-	} else {
-		html = body.String()
-	}
-
-	return
-}
+// TODO: Revisit unused declaration createHTML; restore it only when needed.
+// func createHTML(_ *config.Config, data any, htmlTemplate string, inlineCSS bool) (html string, err error) {
+// 	ht, err := template.New("dataview").Parse(htmlTemplate)
+// 	if err != nil {
+// 		return
+// 	}
+//
+// 	var body strings.Builder
+// 	err = ht.Execute(&body, data)
+// 	if err != nil {
+// 		return
+// 	}
+//
+// 	if inlineCSS {
+// 		html, err = inliner.Inline(body.String())
+// 	} else {
+// 		html = body.String()
+// 	}
+//
+// 	return
+// }
 
 func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.Time) (err error) {
 	data, ok := d.(DV2EMailData)

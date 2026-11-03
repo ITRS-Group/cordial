@@ -21,6 +21,7 @@ import (
 	"net/url"
 )
 
+// POST TODO: Document its behavior, inputs, and effects.
 func (snow Connection) POST(payload []byte, options ...ReqOptions) TransitiveConnection {
 	opts := evalReqOptions(options...)
 
@@ -50,6 +51,7 @@ func (snow Connection) POST(payload []byte, options ...ReqOptions) TransitiveCon
 	}
 }
 
+// GET TODO: Document its behavior, inputs, and effects.
 func (snow Connection) GET(options ...ReqOptions) TransitiveConnection {
 	opts := evalReqOptions(options...)
 
@@ -116,6 +118,7 @@ type reqOptions struct {
 	sysID  string
 }
 
+// ReqOptions TODO: Describe its purpose and intended use.
 type ReqOptions func(*reqOptions)
 
 func evalReqOptions(options ...ReqOptions) (opts *reqOptions) {
@@ -126,30 +129,35 @@ func evalReqOptions(options ...ReqOptions) (opts *reqOptions) {
 	return
 }
 
+// Limit TODO: Document its behavior, inputs, and effects.
 func Limit(limit string) ReqOptions {
 	return func(ro *reqOptions) {
 		ro.limit = limit
 	}
 }
 
+// Fields TODO: Document its behavior, inputs, and effects.
 func Fields(fields string) ReqOptions {
 	return func(ro *reqOptions) {
 		ro.fields = fields
 	}
 }
 
+// Offset TODO: Document its behavior, inputs, and effects.
 func Offset(offset string) ReqOptions {
 	return func(ro *reqOptions) {
 		ro.offset = offset
 	}
 }
 
+// Query TODO: Document its behavior, inputs, and effects.
 func Query(query string) ReqOptions {
 	return func(ro *reqOptions) {
 		ro.query = query
 	}
 }
 
+// SysID TODO: Document its behavior, inputs, and effects.
 func SysID(sysID string) ReqOptions {
 	return func(ro *reqOptions) {
 		ro.sysID = sysID

@@ -184,8 +184,10 @@ func init() {
 //go:embed _docs/geneos.md
 var geneosCmdDescription string
 
+// CmdKeyType TODO: Describe its purpose and intended use.
 type CmdKeyType string
 
+// CmdKey TODO: Describe its purpose and intended use.
 const CmdKey = CmdKeyType("data")
 
 // CmdValType is the struct used to store the results of parsing the

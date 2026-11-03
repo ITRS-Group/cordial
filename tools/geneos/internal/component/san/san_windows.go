@@ -17,6 +17,7 @@ limitations under the License.
 
 package san
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *San) Reload() (err error) {
 	return
 }

@@ -39,8 +39,10 @@ const (
 	VARMAP_KEY_VALUE = "value"
 )
 
+// Variables TODO: Describe its purpose and intended use.
 type Variables []Variable
 
+// VarsOptionsText TODO: Describe its purpose and intended use.
 const VarsOptionsText = "A variable in the format [TYPE:]NAME=VALUE\n(Repeat as required, san only)"
 
 // String returns the default value for Variables, which is list of
@@ -85,6 +87,7 @@ func (v *Variables) Set(value string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (v *Variables) Type() string {
 	return "[TYPE:]NAME=VALUE"
 }

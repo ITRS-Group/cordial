@@ -160,6 +160,7 @@ limitations under the License.
 // string ${unchanged} as there is no recursive lookups.
 package config
 
+// Expand TODO: Document its behavior, inputs, and effects.
 func Expand[T string | []byte](c *Config, input string, options ...ExpandOption) (value T) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()

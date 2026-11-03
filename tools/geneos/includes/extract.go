@@ -21,7 +21,9 @@ import (
 )
 
 const (
+	// IncludePattern TODO: Describe its purpose and intended use.
 	IncludePattern = "files/itrs.*.xml"
+	// ConfigPattern TODO: Describe its purpose and intended use.
 	ConfigPattern  = "files/config.*.xml"
 )
 

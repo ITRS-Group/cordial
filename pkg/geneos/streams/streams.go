@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
+// Stream TODO: Describe its purpose and intended use.
 type Stream struct {
 	io.Writer
 	io.StringWriter
@@ -80,6 +81,7 @@ func (s Stream) WriteString(data string) (n int, err error) {
 	return
 }
 
+// RESTStream TODO: Describe its purpose and intended use.
 type RESTStream struct {
 	baseurl *url.URL
 	client  *http.Client
@@ -89,6 +91,7 @@ type RESTStream struct {
 // underlying HTTP response
 var ErrServerError = errors.New("error from server (HTTP Status > 299)")
 
+// NewRESTStream TODO: Document its behavior, inputs, and effects.
 func NewRESTStream(url *url.URL, entity, sampler, streamname string) (stream RESTStream, err error) {
 	stream.baseurl = url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", streamname)
 	stream.client = &http.Client{
@@ -100,6 +103,7 @@ func NewRESTStream(url *url.URL, entity, sampler, streamname string) (stream RES
 	return
 }
 
+// Write TODO: Document its behavior, inputs, and effects.
 func (s RESTStream) Write(data []byte) (n int, err error) {
 	b := bytes.NewBuffer(data)
 	u := s.baseurl.String()

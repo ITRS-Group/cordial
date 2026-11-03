@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// PerfmonPlugin TODO: Describe its purpose and intended use.
 type PerfmonPlugin struct {
 	XMLName xml.Name `xml:"perfmon" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *PerfmonPlugin) String() string {
 	return p.XMLName.Local
 }

@@ -7,6 +7,7 @@ type processOptions struct {
 	fetchLazy    bool
 }
 
+// ProcessOption TODO: Describe its purpose and intended use.
 type ProcessOption func(*processOptions)
 
 func evalProcessOptions(options ...ProcessOption) *processOptions {
@@ -17,12 +18,14 @@ func evalProcessOptions(options ...ProcessOption) *processOptions {
 	return opts
 }
 
+// RefreshCache TODO: Document its behavior, inputs, and effects.
 func RefreshCache() ProcessOption {
 	return func(po *processOptions) {
 		po.refreshCache = true
 	}
 }
 
+// CustomChecker TODO: Document its behavior, inputs, and effects.
 func CustomChecker(checkFunc func(checkArg any, cmdline []string) bool, checkArg any) ProcessOption {
 	return func(po *processOptions) {
 		po.checkFunc = checkFunc

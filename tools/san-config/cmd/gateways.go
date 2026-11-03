@@ -258,12 +258,13 @@ func GatewayDetails(name string, gateways []map[string]string) (gateway GatewayS
 	return
 }
 
-type gatewayEntry struct {
-	Name    string `json:"name" yaml:"name"`
-	Primary string `json:"primary" yaml:"primary"`
-	Standby string `json:"standby" yaml:"standby"`
-	Secure  bool   `json:"secure" yaml:"secure"`
-}
+// TODO: Revisit unused declaration gatewayEntry; restore it only when needed.
+// type gatewayEntry struct {
+// 	Name    string `json:"name" yaml:"name"`
+// 	Primary string `json:"primary" yaml:"primary"`
+// 	Standby string `json:"standby" yaml:"standby"`
+// 	Secure  bool   `json:"secure" yaml:"secure"`
+// }
 
 // ReadGateways reads an local file for gateway details. Paths can use
 // the "~/" prefix for the user's home directory.

@@ -11,6 +11,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
+// FloatingProfile TODO: Describe its purpose and intended use.
 type FloatingProfile struct {
 	profile.Common `mapstructure:",squash"`
 	Gateways       []string `yaml:"gateways,omitempty"`

@@ -30,12 +30,14 @@ const (
 	// ...
 )
 
+// Filter limits a GW Hub query by entity, time range, and optional time windows.
 type Filter struct {
 	Entities    string       `json:"entities,omitempty"`
 	Range       TimeRange    `json:"range"`
 	TimeWindows []TimeWindow `json:"timeWindows,omitempty"`
 }
 
+// TimeRange defines the inclusive start and end times for a query.
 type TimeRange struct {
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`
@@ -53,13 +55,14 @@ func (t TimeRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal(timerange)
 }
 
-// TimeWindow is only time-of-day
+// TimeWindow limits a query to a time-of-day interval on selected days.
 type TimeWindow struct {
 	From time.Time `json:"from"`
 	To   time.Time `json:"to"`
 	On   []string  `json:"on,omitempty"`
 }
 
+// MarshalJSON encodes the interval as clock times rather than full timestamps.
 func (t TimeWindow) MarshalJSON() ([]byte, error) {
 	timewindow := struct {
 		From string   `json:"from"`

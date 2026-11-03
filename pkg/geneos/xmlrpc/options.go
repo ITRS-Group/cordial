@@ -4,6 +4,7 @@ type xmlrpcOptions struct {
 	insecureSkipVerify bool
 }
 
+// Option TODO: Describe its purpose and intended use.
 type Option func(*xmlrpcOptions)
 
 func evalOptions(c *xmlrpcOptions, options ...Option) {

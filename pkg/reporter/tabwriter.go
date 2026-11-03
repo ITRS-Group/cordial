@@ -57,6 +57,7 @@ func (t *TabWriterReporter) AddHeadline(name, value string) {
 	// No-op for tabwriter
 }
 
+// AddHeadlines TODO: Document its behavior, inputs, and effects.
 func (t *TabWriterReporter) AddHeadlines(headlines map[string]string) {
 	// No-op for tabwriter
 }

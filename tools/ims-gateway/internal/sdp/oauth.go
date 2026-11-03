@@ -46,16 +46,19 @@ var DefaultUserKeyfile = config.KeyFile(
 	),
 )
 
+// Config TODO: Describe its purpose and intended use.
 type Config struct {
 	oauth2.Config
 	Code config.Secret
 }
 
+// SDPTokenSource TODO: Describe its purpose and intended use.
 type SDPTokenSource struct {
 	next   oauth2.TokenSource
 	expiry time.Time
 }
 
+// NewSDPTokenSource TODO: Document its behavior, inputs, and effects.
 func NewSDPTokenSource(ctx context.Context, conf *Config, token *oauth2.Token) *SDPTokenSource {
 	return &SDPTokenSource{
 		next:   conf.TokenSource(ctx, token),
@@ -63,6 +66,7 @@ func NewSDPTokenSource(ctx context.Context, conf *Config, token *oauth2.Token) *
 	}
 }
 
+// Token TODO: Document its behavior, inputs, and effects.
 func (s *SDPTokenSource) Token() (*oauth2.Token, error) {
 	token, err := s.next.Token()
 	if err != nil {

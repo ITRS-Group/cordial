@@ -58,7 +58,8 @@ var netCSVColumns = []string{
 	"RXQueue",
 }
 
-var netCSVHeader = strings.Join(netCSVColumns, "\t")
+// TODO: Revisit unused declaration netCSVHeader; restore it only when needed.
+// var netCSVHeader = strings.Join(netCSVColumns, "\t")
 
 func psNetworkJSON(i geneos.Instance, pid int) (conns []psInstanceNetwork, err error) {
 	ct := i.Type()

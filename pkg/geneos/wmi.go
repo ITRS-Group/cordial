@@ -17,8 +17,10 @@ limitations under the License.
 
 package geneos
 
+// WMIPlugin TODO: Describe its purpose and intended use.
 type WMIPlugin struct{}
 
+// String TODO: Document its behavior, inputs, and effects.
 func (_ *WMIPlugin) String() string {
 	return "wmi"
 }

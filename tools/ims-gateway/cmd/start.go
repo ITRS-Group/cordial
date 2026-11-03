@@ -101,9 +101,11 @@ var startCmd = &cobra.Command{
 	},
 }
 
-type ctxKey string
+// TODO: Revisit unused declaration ctxKey; restore it only when needed.
+// type ctxKey string
 
-const startTimeKey ctxKey = "starttime"
+// TODO: Revisit unused declaration startTimeKey; restore it only when needed.
+// const startTimeKey ctxKey = "starttime"
 
 func startGateway(cf *config.Config) {
 	listen := config.Get[string](cf, cf.Join("server", "listen"))
@@ -312,11 +314,13 @@ type responseRecorder struct {
 	body   bytes.Buffer
 }
 
+// WriteHeader TODO: Document its behavior, inputs, and effects.
 func (r *responseRecorder) WriteHeader(code int) {
 	r.status = int64(code)
 	r.ResponseWriter.WriteHeader(code)
 }
 
+// Write TODO: Document its behavior, inputs, and effects.
 func (r *responseRecorder) Write(b []byte) (int, error) {
 	n, err := r.ResponseWriter.Write(b)
 	if n > 0 {

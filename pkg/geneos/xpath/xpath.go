@@ -48,7 +48,9 @@ import (
 	"unicode"
 )
 
+// ErrInvalidPath TODO: Describe its purpose and intended use.
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
+// ErrRelativePath TODO: Describe its purpose and intended use.
 var ErrRelativePath = errors.New("unsupported relative Geneos XPath")
 
 // XPath represents a Geneos Gateway XPath
@@ -68,40 +70,49 @@ type XPath struct {
 	Column   *Column   `json:"column,omitempty"`
 }
 
+// Elements TODO: Describe its purpose and intended use.
 type Elements interface {
 	Gateway | Probe | Entity | Sampler | Dataview | Headline | Row | Column
 }
 
+// Gateway TODO: Describe its purpose and intended use.
 type Gateway struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Probe TODO: Describe its purpose and intended use.
 type Probe struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Entity TODO: Describe its purpose and intended use.
 type Entity struct {
 	Name       string            `json:"name,omitempty"`
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
+// Sampler TODO: Describe its purpose and intended use.
 type Sampler struct {
 	Name string  `json:"name,omitempty"`
 	Type *string `json:"type,omitempty"`
 }
 
+// Dataview TODO: Describe its purpose and intended use.
 type Dataview struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Headline TODO: Describe its purpose and intended use.
 type Headline struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Row TODO: Describe its purpose and intended use.
 type Row struct {
 	Name string `json:"name,omitempty"`
 }
 
+// Column TODO: Describe its purpose and intended use.
 type Column struct {
 	Name string `json:"name,omitempty"`
 }
@@ -363,26 +374,32 @@ func (x *XPath) IsTableCell() bool {
 	return x.Rows && x.Row != nil && x.Column != nil
 }
 
+// IsHeadline TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsHeadline() bool {
 	return x.Headline != nil && x.Row == nil
 }
 
+// IsDataview TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsDataview() bool {
 	return x.Dataview != nil && x.Headline == nil && x.Row == nil
 }
 
+// IsSampler TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsSampler() bool {
 	return x.Sampler != nil && x.Dataview == nil
 }
 
+// IsEntity TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsEntity() bool {
 	return x.Entity != nil && x.Sampler == nil
 }
 
+// IsProbe TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsProbe() bool {
 	return x.Probe != nil && x.Entity == nil
 }
 
+// IsGateway TODO: Document its behavior, inputs, and effects.
 func (x *XPath) IsGateway() bool {
 	return x.Gateway != nil && x.Probe == nil
 }

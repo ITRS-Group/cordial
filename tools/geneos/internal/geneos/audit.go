@@ -47,18 +47,22 @@ func InitGlobalAudit() (err error) {
 	return nil
 }
 
+// AuditCommands TODO: Document its behavior, inputs, and effects.
 func AuditCommands() bool {
 	return auditCommands
 }
 
+// AuditActions TODO: Document its behavior, inputs, and effects.
 func AuditActions() bool {
 	return auditActions
 }
 
+// SetAuditCommands TODO: Document its behavior, inputs, and effects.
 func SetAuditCommands(enabled bool) {
 	auditCommands = enabled
 }
 
+// SetAuditActions TODO: Document its behavior, inputs, and effects.
 func SetAuditActions(enabled bool) {
 	auditActions = enabled
 }

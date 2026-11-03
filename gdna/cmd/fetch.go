@@ -94,17 +94,21 @@ var fetchCmd = &cobra.Command{
 // Sources is a slice of licence data sources
 type Sources []string
 
+// SourcesOptionsText TODO: Describe its purpose and intended use.
 const SourcesOptionsText = "Override configured licence source.\n(Repeat as required)"
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Sources) String() string {
 	return strings.Join(*i, ", ")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *Sources) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *Sources) Type() string {
 	return "URL | PATH"
 }

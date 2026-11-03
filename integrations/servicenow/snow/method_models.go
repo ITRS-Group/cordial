@@ -28,6 +28,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 )
 
+// Connection TODO: Describe its purpose and intended use.
 type Connection struct {
 	Client   *http.Client
 	Instance string
@@ -37,6 +38,7 @@ type Connection struct {
 	Trace    bool
 }
 
+// TransitiveConnection TODO: Describe its purpose and intended use.
 type TransitiveConnection struct {
 	Connection
 	Payload []byte
@@ -45,6 +47,7 @@ type TransitiveConnection struct {
 	SysID   string
 }
 
+// RouterContext TODO: Describe its purpose and intended use.
 type RouterContext struct {
 	echo.Context
 	Conf *config.Config

@@ -36,8 +36,11 @@ import (
 )
 
 const (
+	// PEMExtension TODO: Describe its purpose and intended use.
 	PEMExtension      = ".pem"
+	// KEYExtension TODO: Describe its purpose and intended use.
 	KEYExtension      = ".key"
+	// KeystoreExtension TODO: Describe its purpose and intended use.
 	KeystoreExtension = ".db"
 )
 

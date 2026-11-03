@@ -30,6 +30,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+// GetFileOwner TODO: Document its behavior, inputs, and effects.
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
 	uid, gid = -1, -1
 	if h.IsLocalhost() {
@@ -65,6 +66,7 @@ func setProcAffinity(cpus ...int) {}
 
 func restoreProcAffinity() {}
 
+// Lchtimes TODO: Document its behavior, inputs, and effects.
 func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	return
 }

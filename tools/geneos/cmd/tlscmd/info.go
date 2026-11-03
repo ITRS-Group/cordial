@@ -795,28 +795,34 @@ func containsExtKeyUsage(usages []x509.ExtKeyUsage, usage x509.ExtKeyUsage) bool
 	return slices.Contains(usages, usage)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (c *infoCmdConnectsType) String() string {
 	return strings.Join(*c, ", ")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (c *infoCmdConnectsType) Set(value string) error {
 	*c = append(*c, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (c *infoCmdConnectsType) Type() string {
 	return "connect"
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (r *infoCmdRootsType) String() string {
 	return strings.Join(*r, ", ")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (r *infoCmdRootsType) Set(value string) error {
 	*r = append(*r, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (r *infoCmdRootsType) Type() string {
 	return "roots"
 }

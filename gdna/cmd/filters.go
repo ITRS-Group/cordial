@@ -55,10 +55,12 @@ import (
 )
 
 // docs
-var addIncludeCmdDescription string
+// TODO: Revisit unused declaration addIncludeCmdDescription; restore it only when needed.
+// var addIncludeCmdDescription string
 var addExcludeCmdDescription string
 
-var removeAddCmdDescription string
+// TODO: Revisit unused declaration removeAddCmdDescription; restore it only when needed.
+// var removeAddCmdDescription string
 var removeIncludeCmdDescription string
 var removeExcludeCmdDescription string
 
@@ -66,6 +68,7 @@ var removeCmdAll bool
 
 var filterBase = "gdna-filters"
 
+// Filter TODO: Describe its purpose and intended use.
 type Filter struct {
 	Name      string     `mapstructure:"name"`
 	Pattern   []string   `mapstructure:"pattern"`

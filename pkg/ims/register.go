@@ -29,6 +29,7 @@ type Endpoint struct {
 	Handler http.HandlerFunc
 }
 
+// Endpoints TODO: Describe its purpose and intended use.
 var Endpoints = []Endpoint{}
 
 // RegisterEndpoint registers an API endpoint for the IMS integration,

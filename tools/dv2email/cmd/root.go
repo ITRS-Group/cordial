@@ -106,6 +106,7 @@ func initConfig() {
 	}
 }
 
+// DV2EMailData TODO: Describe its purpose and intended use.
 type DV2EMailData struct {
 	// Dataviews is a slice of each Dataview's data, including Columns
 	// and Rows which are ordered names for the columns and rows

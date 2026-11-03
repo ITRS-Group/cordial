@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// AcceptEvent TODO: Document its behavior, inputs, and effects.
 func AcceptEvent(c echo.Context) (err error) {
 	cc := c.(*RouterContext)
 	vc := cc.Conf

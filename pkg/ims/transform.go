@@ -11,6 +11,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// Transformation TODO: Describe its purpose and intended use.
 type Transformation struct {
 	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
 	Remove      []string          `mapstructure:"remove,omitempty"`

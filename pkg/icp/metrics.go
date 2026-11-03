@@ -42,6 +42,7 @@ type MetricsSummariesRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-metrics-summaries
 type MetricsSummariesResponse []MetricsSummaryItem
 
+// MetricsSummaryItem TODO: Describe its purpose and intended use.
 type MetricsSummaryItem struct {
 	EntityID            int     `json:"EntityID,omitempty"`
 	Metric              string  `json:"Metric,omitempty"`

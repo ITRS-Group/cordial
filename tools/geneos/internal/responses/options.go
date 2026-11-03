@@ -175,12 +175,14 @@ func CompletedOnly() Option {
 	}
 }
 
+// ValueOnly TODO: Document its behavior, inputs, and effects.
 func ValueOnly() Option {
 	return func(wo *options) {
 		wo.outputFields = outputFieldValue
 	}
 }
 
+// AddHeadline TODO: Document its behavior, inputs, and effects.
 func AddHeadline(key, value string) Option {
 	return func(wo *options) {
 		if wo.headlines == nil {
@@ -190,6 +192,7 @@ func AddHeadline(key, value string) Option {
 	}
 }
 
+// AddHeadlines TODO: Document its behavior, inputs, and effects.
 func AddHeadlines(headlines map[string]string) Option {
 	return func(wo *options) {
 		if wo.headlines == nil {

@@ -36,7 +36,10 @@ import (
 
 var cfgFile string
 var execname = cordial.ExecutableName()
-var debug, quiet bool
+var debug bool
+
+// TODO: Revisit unused declaration quiet; restore it only when needed.
+// var quiet bool
 var d int
 
 var log = logger.Logger
@@ -70,11 +73,13 @@ type Column struct {
 // 	return json.Unmarshal(d, c)
 // }
 
+// Headline TODO: Describe its purpose and intended use.
 type Headline struct {
 	Name  string
 	Value string
 }
 
+// Dataview TODO: Describe its purpose and intended use.
 type Dataview struct {
 	Name      string
 	Headlines []Headline

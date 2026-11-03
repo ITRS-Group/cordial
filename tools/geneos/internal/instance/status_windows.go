@@ -8,6 +8,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/process"
 )
 
+// ProcessInfo TODO: Describe its purpose and intended use.
 type ProcessInfo struct {
 	PID  int
 	PPID int

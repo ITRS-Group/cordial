@@ -22,8 +22,10 @@ import "strings"
 // gateway - name:port
 type Gateways []string
 
+// GatewaysOptionstext TODO: Describe its purpose and intended use.
 const GatewaysOptionstext = "A gateway connection in the format HOSTNAME:PORT\n(Repeat as required, san and floating only)"
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Gateways) String() string {
 	if i == nil {
 		return ""
@@ -35,6 +37,7 @@ func (i *Gateways) String() string {
 	return strings.Join(parts, ",")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *Gateways) Set(value string) error {
 	if *i == nil {
 		*i = Gateways{}
@@ -43,6 +46,7 @@ func (i *Gateways) Set(value string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *Gateways) Type() string {
 	return "HOSTNAME:PORT"
 }

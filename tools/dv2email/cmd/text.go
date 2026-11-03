@@ -24,7 +24,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"text/template"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -34,20 +33,21 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/commands"
 )
 
-func createTextTemplate(cf *config.Config, data any, textTemplate string) (text string, err error) {
-	tt, err := template.New("dataview").Parse(textTemplate)
-	if err != nil {
-		return
-	}
-
-	var body strings.Builder
-	err = tt.Execute(&body, data)
-	if err != nil {
-		return
-	}
-	text = body.String()
-	return
-}
+// TODO: Revisit unused declaration createTextTemplate; restore it only when needed.
+// func createTextTemplate(cf *config.Config, data any, textTemplate string) (text string, err error) {
+// 	tt, err := template.New("dataview").Parse(textTemplate)
+// 	if err != nil {
+// 		return
+// 	}
+//
+// 	var body strings.Builder
+// 	err = tt.Execute(&body, data)
+// 	if err != nil {
+// 		return
+// 	}
+// 	text = body.String()
+// 	return
+// }
 
 func createTextTables(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err error) {
 	buf := &bytes.Buffer{}

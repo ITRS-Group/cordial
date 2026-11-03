@@ -60,6 +60,7 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
+// DefaultMsTeamsTimeout TODO: Describe its purpose and intended use.
 const DefaultMsTeamsTimeout = 2000
 
 var webhookValidators []string = []string{

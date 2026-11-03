@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// TopPlugin TODO: Describe its purpose and intended use.
 type TopPlugin struct {
 	XMLName xml.Name `xml:"top" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *TopPlugin) String() string {
 	return p.XMLName.Local
 }

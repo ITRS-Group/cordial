@@ -73,6 +73,7 @@ func FollowInstanceLogs(instances []geneos.Instance, options ...LogWatcherOption
 	<-done
 }
 
+// TailInstance TODO: Document its behavior, inputs, and effects.
 func TailInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 	if i.Type().IsA("profile") {
@@ -131,6 +132,7 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string, opts lo
 	return
 }
 
+// CatInstance TODO: Document its behavior, inputs, and effects.
 func CatInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 	if i.Type().IsA("profile") {
@@ -519,6 +521,7 @@ func outHeaderString(i geneos.Instance, path string, opts logWatcherOptions) (li
 	return
 }
 
+// LogWatcherOptions TODO: Describe its purpose and intended use.
 type LogWatcherOptions func(*logWatcherOptions)
 
 type logWatcherOptions struct {
@@ -542,48 +545,56 @@ func evalLogWatcherOptions(opts ...LogWatcherOptions) logWatcherOptions {
 	return lo
 }
 
+// WithNoHeaders TODO: Document its behavior, inputs, and effects.
 func WithNoHeaders(noHeaders bool) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.noHeaders = noHeaders
 	}
 }
 
+// Matching TODO: Document its behavior, inputs, and effects.
 func Matching(match string) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.match = match
 	}
 }
 
+// IgnoreMatches TODO: Document its behavior, inputs, and effects.
 func IgnoreMatches(ignore string) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.ignore = ignore
 	}
 }
 
+// WithStderr TODO: Document its behavior, inputs, and effects.
 func WithStderr(stderr bool) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.stderr = stderr
 	}
 }
 
+// WithoutNormal TODO: Document its behavior, inputs, and effects.
 func WithoutNormal(noNormal bool) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.noNormal = noNormal
 	}
 }
 
+// WithCALog TODO: Document its behavior, inputs, and effects.
 func WithCALog(caLog bool) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.caLog = caLog
 	}
 }
 
+// ShowAuditLogs TODO: Document its behavior, inputs, and effects.
 func ShowAuditLogs(audit bool) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.audit = audit
 	}
 }
 
+// MaxLines TODO: Document its behavior, inputs, and effects.
 func MaxLines(lines int) LogWatcherOptions {
 	return func(lo *logWatcherOptions) {
 		lo.lines = lines

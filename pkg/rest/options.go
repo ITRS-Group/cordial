@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Option configures a Client created by NewClient.
 type Option func(*restOptions)
 
 type restOptions struct {
@@ -37,8 +38,8 @@ func BaseURLString(baseurl string) Option {
 	}
 }
 
-// BaseURLString sets the root of the REST API URL. The default is
-// "https://localhost"
+// BaseURL sets the root URL used by the REST client. The default is
+// "https://localhost".
 func BaseURL(baseurl *url.URL) Option {
 	return func(io *restOptions) {
 		io.baseURL = baseurl
@@ -67,6 +68,8 @@ func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Option 
 	}
 }
 
+// Logger sets the logger used by the REST client. A nil logger disables
+// request logging.
 func Logger(logger *slog.Logger) Option {
 	return func(ro *restOptions) {
 		ro.logger = logger

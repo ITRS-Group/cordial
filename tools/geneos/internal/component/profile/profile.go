@@ -40,6 +40,7 @@ const name = "profile"
 
 var log = logger.Logger
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:          name,
 	Aliases:       []string{"profiles"},
@@ -70,6 +71,7 @@ var Component = geneos.Component{
 	},
 }
 
+// Profile TODO: Describe its purpose and intended use.
 type Profile instance.Instance
 
 // ensure that Profiles satisfies geneos.Instance interface
@@ -118,6 +120,7 @@ func (i *Profile) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Name() string {
 	if i.Config() == nil {
 		return ""
@@ -125,14 +128,17 @@ func (i *Profile) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -140,40 +146,49 @@ func (i *Profile) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Profile) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Profile) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Unload() (err error) {
 	profiles.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Profile) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Profile) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -209,6 +224,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	return nil
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Profile) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 

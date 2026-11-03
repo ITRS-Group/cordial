@@ -29,7 +29,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 )
 
+// Execname TODO: Describe its purpose and intended use.
 var configFile, Execname, logFile string
+// Debug TODO: Describe its purpose and intended use.
 var Debug bool
 
 var log = logger.Logger
@@ -59,6 +61,7 @@ func init() {
 //go:embed _docs/ims-gateway.md
 var imsGatewayDescription string
 
+// Cmd TODO: Describe its purpose and intended use.
 var Cmd = &cobra.Command{
 	Use:   "ims-gateway",
 	Short: "ITRS IMS Gateway",

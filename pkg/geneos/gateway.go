@@ -34,7 +34,8 @@ import (
 	"io"
 )
 
-// Gateway is for reading a Gateway configuration
+// Gateway represents the top-level Geneos Gateway configuration for XML
+// decoding and encoding.
 type Gateway struct {
 	XMLName              xml.Name              `xml:"gateway"`
 	Compatibility        int                   `xml:"compatibility,attr"`
@@ -52,6 +53,7 @@ type Gateway struct {
 	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
 }
 
+// OperatingEnvironment contains the Gateway identity and listener ports.
 type OperatingEnvironment struct {
 	XMLName      xml.Name `xml:"operatingEnvironment"`
 	Comment      string   `xml:",comment"`
@@ -61,12 +63,14 @@ type OperatingEnvironment struct {
 	InsecurePort int      `xml:"listenPorts>insecure>listenPort,omitempty"`
 }
 
+// Dataview describes a named dataview and any static additions to it.
 type Dataview struct {
 	Name      string            `xml:"name,attr"`
 	Comment   string            `xml:",comment"`
 	Additions DataviewAdditions `xml:"additions,omitempty" yaml:",omitempty"`
 }
 
+// DataviewAdditions groups variable headlines, columns, and rows added to a dataview.
 type DataviewAdditions struct {
 	XMLName   xml.Name                  `xml:"additions" json:"-" yaml:"-"`
 	Headlines DataviewAdditionHeadlines `xml:"var-headlines,omitempty"`
@@ -76,8 +80,8 @@ type DataviewAdditions struct {
 
 var _ xml.Unmarshaler = (*DataviewAdditions)(nil)
 
-// UnmarshalXML deals with the case where merged XML configs have the
-// "var-" prefix of the tags removed
+// UnmarshalXML decodes dataview additions with or without the "var-" element
+// prefix used by some merged Gateway configurations.
 func (v *DataviewAdditions) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	if v == nil {
 		v = &DataviewAdditions{}
@@ -122,35 +126,42 @@ func (v *DataviewAdditions) UnmarshalXML(d *xml.Decoder, start xml.StartElement)
 	}
 }
 
+// DataviewAddition represents one static headline addition to a dataview.
 type DataviewAddition struct {
 	XMLName xml.Name             `xml:"data" json:"-" yaml:"-"`
 	Name    *SingleLineStringVar `xml:"headline,omitempty"`
 }
 
+// DataviewAdditionHeadlines contains headline values and an optional source variable.
 type DataviewAdditionHeadlines struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>headline,omitempty"`
 }
 
+// DataviewAdditionColumns contains column values and an optional source variable.
 type DataviewAdditionColumns struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>column,omitempty"`
 }
 
+// DataviewAdditionRows contains row values and an optional source variable.
 type DataviewAdditionRows struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>rows,omitempty"`
 }
 
+// Schemas contains the dataview schemas declared in a Gateway configuration.
 type Schemas struct {
 	Dataviews *[]DataviewSchema `xml:"dataviews>dataviewSchema,omitempty"`
 }
 
+// DataviewSchema associates a dataview name with its schema.
 type DataviewSchema struct {
 	Dataview string `xml:"dataview,omitempty"`
 	Schema   Schema `xml:"schema>data"`
 }
 
+// Schema describes the headlines, columns, and publishing behavior of a dataview.
 type Schema struct {
 	Headlines *[]SchemaTypedItem `xml:"headlines>headline,omitempty"`
 	Columns   *[]SchemaTypedItem `xml:"columns>column,omitempty"`
@@ -158,6 +169,7 @@ type Schema struct {
 	Publish   bool               `xml:"publish"`
 }
 
+// SchemaTypedItem describes one typed headline or column in a dataview schema.
 type SchemaTypedItem struct {
 	Name     string         `xml:"name"`
 	String   *EmptyStruct   `xml:"string,omitempty"`
@@ -170,8 +182,10 @@ type SchemaTypedItem struct {
 	DateTime *EmptyStruct   `xml:"dateTime,omitempty"`
 }
 
+// UOM identifies a unit of measure used by typed Geneos schema values.
 type UOM string
 
+// Built-in units of measure accepted by Geneos schema values.
 const (
 	None              UOM = ""
 	Percent           UOM = "percent"
@@ -191,28 +205,34 @@ const (
 	MegabitsPerSecond UOM = "megabits per second"
 )
 
+// UnitOfMeasure attaches a unit to a typed schema value.
 type UnitOfMeasure struct {
 	Unit UOM `xml:"unitOfMeasure"`
 }
 
+// StandardisedFormatting contains formatting rules shared by Gateway dataviews.
 type StandardisedFormatting struct {
 	Dataviews []StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// StandardisedFormattingDataview applies shared formatting to a named dataview.
 type StandardisedFormattingDataview struct {
 	Name      string                           `xml:"name"` // do not omitempty
 	Variables []StandardisedFormattingVariable `xml:"variables>variable"`
 }
 
+// StandardisedFormattingVariable groups a value type with its applicability rules.
 type StandardisedFormattingVariable struct {
 	Type          *StandardisedFormattingType          `xml:"type"`
 	Applicability *StandardisedFormattingApplicability `xml:"applicability"`
 }
 
+// StandardisedFormattingType selects the formatting rules for a value type.
 type StandardisedFormattingType struct {
 	DateTime *StandardisedFormattingDateTime `xml:"dateTime"`
 }
 
+// StandardisedFormattingDateTime defines accepted and overridden datetime formats.
 type StandardisedFormattingDateTime struct {
 	Formats                   []string `xml:"formats>format,omitempty"`
 	Exceptions                []string `xml:"exceptions,omitempty"`
@@ -220,23 +240,27 @@ type StandardisedFormattingDateTime struct {
 	OverrideTimezone          string   `xml:"overrideTimezone,omitempty"`
 }
 
+// StandardisedFormattingApplicability limits formatting rules to matching schema items.
 type StandardisedFormattingApplicability struct {
 	Headlines []Regex                      `xml:"headlines>pattern,omitempty"`
 	Columns   []Regex                      `xml:"columns>pattern,omitempty"`
 	Cells     []StandardisedFormattingCell `xml:"cells>cell,omitempty"`
 }
 
+// StandardisedFormattingCell selects an individual row and column for formatting.
 type StandardisedFormattingCell struct {
 	Row    string `xml:"row"`
 	Column string `xml:"column"`
 }
 
+// ActiveTimeRef refers to an active-time definition by name or variable.
 type ActiveTimeRef struct {
 	XMLName    xml.Name          `xml:"activeTime"`
 	ActiveTime *ActiveTimeByName `xml:"activeTime,omitempty"`
 	Var        *Var              `xml:"var,omitempty"`
 }
 
+// ActiveTimeByName stores the name of a referenced active-time definition.
 type ActiveTimeByName struct {
 	XMLName    xml.Name `xml:"activeTime"`
 	ActiveTime string   `xml:"ref,attr"`

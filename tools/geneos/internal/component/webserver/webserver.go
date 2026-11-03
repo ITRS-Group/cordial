@@ -38,6 +38,7 @@ import (
 
 const name = "webserver"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:                 name,
 	Aliases:              []string{"web-server", "webservers", "webdashboard", "dashboards"},
@@ -102,6 +103,7 @@ var Component = geneos.Component{
 	ApplyProfile: profile.ApplyCommonProfile,
 }
 
+// Webserver TODO: Describe its purpose and intended use.
 type Webserver instance.Instance
 
 // ensure that Webservers satisfies geneos.Instance interface
@@ -169,6 +171,7 @@ func (i *Webserver) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -176,10 +179,12 @@ func (i *Webserver) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -187,6 +192,7 @@ func (i *Webserver) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -194,18 +200,22 @@ func (i *Webserver) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Unload() (err error) {
 	if i == nil {
 		return
@@ -215,6 +225,7 @@ func (i *Webserver) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -222,6 +233,7 @@ func (i *Webserver) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -229,6 +241,7 @@ func (i *Webserver) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -236,6 +249,7 @@ func (i *Webserver) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -243,6 +257,7 @@ func (i *Webserver) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -359,6 +374,7 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	return changed, err
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -465,6 +481,7 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Webserver) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

@@ -42,6 +42,7 @@ func (i *Includes) String() string {
 	return strings.Join(parts, ",")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *Includes) Set(value string) error {
 	if *i == nil {
 		*i = Includes{}
@@ -61,6 +62,7 @@ func (i *Includes) Set(value string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *Includes) Type() string {
 	return "PRIORITY:{URL|PATH}"
 }

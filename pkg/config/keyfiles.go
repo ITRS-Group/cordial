@@ -103,6 +103,8 @@ func (k *KeyFile) Read(h host.Host) (kv *KeyValues, err error) {
 	return ReadKeyValues(r)
 }
 
+// Write serializes kv to the keyfile on h, creating it with restrictive
+// permissions if needed.
 func (k *KeyFile) Write(h host.Host, kv *KeyValues) (err error) {
 	w, err := h.Create(k.String(), 0600)
 	if err != nil {

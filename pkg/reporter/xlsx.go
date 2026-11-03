@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// XLSXReporter TODO: Describe its purpose and intended use.
 type XLSXReporter struct {
 	reporterCommon
 	w io.Writer
@@ -218,6 +219,7 @@ func newXLSXReporter(_ string, w io.Writer, options ...any) (Reporter, error) {
 	return x, nil
 }
 
+// Prepare TODO: Document its behavior, inputs, and effects.
 func (x *XLSXReporter) Prepare(report Report) (err error) {
 	x.currentSheet = report.Title
 
@@ -440,6 +442,7 @@ func logicalWrapper(logic string) string {
 	}
 }
 
+// Reset TODO: Document its behavior, inputs, and effects.
 func (x *XLSXReporter) Reset(report Report) (err error) {
 	// do nothing, yet
 	return
@@ -477,6 +480,7 @@ func (x *XLSXReporter) AddHeadlines(headlines map[string]string) {
 	maps.Copy(sheet.headlines, headlines)
 }
 
+// Render TODO: Document its behavior, inputs, and effects.
 func (x *XLSXReporter) Render() {
 	x.setSheetData()
 	x.applyConditionalFormat()
@@ -487,10 +491,12 @@ func (x *XLSXReporter) Render() {
 	})
 }
 
+// Close TODO: Document its behavior, inputs, and effects.
 func (x *XLSXReporter) Close() {
 	x.x.Close()
 }
 
+// Extension TODO: Document its behavior, inputs, and effects.
 func (x *XLSXReporter) Extension() string {
 	return "xlsx"
 }

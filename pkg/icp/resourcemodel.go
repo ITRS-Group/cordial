@@ -132,10 +132,12 @@ type Grouping struct {
 
 // ICP date times may not have a timezone, work around it
 
+// Time TODO: Describe its purpose and intended use.
 type Time struct {
 	time.Time
 }
 
+// UnmarshalJSON TODO: Document its behavior, inputs, and effects.
 func (t *Time) UnmarshalJSON(data []byte) (err error) {
 	if bytes.Equal(data, []byte("null")) || bytes.Contains(data, []byte("0001-01-01T00:00:00")) {
 		return
@@ -153,6 +155,7 @@ func (t *Time) UnmarshalJSON(data []byte) (err error) {
 	return t.Time.UnmarshalJSON(data)
 }
 
+// MarshalJSON TODO: Document its behavior, inputs, and effects.
 func (t *Time) MarshalJSON() ([]byte, error) {
 	ts := fmt.Sprintf("%q", t.UTC().Format(time.RFC3339))
 	return []byte(ts), nil

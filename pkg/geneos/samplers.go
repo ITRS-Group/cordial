@@ -21,12 +21,14 @@ import (
 	"encoding/xml"
 )
 
+// Samplers TODO: Describe its purpose and intended use.
 type Samplers struct {
 	XMLName       xml.Name       `xml:"samplers" json:"-" yaml:"-"`
 	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
 }
 
+// SamplerGroup TODO: Describe its purpose and intended use.
 type SamplerGroup struct {
 	XMLName       xml.Name       `xml:"samplerGroup" json:"-" yaml:"-"`
 	Name          string         `xml:"name,attr"`

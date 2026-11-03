@@ -38,16 +38,22 @@ import (
 
 var log = logger.Logger
 
+// ContextKey TODO: Describe its purpose and intended use.
 type ContextKey string
 
 const (
+	// ContextKeyConfig TODO: Describe its purpose and intended use.
 	ContextKeyConfig   ContextKey = "config"   // Context key for passing configuration to handlers, type is *config.Config
+	// ContextKeyResponse TODO: Describe its purpose and intended use.
 	ContextKeyResponse ContextKey = "response" // Context key for passing response to handlers, type is *ims.Response
 )
 
 const (
+	// PROFILE TODO: Describe its purpose and intended use.
 	PROFILE              = "__itrs_profile"
+	// INCIDENT_UPDATE_ONLY TODO: Describe its purpose and intended use.
 	INCIDENT_UPDATE_ONLY = "__incident_update_only"
+	// INCIDENT_CORRELATION TODO: Describe its purpose and intended use.
 	INCIDENT_CORRELATION = "__incident_correlation"
 )
 
@@ -185,6 +191,7 @@ type LogTransport struct {
 	Transport http.RoundTripper
 }
 
+// RoundTrip TODO: Document its behavior, inputs, and effects.
 func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request
 	reqDump, err := httputil.DumpRequestOut(req, true)

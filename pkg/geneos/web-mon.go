@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// WebMonPlugin TODO: Describe its purpose and intended use.
 type WebMonPlugin struct {
 	XMLName xml.Name `xml:"web-mon" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *WebMonPlugin) String() string {
 	return p.XMLName.Local
 }

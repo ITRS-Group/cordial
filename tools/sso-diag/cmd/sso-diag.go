@@ -209,9 +209,10 @@ func loadSSOkey(cf *config.Config) *rsa.PrivateKey {
 	return nil
 }
 
-func loadTLSCert(cf *config.Config) {
-
-}
+// TODO: Revisit unused declaration loadTLSCert; restore it only when needed.
+// func loadTLSCert(cf *config.Config) {
+//
+// }
 
 func statusPage(c echo.Context) error {
 	return c.String(http.StatusOK, "status page")

@@ -30,6 +30,7 @@ import "encoding/xml"
 // needs a concept of "unset" must be a pointer. This is mostly for
 // booleans and ints that can be zero, in groups.
 
+// Probes TODO: Describe its purpose and intended use.
 type Probes struct {
 	XMLName        xml.Name        `xml:"probes" json:"-" yaml:"-"`
 	ProbeGroups    []ProbeGroup    `xml:"probeGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
@@ -38,6 +39,7 @@ type Probes struct {
 	FloatingProbes []FloatingProbe `xml:"floatingProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
 }
 
+// ProbeGroup TODO: Describe its purpose and intended use.
 type ProbeGroup struct {
 	XMLName        xml.Name `xml:"probeGroup" json:"-" yaml:"-"`
 	Name           string   `xml:"name,attr"`
@@ -59,6 +61,7 @@ type ProbeInfo struct {
 	ProbeInfoWithoutPort `yaml:",inline" mapstructure:",squash"`
 }
 
+// ProbeInfoWithoutPort TODO: Describe its purpose and intended use.
 type ProbeInfoWithoutPort struct {
 	CommandTimeOut         int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"commandtimeout"`
 	MaxDatabaseConnections int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxdatabaseconnections"`
@@ -66,11 +69,15 @@ type ProbeInfoWithoutPort struct {
 }
 
 const (
+	// ProbeTypeProbe TODO: Describe its purpose and intended use.
 	ProbeTypeProbe int = iota
+	// ProbeTypeFloating TODO: Describe its purpose and intended use.
 	ProbeTypeFloating
+	// ProbeTypeVirtual TODO: Describe its purpose and intended use.
 	ProbeTypeVirtual
 )
 
+// Probe TODO: Describe its purpose and intended use.
 type Probe struct {
 	XMLName   xml.Name `xml:"probe" json:"-" yaml:"-"`
 	Type      int      `xml:"-" json:"-" yaml:"-"`
@@ -80,12 +87,14 @@ type Probe struct {
 	ProbeInfo `json:",inline" yaml:",inline" mapstructure:",squash"`
 }
 
+// VirtualProbe TODO: Describe its purpose and intended use.
 type VirtualProbe struct {
 	XMLName  xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
 	Name     string   `xml:"name,attr" json:"name" yaml:"name"`
 	Disabled bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// FloatingProbe TODO: Describe its purpose and intended use.
 type FloatingProbe struct {
 	XMLName              xml.Name `xml:"floatingProbe" json:"-" yaml:"-"`
 	Name                 string   `xml:"name.attr" json:"name" yaml:"name"`

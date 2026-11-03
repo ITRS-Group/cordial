@@ -731,6 +731,7 @@ type configOptions struct {
 	noRebuild bool
 	noReload  bool
 }
+// ConfigOption TODO: Describe its purpose and intended use.
 type ConfigOption func(*configOptions)
 
 func evalConfigOptions(options ...ConfigOption) (opts *configOptions) {

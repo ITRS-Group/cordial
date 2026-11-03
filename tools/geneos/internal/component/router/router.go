@@ -39,6 +39,7 @@ import (
 
 const name = "netprobe-router"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Initialise:   geneos.WriteTemplates,
 	Name:         name,
@@ -97,6 +98,7 @@ var Component = geneos.Component{
 	GetPID: pidCheckFn,
 }
 
+// Router TODO: Describe its purpose and intended use.
 type Router instance.Instance
 
 // ensure that Routers satisfies geneos.Instance interface
@@ -166,6 +168,7 @@ func (i *Router) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Router) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -173,10 +176,12 @@ func (i *Router) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Router) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Router) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -184,6 +189,7 @@ func (i *Router) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Router) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -191,18 +197,22 @@ func (i *Router) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Router) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Router) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Router) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Router) Unload() (err error) {
 	if i == nil {
 		return
@@ -212,6 +222,7 @@ func (i *Router) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Router) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -219,6 +230,7 @@ func (i *Router) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Router) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -226,6 +238,7 @@ func (i *Router) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Router) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -233,6 +246,7 @@ func (i *Router) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Router) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -240,6 +254,7 @@ func (i *Router) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Router) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -316,6 +331,7 @@ func (i *Router) Rebuild(initial bool) (changed bool, cerr error) {
 	)
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -378,6 +394,7 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Router) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

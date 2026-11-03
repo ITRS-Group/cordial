@@ -22,17 +22,21 @@ import "strings"
 // attribute - name=value
 type Types []string
 
+// TypesOptionsText TODO: Describe its purpose and intended use.
 const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Types) String() string {
 	return strings.Join(*i, ",")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *Types) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *Types) Type() string {
 	return "NAME"
 }

@@ -159,8 +159,10 @@ type DataMartGetEntitiesRequest struct {
 	EntityType []string `json:"EntityType"`
 }
 
+// DataMartGetEntitiesResponse TODO: Describe its purpose and intended use.
 type DataMartGetEntitiesResponse []DataMartGetEntitiesItem
 
+// DataMartGetEntitiesItem TODO: Describe its purpose and intended use.
 type DataMartGetEntitiesItem struct {
 	SourceKey1 string `json:"SourceKey1"`
 	SourceKey2 string `json:"SourceKey2"`
@@ -186,6 +188,7 @@ type DataMartStartProcessingRequest struct {
 	ProjectID int `json:"ProjectId"`
 }
 
+// DataMartStartProcessingResponse TODO: Describe its purpose and intended use.
 type DataMartStartProcessingResponse struct {
 	ProcessingStarted  bool
 	ProcessingDateTime *Time

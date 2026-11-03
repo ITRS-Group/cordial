@@ -10,6 +10,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
+// GatewayProfile TODO: Describe its purpose and intended use.
 type GatewayProfile struct {
 	profile.Common `mapstructure:",squash"`
 	GatewayName    string            `yaml:"gateway-name"`

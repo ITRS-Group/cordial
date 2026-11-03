@@ -36,6 +36,7 @@ import (
 
 const name = "fa"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:          "fileagent",
 	Aliases:       []string{"fileagents", "file-agent"},
@@ -97,6 +98,7 @@ var Component = geneos.Component{
 	},
 }
 
+// FileAgent TODO: Describe its purpose and intended use.
 type FileAgent instance.Instance
 
 // ensure that FileAgents satisfies geneos.Instance interface
@@ -145,6 +147,7 @@ func (i *FileAgent) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Name() string {
 	if i.Config() == nil {
 		return ""
@@ -152,14 +155,17 @@ func (i *FileAgent) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -167,40 +173,49 @@ func (i *FileAgent) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Unload() (err error) {
 	fileagents.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -225,6 +240,7 @@ func (i *FileAgent) Add(options ...any) (err error) {
 	return nil
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -264,6 +280,7 @@ func (i *FileAgent) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *FileAgent) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

@@ -33,10 +33,12 @@ type Plugins interface {
 	Close() error
 }
 
+// Connection TODO: Describe its purpose and intended use.
 type Connection struct {
 	xmlrpc.Sampler
 }
 
+// Open TODO: Document its behavior, inputs, and effects.
 func Open(url *url.URL, entityName string, samplerName string) (s *Connection, err error) {
 	sampler, err := xmlrpc.NewClient(url).Sampler(entityName, samplerName)
 	s = &Connection{sampler}

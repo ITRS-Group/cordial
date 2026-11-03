@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// ProcessesPlugin TODO: Describe its purpose and intended use.
 type ProcessesPlugin struct {
 	XMLName                     xml.Name  `xml:"processes" json:"-" yaml:"-"`
 	AdjustForLogicalCPUs        *Value    `xml:"adjustForLogicalCPUs,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -26,26 +27,31 @@ type ProcessesPlugin struct {
 	Processes                   []Process `xml:"processes>process,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *ProcessesPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// Process TODO: Describe its purpose and intended use.
 type Process struct {
 	XMLName           xml.Name              `xml:"process" json:"-" yaml:"-"`
 	Data              *ProcessDescriptor    `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProcessDescriptor *ProcessDescriptorRef `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// ProcessDescriptorRef TODO: Describe its purpose and intended use.
 type ProcessDescriptorRef struct {
 	Name string `xml:"ref,attr" json:"name" yaml:"name"`
 }
 
+// ProcessDescriptors TODO: Describe its purpose and intended use.
 type ProcessDescriptors struct {
 	XMLName                 xml.Name                 `xml:"processDescriptors" json:"-" yaml:"-"`
 	ProcessDescriptors      []ProcessDescriptor      `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProcessDescriptorGroups []ProcessDescriptorGroup `xml:"processDescriptorGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// ProcessDescriptorGroup TODO: Describe its purpose and intended use.
 type ProcessDescriptorGroup struct {
 	XMLName                 xml.Name                 `xml:"processDescriptorGroup" json:"-" yaml:"-"`
 	Name                    string                   `xml:"name,attr" json:"name" yaml:"name"`
@@ -54,6 +60,7 @@ type ProcessDescriptorGroup struct {
 	ProcessDescriptorGroups []ProcessDescriptorGroup `xml:"processDescriptorGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// ProcessDescriptor TODO: Describe its purpose and intended use.
 type ProcessDescriptor struct {
 	// no struct XMLName as we can get here via two routes - "data" or "processDescriptor"
 	// XMLName  xml.Name             `xml:"processDescriptor" json:"-" yaml:"-"`

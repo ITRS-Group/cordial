@@ -16,6 +16,7 @@ import (
 // functions to manage Java keystore files for webserver, collection
 // agent and others
 
+// KeyStore TODO: Describe its purpose and intended use.
 type KeyStore struct {
 	keystore.KeyStore
 }

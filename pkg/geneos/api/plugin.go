@@ -38,10 +38,12 @@ type Sampler interface {
 
 var plugins sync.Map
 
+// RegisterPlugin TODO: Document its behavior, inputs, and effects.
 func RegisterPlugin(name string, plugin Sampler) {
 	plugins.Store(name, plugin)
 }
 
+// FindPlugin TODO: Document its behavior, inputs, and effects.
 func FindPlugin(name string) (plugin Sampler) {
 	p, ok := plugins.Load(name)
 	if ok {
@@ -59,6 +61,7 @@ type Plugin struct {
 	Interval time.Duration
 }
 
+// NewSampler TODO: Document its behavior, inputs, and effects.
 func NewSampler(c APIClient, name, entity, sampler string) (s *Plugin) {
 	s = &Plugin{
 		APIClient: c,

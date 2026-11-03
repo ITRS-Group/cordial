@@ -18,7 +18,6 @@ limitations under the License.
 package cmd
 
 import (
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -29,12 +28,12 @@ import (
 	"strings"
 
 	"golang.org/x/net/html/charset"
-	"gopkg.in/yaml.v3"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/geneos"
 )
 
+// Probe TODO: Describe its purpose and intended use.
 type Probe struct {
 	Name     string `json:"name"`
 	Hostname string `json:"hostname"`
@@ -42,6 +41,7 @@ type Probe struct {
 	Secure   bool   `json:"secure,omitempty"`
 }
 
+// Sampler TODO: Describe its purpose and intended use.
 type Sampler struct {
 	Type    string   `json:"type,omitempty"`
 	Name    string   `json:"name"`
@@ -50,6 +50,7 @@ type Sampler struct {
 	Column2 []string `json:"data2,omitempty"`
 }
 
+// Entity TODO: Describe its purpose and intended use.
 type Entity struct {
 	Name       string            `json:"name"`
 	Probe      Probe             `json:"probe"`
@@ -184,32 +185,35 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	return
 }
 
-func printStructJSON(out io.Writer, in any) {
-	j := json.NewEncoder(out)
-	j.SetEscapeHTML(false)
-	j.SetIndent("", "    ")
-	err := j.Encode(in)
-	if err != nil {
-		return
-	}
-}
+// TODO: Revisit unused declaration printStructJSON; restore it only when needed.
+// func printStructJSON(out io.Writer, in any) {
+// 	j := json.NewEncoder(out)
+// 	j.SetEscapeHTML(false)
+// 	j.SetIndent("", "    ")
+// 	err := j.Encode(in)
+// 	if err != nil {
+// 		return
+// 	}
+// }
 
-func printStructYAML(out io.Writer, in any) {
-	b, _ := yaml.Marshal(in)
-	fmt.Fprintln(out, string(b))
-}
+// TODO: Revisit unused declaration printStructYAML; restore it only when needed.
+// func printStructYAML(out io.Writer, in any) {
+// 	b, _ := yaml.Marshal(in)
+// 	fmt.Fprintln(out, string(b))
+// }
 
-func pluginName(in any) (name string) {
-	switch t := in.(type) {
-	case map[string]any:
-		for n := range t {
-			return n
-		}
-	default:
-		log.Error("unknown type", slog.String("type", fmt.Sprintf("%T", t)))
-	}
-	return ""
-}
+// TODO: Revisit unused declaration pluginName; restore it only when needed.
+// func pluginName(in any) (name string) {
+// 	switch t := in.(type) {
+// 	case map[string]any:
+// 		for n := range t {
+// 			return n
+// 		}
+// 	default:
+// 		log.Error("unknown type", slog.String("type", fmt.Sprintf("%T", t)))
+// 	}
+// 	return ""
+// }
 
 func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDescriptor) {
 	switch plugin := in.(type) {

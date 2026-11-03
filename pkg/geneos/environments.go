@@ -19,23 +19,27 @@ package geneos
 
 import "encoding/xml"
 
+// EnvironmentRef TODO: Describe its purpose and intended use.
 type EnvironmentRef struct {
 	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
 	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
+// Environments TODO: Describe its purpose and intended use.
 type Environments struct {
 	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
 	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// EnvironmentGroup TODO: Describe its purpose and intended use.
 type EnvironmentGroup struct {
 	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
 	Name         string        `xml:"name,attr"`
 	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// Environment TODO: Describe its purpose and intended use.
 type Environment struct {
 	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
 	Name         string        `xml:"name,attr"`

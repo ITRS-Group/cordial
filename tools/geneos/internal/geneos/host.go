@@ -141,6 +141,7 @@ func NewHost(name string, options ...any) (h *Host) {
 	return
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (h *Host) String() string {
 	if h == nil {
 		return ""
@@ -148,6 +149,7 @@ func (h *Host) String() string {
 	return config.Get[string](h.Config, "name")
 }
 
+// MarshalJSON TODO: Document its behavior, inputs, and effects.
 func (h *Host) MarshalJSON() (b []byte, err error) {
 	if h == nil {
 		return []byte(`"unknown"`), nil

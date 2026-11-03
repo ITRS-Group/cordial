@@ -17,6 +17,7 @@ limitations under the License.
 
 package gateway
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Reload() (err error) {
 	return
 }

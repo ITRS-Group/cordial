@@ -38,25 +38,37 @@ import (
 const (
 	// ServiceNow fields
 	SNOW_CMDB_CI        = "cmdb_ci"
+	// SNOW_CORRELATION_ID TODO: Describe its purpose and intended use.
 	SNOW_CORRELATION_ID = "correlation_id"
+	// SNOW_SYS_ID TODO: Describe its purpose and intended use.
 	SNOW_SYS_ID         = "sys_id"
+	// SNOW_USER_NAME TODO: Describe its purpose and intended use.
 	SNOW_USER_NAME      = "user_name"
 
 	// ServiceNow tables
 	SNOW_SYS_USER_TABLE = "sys_user"
+	// SNOW_INCIDENT_TABLE TODO: Describe its purpose and intended use.
 	SNOW_INCIDENT_TABLE = "incident"
+	// SNOW_CMDB_TABLE TODO: Describe its purpose and intended use.
 	SNOW_CMDB_TABLE     = "cmdb_ci"
 
 	// internal fields
 	CMDB_CI_DEFAULT    = "_cmdb_ci_default"
+	// CMDB_SEARCH TODO: Describe its purpose and intended use.
 	CMDB_SEARCH        = "_cmdb_search"
+	// CMDB_TABLE TODO: Describe its purpose and intended use.
 	CMDB_TABLE         = "_cmdb_table"
+	// INCIDENT_TABLE TODO: Describe its purpose and intended use.
 	INCIDENT_TABLE     = "_table"
+	// PROFILE TODO: Describe its purpose and intended use.
 	PROFILE            = "_profile"
+	// RAW_CORRELATION_ID TODO: Describe its purpose and intended use.
 	RAW_CORRELATION_ID = "_correlation_id"
+	// UPDATE_ONLY TODO: Describe its purpose and intended use.
 	UPDATE_ONLY        = "_update_only"
 )
 
+// ResultsResponse TODO: Describe its purpose and intended use.
 type ResultsResponse struct {
 	Fields  []string     `json:"fields,omitempty"`
 	Results snow.Results `json:"results,omitempty"`
@@ -165,11 +177,15 @@ func validateFields(keys []string) bool {
 }
 
 const (
+	// Failed TODO: Describe its purpose and intended use.
 	Failed  = "Failed"
+	// Created TODO: Describe its purpose and intended use.
 	Created = "Created"
+	// Updated TODO: Describe its purpose and intended use.
 	Updated = "Updated"
 )
 
+// Response TODO: Describe its purpose and intended use.
 type Response struct {
 	Timestamp string `json:"_timestamp"`
 	Action    string `json:"_action"`

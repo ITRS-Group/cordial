@@ -32,6 +32,7 @@ type handlerOpts struct {
 	json       bool
 }
 
+// HandlerOption TODO: Describe its purpose and intended use.
 type HandlerOption func(*handlerOpts)
 
 func evalHandlerOpts(options ...HandlerOption) *handlerOpts {

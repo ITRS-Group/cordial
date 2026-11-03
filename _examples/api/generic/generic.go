@@ -8,12 +8,14 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
+// GenericData TODO: Describe its purpose and intended use.
 type GenericData struct {
 	RowName string
 	Column1 string
 	Column2 string
 }
 
+// GenericSampler TODO: Describe its purpose and intended use.
 type GenericSampler struct {
 	samplers.Samplers
 	localdata string
@@ -21,12 +23,14 @@ type GenericSampler struct {
 
 var log = cordial.Logger
 
+// New TODO: Document its behavior, inputs, and effects.
 func New(s *plugins.Connection, name string, group string) (*GenericSampler, error) {
 	c := new(GenericSampler)
 	c.Plugins = c
 	return c, c.New(s, name, group)
 }
 
+// InitSampler TODO: Document its behavior, inputs, and effects.
 func (g *GenericSampler) InitSampler() error {
 	log.Debug("called")
 	example, err := g.Parameter("EXAMPLE")
@@ -45,6 +49,7 @@ func (g *GenericSampler) InitSampler() error {
 	return g.Headline("example", g.localdata)
 }
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p *GenericSampler) DoSample() error {
 	log.Debug("called")
 	var rowdata = []GenericData{

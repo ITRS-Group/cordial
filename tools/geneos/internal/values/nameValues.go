@@ -22,19 +22,25 @@ import "strings"
 // attribute - name=value
 type NameValues []string
 
+// AttributesOptionsText TODO: Describe its purpose and intended use.
 const AttributesOptionsText = "Attribute in the format NAME=VALUE\n(Repeat as required, san only)"
+// EnvsOptionsText TODO: Describe its purpose and intended use.
 const EnvsOptionsText = "Environment variable for instance start-up in the format NAME=VALUE\n(Repeat as required)"
+// HeadersOptionsText TODO: Describe its purpose and intended use.
 const HeadersOptionsText = "HTTP header in the format NAME=VALUE\n(Repeat as required)"
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *NameValues) String() string {
 	return strings.Join(*i, ",")
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *NameValues) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *NameValues) Type() string {
 	return "NAME=VALUE"
 }

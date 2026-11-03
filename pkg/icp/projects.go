@@ -27,12 +27,15 @@ func (i *ICP) Projects(ctx context.Context) (response ProjectsResponse, resp *ht
 	return
 }
 
+// ProjectsSolutionIDRequest TODO: Describe its purpose and intended use.
 type ProjectsSolutionIDRequest struct {
 	ProjectID int `url:"projectId"`
 }
 
+// ProjectsSolutionIDResponse TODO: Describe its purpose and intended use.
 type ProjectsSolutionIDResponse int32
 
+// ProjectsSolutionID TODO: Document its behavior, inputs, and effects.
 func (i *ICP) ProjectsSolutionID(ctx context.Context, request *ProjectsSolutionIDRequest) (response ProjectsSolutionIDResponse, resp *http.Response, err error) {
 	resp, err = i.Get(ctx, ProjectsSolutionIDEndpoint, request, &response)
 	return
@@ -93,6 +96,7 @@ type DynamicProperty struct {
 	PropertyValue string `json:"PropertyValue"`
 }
 
+// ProjectsIgnoreList TODO: Document its behavior, inputs, and effects.
 func (i *ICP) ProjectsIgnoreList(ctx context.Context, request *ProjectsIgnoreListRequest) (response ProjectsIgnoreListResponse, resp *http.Response, err error) {
 	resp, err = i.Get(ctx, ProjectsIgnoreListEndpoint, request, &response)
 	return

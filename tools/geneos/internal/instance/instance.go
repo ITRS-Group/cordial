@@ -506,6 +506,7 @@ type instanceOptions struct {
 	parameters         []string
 	matchParentPackage bool
 }
+// InstanceOption TODO: Describe its purpose and intended use.
 type InstanceOption func(*instanceOptions)
 
 func evalInstanceOptions(options ...InstanceOption) (opts *instanceOptions) {
@@ -673,6 +674,7 @@ func ParseName(name string, defaultHost ...*geneos.Host) (host *geneos.Host, ct 
 	return
 }
 
+// ImportFiles TODO: Document its behavior, inputs, and effects.
 func ImportFiles(i geneos.Instance, files ...string) (err error) {
 	for _, item := range files {
 		var dest, source string
@@ -707,6 +709,7 @@ func ImportFiles(i geneos.Instance, files ...string) (err error) {
 // look for "[flavour:]name[@host]" - only name can contain glob chars
 var validNameRE = regexp.MustCompile(`^(\w+:)?([\w\.\-\ _\*\?\[\]\^\]]+)?(@[\w\-_\.]*)?$`)
 
+// ValidName TODO: Document its behavior, inputs, and effects.
 func ValidName(name string) bool {
 	return validNameRE.MatchString(name)
 }

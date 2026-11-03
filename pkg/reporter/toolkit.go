@@ -25,6 +25,7 @@ import (
 	"strings"
 )
 
+// ToolkitReporter TODO: Describe its purpose and intended use.
 type ToolkitReporter struct {
 	reporterCommon
 	w               io.Writer
@@ -54,6 +55,7 @@ func newToolkitReporter(format string, w io.Writer, options ...any) (Reporter, e
 	}, nil
 }
 
+// Prepare TODO: Document its behavior, inputs, and effects.
 func (t *ToolkitReporter) Prepare(report Report) error {
 	t.scrambleColumns = report.ScrambleColumns
 	return nil
@@ -87,11 +89,13 @@ func (t *ToolkitReporter) UpdateTable(columns []string, rows [][]string) {
 	t.table = append([][]string{columns}, rows...)
 }
 
+// Reset TODO: Document its behavior, inputs, and effects.
 func (t *ToolkitReporter) Reset(report Report) (err error) {
 	// do nothing
 	return
 }
 
+// Render TODO: Document its behavior, inputs, and effects.
 func (t *ToolkitReporter) Render() {
 	t.c.WriteAll(t.table)
 	t.c.Flush()
@@ -111,6 +115,7 @@ func (t *ToolkitReporter) Close() {
 	}
 }
 
+// Extension TODO: Document its behavior, inputs, and effects.
 func (t *ToolkitReporter) Extension() string {
 	return "txt"
 }

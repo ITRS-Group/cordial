@@ -37,10 +37,12 @@ var initDirs = make(map[string][]string)
 // this should actually become an Interface
 var registeredComponents = make(componentsMap)
 
+// RootComponentName TODO: Describe its purpose and intended use.
 const RootComponentName = "root"
 
 const sharedSuffix = "_shared"
 
+// RootComponent TODO: Describe its purpose and intended use.
 var RootComponent = Component{
 	Name:         RootComponentName,
 	PackageTypes: nil,

@@ -36,6 +36,7 @@ import (
 
 const component = "netprobe"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         component,
 	Aliases:      []string{"probe", "netprobes", "probes"},
@@ -106,6 +107,7 @@ var Component = geneos.Component{
 	ApplyProfile: profile.ApplyCommonProfile,
 }
 
+// Netprobe TODO: Describe its purpose and intended use.
 type Netprobe instance.Instance
 
 // ensure that Netprobes satisfies geneos.Instance interface
@@ -174,6 +176,7 @@ func (i *Netprobe) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -181,10 +184,12 @@ func (i *Netprobe) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -192,6 +197,7 @@ func (i *Netprobe) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -199,18 +205,22 @@ func (i *Netprobe) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Unload() (err error) {
 	if i == nil {
 		return
@@ -220,6 +230,7 @@ func (i *Netprobe) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -227,6 +238,7 @@ func (i *Netprobe) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -234,10 +246,12 @@ func (i *Netprobe) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -245,6 +259,7 @@ func (i *Netprobe) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -274,6 +289,7 @@ func (i *Netprobe) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -331,6 +347,7 @@ func (i *Netprobe) Command(skipFileCheck bool) (args, env []string, home string,
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

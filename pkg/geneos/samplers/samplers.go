@@ -30,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
+// SamplerInstance TODO: Describe its purpose and intended use.
 type SamplerInstance interface {
 	New(plugins.Connection, string, string) *SamplerInstance
 	InitSampler() (err error)
@@ -57,7 +58,8 @@ type columndetails struct {
 	name     string           // display name of column. name="OMIT" mean not rendered
 	number   int              // column index - convenience for now
 	format   string           // alterative Printf format, default is %v
-	convfunc func(any) string // this may happen - not yet used
+// TODO: Revisit unused field convfunc; restore it only when needed.
+// 	convfunc func(any) string // this may happen - not yet used
 	sort     sortType         // if this is the sorting column then what type from above
 }
 
@@ -98,39 +100,48 @@ func (p *Samplers) doSampleInterval() error {
 	return fmt.Errorf("no DoSample() found in plugin")
 }
 
+// New TODO: Document its behavior, inputs, and effects.
 func (s *Samplers) New(p *plugins.Connection, name string, group string) error {
 	s.name, s.group = name, group
 	return s.initDataviews(p)
 }
 
+// SetInterval TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) SetInterval(interval time.Duration) {
 	p.interval = interval
 }
 
+// Interval TODO: Document its behavior, inputs, and effects.
 func (p Samplers) Interval() time.Duration {
 	return p.interval
 }
 
+// SetColumnNames TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) SetColumnNames(columnnames []string) {
 	p.columnnames = columnnames
 }
 
+// ColumnNames TODO: Document its behavior, inputs, and effects.
 func (p Samplers) ColumnNames() []string {
 	return p.columnnames
 }
 
+// SetColumns TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) SetColumns(columns Columns) {
 	p.columns = columns
 }
 
+// Columns TODO: Document its behavior, inputs, and effects.
 func (p Samplers) Columns() Columns {
 	return p.columns
 }
 
+// SetSortColumn TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) SetSortColumn(column string) {
 	p.sortcolumn = column
 }
 
+// SortColumn TODO: Document its behavior, inputs, and effects.
 func (p Samplers) SortColumn() string {
 	return p.sortcolumn
 }
@@ -144,6 +155,7 @@ func (s *Samplers) initDataviews(p *plugins.Connection) (err error) {
 	return
 }
 
+// Start TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 	if !p.Exists() {
 		err = fmt.Errorf("Start(): Dataview not defined")
@@ -166,6 +178,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 	return
 }
 
+// Close TODO: Document its behavior, inputs, and effects.
 func (s *Samplers) Close() error {
 	if !s.Exists() {
 		return nil

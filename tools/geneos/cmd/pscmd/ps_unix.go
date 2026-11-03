@@ -4,7 +4,6 @@ package pscmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
@@ -39,7 +38,8 @@ var instanceCSVExtraColumns = []string{
 	"TotalChildKernelTime",
 }
 
-var instanceCSVLongHeader = strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t")
+// TODO: Revisit unused declaration instanceCSVLongHeader; restore it only when needed.
+// var instanceCSVLongHeader = strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t")
 
 func psInstanceLongColumns(pi *instance.ProcessInfo) []string {
 	return []string{

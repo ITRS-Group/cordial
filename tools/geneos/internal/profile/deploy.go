@@ -15,6 +15,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
+// DeployProfile TODO: Document its behavior, inputs, and effects.
 func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) (err error) {
 	opts := evaluateProfileDeployOptions(options...)
 

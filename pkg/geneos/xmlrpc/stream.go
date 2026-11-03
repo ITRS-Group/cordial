@@ -27,14 +27,17 @@ func (s Sampler) WriteMessage(streamname string, message string) (err error) {
 	return s.addMessageStream(s.entityName, s.samplerName, streamname, message)
 }
 
+// SignOnStream TODO: Document its behavior, inputs, and effects.
 func (s Sampler) SignOnStream(streamname string, heartbeat time.Duration) error {
 	return s.signOnStream(s.entityName, s.samplerName, streamname, int(heartbeat.Seconds()))
 }
 
+// SignOffStream TODO: Document its behavior, inputs, and effects.
 func (s Sampler) SignOffStream(streamname string) error {
 	return s.signOffStream(s.entityName, s.samplerName, streamname)
 }
 
+// HeartbeatStream TODO: Document its behavior, inputs, and effects.
 func (s Sampler) HeartbeatStream(streamname string) error {
 	return s.heartbeatStream(s.entityName, s.samplerName, streamname)
 }

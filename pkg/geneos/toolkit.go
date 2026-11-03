@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// ToolkitPlugin TODO: Describe its purpose and intended use.
 type ToolkitPlugin struct {
 	XMLName              xml.Name               `xml:"toolkit" json:"-" yaml:"-"`
 	SamplerScript        *SingleLineStringVar   `xml:"samplerScript"`
@@ -26,10 +27,12 @@ type ToolkitPlugin struct {
 	EnvironmentVariables *[]EnvironmentVariable `xml:"environmentVariables>variable"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *ToolkitPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// EnvironmentVariable TODO: Describe its purpose and intended use.
 type EnvironmentVariable struct {
 	XMLName xml.Name             `xml:"variable"  json:"-" yaml:"-"`
 	Name    string               `xml:"name"`

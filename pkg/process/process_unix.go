@@ -43,6 +43,7 @@ const notfound = "[NOT FOUND]"
 var usernames sync.Map
 var groupnames sync.Map
 
+// GetUsername TODO: Document its behavior, inputs, and effects.
 func GetUsername(uid int) (username string) {
 	if u, ok := usernames.Load(uid); ok {
 		username = u.(string)
@@ -64,6 +65,7 @@ func GetUsername(uid int) (username string) {
 	return
 }
 
+// GetGroupname TODO: Document its behavior, inputs, and effects.
 func GetGroupname(gid int) (groupname string) {
 	if g, ok := groupnames.Load(gid); ok {
 		groupname = g.(string)
@@ -106,6 +108,7 @@ func GetLoginName(pid int) (name string, err error) {
 	return GetUsername(int(uid)), nil
 }
 
+// GetCurrentUsername TODO: Document its behavior, inputs, and effects.
 func GetCurrentUsername() (name string, err error) {
 	currentUser, err := user.Current()
 	if err != nil {
@@ -306,6 +309,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	return
 }
 
+// ProcessStatusOpenFiles TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 	if fv.CanSet() {
 		of := OpenFiles(h, pid)
@@ -342,6 +346,7 @@ func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 	}
 }
 
+// ProcessStatusOpenSockets TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
 	if fv.CanSet() {
 		var opensockets int64 = 0
@@ -359,6 +364,7 @@ func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
 	}
 }
 
+// ProcessStatusListeningPorts TODO: Document its behavior, inputs, and effects.
 func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
 	if fv.CanSet() {
 		ports := ListeningPorts(h, pid)

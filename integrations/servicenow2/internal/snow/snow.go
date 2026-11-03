@@ -36,12 +36,15 @@ import (
 var snowMutex sync.RWMutex
 var snowConnection *rest.Client
 
+// Context TODO: Describe its purpose and intended use.
 type Context struct {
 	echo.Context
 	Conf  *config.Config
-	debug bool
+// TODO: Revisit unused field debug; restore it only when needed.
+// 	debug bool
 }
 
+// ServiceNow TODO: Document its behavior, inputs, and effects.
 func ServiceNow(cf *config.Config) (rc *rest.Client) {
 	snowMutex.RLock()
 	if snowConnection != nil {

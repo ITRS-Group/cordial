@@ -24,6 +24,7 @@ import (
 	"time"
 )
 
+// Dataview TODO: Describe its purpose and intended use.
 type Dataview struct {
 	APIClient
 
@@ -64,6 +65,7 @@ func NewDataview(c APIClient, entity, sampler, typeName, groupHeading, viewName 
 	return
 }
 
+// Exists TODO: Document its behavior, inputs, and effects.
 func (view *Dataview) Exists() (exists bool, err error) {
 	if view == nil {
 		return
@@ -72,6 +74,7 @@ func (view *Dataview) Exists() (exists bool, err error) {
 
 }
 
+// Update TODO: Document its behavior, inputs, and effects.
 func (view *Dataview) Update() (err error) {
 	return
 }

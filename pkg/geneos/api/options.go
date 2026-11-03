@@ -21,6 +21,7 @@ type apiOptions struct {
 	insecureSkipVerify bool
 }
 
+// Option TODO: Describe its purpose and intended use.
 type Option func(*apiOptions)
 
 func evalOptions(options ...Option) *apiOptions {

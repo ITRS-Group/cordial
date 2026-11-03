@@ -21,16 +21,19 @@ import "encoding/xml"
 
 // API Plugin
 
+// APIPlugin TODO: Describe its purpose and intended use.
 type APIPlugin struct {
 	XMLName     xml.Name             `xml:"api" json:"-" yaml:"-"`
 	Parameters  []Parameter          `xml:"parameters>parameter"`
 	SummaryView *SingleLineStringVar `xml:"showSummaryView>always>viewName,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (f *APIPlugin) String() string {
 	return "api"
 }
 
+// Parameter TODO: Describe its purpose and intended use.
 type Parameter struct {
 	Name  string               `xml:"name"`
 	Value *SingleLineStringVar `xml:"value"`
@@ -38,6 +41,7 @@ type Parameter struct {
 
 // API Streams Plugin
 
+// APIStreamsPlugin TODO: Describe its purpose and intended use.
 type APIStreamsPlugin struct {
 	XMLName    xml.Name `xml:"api-streams" json:"-" yaml:"-"`
 	Streams    *Streams `xml:"streams"`
@@ -45,10 +49,12 @@ type APIStreamsPlugin struct {
 	CreateView *Value   `xml:"createView,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (f *APIStreamsPlugin) String() string {
 	return "api-streams"
 }
 
+// Streams TODO: Describe its purpose and intended use.
 type Streams struct {
 	XMLName xml.Name               `xml:"streams" json:"-" yaml:"-"`
 	Stream  []*SingleLineStringVar `xml:"stream"`

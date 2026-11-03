@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -58,7 +57,8 @@ var fileCSVColumns = []string{
 	"Path",
 }
 
-var fileCSVHeader = strings.Join(fileCSVColumns, "\t")
+// TODO: Revisit unused declaration fileCSVHeader; restore it only when needed.
+// var fileCSVHeader = strings.Join(fileCSVColumns, "\t")
 
 func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error) {
 	ct := i.Type()

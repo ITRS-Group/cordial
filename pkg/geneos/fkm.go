@@ -24,25 +24,30 @@ import (
 
 // FKM
 
+// FKMPlugin TODO: Describe its purpose and intended use.
 type FKMPlugin struct {
 	XMLName xml.Name    `xml:"fkm" json:"-" yaml:"-"`
 	Display *FKMDisplay `xml:"display,omitempty" json:",omitempty" yaml:",omitempty"`
 	Files   FKMFiles    `xml:"files,omitempty"yaml:",omitempty" mapstructure:"files"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (_ *FKMPlugin) String() string {
 	return "fkm"
 }
 
+// FKMDisplay TODO: Describe its purpose and intended use.
 type FKMDisplay struct {
 	TriggerMode string `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// FKMFiles TODO: Describe its purpose and intended use.
 type FKMFiles struct {
 	XMLName xml.Name  `xml:"files" json:"-" yaml:"-"`
 	Files   []FKMFile `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
 }
 
+// FKMFile TODO: Describe its purpose and intended use.
 type FKMFile struct {
 	XMLName             xml.Name       `xml:"file" json:"-" yaml:"-"`
 	Source              *FKMFileSource `xml:"source"`
@@ -53,6 +58,7 @@ type FKMFile struct {
 	Alias               *Value         `xml:"alias,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
+// FKMFileSource TODO: Describe its purpose and intended use.
 type FKMFileSource struct {
 	Filename          *SingleLineStringVar `xml:"filename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"filename"`
 	Stream            *SingleLineStringVar `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
@@ -60,28 +66,33 @@ type FKMFileSource struct {
 	ProcessDescriptor *Reference           `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"processDescriptor"`
 }
 
+// FKMTable TODO: Describe its purpose and intended use.
 type FKMTable struct {
 	XMLName  xml.Name `xml:"table" json:"-" yaml:"-"`
 	Severity string   `xml:"severity"`
 	KeyTable *Value   `xml:"keyTable"`
 }
 
+// FKMKeyTable TODO: Describe its purpose and intended use.
 type FKMKeyTable struct {
 	XMLName xml.Name `xml:"fkmTable" json:"-" yaml:"-"`
 	Name    string   `xml:"ref,attr"`
 }
 
+// FKMStaticKeyTable TODO: Describe its purpose and intended use.
 type FKMStaticKeyTable struct {
 	XMLName xml.Name `xml:"fkmTable" json:"-" yaml:"-"`
 	Name    string   `xml:"name,attr"`
 	Keys    FKMKeys
 }
 
+// FKMKeyData TODO: Describe its purpose and intended use.
 type FKMKeyData struct {
 	XMLName xml.Name `xml:"data" json:"-" yaml:"-"`
 	Keys    FKMKeys
 }
 
+// FKMKeys TODO: Describe its purpose and intended use.
 type FKMKeys struct {
 	XMLName xml.Name `xml:"keys" json:"-" yaml:"-"`
 	Keys    []any    // should be FKMIgnoreKey or FKMKey
@@ -104,6 +115,7 @@ func NewFKMKeys(keys ...string) (out FKMKeys) {
 	return
 }
 
+// Append TODO: Document its behavior, inputs, and effects.
 func (in FKMKeys) Append(key string) (out FKMKeys) {
 	out = in
 	rule := Basic
@@ -211,12 +223,14 @@ func (in FKMKeys) Append(key string) (out FKMKeys) {
 	return
 }
 
+// FKMIgnoreKey TODO: Describe its purpose and intended use.
 type FKMIgnoreKey struct {
 	XMLName xml.Name `xml:"ignoreKey" json:"-" yaml:"-"`
 	Match   FKMMatch `xml:"match"`
 	// ActiveTime
 }
 
+// FKMKey TODO: Describe its purpose and intended use.
 type FKMKey struct {
 	XMLName  xml.Name  `xml:"key" json:"-" yaml:"-"`
 	SetKey   FKMSetKey `xml:"setKey"`
@@ -225,20 +239,26 @@ type FKMKey struct {
 	Severity string    `xml:"severity,omitempty"`
 }
 
+// FKMSetKey TODO: Describe its purpose and intended use.
 type FKMSetKey struct {
 	Match        *FKMMatch `xml:"match,omitempty"`
 	NotUpdatedIn *Value    `xml:"notUpdatedIn>timePeriodInSeconds,omitempty"`
 	Updated      string    `xml:"updated,omitempty"`
 }
 
+// FKMMatchRules TODO: Describe its purpose and intended use.
 type FKMMatchRules string
 
 const (
+	// Basic TODO: Describe its purpose and intended use.
 	Basic            FKMMatchRules = "BASIC"
+	// Regexp TODO: Describe its purpose and intended use.
 	Regexp           FKMMatchRules = "REGEXP"
+	// RegexpIgnoreCase TODO: Describe its purpose and intended use.
 	RegexpIgnoreCase FKMMatchRules = "REGEXP_IGNORE_CASE"
 )
 
+// FKMMatch TODO: Describe its purpose and intended use.
 type FKMMatch struct {
 	SearchString *SingleLineStringVar `xml:"searchString"`
 	Rules        FKMMatchRules        `xml:"rules,omitempty"`

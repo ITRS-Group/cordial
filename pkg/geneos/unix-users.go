@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// UNIXUsersPlugin TODO: Describe its purpose and intended use.
 type UNIXUsersPlugin struct {
 	XMLName xml.Name `xml:"unix-users" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *UNIXUsersPlugin) String() string {
 	return p.XMLName.Local
 }

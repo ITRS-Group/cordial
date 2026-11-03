@@ -25,21 +25,25 @@ import (
 
 // SQL Toolkit
 
+// SQLToolkitPlugin TODO: Describe its purpose and intended use.
 type SQLToolkitPlugin struct {
 	XMLName    xml.Name     `xml:"sql-toolkit" json:"-" yaml:"-"`
 	Queries    []Query      `xml:"queries>query"`
 	Connection DBConnection `xml:"connection"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *SQLToolkitPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// Query TODO: Describe its purpose and intended use.
 type Query struct {
 	Name *SingleLineStringVar `xml:"name"`
 	SQL  *SingleLineStringVar `xml:"sql"`
 }
 
+// DBConnection TODO: Describe its purpose and intended use.
 type DBConnection struct {
 	MySQL                     *MySQL               `xml:"database>mysql,omitempty"`
 	SQLServer                 *SQLServer           `xml:"database>sqlServer,omitempty"`
@@ -50,6 +54,7 @@ type DBConnection struct {
 	CloseConnectionAfterQuery *Value               `xml:"closeConnectionAfterQuery,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (d *DBConnection) String() string {
 	if d.MySQL != nil {
 		port := d.MySQL.Port.String()
@@ -78,6 +83,7 @@ func (d *DBConnection) String() string {
 	return "unsupported"
 }
 
+// MySQL TODO: Describe its purpose and intended use.
 type MySQL struct {
 	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
 	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
@@ -133,6 +139,7 @@ func (v *MySQL) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 	}
 }
 
+// SQLServer TODO: Describe its purpose and intended use.
 type SQLServer struct {
 	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
 	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
@@ -187,6 +194,7 @@ func (v *SQLServer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err er
 	}
 }
 
+// Oracle TODO: Describe its purpose and intended use.
 type Oracle struct {
 	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`
 	ApplicationName *SingleLineStringVar `xml:"var-applicationName,omitempty"`
@@ -233,6 +241,7 @@ func (v *Oracle) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error
 	}
 }
 
+// Sybase TODO: Describe its purpose and intended use.
 type Sybase struct {
 	InterfaceEntry  *SingleLineStringVar `xml:"var-interfaceEntry,omitempty"`
 	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`

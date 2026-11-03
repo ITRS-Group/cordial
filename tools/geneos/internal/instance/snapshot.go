@@ -13,6 +13,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+// SnapshotDataviews TODO: Document its behavior, inputs, and effects.
 func SnapshotDataviews(i geneos.Instance, paths []string, options ...SnapshotOptions) (dataviews []*commands.Dataview, err error) {
 	if CompareVersion(i, "5.14") <= 0 {
 		err = fmt.Errorf("%s is too old (5.14 or above required)", i)
@@ -120,6 +121,7 @@ func gatewayURL(i geneos.Instance) (u *url.URL) {
 	return
 }
 
+// SnapshotOptions TODO: Describe its purpose and intended use.
 type SnapshotOptions func(*snapshotOptions)
 
 type snapshotOptions struct {
@@ -140,6 +142,7 @@ func evalSnapshotOptions(options ...SnapshotOptions) *snapshotOptions {
 	return opts
 }
 
+// SnapshotUsername TODO: Document its behavior, inputs, and effects.
 func SnapshotUsername(username string) SnapshotOptions {
 	return func(opts *snapshotOptions) {
 		// set the username in the snapshot options
@@ -147,6 +150,7 @@ func SnapshotUsername(username string) SnapshotOptions {
 	}
 }
 
+// SnapshotPassword TODO: Document its behavior, inputs, and effects.
 func SnapshotPassword(password config.Secret) SnapshotOptions {
 	return func(opts *snapshotOptions) {
 		// set the password in the snapshot options
@@ -154,6 +158,7 @@ func SnapshotPassword(password config.Secret) SnapshotOptions {
 	}
 }
 
+// SnapshotScopes TODO: Document its behavior, inputs, and effects.
 func SnapshotScopes(scopes commands.Scope) SnapshotOptions {
 	return func(opts *snapshotOptions) {
 		// set the scopes in the snapshot options
@@ -161,6 +166,7 @@ func SnapshotScopes(scopes commands.Scope) SnapshotOptions {
 	}
 }
 
+// SnapshotMaxItems TODO: Document its behavior, inputs, and effects.
 func SnapshotMaxItems(maxitems int) SnapshotOptions {
 	return func(opts *snapshotOptions) {
 		// set the maxitems in the snapshot options
@@ -168,6 +174,7 @@ func SnapshotMaxItems(maxitems int) SnapshotOptions {
 	}
 }
 
+// SnapshotXPathOnly TODO: Document its behavior, inputs, and effects.
 func SnapshotXPathOnly(xpathOnly bool) SnapshotOptions {
 	return func(opts *snapshotOptions) {
 		// set the xpathOnly flag in the snapshot options

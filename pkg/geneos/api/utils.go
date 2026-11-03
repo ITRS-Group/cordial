@@ -34,7 +34,8 @@ type columndetails struct {
 	name     string           // display name of column. name="OMIT" mean not rendered
 	number   int              // column index - convenience for now
 	format   string           // alterative Printf format, default is %v
-	convfunc func(any) string // this may happen - not yet used
+// TODO: Revisit unused field convfunc; restore it only when needed.
+// 	convfunc func(any) string // this may happen - not yet used
 	sort     sortType         // if this is the sorting column then what type from above
 }
 

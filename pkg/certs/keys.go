@@ -14,23 +14,31 @@ import (
 	"strings"
 )
 
+// KeyType TODO: Describe its purpose and intended use.
 type KeyType string
+// PrivateKey TODO: Describe its purpose and intended use.
 type PrivateKey []byte
 
 const (
+	// RSA TODO: Describe its purpose and intended use.
 	RSA     KeyType = "rsa"
+	// ECDSA TODO: Describe its purpose and intended use.
 	ECDSA   KeyType = "ecdsa"
+	// ED25519 TODO: Describe its purpose and intended use.
 	ED25519 KeyType = "ed25519"
+	// ECDH TODO: Describe its purpose and intended use.
 	ECDH    KeyType = "ecdh"
 )
 
 // DefaultKeyType is the default key type
 const DefaultKeyType = ECDH
 
+// String TODO: Document its behavior, inputs, and effects.
 func (k *KeyType) String() string {
 	return string(*k)
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (k *KeyType) Set(s string) error {
 	kt := strings.ToLower(s)
 	switch kt {
@@ -42,6 +50,7 @@ func (k *KeyType) Set(s string) error {
 	}
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (k *KeyType) Type() string {
 	return "KeyType"
 }

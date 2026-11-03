@@ -38,7 +38,10 @@ var cf *config.Config
 
 var cfgFile string
 var execname = cordial.ExecutableName(cordial.VERSION)
-var debug, quiet bool
+var debug bool
+
+// TODO: Revisit unused declaration quiet; restore it only when needed.
+// var quiet bool
 var startTime time.Time
 var startTimestamp string
 

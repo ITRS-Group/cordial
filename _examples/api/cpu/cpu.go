@@ -12,11 +12,13 @@ func init() {
 	// logger.EnableDebugLog()
 }
 
+// CPUSampler TODO: Describe its purpose and intended use.
 type CPUSampler struct {
 	samplers.Samplers
 	cpustats cpustat
 }
 
+// New TODO: Document its behavior, inputs, and effects.
 func New(s *plugins.Connection, name string, group string) (*CPUSampler, error) {
 	log.Debug("called")
 	c := new(CPUSampler)
@@ -24,6 +26,7 @@ func New(s *plugins.Connection, name string, group string) (*CPUSampler, error) 
 	return c, c.New(s, name, group)
 }
 
+// InitSampler TODO: Document its behavior, inputs, and effects.
 func (p *CPUSampler) InitSampler() (err error) {
 	log.Debug("called")
 	p.Headline("OS", runtime.GOOS)

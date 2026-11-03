@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// FIXAnalyser2Plugin TODO: Describe its purpose and intended use.
 type FIXAnalyser2Plugin struct {
 	XMLName xml.Name `xml:"fix-analyser2" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *FIXAnalyser2Plugin) String() string {
 	return p.XMLName.Local
 }

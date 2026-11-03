@@ -316,6 +316,7 @@ func WritePrivateKeyTo(w io.Writer, key PrivateKey) (n int, err error) {
 	return
 }
 
+// WritePublicKeyTo TODO: Document its behavior, inputs, and effects.
 func WritePublicKeyTo(w io.Writer, pubKey any) (n int, err error) {
 	var m int
 

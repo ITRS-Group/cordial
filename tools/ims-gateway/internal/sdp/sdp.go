@@ -72,24 +72,28 @@ type ProblemAttributes struct {
 	Lifecycle          *NameID                   `json:"lifecycle,omitempty"`
 }
 
+// ProblemImpactDetails TODO: Describe its purpose and intended use.
 type ProblemImpactDetails struct {
 	ImpactDetailsDescription string    `json:"impact_details_description,omitempty"`
 	ImpactDetailsUpdatedTime *DateTime `json:"impact_details_updated_time,omitempty"`
 	ImpactDetailsUpdatedBy   *User     `json:"impact_details_updated_by,omitempty"`
 }
 
+// ProblemRootCause TODO: Describe its purpose and intended use.
 type ProblemRootCause struct {
 	RootCauseDescription string    `json:"root_cause_description,omitempty"`
 	RootCauseUpdatedOn   *DateTime `json:"root_cause_updated_on,omitempty"`
 	RootCauseUpdatedBy   *User     `json:"root_cause_updated_by,omitempty"`
 }
 
+// ProblemSymptoms TODO: Describe its purpose and intended use.
 type ProblemSymptoms struct {
 	SymptomsDescription string    `json:"symptoms_description,omitempty"`
 	SymptomsUpdatedOn   *DateTime `json:"symptoms_updated_on,omitempty"`
 	SymptomsUpdatedBy   *User     `json:"symptoms_updated_by,omitempty"`
 }
 
+// ProblemKnownError TODO: Describe its purpose and intended use.
 type ProblemKnownError struct {
 	KnownErrorComments         string    `json:"known_error_comments,omitempty"`
 	IsKnownError               bool      `json:"is_known_error,omitempty"`
@@ -97,6 +101,7 @@ type ProblemKnownError struct {
 	KnownErrorDetailsUpdatedBy *User     `json:"known_error_details_updated_by,omitempty"`
 }
 
+// ProblemCloseDetails TODO: Describe its purpose and intended use.
 type ProblemCloseDetails struct {
 	CloseDetailsComments  string    `json:"close_details_comments,omitempty"`
 	ClosureCode           *NameID   `json:"closure_code,omitempty"`
@@ -104,12 +109,14 @@ type ProblemCloseDetails struct {
 	CloseDetailsUpdatedBy *User     `json:"close_details_updated_by,omitempty"`
 }
 
+// ProblemResolutionDetails TODO: Describe its purpose and intended use.
 type ProblemResolutionDetails struct {
 	ResolutionDetailsDescription string    `json:"resolution_details_description,omitempty"`
 	ResolutionDetailsUpdatedOn   *DateTime `json:"resolution_details_updated_on,omitempty"`
 	ResolutionDetailsUpdatedBy   *User     `json:"resolution_details_updated_by,omitempty"`
 }
 
+// ProblemWorkAroundDetails TODO: Describe its purpose and intended use.
 type ProblemWorkAroundDetails struct {
 	WorkAroundDetailsDescription string    `json:"workaround_details_description,omitempty"`
 	WorkAroundDetailsUpdatedOn   *DateTime `json:"workaround_details_updated_on,omitempty"`
@@ -206,6 +213,7 @@ type RequestAttributes struct {
 	EditorStatus              int                 `json:"editor_status,omitempty"`
 }
 
+// OnHoldScheduler TODO: Describe its purpose and intended use.
 type OnHoldScheduler struct {
 	ScheduledTime  *DateTime `json:"scheduled_time,omitempty"`
 	Comments       string    `json:"comments,omitempty"`
@@ -213,6 +221,7 @@ type OnHoldScheduler struct {
 	HeldBy         *User     `json:"held_by,omitempty"`
 }
 
+// ClosureInfo TODO: Describe its purpose and intended use.
 type ClosureInfo struct {
 	RequesterAckResolution bool    `json:"requester_ack_resolution,omitempty"`
 	RequesterAckComments   string  `json:"requester_ack_comments,omitempty"`
@@ -220,15 +229,18 @@ type ClosureInfo struct {
 	ClosureCode            *NameID `json:"closure_code,omitempty"`
 }
 
+// CancelFlagComments TODO: Describe its purpose and intended use.
 type CancelFlagComments struct {
 	Comment string `json:"comment,omitempty"`
 	ID      int64  `json:"id,string,omitempty"`
 }
 
+// RequestRequestID TODO: Describe its purpose and intended use.
 type RequestRequestID struct {
 	ID int64 `json:"id,string,omitempty"`
 }
 
+// RequestAttachment TODO: Describe its purpose and intended use.
 type RequestAttachment struct {
 	ContentType string `json:"content_type,omitempty"`
 	Size        int64  `json:"size,string,omitempty"`
@@ -236,15 +248,18 @@ type RequestAttachment struct {
 	Name        string `json:"name,omitempty"`
 }
 
+// RequestResources TODO: Describe its purpose and intended use.
 type RequestResources struct {
 	Resource string `json:"resource,omitempty"`
 }
 
+// RequestResolution TODO: Describe its purpose and intended use.
 type RequestResolution struct {
 	Content     string `json:"content,omitempty"`
 	SubmittedBy *User  `json:"submitted_by,omitempty"`
 }
 
+// ServiceApprover TODO: Describe its purpose and intended use.
 type ServiceApprover struct {
 	OrgRoles *NameID `json:"org_roles,omitempty"`
 	Users    *User   `json:"service_approvers,omitempty"`
@@ -283,11 +298,13 @@ type User struct {
 	} `json:"site"`
 }
 
+// DateTime TODO: Describe its purpose and intended use.
 type DateTime struct {
 	DisplayValue string `json:"display_value,omitempty"`
 	Value        string `json:"value,omitempty"`
 }
 
+// NameID TODO: Describe its purpose and intended use.
 type NameID struct {
 	Name string `json:"name,omitempty"`
 	ID   int64  `json:"id,string,omitempty"`

@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// StateTrackerPlugin TODO: Describe its purpose and intended use.
 type StateTrackerPlugin struct {
 	XMLName         xml.Name                     `xml:"stateTracker" json:"-" yaml:"-"`
 	Columns         StateTrackerColumns          `xml:"columns"`
@@ -27,30 +28,36 @@ type StateTrackerPlugin struct {
 	TrackerGroup    []StateTrackerGroup          `xml:"trackerGroup,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *StateTrackerPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// StateTrackerColumns TODO: Describe its purpose and intended use.
 type StateTrackerColumns struct {
 	RenameTrackerColumn *SingleLineStringVar   `xml:"renameTrackerColumn"`
 	Columns             []*SingleLineStringVar `xml:"column"`
 }
 
+// StateTrackerTemplateOptions TODO: Describe its purpose and intended use.
 type StateTrackerTemplateOptions struct {
 	HideTrackerIDs *Value `xml:"hideTrackerIDs"`
 }
 
+// StateTrackerPerformance TODO: Describe its purpose and intended use.
 type StateTrackerPerformance struct {
 	SkipMidsampleUpdates   *Value `xml:"skipMidSampleUpdates,omitempty"`
 	MaxMessagesPerSample   *Value `xml:"maxMessagesPerSample,omitempty"`
 	MinimumReservedRowpace *Value `xml:"minimumReservedRowspace,omitempty"`
 }
 
+// StateTrackerGroup TODO: Describe its purpose and intended use.
 type StateTrackerGroup struct {
 	Name     string                 `xml:"name,attr"`
 	Trackers []*StateTrackerTracker `xml:"trackers>tracker,omitempty"`
 }
 
+// StateTrackerTracker TODO: Describe its purpose and intended use.
 type StateTrackerTracker struct {
 	// XMLName        xml.Name             `xml:"tracker" json:"-" yaml:"-"`
 	DeprecatedName string               `xml:"name,attr"`

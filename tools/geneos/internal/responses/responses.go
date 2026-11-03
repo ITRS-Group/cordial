@@ -48,6 +48,7 @@ type General struct {
 	Dataview   *Dataview     // dataview for reporting, each should have same columns
 }
 
+// Response TODO: Describe its purpose and intended use.
 type Response interface {
 	General
 }
@@ -66,6 +67,7 @@ type Dataview struct {
 
 var log = logger.Logger
 
+// Finished TODO: Document its behavior, inputs, and effects.
 func Finished[R Response](resp *R) {
 	switch any(*resp).(type) {
 	case General:
@@ -78,6 +80,7 @@ func Finished[R Response](resp *R) {
 	}
 }
 
+// New TODO: Document its behavior, inputs, and effects.
 func New[R Response](i geneos.Instance) *R {
 	var resp *R
 	switch any(resp).(type) {

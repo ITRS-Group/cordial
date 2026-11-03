@@ -356,6 +356,7 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 	}
 }
 
+// UnrollTypes TODO: Document its behavior, inputs, and effects.
 func UnrollTypes(in *Types) (types map[string]Type) {
 	types = make(map[string]Type)
 
@@ -402,6 +403,7 @@ func unrollTypeGroup(in *TypeGroup) (types map[string]Type) {
 	return
 }
 
+// UnrollSamplers TODO: Document its behavior, inputs, and effects.
 func UnrollSamplers(in *Samplers) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 
@@ -450,6 +452,7 @@ func unrollSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	return
 }
 
+// UnrollProcessDescriptors TODO: Document its behavior, inputs, and effects.
 func UnrollProcessDescriptors(in *ProcessDescriptors) (processDescriptors map[string]ProcessDescriptor) {
 	processDescriptors = make(map[string]ProcessDescriptor)
 

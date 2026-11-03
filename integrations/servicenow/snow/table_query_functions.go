@@ -39,6 +39,7 @@ type snowError struct {
 	Status string `json:"status"`
 }
 
+// QueryTableDetail TODO: Document its behavior, inputs, and effects.
 func (snow TransitiveConnection) QueryTableDetail(table string) (r resultDetail, err error) {
 	var i resultsArray
 	i, err = snow.QueryTable(table)
@@ -48,6 +49,7 @@ func (snow TransitiveConnection) QueryTableDetail(table string) (r resultDetail,
 	return
 }
 
+// QueryTable TODO: Document its behavior, inputs, and effects.
 func (snow TransitiveConnection) QueryTable(table string) (i resultsArray, err error) {
 	req, err := AssembleRequest(snow, table)
 	if err != nil {
@@ -97,6 +99,7 @@ func (snow TransitiveConnection) QueryTable(table string) (i resultsArray, err e
 	return
 }
 
+// QueryTableSingle TODO: Document its behavior, inputs, and effects.
 func (snow TransitiveConnection) QueryTableSingle(table string) (i resultDetail, err error) {
 	req, err := AssembleRequest(snow, table)
 	if err != nil {

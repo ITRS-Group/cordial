@@ -133,10 +133,12 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 
 // debug transport for tracing
 
+// LogTransport TODO: Describe its purpose and intended use.
 type LogTransport struct {
 	Transport http.RoundTripper
 }
 
+// RoundTrip TODO: Document its behavior, inputs, and effects.
 func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// Log the request
 	reqDump, err := httputil.DumpRequestOut(req, true)

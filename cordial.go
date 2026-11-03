@@ -30,7 +30,7 @@ import (
 	"src.elv.sh/pkg/md"
 )
 
-// VERSION is a semi-global string variable
+// VERSION is the Cordial version embedded in the binary at build time.
 //
 //go:embed VERSION
 var VERSION string

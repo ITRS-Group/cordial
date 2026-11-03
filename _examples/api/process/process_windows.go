@@ -10,6 +10,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
+// Win32_Process TODO: Describe its purpose and intended use.
 type Win32_Process struct {
 	ProcessID    uint32 `column:"PID,sort=+num"`
 	Name         string `column:"processName`
@@ -17,6 +18,7 @@ type Win32_Process struct {
 	CreationDate time.Time
 }
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p *ProcessSampler) DoSample() (err error) {
 	var dst []Win32_Process
 	q := wmi.CreateQuery(&dst, "")

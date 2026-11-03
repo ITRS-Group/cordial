@@ -28,6 +28,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
+// SupportedExts lists the file extensions supported by the underlying config
+// loader.
 var SupportedExts = viper.SupportedExts
 
 type config struct {

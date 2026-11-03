@@ -20,5 +20,6 @@ package api
 import "errors"
 
 var (
+	// ErrInvalidArgs TODO: Describe its purpose and intended use.
 	ErrInvalidArgs = errors.New("invalid arguments")
 )

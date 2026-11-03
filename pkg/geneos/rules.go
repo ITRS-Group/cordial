@@ -21,12 +21,14 @@ import "encoding/xml"
 
 // Rules
 
+// Rules TODO: Describe its purpose and intended use.
 type Rules struct {
 	XMLName    xml.Name    `xml:"rules" json:"-" yaml:"-"`
 	RuleGroups []RuleGroup `xml:"ruleGroup,omitempty" json:"rulegroup,omitempty"`
 	Rules      []Rule      `xml:"rule,omitempty" json:"rule,omitempty"`
 }
 
+// RuleGroup TODO: Describe its purpose and intended use.
 type RuleGroup struct {
 	XMLName    xml.Name      `xml:"ruleGroup" json:"-" yaml:"-"`
 	Name       string        `xml:"name,attr"`
@@ -36,6 +38,7 @@ type RuleGroup struct {
 	RuleGroups []RuleGroup   `xml:"ruleGroup,omitempty" json:"rulegroup,omitempty"`
 }
 
+// RuleDefault TODO: Describe its purpose and intended use.
 type RuleDefault struct {
 	XMLName       xml.Name       `xml:"default,omitempty" json:"default"`
 	Name          string         `xml:"name,attr"`
@@ -44,6 +47,7 @@ type RuleDefault struct {
 	ActiveTime    *ActiveTimeRef `xml:"activeTime" json:",omitempty" yaml:",omitempty"`
 }
 
+// Rule TODO: Describe its purpose and intended use.
 type Rule struct {
 	XMLName       xml.Name `xml:"rule" json:"-" yaml:"-"`
 	Name          string   `xml:"name,attr"`

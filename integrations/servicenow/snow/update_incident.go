@@ -25,6 +25,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// UpdateIncident TODO: Document its behavior, inputs, and effects.
 func UpdateIncident(vc *config.Config, incident_id string, incident IncidentFields) (incident_number string, err error) {
 	var postbytes []byte
 	var result resultDetail

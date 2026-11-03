@@ -32,7 +32,13 @@ import (
 
 // var cf *config.Config
 
-var configFile, Execname, logFile string
+// Execname TODO: Describe its purpose and intended use.
+// TODO: Revisit unused declaration logFile; restore it only when needed.
+var configFile, Execname string
+
+// TODO: Revisit unused declaration logFile; restore it only when needed.
+// var logFile string
+// Debug TODO: Describe its purpose and intended use.
 var Debug bool
 
 var log = logger.Logger
@@ -60,6 +66,7 @@ func init() {
 	})
 }
 
+// Cmd TODO: Describe its purpose and intended use.
 var Cmd = &cobra.Command{
 	Use:   "servicenow2",
 	Short: "Geneos to ServiceNow integration",

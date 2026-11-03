@@ -31,6 +31,7 @@ type Client struct {
 	url *url.URL
 }
 
+// NewClient TODO: Document its behavior, inputs, and effects.
 func NewClient(url *url.URL, options ...Option) (c *Client) {
 	opt := &xmlrpcOptions{}
 	evalOptions(opt, options...)
@@ -67,6 +68,7 @@ func (c Client) Connected() bool {
 	return res
 }
 
+// InsecureSkipVerify TODO: Document its behavior, inputs, and effects.
 func (c *Client) InsecureSkipVerify() {
 	tr := &http.Transport{
 		Proxy:           http.ProxyFromEnvironment,

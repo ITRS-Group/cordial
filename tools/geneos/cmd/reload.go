@@ -61,6 +61,7 @@ var reloadCmd = &cobra.Command{
 	},
 }
 
+// ReloadInstance TODO: Document its behavior, inputs, and effects.
 func ReloadInstance(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 

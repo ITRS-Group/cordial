@@ -98,6 +98,7 @@ func evalOptions(options ...GeneosOption) (d *geneosOptions) {
 	return
 }
 
+// ForComponent TODO: Document its behavior, inputs, and effects.
 func ForComponent(component *Component) GeneosOption {
 	return func(d *geneosOptions) {
 		if component == nil {
@@ -107,30 +108,35 @@ func ForComponent(component *Component) GeneosOption {
 	}
 }
 
+// Insecure TODO: Document its behavior, inputs, and effects.
 func Insecure(insecure bool) GeneosOption {
 	return func(d *geneosOptions) {
 		d.insecure = insecure
 	}
 }
 
+// SigningBundle TODO: Document its behavior, inputs, and effects.
 func SigningBundle(signingBundle string) GeneosOption {
 	return func(d *geneosOptions) {
 		d.signingBundle = signingBundle
 	}
 }
 
+// SigningBundlePassword TODO: Document its behavior, inputs, and effects.
 func SigningBundlePassword(signingBundlePassword config.Secret) GeneosOption {
 	return func(d *geneosOptions) {
 		d.signingBundlePassword = signingBundlePassword
 	}
 }
 
+// SigningBundlePrompt TODO: Document its behavior, inputs, and effects.
 func SigningBundlePrompt(prompt func(bool, int, ...string) (config.Secret, error)) GeneosOption {
 	return func(d *geneosOptions) {
 		d.signingBundlePrompt = prompt
 	}
 }
 
+// RootDirPrompt TODO: Document its behavior, inputs, and effects.
 func RootDirPrompt(prompt func(string, ...any) (string, error)) GeneosOption {
 	return func(d *geneosOptions) {
 		d.promptRootDir = prompt

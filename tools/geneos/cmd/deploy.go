@@ -26,7 +26,6 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -49,7 +48,8 @@ var deployCmdImportFiles values.Filename
 var deployCmdKeyfile string
 var deployCmdExtras = values.Values{}
 
-var flags *pflag.FlagSet
+// TODO: Revisit unused declaration flags; restore it only when needed.
+// var flags *pflag.FlagSet
 
 func init() {
 	Cmd.AddCommand(deployCmd)

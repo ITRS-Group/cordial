@@ -19,6 +19,7 @@ package geneos
 
 import "encoding/xml"
 
+// ControlMPlugin TODO: Describe its purpose and intended use.
 type ControlMPlugin struct {
 	XMLName   xml.Name           `xml:"control-m" json:"-" yaml:"-"`
 	Host      *Host              `xml:"host"`
@@ -29,16 +30,19 @@ type ControlMPlugin struct {
 	Dataviews []ControlMDataview `xml:"dataviews>dataview,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (_ *ControlMPlugin) String() string {
 	return "control-m"
 }
 
+// ControlMDataview TODO: Describe its purpose and intended use.
 type ControlMDataview struct {
 	Name       string              `xml:"name"`
 	Parameters []ControlMParameter `xml:"parameters,omitempty"`
 	Columns    []string            `xml:"columns>column,omitempty"`
 }
 
+// ControlMParameter TODO: Describe its purpose and intended use.
 type ControlMParameter struct {
 	Parameter string `xml:"parameter"`
 	Criteria  string `xml:"criteria"`

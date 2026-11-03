@@ -17,6 +17,7 @@ import (
 // Additional audit files can be configured to receive a subset of
 // entries based on specific criteria.
 
+// AuditLogger TODO: Describe its purpose and intended use.
 type AuditLogger struct {
 	*slog.Logger
 }
@@ -97,10 +98,12 @@ func ResetEventID() {
 	auditCommandID = uuid.NewString()
 }
 
+// NewGlobalAuditLogger TODO: Document its behavior, inputs, and effects.
 func NewGlobalAuditLogger(global io.Writer) {
 	auditLogger = NewAuditLogger(GlobalWriter(global))
 }
 
+// Audit TODO: Document its behavior, inputs, and effects.
 func Audit() *AuditLogger {
 	if auditLogger == nil {
 		auditLogger = NewAuditLogger()

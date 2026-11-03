@@ -21,6 +21,7 @@ import (
 	"encoding/xml"
 )
 
+// XPingPlugin TODO: Describe its purpose and intended use.
 type XPingPlugin struct {
 	XMLName           xml.Name   `xml:"x-ping" json:"-" yaml:"-"`
 	TargetNodes       []Host     `xml:"targetNodes>targetNode,omitempty" json:"targetNode,omitempty" yaml:"targetNode,omitempty"`
@@ -29,6 +30,7 @@ type XPingPlugin struct {
 	SendInterface     *Value     `xml:"sendInterface" json:"sendInterface" yaml:"sendInterface"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *XPingPlugin) String() string {
 	return p.XMLName.Local
 }

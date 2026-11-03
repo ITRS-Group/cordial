@@ -20,8 +20,6 @@ package cmd
 import (
 	"context"
 	_ "embed"
-	"encoding/json"
-	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -39,11 +37,13 @@ import (
 //go:embed pagerduty.defaults.yaml
 var defaults []byte
 
+// Link TODO: Describe its purpose and intended use.
 type Link struct {
 	Href string `json:"href"`
 	Text string `json:"text,omitempty"`
 }
 
+// Image TODO: Describe its purpose and intended use.
 type Image struct {
 	Src  string `json:"src"`
 	Href string `json:"href,omitempty"`
@@ -53,8 +53,11 @@ type Image struct {
 type eventType int
 
 const (
+	// Trigger TODO: Describe its purpose and intended use.
 	Trigger eventType = iota
+	// Assign TODO: Describe its purpose and intended use.
 	Assign
+	// Resolve TODO: Describe its purpose and intended use.
 	Resolve
 )
 
@@ -103,6 +106,7 @@ func Execute() {
 	}
 }
 
+// RootCmd2 TODO: Document its behavior, inputs, and effects.
 func RootCmd2() *cobra.Command {
 	return Cmd
 }
@@ -204,17 +208,18 @@ func sendEvent(eventType eventType) (err error) {
 	return // not reached
 }
 
-func listServices() {
-	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"))
-
-	opts := pagerduty.ListServiceOptions{
-		Total: true,
-	}
-	l, err := client.ListServicesPaginated(context.Background(), opts)
-	if err != nil {
-		log.Error("error listing services", slog.Any("error", err))
-		os.Exit(1)
-	}
-	s, _ := json.MarshalIndent(l, "", "    ")
-	fmt.Println(string(s))
-}
+// TODO: Revisit unused declaration listServices; restore it only when needed.
+// func listServices() {
+// 	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"))
+//
+// 	opts := pagerduty.ListServiceOptions{
+// 		Total: true,
+// 	}
+// 	l, err := client.ListServicesPaginated(context.Background(), opts)
+// 	if err != nil {
+// 		log.Error("error listing services", slog.Any("error", err))
+// 		os.Exit(1)
+// 	}
+// 	s, _ := json.MarshalIndent(l, "", "    ")
+// 	fmt.Println(string(s))
+// }

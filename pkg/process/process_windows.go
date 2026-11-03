@@ -265,30 +265,37 @@ func readNTUnicodeString(ph windows.Handle, us windows.NTUnicodeString) (s strin
 	return windows.UTF16ToString(buf[:numRead/2]), nil
 }
 
+// ProcessStatusOpenFiles TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
+// ProcessStatusOpenSockets TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
+// ProcessStatusListeningPorts TODO: Document its behavior, inputs, and effects.
 func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
 	return
 }
 
+// GetUsername TODO: Document its behavior, inputs, and effects.
 func GetUsername(uid int) (username string) {
 	return
 }
 
+// GetGroupname TODO: Document its behavior, inputs, and effects.
 func GetGroupname(gid int) (groupname string) {
 	return
 }
 
+// GetLoginName TODO: Document its behavior, inputs, and effects.
 func GetLoginName(pid int) (name string, err error) {
 	return
 }
 
+// GetCurrentUsername TODO: Document its behavior, inputs, and effects.
 func GetCurrentUsername() (name string, err error) {
 	return
 }

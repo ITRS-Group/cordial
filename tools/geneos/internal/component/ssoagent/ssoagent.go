@@ -46,6 +46,7 @@ import (
 
 const name = "sso-agent"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"ssoagent", "sso"},
@@ -101,6 +102,7 @@ var Component = geneos.Component{
 	GetPID: pidCheckFn,
 }
 
+// SSOAgent TODO: Describe its purpose and intended use.
 type SSOAgent instance.Instance
 
 // ensure that SSOAgents satisfies geneos.Instance interface
@@ -168,6 +170,7 @@ func (i *SSOAgent) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -175,10 +178,12 @@ func (i *SSOAgent) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -186,6 +191,7 @@ func (i *SSOAgent) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -193,18 +199,22 @@ func (i *SSOAgent) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Unload() (err error) {
 	if i == nil {
 		return
@@ -214,6 +224,7 @@ func (i *SSOAgent) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -221,6 +232,7 @@ func (i *SSOAgent) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -228,6 +240,7 @@ func (i *SSOAgent) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -235,6 +248,7 @@ func (i *SSOAgent) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -242,6 +256,7 @@ func (i *SSOAgent) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -497,6 +512,7 @@ func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 	return certs.CreateCertificate(template, template, privateKey)
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -545,6 +561,7 @@ func (i *SSOAgent) Command(skipFileCheck bool) (args, env []string, home string,
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *SSOAgent) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

@@ -6,6 +6,8 @@ import (
 	"time"
 )
 
+// MetricsQueryRequest defines the metrics, filters, grouping, and time buckets
+// requested from GW Hub.
 type MetricsQueryRequest struct {
 	Grouping     []string  `json:"grouping,omitempty"`
 	Filter       Filter    `json:"filter"`
@@ -15,55 +17,61 @@ type MetricsQueryRequest struct {
 	Bucketing    Bucketing `json:"bucketing"`
 }
 
+// MetricsQueryResponse contains the query schema and metric data buckets.
 type MetricsQueryResponse struct {
 	Schema Schema `json:"schema"`
 	Data   []Data `json:"data"`
 }
 
+// Schema describes the grouping, bucket size, and metric fields in a query response.
 type Schema struct {
 	Bucketing Bucketing                 `json:"bucketing"`
 	Grouping  []string                  `json:"grouping"`
 	Metrics   map[string]map[string]any `json:"metrics"`
 }
 
+// Data contains metric values for one time bucket and grouping.
 type Data struct {
 	Bucket   time.Time                 `json:"bucket"`
 	Grouping DataGrouping              `json:"group"`
 	Metrics  map[string]map[string]any `json:"metrics"`
 }
 
+// DataGrouping identifies the row, entity, or attribute represented by a data bucket.
 type DataGrouping struct {
 	Rowname   string `json:"rowname,omitempty"`
 	Entity    int    `json:"entity,omitempty"`
 	Attribute string `json:"attribute,omitempty"`
 }
 
+// Metric selects a metric identifier and the fields to include in its result.
 type Metric struct {
 	Identifier string   `json:"identifier"`
 	Include    []string `json:"include"`
 }
 
+// Bucketing defines the duration or count of time buckets in a metrics query.
 type Bucketing struct {
 	Duration string `json:"duration,omitempty"`
 	Count    int    `json:"count,omitempty"`
 }
 
-// MetricsQuery request
+// MetricsQuery runs a metrics query and decodes its schema and data.
 func (h *Hub) MetricsQuery(ctx context.Context, request MetricsQueryRequest) (response MetricsQueryResponse, resp *http.Response, err error) {
 	resp, err = h.Post(ctx, MetricsQueryEndpoint, request, &response)
 	return
 }
 
-// MetricsAggregationsResponse type
+// MetricsAggregationsResponse maps aggregation names to their definitions.
 type MetricsAggregationsResponse map[string]MetricsAggregation
 
-// MetricsAggregation type
+// MetricsAggregation describes an aggregation and its required parameters.
 type MetricsAggregation struct {
 	Parameters  []map[string]string `json:"parameters"`
 	Description string              `json:"description"`
 }
 
-// MetricsAggregations request
+// MetricsAggregations returns the aggregations supported by GW Hub.
 func (h *Hub) MetricsAggregations(ctx context.Context) (response MetricsAggregationsResponse, resp *http.Response, err error) {
 	resp, err = h.Get(ctx, MetricsAggregationsEndpoint, nil, response)
 	return

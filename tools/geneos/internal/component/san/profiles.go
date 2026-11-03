@@ -14,6 +14,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
+// SanProfile TODO: Describe its purpose and intended use.
 type SanProfile struct {
 	profile.Common  `mapstructure:",squash"`
 	Gateways        []string          `yaml:"gateways,omitempty"`
@@ -23,6 +24,7 @@ type SanProfile struct {
 	ManagedEntities []ManagedEntity   `yaml:"managed-entities,omitempty"`
 }
 
+// ManagedEntity TODO: Describe its purpose and intended use.
 type ManagedEntity struct {
 	Name       string            `yaml:"name"`
 	ForEach    string            `yaml:"for-each,omitempty"`

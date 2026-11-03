@@ -22,12 +22,14 @@ import (
 	"time"
 )
 
+// Sampler TODO: Describe its purpose and intended use.
 type Sampler struct {
 	Client
 	entityName  string
 	samplerName string
 }
 
+// Exists TODO: Document its behavior, inputs, and effects.
 func (s *Sampler) Exists() bool {
 	res, err := s.samplerExists(s.entityName, s.samplerName)
 	if err != nil {

@@ -185,55 +185,56 @@ func start() (err error) {
 	return
 }
 
-func updateJobs() {
-	var err error
-	if once {
-		return
-	}
-	if mainjob != nil {
-		mainjob, err = sched.Update(mainjob.ID(),
-			gocron.CronJob(config.Get[string](cf, "gdna.schedule"), false),
-			maintask,
-			gocron.WithName("main"),
-			gocron.WithSingletonMode(gocron.LimitModeReschedule),
-			listeners,
-		)
-		if err != nil {
-			log.Error("updating main job", slog.Any("error", err))
-			return
-		}
-
-		rjt, _ := mainjob.NextRun()
-		log.Info("next report job", slog.Time("at", rjt))
-	}
-
-	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
-		if emailjob != nil {
-			emailjob, err = sched.Update(emailjob.ID(),
-				gocron.CronJob(es, false),
-				emailtask,
-				gocron.WithName("email"),
-				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-				listeners,
-			)
-		} else {
-			emailjob, err = sched.NewJob(
-				gocron.CronJob(es, false),
-				emailtask,
-				gocron.WithName("email"),
-				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-				listeners,
-			)
-		}
-		if err != nil {
-			log.Error("updating email job", slog.Any("error", err))
-			return
-		}
-		ejt, _ := emailjob.NextRun()
-		log.Info("next email job", slog.Time("at", ejt))
-	}
-
-}
+// TODO: Revisit unused declaration updateJobs; restore it only when needed.
+// func updateJobs() {
+// 	var err error
+// 	if once {
+// 		return
+// 	}
+// 	if mainjob != nil {
+// 		mainjob, err = sched.Update(mainjob.ID(),
+// 			gocron.CronJob(config.Get[string](cf, "gdna.schedule"), false),
+// 			maintask,
+// 			gocron.WithName("main"),
+// 			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+// 			listeners,
+// 		)
+// 		if err != nil {
+// 			log.Error("updating main job", slog.Any("error", err))
+// 			return
+// 		}
+//
+// 		rjt, _ := mainjob.NextRun()
+// 		log.Info("next report job", slog.Time("at", rjt))
+// 	}
+//
+// 	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
+// 		if emailjob != nil {
+// 			emailjob, err = sched.Update(emailjob.ID(),
+// 				gocron.CronJob(es, false),
+// 				emailtask,
+// 				gocron.WithName("email"),
+// 				gocron.WithSingletonMode(gocron.LimitModeReschedule),
+// 				listeners,
+// 			)
+// 		} else {
+// 			emailjob, err = sched.NewJob(
+// 				gocron.CronJob(es, false),
+// 				emailtask,
+// 				gocron.WithName("email"),
+// 				gocron.WithSingletonMode(gocron.LimitModeReschedule),
+// 				listeners,
+// 			)
+// 		}
+// 		if err != nil {
+// 			log.Error("updating email job", slog.Any("error", err))
+// 			return
+// 		}
+// 		ejt, _ := emailjob.NextRun()
+// 		log.Info("next email job", slog.Time("at", ejt))
+// 	}
+//
+// }
 
 var listeners = gocron.WithEventListeners(
 	gocron.BeforeJobRuns(beforejob),

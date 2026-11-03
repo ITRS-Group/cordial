@@ -28,6 +28,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// ActionGroup TODO: Describe its purpose and intended use.
 type ActionGroup struct {
 	If       []string          `json:"if,omitempty"`
 	Set      map[string]string `json:"set,omitempty"`

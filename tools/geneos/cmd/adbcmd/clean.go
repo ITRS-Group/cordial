@@ -789,15 +789,18 @@ type cleaningOptions struct {
 	Dataviews  optionSlice
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (o *optionSlice) String() string {
 	return fmt.Sprintf("%v", *o)
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (o *optionSlice) Set(value string) error {
 	*o = append(*o, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (o *optionSlice) Type() string {
 	return "OPTION"
 }

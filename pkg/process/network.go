@@ -20,10 +20,11 @@ var tcpfiles = []string{
 	"/proc/net/tcp6",
 }
 
-var udpfiles = []string{
-	"/proc/net/udp",
-	"/proc/net/udp6",
-}
+// TODO: Revisit unused declaration udpfiles; restore it only when needed.
+// var udpfiles = []string{
+// 	"/proc/net/udp",
+// 	"/proc/net/udp6",
+// }
 
 // from linux net/tcp_states.h
 const (
@@ -57,6 +58,7 @@ var stateNames = map[int]string{
 	TCP_NEW_SYN_RECV: "SYN-RECEIVED",
 }
 
+// SocketConnection TODO: Describe its purpose and intended use.
 type SocketConnection struct {
 	Protocol   string
 	LocalAddr  net.IP

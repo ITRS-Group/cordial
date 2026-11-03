@@ -27,6 +27,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// LookupIncident TODO: Document its behavior, inputs, and effects.
 func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (incident_id string, short_description string, state int, err error) {
 	s := InitializeConnection(vc)
 
@@ -50,6 +51,7 @@ func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (i
 	return
 }
 
+// LookupSysIDSimple TODO: Document its behavior, inputs, and effects.
 func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
 	var r resultDetail
 	var field, value string
@@ -85,6 +87,7 @@ func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string)
 	return
 }
 
+// LookupSysID TODO: Document its behavior, inputs, and effects.
 func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_id, sys_class_name string, err error) {
 	var r resultDetail
 	var ok bool

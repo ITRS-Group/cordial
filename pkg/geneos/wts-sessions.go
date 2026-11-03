@@ -19,10 +19,12 @@ package geneos
 
 import "encoding/xml"
 
+// WTSSessionsPlugin TODO: Describe its purpose and intended use.
 type WTSSessionsPlugin struct {
 	XMLName xml.Name `xml:"wts-sessions" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *WTSSessionsPlugin) String() string {
 	return p.XMLName.Local
 }

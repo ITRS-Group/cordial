@@ -38,6 +38,7 @@ type discardCloser struct {
 	io.Writer
 }
 
+// Close TODO: Document its behavior, inputs, and effects.
 func (discardCloser) Close() error { return nil }
 
 // Init is called to set-up logging with our chosen defaults. The

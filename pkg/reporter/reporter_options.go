@@ -21,6 +21,7 @@ limitations under the License.
 // formats.
 package reporter
 
+// ReporterOption TODO: Describe its purpose and intended use.
 type ReporterOption func(*reporterOptions)
 
 type reporterOptions struct {
@@ -39,18 +40,21 @@ func evalReporterOptions(options ...ReporterOption) (ro *reporterOptions) {
 	return
 }
 
+// Scramble TODO: Document its behavior, inputs, and effects.
 func Scramble(scramble bool) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleNames = scramble
 	}
 }
 
+// ScrambleFunc TODO: Document its behavior, inputs, and effects.
 func ScrambleFunc(fn func(in string) string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleFunc = fn
 	}
 }
 
+// ScrambleColumns TODO: Document its behavior, inputs, and effects.
 func ScrambleColumns(columns []string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleColumns = columns

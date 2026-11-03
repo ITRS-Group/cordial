@@ -231,31 +231,42 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 	return false
 }
 
-// Temporary workaround for yaml lib generating incorrect yaml with long strings
-// that do not contain \n.
-func forceMultiLine(s string) string {
-	if len(s) > 60 && !strings.Contains(s, "\n") {
-		s = s + "\n"
-	}
-	return s
-}
+// TODO: Revisit unused declaration forceMultiLine; restore it only when needed.
+// // Temporary workaround for yaml lib generating incorrect yaml with long strings
+// // that do not contain \n.
+// func forceMultiLine(s string) string {
+// 	if len(s) > 60 && !strings.Contains(s, "\n") {
+// 		s = s + "\n"
+// 	}
+// 	return s
+// }
 
 type byName []*cobra.Command
 
+// Len TODO: Document its behavior, inputs, and effects.
 func (s byName) Len() int           { return len(s) }
+// Swap TODO: Document its behavior, inputs, and effects.
 func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+// Less TODO: Document its behavior, inputs, and effects.
 func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 
-type subsystemsThenNames []*cobra.Command
+// TODO: Revisit unused declaration subsystemsThenNames; restore it only when needed.
+// type subsystemsThenNames []*cobra.Command
 
-func (s subsystemsThenNames) Len() int      { return len(s) }
-func (s subsystemsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s subsystemsThenNames) Less(i, j int) bool {
-	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
-		return true
-	}
-	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
-		return false
-	}
-	return s[i].Name() < s[j].Name()
-}
+// TODO: Revisit unused declaration subsystemsThenNames.Len; restore it only when needed.
+// // Len TODO: Document its behavior, inputs, and effects.
+// func (s subsystemsThenNames) Len() int      { return len(s) }
+// TODO: Revisit unused declaration subsystemsThenNames.Swap; restore it only when needed.
+// // Swap TODO: Document its behavior, inputs, and effects.
+// func (s subsystemsThenNames) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+// TODO: Revisit unused declaration subsystemsThenNames.Less; restore it only when needed.
+// // Less TODO: Document its behavior, inputs, and effects.
+// func (s subsystemsThenNames) Less(i, j int) bool {
+// 	if s[i].HasAvailableSubCommands() && !s[j].HasAvailableSubCommands() {
+// 		return true
+// 	}
+// 	if !s[i].HasAvailableSubCommands() && s[j].HasAvailableSubCommands() {
+// 		return false
+// 	}
+// 	return s[i].Name() < s[j].Name()
+// }

@@ -98,10 +98,11 @@ func (c Client) removeHeadline(entity string, sampler string, view string, rowna
 	return c.callMethod(method, rowname)
 }
 
-func (c Client) updateVariable(entity string, sampler string, view string, variable string, value string) error {
-	method := strings.Join([]string{entity, sampler, view, "updateVariable"}, ".")
-	return c.callMethod(method, variable, value)
-}
+// TODO: Revisit unused declaration Client.updateVariable; restore it only when needed.
+// func (c Client) updateVariable(entity string, sampler string, view string, variable string, value string) error {
+// 	method := strings.Join([]string{entity, sampler, view, "updateVariable"}, ".")
+// 	return c.callMethod(method, variable, value)
+// }
 
 func (c Client) updateHeadline(entity string, sampler string, view string, headline string, value string) error {
 	method := strings.Join([]string{entity, sampler, view, "updateHeadline"}, ".")
@@ -213,10 +214,11 @@ func (c Client) gatewayConnected() (bool, error) {
 	return c.callMethodBool(method)
 }
 
-func (c Client) entityExists(entity string) (bool, error) {
-	method := "_netprobe.managedEntityExists"
-	return c.callMethodBool(method, entity)
-}
+// TODO: Revisit unused declaration Client.entityExists; restore it only when needed.
+// func (c Client) entityExists(entity string) (bool, error) {
+// 	method := "_netprobe.managedEntityExists"
+// 	return c.callMethodBool(method, entity)
+// }
 
 func (c Client) samplerExists(entity string, sampler string) (result bool, err error) {
 	method := "_netprobe.samplerExists"

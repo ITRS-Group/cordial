@@ -17,14 +17,9 @@ limitations under the License.
 
 package cmd
 
-import (
-	"os"
-
-	"github.com/itrs-group/cordial/pkg/config"
-)
-
-func processLines(dv *config.Config) (dataview Dataview, err error) {
-	dataview.Name = config.Get[string](dv, "name")
-
-	return dataview, os.ErrInvalid
-}
+// TODO: Revisit unused declaration processLines; restore it only when needed.
+// func processLines(dv *config.Config) (dataview Dataview, err error) {
+// 	dataview.Name = config.Get[string](dv, "name")
+//
+// 	return dataview, os.ErrInvalid
+// }

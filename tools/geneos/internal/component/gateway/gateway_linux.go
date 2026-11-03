@@ -24,6 +24,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Reload() (err error) {
 	if i == nil {
 		err = os.ErrInvalid

@@ -104,6 +104,7 @@ type stopOptions struct {
 	skipAudit bool
 }
 
+// StopOption TODO: Describe its purpose and intended use.
 type StopOption func(*stopOptions)
 
 func evalStopOptions(options ...StopOption) *stopOptions {
@@ -114,12 +115,14 @@ func evalStopOptions(options ...StopOption) *stopOptions {
 	return so
 }
 
+// WithStopForce TODO: Document its behavior, inputs, and effects.
 func WithStopForce(force bool) StopOption {
 	return func(so *stopOptions) {
 		so.force = force
 	}
 }
 
+// WithStopKill TODO: Document its behavior, inputs, and effects.
 func WithStopKill(kill bool) StopOption {
 	return func(so *stopOptions) {
 		so.kill = kill

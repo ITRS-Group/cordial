@@ -17,6 +17,7 @@ limitations under the License.
 
 package floating
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Reload() (err error) {
 	return
 }

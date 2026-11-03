@@ -19,22 +19,27 @@ package geneos
 
 import "encoding/xml"
 
+// CPUPlugin TODO: Describe its purpose and intended use.
 type CPUPlugin struct {
 	XMLName xml.Name `xml:"cpu" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *CPUPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// DeviceIOPlugin TODO: Describe its purpose and intended use.
 type DeviceIOPlugin struct {
 	XMLName xml.Name `xml:"deviceio" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *DeviceIOPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// DiskPlugin TODO: Describe its purpose and intended use.
 type DiskPlugin struct {
 	XMLName              xml.Name           `xml:"disk" json:"-" yaml:"-"`
 	Partitions           []Partition        `xml:"partitions>partition,omitempty"`
@@ -45,32 +50,39 @@ type DiskPlugin struct {
 	MatchExactPartitions *Value             `xml:"matchExactPartitions,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *DiskPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// Partition TODO: Describe its purpose and intended use.
 type Partition struct {
 	Path  *SingleLineStringVar `xml:"path"`
 	Alias *SingleLineStringVar `xml:"alias"`
 }
 
+// ExcludePartition TODO: Describe its purpose and intended use.
 type ExcludePartition struct {
 	Path       string `xml:"path"`
 	FileSystem string `xml:"fileSystem"`
 }
 
+// HardwarePlugin TODO: Describe its purpose and intended use.
 type HardwarePlugin struct {
 	XMLName xml.Name `xml:"hardware" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *HardwarePlugin) String() string {
 	return p.XMLName.Local
 }
 
+// NetworkPlugin TODO: Describe its purpose and intended use.
 type NetworkPlugin struct {
 	XMLName xml.Name `xml:"network" json:"-" yaml:"-"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *NetworkPlugin) String() string {
 	return p.XMLName.Local
 }

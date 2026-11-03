@@ -26,6 +26,7 @@ import (
 // These types represent those found in a netprobe setup file (SAN or
 // floating) and not a probe config in the gateway
 
+// Netprobe TODO: Describe its purpose and intended use.
 type Netprobe struct {
 	XMLName          xml.Name          `xml:"netprobe"`
 	Compatibility    int               `xml:"compatibility,attr"`                 // 1
@@ -37,6 +38,7 @@ type Netprobe struct {
 	SelfAnnounce     *SelfAnnounce     `xml:"selfAnnounce,omitempty"`
 }
 
+// FloatingNetprobe TODO: Describe its purpose and intended use.
 type FloatingNetprobe struct {
 	Enabled                  bool      `xml:"enabled"`
 	RetryInterval            int       `xml:"retryInterval,omitempty"`
@@ -45,6 +47,7 @@ type FloatingNetprobe struct {
 	Gateways                 []Gateway `xml:"gateways>gateway"`
 }
 
+// SelfAnnounce TODO: Describe its purpose and intended use.
 type SelfAnnounce struct {
 	Enabled                  bool             `xml:"enabled"`
 	RetryInterval            int              `xml:"retryInterval,omitempty"`
@@ -62,6 +65,7 @@ type SelfAnnounce struct {
 	Gateways                 []Gateway        `xml:"gateways>gateway"`
 }
 
+// Gateway TODO: Describe its purpose and intended use.
 type Gateway struct {
 	XMLName  xml.Name `xml:"gateway"`
 	Hostname string   `xml:"hostname"`
@@ -69,6 +73,7 @@ type Gateway struct {
 	Secure   bool     `xml:"secure,omitempty"`
 }
 
+// ManagedEntity TODO: Describe its purpose and intended use.
 type ManagedEntity struct {
 	XMLName    xml.Name    `xml:"managedEntity"`
 	Name       string      `xml:"name"`
@@ -77,16 +82,19 @@ type ManagedEntity struct {
 	Types      *Types      `xml:"types,omitempty"`
 }
 
+// Attributes TODO: Describe its purpose and intended use.
 type Attributes struct {
 	XMLName    xml.Name `xml:"attributes"`
 	Attributes []geneos.Attribute
 }
 
+// Vars TODO: Describe its purpose and intended use.
 type Vars struct {
 	XMLName xml.Name `xml:"variables"`
 	Vars    []geneos.Vars
 }
 
+// Types TODO: Describe its purpose and intended use.
 type Types struct {
 	XMLName xml.Name `xml:"types"`
 	Types   []string `xml:"type"`
@@ -96,6 +104,7 @@ type Types struct {
 // 	Type string `xml:"type"`
 // }
 
+// CollectionAgent TODO: Describe its purpose and intended use.
 type CollectionAgent struct {
 	Start        bool   `xml:"start,omitempty"`
 	JVMArgs      string `xml:"jvmArgs,omitempty"`
@@ -104,6 +113,7 @@ type CollectionAgent struct {
 	Detached     bool   `xml:"detached"`
 }
 
+// DynamicEntities TODO: Describe its purpose and intended use.
 type DynamicEntities struct {
 	MappingType []string `xml:"mappingType,omitempty"`
 }

@@ -69,6 +69,7 @@ type Macro struct {
 // to.
 type EmptyStruct struct{}
 
+// StringList TODO: Describe its purpose and intended use.
 type StringList struct {
 	Strings []string `xml:"string" mapstructure:"string"`
 }
@@ -82,6 +83,7 @@ func (s *StringList) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// NameValueList TODO: Describe its purpose and intended use.
 type NameValueList struct {
 	NameValues []NameValue `xml:"item,omitempty" json:",omitempty" yaml:",omitempty"`
 }
@@ -95,11 +97,13 @@ func (s *NameValueList) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// NameValue TODO: Describe its purpose and intended use.
 type NameValue struct {
 	Name  string `xml:"name"`
 	Value string `xml:"value"`
 }
 
+// Reference TODO: Describe its purpose and intended use.
 type Reference struct {
 	Name string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
@@ -192,6 +196,7 @@ func (v *SingleLineStringVar) UnmarshalXML(d *xml.Decoder, start xml.StartElemen
 
 var _ fmt.Stringer = (*SingleLineStringVar)(nil)
 
+// String TODO: Document its behavior, inputs, and effects.
 func (s *SingleLineStringVar) String() (out string) {
 	if s == nil {
 		return
@@ -207,31 +212,37 @@ func (s *SingleLineStringVar) String() (out string) {
 
 var _ json.Marshaler = (*SingleLineStringVar)(nil)
 
+// MarshalJSON TODO: Document its behavior, inputs, and effects.
 func (s *SingleLineStringVar) MarshalJSON() (out []byte, err error) {
 	return json.Marshal(s.String())
 }
 
 var _ yaml.Marshaler = (*SingleLineStringVar)(nil)
 
+// MarshalYAML TODO: Document its behavior, inputs, and effects.
 func (s *SingleLineStringVar) MarshalYAML() (out any, err error) {
 	out = s.String()
 	return
 }
 
+// Var TODO: Describe its purpose and intended use.
 type Var struct {
 	XMLName xml.Name `xml:"var" json:"-" yaml:"-"`
 	Var     string   `xml:"ref,attr"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (v Var) String() string {
 	return "$(" + v.Var + ")"
 }
 
+// Data TODO: Describe its purpose and intended use.
 type Data struct {
 	XMLName xml.Name `xml:"data" json:"-" yaml:"-"`
 	Data    string   `xml:",chardata"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (d Data) String() string {
 	return d.Data
 }
@@ -290,6 +301,7 @@ func NewValue(in any) (n *Value) {
 // ensure that Value satisfies xml.Unmarshaler interface
 var _ xml.Unmarshaler = (*Value)(nil)
 
+// UnmarshalXML TODO: Document its behavior, inputs, and effects.
 func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	if v == nil {
 		v = &Value{}
@@ -339,6 +351,7 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error)
 
 var _ fmt.Stringer = (*Value)(nil)
 
+// String TODO: Document its behavior, inputs, and effects.
 func (s *Value) String() (out string) {
 	if s == nil {
 		return ""
@@ -355,16 +368,19 @@ func (s *Value) String() (out string) {
 	return fmt.Sprint(s.Data)
 }
 
+// Regex TODO: Describe its purpose and intended use.
 type Regex struct {
 	Regex string      `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
 	Flags *RegexFlags `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
 }
 
+// RegexFlags TODO: Describe its purpose and intended use.
 type RegexFlags struct {
 	CaseInsensitive *bool `xml:"i,omitempty" json:"i,omitempty" yaml:"i,omitempty"`
 	DotMatchesAll   *bool `xml:"s,omitempty" json:"s,omitempty" yaml:"s,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (r *Regex) String() (s string) {
 	if r == nil {
 		return ""
@@ -382,12 +398,14 @@ func (r *Regex) String() (s string) {
 	return
 }
 
+// Host TODO: Describe its purpose and intended use.
 type Host struct {
 	Name      string     `xml:"name,omitempty"`
 	IPAddress *IPAddress `xml:"ipAddress,omitempty"`
 	Var       *Reference `xml:"var,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (t *Host) String() string {
 	if t == nil {
 		return ""
@@ -401,10 +419,12 @@ func (t *Host) String() string {
 	return t.Name
 }
 
+// IPAddress TODO: Describe its purpose and intended use.
 type IPAddress struct {
 	Octets []int `xml:"value"` // must be []int else unmarshal treats []uint8 as a []byte
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (ip *IPAddress) String() string {
 	if ip == nil {
 		return "0.0.0.0"

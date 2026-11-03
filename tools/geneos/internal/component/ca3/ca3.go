@@ -24,7 +24,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -39,6 +38,7 @@ import (
 
 const name = "ca3"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"collection-agent", "ca3s", "collector"},
@@ -93,17 +93,24 @@ var Component = geneos.Component{
 }
 
 const (
-	ca3prefix = "collection-agent-"
-	ca3suffix = "-exec.jar"
+// TODO: Revisit unused declaration ca3prefix; restore it only when needed.
+//
+//	ca3prefix = "collection-agent-"
+//
+// TODO: Revisit unused declaration ca3suffix; restore it only when needed.
+//
+//	ca3suffix = "-exec.jar"
 )
 
-var ca3jarRE = regexp.MustCompile(`^` + ca3prefix + `(.+)` + ca3suffix)
+// TODO: Revisit unused declaration ca3jarRE; restore it only when needed.
+// var ca3jarRE = regexp.MustCompile(`^` + ca3prefix + `(.+)` + ca3suffix)
 
 var initialFiles = []string{
 	"collection-agent.yml",
 	"logback.xml",
 }
 
+// CA3 TODO: Describe its purpose and intended use.
 type CA3 instance.Instance
 
 // ensure that CA3s satisfies geneos.Instance interface
@@ -159,6 +166,7 @@ func (i *CA3) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -166,10 +174,12 @@ func (i *CA3) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -177,6 +187,7 @@ func (i *CA3) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -184,18 +195,22 @@ func (i *CA3) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *CA3) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *CA3) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Unload() (err error) {
 	if i == nil {
 		return
@@ -205,6 +220,7 @@ func (i *CA3) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -212,6 +228,7 @@ func (i *CA3) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *CA3) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -219,6 +236,7 @@ func (i *CA3) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -226,6 +244,7 @@ func (i *CA3) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *CA3) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -233,6 +252,7 @@ func (i *CA3) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -272,6 +292,7 @@ func (i *CA3) Rebuild(initial bool) (changed bool, err error) {
 	return false, geneos.ErrNotSupported
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -325,6 +346,7 @@ func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err 
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *CA3) Reload() (err error) {
 	return geneos.ErrNotSupported
 }

@@ -136,6 +136,7 @@ func matchVersion(v string) bool {
 	return anchoredVersRE.MatchString(v)
 }
 
+// OverrideToComponentVersion TODO: Document its behavior, inputs, and effects.
 func OverrideToComponentVersion(override string) (ct *Component, version string, err error) {
 	t, v, found := strings.Cut(override, ":")
 	if !found {

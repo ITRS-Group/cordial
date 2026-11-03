@@ -63,7 +63,9 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
+// DefaultWebhookURLValidationPattern TODO: Describe its purpose and intended use.
 const DefaultWebhookURLValidationPattern = `^https:\/\/(?:.*\.webhook|outlook)\.office(?:365)?\.com`
+// DefaultMsTeamsTimeout TODO: Describe its purpose and intended use.
 const DefaultMsTeamsTimeout = 2000
 
 type msTeamsBasicTextNotifPostData struct {

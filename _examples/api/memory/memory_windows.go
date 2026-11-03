@@ -9,6 +9,7 @@ import (
 	extmemory "github.com/mackerelio/go-osstat/memory"
 )
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p *MemorySampler) DoSample() error {
 	table := [][]string{
 		{"counter", "bytes"},

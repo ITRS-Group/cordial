@@ -28,6 +28,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 )
 
+// Reporter TODO: Describe its purpose and intended use.
 type Reporter interface {
 	// Prepare initialises the current report and must be called before AddHeadline() or UpdateTable()
 	Prepare(report Report) error
@@ -54,6 +55,7 @@ type Reporter interface {
 	Extension() string
 }
 
+// Report TODO: Describe its purpose and intended use.
 type Report struct {
 	Name            string   `mapstructure:"report"`
 	Title           string   `mapstructure:"name"`
@@ -128,6 +130,7 @@ func NewReporter(format string, w io.Writer, options ...any) (r Reporter, err er
 	return
 }
 
+// CollectOptions TODO: Document its behavior, inputs, and effects.
 func CollectOptions[T any](options ...any) (opts []T) {
 	for _, o := range options {
 		if opt, ok := o.(T); ok {

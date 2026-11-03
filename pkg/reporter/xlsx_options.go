@@ -23,6 +23,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// XLSXReporterOption TODO: Describe its purpose and intended use.
 type XLSXReporterOption func(*xlsxReportOptions)
 
 type xlsxReportOptions struct {
@@ -60,6 +61,7 @@ func evalXLSXReportOptions(options ...XLSXReporterOption) (xo *xlsxReportOptions
 	return
 }
 
+// XLSXScramble TODO: Document its behavior, inputs, and effects.
 func XLSXScramble(scramble bool) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.scramble = scramble
@@ -74,8 +76,11 @@ func XLSXPassword(password config.Secret) XLSXReporterOption {
 }
 
 const (
+	// XLSXHeadlinesNone TODO: Describe its purpose and intended use.
 	XLSXHeadlinesNone = iota
+	// XLSXHeadlinesVertical TODO: Describe its purpose and intended use.
 	XLSXHeadlinesVertical
+	// XLSXHeadlinesHorizontal TODO: Describe its purpose and intended use.
 	XLSXHeadlinesHorizontal
 )
 
@@ -91,30 +96,35 @@ func XLSXHeadlines(headlines int) XLSXReporterOption {
 	}
 }
 
+// SummarySheetName TODO: Document its behavior, inputs, and effects.
 func SummarySheetName(name string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.summarySheetName = name
 	}
 }
 
+// DateFormat TODO: Document its behavior, inputs, and effects.
 func DateFormat(dateFormat string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.dateFormat = dateFormat
 	}
 }
 
+// IntFormat TODO: Document its behavior, inputs, and effects.
 func IntFormat(format int) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.intFormat = format
 	}
 }
 
+// PercentFormat TODO: Document its behavior, inputs, and effects.
 func PercentFormat(format int) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.percentFormat = format
 	}
 }
 
+// SeverityColours TODO: Document its behavior, inputs, and effects.
 func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.undefinedColour = undefined
@@ -124,12 +134,14 @@ func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOption
 	}
 }
 
+// MinColumnWidth TODO: Document its behavior, inputs, and effects.
 func MinColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.minColWidth = n
 	}
 }
 
+// MaxColumnWidth TODO: Document its behavior, inputs, and effects.
 func MaxColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.maxColWidth = n

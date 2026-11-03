@@ -243,6 +243,7 @@ func evalCopyOptions(options ...CopyOption) (co *copyOptions) {
 	return
 }
 
+// CopyOption TODO: Describe its purpose and intended use.
 type CopyOption func(*copyOptions)
 
 // Move tells Copy to remove the source instance(s) after the copy.

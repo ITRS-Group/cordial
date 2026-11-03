@@ -121,10 +121,15 @@ type Host interface {
 }
 
 var (
+	// ErrInvalidArgs TODO: Describe its purpose and intended use.
 	ErrInvalidArgs  = errors.New("invalid arguments")
+	// ErrNotSupported TODO: Describe its purpose and intended use.
 	ErrNotSupported = errors.New("not supported")
+	// ErrNotAvailable TODO: Describe its purpose and intended use.
 	ErrNotAvailable = errors.New("not available")
+	// ErrExist TODO: Describe its purpose and intended use.
 	ErrExist        = errors.New("already exists")
+	// ErrNotExist TODO: Describe its purpose and intended use.
 	ErrNotExist     = errors.New("does not exist")
 )
 

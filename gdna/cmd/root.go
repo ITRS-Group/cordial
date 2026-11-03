@@ -41,7 +41,9 @@ var logFile string
 var daemon bool
 
 const (
+	// SummaryPath TODO: Describe its purpose and intended use.
 	SummaryPath = "licensing/licences.csv"
+	// DetailsPath TODO: Describe its purpose and intended use.
 	DetailsPath = "licensing/all_licences.csv"
 )
 

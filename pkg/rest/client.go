@@ -15,6 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package rest provides a JSON-oriented HTTP client with configurable
+// authentication and request setup.
 package rest
 
 import (
@@ -38,15 +40,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-// Package rest provides a very simple client for REST calls with
-// automatic marshalling and unmarshalling of request and response.
-//
-// GET requests encode parameters into the URL while POST and PUT
-// requests...
-//
-// Responses must be in JSON and can be either an array or objects or a
-// single object.
-
+// Client sends HTTP requests to a REST service and decodes responses.
 type Client struct {
 	BaseURL    *url.URL
 	HTTPClient *http.Client
@@ -416,58 +410,59 @@ func decodeResponse(resp *http.Response, response any) (err error) {
 	return
 }
 
-// decodeResponseBytes checks the content-type and decodes based on
-// that. On failure it returns the body in b.
-func decodeResponseBytes(resp *http.Response, response any) (b []byte, err error) {
-	if response == nil {
-		return
-	}
-	// we only care about the main value, not char sets etc.
-	ct := resp.Header.Get("content-type")
-	ct, _, _ = strings.Cut(ct, ";")
-	switch ct {
-	case "application/json":
-		// stream JSON
-		d := json.NewDecoder(resp.Body)
-		rt := reflect.TypeOf(response)
-		switch rt.Kind() {
-		case reflect.Slice:
-			rv := reflect.ValueOf(response)
-			var t json.Token
-			t, err = d.Token()
-			if err != nil {
-				return
-			}
-			if t != "[" {
-				err = errors.New("not an array")
-				return
-			}
-			for d.More() {
-				var s any
-				if err = d.Decode(&s); err != nil {
-					return
-				}
-				rv = reflect.Append(rv, reflect.ValueOf(s))
-			}
-			t, err = d.Token()
-			if err != nil {
-				return
-			}
-			if t != "]" {
-				err = errors.New("array not terminated")
-				return
-			}
-		default:
-			err = d.Decode(&response)
-		}
-	case "text/xml", "application/xml":
-		var mv mxj.Map
-		if mv, err = mxj.NewMapXmlReader(resp.Body); err == nil { // all good ?
-			response = mv
-		}
-	default:
-		// return bytes
-		return io.ReadAll(resp.Body)
-	}
-	return
-}
+// TODO: Revisit unused declaration decodeResponseBytes; restore it only when needed.
+// // decodeResponseBytes checks the content-type and decodes based on
+// // that. On failure it returns the body in b.
+// func decodeResponseBytes(resp *http.Response, response any) (b []byte, err error) {
+// 	if response == nil {
+// 		return
+// 	}
+// 	// we only care about the main value, not char sets etc.
+// 	ct := resp.Header.Get("content-type")
+// 	ct, _, _ = strings.Cut(ct, ";")
+// 	switch ct {
+// 	case "application/json":
+// 		// stream JSON
+// 		d := json.NewDecoder(resp.Body)
+// 		rt := reflect.TypeOf(response)
+// 		switch rt.Kind() {
+// 		case reflect.Slice:
+// 			rv := reflect.ValueOf(response)
+// 			var t json.Token
+// 			t, err = d.Token()
+// 			if err != nil {
+// 				return
+// 			}
+// 			if t != "[" {
+// 				err = errors.New("not an array")
+// 				return
+// 			}
+// 			for d.More() {
+// 				var s any
+// 				if err = d.Decode(&s); err != nil {
+// 					return
+// 				}
+// 				rv = reflect.Append(rv, reflect.ValueOf(s))
+// 			}
+// 			t, err = d.Token()
+// 			if err != nil {
+// 				return
+// 			}
+// 			if t != "]" {
+// 				err = errors.New("array not terminated")
+// 				return
+// 			}
+// 		default:
+// 			err = d.Decode(&response)
+// 		}
+// 	case "text/xml", "application/xml":
+// 		var mv mxj.Map
+// 		if mv, err = mxj.NewMapXmlReader(resp.Body); err == nil { // all good ?
+// 			response = mv
+// 		}
+// 	default:
+// 		// return bytes
+// 		return io.ReadAll(resp.Body)
+// 	}
+// 	return
+// }

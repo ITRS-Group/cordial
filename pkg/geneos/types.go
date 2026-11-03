@@ -19,12 +19,14 @@ package geneos
 
 import "encoding/xml"
 
+// Types TODO: Describe its purpose and intended use.
 type Types struct {
 	XMLName    xml.Name    `xml:"types" json:"-" yaml:"-"`
 	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
 
+// TypeGroup TODO: Describe its purpose and intended use.
 type TypeGroup struct {
 	XMLName    xml.Name    `xml:"typeGroup" json:"-" yaml:"-"`
 	Name       string      `xml:"name,attr"`
@@ -33,6 +35,7 @@ type TypeGroup struct {
 	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
 
+// Type TODO: Describe its purpose and intended use.
 type Type struct {
 	XMLName     xml.Name     `xml:"type" json:"-" yaml:"-"`
 	Name        string       `xml:"name,attr"`
@@ -42,6 +45,7 @@ type Type struct {
 	Samplers    []SamplerRef `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 }
 
+// SamplerRef TODO: Describe its purpose and intended use.
 type SamplerRef struct {
 	XMLName  xml.Name `xml:"sampler" json:"-" yaml:"-"`
 	Name     string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`

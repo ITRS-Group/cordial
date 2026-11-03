@@ -18,6 +18,7 @@ type loggerOpts struct {
 	format        string
 }
 
+// LoggerOption TODO: Describe its purpose and intended use.
 type LoggerOption func(*loggerOpts)
 
 func evalLoggerOptions(options ...LoggerOption) *loggerOpts {
@@ -32,6 +33,7 @@ func evalLoggerOptions(options ...LoggerOption) *loggerOpts {
 	return opts
 }
 
+// SetLogfile TODO: Document its behavior, inputs, and effects.
 func SetLogfile(logfile string) LoggerOption {
 	return func(lo *loggerOpts) {
 		lo.logfile = config.ResolveHome(logfile)
@@ -53,6 +55,7 @@ func SetWriter(w io.Writer) LoggerOption {
 	}
 }
 
+// RotateOnStart TODO: Document its behavior, inputs, and effects.
 func RotateOnStart(rotate bool) LoggerOption {
 	return func(lo *loggerOpts) {
 		lo.rotateOnStart = rotate
@@ -66,6 +69,7 @@ func SetLogLevel(level slog.Level) LoggerOption {
 	}
 }
 
+// Format TODO: Document its behavior, inputs, and effects.
 func Format(format string) LoggerOption {
 	return func(lo *loggerOpts) {
 		lo.format = format

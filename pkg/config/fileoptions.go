@@ -205,6 +205,7 @@ func WithDefaults(defaults []byte, format string) FileOption {
 	}
 }
 
+// DefaultsFrom uses the settings in cf as defaults when loading a configuration.
 func DefaultsFrom(cf *Config) FileOption {
 	return func(c *fileOptions) {
 		c.defaultConfig = cf

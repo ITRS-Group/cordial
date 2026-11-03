@@ -32,6 +32,7 @@ import (
 )
 
 type results map[string]string
+// Results TODO: Describe its purpose and intended use.
 type Results []results
 
 // Record is a map of key/value pairs
@@ -54,11 +55,13 @@ type snowResult struct {
 	Status string `json:"status,omitempty"`
 }
 
+// TableQuery TODO: Describe its purpose and intended use.
 type TableQuery struct {
 	Enabled        bool     `mapstructure:"enabled"`
 	ResponseFields []string `mapstructure:"fields"`
 }
 
+// TableStates TODO: Describe its purpose and intended use.
 type TableStates struct {
 	Defaults    map[string]string `mapstructure:"defaults,omitempty"`
 	Remove      []string          `mapstructure:"remove,omitempty"`
@@ -67,12 +70,14 @@ type TableStates struct {
 	Filter      []string          `mapstructure:"filter,omitempty"`
 }
 
+// TableResponses TODO: Describe its purpose and intended use.
 type TableResponses struct {
 	Created string `mapstructure:"created,omitempty"`
 	Updated string `mapstructure:"updated,omitempty"`
 	Failed  string `mapstructure:"failed,omitempty"`
 }
 
+// TableData TODO: Describe its purpose and intended use.
 type TableData struct {
 	Name          string              `mapstructure:"name,omitempty"`
 	Search        string              `mapstructure:"search,omitempty"`
@@ -84,6 +89,7 @@ type TableData struct {
 
 var log = logger.Logger
 
+// LookupRecord TODO: Document its behavior, inputs, and effects.
 func LookupRecord(ctx *Context, options ...config.ExpandOption) (sys_id string, state int, err error) {
 	cf := ctx.Conf
 
@@ -104,6 +110,7 @@ func LookupRecord(ctx *Context, options ...config.ExpandOption) (sys_id string, 
 	return
 }
 
+// LookupCmdbCI TODO: Document its behavior, inputs, and effects.
 func LookupCmdbCI(ctx *Context, table, query, cmdb_ci_default string) (cmdb_ci string, err error) {
 	result, err := GetRecord(ctx, table, Fields("sys_id"), Query(query))
 	if err != nil {
@@ -129,6 +136,7 @@ func (record Record) CreateRecord(ctx *Context) (number string, err error) {
 	return
 }
 
+// UpdateRecord TODO: Document its behavior, inputs, and effects.
 func (record Record) UpdateRecord(ctx *Context, sys_id string) (number string, err error) {
 	result, err := PutRecord(ctx, ctx.Param("table"), record, Fields("number"), SysID(sys_id))
 	number = result["number"]
@@ -157,6 +165,7 @@ func (x *Results) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// GetRecords TODO: Document its behavior, inputs, and effects.
 func GetRecords(ctx *Context, table string, options ...Option) (results Results, err error) {
 	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
@@ -169,6 +178,7 @@ func GetRecords(ctx *Context, table string, options ...Option) (results Results,
 	return
 }
 
+// GetRecord TODO: Document its behavior, inputs, and effects.
 func GetRecord(ctx *Context, table string, options ...Option) (results results, err error) {
 	var result snowResult
 	rc := ServiceNow(ctx.Conf.Sub("servicenow"))
@@ -186,6 +196,7 @@ func GetRecord(ctx *Context, table string, options ...Option) (results results, 
 	return
 }
 
+// PostRecord TODO: Document its behavior, inputs, and effects.
 func PostRecord(ctx *Context, table string, record Record, options ...Option) (result results, err error) {
 	var r snowResult
 
@@ -211,6 +222,7 @@ func PostRecord(ctx *Context, table string, record Record, options ...Option) (r
 	return
 }
 
+// PutRecord TODO: Document its behavior, inputs, and effects.
 func PutRecord(ctx *Context, table string, record Record, options ...Option) (result results, err error) {
 	var r snowResult
 
@@ -237,6 +249,7 @@ func PutRecord(ctx *Context, table string, record Record, options ...Option) (re
 	return
 }
 
+// AssembleURL TODO: Document its behavior, inputs, and effects.
 func AssembleURL(table string, options ...Option) *url.URL {
 	opts := evalReqOptions(options...)
 
@@ -271,6 +284,7 @@ func AssembleURL(table string, options ...Option) *url.URL {
 	return u
 }
 
+// TableConfig TODO: Document its behavior, inputs, and effects.
 func TableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
 	var tables []TableData
 

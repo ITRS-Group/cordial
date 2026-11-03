@@ -44,38 +44,45 @@ func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedRep
 	return
 }
 
+// FormattedReporterOption TODO: Describe its purpose and intended use.
 type FormattedReporterOption func(*formattedReporterOptions)
 
+// Writer TODO: Document its behavior, inputs, and effects.
 func Writer(w io.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.writer = w
 	}
 }
 
+// ZipWriter TODO: Document its behavior, inputs, and effects.
 func ZipWriter(z *zip.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.zipWriter = z
 	}
 }
 
+// DataviewCSSClass TODO: Document its behavior, inputs, and effects.
 func DataviewCSSClass(cssclass string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.dvcssclass = cssclass
 	}
 }
 
+// HeadlineCSSClass TODO: Document its behavior, inputs, and effects.
 func HeadlineCSSClass(cssclass string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.headlinecssclass = cssclass
 	}
 }
 
+// HTMLPreamble TODO: Document its behavior, inputs, and effects.
 func HTMLPreamble(preamble string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpreamble = preamble
 	}
 }
 
+// HTMLPostscript TODO: Document its behavior, inputs, and effects.
 func HTMLPostscript(postscript string) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.htmlpostscript = postscript

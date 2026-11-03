@@ -43,6 +43,7 @@ var log = logger.Logger
 //go:embed "profiles.defaults.yaml"
 var profilesDefault []byte
 
+// Profiles TODO: Describe its purpose and intended use.
 var Profiles *config.Config
 
 // IncludeFlags defines the list of command-line flags that should be
@@ -133,6 +134,7 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 	return
 }
 
+// Common TODO: Describe its purpose and intended use.
 type Common struct {
 	Name               string            `yaml:"name"`
 	Env                values.NameValues `yaml:"env,omitempty"`
@@ -170,6 +172,7 @@ func Apply(pf *config.Config, name string, forceRebuild bool) error {
 	return nil
 }
 
+// Instance TODO: Describe its purpose and intended use.
 type Instance struct {
 	Name      string `yaml:"name"`
 	Component string `yaml:"component"`

@@ -21,21 +21,25 @@ import "encoding/xml"
 
 // JMX-Server
 
+// JMXServerPlugin TODO: Describe its purpose and intended use.
 type JMXServerPlugin struct {
 	XMLName    xml.Name      `xml:"jmx-server" json:"-" yaml:"-"`
 	Connection JMXConnection `xml:"connection"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *JMXServerPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// JMXConnection TODO: Describe its purpose and intended use.
 type JMXConnection struct {
 	Generic   *JMXGenericConnection
 	WebLogic  *JMXWebLogicConnection
 	WebSphere *JMXWebSphereConnection
 }
 
+// JMXGenericConnection TODO: Describe its purpose and intended use.
 type JMXGenericConnection struct {
 	ServiceURL        *SingleLineStringVar
 	ConnectionDetails *JMXGenericConnectionDetails
@@ -45,12 +49,14 @@ type JMXGenericConnection struct {
 	Timeout           *Value
 }
 
+// JMXGenericConnectionDetails TODO: Describe its purpose and intended use.
 type JMXGenericConnectionDetails struct {
 	Host    *SingleLineStringVar
 	Port    *Value
 	URLPath *SingleLineStringVar
 }
 
+// JMXWebLogicConnection TODO: Describe its purpose and intended use.
 type JMXWebLogicConnection struct {
 	URL         *SingleLineStringVar
 	Principal   *SingleLineStringVar
@@ -60,6 +66,7 @@ type JMXWebLogicConnection struct {
 	Password    *Value
 }
 
+// JMXWebSphereConnection TODO: Describe its purpose and intended use.
 type JMXWebSphereConnection struct {
 	Host                        *SingleLineStringVar
 	Port                        *Value

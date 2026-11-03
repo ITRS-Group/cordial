@@ -46,56 +46,66 @@ func evalAPIOptions(options ...APIReporterOption) (fro *apiReportOptions) {
 	return
 }
 
+// APIReporterOption TODO: Describe its purpose and intended use.
 type APIReporterOption func(*apiReportOptions)
 
+// APIHostname TODO: Document its behavior, inputs, and effects.
 func APIHostname(hostname string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.hostname = hostname
 	}
 }
 
+// APIPort TODO: Document its behavior, inputs, and effects.
 func APIPort(port int) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.port = port
 	}
 }
 
+// APISecure TODO: Document its behavior, inputs, and effects.
 func APISecure(secure bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.secure = secure
 	}
 }
 
+// APISkipVerify TODO: Document its behavior, inputs, and effects.
 func APISkipVerify(skip bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.skipVerify = skip
 	}
 }
 
+// APIEntity TODO: Document its behavior, inputs, and effects.
 func APIEntity(entity string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.entity = entity
 	}
 }
 
+// APISampler TODO: Document its behavior, inputs, and effects.
 func APISampler(sampler string) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.sampler = sampler
 	}
 }
 
+// DataviewCreateDelay TODO: Document its behavior, inputs, and effects.
 func DataviewCreateDelay(delay time.Duration) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.dvCreateDelay = delay
 	}
 }
 
+// ResetDataviews TODO: Document its behavior, inputs, and effects.
 func ResetDataviews(reset bool) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.reset = reset
 	}
 }
 
+// APIMaxRows TODO: Document its behavior, inputs, and effects.
 func APIMaxRows(n int) APIReporterOption {
 	return func(aro *apiReportOptions) {
 		aro.maxrows = n

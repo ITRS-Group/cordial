@@ -28,7 +28,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// Config structure
+// Config provides synchronized access to configuration values, defaults,
+// environment variables, and file-backed settings.
 type Config struct {
 	config               *config        // the config structure associated with this Config instance, defaults to global
 	rwmutex              *sync.RWMutex  // mutex to protect concurrent access to the above viper
@@ -107,6 +108,8 @@ func ResetConfig(options ...FileOption) {
 	global.MergeConfigMap(tmp)
 }
 
+// ErrNoUserConfigDir is returned when the operating system cannot determine
+// the user's configuration directory.
 var ErrNoUserConfigDir = errors.New("cannot resolve user config directory, check $USER and $HOME exist")
 
 // AppConfigDir returns the application configuration directory for the
@@ -127,12 +130,14 @@ func (c *Config) Join(parts ...string) string {
 	return strings.Join(append([]string{}, parts...), c.delimiter)
 }
 
+// ConfigType returns the configuration type recorded for c.
 func (c *Config) ConfigType() string {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return c.configType
 }
 
+// SetConfigType sets the configuration type used when reading configuration data.
 func (c *Config) SetConfigType(t string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
@@ -156,6 +161,7 @@ func (c *Config) Sub(key string) *Config {
 	return c.sub(key)
 }
 
+// Set stores value at key in c, applying any supplied expansion options.
 func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
@@ -252,6 +258,7 @@ func (c *Config) SetKeyValuePairs(items ...string) (err error) {
 	return c.setKeyValuePairs(items...)
 }
 
+// MergeConfigMap merges vals into c, with values in vals taking precedence.
 func (c *Config) MergeConfigMap(vals map[string]any) (err error) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
@@ -282,42 +289,49 @@ func (c *Config) AllSettings() (value map[string]any) {
 	return c.allSettings()
 }
 
+// SetEnvPrefix sets the prefix used when mapping environment variables to keys.
 func (c *Config) SetEnvPrefix(prefix string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.setEnvPrefix(prefix)
 }
 
+// AutomaticEnv enables lookup of environment variables for configuration keys.
 func (c *Config) AutomaticEnv() {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.automaticEnv()
 }
 
+// Default sets value as the fallback for key when no other source defines it.
 func (c *Config) Default(key string, value any) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.setDefault(key, value)
 }
 
+// IsSet reports whether key is present in c or any configured source.
 func (c *Config) IsSet(key string) (value bool) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return c.isSet(key)
 }
 
+// ConfigFileUsed returns the path of the file most recently read by c, if any.
 func (c *Config) ConfigFileUsed() (f string) {
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return c.configFileUsed()
 }
 
+// RegisterAlias makes alias refer to the same setting as key.
 func (c *Config) RegisterAlias(alias, key string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.registerAlias(alias, key)
 }
 
+// BindEnv binds the named configuration key or keys to environment variables.
 func (c *Config) BindEnv(input ...string) (err error) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()

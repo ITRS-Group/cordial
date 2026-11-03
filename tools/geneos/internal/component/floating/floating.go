@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
@@ -41,8 +40,10 @@ import (
 
 const name = "floating"
 
-var log = logger.Logger
+// TODO: Revisit unused declaration log; restore it only when needed.
+// var log = logger.Logger
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Initialise:   geneos.WriteTemplates,
 	Name:         "floating",
@@ -107,6 +108,7 @@ var Component = geneos.Component{
 	ApplyProfile: applyProfile,
 }
 
+// Floating TODO: Describe its purpose and intended use.
 type Floating instance.Instance
 
 // ensure that Floatings satisfies geneos.Instance interface
@@ -165,6 +167,7 @@ func (i *Floating) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Name() string {
 	if i.Config() == nil {
 		return ""
@@ -172,14 +175,17 @@ func (i *Floating) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -187,40 +193,49 @@ func (i *Floating) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Floating) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Floating) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Unload() (err error) {
 	floatings.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Floating) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Floating) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -307,6 +322,7 @@ func (i *Floating) Rebuild(initial bool) (changed bool, err error) {
 	)
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 

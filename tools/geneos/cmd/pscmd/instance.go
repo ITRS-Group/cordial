@@ -51,7 +51,8 @@ var instanceCSVColumns = []string{
 	"Home",
 }
 
-var instanceCSVHeader = strings.Join(instanceCSVColumns, "\t")
+// TODO: Revisit unused declaration instanceCSVHeader; restore it only when needed.
+// var instanceCSVHeader = strings.Join(instanceCSVColumns, "\t")
 
 func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	ct := i.Type()

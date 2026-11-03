@@ -32,6 +32,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// GetFileOwner TODO: Document its behavior, inputs, and effects.
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
 	if h.IsLocalhost() {
 		uid = int(info.Sys().(*syscall.Stat_t).Uid)
@@ -172,6 +173,7 @@ func restoreProcAffinity() (err error) {
 	return
 }
 
+// Lchtimes TODO: Document its behavior, inputs, and effects.
 func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	var ua, um int64
 	if !atime.IsZero() {
@@ -187,6 +189,7 @@ func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err err
 	return unix.Lutimes(path, tv)
 }
 
+// Symlink TODO: Document its behavior, inputs, and effects.
 func (h *Local) Symlink(oldname, newname string) (err error) {
 	return os.Symlink(oldname, newname)
 }

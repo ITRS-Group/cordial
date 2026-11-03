@@ -37,6 +37,7 @@ import (
 
 const name = "tr-gateway"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"trgateway", "trgw"},
@@ -100,6 +101,7 @@ var Component = geneos.Component{
 	GetPID: pidCheckFn,
 }
 
+// TRGateway TODO: Describe its purpose and intended use.
 type TRGateway instance.Instance
 
 // ensure that Trgateway satisfies geneos.Instance interface
@@ -146,6 +148,7 @@ func factory(name string) (i geneos.Instance) {
 	return
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Type() *geneos.Component {
 	if i == nil {
 		return nil
@@ -153,6 +156,7 @@ func (i *TRGateway) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -160,6 +164,7 @@ func (i *TRGateway) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Home() string {
 	if i == nil {
 		return ""
@@ -167,6 +172,7 @@ func (i *TRGateway) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -174,6 +180,7 @@ func (i *TRGateway) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -181,18 +188,22 @@ func (i *TRGateway) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Load() error {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Unload() error {
 	if i == nil {
 		return nil
@@ -202,6 +213,7 @@ func (i *TRGateway) Unload() error {
 	return nil
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -209,6 +221,7 @@ func (i *TRGateway) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -216,6 +229,7 @@ func (i *TRGateway) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -223,6 +237,7 @@ func (i *TRGateway) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -230,6 +245,7 @@ func (i *TRGateway) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Add(options ...any) error {
 	if i == nil {
 		return os.ErrInvalid
@@ -278,6 +294,7 @@ func seedPackagedYAML(i *TRGateway) {
 	i.AuditEvent("action/import", nil, slog.Any("file", path.Base(setup)))
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -348,6 +365,7 @@ func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Reload() error {
 	return geneos.ErrNotSupported
 }

@@ -42,7 +42,8 @@ type expandOptions struct {
 	noExpand           bool                // whether to skip expansion entirely
 	promoteFrom        []string            // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
 	replacements       []string            // a list of string replacements to apply during expansion
-	trimPrefix         bool                // whether to trim the prefix from the expanded value
+// TODO: Revisit unused field trimPrefix; restore it only when needed.
+// 	trimPrefix         bool                // whether to trim the prefix from the expanded value
 	trimSpace          bool                // whether to trim leading and trailing whitespace from the expanded value
 	useKeyFile         string              // the path to a key file to be used for decryption during expansion
 }

@@ -38,6 +38,7 @@ import (
 
 const name = "md-gateway"
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"mdgateway", "mdgw"},
@@ -101,6 +102,7 @@ var Component = geneos.Component{
 	GetPID: pidCheckFn,
 }
 
+// MDGateway TODO: Describe its purpose and intended use.
 type MDGateway instance.Instance
 
 // ensure that MDGateway satisfies geneos.Instance interface
@@ -147,6 +149,7 @@ func factory(name string) (i geneos.Instance) {
 	return
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Type() *geneos.Component {
 	if i == nil {
 		return nil
@@ -154,6 +157,7 @@ func (i *MDGateway) Type() *geneos.Component {
 	return i.Component
 }
 
+// Name TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Name() string {
 	if i == nil || i.Config() == nil {
 		return ""
@@ -161,6 +165,7 @@ func (i *MDGateway) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Home() string {
 	if i == nil {
 		return ""
@@ -168,6 +173,7 @@ func (i *MDGateway) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -175,6 +181,7 @@ func (i *MDGateway) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -182,18 +189,22 @@ func (i *MDGateway) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Load() error {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Unload() error {
 	if i == nil {
 		return nil
@@ -203,6 +214,7 @@ func (i *MDGateway) Unload() error {
 	return nil
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -210,6 +222,7 @@ func (i *MDGateway) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -217,6 +230,7 @@ func (i *MDGateway) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -224,6 +238,7 @@ func (i *MDGateway) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -231,6 +246,7 @@ func (i *MDGateway) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Add(options ...any) error {
 	if i == nil {
 		return os.ErrInvalid
@@ -277,6 +293,7 @@ func seedPackagedYAML(i *MDGateway) {
 	i.AuditEvent("action/import", nil, slog.Any("file", path.Base(setup)))
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 
@@ -347,6 +364,7 @@ func (i *MDGateway) Command(skipFileCheck bool) (args, env []string, home string
 	return
 }
 
+// Reload TODO: Document its behavior, inputs, and effects.
 func (i *MDGateway) Reload() error {
 	return geneos.ErrNotSupported
 }

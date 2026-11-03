@@ -98,6 +98,7 @@ func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter,
 	return fr, nil
 }
 
+// Prepare TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Prepare(report Report) (err error) {
 	// flush any existing data
 	fr.Render()
@@ -145,6 +146,7 @@ func (fr *FormattedReporter) AddHeadlines(headlines map[string]string) {
 	maps.Copy(fr.headlines, headlines)
 }
 
+// UpdateTable TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if len(fr.columns) == 0 {
 		// init
@@ -182,6 +184,7 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	}
 }
 
+// Reset TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Reset(report Report) (err error) {
 	// do nothing
 	return
@@ -292,6 +295,7 @@ func (fr *FormattedReporter) Render() {
 	}
 }
 
+// Close TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Close() {
 	if fr.format == "html" {
 		fr.w.Write([]byte(fr.htmlpostscript))
@@ -313,6 +317,7 @@ func (fr *FormattedReporter) Close() {
 	}
 }
 
+// Extension TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Extension() string {
 	return fr.format
 }

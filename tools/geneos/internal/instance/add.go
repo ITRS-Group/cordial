@@ -216,8 +216,10 @@ type addOptions struct {
 	Values             values.Values
 }
 
+// AddOption TODO: Describe its purpose and intended use.
 type AddOption func(*addOptions)
 
+// EvalAddOptions TODO: Document its behavior, inputs, and effects.
 func EvalAddOptions(options ...any) *addOptions {
 	var o []AddOption
 	for _, opt := range options {
@@ -238,84 +240,98 @@ func evalAddOptions(opts ...AddOption) *addOptions {
 	return o
 }
 
+// WithTemplate TODO: Document its behavior, inputs, and effects.
 func WithTemplate(template string) AddOption {
 	return func(o *addOptions) {
 		o.Template = template
 	}
 }
 
+// WithCertBundle TODO: Document its behavior, inputs, and effects.
 func WithCertBundle(bundle string) AddOption {
 	return func(o *addOptions) {
 		o.CertBundle = bundle
 	}
 }
 
+// WithCertBundlePassword TODO: Document its behavior, inputs, and effects.
 func WithCertBundlePassword(password config.Secret) AddOption {
 	return func(o *addOptions) {
 		o.CertBundlePassword = password
 	}
 }
 
+// Base TODO: Document its behavior, inputs, and effects.
 func Base(base string) AddOption {
 	return func(o *addOptions) {
 		o.Base = base
 	}
 }
 
+// Insecure TODO: Document its behavior, inputs, and effects.
 func Insecure(insecure bool) AddOption {
 	return func(o *addOptions) {
 		o.Insecure = insecure
 	}
 }
 
+// StartAfterAdd TODO: Document its behavior, inputs, and effects.
 func StartAfterAdd(start bool) AddOption {
 	return func(o *addOptions) {
 		o.Start = start
 	}
 }
 
+// LogsAfterAdd TODO: Document its behavior, inputs, and effects.
 func LogsAfterAdd(logs bool) AddOption {
 	return func(o *addOptions) {
 		o.Logs = logs
 	}
 }
 
+// WithKeyfile TODO: Document its behavior, inputs, and effects.
 func WithKeyfile(keyfile string) AddOption {
 	return func(o *addOptions) {
 		o.Keyfile = keyfile
 	}
 }
 
+// KeyfileCRC TODO: Document its behavior, inputs, and effects.
 func KeyfileCRC(crc string) AddOption {
 	return func(o *addOptions) {
 		o.KeyfileCRC = crc
 	}
 }
 
+// WithImports TODO: Document its behavior, inputs, and effects.
 func WithImports(imports []string) AddOption {
 	return func(o *addOptions) {
 		o.Imports = imports
 	}
 }
 
+// WithProfiles TODO: Document its behavior, inputs, and effects.
 func WithProfiles(profiles *config.Config) AddOption {
 	return func(o *addOptions) {
 		o.Profiles = profiles
 	}
 }
 
+// WithFlags TODO: Document its behavior, inputs, and effects.
 func WithFlags(flags *pflag.FlagSet) AddOption {
 	return func(o *addOptions) {
 		o.Flags = flags
 	}
 }
 
+// WithPort TODO: Document its behavior, inputs, and effects.
 func WithPort(port uint16) AddOption {
 	return func(o *addOptions) {
 		o.Port = port
 	}
 }
 
+// WithValues TODO: Document its behavior, inputs, and effects.
 func WithValues(values values.Values) AddOption {
 	return func(o *addOptions) {
 		o.Values = values

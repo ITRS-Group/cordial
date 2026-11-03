@@ -19,10 +19,8 @@ package cmd
 
 import (
 	_ "embed"
-	"io"
 	"io/fs"
 	"os"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -38,14 +36,16 @@ var logCmdStderr, logCmdNoNormal, logCmdCALog, logCmdFollow, logCmdCat, logCmdAu
 var logCmdMatch, logCmdIgnore string
 var logCmdNoHeaders bool
 
-type files struct {
-	instance geneos.Instance
-	reader   io.ReadSeekCloser
-	offset   int64
-}
+// TODO: Revisit unused declaration files; restore it only when needed.
+// type files struct {
+// 	instance geneos.Instance
+// 	reader   io.ReadSeekCloser
+// 	offset   int64
+// }
 
 // global watchers for logs
-var tails *sync.Map
+// TODO: Revisit unused declaration tails; restore it only when needed.
+// var tails *sync.Map
 
 func init() {
 	Cmd.AddCommand(logsCmd)

@@ -21,6 +21,7 @@ import "encoding/xml"
 
 // TCP-Links
 
+// TCPLinksPlugin TODO: Describe its purpose and intended use.
 type TCPLinksPlugin struct {
 	XMLName      xml.Name              `xml:"tcp-links" json:"-" yaml:"-"`
 	LocalPorts   []SingleLineStringVar `xml:"localPorts>port,omitempty" json:"localPorts,omitempty" yaml:"localPorts,omitempty"`
@@ -29,10 +30,12 @@ type TCPLinksPlugin struct {
 	NameContents *NameContents         `xml:"nameContents,omitempty" json:"nameContents,omitempty" yaml:"nameContents,omitempty"`
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *TCPLinksPlugin) String() string {
 	return p.XMLName.Local
 }
 
+// NameContents TODO: Describe its purpose and intended use.
 type NameContents struct {
 	ShowLocalAddress  *Value `xml:"showLocalAddress,omitempty" json:"showLocalAddress,omitempty" yaml:"showLocalAddress,omitempty"`
 	ShowLocalPort     *Value `xml:"showLocalPort,omitempty" json:"showLocalPort,omitempty" yaml:"showLocalPort,omitempty"`

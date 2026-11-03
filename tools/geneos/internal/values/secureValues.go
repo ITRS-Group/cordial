@@ -26,13 +26,16 @@ import (
 
 // interfaces for pflag Var interface
 
+// SecureValues TODO: Describe its purpose and intended use.
 type SecureValues []*SecureValue
 
+// SecureValue TODO: Describe its purpose and intended use.
 type SecureValue struct {
 	Name   string
 	Secret config.Secret
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (p *SecureValues) String() string {
 	return ""
 }
@@ -59,6 +62,7 @@ func (p *SecureValues) Set(v string) error {
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (p *SecureValues) Type() string {
 	return "NAME[=VALUE]"
 }

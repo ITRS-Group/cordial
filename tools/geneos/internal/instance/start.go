@@ -244,6 +244,7 @@ type startOptions struct {
 	skipAudit     bool
 }
 
+// StartOption TODO: Describe its purpose and intended use.
 type StartOption func(*startOptions)
 
 func evalStartOptions(options ...StartOption) (d *startOptions) {
@@ -272,6 +273,7 @@ func StartingEnvs(envs []string) StartOption {
 	}
 }
 
+// SkipFileCheck TODO: Document its behavior, inputs, and effects.
 func SkipFileCheck() StartOption {
 	return func(so *startOptions) {
 		so.skipfilecheck = true

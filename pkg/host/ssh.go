@@ -76,6 +76,7 @@ func NewSSHRemote(name string, options ...any) Host {
 	return r
 }
 
+// SSHOption TODO: Describe its purpose and intended use.
 type SSHOption func(*SSHRemote)
 
 func evalOptions(r *SSHRemote, options ...any) {
@@ -95,24 +96,28 @@ func evalOptions(r *SSHRemote, options ...any) {
 
 }
 
+// Username TODO: Document its behavior, inputs, and effects.
 func Username(username string) SSHOption {
 	return func(s *SSHRemote) {
 		s.username = username
 	}
 }
 
+// Password TODO: Document its behavior, inputs, and effects.
 func Password(password []byte) SSHOption {
 	return func(s *SSHRemote) {
 		s.password = password
 	}
 }
 
+// Port TODO: Document its behavior, inputs, and effects.
 func Port(port uint16) SSHOption {
 	return func(s *SSHRemote) {
 		s.port = port
 	}
 }
 
+// Hostname TODO: Document its behavior, inputs, and effects.
 func Hostname(hostname string) SSHOption {
 	return func(s *SSHRemote) {
 		s.hostname = hostname
@@ -128,10 +133,12 @@ func PrivateKeyFiles(paths ...string) SSHOption {
 	}
 }
 
+// Username TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Username() string {
 	return h.username
 }
 
+// Hostname TODO: Document its behavior, inputs, and effects.
 func (s *SSHRemote) Hostname() string {
 	return s.hostname
 }
@@ -306,6 +313,7 @@ func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 	return
 }
 
+// CloseSFTP TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) CloseSFTP() {
 	if h == nil {
 		return
@@ -342,10 +350,12 @@ func (h *SSHRemote) IsAvailable() (ok bool, err error) {
 	return err == nil, err
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) String() string {
 	return h.name
 }
 
+// Abs TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Abs(dir string) (string, error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return "", err
@@ -354,6 +364,7 @@ func (h *SSHRemote) Abs(dir string) (string, error) {
 	}
 }
 
+// Base TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Base(file string) string {
 	if h.OS() == "windows" {
 		if runtime.GOOS == "windows" {
@@ -365,6 +376,7 @@ func (h *SSHRemote) Base(file string) string {
 	return path.Base(file)
 }
 
+// Dir TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Dir(file string) string {
 	if h.OS() == "windows" {
 		if runtime.GOOS == "windows" {
@@ -376,10 +388,12 @@ func (h *SSHRemote) Dir(file string) string {
 	return path.Dir(file)
 }
 
+// Ext TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Ext(file string) string {
 	return path.Ext(file)
 }
 
+// Join TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Join(elem ...string) string {
 	sep, ok := Seperators[h.OS()]
 	if !ok {
@@ -388,6 +402,7 @@ func (h *SSHRemote) Join(elem ...string) string {
 	return strings.Join(elem, sep)
 }
 
+// ToSlash TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) ToSlash(path string) string {
 	if h.OS() == "windows" {
 		return strings.ReplaceAll(path, `\`, `/`)
@@ -395,6 +410,7 @@ func (h *SSHRemote) ToSlash(path string) string {
 	return path
 }
 
+// VolumeName TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) VolumeName(path string) string {
 	if h.OS() == "windows" {
 		if runtime.GOOS == "windows" {
@@ -415,6 +431,7 @@ func (h *SSHRemote) VolumeName(path string) string {
 	return ""
 }
 
+// Split TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Split(file string) (dir, base string) {
 	if h.OS() == "windows" {
 		if runtime.GOOS == "windows" {
@@ -427,6 +444,7 @@ func (h *SSHRemote) Split(file string) (dir, base string) {
 	return path.Split(file)
 }
 
+// Getwd TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Getwd() (dir string, err error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return "", err
@@ -435,6 +453,7 @@ func (h *SSHRemote) Getwd() (dir string, err error) {
 	}
 }
 
+// Symlink TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Symlink(oldname, newname string) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -443,6 +462,7 @@ func (h *SSHRemote) Symlink(oldname, newname string) error {
 	}
 }
 
+// Readlink TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Readlink(file string) (string, error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return "", err
@@ -451,6 +471,7 @@ func (h *SSHRemote) Readlink(file string) (string, error) {
 	}
 }
 
+// Mkdir TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Mkdir(p string, perm os.FileMode) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -459,6 +480,7 @@ func (h *SSHRemote) Mkdir(p string, perm os.FileMode) error {
 	}
 }
 
+// MkdirAll TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) MkdirAll(p string, perm os.FileMode) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -467,6 +489,7 @@ func (h *SSHRemote) MkdirAll(p string, perm os.FileMode) error {
 	}
 }
 
+// Chown TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Chown(name string, uid, gid int) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -484,6 +507,7 @@ func (h *SSHRemote) Lchown(name string, uid, gid int) error {
 	}
 }
 
+// Chtimes TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Chtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -492,6 +516,7 @@ func (h *SSHRemote) Chtimes(path string, atime time.Time, mtime time.Time) (err 
 	}
 }
 
+// Lchtimes TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -501,6 +526,7 @@ func (h *SSHRemote) Lchtimes(path string, atime time.Time, mtime time.Time) (err
 	}
 }
 
+// Create TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
 	var cf *sftp.File
 	var s *sftp.Client
@@ -517,6 +543,7 @@ func (h *SSHRemote) Create(p string, perms fs.FileMode) (out io.WriteCloser, err
 	return
 }
 
+// Remove TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Remove(name string) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -525,6 +552,7 @@ func (h *SSHRemote) Remove(name string) error {
 	}
 }
 
+// RemoveAll TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) RemoveAll(name string) (err error) {
 	var s *sftp.Client
 	if s, err = h.DialSFTP(); err != nil {
@@ -549,6 +577,7 @@ func (h *SSHRemote) RemoveAll(name string) (err error) {
 	return
 }
 
+// Rename TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Rename(oldpath, newpath string) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -558,6 +587,7 @@ func (h *SSHRemote) Rename(oldpath, newpath string) error {
 	}
 }
 
+// Link TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Link(oldname, newname string) error {
 	if s, err := h.DialSFTP(); err != nil {
 		return err
@@ -584,6 +614,7 @@ func (h *SSHRemote) Lstat(name string) (fs.FileInfo, error) {
 	}
 }
 
+// Glob TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Glob(pattern string) ([]string, error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return []string{}, err
@@ -592,6 +623,7 @@ func (h *SSHRemote) Glob(pattern string) ([]string, error) {
 	}
 }
 
+// WriteFile TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) WriteFile(name string, data []byte, perm os.FileMode) (err error) {
 	var s *sftp.Client
 	var f *sftp.File
@@ -608,6 +640,7 @@ func (h *SSHRemote) WriteFile(name string, data []byte, perm os.FileMode) (err e
 	return
 }
 
+// ReadFile TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) ReadFile(name string) (b []byte, err error) {
 	var s *sftp.Client
 	if s, err = h.DialSFTP(); err != nil {
@@ -651,6 +684,7 @@ func (h *SSHRemote) ReadDir(name string) (dirs []os.DirEntry, err error) {
 	return
 }
 
+// Open TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Open(name string) (io.ReadSeekCloser, error) {
 	if s, err := h.DialSFTP(); err != nil {
 		return nil, err
@@ -659,6 +693,7 @@ func (h *SSHRemote) Open(name string) (io.ReadSeekCloser, error) {
 	}
 }
 
+// HostPath TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) HostPath(p string) string {
 	return fmt.Sprintf("%s:%s", h, p)
 }
@@ -673,6 +708,7 @@ func (h *SSHRemote) TempDir() string {
 	return "/tmp"
 }
 
+// LastError TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) LastError() error {
 	// if the failure was a while back, try again (XXX crude)
 	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
@@ -682,6 +718,7 @@ func (h *SSHRemote) LastError() error {
 	return h.failed
 }
 
+// ServerVersion TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) ServerVersion() string {
 	remote, err := h.DialSSH()
 	if err != nil {
@@ -690,6 +727,7 @@ func (h *SSHRemote) ServerVersion() string {
 	return string(remote.ServerVersion())
 }
 
+// OS TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) OS() string {
 	if strings.Contains(h.ServerVersion(), "windows") {
 		return "windows"
@@ -697,6 +735,7 @@ func (h *SSHRemote) OS() string {
 	return "linux"
 }
 
+// GetFs TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) GetFs() afero.Fs {
 	client, err := h.DialSFTP()
 	if err != nil {
@@ -862,6 +901,7 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte,
 	return sess.Output(cmdstr)
 }
 
+// Uname TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Uname() (os, arch string, err error) {
 	if h.OS() == "windows" {
 		err = errors.New("cannot run remote commands on windows")
@@ -890,6 +930,7 @@ func (h *SSHRemote) Uname() (os, arch string, err error) {
 	return
 }
 
+// WalkDir TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) WalkDir(dir string, fn fs.WalkDirFunc) error {
 	s, err := h.DialSFTP()
 	if err != nil {

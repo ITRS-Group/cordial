@@ -17,12 +17,14 @@ limitations under the License.
 
 package reporter
 
+// ConditionalFormat TODO: Describe its purpose and intended use.
 type ConditionalFormat struct {
 	Test ConditionalFormatTest  `mapstructure:"test,omitempty"`
 	Set  []ConditionalFormatSet `mapstructure:"set,omitempty"`
 	// Else ConditionalFormatSet   `mapstructure:"else,omitempty"`
 }
 
+// ConditionalFormatTest TODO: Describe its purpose and intended use.
 type ConditionalFormatTest struct {
 	Columns   []string `mapstructure:"columns,omitempty"`
 	Logical   string   `mapstructure:"logical,omitempty"` // "and", "all" or "or", "any"
@@ -31,6 +33,7 @@ type ConditionalFormatTest struct {
 	Value     string   `mapstructure:"value,omitempty"`
 }
 
+// ConditionalFormatSet TODO: Describe its purpose and intended use.
 type ConditionalFormatSet struct {
 	Rows    string   `mapstructure:"rows,omitempty"`
 	NotRows string   `mapstructure:"not-rows,omitempty"`

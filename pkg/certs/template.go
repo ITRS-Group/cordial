@@ -78,8 +78,10 @@ func evalTemplateOptions(options ...TemplateOption) (opts *templateOptions) {
 	return
 }
 
+// TemplateOption TODO: Describe its purpose and intended use.
 type TemplateOption func(*templateOptions)
 
+// Days TODO: Document its behavior, inputs, and effects.
 func Days(days int) TemplateOption {
 	return func(opts *templateOptions) {
 		if days == 0 {
@@ -89,30 +91,35 @@ func Days(days int) TemplateOption {
 	}
 }
 
+// KeyUsage TODO: Document its behavior, inputs, and effects.
 func KeyUsage(ku x509.KeyUsage) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.keyUsage = ku
 	}
 }
 
+// ExtKeyUsage TODO: Document its behavior, inputs, and effects.
 func ExtKeyUsage(eku ...x509.ExtKeyUsage) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.extKeyUsage = eku
 	}
 }
 
+// IsCA TODO: Document its behavior, inputs, and effects.
 func IsCA() TemplateOption {
 	return func(opts *templateOptions) {
 		opts.isCA = true
 	}
 }
 
+// BasicConstraintsValid TODO: Document its behavior, inputs, and effects.
 func BasicConstraintsValid() TemplateOption {
 	return func(opts *templateOptions) {
 		opts.basicConstraintsValid = true
 	}
 }
 
+// MaxPathLen TODO: Document its behavior, inputs, and effects.
 func MaxPathLen(len int) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.maxPathLen = len
@@ -145,12 +152,14 @@ func SANsFromCert(cert *x509.Certificate) TemplateOption {
 	}
 }
 
+// DNSNames TODO: Document its behavior, inputs, and effects.
 func DNSNames(names ...string) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.dnsNames = names
 	}
 }
 
+// IPAddresses TODO: Document its behavior, inputs, and effects.
 func IPAddresses(ips ...string) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.ipAddresses = make([]net.IP, 0, len(ips))
@@ -164,12 +173,14 @@ func IPAddresses(ips ...string) TemplateOption {
 	}
 }
 
+// EmailAddresses TODO: Document its behavior, inputs, and effects.
 func EmailAddresses(emails ...string) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.emailAddresses = emails
 	}
 }
 
+// URIs TODO: Document its behavior, inputs, and effects.
 func URIs(uris ...string) TemplateOption {
 	return func(opts *templateOptions) {
 		opts.uris = make([]*url.URL, 0, len(uris))

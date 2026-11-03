@@ -55,6 +55,7 @@ func init() {
 	log = logger.Init(execname)
 }
 
+// Cmd TODO: Describe its purpose and intended use.
 var Cmd = &cobra.Command{
 	Use:   "servicenow",
 	Short: "Geneos to ServiceNow integration",
@@ -94,6 +95,7 @@ func initConfig() {
 
 var snowConnection *snow.Connection
 
+// InitializeConnection TODO: Document its behavior, inputs, and effects.
 func InitializeConnection() *snow.Connection {
 	if snowConnection != nil {
 		return snowConnection

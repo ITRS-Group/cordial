@@ -20,11 +20,13 @@ func init() {
 	// geneos.EnableDebugLog()
 }
 
+// PowerwallSampler TODO: Describe its purpose and intended use.
 type PowerwallSampler struct {
 	samplers.Samplers
 	pwurl string
 }
 
+// NewPW TODO: Document its behavior, inputs, and effects.
 func NewPW(s *plugins.Connection, name string, group string) (*PowerwallSampler, error) {
 	c := new(PowerwallSampler)
 	c.Plugins = c
@@ -55,6 +57,7 @@ var pwrows = []string{
 	"solar",
 }
 
+// InitSampler TODO: Document its behavior, inputs, and effects.
 func (p *PowerwallSampler) InitSampler() (err error) {
 	pwurl, err := p.Parameter("POWERWALL_URL")
 	if err != nil {
@@ -65,6 +68,7 @@ func (p *PowerwallSampler) InitSampler() (err error) {
 	return
 }
 
+// DoSample TODO: Document its behavior, inputs, and effects.
 func (p PowerwallSampler) DoSample() (err error) {
 	if p.pwurl == "" {
 		err = fmt.Errorf("No URL defined in sampler parameters (POWERWALL_URL)")

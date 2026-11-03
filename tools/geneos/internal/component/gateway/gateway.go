@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/includes"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -41,10 +40,12 @@ import (
 const name = "gateway"
 
 const (
+	// INSTANCEXML TODO: Describe its purpose and intended use.
 	INSTANCEXML = "instance.setup.xml"
 )
 
-var log = logger.Logger
+// TODO: Revisit unused declaration log; restore it only when needed.
+// var log = logger.Logger
 
 func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error) {
 	geneos.WriteTemplates(h, ct, override)
@@ -52,6 +53,7 @@ func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error)
 	return nil
 }
 
+// Component TODO: Describe its purpose and intended use.
 var Component = geneos.Component{
 	Initialise:   initialise,
 	Name:         name,
@@ -144,6 +146,7 @@ var Component = geneos.Component{
 	ApplyProfile: applyProfile,
 }
 
+// Gateway TODO: Describe its purpose and intended use.
 type Gateway instance.Instance
 
 // ensure that Gateways satisfies geneos.Instance interface
@@ -222,10 +225,12 @@ func (i *Gateway) Name() string {
 	return config.Get[string](i.Config(), "name")
 }
 
+// Home TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Home() string {
 	return instance.Home(i)
 }
 
+// Host TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Host() *geneos.Host {
 	if i == nil {
 		return nil
@@ -233,6 +238,7 @@ func (i *Gateway) Host() *geneos.Host {
 	return i.InstanceHost
 }
 
+// Log TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Log() *slog.Logger {
 	if i == nil {
 		return slog.Default()
@@ -240,18 +246,22 @@ func (i *Gateway) Log() *slog.Logger {
 	return i.Logger
 }
 
+// AuditEvent TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) AuditEvent(event string, result error, args ...any) {
 	instance.AuditEvent(i, result, event, args...)
 }
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) String() string {
 	return instance.DisplayName(i)
 }
 
+// Load TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Load() (err error) {
 	return instance.Read(i)
 }
 
+// Unload TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Unload() (err error) {
 	if i == nil {
 		return
@@ -261,6 +271,7 @@ func (i *Gateway) Unload() (err error) {
 	return
 }
 
+// Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
@@ -268,6 +279,7 @@ func (i *Gateway) Loaded() time.Time {
 	return i.ConfigLoaded
 }
 
+// SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
@@ -275,6 +287,7 @@ func (i *Gateway) SetLoaded(t time.Time) {
 	i.ConfigLoaded = t
 }
 
+// Config TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Config() *config.Config {
 	if i == nil {
 		return nil
@@ -282,6 +295,7 @@ func (i *Gateway) Config() *config.Config {
 	return i.Conf
 }
 
+// SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
@@ -289,6 +303,7 @@ func (i *Gateway) SetConfig(cf *config.Config) {
 	i.Conf = cf
 }
 
+// Add TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Add(options ...any) (err error) {
 	if i == nil {
 		return os.ErrInvalid
@@ -334,6 +349,7 @@ func (i *Gateway) Add(options ...any) (err error) {
 	return nil
 }
 
+// Rebuild TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
@@ -418,6 +434,7 @@ func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 	return
 }
 
+// Command TODO: Document its behavior, inputs, and effects.
 func (i *Gateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
 	var checks []string
 

@@ -235,6 +235,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 	return
 }
 
+// CreateSigningCert TODO: Document its behavior, inputs, and effects.
 func CreateSigningCert(destination string, overwrite bool, hostname string) (err error) {
 	var b bytes.Buffer
 	var basepath string
@@ -276,6 +277,7 @@ func CreateSigningCert(destination string, overwrite bool, hostname string) (err
 	return
 }
 
+// SubjectAltNames TODO: Describe its purpose and intended use.
 type SubjectAltNames struct {
 	DNS   values
 	IP    values
@@ -286,17 +288,21 @@ type SubjectAltNames struct {
 // attribute - name=value
 type values []string
 
+// TypesOptionsText TODO: Describe its purpose and intended use.
 const TypesOptionsText = "A type NAME\n(Repeat as required, san only)"
 
+// String TODO: Document its behavior, inputs, and effects.
 func (i *values) String() string {
 	return ""
 }
 
+// Set TODO: Document its behavior, inputs, and effects.
 func (i *values) Set(value string) error {
 	*i = append(*i, value)
 	return nil
 }
 
+// Type TODO: Document its behavior, inputs, and effects.
 func (i *values) Type() string {
 	return "VALUE"
 }
