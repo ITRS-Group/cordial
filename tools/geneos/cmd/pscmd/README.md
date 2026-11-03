@@ -2,7 +2,7 @@ The `ps` command, which can also be invoked using the alias `status`, will repor
 
 The `--long/-l` flag also reports a number of other metrics, largely derived from the Linux `/proc` filesystem. Also, as it potentially takes significant time to lookup ports for remote instances these are not shown by default. Use the `--long`/`-l` option to see these.
 
-To see open files use the `--files/-f` flag, or to see open sockets use the `--network/-n` flag. The meaning of the columns will be documented later. The previous meaning of the short `-n` flag has changed and the `--nolookup` option was removed.
+Use `--files`/`-f` to list open files or `--network`/`-n` to list TCP sockets. These flags select different output views and cannot be used together.
 
 The default output is a table format intended for humans but this can be changed to CSV format using the `--csv`/`-c` flag or JSON with the `--json`/`-j` or `--pretty`/`-i` options, the latter option formatting the output over multiple, indented lines. Use the `--toolkit/-t` flag to report in Geneos Toolkit specific CSV format, which includes headlines and a unique first column to act as the row name.
 
