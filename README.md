@@ -8,19 +8,25 @@ Cordial works alongside your Geneos environment; it does not replace its monitor
 
 ### Manage Geneos with one command
 
-The [`geneos` command](tools/geneos/README.md) gives you one consistent way to view, install, update, configure, start, and stop Geneos components. You can manage local and remote hosts, work with existing installations, and use profiles as starting points for common deployments. This reduces repeated host-by-host work and makes routine changes easier to script and repeat. Profile and Monitor-of-the-Monitors features in the current development release are previews.
+The [`geneos` command](tools/geneos/README.md) brings common management tasks into one consistent interface. You can use it across local and remote hosts, including with existing installations. Its main benefits include:
+
+- **Consistent operations:** View, install, update, configure, start, and stop Geneos components with repeatable commands instead of maintaining separate scripts for each task.
+- **Security by default:** New deployments use TLS. Unless you provide your own certificates or choose insecure mode, `geneos` establishes a private certificate authority and issues certificates for Geneos components. This gives you a consistent foundation for protected communications without building a separate certificate workflow.
+- **Faster common setups:** Ready-made Gateway include files based on Geneos best practices, together with profiles, help you deploy common monitoring scenarios without building each configuration from scratch.
+- **Operational audit:** Selected command invocations and instance actions are recorded in global and per-instance logs. You can review who ran a command, what action it took, and whether it succeeded. Recognized sensitive values are redacted from logged command details.
+- **MOTM (preview):** The supplied profile can configure a Self-Announcing Netprobe to report installed Geneos components to a central MOTM Gateway. This gives you a consolidated view without defining every managed entity by hand. Rebuild the profile after estate changes to refresh that view.
 
 ### Review monitoring coverage with GDNA
 
-Geneos licence data can be detailed and spread across many Gateways and Netprobes. [GDNA](gdna/README.md) turns data from Geneos Licence Daemons (`licd`) into dashboards and reports that show monitoring coverage across servers; it does not collect monitoring data from other sources. You and your team can use these reports to find potential gaps, compare plugin use with your coverage goals, and plan improvements. GDNA can also email reports on a schedule, so you can share regular updates without running them manually. Results depend on the licence data available and the coverage policies in use. To learn about the data source, read the ITRS documentation for the [Geneos Licence Daemon](https://docs.itrsgroup.com/docs/geneos/7.12.0/administration/licence-daemon/index.html).
+Geneos licence data can be detailed and spread across many Gateways and Netprobes. [GDNA](gdna/README.md) turns data from Geneos Licence Daemons (`licd`) into dashboards and reports that show monitoring coverage across servers; it does not collect monitoring data from other sources. You and your team can use these reports to find potential gaps, compare plugin use with your coverage goals, and plan improvements. GDNA can also email reports on a schedule, so you can share regular updates without running them manually. Results depend on the licence data available and the coverage policies in use.
 
 ### Share Dataviews with dv2email
 
-[`dv2email`](tools/dv2email/README.md) turns Geneos Dataview snapshots into email reports or files such as HTML and Excel workbooks. A Gateway Action or Effect can start a report when an alert occurs. This avoids repeated manual exports and copy-and-paste for incident reviews, handovers, and other operational reports. To see how the Gateway provides Dataview snapshots, read the [Gateway Commands guide](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_commands_tr/index.html#rest-service).
+[`dv2email`](tools/dv2email/README.md) turns Geneos Dataview snapshots into email reports or files such as HTML and Excel workbooks. A Gateway Action or Effect can start a report when an alert occurs. This avoids repeated manual exports and copy-and-paste for incident reviews, handovers, and other operational reports.
 
 ### Connect alerts to ServiceNow
 
-The [`servicenow2` integration](integrations/servicenow2/README.md) maps Geneos alert data to ServiceNow incident fields. Based on its configured rules and correlation values, it can create an incident or update an existing one. It removes the need for a separate wrapper script to translate Gateway event data. This reduces manual ticket entry and keeps alerts in your service-management workflow. To see how Geneos passes event details to external programs, read the ITRS guide to [Gateway Actions and Effects](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html).
+The [`servicenow2` integration](integrations/servicenow2/README.md) maps Geneos alert data to ServiceNow incident fields. Based on its configured rules and correlation values, it can create an incident or update an existing one. It removes the need for a separate wrapper script to translate Gateway event data. This reduces manual ticket entry and keeps alerts in your service-management workflow.
 
 ## Low-overhead deployment
 
