@@ -1,8 +1,8 @@
 # Cordial
 
-Cordial provides tools and integrations to help you and your team manage ITRS Geneos. It makes routine work easier to repeat, with ready-made commands, reports, and integrations that reduce manual steps and the number of scripts you need to maintain. Geneos can monitor many Gateways, Netprobes, hosts, and plugins. To see how these components collect, process, and present monitoring data, read the [Geneos architecture guide](https://docs.itrsgroup.com/docs/geneos/current/getting-started/architecture/index.html).
+Cordial is a practical toolkit for the day-to-day operation of ITRS Geneos. It brings common work, such as managing deployments, reviewing monitoring coverage, sharing Dataviews, and routing alerts, into ready-made commands, reports, and integrations.
 
-Cordial does not replace any existing Geneos components. It helps you get more operational value from it with less manual effort and fewer tools to maintain. Depending on how you use it, Cordial can also reduce the effort and cost of routine support.
+Cordial works alongside your Geneos environment; it does not replace its monitoring components. Use it to make routine work more consistent and reduce one-off scripts, manual exports, and hand-offs. This can leave you and your team with more time to review monitoring results and act on them.
 
 ## Operational workflows
 
