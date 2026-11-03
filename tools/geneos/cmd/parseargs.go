@@ -102,6 +102,11 @@ const (
 	// should trigger the application of profiles. This can be used to
 	// automatically apply profiles when specific conditions are met.
 	CmdProfileTrigger = geneos.CmdProfileTrigger
+
+	// CmdPackageVariants should be "true" to accept a component type
+	// with a package variant suffix, e.g. `md-gateway-asx`, as the
+	// first argument. The variant is returned by FetchVariant.
+	CmdPackageVariants = geneos.CmdPackageVariants
 )
 
 // TODO: rewrite this
@@ -148,6 +153,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	cmdKeepHosts, _ := strconv.ParseBool(c.Annotations[CmdKeepHosts])
 	cmdWildcardNames, _ := strconv.ParseBool(c.Annotations[CmdWildcardNames])
 	cmdAllInstancesMustMatch, _ := strconv.ParseBool(c.Annotations[CmdAllInstancesMustMatch])
+	cmdPackageVariants, _ := strconv.ParseBool(c.Annotations[CmdPackageVariants])
 
 	// set audit configuration in the global configuration based on
 	// command annotations
@@ -224,6 +230,15 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 			cd.component = ct
 			cd.Unlock()
 			args = args[1:]
+		} else if cmdPackageVariants {
+			var variant string
+			if ct, variant = geneos.ParseComponentVariant(args[0]); ct != nil {
+				cd.Lock()
+				cd.component = ct
+				cd.variant = variant
+				cd.Unlock()
+				args = args[1:]
+			}
 		}
 	}
 
@@ -298,4 +313,17 @@ func FetchArgs(command *cobra.Command) (ct *geneos.Component, args, params []str
 	}
 
 	return
+}
+
+// FetchVariant returns the package variant set by ParseArgs, e.g. `asx`
+// for `md-gateway-asx`, for commands with the CmdPackageVariants
+// annotation. It is empty if no variant was given.
+func FetchVariant(command *cobra.Command) (variant string) {
+	d := cmddata(command)
+	if d == nil {
+		return
+	}
+	d.Lock()
+	defer d.Unlock()
+	return d.variant
 }

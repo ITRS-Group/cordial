@@ -22,9 +22,24 @@ Archive names are recognised without `--override`, including Maven snapshots:
 tr-gateway-1.0.0.tar.gz
 tr-gateway-1.0.0-SNAPSHOT-linux-x64.tar.gz
 tr-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz
+tr-gateway-idx-1.0.0-20261030.041812-1-linux-x64.tar.gz
 ```
 
 Each distinct snapshot timestamp is installed as its own version directory. Use `--override tr-gateway:VERSION` only if the filename does not match. These packages are not downloaded from ITRS.
+
+Exchange-specific packages, `tr-gateway-EXCHANGE-VERSION...`, install as a `tr-gateway` release with the exchange appended to the version, e.g. `packages/tr-gateway/1.0.0-20261030.041812-1+idx`, so packages for different exchanges with the same version do not collide. To select one exchange, give the package commands `tr-gateway-EXCHANGE` as the type:
+
+```bash
+geneos package install tr-gateway-idx ./downloads/
+geneos package install tr-gateway-idx -N -S
+geneos package update tr-gateway-idx
+```
+
+This installs only `tr-gateway-idx-*` archives from a directory, downloads the `tr-gateway-idx` artifact from Nexus, and updates `active_prod` to the latest `+idx` release. Without an exchange, `tr-gateway` keeps its existing behaviour. Instances are still `tr-gateway` instances.
+
+The `active_prod` link is shared by all exchanges, so on a host with more than one exchange installed, give each instance its own release with `geneos set tr-gateway NAME version=1.0.0-20261030.041812-1+idx` rather than relying on `active_prod`.
+
+Releases before v1.30.0 do not recognise exchange package names. To install one with those releases, rename the archive to put the exchange after the version, e.g. `tr-gateway-1.0.0-20261030.041812-1-idx-linux-x64.tar.gz`. It then installs into the same `...+idx` directory, and later releases accept the renamed file too.
 
 ```bash
 geneos package install tr-gateway ./tr-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz

@@ -47,22 +47,52 @@ func CleanRelativePath(p string) (clean string, err error) {
 // geneos-gateway-7.1.0-20240828.194610-12-linux-x64.tar.gz
 var archiveRE = regexp.MustCompile(`^(?:geneos-)?(?<component>[\w-]+)-(?<version>[\d\-\.]+)(-(?<platform>\w+))?[\.-](?<os>linux|windows).*?\.(?<suffix>[\w\.]+)$`)
 
+// variantAfterVersionRE matches package variant archives renamed to put
+// the variant after the version, so that older releases that only use
+// archiveRE install them as VERSION+VARIANT, e.g.
+//
+// md-gateway-1.0.0-20261030.041812-1-asx-linux-x64.tar.gz
+var variantAfterVersionRE = regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)-(?<platform>[a-z][a-z0-9]*)-(?<os>linux|windows)(?:-\w+)?\.(?<suffix>tar\.gz|zip)$`)
+
 // FilenameToComponentVersion transforms an archive filename and returns
 // the component and version or an error if the file format is not
 // recognised
 func FilenameToComponentVersion(oct *Component, filename string) (ct *Component, version, platform, suffix string, err error) {
-	var re *regexp.Regexp
-	var parts []string
+	var re, firstRE *regexp.Regexp
+	var parts, firstParts []string
 
+	// prefer a match where the component is recognised, e.g. the
+	// md-gateway regexp over the default one for
+	// `md-gateway-asx-...`, otherwise fall back to the first match
+search:
 	for nct := range oct.OrList() {
-		re = archiveRE
+		res := []*regexp.Regexp{archiveRE}
 		if nct.DownloadNameRegexp != nil {
-			re = nct.DownloadNameRegexp
+			res = []*regexp.Regexp{nct.DownloadNameRegexp}
+			if nct.PackageVariants {
+				res = append(res, variantAfterVersionRE)
+			}
 		}
-		parts = re.FindStringSubmatch(filename)
-		if len(parts) > 0 {
-			break
+		for _, r := range res {
+			p := r.FindStringSubmatch(filename)
+			if len(p) == 0 {
+				continue
+			}
+			// only for this component, not just any that parses
+			if r == variantAfterVersionRE && ParseComponent(p[r.SubexpIndex("component")]) != nct {
+				continue
+			}
+			if i := r.SubexpIndex("component"); i != -1 && ParseComponent(p[i]) != nil {
+				re, parts = r, p
+				break search
+			}
+			if firstParts == nil {
+				firstRE, firstParts = r, p
+			}
 		}
+	}
+	if parts == nil {
+		re, parts = firstRE, firstParts
 	}
 
 	if len(parts) == 0 {

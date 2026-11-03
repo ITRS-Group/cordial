@@ -330,11 +330,17 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 		return
 	}
 	versions = slices.DeleteFunc(versions, func(version string) bool { return !strings.HasPrefix(version, opts.version) })
+	if opts.variant != "" {
+		versions = slices.DeleteFunc(versions, func(version string) bool { return !strings.HasSuffix(version, "+"+opts.variant) })
+	}
 	if len(versions) > 0 {
 		version = versions[len(versions)-1]
 	}
 
 	if version == "" {
+		if opts.variant != "" {
+			originalVersion += "+" + opts.variant
+		}
 		return fmt.Errorf("%s version %q on %s: %w", ct, originalVersion, h, os.ErrNotExist)
 	}
 

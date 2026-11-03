@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -41,7 +42,16 @@ var Component = geneos.Component{
 	Aliases:      []string{"trgateway", "trgw"},
 	LegacyPrefix: "trgw",
 
-	// DownloadNameRegexp: regexp.MustCompile(`^(?<component>[\w-]+)-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz)$`),
+	// Archive names are COMPONENT[-EXCHANGE]-VERSION[-OS-ARCH].SUFFIX,
+	// e.g. `tr-gateway-idx-1.0.0-20261030.041812-1-linux-x64.tar.gz`.
+	// The optional exchange is returned as the platform, which is
+	// appended to the version (as `+idx`) so that each exchange installs
+	// into its own package directory.
+	DownloadNameRegexp: regexp.MustCompile(`^(?<component>` + name + `)(?:-(?<platform>[a-z][a-z0-9]*))?-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz|zip)$`),
+
+	// accept `NAME-EXCHANGE` in package commands, e.g. `package install tr-gateway-idx`
+	PackageVariants: true,
+
 	DownloadParams: &[]string{
 		"title=",
 	},

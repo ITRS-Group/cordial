@@ -347,11 +347,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 
 	var req *http.Request
 
-	artifacts := strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {
-		return unicode.IsSpace(r) || r == ','
-	})
-
-	for _, artifactId := range artifacts {
+	for _, artifactId := range nexusArtifactIDs(ct, opts.variant) {
 		v.Set("maven.artifactId", artifactId)
 		downloadURL.RawQuery = v.Encode()
 		source = downloadURL.String()
@@ -378,6 +374,21 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 		if resp.StatusCode < 300 {
 			return
 		}
+	}
+	return
+}
+
+// nexusArtifactIDs returns the Nexus artifact IDs to try, in order, for
+// component ct. A package variant is appended to each, e.g.
+// `md-gateway-asx`.
+func nexusArtifactIDs(ct *Component, variant string) (artifacts []string) {
+	for _, artifactId := range strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {
+		return unicode.IsSpace(r) || r == ','
+	}) {
+		if variant != "" {
+			artifactId += "-" + variant
+		}
+		artifacts = append(artifacts, artifactId)
 	}
 	return
 }

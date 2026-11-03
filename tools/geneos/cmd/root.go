@@ -205,6 +205,10 @@ type CmdValType struct {
 
 	// the list of non-instance names on the command line (invalid names, not match failures)
 	params []string
+
+	// the package variant, e.g. `asx` for `md-gateway-asx`, for
+	// commands with the CmdPackageVariants annotation
+	variant string
 }
 
 // cmddata is a helper to get the command data struct from the command

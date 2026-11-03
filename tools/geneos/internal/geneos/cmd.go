@@ -69,4 +69,9 @@ const (
 	// should trigger the application of profiles. This can be used to
 	// automatically apply profiles when specific conditions are met.
 	CmdProfileTrigger = "profiletrigger"
+
+	// CmdPackageVariants should be "true" to accept a component type
+	// with a package variant suffix, e.g. `md-gateway-asx`, as the
+	// first argument. See [ParseComponentVariant].
+	CmdPackageVariants = "packagevariants"
 )
