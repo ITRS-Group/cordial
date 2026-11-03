@@ -17,7 +17,15 @@ limitations under the License.
 
 package floating
 
+import (
+	"errors"
+	"os"
+)
+
 // Reload TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Reload() (err error) {
-	return
+	if i == nil {
+		return os.ErrInvalid
+	}
+	return errors.ErrUnsupported
 }

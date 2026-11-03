@@ -118,7 +118,9 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 	switch {
 	case program.Foreground:
 		cmd := exec.Command(program.Executable, program.Args...)
-		setCredentialsFromUsername(cmd, program.Username)
+		if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+			return 0, err
+		}
 		cmd.Env = program.Env
 		cmd.Dir = program.WorkingDir
 		if _, err := h.Run(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
@@ -129,7 +131,9 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		go func() {
 			for {
 				cmd := exec.Command(program.Executable, program.Args...)
-				setCredentialsFromUsername(cmd, program.Username)
+				if setCredentialsFromUsername(cmd, program.Username) != nil {
+					return
+				}
 				cmd.Env = program.Env
 				cmd.Dir = program.WorkingDir
 				h.Run(cmd, host.ProcessErrfile(program.ErrLog))
@@ -142,7 +146,9 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		}()
 	default:
 		cmd := exec.Command(program.Executable, program.Args...)
-		setCredentialsFromUsername(cmd, program.Username)
+		if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+			return 0, err
+		}
 		cmd.Env = program.Env
 		cmd.Dir = program.WorkingDir
 		if _, err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {

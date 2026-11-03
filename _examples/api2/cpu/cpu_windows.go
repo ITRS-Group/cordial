@@ -3,12 +3,10 @@
 package cpu
 
 import (
+	"errors"
 	"log/slog"
-	"time"
 
 	"github.com/StackExchange/wmi"
-	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
 // Win32_PerfRawData_PerfOS_Processor must be exported along with all it's
@@ -32,35 +30,16 @@ type cpustat struct {
 	frequency  float64
 }
 
-var log = cordial.Logger
+var log = slog.Default()
 
-// DoSample TODO: Document its behavior, inputs, and effects.
-func (p *CPUSampler) DoSample() (err error) {
-	log.Debug("called")
-	laststats := p.cpustats
-	if laststats.lastsample == 0 {
-		// first time through, store initial stats, don't update table and wait for next call
-		var stat cpustat
-		err = getstats(&stat)
-		if err != nil {
-			return
-		}
-		p.cpustats = stat
-	} else {
-		// calculate diff and publish
-		var stat cpustat
-
-		err = getstats(&stat)
-		if err != nil {
-			return
-		}
-		interval := stat.lastsample - laststats.lastsample
-
-		err = p.UpdateTableFromMapDelta(stat.cpus, laststats.cpus, time.Duration(interval)*10*time.Millisecond)
-		p.cpustats = stat
+// SampleNow stores the latest Windows processor counters for this sampler.
+func (p *CPUPlugin) SampleNow() error {
+	var stat cpustat
+	if err := getstats(&stat); err != nil {
+		return err
 	}
-
-	return
+	p.cpustats = stat
+	return nil
 }
 
 func getstats(c *cpustat) (err error) {
@@ -73,16 +52,15 @@ func getstats(c *cpustat) (err error) {
 		log.Error("error querying WMI", slog.Any("error", err))
 		return
 	}
+	if len(dst) == 0 || dst[0].Frequency_PerfTime == 0 {
+		return errors.New("WMI returned no usable processor data")
+	}
 
 	c.lastsample = float64(dst[0].Timestamp_PerfTime)
 	c.frequency = float64(dst[0].Frequency_PerfTime)
 
-	for k, v := range dst {
-		c.cpus[v.Name] = Win32_PerfRawData_PerfOS_Processor(dst[k])
+	for _, v := range dst {
+		c.cpus[v.Name] = v
 	}
 	return
-}
-
-func (p CPUSampler) initColumns() (cols samplers.Columns, columnnames []string, sortcol string, err error) {
-	return p.ColumnInfo(Win32_PerfRawData_PerfOS_Processor{})
 }

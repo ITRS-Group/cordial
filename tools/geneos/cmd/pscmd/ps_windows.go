@@ -3,6 +3,7 @@
 package pscmd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
@@ -12,7 +13,7 @@ var instanceToolkitExtraColumns = []string{
 	"state",
 	"threads",
 	"cpuAffinity",
-	"openfiles",
+	"openFiles",
 	"opensockets",
 	"residentSetSize",
 	"residentSetSizeAnon",
@@ -41,5 +42,18 @@ var instanceCSVExtraColumns = []string{
 var instanceCSVLongHeader = strings.Join(append(instanceCSVColumns, instanceCSVExtraColumns...), "\t")
 
 func psInstanceLongColumns(pi *instance.ProcessInfo) []string {
-	return []string{}
+	return []string{
+		pi.State,
+		fmt.Sprint(pi.Threads),
+		pi.CpusAllowedList,
+		fmt.Sprint(len(pi.OpenFiles)),
+		fmt.Sprint(pi.OpenSockets),
+		fmt.Sprintf("%.2f MiB", float64(pi.VmRSS)/(1024*1024)),
+		fmt.Sprintf("%.2f MiB", float64(pi.RssAnon)/(1024*1024)),
+		fmt.Sprintf("%.2f MiB", float64(pi.VmHWM)/(1024*1024)),
+		fmt.Sprintf("%.2f s", pi.Utime.Seconds()),
+		fmt.Sprintf("%.2f s", pi.Stime.Seconds()),
+		fmt.Sprintf("%.2f s", pi.CUtime.Seconds()),
+		fmt.Sprintf("%.2f s", pi.CStime.Seconds()),
+	}
 }

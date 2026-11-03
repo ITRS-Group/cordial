@@ -3,7 +3,6 @@
 package process
 
 import (
-	"log"
 	"time"
 
 	"github.com/StackExchange/wmi"
@@ -13,7 +12,7 @@ import (
 // Win32_Process TODO: Describe its purpose and intended use.
 type Win32_Process struct {
 	ProcessID    uint32 `column:"PID,sort=+num"`
-	Name         string `column:"processName`
+	Name         string `column:"processName"`
 	CommandLine  string `column:"commandLine"`
 	CreationDate time.Time
 }
@@ -24,7 +23,7 @@ func (p *ProcessSampler) DoSample() (err error) {
 	q := wmi.CreateQuery(&dst, "")
 	err = wmi.Query(q, &dst)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	data := make(map[string]Win32_Process, len(dst))

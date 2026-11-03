@@ -2,10 +2,8 @@ package memory
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 
-	_ "github.com/StackExchange/wmi"
 	extmemory "github.com/mackerelio/go-osstat/memory"
 )
 
@@ -16,7 +14,7 @@ func (p *MemorySampler) DoSample() error {
 	}
 	m, err := extmemory.Get()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// use reflect to paint the structure into a table

@@ -3,12 +3,11 @@
 package cpu
 
 import (
+	"errors"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/StackExchange/wmi"
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
 )
 
@@ -33,7 +32,7 @@ type cpustat struct {
 	frequency  float64
 }
 
-var log = cordial.Logger
+var log = slog.Default()
 
 // DoSample TODO: Document its behavior, inputs, and effects.
 func (p *CPUSampler) DoSample() (err error) {
@@ -57,7 +56,7 @@ func (p *CPUSampler) DoSample() (err error) {
 		}
 		interval := stat.lastsample - laststats.lastsample
 
-		err = p.UpdateTableFromMapDelta(stat.cpus, laststats.cpus, time.Duration(interval)*10*time.Millisecond)
+		err = p.UpdateTableFromMapDelta(stat.cpus, laststats.cpus, time.Duration(interval/stat.frequency*float64(time.Second)))
 		p.cpustats = stat
 	}
 
@@ -71,15 +70,18 @@ func getstats(c *cpustat) (err error) {
 	q := wmi.CreateQuery(&dst, "")
 	err = wmi.Query(q, &dst)
 	if err != nil {
-		log.Error("WMI query failed", slog.Err(err))
-		os.Exit(1)
+		log.Error("WMI query failed", slog.Any("error", err))
+		return err
+	}
+	if len(dst) == 0 || dst[0].Frequency_PerfTime == 0 {
+		return errors.New("WMI returned no usable processor data")
 	}
 
 	c.lastsample = float64(dst[0].Timestamp_PerfTime)
 	c.frequency = float64(dst[0].Frequency_PerfTime)
 
-	for k, v := range dst {
-		c.cpus[v.Name] = Win32_PerfRawData_PerfOS_Processor(dst[k])
+	for _, v := range dst {
+		c.cpus[v.Name] = v
 	}
 	return
 }

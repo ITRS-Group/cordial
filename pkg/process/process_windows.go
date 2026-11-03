@@ -21,12 +21,16 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"os/user"
 	"reflect"
+	"runtime"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/itrs-group/cordial/pkg/host"
+	gprocess "github.com/shirou/gopsutil/v4/process"
 	"golang.org/x/sys/windows"
 )
 
@@ -110,14 +114,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	userInfo := (*windows.Tokenuser)(unsafe.Pointer(&buf[0]))
 
 	sid := userInfo.User.Sid
-	subAuthCount := int(sid.SubAuthorityCount())
-	if subAuthCount < 2 {
-		return
-	}
-
-	// "UID" and "GID"
-	uid := int(sid.SubAuthority(uint32(subAuthCount - 1)))
-	gid := int(sid.SubAuthority(uint32(subAuthCount - 2)))
+	uid, gid := -1, -1
 
 	svUID := sv.FieldByName("UID")
 	if svUID.IsValid() && svUID.CanSet() {
@@ -132,6 +129,22 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		k := svGID.Kind()
 		if k == reflect.Int || k == reflect.Int64 || k == reflect.Int32 || k == reflect.Int16 || k == reflect.Int8 {
 			svGID.SetInt(int64(gid))
+		}
+	}
+	if account, domain, _, lookupErr := sid.LookupAccount(""); lookupErr == nil {
+		username := account
+		if domain != "" {
+			username = domain + "\\" + account
+		}
+		setProcessString(sv, "Username", username)
+	}
+	if primaryGroup, groupErr := token.GetTokenPrimaryGroup(); groupErr == nil {
+		if group, domain, _, lookupErr := primaryGroup.PrimaryGroup.LookupAccount(""); lookupErr == nil {
+			groupname := group
+			if domain != "" {
+				groupname = domain + "\\" + group
+			}
+			setProcessString(sv, "Groupname", groupname)
 		}
 	}
 
@@ -202,23 +215,24 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		}
 	}
 
-	cmdBuf := make([]byte, pp.CommandLine.Length)
-	err = windows.ReadProcessMemory(ph, uintptr(unsafe.Pointer(pp.CommandLine.Buffer)), &cmdBuf[0], uintptr(pp.CommandLine.Length), nil)
-	if err != nil {
-		err = fmt.Errorf("failed to read command line for pid %d: %w", pid, err)
-		return
-	}
-
-	argvw, err := windows.CommandLineToArgv((*uint16)(unsafe.Pointer(&cmdBuf[0])), &argc)
-	if err != nil {
-		err = fmt.Errorf("failed to convert command line to argv for pid %d: %w", pid, err)
-		return
-	}
-	defer windows.LocalFree((windows.Handle)(unsafe.Pointer(argvw)))
-
 	var cmdLine []string
-	for i := range argc {
-		cmdLine = append(cmdLine, windows.UTF16ToString(argvw[i][:]))
+	if pp.CommandLine.Length > 0 && pp.CommandLine.Buffer != nil {
+		cmdBuf := make([]byte, pp.CommandLine.Length)
+		err = windows.ReadProcessMemory(ph, uintptr(unsafe.Pointer(pp.CommandLine.Buffer)), &cmdBuf[0], uintptr(pp.CommandLine.Length), nil)
+		if err != nil {
+			err = fmt.Errorf("failed to read command line for pid %d: %w", pid, err)
+			return
+		}
+
+		argvw, conversionErr := windows.CommandLineToArgv((*uint16)(unsafe.Pointer(&cmdBuf[0])), &argc)
+		if conversionErr != nil {
+			err = fmt.Errorf("failed to convert command line to argv for pid %d: %w", pid, conversionErr)
+			return
+		}
+		defer windows.LocalFree((windows.Handle)(unsafe.Pointer(argvw)))
+		for i := range argc {
+			cmdLine = append(cmdLine, windows.UTF16ToString(argvw[i][:]))
+		}
 	}
 
 	svCmdline := sv.FieldByName("Cmdline")
@@ -246,8 +260,145 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 			svStartTime.Set(reflect.ValueOf(&startTime))
 		}
 	}
+	fillWindowsProcessDetails(sv, pid)
 
 	return
+}
+
+func fillWindowsProcessDetails(sv reflect.Value, pid int) {
+	proc, err := gprocess.NewProcess(int32(pid))
+	if err != nil {
+		return
+	}
+
+	if ppid, err := proc.Ppid(); err == nil {
+		setProcessInt(sv, "PPID", int64(ppid))
+	}
+	if username, err := proc.Username(); err == nil {
+		setProcessString(sv, "Username", username)
+	}
+	if cwd, err := proc.Cwd(); err == nil {
+		setProcessString(sv, "Cwd", cwd)
+	}
+	if threads, err := proc.NumThreads(); err == nil {
+		setProcessInt(sv, "Threads", int64(threads))
+	}
+	if times, err := proc.Times(); err == nil {
+		setProcessDuration(sv, "Utime", times.User)
+		setProcessDuration(sv, "Stime", times.System)
+	}
+	if memory, err := proc.MemoryInfo(); err == nil {
+		setProcessInt(sv, "VmRSS", int64(memory.RSS))
+	}
+	if affinity, err := processCPUAffinity(pid); err == nil {
+		values := make([]string, len(affinity))
+		for i, cpu := range affinity {
+			values[i] = fmt.Sprint(cpu)
+		}
+		setProcessString(sv, "CpusAllowedList", strings.Join(values, ","))
+	}
+	fillProcessMemoryCounters(sv, pid)
+	if running, err := proc.IsRunning(); err == nil {
+		state := "stopped"
+		if running {
+			state = "running"
+		}
+		setProcessString(sv, "State", state)
+	}
+}
+
+var (
+	getProcessAffinityMaskProc = windows.NewLazySystemDLL("kernel32.dll").NewProc("GetProcessAffinityMask")
+	getProcessMemoryInfoProc   = windows.NewLazySystemDLL("psapi.dll").NewProc("GetProcessMemoryInfo")
+)
+
+type processMemoryCounters struct {
+	Size                    uint32
+	PageFaultCount          uint32
+	PeakWorkingSetSize      uintptr
+	WorkingSetSize          uintptr
+	QuotaPeakPagedPoolUsage uintptr
+	QuotaPagedPoolUsage     uintptr
+	QuotaPeakNonPagedPool   uintptr
+	QuotaNonPagedPoolUsage  uintptr
+	PagefileUsage           uintptr
+	PeakPagefileUsage       uintptr
+	PrivateUsage            uintptr
+}
+
+func processCPUAffinity(pid int) (cpus []int, err error) {
+	ph, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return nil, err
+	}
+	defer windows.CloseHandle(ph)
+
+	var processMask, systemMask uintptr
+	result, _, callErr := getProcessAffinityMaskProc.Call(
+		uintptr(ph),
+		uintptr(unsafe.Pointer(&processMask)),
+		uintptr(unsafe.Pointer(&systemMask)),
+	)
+	if result == 0 {
+		if callErr != syscall.Errno(0) {
+			return nil, callErr
+		}
+		return nil, syscall.EINVAL
+	}
+	for cpu := 0; cpu < runtime.NumCPU() && cpu < 8*int(unsafe.Sizeof(processMask)); cpu++ {
+		if processMask&(uintptr(1)<<uint(cpu)) != 0 {
+			cpus = append(cpus, cpu)
+		}
+	}
+	return cpus, nil
+}
+
+func fillProcessMemoryCounters(sv reflect.Value, pid int) {
+	ph, err := windows.OpenProcess(windows.PROCESS_QUERY_INFORMATION|windows.PROCESS_VM_READ, false, uint32(pid))
+	if err != nil {
+		return
+	}
+	defer windows.CloseHandle(ph)
+
+	counters := processMemoryCounters{Size: uint32(unsafe.Sizeof(processMemoryCounters{}))}
+	result, _, _ := getProcessMemoryInfoProc.Call(
+		uintptr(ph),
+		uintptr(unsafe.Pointer(&counters)),
+		uintptr(counters.Size),
+	)
+	if result != 0 {
+		setProcessInt(sv, "VmRSS", int64(counters.WorkingSetSize))
+		setProcessInt(sv, "VmHWM", int64(counters.PeakWorkingSetSize))
+	}
+}
+
+func setProcessString(sv reflect.Value, name, value string) {
+	fv := sv.FieldByName(name)
+	if fv.IsValid() && fv.CanSet() && fv.Kind() == reflect.String {
+		fv.SetString(value)
+	}
+}
+
+func setProcessInt(sv reflect.Value, name string, value int64) {
+	fv := sv.FieldByName(name)
+	if !fv.IsValid() || !fv.CanSet() {
+		return
+	}
+	switch fv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		fv.SetInt(value)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		if value >= 0 {
+			fv.SetUint(uint64(value))
+		}
+	}
+}
+
+func setProcessDuration(sv reflect.Value, name string, seconds float64) {
+	fv := sv.FieldByName(name)
+	if fv.IsValid() && fv.CanSet() && fv.Type() == reflect.TypeOf(time.Duration(0)) {
+		fv.SetInt(int64(seconds * float64(time.Second)))
+	}
 }
 
 func readNTUnicodeString(ph windows.Handle, us windows.NTUnicodeString) (s string, err error) {
@@ -267,37 +418,135 @@ func readNTUnicodeString(ph windows.Handle, us windows.NTUnicodeString) (s strin
 
 // ProcessStatusOpenFiles TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
-	return
+	if !fv.IsValid() || !fv.CanSet() {
+		return
+	}
+	files := OpenFiles(h, pid)
+	switch fv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		fv.SetInt(int64(len(files)))
+	case reflect.Slice:
+		if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
+			fv.Set(reflect.ValueOf(files))
+		} else if fv.Type().Elem().Kind() == reflect.String {
+			paths := make([]string, 0, len(files))
+			for _, file := range files {
+				paths = append(paths, file.Path)
+			}
+			fv.Set(reflect.ValueOf(paths))
+		}
+	case reflect.String:
+		paths := make([]string, 0, len(files))
+		for _, file := range files {
+			paths = append(paths, file.Path)
+		}
+		if len(paths) == 0 {
+			fv.SetString("NONE")
+		} else {
+			fv.SetString(strings.Join(paths, ","))
+		}
+	}
 }
 
 // ProcessStatusOpenSockets TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
-	return
+	if !fv.IsValid() || !fv.CanSet() || !h.IsLocalhost() {
+		return
+	}
+	proc, err := gprocess.NewProcess(int32(pid))
+	if err != nil {
+		return
+	}
+	connections, err := proc.Connections()
+	if err == nil && fv.Kind() >= reflect.Int && fv.Kind() <= reflect.Int64 {
+		fv.SetInt(int64(len(connections)))
+	}
 }
 
 // ProcessStatusListeningPorts TODO: Document its behavior, inputs, and effects.
 func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
-	return
+	if !fv.IsValid() || !fv.CanSet() || !h.IsLocalhost() {
+		return
+	}
+	proc, err := gprocess.NewProcess(int32(pid))
+	if err != nil {
+		return
+	}
+	connections, err := proc.Connections()
+	if err != nil {
+		return
+	}
+	ports := make([]int, 0)
+	seen := make(map[int]struct{})
+	for _, connection := range connections {
+		if !strings.EqualFold(connection.Status, "LISTEN") {
+			continue
+		}
+		port := int(connection.Laddr.Port)
+		if _, ok := seen[port]; !ok {
+			seen[port] = struct{}{}
+			ports = append(ports, port)
+		}
+	}
+	switch fv.Kind() {
+	case reflect.Slice:
+		if fv.Type().Elem().Kind() == reflect.Int {
+			fv.Set(reflect.ValueOf(ports))
+		} else if fv.Type().Elem().Kind() == reflect.String {
+			values := make([]string, 0, len(ports))
+			for _, port := range ports {
+				values = append(values, fmt.Sprint(port))
+			}
+			fv.Set(reflect.ValueOf(values))
+		}
+	case reflect.String:
+		values := make([]string, 0, len(ports))
+		for _, port := range ports {
+			values = append(values, fmt.Sprint(port))
+		}
+		if len(values) == 0 {
+			fv.SetString("NONE")
+		} else {
+			fv.SetString(strings.Join(values, ","))
+		}
+	}
 }
 
 // GetUsername TODO: Document its behavior, inputs, and effects.
 func GetUsername(uid int) (username string) {
-	return
+	if uid < 0 {
+		return "unknown"
+	}
+	return fmt.Sprint(uid)
 }
 
 // GetGroupname TODO: Document its behavior, inputs, and effects.
 func GetGroupname(gid int) (groupname string) {
-	return
+	if gid < 0 {
+		return "unknown"
+	}
+	return fmt.Sprint(gid)
 }
 
 // GetLoginName TODO: Document its behavior, inputs, and effects.
 func GetLoginName(pid int) (name string, err error) {
-	return
+	if pid < 0 {
+		return GetCurrentUsername()
+	}
+	proc, err := gprocess.NewProcess(int32(pid))
+	if err != nil {
+		return "", err
+	}
+	return proc.Username()
 }
 
 // GetCurrentUsername TODO: Document its behavior, inputs, and effects.
 func GetCurrentUsername() (name string, err error) {
-	return
+	currentUser, err := user.Current()
+	if err != nil {
+		return "unknown", err
+	}
+	return currentUser.Username, nil
 }
 
 func prepareCmd(cmd *exec.Cmd) {
@@ -308,43 +557,4 @@ func prepareCmd(cmd *exec.Cmd) {
 	} else {
 		cmd.SysProcAttr.CreationFlags = syscall.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS
 	}
-}
-
-// getProcessIngo fills in the pstats struct for a given pid.
-func getProcessInfo[T any](pid uint32, pstats T) (err error) {
-
-	return
-}
-
-func getProcessUser(ph windows.Handle) (uid, gid int, err error) {
-	var token windows.Token
-	err = windows.OpenProcessToken(ph, windows.TOKEN_QUERY, &token)
-	if err != nil {
-		return 0, 0, err
-	}
-	defer token.Close()
-
-	var size uint32
-	err = windows.GetTokenInformation(token, windows.TokenUser, nil, 0, &size)
-	if err != nil && err != windows.ERROR_INSUFFICIENT_BUFFER {
-		return 0, 0, err
-	}
-
-	buf := make([]byte, size)
-	err = windows.GetTokenInformation(token, windows.TokenUser, &buf[0], size, &size)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	userInfo := (*windows.Tokenuser)(unsafe.Pointer(&buf[0]))
-
-	sid := userInfo.User.Sid
-	subAuthCount := int(sid.SubAuthorityCount())
-	if subAuthCount < 2 {
-		return 0, 0, nil
-	}
-	uid = int(sid.SubAuthority(uint32(subAuthCount - 1)))
-	gid = int(sid.SubAuthority(uint32(subAuthCount - 2)))
-
-	return uid, gid, nil
 }

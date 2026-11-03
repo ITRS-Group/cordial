@@ -18,12 +18,16 @@ limitations under the License.
 package host
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"syscall"
 	"time"
+	"unsafe"
 
 	"github.com/Microsoft/go-winio"
 	"github.com/pkg/sftp"
@@ -33,18 +37,17 @@ import (
 // GetFileOwner TODO: Document its behavior, inputs, and effects.
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
 	uid, gid = -1, -1
-	if h.IsLocalhost() {
-		if stat, ok := info.Sys().(*windows.Win32FileAttributeData); ok {
-			// Windows doesn't have the concept of UID/GID, but we can return the file's owner SID as a string
-			uid = int(stat.FileAttributes)
-			gid = 0 // GID is not applicable on Windows
-		}
-	} else {
-		uid = int(info.Sys().(*sftp.FileStat).UID)
-		gid = int(info.Sys().(*sftp.FileStat).GID)
+	if h == nil || h.IsLocalhost() || info == nil {
+		return
+	}
+	if stat, ok := info.Sys().(*sftp.FileStat); ok {
+		uid = int(stat.UID)
+		gid = int(stat.GID)
 	}
 	return
 }
+
+var setProcessAffinityMask = windows.NewLazySystemDLL("kernel32.dll").NewProc("SetProcessAffinityMask")
 
 func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
@@ -59,16 +62,64 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 }
 
 func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
-	return
+	po := evalProcessOptions(options...)
+	if len(po.cpuAffinity) == 0 {
+		return nil
+	}
+	if cmd.Process == nil {
+		return errors.New("process has not been started")
+	}
+	return setProcAffinity(cmd.Process.Pid, po.cpuAffinity...)
 }
 
-func setProcAffinity(cpus ...int) {}
-
-func restoreProcAffinity() {}
+func setProcAffinity(pid int, cpus ...int) error {
+	if len(cpus) == 0 {
+		return nil
+	}
+	var mask uintptr
+	for _, cpu := range cpus {
+		if cpu < 0 || cpu >= runtime.NumCPU() || cpu >= 8*int(unsafe.Sizeof(mask)) {
+			return fmt.Errorf("CPU index %d is outside the process affinity mask", cpu)
+		}
+		mask |= uintptr(1) << uint(cpu)
+	}
+	process, err := windows.OpenProcess(windows.PROCESS_SET_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(process)
+	r1, _, callErr := setProcessAffinityMask.Call(uintptr(process), mask)
+	if r1 == 0 {
+		if callErr != syscall.Errno(0) {
+			return callErr
+		}
+		return syscall.EINVAL
+	}
+	return nil
+}
 
 // Lchtimes TODO: Document its behavior, inputs, and effects.
 func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
-	return
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	handle, err := windows.CreateFile(
+		name,
+		windows.FILE_WRITE_ATTRIBUTES,
+		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE|windows.FILE_SHARE_DELETE,
+		nil,
+		windows.OPEN_EXISTING,
+		windows.FILE_FLAG_BACKUP_SEMANTICS|windows.FILE_FLAG_OPEN_REPARSE_POINT,
+		0,
+	)
+	if err != nil {
+		return err
+	}
+	defer windows.CloseHandle(handle)
+	accessTime := windows.NsecToFiletime(atime.UnixNano())
+	modifiedTime := windows.NsecToFiletime(mtime.UnixNano())
+	return windows.SetFileTime(handle, nil, &accessTime, &modifiedTime)
 }
 
 // Symlink on Windows will use a junction if the target is a directory,
