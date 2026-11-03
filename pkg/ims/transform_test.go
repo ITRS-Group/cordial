@@ -1,11 +1,41 @@
 package ims
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
+
+func TestConnectUsesEachURLAndSharedSettings(t *testing.T) {
+	cf := config.New()
+	config.Set(cf, "url", []string{"https://one.example/api", "https://two.example/api"})
+	config.Set(cf, config.Join("authentication", "token"), "test-token")
+	config.Set(cf, config.Join("timeout"), 3*time.Second)
+	config.Set(cf, config.Join("tls", "skip-verify"), true)
+
+	var urls []string
+	for client := range Connect(cf, "snow") {
+		urls = append(urls, client.BaseURL.String())
+		if client.HTTPClient.Timeout != 3*time.Second {
+			t.Errorf("client timeout = %s, want %s", client.HTTPClient.Timeout, 3*time.Second)
+		}
+		request, err := http.NewRequest(http.MethodGet, client.BaseURL.String(), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client.SetupRequest(request, client, nil)
+		if got := request.Header.Get("Authorization"); got != "Bearer test-token" {
+			t.Errorf("Authorization header = %q, want bearer token", got)
+		}
+	}
+	want := []string{"https://one.example/api/snow", "https://two.example/api/snow"}
+	if !reflect.DeepEqual(urls, want) {
+		t.Errorf("Connect() URLs = %#v, want %#v", urls, want)
+	}
+}
 
 func TestTransformationTransformAppliesStages(t *testing.T) {
 	input := map[string]string{

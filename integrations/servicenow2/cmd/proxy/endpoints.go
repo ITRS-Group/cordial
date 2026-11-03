@@ -37,35 +37,35 @@ import (
 
 const (
 	// ServiceNow fields
-	SNOW_CMDB_CI        = "cmdb_ci"
+	SNOW_CMDB_CI = "cmdb_ci"
 	// SNOW_CORRELATION_ID TODO: Describe its purpose and intended use.
 	SNOW_CORRELATION_ID = "correlation_id"
 	// SNOW_SYS_ID TODO: Describe its purpose and intended use.
-	SNOW_SYS_ID         = "sys_id"
+	SNOW_SYS_ID = "sys_id"
 	// SNOW_USER_NAME TODO: Describe its purpose and intended use.
-	SNOW_USER_NAME      = "user_name"
+	SNOW_USER_NAME = "user_name"
 
 	// ServiceNow tables
 	SNOW_SYS_USER_TABLE = "sys_user"
 	// SNOW_INCIDENT_TABLE TODO: Describe its purpose and intended use.
 	SNOW_INCIDENT_TABLE = "incident"
 	// SNOW_CMDB_TABLE TODO: Describe its purpose and intended use.
-	SNOW_CMDB_TABLE     = "cmdb_ci"
+	SNOW_CMDB_TABLE = "cmdb_ci"
 
 	// internal fields
-	CMDB_CI_DEFAULT    = "_cmdb_ci_default"
+	CMDB_CI_DEFAULT = "_cmdb_ci_default"
 	// CMDB_SEARCH TODO: Describe its purpose and intended use.
-	CMDB_SEARCH        = "_cmdb_search"
+	CMDB_SEARCH = "_cmdb_search"
 	// CMDB_TABLE TODO: Describe its purpose and intended use.
-	CMDB_TABLE         = "_cmdb_table"
+	CMDB_TABLE = "_cmdb_table"
 	// INCIDENT_TABLE TODO: Describe its purpose and intended use.
-	INCIDENT_TABLE     = "_table"
+	INCIDENT_TABLE = "_table"
 	// PROFILE TODO: Describe its purpose and intended use.
-	PROFILE            = "_profile"
+	PROFILE = "_profile"
 	// RAW_CORRELATION_ID TODO: Describe its purpose and intended use.
 	RAW_CORRELATION_ID = "_correlation_id"
 	// UPDATE_ONLY TODO: Describe its purpose and intended use.
-	UPDATE_ONLY        = "_update_only"
+	UPDATE_ONLY = "_update_only"
 )
 
 // ResultsResponse TODO: Describe its purpose and intended use.
@@ -178,7 +178,7 @@ func validateFields(keys []string) bool {
 
 const (
 	// Failed TODO: Describe its purpose and intended use.
-	Failed  = "Failed"
+	Failed = "Failed"
 	// Created TODO: Describe its purpose and intended use.
 	Created = "Created"
 	// Updated TODO: Describe its purpose and intended use.
@@ -387,10 +387,15 @@ func acceptRecord(c echo.Context) (err error) {
 		// Filter, if defined, is a slice of regexps to filter incident
 		// fields. Only fields matching the filters will be retained.
 		if len(s.Filter) > 0 {
+			filters := make([]*regexp.Regexp, 0, len(s.Filter))
+			for _, pattern := range s.Filter {
+				if re, err := regexp.Compile(pattern); err == nil {
+					filters = append(filters, re)
+				}
+			}
 			for key := range incident {
-				if !slices.ContainsFunc(s.Filter, func(f string) bool {
-					match, _ := regexp.MatchString(f, key) // ignore error as this would be a failed match anyway
-					return match
+				if !slices.ContainsFunc(filters, func(re *regexp.Regexp) bool {
+					return re.MatchString(key)
 				}) {
 					delete(incident, key)
 				}

@@ -43,14 +43,14 @@ type ContextKey string
 
 const (
 	// ContextKeyConfig TODO: Describe its purpose and intended use.
-	ContextKeyConfig   ContextKey = "config"   // Context key for passing configuration to handlers, type is *config.Config
+	ContextKeyConfig ContextKey = "config" // Context key for passing configuration to handlers, type is *config.Config
 	// ContextKeyResponse TODO: Describe its purpose and intended use.
 	ContextKeyResponse ContextKey = "response" // Context key for passing response to handlers, type is *ims.Response
 )
 
 const (
 	// PROFILE TODO: Describe its purpose and intended use.
-	PROFILE              = "__itrs_profile"
+	PROFILE = "__itrs_profile"
 	// INCIDENT_UPDATE_ONLY TODO: Describe its purpose and intended use.
 	INCIDENT_UPDATE_ONLY = "__incident_update_only"
 	// INCIDENT_CORRELATION TODO: Describe its purpose and intended use.
@@ -159,17 +159,20 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 //   - `trace`: whether to enable HTTP request/response tracing, e.g. `true`
 func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 	return func(yield func(*rest.Client) bool) {
-		for _, r := range config.Get[[]string](imsCf, "url") {
-			ccf := &ClientConfig{
-				URL:     r + "/" + imsType,
-				Token:   config.Get[string](imsCf, config.Join("authentication", "token")),
-				Timeout: config.Get[time.Duration](imsCf, config.Join("timeout")),
-			}
-			ccf.TLS.SkipVerify = config.Get[bool](imsCf, config.Join("tls", "skip-verify"))
-			ccf.TLS.CACerts = config.Get[[]byte](imsCf, config.Join("tls", "chain"))
-			ccf.Trace = config.Get[bool](imsCf, config.Join("trace"))
+		urls := config.Get[[]string](imsCf, "url")
+		common := ClientConfig{
+			Token:   config.Get[string](imsCf, config.Join("authentication", "token")),
+			Timeout: config.Get[time.Duration](imsCf, config.Join("timeout")),
+		}
+		common.TLS.SkipVerify = config.Get[bool](imsCf, config.Join("tls", "skip-verify"))
+		common.TLS.CACerts = config.Get[[]byte](imsCf, config.Join("tls", "chain"))
+		common.Trace = config.Get[bool](imsCf, config.Join("trace"))
 
-			if !yield(NewClient(ccf)) {
+		for _, r := range urls {
+			ccf := common
+			ccf.URL = r + "/" + imsType
+
+			if !yield(NewClient(&ccf)) {
 				return
 			}
 		}

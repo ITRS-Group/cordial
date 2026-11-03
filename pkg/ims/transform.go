@@ -79,6 +79,8 @@ type Transformation struct {
 // should not be sent to the remote IMS.
 func (s Transformation) Transform(cf *config.Config, idp string, input map[string]string) (output map[string]string, err error) {
 	output = maps.Clone(input)
+	excludePatterns := compilePatterns(s.Exclude)
+	includePatterns := compilePatterns(s.Include)
 
 	// 1. Defaults
 	for k, v := range s.Defaults {
@@ -116,9 +118,8 @@ func (s Transformation) Transform(cf *config.Config, idp string, input map[strin
 	// 4. Exclude
 	if len(s.Exclude) > 0 {
 		for key := range output {
-			if slices.ContainsFunc(s.Exclude, func(f string) bool {
-				match, _ := regexp.MatchString(f, key)
-				return match
+			if slices.ContainsFunc(excludePatterns, func(pattern *regexp.Regexp) bool {
+				return pattern.MatchString(key)
 			}) {
 				delete(output, key)
 			}
@@ -128,9 +129,8 @@ func (s Transformation) Transform(cf *config.Config, idp string, input map[strin
 	// 5. Include
 	if len(s.Include) > 0 {
 		for key := range output {
-			if !slices.ContainsFunc(s.Include, func(f string) bool {
-				match, _ := regexp.MatchString(f, key)
-				return match
+			if !slices.ContainsFunc(includePatterns, func(pattern *regexp.Regexp) bool {
+				return pattern.MatchString(key)
 			}) {
 				delete(output, key)
 			}
@@ -159,5 +159,14 @@ func (s Transformation) Transform(cf *config.Config, idp string, input map[strin
 
 	log.Debug("result of transformed incident fields", slog.Any("fields", output))
 
+	return
+}
+
+func compilePatterns(patterns []string) (compiled []*regexp.Regexp) {
+	for _, pattern := range patterns {
+		if re, err := regexp.Compile(pattern); err == nil {
+			compiled = append(compiled, re)
+		}
+	}
 	return
 }
