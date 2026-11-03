@@ -140,6 +140,7 @@ var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Versi
 // flag is set.
 func listIncludes(h *geneos.Host) (err error) {
 	root := h.PathTo("gateway")
+	longFormat := includeListLongFormat()
 
 	versionDirs, versionedIncludes, err := getVersionedIncludes(h, root)
 	if err != nil {
@@ -161,7 +162,7 @@ func listIncludes(h *geneos.Host) (err error) {
 			}
 			// first, list current symlinks
 			resp := responses.New[responses.General](nil)
-			if includesListCmdLong {
+			if longFormat {
 				resp.Dataview.Table = append(resp.Dataview.Table, []string{
 					"current",
 					fmt.Sprintf("%d", len(vinc)),
@@ -185,13 +186,13 @@ func listIncludes(h *geneos.Host) (err error) {
 
 			if includesListCmdAll {
 				for _, f := range vinc {
-					if includesListCmdLong {
+					if longFormat {
 						resp.Dataview.Table = append(resp.Dataview.Table, []string{
 							"current # " + filepath.Base(f.Path),
 							"-",
 							f.Version,
-							f.FileInfo.Mode().String(), // perms
-							"-",                        // owner
+							includePermissions(f.FileInfo.Mode(), true), // perms
+							"-", // owner
 							f.ModTime.Format(time.RFC3339),
 							includeSizeString(f),
 							f.Path,
@@ -226,13 +227,13 @@ func listIncludes(h *geneos.Host) (err error) {
 					count++
 				}
 			}
-			if includesListCmdLong {
+			if longFormat {
 				resp.Dataview.Table = append(resp.Dataview.Table, []string{
 					version,
 					fmt.Sprintf("%d", count),
 					"-",
-					fi.Mode().String(), // perms
-					"-",                // owner
+					includePermissions(fi.Mode(), true), // perms
+					"-",                                 // owner
 					fi.ModTime().Format(time.RFC3339),
 					"-",
 					h.Join(root, "includes", version),
@@ -255,13 +256,13 @@ func listIncludes(h *geneos.Host) (err error) {
 							return fmt.Errorf("failed to get file info for %s: %w", f.Name(), err)
 						}
 						size := fi.Size()
-						if includesListCmdLong {
+						if longFormat {
 							resp.Dataview.Table = append(resp.Dataview.Table, []string{
 								version + " # " + f.Name(),
 								"-",
 								"-",
-								fi.Mode().String(), // perms
-								"-",                // owner
+								includePermissions(fi.Mode(), true), // perms
+								"-",                                 // owner
 								fi.ModTime().Format(time.RFC3339),
 								includeSizeString(includeFile{FileInfo: fi, Size: &size}),
 								h.Join(root, "includes", version, f.Name()),
@@ -283,7 +284,7 @@ func listIncludes(h *geneos.Host) (err error) {
 		}
 
 		columns := versionColumns
-		if includesListCmdLong {
+		if longFormat {
 			columns = versionColumnsLong
 		}
 		return formatIncludeResponses(os.Stdout, resps, columns)
@@ -366,25 +367,25 @@ func listIncludes(h *geneos.Host) (err error) {
 					count := gatewayCount[p]
 					key := fmt.Sprintf("%s # %d", base, idx+1)
 					resp := responses.New(nil)
-					resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(key, "", count, inc, p, includesListCmdLong))
+					resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(key, "", count, inc, p, longFormat))
 					total += count
 					resps[key] = resp
 				}
 
 				// Add a summary row for the basename shared by these files.
 				resp := responses.New(nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, includeSummaryRow(base, len(paths), total, includesListCmdLong))
+				resp.Dataview.Table = append(resp.Dataview.Table, includeSummaryRow(base, len(paths), total, longFormat))
 				resps[base] = resp
 			} else {
 				count := gatewayCount[path]
 				resp := responses.New(nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(base, "1", count, inc, path, includesListCmdLong))
+				resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(base, "1", count, inc, path, longFormat))
 				resps[base] = resp
 			}
 
 		}
 		columns := includeColumns
-		if includesListCmdLong {
+		if longFormat {
 			columns = includeColumnsLong
 		}
 		return formatIncludeResponses(os.Stdout, resps, columns)
@@ -394,7 +395,7 @@ func listIncludes(h *geneos.Host) (err error) {
 		// build responses.GeneralReponses and call Formatted to output
 		resps := responses.GeneralResponses{}
 		columns := gatewayColumns
-		if includesListCmdLong {
+		if longFormat {
 			columns = gatewayColumnsLong
 		}
 
@@ -412,7 +413,7 @@ func listIncludes(h *geneos.Host) (err error) {
 					resps[gwname] = resp
 				}
 
-				resp.Dataview.Table = append(resp.Dataview.Table, gatewayIncludeRow(gwname, p, includesListCmdLong))
+				resp.Dataview.Table = append(resp.Dataview.Table, gatewayIncludeRow(gwname, p, longFormat))
 
 				// Priority is the third column in both output schemas.
 				pri := slices.Index(columns, "Priority")
@@ -432,7 +433,7 @@ func listIncludes(h *geneos.Host) (err error) {
 }
 
 func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, columns []string) error {
-	if includesListCmdFormat != "json" && includesListCmdFormat != "pretty" {
+	if !includesListJSON() {
 		return result.Formatted(w, includesListCmdFormat, columns, nil)
 	}
 
@@ -449,6 +450,10 @@ func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, colu
 					break
 				}
 				if column == "Owner" {
+					continue
+				}
+				if column == "Flags" {
+					addIncludeFlagFields(item, row[index])
 					continue
 				}
 				value := includeJSONValue(column, row[index])
@@ -471,6 +476,41 @@ func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, colu
 		encoder.SetIndent("", "    ")
 	}
 	return encoder.Encode(rows)
+}
+
+func includesListJSON() bool {
+	return includesListCmdFormat == "json" || includesListCmdFormat == "pretty"
+}
+
+func includeListLongFormat() bool {
+	return includesListCmdLong || includesListJSON()
+}
+
+func includePermissions(mode fs.FileMode, includeType bool) string {
+	if includesListJSON() {
+		return fmt.Sprintf("%#o", mode.Perm())
+	}
+	if includeType {
+		return mode.String()
+	}
+	return mode.Perm().String()
+}
+
+func addIncludeFlagFields(fields map[string]any, flags string) {
+	flagNames := map[rune]string{
+		'D': "disabled",
+		'L': "local",
+		'R': "readOnly",
+		'S': "shared",
+		'U': "remote",
+		'X': "missing",
+		'o': "optional",
+	}
+	for _, flag := range flags {
+		if name, ok := flagNames[flag]; ok {
+			fields[name] = true
+		}
+	}
 }
 
 func includeJSONValue(column, value string) any {
@@ -519,7 +559,7 @@ func includeFileRow(name, copies string, gatewayCount int, include includeFile, 
 
 	permissions := ""
 	if include.FileInfo != nil {
-		permissions = include.FileInfo.Mode().Perm().String()
+		permissions = includePermissions(include.FileInfo.Mode(), false)
 	}
 	return []string{name, copies, fmt.Sprintf("%d", gatewayCount), renderFlags(include), include.Version, permissions, "", modified, size, location}
 }
@@ -534,9 +574,6 @@ func includeSummaryRow(name string, copies, gatewayCount int, long bool) []strin
 
 func gatewayIncludeRow(gateway string, include gatewayInclude, long bool) []string {
 	name := filepath.Base(include.Location)
-	if len(include.Groups) > 0 {
-		name = strings.Join(append(slices.Clone(include.Groups), name), "/")
-	}
 	modified := ""
 	if !include.ModTime.IsZero() {
 		modified = include.ModTime.Format(time.RFC3339)
@@ -552,7 +589,7 @@ func gatewayIncludeRow(gateway string, include gatewayInclude, long bool) []stri
 	}
 	permissions := ""
 	if include.FileInfo != nil {
-		permissions = include.FileInfo.Mode().Perm().String()
+		permissions = includePermissions(include.FileInfo.Mode(), false)
 	}
 	return []string{gateway, name, fmt.Sprintf("%d", include.Priority), renderGatewayFlags(include), include.Version, reload, permissions, "", modified, size, include.Location}
 }

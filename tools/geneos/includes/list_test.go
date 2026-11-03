@@ -74,6 +74,41 @@ func TestFormatIncludeResponsesJSON(t *testing.T) {
 	}
 }
 
+func TestFormatIncludeResponsesExpandsFlags(t *testing.T) {
+	oldFormat := includesListCmdFormat
+	includesListCmdFormat = "json"
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	response := responses.New[responses.General](nil)
+	response.Dataview.Table = [][]string{
+		{"all", "DLRoSUX"},
+		{"readonly", "R"},
+	}
+	var output bytes.Buffer
+	if err := formatIncludeResponses(&output, responses.GeneralResponses{"gateway": response}, []string{"Gateway", "Flags"}); err != nil {
+		t.Fatalf("formatIncludeResponses() error = %v", err)
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
+		t.Fatalf("JSON output is invalid: %v", err)
+	}
+	wantFlags := []string{"disabled", "local", "readOnly", "shared", "remote", "missing", "optional"}
+	if len(rows) != 2 {
+		t.Fatalf("JSON rows = %#v, want two rows", rows)
+	}
+	for _, name := range wantFlags {
+		if rows[0][name] != true {
+			t.Errorf("first row %s = %#v, want true", name, rows[0][name])
+		}
+		if _, ok := rows[1][name]; ok != (name == "readOnly") {
+			t.Errorf("second row has %s = %t, want only readOnly", name, ok)
+		}
+	}
+	if _, ok := rows[0]["flags"]; ok {
+		t.Error("JSON row retained aggregate flags field")
+	}
+}
+
 func TestFormatIncludeResponsesOmitsEmptyFields(t *testing.T) {
 	oldFormat := includesListCmdFormat
 	includesListCmdFormat = "json"
@@ -90,10 +125,10 @@ func TestFormatIncludeResponsesOmitsEmptyFields(t *testing.T) {
 	if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
 		t.Fatalf("JSON output is invalid: %v", err)
 	}
-	if len(rows) != 1 || rows[0]["gateway"] != "Demo Gateway" || rows[0]["flags"] != "-" {
-		t.Fatalf("JSON rows = %#v, want gateway and flags", rows)
+	if len(rows) != 1 || rows[0]["gateway"] != "Demo Gateway" {
+		t.Fatalf("JSON rows = %#v, want gateway field", rows)
 	}
-	for _, omitted := range []string{"owner", "version"} {
+	for _, omitted := range []string{"owner", "flags", "version", "disabled", "remote"} {
 		if _, ok := rows[0][omitted]; ok {
 			t.Errorf("JSON unexpectedly included %q: %#v", omitted, rows[0][omitted])
 		}
@@ -113,6 +148,45 @@ func TestFormatIncludeResponsesPrettyJSON(t *testing.T) {
 	}
 	if !strings.Contains(output.String(), "\n        \"gateway\"") {
 		t.Fatalf("pretty JSON was not indented: %s", output.String())
+	}
+}
+
+func TestJSONUsesLongFieldsAndOctalPermissions(t *testing.T) {
+	oldFormat, oldLong := includesListCmdFormat, includesListCmdLong
+	includesListCmdFormat = "json"
+	includesListCmdLong = false
+	t.Cleanup(func() {
+		includesListCmdFormat = oldFormat
+		includesListCmdLong = oldLong
+	})
+	if !includeListLongFormat() {
+		t.Fatal("JSON output did not select the long format")
+	}
+
+	filePath := filepath.Join(t.TempDir(), "readonly.xml")
+	if err := os.WriteFile(filePath, nil, 0640); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	info, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatalf("Stat() error = %v", err)
+	}
+	if got := includePermissions(info.Mode(), false); got != "0640" {
+		t.Fatalf("JSON permissions = %q, want 0640", got)
+	}
+
+	include := includeFile{FileInfo: info, Size: int64Ptr(0)}
+	row := includeFileRow("readonly.xml", "1", 1, include, filePath, includeListLongFormat())
+	if len(row) != len(includeColumnsLong) || row[5] != "0640" {
+		t.Fatalf("JSON include row = %v, want long fields and octal permissions", row)
+	}
+	if got := includePermissions(info.Mode(), false); got == info.Mode().Perm().String() {
+		t.Fatal("octal JSON permissions unexpectedly match symbolic permissions")
+	}
+
+	includesListCmdFormat = "column"
+	if got := includePermissions(info.Mode(), false); got != info.Mode().Perm().String() {
+		t.Errorf("table permissions = %q, want symbolic %q", got, info.Mode().Perm().String())
 	}
 }
 
@@ -208,8 +282,23 @@ func TestIncludeRowsHonorStandardAndLongSchemas(t *testing.T) {
 	if len(standardGateway) != len(gatewayColumns) || len(longGateway) != len(gatewayColumnsLong) {
 		t.Fatalf("gateway row lengths = %d and %d, want %d and %d", len(standardGateway), len(longGateway), len(gatewayColumns), len(gatewayColumnsLong))
 	}
-	if standardGateway[1] != "parent/child/file.xml" {
-		t.Errorf("grouped include name = %q, want parent/child/file.xml", standardGateway[1])
+	if standardGateway[1] != "file.xml" {
+		t.Errorf("grouped include filename = %q, want file.xml", standardGateway[1])
+	}
+
+	includesListCmdFormat = "json"
+	response := responses.New[responses.General](nil)
+	response.Dataview.Table = [][]string{standardGateway}
+	var output bytes.Buffer
+	if err := formatIncludeResponses(&output, responses.GeneralResponses{"gw": response}, gatewayColumns); err != nil {
+		t.Fatalf("formatIncludeResponses() error = %v", err)
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
+		t.Fatalf("JSON output is invalid: %v", err)
+	}
+	if len(rows) != 1 || rows[0]["file"] != "file.xml" {
+		t.Errorf("JSON file = %#v, want basename file.xml", rows)
 	}
 }
 
