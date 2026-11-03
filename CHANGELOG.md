@@ -7,28 +7,30 @@
 
 ## Version v1.30.0 Highlights
 
-This release introduces significant new features for the `geneos` command, along with some minor breaking changes. Please read this changelog carefully before upgrading.
+This release introduces significant new features for the `geneos` command, along with a number of minor breaking changes. Please read this changelog carefully before upgrading.
 
-For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
+A number of the new features have been introduced as part of a larger Monitor-Of-The-Monitors (MOTM) effort. For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
 
->[!IMPORTANT]
->**Breaking Changes**
->1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more standard single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
->
->1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
+* **Monitor-Of-The-Monitors (MOTM) Framework**: The MOTM framework is an existing collection of monitoring capabilities and best practices designed to provide a unified view and management of multiple monitoring components within the Geneos ecosystem. It serves as the foundation for the new features introduced in this release, including profiles, includes, and enhanced snapshot capabilities. Once these features are fully integrated, they will enable more streamlined and automated management of complex monitoring environments.
 
-* **Profiles**: The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience). Read more about them in `geneos help profiles`
+  * **Profiles**: The `geneos` command now supports pre-defined configurations through _profiles_. A profile is a pseudo-component type that uses a configuration file to control the automated creation and management of other components with various contextual settings to help automate common deployment scenarios.
 
-  To support more complex configuration scenarios possible with profiles, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
+    As part of this effort, `san` components have been enhanced to better integrate with profiles. To support more complex configuration scenarios possible with profiles, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
 
-* **Includes**: The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
+  * **Includes**: The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of new _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
 
-* **Dashboards**: The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
+  * **Gateway Dataview Snapshots**: The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
 
 * **Auditing**: Support for auditing events within the `geneos` command. Audit logs are now created for global and per-instance events. As part of this, most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
-* **Gateway Dataview Snapshots**: The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
+* **Dashboard Tools**: The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
 
+>[!IMPORTANT]
+>**Breaking Changes**
+>
+>1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more common single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
+>
+>1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
 
 ## Version v1.30.0 Changes
 
@@ -115,6 +117,10 @@ For now, all of these should be considered preview features and may be subject t
   * Fix the `geneos set` command to correctly handle secure (encoded) variables.
 
   * Fix `geneos tls export` for instances to only write out the private key once.
+
+* `tools/ims-gateway`
+
+  * Fix the tense of "exclude" and "include" field filters.
 
 ---
 

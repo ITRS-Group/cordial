@@ -1,42 +1,68 @@
-# `cordial` - Geneos Utilities, Tools, Integrations and Packages
+# Cordial
 
-> [!NOTE]
->
-> This is **Version v1.29.2** - Released 2026-09-10 - See [`CHANGELOG.md`](CHANGELOG.md) for more details.
+Cordial provides tools and integrations to help you and your team manage ITRS Geneos. It makes routine work easier to repeat, with ready-made commands, reports, and integrations that reduce manual steps and the number of scripts you need to maintain. Geneos can monitor many Gateways, Netprobes, hosts, and plugins. To see how these components collect, process, and present monitoring data, read the [Geneos architecture guide](https://docs.itrsgroup.com/docs/geneos/current/getting-started/architecture/index.html).
 
-## Tools and Utilities
+Cordial does not replace any existing Geneos components. It helps you get more operational value from it with less manual effort and fewer tools to maintain. Depending on how you use it, Cordial can also reduce the effort and cost of routine support.
 
-| Name                                                   | Description                                                         |
-| ------------------------------------------------------ | ------------------------------------------------------------------- |
-| [`gdna`](gdna/README.md)                               | Geneos Dynamic Netprobe Analysis                                    |
-| [`geneos`](tools/geneos/README.md)                     | Manage Your Geneos environment                                      |
-| [`dv2email`](tools/dv2email/README.md)                 | Send a Dataview as an EMail                                         |
-| [`files2dv`](tools/files2dv/README.md)                 | Scan directories and files for information (not an FKM substitute!) |
-| [`gateway-reporter`](tools/gateway-reporter/README.md) | Generate monitoring coverage reports from setup files               |
-| [`libemail`](libraries/libemail/README.md)             | Drop-In Updated Replacement for `libemail`                          |
-| [`san-config`](tools/san-config/README.md)             | Dynamic SAN configuration file server (not yet fully integrated)    |
+## Operational workflows
+
+### Manage Geneos with one command
+
+The [`geneos` command](tools/geneos/README.md) gives you one consistent way to view, install, update, configure, start, and stop Geneos components. You can manage local and remote hosts, work with existing installations, and use profiles as starting points for common deployments. This reduces repeated host-by-host work and makes routine changes easier to script and repeat. Profile and Monitor-of-the-Monitors features in the current development release are previews.
+
+### Review monitoring coverage with GDNA
+
+Geneos licence data can be detailed and spread across many Gateways and Netprobes. [GDNA](gdna/README.md) turns data from Geneos Licence Daemons (`licd`) into dashboards and reports that show monitoring coverage across servers; it does not collect monitoring data from other sources. You and your team can use these reports to find potential gaps, compare plugin use with your coverage goals, and plan improvements. GDNA can also email reports on a schedule, so you can share regular updates without running them manually. Results depend on the licence data available and the coverage policies in use. To learn about the data source, read the ITRS documentation for the [Geneos Licence Daemon](https://docs.itrsgroup.com/docs/geneos/7.12.0/administration/licence-daemon/index.html).
+
+### Share Dataviews with dv2email
+
+[`dv2email`](tools/dv2email/README.md) turns Geneos Dataview snapshots into email reports or files such as HTML and Excel workbooks. A Gateway Action or Effect can start a report when an alert occurs. This avoids repeated manual exports and copy-and-paste for incident reviews, handovers, and other operational reports. To see how the Gateway provides Dataview snapshots, read the [Gateway Commands guide](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_commands_tr/index.html#rest-service).
+
+### Connect alerts to ServiceNow
+
+The [`servicenow2` integration](integrations/servicenow2/README.md) maps Geneos alert data to ServiceNow incident fields. Based on its configured rules and correlation values, it can create an incident or update an existing one. It removes the need for a separate wrapper script to translate Gateway event data. This reduces manual ticket entry and keeps alerts in your service-management workflow. To see how Geneos passes event details to external programs, read the ITRS guide to [Gateway Actions and Effects](https://docs.itrsgroup.com/docs/geneos/current/processing/monitoring-and-alerts/geneos_rulesactionsalerts_tr/index.html).
+
+## Low-overhead deployment
+
+The pre-built Linux command-line programs are statically linked for compatible 64-bit x86 Linux systems. You do not need to install a separate language runtime, interpreter, or helper utility to run them. The exception is `libemail.so`: it is a shared library that uses the host's standard C runtime and must be loaded by a compatible Geneos Gateway. Each program still needs the configuration, network access, and external services required for its work.
+
+The `geneos` command also includes tools for many tasks that might otherwise need separate scripts or diagnostic utilities. For example, `geneos package install` can download and unpack releases; `geneos ps` can inspect running instances, open files, and sockets; `geneos logs` can read, filter, and follow local or remote logs; and `geneos snapshot` can fetch Gateway Dataviews. These built-in tools can reduce software setup and maintenance on your Geneos hosts.
 
 ## Integrations
 
-| Name                                              | Description                                  |
-| ------------------------------------------------- | -------------------------------------------- |
-| [servicenow](integrations/servicenow/README.md)   | Send Geneos Alerts to ServiceNow             |
-| [servicenow2](integrations/servicenow2/README.md) | Send Geneos Alerts to ServiceNow - Version 2 |
-| [pagerduty](integrations/pagerduty/README.md)     | Send Geneos to PagerDuty                     |
+| Integration | Purpose |
+| --- | --- |
+| [`servicenow2`](integrations/servicenow2/README.md) | Creates or updates ServiceNow incidents from Geneos alerts. |
+| [`pagerduty`](integrations/pagerduty/README.md) | Sends Geneos alerts to PagerDuty as events. |
 
-## Packages
+## Libraries
 
-These packages provide Go interfaces to ITRS Geneos as well as utilities to help build useful tools for working with ITRS Geneos.
+| Library | Purpose |
+| --- | --- |
+| [`libalert`](libraries/libalert/README.md) | Geneos notification library with enhanced email support and Microsoft Teams notifications. |
+| [`libemail`](libraries/libemail/README.md) | Geneos email library with support for authenticated SMTP, TLS, and templates. |
 
-| Package                                                                                                                                              | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`config`](pkg/config/README.md)                                                                                                                     | Configuration support, based on the excellent [`viper`](https://pkg.go.dev/github.com/spf13/viper) package, with local extensions to add expansion of embedded references including AES encrypted values, interpolation of environment variables and other configuration parameters as well as reading local files and from URLs.<br><br>A one-stop-shop to load and save configurations makes initialising programs easier and simpler.<br><br>The implementation is slowly maturing but is not complete and is subject to API changes as we find better ways to do things. The options on those functions that have been extended allow fine grained control of how interpolation is performed including restricting which methods are supported and adding custom functions for interpolation/expansion. |
-| [`email`](pkg/email/README.md)                                                                                                                       | Functions extracted from the `libemail` sources to be more generally available, initially for the `dv2email` program but also for additional tools in the future. `libemail` has not been changed so that it remains fully backward compatible.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| [`geneos`](pkg/geneos/README.md)                                                                                                                     | Automate Geneos XML configuration file generation using Go programs.<br><br>The Geneos schema is not, and cannot be, fully implemented at this stage as the mappings have been hand-rolled rather than any attempt as machine translation.<br><br>Automate Geneos XML configuration file generation using Go programs.<br><br>The Geneos schema is not, and cannot be, fully implemented at this stage as the mappings have been hand-rolled rather than any attempt as machine translation.                                                                                                                                                                                                                                                                                                                |
-| [`geneos/api`](pkg/geneos/api/README.md)                                                                                                             | An updated API package for sending data into Geneos. This is work in progress and is not ready for real-world use. This package will provide a unified API for both XML-RPC and REST APIs, within the constraints of the features of both.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| [`host`](pkg/host/README.md)                                                                                                                         | Remote host integration extracted from `geneos` internal packages and turned into an extensible interface that supports local OS and remote SSH/SFTP operations. The API is still in flux and could do with more review and structure.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [`plugins`](pkg/geneos/plugins/README.md)<br>[`samplers`](pkg/geneos/samplers/README.md)<br>[`streams`](pkg/geneos/streams/README.md)<br>[`xmlrpc`](pkg/geneos/xmlrpc/README.md) | These four packages provide support for the Geneos XML-RPC API Plugin.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| [`process`](pkg/process/README.md)                                                                                                                   | Process management functions. There is a `Daemon()` function to background a process and the beginnings of program and batch managers. While the `Daemon()` function is relatively stable the other methods in this package are new and liable to change as their use matures.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [`commands`](pkg/geneos/commands/README.md)                                                                                                                 | Geneos Gateway REST API Commands including programmatic support for `snapshots` of Dataviews. When used with the `xpath` package below it provides a simple way of executing REST commands on Geneos Gateways.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| [`xpath`](pkg/geneos/xpath/README.md)                                                                                                                       | Geneos XPath handling functions and methods. This is a developing API and is not complete. Basic functionality exists to parse and manipulate simple XPaths.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| [`pkg/icp`](pkg/icp)<br>[`pkg/gwhub`](pkg/gwhub)                                                                                                     | These two packages are the start of APIs to ITRS Capacity Planner and Gateway Hub respectively. They are work in progress and should not be used for anything other than testing for the moment.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+## Other tools
+
+| Tool | Purpose |
+| --- | --- |
+| [`files2dv`](tools/files2dv/README.md) | Builds Geneos Toolkit-compatible Dataview data from files. Its background push mode is not implemented. |
+| [`ims-gateway`](tools/ims-gateway/README.md) | Connects Geneos incident commands to ServiceNow or ServiceDesk Plus. |
+| [`san-config`](tools/san-config/README.md) | Serves inventory-based configuration to Self-Announcing Netprobes. |
+
+## Go packages
+
+If you build your own tools, Cordial also provides Go packages that work with Geneos:
+
+| Package | Purpose |
+| --- | --- |
+| [`config`](pkg/config/README.md) | Load configuration and expand values such as environment variables and encrypted credentials. |
+| [`geneos`](pkg/geneos/README.md) | Build Geneos Gateway and Netprobe configuration using Go data structures. |
+| [`geneos/api`](pkg/geneos/api/README.md) | Send data to Netprobes through their REST and XML-RPC APIs. |
+| [`geneos/commands`](pkg/geneos/commands/README.md) | Run Gateway REST commands and retrieve Dataview snapshots. |
+| [`geneos/plugins`](pkg/geneos/plugins/README.md), [`samplers`](pkg/geneos/samplers/README.md), [`streams`](pkg/geneos/streams/README.md), [`xmlrpc`](pkg/geneos/xmlrpc/README.md) | Build integrations with the Geneos XML-RPC API. |
+| [`geneos/xpath`](pkg/geneos/xpath/README.md) | Work with XPath expressions used by Geneos configuration and APIs. |
+| [`host`](pkg/host/README.md) | Perform file and process operations on local and remote SSH hosts. |
+| [`email`](pkg/email/README.md) | Send Geneos-aware email through SMTP, including TLS and authentication. |
+
+Other packages support certificates, logging, reporting, REST clients, process management, IMS, Capacity Planner, and Gateway Hub. For the full package list, see the [package overview](pkg/README.md).
