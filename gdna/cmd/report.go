@@ -296,8 +296,9 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 func matchReport(name, pattern string) (match bool, subreport string) {
 	for p := range strings.FieldsFuncSeq(pattern, func(r rune) bool { return r == ',' }) {
 		// trim anything after a ':'
+		var candidateSubreport string
 		if c := strings.Index(p, ":"); c != -1 {
-			subreport = p[c+1:]
+			candidateSubreport = p[c+1:]
 			p = p[:c]
 		}
 		if p == "" {
@@ -305,6 +306,7 @@ func matchReport(name, pattern string) (match bool, subreport string) {
 		}
 		if ok, _ := path.Match(p, name); ok {
 			match = true
+			subreport = candidateSubreport
 			return
 		}
 	}

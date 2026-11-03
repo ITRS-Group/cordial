@@ -143,8 +143,7 @@ var snowField1 = regexp.MustCompile(`^[\w\.-]+$`)
 // hyphens and cannot begin or end with a hyphen. They cannot be an
 // empty string either.
 //
-// it also lowercases all fields names and if there is a clash it
-// returns false.
+// It returns false if fields are invalid or duplicate ignoring case.
 //
 // if there are no keys the function returns false.
 //
@@ -166,14 +165,17 @@ func validateFields(keys []string) bool {
 	}
 
 	// check keys are unique when lowercased
-	slices.SortFunc(keys, func(a, b string) int {
+	sortedKeys := slices.Clone(keys)
+	slices.SortFunc(sortedKeys, func(a, b string) int {
 		return strings.Compare(strings.ToLower(a), strings.ToLower(b))
 	})
 
-	l1 := len(keys)
-	l2 := len(slices.Compact(keys)) // slices.Compact modifies the slice
-
-	return l1 == l2
+	for i := 1; i < len(sortedKeys); i++ {
+		if strings.EqualFold(sortedKeys[i-1], sortedKeys[i]) {
+			return false
+		}
+	}
+	return true
 }
 
 const (
