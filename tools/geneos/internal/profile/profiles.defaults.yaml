@@ -1,4 +1,10 @@
 #
+# Default profiles for Geneos components
+#
+# This file defines the default profiles used by the `geneos` command
+# for initializing and deploying various Geneos components. Profiles
+# provide a convenient way to pre-configure common deployment scenarios
+# and can be extended or overridden as needed.
 #
 version: {{version}}
 
@@ -392,7 +398,8 @@ profiles:
   motm-gateway:
     _short: "MOTM gateway profile"
     _description: |
-      Configuration for the MOTM gateway, including its parameters, includes, and variables.
+      Configuration for the MOTM gateway, including its parameters,
+      includes, and variables. 
     gateways:
       - name: ${hostname}-motm
         includes:
