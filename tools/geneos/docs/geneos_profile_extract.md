@@ -1,6 +1,8 @@
 # `geneos profile extract`
 
-Extract embedded profile configuration
+Extracts the embedded default profile configuration to the user's `geneos/profiles.yaml` file. If the file already matches the embedded defaults, it is left unchanged. If it differs, the existing file is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before the embedded defaults are written. A missing file is created without a backup.
+
+This command always targets the standard user configuration path, even if another profile file is selected with `--profiles`. See the [profile guide](geneos_profile.md) for profile file locations and usage.
 ## Usage
 
 ```text

@@ -28,6 +28,11 @@ func installGeneosMarkdownHelp(command *cobra.Command) {
 `)
 }
 
+// RenderHelpMarkdown renders help Markdown at the standard width for the given output.
+func RenderHelpMarkdown(input string, output io.Writer) string {
+	return renderHelpMarkdownTo(input, helpMarkdownWidth, output)
+}
+
 // RenderHelpMarkdownTTY renders Geneos help Markdown for terminal output.
 func RenderHelpMarkdownTTY(input string, width int) string {
 	if width < 1 {

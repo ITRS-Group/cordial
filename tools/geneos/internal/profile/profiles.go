@@ -43,6 +43,11 @@ var log = logger.Logger
 //go:embed "profiles.defaults.yaml"
 var profilesDefault []byte
 
+// EmbeddedDefaults returns a copy of the embedded profile configuration.
+func EmbeddedDefaults() []byte {
+	return slices.Clone(profilesDefault)
+}
+
 // Profiles TODO: Describe its purpose and intended use.
 var Profiles *config.Config
 

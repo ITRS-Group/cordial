@@ -43,19 +43,28 @@ const lockDirSuffix = "lck"
 // operation.
 func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string) error {
 	var done []string
+	var rollErr error
 
 	for _, p := range params {
 		i.Log().Debug("rolling file", slog.String("file", p))
-		if err := rollOneFileParam(i, p, newSuffix, oldSuffix); err != nil {
+		if rollErr = rollOneFileParam(i, p, newSuffix, oldSuffix); rollErr != nil {
 			break
 		}
 		done = append(done, p)
 	}
 
-	// unroll on error, just reversing the done list and the prefixes
-	if len(done) != len(params) {
-		err := RollFiles(i, oldSuffix, newSuffix, done...)
-		return fmt.Errorf("failed to roll files for %s: %w", i, err)
+	if rollErr != nil {
+		var rollbackErr error
+		if len(done) > 0 {
+			rollbackErr = RollFiles(i, oldSuffix, newSuffix, done...)
+		}
+		if rollbackErr != nil {
+			return errors.Join(
+				fmt.Errorf("failed to roll files for %s: %w", i, rollErr),
+				fmt.Errorf("rollback failed: %w", rollbackErr),
+			)
+		}
+		return fmt.Errorf("failed to roll files for %s; completed files were rolled back: %w", i, rollErr)
 	}
 
 	return nil

@@ -438,4 +438,4 @@ Current implementation limits:
 - `deploy --signing-bundle` is used when it initialises a local installation. It is not passed through to profile deployment in an existing installation. Use `--certs-bundle` for issued instance certificates there.
 - Application is not transactional. An error can leave some instances updated and others unchanged. Check the result before retrying.
 - Removing an instance from the YAML does not delete the installed instance. Renaming an entry can create a new instance and leave the old one in place.
-- `geneos profile extract` and its `update` alias are registered but do not currently export or update configuration. Use the [supplied YAML source](../../profile/profiles.defaults.yaml) as the reference for default definitions.
+- [`geneos profile extract`](geneos_profile_extract.md) and its `update` alias write the embedded defaults to the standard user profiles file. If that file differs, it is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before replacement; if it already matches, no file change is made. A custom file selected with `--profiles` is not overwritten.

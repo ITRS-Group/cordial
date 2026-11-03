@@ -18,18 +18,25 @@ limitations under the License.
 package profile
 
 import (
+	"bytes"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"maps"
 	"os"
+	"path/filepath"
 	"slices"
+	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	profileconfig "github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
@@ -75,18 +82,13 @@ func profileHelp(command *cobra.Command, _ []string) {
 		components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 		if found {
 			if desc, ok := components["_description"].(string); ok {
-				fmt.Println(cmd.RenderHelpMarkdownTTY(desc, 76))
+				command.Print(cmd.RenderHelpMarkdown(desc, command.OutOrStdout()))
 			}
 			return
 		}
 	}
 
-	// no profile name is given, just display the general help text
-	if command.Long != "" {
-		command.Println(command.Long)
-		command.Println()
-	}
-	command.Print(command.UsageString())
+	cmd.Cmd.HelpFunc()(command, nil)
 }
 
 //go:embed _docs/list.md
@@ -165,7 +167,100 @@ var profileExtractCmd = &cobra.Command{
 	Long:                  profileExtractDescription,
 	SilenceUsage:          true,
 	DisableFlagsInUseLine: true,
-	Run: func(command *cobra.Command, args []string) {
-		return
+	RunE: func(command *cobra.Command, _ []string) error {
+		profilesPath, err := config.UserConfigPath(cordial.ExecutableName(), "profiles.yaml")
+		if err != nil {
+			return fmt.Errorf("resolve user profiles path: %w", err)
+		}
+
+		backup, changed, err := extractProfileConfig(profilesPath, profileconfig.EmbeddedDefaults(), time.Now())
+		if err != nil {
+			return err
+		}
+		if !changed {
+			command.Printf("Embedded profile configuration already matches %s; no changes made.\n", profilesPath)
+			return nil
+		}
+		if backup != "" {
+			command.Printf("Backed up existing profile configuration to %s\n", backup)
+		}
+		command.Printf("Wrote embedded profile configuration to %s\n", profilesPath)
+		return nil
 	},
+}
+
+func extractProfileConfig(filename string, embedded []byte, now time.Time) (backup string, changed bool, err error) {
+	dir := filepath.Dir(filename)
+	if err = os.MkdirAll(dir, 0o755); err != nil {
+		return "", false, fmt.Errorf("create user profiles directory: %w", err)
+	}
+
+	current, readErr := os.ReadFile(filename)
+	if readErr == nil && bytes.Equal(current, embedded) {
+		return "", false, nil
+	}
+	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
+		return "", false, fmt.Errorf("read user profiles file: %w", readErr)
+	}
+
+	temp, err := os.CreateTemp(dir, ".profiles-*.yaml")
+	if err != nil {
+		return "", false, fmt.Errorf("create temporary profiles file: %w", err)
+	}
+	tempPath := temp.Name()
+	defer os.Remove(tempPath)
+	if _, err = temp.Write(embedded); err != nil {
+		temp.Close()
+		return "", false, fmt.Errorf("write temporary profiles file: %w", err)
+	}
+	if err = temp.Chmod(0o644); err != nil {
+		temp.Close()
+		return "", false, fmt.Errorf("set temporary profiles permissions: %w", err)
+	}
+	if err = temp.Close(); err != nil {
+		return "", false, fmt.Errorf("close temporary profiles file: %w", err)
+	}
+
+	if readErr == nil {
+		backup, err = profileBackupPath(filename, now)
+		if err != nil {
+			return "", false, err
+		}
+		if err = os.Rename(filename, backup); err != nil {
+			return "", false, fmt.Errorf("back up existing profiles file: %w", err)
+		}
+	}
+
+	if err = os.Rename(tempPath, filename); err != nil {
+		installErr := fmt.Errorf("install embedded profiles file: %w", err)
+		if backup != "" {
+			if restoreErr := os.Rename(backup, filename); restoreErr != nil {
+				return backup, false, errors.Join(installErr, fmt.Errorf("restore previous profiles file from %s: %w", backup, restoreErr))
+			}
+		}
+		return "", false, installErr
+	}
+
+	return backup, true, nil
+}
+
+func profileBackupPath(filename string, now time.Time) (string, error) {
+	ext := filepath.Ext(filename)
+	prefix := strings.TrimSuffix(filename, ext)
+	timestamp := now.Format("20060102150405")
+	for suffix := 0; ; suffix++ {
+		candidate := fmt.Sprintf("%s-%s%s%s", prefix, timestamp, backupSequence(suffix), ext)
+		if _, err := os.Lstat(candidate); errors.Is(err, os.ErrNotExist) {
+			return candidate, nil
+		} else if err != nil {
+			return "", fmt.Errorf("check profile backup path %s: %w", candidate, err)
+		}
+	}
+}
+
+func backupSequence(suffix int) string {
+	if suffix == 0 {
+		return ""
+	}
+	return fmt.Sprintf("-%d", suffix)
 }
