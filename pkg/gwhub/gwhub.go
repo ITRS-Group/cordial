@@ -38,7 +38,7 @@ func (hub *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
 // From https://github.com/spatialtime/iso8601 but "fixed" to allow
 // durations without 'T'
 func ParseDuration(isoDuration string) (time.Duration, error) {
-	re := regexp.MustCompile(`^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:.\d+)?)S)?$`)
+	re := regexp.MustCompile(`^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$`)
 	matches := re.FindStringSubmatch(isoDuration)
 	if matches == nil {
 		return 0, errors.New("duration string is of incorrect format")
@@ -48,18 +48,27 @@ func ParseDuration(isoDuration string) (time.Duration, error) {
 
 	//skipping years and months
 
-	//days
+	// weeks
 	if matches[3] != "" {
 		f, err := strconv.ParseFloat(matches[3], 32)
 		if err != nil {
 			return 0, err
 		}
 
-		seconds += (f * 24 * 60 * 60)
+		seconds += f * 7 * 24 * 60 * 60
 	}
-	//hours
+	// days
 	if matches[4] != "" {
 		f, err := strconv.ParseFloat(matches[4], 32)
+		if err != nil {
+			return 0, err
+		}
+
+		seconds += f * 24 * 60 * 60
+	}
+	//hours
+	if matches[5] != "" {
+		f, err := strconv.ParseFloat(matches[5], 32)
 		if err != nil {
 			return 0, err
 		}
@@ -67,8 +76,8 @@ func ParseDuration(isoDuration string) (time.Duration, error) {
 		seconds += (f * 60 * 60)
 	}
 	//minutes
-	if matches[5] != "" {
-		f, err := strconv.ParseFloat(matches[5], 32)
+	if matches[6] != "" {
+		f, err := strconv.ParseFloat(matches[6], 32)
 		if err != nil {
 			return 0, err
 		}
@@ -76,8 +85,8 @@ func ParseDuration(isoDuration string) (time.Duration, error) {
 		seconds += (f * 60)
 	}
 	//seconds & milliseconds
-	if matches[6] != "" {
-		f, err := strconv.ParseFloat(matches[6], 32)
+	if matches[7] != "" {
+		f, err := strconv.ParseFloat(matches[7], 32)
 		if err != nil {
 			return 0, err
 		}
@@ -132,7 +141,7 @@ func FormatDuration(d time.Duration) (iso string) {
 
 	minutes := d.Truncate(time.Minute)
 	if minutes > 0 {
-		iso += fmt.Sprintf("%dH", minutes/time.Minute)
+		iso += fmt.Sprintf("%dM", minutes/time.Minute)
 		d -= minutes
 		if d == 0 {
 			return

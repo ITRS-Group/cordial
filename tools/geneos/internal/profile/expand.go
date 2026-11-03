@@ -159,7 +159,7 @@ func SelectPrefix(ci map[string]any, s string, trim bool, _ ...any) (result stri
 	// const validSeparators = "+ /-"
 	var r strings.Builder
 
-	s = strings.TrimLeft(s, "select:")
+	s = strings.TrimPrefix(s, "select:")
 	params := strings.Split(s, ":")
 	if len(params) == 0 {
 		return

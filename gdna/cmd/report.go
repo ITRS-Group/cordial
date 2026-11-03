@@ -294,7 +294,7 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 // match. The match is done removing any `:value` suffix to allow for
 // limited split report names.
 func matchReport(name, pattern string) (match bool, subreport string) {
-	for _, p := range strings.FieldsFunc(pattern, func(r rune) bool { return r == ',' }) {
+	for p := range strings.FieldsFuncSeq(pattern, func(r rune) bool { return r == ',' }) {
 		// trim anything after a ':'
 		if c := strings.Index(p, ":"); c != -1 {
 			subreport = p[c+1:]

@@ -57,22 +57,16 @@ type Transformation struct {
 // during renaming to be retained.
 //
 // 4. Exclude: If the `Exclude` slice is not empty, any keys in the
-// incident that do not match any of the regular expressions in the
-// `Exclude` slice are removed from the incident. This allows for
-// filtering out any fields that are not explicitly allowed by the
-// regular expressions in the `Exclude` slice. The regular expressions
-// supported are in Go [regexp/syntax](https://pkg.go.dev/regexp/syntax)
-// syntax. If the Exclude slice is empty, no fields are excluded at this
-// stage.
+// incident that match a regular expression in the `Exclude` slice are
+// removed from the incident. The regular expressions supported are in
+// Go [regexp/syntax](https://pkg.go.dev/regexp/syntax) syntax. If the
+// Exclude slice is empty, no fields are excluded at this stage.
 //
 // 5. Include: If the `Include` slice is not empty, only keys in the
 // incident that match at least one of the regular expressions in the
-// `Include` slice are retained in the incident. This allows for
-// filtering out any fields that are not explicitly allowed by the
-// regular expressions in the `Include` slice. The regular expressions
-// supported are in Go [regexp/syntax](https://pkg.go.dev/regexp/syntax)
-// syntax. If the Include slice is empty, all fields are included at
-// this stage.
+// `Include` slice are retained. The regular expressions supported are
+// in Go [regexp/syntax](https://pkg.go.dev/regexp/syntax) syntax. If the
+// Include slice is empty, all fields are included at this stage.
 //
 // 6. MustInclude: For each key in the `MustInclude` slice, if the key
 // is not present in the incident after applying the previous
@@ -122,7 +116,7 @@ func (s Transformation) Transform(cf *config.Config, idp string, input map[strin
 	// 4. Exclude
 	if len(s.Exclude) > 0 {
 		for key := range output {
-			if !slices.ContainsFunc(s.Exclude, func(f string) bool {
+			if slices.ContainsFunc(s.Exclude, func(f string) bool {
 				match, _ := regexp.MatchString(f, key)
 				return match
 			}) {
@@ -134,7 +128,7 @@ func (s Transformation) Transform(cf *config.Config, idp string, input map[strin
 	// 5. Include
 	if len(s.Include) > 0 {
 		for key := range output {
-			if slices.ContainsFunc(s.Include, func(f string) bool {
+			if !slices.ContainsFunc(s.Include, func(f string) bool {
 				match, _ := regexp.MatchString(f, key)
 				return match
 			}) {

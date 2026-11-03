@@ -50,6 +50,7 @@ import (
 
 // ErrInvalidPath TODO: Describe its purpose and intended use.
 var ErrInvalidPath = errors.New("invalid Geneos XPath")
+
 // ErrRelativePath TODO: Describe its purpose and intended use.
 var ErrRelativePath = errors.New("unsupported relative Geneos XPath")
 
@@ -513,13 +514,17 @@ func Parse(s string) (xpath *XPath, err error) {
 	// if the path is a wildcard, find the first level and prefix the parts[] with
 	// the higher levels
 	if strings.HasPrefix(s, "//") {
-		f := strings.FieldsFunc(s, func(r rune) bool { return !unicode.IsLetter(r) })
-		if len(f) == 0 {
+		var first string
+		for field := range strings.FieldsFuncSeq(s, func(r rune) bool { return !unicode.IsLetter(r) }) {
+			first = field
+			break
+		}
+		if first == "" {
 			err = ErrInvalidPath
 			return
 		}
 		parts = parts[2:]
-		switch f[0] {
+		switch first {
 		case "rows", "headlines":
 			parts = append([]string{"dataview"}, parts...)
 			fallthrough

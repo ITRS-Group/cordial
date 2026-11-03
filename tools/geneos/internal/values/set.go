@@ -72,7 +72,7 @@ func setProfile2(key, split1, split2 string, vals []Variable, options map[string
 func setProfile3(key, split string, vals map[string]string, options map[string]string) (changed bool) {
 	if vals != nil {
 		nvals := make(map[string]string)
-		for _, v := range strings.Split(options[key], ",") {
+		for v := range strings.SplitSeq(options[key], ",") {
 			k, v, found := strings.Cut(v, split)
 			if !found {
 				continue

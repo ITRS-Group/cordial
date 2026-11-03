@@ -122,15 +122,15 @@ type Host interface {
 
 var (
 	// ErrInvalidArgs TODO: Describe its purpose and intended use.
-	ErrInvalidArgs  = errors.New("invalid arguments")
+	ErrInvalidArgs = errors.New("invalid arguments")
 	// ErrNotSupported TODO: Describe its purpose and intended use.
 	ErrNotSupported = errors.New("not supported")
 	// ErrNotAvailable TODO: Describe its purpose and intended use.
 	ErrNotAvailable = errors.New("not available")
 	// ErrExist TODO: Describe its purpose and intended use.
-	ErrExist        = errors.New("already exists")
+	ErrExist = errors.New("already exists")
 	// ErrNotExist TODO: Describe its purpose and intended use.
-	ErrNotExist     = errors.New("does not exist")
+	ErrNotExist = errors.New("does not exist")
 )
 
 // CopyFile copies a file between two locations. Destination can be a
@@ -175,19 +175,18 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
 	if srcHost.IsLocalhost() {
 		filesystem := os.DirFS(srcDir)
-		fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
+		return fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
 			if err != nil {
-				return nil
+				return err
 			}
 			fi, err := d.Info()
 			if err != nil {
-				return nil
+				return err
 			}
 			dstPath := path.Join(dstDir, file)
 			srcPath := path.Join(srcDir, file)
 			return processDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
 		})
-		return
 	}
 
 	if sf, ok := srcHost.(*SSHRemote); ok {

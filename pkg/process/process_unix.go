@@ -145,7 +145,9 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		execStat, rest, _ := strings.Cut(rest, ") ")
 
 		statFields = []string{pidStat, execStat}
-		statFields = append(statFields, strings.Split(rest, " ")...)
+		for field := range strings.SplitSeq(rest, " ") {
+			statFields = append(statFields, field)
+		}
 	}
 
 	var statusFields map[string]string
@@ -229,7 +231,11 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		case "UID":
 			if fv.CanSet() && fv.Type().Kind() == reflect.Int {
 				if v, ok := statusFields["Uid"]; ok {
-					uidStr := strings.Fields(v)[0]
+					var uidStr string
+					for field := range strings.FieldsSeq(v) {
+						uidStr = field
+						break
+					}
 					if uid, err := strconv.Atoi(uidStr); err == nil {
 						fv.SetInt(int64(uid))
 						// find a Username field and set that too if it exists
@@ -245,7 +251,11 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		case "GID":
 			if fv.CanSet() && fv.Type().Kind() == reflect.Int {
 				if v, ok := statusFields["Gid"]; ok {
-					gidStr := strings.Fields(v)[0]
+					var gidStr string
+					for field := range strings.FieldsSeq(v) {
+						gidStr = field
+						break
+					}
 					if gid, err := strconv.Atoi(gidStr); err == nil {
 						fv.SetInt(int64(gid))
 						// find a Groupname field and set that too if it exists

@@ -117,16 +117,15 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 		}
 	}
 
-	basepaths := strings.FieldsFunc(ct.DownloadBase.Default, func(r rune) bool {
-		return unicode.IsSpace(r) || r == ','
-	})
-
 	timeout := config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second))
 	client := &http.Client{
 		Timeout: timeout,
 	}
 
-	for _, bp := range basepaths {
+	for bp := range strings.FieldsFuncSeq(ct.DownloadBase.Default, func(r rune) bool {
+		return unicode.IsSpace(r) || r == ','
+	}) {
+
 		var authReader io.Reader
 		var authBody []byte
 
@@ -382,7 +381,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 // component ct. A package variant is appended to each, e.g.
 // `md-gateway-asx`.
 func nexusArtifactIDs(ct *Component, variant string) (artifacts []string) {
-	for _, artifactId := range strings.FieldsFunc(ct.DownloadBase.Nexus, func(r rune) bool {
+	for artifactId := range strings.FieldsFuncSeq(ct.DownloadBase.Nexus, func(r rune) bool {
 		return unicode.IsSpace(r) || r == ','
 	}) {
 		if variant != "" {

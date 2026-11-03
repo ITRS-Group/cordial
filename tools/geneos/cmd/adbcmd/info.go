@@ -236,16 +236,13 @@ func processLine(line string) {
 			fmt.Println("Error parsing DataItemExprNode line:", err)
 			return
 		}
-		dataitems := strings.Split(de.URLTarget, "dataitem(")
-		if len(dataitems) == 0 {
-			return
-		}
-		// throw away the first empty element resulting from the split
-		dataitems = dataitems[1:]
-		for i, d := range dataitems {
-			dataitems[i] = strings.TrimSuffix(d, ")")
-		}
-		for _, di := range dataitems {
+		firstDataItem := true
+		for di := range strings.SplitSeq(de.URLTarget, "dataitem(") {
+			if firstDataItem {
+				firstDataItem = false
+				continue
+			}
+			di = strings.TrimSuffix(di, ")")
 			xpaths[di]++
 			xp, err := xpath.Parse(di)
 			if err != nil {
@@ -285,16 +282,13 @@ func processLine(line string) {
 			fmt.Println("Error parsing DataItemSeverityNode line:", err)
 			return
 		}
-		dataitems := strings.Split(ds.URLTarget, "dataitem(")
-		if len(dataitems) == 0 {
-			return
-		}
-		// throw away the first empty element resulting from the split
-		dataitems = dataitems[1:]
-		for i, d := range dataitems {
-			dataitems[i] = strings.TrimSuffix(d, ")")
-		}
-		for _, di := range dataitems {
+		firstDataItem := true
+		for di := range strings.SplitSeq(ds.URLTarget, "dataitem(") {
+			if firstDataItem {
+				firstDataItem = false
+				continue
+			}
+			di = strings.TrimSuffix(di, ")")
 			xpaths[di]++
 			xp, err := xpath.Parse(di)
 			if err != nil {
@@ -334,16 +328,13 @@ func processLine(line string) {
 			fmt.Println("Error parsing GeneosURL line:", err)
 			return
 		}
-		dataitems := strings.Split(gu.URLTarget, "dataitem(")
-		if len(dataitems) == 0 {
-			return
-		}
-		// throw away the first empty element resulting from the split
-		dataitems = dataitems[1:]
-		for i, d := range dataitems {
-			dataitems[i] = strings.TrimSuffix(d, ")")
-		}
-		for _, di := range dataitems {
+		firstDataItem := true
+		for di := range strings.SplitSeq(gu.URLTarget, "dataitem(") {
+			if firstDataItem {
+				firstDataItem = false
+				continue
+			}
+			di = strings.TrimSuffix(di, ")")
 			xpaths[di]++
 			xp, err := xpath.Parse(di)
 			if err != nil {
