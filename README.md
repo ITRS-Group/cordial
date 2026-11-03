@@ -8,12 +8,17 @@ Cordial works alongside your Geneos environment; it does not replace its monitor
 
 ### Manage Geneos with one command
 
-The [`geneos` command](tools/geneos/README.md) brings common management tasks into one consistent interface. You can use it across local and remote hosts, including with existing installations. Its main benefits include:
+
+The [`geneos`](tools/geneos/README.md) command brings common management tasks into one consistent interface. You can use it across local and remote hosts, including with existing installations. Its main benefits include:
 
 - **Consistent operations:** View, install, update, configure, start, and stop Geneos components with repeatable commands instead of maintaining separate scripts for each task.
+
 - **Security by default:** New deployments use TLS. Unless you provide your own certificates or choose insecure mode, `geneos` establishes a private certificate authority and issues certificates for Geneos components. This gives you a consistent foundation for protected communications without building a separate certificate workflow.
+
 - **Faster common setups:** Ready-made Gateway include files based on Geneos best practices, together with profiles, help you deploy common monitoring scenarios without building each configuration from scratch.
+
 - **Operational audit:** Selected command invocations and instance actions are recorded in global and per-instance logs. You can review who ran a command, what action it took, and whether it succeeded. Recognized sensitive values are redacted from logged command details.
+
 - **MOTM (preview):** The supplied profile can configure a Self-Announcing Netprobe to report installed Geneos components to a central MOTM Gateway. This gives you a consolidated view without defining every managed entity by hand. Rebuild the profile after estate changes to refresh that view.
 
 ### Review monitoring coverage with GDNA
