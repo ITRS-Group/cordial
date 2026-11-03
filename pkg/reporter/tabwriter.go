@@ -21,7 +21,6 @@ package reporter
 // the tabwriter package.
 import (
 	"io"
-	"strconv"
 	"strings"
 	"text/tabwriter"
 )
@@ -30,9 +29,8 @@ import (
 // output in columns.
 type TabWriterReporter struct {
 	reporterCommon
-	writer               *tabwriter.Writer
-	rows                 [][]string
-	quoteFieldsWithSpace bool
+	writer *tabwriter.Writer
+	rows   [][]string
 }
 
 func init() {
@@ -99,21 +97,4 @@ func (t *TabWriterReporter) Close() {
 // Extension returns the file extension for TabWriterReporter.
 func (t *TabWriterReporter) Extension() string {
 	return "txt"
-}
-
-const allowedTabWriterRunes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:/@()[]{}"
-
-// tabWriterCheckRune checks if a rune triggers quoting
-func tabWriterCheckRune(r rune) bool {
-	if strings.ContainsRune(allowedTabWriterRunes, r) {
-		return false
-	}
-	return true
-}
-
-func tabWriterCheckAndQuote(s string) string {
-	if strings.ContainsFunc(s, tabWriterCheckRune) {
-		return strconv.Quote(s)
-	}
-	return s
 }

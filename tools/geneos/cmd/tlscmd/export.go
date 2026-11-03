@@ -109,11 +109,11 @@ geneos tls export gateway mygateway
 		}
 		signing, signingKey, err := geneos.ReadSigningCertificateAndKey()
 		if err != nil {
-			err = fmt.Errorf("signing certificate cannot be read: %w", signingFile, err)
+			err = fmt.Errorf("signing certificate %q cannot be read: %w", signingFile, err)
 			return
 		}
 		if signingKey == nil {
-			err = fmt.Errorf("signing private key cannot be read: %w", signingFile)
+			err = fmt.Errorf("signing private key %q cannot be found", signingFile)
 			return
 		}
 		pemSigning := pem.EncodeToMemory(&pem.Block{

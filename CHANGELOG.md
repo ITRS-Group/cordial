@@ -7,26 +7,28 @@
 
 ## Version v1.30.0 Highlights
 
-This release comes with significant new features for the `geneos` program, and some minor breaking changes. Please read this changelog carefully before upgrading. For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
+This release introduces significant new features for the `geneos` command, along with some minor breaking changes. Please read this changelog carefully before upgrading.
+
+For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
 
 >[!IMPORTANT]
 >**Breaking Changes**
->1. The custom configuration delimiter `::` has been reverted to the more standard `.` except for some special cases, like domain name and IP keys in `geneos` remote host configs. Please note this change when updating existing configuration files and scripts that reference these keys.
->1. For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways.
+>1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more standard single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
+>
+>1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
 
-* The `geneos`program now supports _profiles_ for managing pre-defined configurations. A profile is a pseudo component type that uses a configuration file to control the creation and management of other components. For example, the `geneos init demo` and `geneos init all` commands can be expressed using profiles to pre-configure the environment. Profiles are also supported by `geneos deploy` and many other commands. Read more about them in `geneos help profiles`
+* **Profiles**: The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience). Read more about them in `geneos help profiles`
 
-  As part of the new profiles feature, and to support more complex configuration scenarios, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
+  To support more complex configuration scenarios possible with profiles, `san` components can now support multiple managed entities via updated parameter handing and templates. See `geneos help san` for more information.
 
-* A new `geneos includes` subsystem has been introduced. A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` program and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
+* **Includes**: The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
 
-* A new `geneos adb` subsystem has been introduced for working with Active Dashboard files. The first two commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
+* **Dashboards**: The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
 
-* The `snapshot` command can now output the captured data in Geneos Toolkit formats, allowing the import of data from a Gateway without the need to configure Gateway Sharing. This is especially useful when only a Netprobe is co-located with the source gateway which does not allow remote connections. 
+* **Auditing**: Support for auditing events within the `geneos` command. Audit logs are now created for global and per-instance events. As part of this, most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
-* Support for auditing events within the `geneos` program. Audit logs are now created for global and per-instance events.
+* **Gateway Dataview Snapshots**: The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
 
-* Most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
 ## Version v1.30.0 Changes
 
@@ -34,37 +36,51 @@ This release comes with significant new features for the `geneos` program, and s
 
 * `tools/geneos`
 
-  * For RHEL8/UBI8 packages `geneos package install` will now fetch releases 7.12 and later without the `-el8` suffix. If you specify a version below 7.12 on the command line then the previous restrcition will still return an error as the download site URLs cannot handle a mix of version and platform. For 7.12+ and "latest" the platform identifier is not used and so will work as expected.
+  * **Breaking Change**: The configuration delimiter for nested keys (previously `::`) has been reverted to the more standard single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`. While this change applies to all commands in _cordial_, the primary impact will be to `geneos` commands that accept configuration parameters, such as `geneos set` and `geneos unset`.
 
-  * **Breaking Change** - For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object (Go "map") to an array (Go "slice") so that you can now specify multiple gateways on the same host. In general this will be transparent to you unless you add or remove a gateway from a SAN instance using `geneos set/unset NAME -g host:port` - in which case you MUST update all the gateways as the original list will be deleted on change.
+  * **Breaking Change**: For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object (Go "map") to an array (Go "slice") so that you can now specify multiple gateways on the same host. In general this will be transparent to you unless you add or remove a gateway from a SAN instance using `geneos set/unset NAME -g host:port` - in which case you MUST update all the gateways as the original list will be deleted on change.
 
-  * The `geneos set` and `geneos unset` commands have been enhanced to support more complex configuration parameters, such as multiple managed entities for `san` components. These also require the updated templates included in the release. To update the templates used in an existing `geneos` managed environment, you should run `geneos init templates` after upgrading the binary.
+  * The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. As part of this new feature, the the `geneos init demo` and `geneos init all` commands are now implemented as profiles and the `geneos init` and `geneos deploy` commands are the principle ways of creating configurations based on profiles. Many other commands treat profiles as groups of components, such as `geneos start profile demo`, for example. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience).
+  
+    The `geneos` command will extract an embedded profiles configurtion file when one does not already exist. This default file contains the specifications for `demo` and `all` as mentioned above, but also `motm` and `motm-gateway` profiles to assist with the simple deployment of "Monitor of the Monitors" setups. You can add your own custom profiles to this file as needed to support your specific deployment scenarios. The format oif this file is documents in the [PROFILES.md](tools/geneos/internal/component/profile/profile.md) document.
 
-    For gateway components, include files (`--include`/`-i` options) can now be specified using pipe (`|`) symbols to denote include group hierarchies, which will work with the newer template included to. For example:
+  * The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios. For existing deployments use the `geneos includes extract` command to write-out the embedded include files to the local filesystem.
+
+  * The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files, respectively.
+  
+    The default `geneos adb clean` action is to remove common, unwanted element names for `gateway`, `probe` and `managedEntity` and also remove `type` elements with empty names from all modifiers and links, while retaining managed entity attributes and the names of other elements. Fine grained behaviour can be controlled using the command line options.
+
+  * Support for auditing events within the `geneos` command. Audit logs are now created for global and per-instance events. As part of this feature, most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
+
+  * The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
+
+  * For RHEL8/UBI8 `geneos package install` will now fetch releases 7.12 and later without the `-el8` suffix. If you specify a version below 7.12 on the command line then the previous restrcition will still return an error as the download site URLs cannot handle a mix of version and platform. For 7.12+ and "latest" the platform identifier is not used and so will work as expected.
+
+  * The `geneos set` and `geneos unset` commands have been enhanced to support more complex configuration parameters, such as multiple managed entities for `san` components. These also require the updated templates included in the release. To update the templates used in an existing `geneos` command managed environment, you should run `geneos init templates` after upgrading the binary.
+
+    For gateway components, include files (`--include`/`-i` options) can now be given using pipe symbols (`|`) to denote include group hierarchies, which also require the updated templates included in this release. For example:
     
     ```shell
     geneos set gateway EXAMPLE -i '100:Top-Level Group | Sub-Group | /path/to/include.xml'
     ```
  
-    will result in an include file with priority 100 and the path given, being placed in two levels of include groups.
+    The above will result in an include file with priority 100 and the path given, being placed in two levels of include groups, `Top-Level Group` and `Sub-Group`. Specifying multiple include files with similar hierarchies will create the corresponding nested include groups for each file in the way expected. Note, as in previous releases, that this only works on creation of gateways for the initial `gateway.setup.xml` file unless the `config.rebuild` option is explicitly set to `always`, which is very rarely the desired behaviour.
 
-    For self-announcing netprobes, using the updated template file, multiple managed entities can now be specified by using attributes, types and variables with names including a forward slash (`/`) to denote the name of the entity, e.g.
+    For self-announcing netprobes, using the updated `san` template file, multiple managed entities can now be specified when setting using attributes, types and variables with names including a forward slash (`/`) to denote the name of the entity, e.g.
 
     ```shell
     geneos set san EXAMPLE -a 'Entity1/ATTRIBUTE=VALUE' -t 'Entity1/Level 2 - Basic Application' -v 'Entity1/logfile=/path/to/logfile'
     ```
 
-    Additionally, managed entities are only included in the generated configuration if they have at least one type specified, as without types they would not have any monitoring configured by the gateway.
+    Additionally, managed entities are only included in the generated `netprobe.setup.xml` configuration if they have at least one type specified, as without types they would not have any monitoring configured by the gateway.
 
   * Changes to template processing to support more complex configuration scenarios, like the one above.
-
-  * Add predefined Geneos gateway include files to the binary for automated deployment to an `gateway/includes` directory, which can be referenced as `../../includes/...` in the main Gateway configuration.
 
   * For the `geneos init` commands, add support for PFX/PKCS#12 certificate bundle passwords to be passed as environment variable `ITRS_CERTS_PASSWORD`
 
   * The internals of the `geneos deploy` command have been refactored to share common code with `geneos add` via an internal package, and add support for profiles.
 
-  * The `geneos list` command now separates the base symlink name and package versionm for programattic output (e.g. CSV, JSON, Toolkit)
+  * The `geneos list` command now separates the base symlink name and package version for programmatic output (e.g. CSV, JSON, Toolkit)
 
   * The code to support log file viewing has been moved from the `geneos log` command to a shared internal package for reuse across the program.
 

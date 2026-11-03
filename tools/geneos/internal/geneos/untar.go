@@ -2,12 +2,15 @@ package geneos
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -57,6 +60,9 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 			return
 		}
 		fullpath := path.Join(dir, name)
+		if err = rejectSymlinkPath(h, dir, name); err != nil {
+			return
+		}
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
@@ -94,6 +100,15 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 				err = fmt.Errorf("archive contains absolute symlink target")
 				return
 			}
+			if _, err = CleanRelativePath(path.Join(path.Dir(name), hdr.Linkname)); err != nil {
+				err = fmt.Errorf("archive contains symlink target outside install directory")
+				return
+			}
+			target := path.Clean(path.Join(path.Dir(name), hdr.Linkname))
+			if err = rejectSymlinkPath(h, dir, target); err != nil {
+				err = fmt.Errorf("archive symlink target traverses an existing symlink: %w", err)
+				return
+			}
 			if _, err = h.Stat(fullpath); err != nil {
 				if err = h.Symlink(hdr.Linkname, fullpath); err != nil {
 					return
@@ -118,4 +133,25 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 		}
 	}
 	return
+}
+
+func rejectSymlinkPath(h *Host, root, relative string) error {
+	current := root
+	for _, element := range strings.Split(relative, "/") {
+		if element == "" || element == "." {
+			continue
+		}
+		current = path.Join(current, element)
+		info, err := h.Lstat(current)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("path %q traverses a symlink", current)
+		}
+	}
+	return nil
 }

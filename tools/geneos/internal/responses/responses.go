@@ -48,25 +48,8 @@ type General struct {
 	Dataview   *Dataview     // dataview for reporting, each should have same columns
 }
 
-type Table struct {
-	Instance geneos.Instance
-	start    time.Time
-	Duration time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
-	Err      error
-	Dataview *Dataview
-}
-
-type Text struct {
-	Instance   geneos.Instance
-	start      time.Time
-	Duration   time.Duration // duration of operation, set by Do() etc. when operation completes, and is used to calculate elapsed time for reporting (alternative to Start and Finish)
-	Err        error
-	ResultText []string
-	Completed  []string
-}
-
 type Response interface {
-	General | Table | Text
+	General
 }
 
 // Dataview is a simple struct to hold the data for a dataview, which
@@ -89,14 +72,6 @@ func Finished[R Response](resp *R) {
 		r := any(*resp).(General)
 		r.Duration = time.Since(r.start)
 		*resp = any(r).(R)
-	case Table:
-		r := any(*resp).(Table)
-		r.Duration = time.Since(r.start)
-		*resp = any(r).(R)
-	case Text:
-		r := any(*resp).(Text)
-		r.Duration = time.Since(r.start)
-		*resp = any(r).(R)
 	default:
 		log.Error("unsupported response type", slog.Any("type", resp))
 		os.Exit(1)
@@ -111,19 +86,6 @@ func New[R Response](i geneos.Instance) *R {
 			Instance: i,
 			start:    time.Now(),
 			Dataview: &Dataview{},
-		}).(*R)
-	case *Table:
-		resp = any(&Table{
-			Instance: i,
-			start:    time.Now(),
-			Dataview: &Dataview{},
-		}).(*R)
-	case *Text:
-		resp = any(&Text{
-			Instance:   i,
-			start:      time.Now(),
-			ResultText: []string{},
-			Completed:  []string{},
 		}).(*R)
 	default:
 		log.Error("unsupported response type", slog.Any("type", resp))

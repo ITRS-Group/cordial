@@ -17,7 +17,9 @@ limitations under the License.
 
 package geneos
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestMatchVersion(t *testing.T) {
 	tests := []struct {
@@ -40,5 +42,34 @@ func TestMatchVersion(t *testing.T) {
 		if got := matchVersion(tt.version); got != tt.ok {
 			t.Errorf("matchVersion(%q) = %v, want %v", tt.version, got, tt.ok)
 		}
+	}
+}
+
+func TestCleanRelativePath(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{name: "regular file", input: "bin/gateway", want: "bin/gateway"},
+		{name: "dot segment", input: "./bin/gateway", want: "bin/gateway"},
+		{name: "parent traversal", input: "../outside", wantErr: true},
+		{name: "nested parent traversal", input: "bin/../../outside", wantErr: true},
+		{name: "parent directory itself", input: "..", wantErr: true},
+		{name: "absolute path", input: "/etc/passwd", wantErr: true},
+	}
+
+	// TODO: define and test how archive paths with Windows separators are handled on non-Windows hosts.
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := CleanRelativePath(test.input)
+			if (err != nil) != test.wantErr {
+				t.Fatalf("CleanRelativePath(%q) error = %v, wantErr %t", test.input, err, test.wantErr)
+			}
+			if err == nil && got != test.want {
+				t.Errorf("CleanRelativePath(%q) = %q, want %q", test.input, got, test.want)
+			}
+		})
 	}
 }

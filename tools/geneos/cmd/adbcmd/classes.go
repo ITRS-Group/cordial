@@ -11,7 +11,7 @@ import (
 // types based on classes in adb file
 
 type knownClasses interface {
-	mainClassFields | dataItemExprNodeFields | dataItemSeverityNodeFields
+	mainClassFields | dataItemExprNodeFields | dataItemSeverityNodeFields | geneosURL
 }
 
 // com.itrsgroup.activeconsole.ui.components.ACActiveDashboard~11.0~1~false~2~activedashboardmanager~ActiveDashboard~false~true~false~2~
@@ -68,6 +68,17 @@ type dataItemSeverityNodeFields struct {
 	CriticalColourR      int8     `adb:"-3"`
 	CriticalColourG      int8     `adb:"-2"`
 	CriticalColourB      int8     `adb:"-1"`
+}
+
+// com.itrsgroup.util.geneosurls.GeneosURL~3.0~dataitem(/geneos/gateway[(@name="Dashboard-GW-01")]/directory/probe]/managedEntity[(@name="Hardware")]/sampler[(@name="Hardware")][(@type="")]/dataview[(@name="Disk Issues")])~Disk Issues~
+
+const geneosURLClass = "com.itrsgroup.util.geneosurls.GeneosURL"
+
+type geneosURL struct {
+	Class     string `adb:"0"`
+	Version   string `adb:"1"`
+	URLTarget string `adb:"2"`
+	Name      string `adb:"3"`
 }
 
 // The field layout includes a line without a class defnition; this is

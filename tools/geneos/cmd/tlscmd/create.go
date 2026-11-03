@@ -152,14 +152,21 @@ func CreateKey(destination string, overwrite bool, keytype certs.KeyType) (key c
 	}
 
 	key, pub, err = certs.GenerateKey(keytype)
-	certs.WritePrivateKeyTo(&b, key)
-
-	if destination == "-" {
-		fmt.Print(b.String())
+	if err != nil {
+		return
+	}
+	if _, err = certs.WritePrivateKeyTo(&b, key); err != nil {
 		return
 	}
 
-	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	if destination == "-" {
+		_, err = fmt.Print(b.String())
+		return
+	}
+
+	if err = geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600); err != nil {
+		return
+	}
 
 	fmt.Printf("private key created in %q\n", basepath+certs.PEMExtension)
 	return

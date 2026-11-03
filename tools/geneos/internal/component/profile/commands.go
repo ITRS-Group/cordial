@@ -25,7 +25,6 @@ import (
 	"slices"
 
 	"github.com/spf13/cobra"
-	"src.elv.sh/pkg/md"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -75,7 +74,7 @@ func profileHelp(command *cobra.Command, _ []string) {
 		components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 		if found {
 			if desc, ok := components["_description"].(string); ok {
-				fmt.Println(md.RenderString(desc, &md.TTYCodec{Width: 76}))
+				fmt.Println(cmd.RenderHelpMarkdownTTY(desc, 76))
 			}
 			return
 		}
