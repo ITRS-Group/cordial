@@ -34,7 +34,7 @@ import (
 // TODO: look at os.Root instead
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
-	if path.IsAbs(clean) || strings.HasPrefix(clean, "../") {
+	if path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../") {
 		log.Debug("path must be relative and descending only", slog.String("path", clean))
 		return "", host.ErrInvalidArgs
 	}

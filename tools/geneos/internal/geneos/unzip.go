@@ -21,10 +21,13 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 	var r []byte
 	r, err = io.ReadAll(archive)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	b := bytes.NewReader(r)
 	z, err = zip.NewReader(b, int64(len(r)))
+	if err != nil {
+		return err
+	}
 
 	label := "installing"
 	if h != LOCAL {
@@ -52,7 +55,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		}
 		name, err = CleanRelativePath(name)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		if name == "." {
 			continue
@@ -63,7 +66,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		// dir
 		if strings.HasSuffix(f.Name, "/") {
 			if err = h.MkdirAll(fullpath, f.Mode()); err != nil {
-				panic(err)
+				return err
 			}
 			// save the dir to update modified times later
 			dirtimes = append(dirtimes, dirtime{Name: fullpath, Modified: f.Modified})
@@ -73,7 +76,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		var c io.ReadCloser
 		c, err = f.Open()
 		if err != nil {
-			panic(err)
+			return err
 		}
 
 		dir := path.Dir(fullpath)
@@ -83,8 +86,12 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 				c.Close()
 				return
 			}
+		} else if err != nil {
+			c.Close()
+			return
 		} else if !st.IsDir() {
-			panic(err)
+			c.Close()
+			return fmt.Errorf("%q is not a directory", dir)
 		}
 
 		var out io.WriteCloser
