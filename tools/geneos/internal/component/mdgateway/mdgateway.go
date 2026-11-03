@@ -24,6 +24,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -41,6 +42,16 @@ var Component = geneos.Component{
 	Name:         name,
 	Aliases:      []string{"mdgateway", "mdgw"},
 	LegacyPrefix: "mdgw",
+
+	// Archive names are COMPONENT[-EXCHANGE]-VERSION[-OS-ARCH].SUFFIX,
+	// e.g. `md-gateway-asx-1.0.0-20261030.041812-1-linux-x64.tar.gz`.
+	// The optional exchange is returned as the platform, which is
+	// appended to the version (as `+asx`) so that each exchange installs
+	// into its own package directory.
+	DownloadNameRegexp: regexp.MustCompile(`^(?<component>` + name + `)(?:-(?<platform>[a-z][a-z0-9]*))?-(?<version>\d+(?:\.\d+){0,2}(?:-SNAPSHOT)?(?:-\d{8}\.\d+(?:-\d+)?)?)(?:-(?<os>linux|windows)(?:-\w+)?)?\.(?<suffix>tar\.gz|zip)$`),
+
+	// accept `NAME-EXCHANGE` in package commands, e.g. `package install md-gateway-asx`
+	PackageVariants: true,
 
 	DownloadParams: &[]string{
 		"title=",

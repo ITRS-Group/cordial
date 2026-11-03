@@ -22,9 +22,24 @@ Archive names are recognised without `--override`, including Maven snapshots:
 md-gateway-1.0.0.tar.gz
 md-gateway-1.0.0-SNAPSHOT-linux-x64.tar.gz
 md-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz
+md-gateway-asx-1.0.0-20261030.041812-1-linux-x64.tar.gz
 ```
 
 Each distinct snapshot timestamp is installed as its own version directory. Use `--override md-gateway:VERSION` only if the filename does not match. These packages are not downloaded from ITRS.
+
+Exchange-specific packages, `md-gateway-EXCHANGE-VERSION...`, install as a `md-gateway` release with the exchange appended to the version, e.g. `packages/md-gateway/1.0.0-20261030.041812-1+asx`, so packages for different exchanges with the same version do not collide. To select one exchange, give the package commands `md-gateway-EXCHANGE` as the type:
+
+```bash
+geneos package install md-gateway-asx ./downloads/
+geneos package install md-gateway-asx -N -S
+geneos package update md-gateway-asx
+```
+
+This installs only `md-gateway-asx-*` archives from a directory, downloads the `md-gateway-asx` artifact from Nexus, and updates `active_prod` to the latest `+asx` release. Without an exchange, `md-gateway` keeps its existing behaviour. Instances are still `md-gateway` instances.
+
+The `active_prod` link is shared by all exchanges, so on a host with more than one exchange installed, give each instance its own release with `geneos set md-gateway NAME version=1.0.0-20261030.041812-1+asx` rather than relying on `active_prod`.
+
+Releases before v1.30.0 do not recognise exchange package names. To install one with those releases, rename the archive to put the exchange after the version, e.g. `md-gateway-1.0.0-20261030.041812-1-asx-linux-x64.tar.gz`. It then installs into the same `...+asx` directory, and later releases accept the renamed file too.
 
 ```bash
 geneos package install md-gateway ./md-gateway-1.0.0-20260826.031023-95-linux-x64.tar.gz

@@ -87,11 +87,13 @@ var installCmd = &cobra.Command{
 geneos install gateway
 geneos install fa2 -V 6.5 -U
 geneos install netprobe -b active_dev -U
+geneos package install md-gateway-asx -N -S
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "false",
+		cmd.CmdGlobal:          "false",
+		cmd.CmdRequireHome:     "false",
+		cmd.CmdPackageVariants: "true",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := log.With("command", "package install")
@@ -112,6 +114,7 @@ geneos install netprobe -b active_dev -U
 		if err != nil {
 			return
 		}
+		variant := cmd.FetchVariant(command)
 
 		log.Debug("args and params", slog.Any("args", args), slog.Any("params", params))
 		params = append(args, params...)
@@ -155,6 +158,7 @@ geneos install netprobe -b active_dev -U
 				geneos.LocalOnly(true),
 				geneos.NoSave(true),
 				geneos.OverrideVersion(installCmdOverride),
+				geneos.Variant(variant),
 			}
 
 			var installed bool
@@ -192,6 +196,10 @@ geneos install netprobe -b active_dev -U
 							version += "+" + platform
 						}
 					}
+					if installCmdOverride == "" && variant != "" && !geneos.ArchiveIsVariant(nct, p, variant) {
+						log.Debug("URL is not the package variant, skipping", slog.String("variant", variant), slog.String("url", source))
+						continue
+					}
 				case geneos.IsFile(source):
 					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
@@ -212,6 +220,10 @@ geneos install netprobe -b active_dev -U
 
 					if ct != nil && ct != nct {
 						log.Debug("ct and file ct do not match, skipping", slog.String("ct", ct.String()), slog.String("file_ct", nct.String()))
+						continue
+					}
+					if installCmdOverride == "" && variant != "" && !geneos.ArchiveIsVariant(nct, path.Base(p), variant) {
+						log.Debug("file is not the package variant, skipping", slog.String("variant", variant), slog.String("filename", p))
 						continue
 					}
 				case geneos.IsDir(source):
@@ -279,6 +291,7 @@ geneos install netprobe -b active_dev -U
 			geneos.Headers(installCmdHeaders...),
 			geneos.UseNexus(installCmdNexus),
 			geneos.UseNexusSnapshots(installCmdSnapshot),
+			geneos.Variant(variant),
 		}
 
 		if installCmdDownloadOnly {

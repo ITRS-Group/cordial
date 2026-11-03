@@ -65,11 +65,13 @@ geneos package update gateway -b active_prod
 geneos package update gateway -b active_dev -V 5.11
 geneos package update
 geneos package update netprobe --version 5.13.2
+geneos package update md-gateway-asx
 `, "|", "`"),
 	SilenceUsage: true,
 	Annotations: map[string]string{
-		cmd.CmdGlobal:      "false",
-		cmd.CmdRequireHome: "true",
+		cmd.CmdGlobal:          "false",
+		cmd.CmdRequireHome:     "true",
+		cmd.CmdPackageVariants: "true",
 	},
 	Args: cobra.RangeArgs(0, 2),
 	RunE: func(command *cobra.Command, _ []string) (err error) {
@@ -140,6 +142,7 @@ geneos package update netprobe --version 5.13.2
 
 		return geneos.Update(h, ct,
 			geneos.Version(version),
+			geneos.Variant(cmd.FetchVariant(command)),
 			geneos.Basename(updateCmdBase),
 			geneos.Override(true),
 			geneos.Restart(instances...),

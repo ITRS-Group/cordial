@@ -113,6 +113,12 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 			return !ctMatch
 		})
 		log.Debug("archives (filtered by version)", slog.String("version", opts.version), slog.Any("archives", archives))
+		if opts.variant != "" {
+			archives = slices.DeleteFunc(archives, func(n string) bool {
+				return !ArchiveIsVariant(ct, n, opts.variant)
+			})
+			log.Debug("archives (filtered by variant)", slog.String("variant", opts.variant), slog.Any("archives", archives))
+		}
 		if len(archives) > 0 {
 			filename = archives[len(archives)-1]
 		}
@@ -143,7 +149,10 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 		return
 	}
 
-	ctFromFile, version, _, _, _ := FilenameToComponentVersion(ct, filename)
+	ctFromFile, version, platform, _, _ := FilenameToComponentVersion(ct, filename)
+	if platform != "" {
+		version += "+" + platform
+	}
 	basedir := h.PathTo("packages", ctFromFile.String(), version)
 
 	if _, err = h.Stat(basedir); err == nil {
@@ -330,4 +339,12 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 	fmt.Printf("%s %q on %s set to %s\n", ct, path.Base(basepath), h, version)
 	return h.HostPath(basedir), nil
 
+}
+
+// ArchiveIsVariant returns true if the archive filename is for package
+// variant of component ct, e.g. `md-gateway-asx-1.0.0-linux-x64.tar.gz`
+// for variant `asx`
+func ArchiveIsVariant(ct *Component, filename, variant string) bool {
+	_, _, platform, _, err := FilenameToComponentVersion(ct, filename)
+	return err == nil && platform == variant
 }

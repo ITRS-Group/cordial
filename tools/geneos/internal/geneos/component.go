@@ -131,6 +131,13 @@ type Component struct {
 	// archive information from the download file
 	DownloadNameRegexp *regexp.Regexp
 
+	// PackageVariants, if true, allows package commands to accept the
+	// component name with a variant suffix, e.g. `md-gateway-asx`. The
+	// variant selects archives and Nexus artifacts named
+	// `COMPONENT-VARIANT-...`, which DownloadNameRegexp must return as
+	// the platform, so they install as version `VERSION+VARIANT`.
+	PackageVariants bool
+
 	// DownloadParams are custom parameters for the download URL. If nil
 	// (not len zero) then os=OS is used, where OS is derived from the
 	// platform details
@@ -394,4 +401,26 @@ func ParseComponent(component string) *Component {
 		}
 	}
 	return nil
+}
+
+var variantRE = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
+
+// ParseComponentVariant splits a name in the form COMPONENT-VARIANT,
+// e.g. `md-gateway-asx`, for components with PackageVariants set and
+// returns the component and the lowercased variant. nil is returned if
+// the name does not match. Plain component names are not matched, use
+// ParseComponent for those.
+func ParseComponentVariant(name string) (ct *Component, variant string) {
+	name = strings.ToLower(name)
+	for _, c := range registeredComponents {
+		if !c.PackageVariants {
+			continue
+		}
+		for _, m := range append([]string{c.Name}, c.Aliases...) {
+			if v, found := strings.CutPrefix(name, strings.ToLower(m)+"-"); found && variantRE.MatchString(v) {
+				return c, v
+			}
+		}
+	}
+	return nil, ""
 }

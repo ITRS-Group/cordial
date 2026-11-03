@@ -56,6 +56,7 @@ type geneosOptions struct {
 	start                 func(Instance, ...any) error
 	stop                  func(Instance, ...any) error
 	username              string
+	variant               string
 	version               string
 }
 
@@ -230,6 +231,15 @@ func StartFunc(fn func(Instance, ...any) error) GeneosOption {
 func StopFunc(fn func(Instance, ...any) error) GeneosOption {
 	return func(d *geneosOptions) {
 		d.stop = fn
+	}
+}
+
+// Variant selects a package variant, e.g. `asx` for `md-gateway-asx`,
+// for components with PackageVariants set. Empty, the default, means no
+// variant filtering.
+func Variant(variant string) GeneosOption {
+	return func(d *geneosOptions) {
+		d.variant = variant
 	}
 }
 

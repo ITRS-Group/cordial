@@ -8,6 +8,8 @@ If a component TYPE is given on the command line then installation is limited to
 
 To install all component types use the `--all`/`-A` flag.
 
+Components with package variants, such as the exchange packages of `md-gateway` and `tr-gateway`, also accept `TYPE-VARIANT`, e.g. `md-gateway-asx`. Only archives, files and Nexus artifacts for that variant are then used. See `geneos help md-gateway` for details.
+
 💡 Downloads require an ITRS client login and credentials must be provided.
 
 Download credentials can be from those stored locally by the `geneos login` command or those supplied on the command line with the --`username`|`-u` option, which will prompt for a password. In previous versions of cordial you may have also stored credentials in the `geneos` program's own configuration, which will still be used if available.
@@ -75,6 +77,7 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 geneos install gateway
 geneos install fa2 -V 6.5 -U
 geneos install netprobe -b active_dev -U
+geneos package install md-gateway-asx -N -S
 
 ```
 
