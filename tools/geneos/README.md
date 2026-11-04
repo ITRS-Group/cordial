@@ -12,8 +12,6 @@ The `geneos` command is Cordial's command-line tool for managing ITRS Geneos. It
 
 - [Usage examples](USAGE.md) for sample operations
 
-- [Documentation index](DOCUMENTATION.md) to find other guides
-
 ## Why use the `geneos` command?
 
 - **One operational interface:** Manage Geneos components and packages through consistent commands across hosts.

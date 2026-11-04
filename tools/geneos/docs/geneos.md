@@ -30,8 +30,6 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos package`](geneos_package.md)	 | Package Operations |
 | [`geneos tls`](geneos_tls.md)	 | TLS Certificate Operations |
 
----
-
 ## Control Instances
 
 | Command / Aliases | Description |
@@ -40,8 +38,6 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos restart`](geneos_restart.md)	 | Restart Instances |
 | [`geneos start`](geneos_start.md)	 | Start Instances |
 | [`geneos stop`](geneos_stop.md)	 | Stop Instances |
-
----
 
 ## Inspect Instances
 
@@ -54,8 +50,6 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos ps / status`](geneos_ps.md)	 | List Running Instance Details |
 | [`geneos show / details`](geneos_show.md)	 | Show Instance Configuration |
 
----
-
 ## Manage Instances
 
 | Command / Aliases | Description |
@@ -67,8 +61,6 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos move / mv / rename`](geneos_move.md)	 | Move instances |
 | [`geneos protect`](geneos_protect.md)	 | Mark instances as protected |
 | [`geneos reset`](geneos_reset.md)	 | Reset Instance Directories |
-
----
 
 ## Configure Instances
 
@@ -86,8 +78,6 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos set`](geneos_set.md)	 | Set Instance Parameters |
 | [`geneos unset`](geneos_unset.md)	 | Unset Instance Parameters |
 
----
-
 ## Manage Credentials
 
 | Command | Description |
@@ -95,16 +85,12 @@ The subsystems below group related functions together and have their own sub-com
 | [`geneos login`](geneos_login.md)	 | Enter Credentials |
 | [`geneos logout`](geneos_logout.md)	 | Remove Credentials |
 
----
-
 ## Miscellaneous
 
 | Command | Description |
 |-------|-------|
 | [`geneos snapshot`](geneos_snapshot.md)	 | Capture a snapshot of each matching dataview |
 | [`geneos version`](geneos_version.md)	 | Show program version |
-
----
 
 ## Component Types
 

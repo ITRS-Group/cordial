@@ -22,11 +22,103 @@ import (
 	"io"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
+
+var markdownLinkPattern = regexp.MustCompile(`\]\(([^)]+)\)`)
+
+// GenMarkdownBook combines generated command pages into one linked document.
+func GenMarkdownBook(dir, filename string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+
+	pages := make(map[string]struct{})
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") && entry.Name() != filename {
+			pages[entry.Name()] = struct{}{}
+		}
+	}
+
+	var book bytes.Buffer
+	book.WriteString("# Geneos Commands\n\n")
+	for _, entry := range entries {
+		if _, ok := pages[entry.Name()]; !ok {
+			continue
+		}
+
+		content, err := os.ReadFile(path.Join(dir, entry.Name()))
+		if err != nil {
+			return err
+		}
+		if book.Len() > len("# Geneos Commands\n\n") {
+			book.WriteString("\n\n---\n\n")
+		}
+		pageContent := addCommandNavigation(string(content), entry.Name(), pages)
+		book.WriteString(strings.TrimSpace(rewriteMarkdownPageLinks(pageContent, pages)))
+	}
+	book.WriteByte('\n')
+
+	return os.WriteFile(path.Join(dir, filename), book.Bytes(), 0644)
+}
+
+func rewriteMarkdownPageLinks(content string, pages map[string]struct{}) string {
+	return markdownLinkPattern.ReplaceAllStringFunc(content, func(link string) string {
+		start := strings.Index(link, "](") + 2
+		destination := strings.Fields(link[start : len(link)-1])[0]
+		if strings.Contains(destination, "://") {
+			return link
+		}
+
+		page := path.Base(destination)
+		if _, ok := pages[page]; !ok {
+			return link
+		}
+
+		anchor := strings.TrimSuffix(page, ".md")
+		anchor = strings.ReplaceAll(anchor, "_", "-")
+		return link[:start] + "#" + anchor + link[start+len(destination):]
+	})
+}
+
+func addCommandNavigation(content, page string, pages map[string]struct{}) string {
+	command := strings.TrimSuffix(page, ".md")
+	if command == "geneos" {
+		return content
+	}
+
+	parent := command
+	for {
+		separator := strings.LastIndex(parent, "_")
+		if separator < 0 {
+			parent = "geneos"
+			break
+		}
+		parent = parent[:separator]
+		if _, ok := pages[parent+".md"]; ok {
+			break
+		}
+	}
+
+	parentLabel := strings.ReplaceAll(parent, "_", " ")
+	parentAnchor := strings.ReplaceAll(parent, "_", "-")
+	navigation := "<sub>[Up: " + parentLabel + "](#" + parentAnchor + ")"
+	if parent != "geneos" {
+		navigation += " | [Top: geneos](#geneos)"
+	}
+	navigation += "</sub>"
+
+	headingEnd := strings.Index(content, "\n")
+	if headingEnd < 0 || !strings.HasPrefix(content, "# ") {
+		return content
+	}
+	return content[:headingEnd] + "\n\n" + navigation + content[headingEnd:]
+}
 
 func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
 	flags := cmd.Flags()
@@ -106,7 +198,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 					fmt.Fprintf(buf, "| [`%s`](%s)\t | %s |\n", cname.String(), linkHandler(link), child.Short)
 				}
 				if i != len(groups)-1 {
-					buf.WriteString("\n---\n\n")
+					buf.WriteByte('\n')
 				}
 			}
 		} else {
@@ -244,9 +336,11 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 type byName []*cobra.Command
 
 // Len TODO: Document its behavior, inputs, and effects.
-func (s byName) Len() int           { return len(s) }
+func (s byName) Len() int { return len(s) }
+
 // Swap TODO: Document its behavior, inputs, and effects.
-func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s byName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
 // Less TODO: Document its behavior, inputs, and effects.
 func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 

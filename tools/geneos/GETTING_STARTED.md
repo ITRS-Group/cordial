@@ -18,7 +18,11 @@ geneos version
 
 Add the `PATH` update to your shell's startup file to keep it in future sessions. Use `~/bin` instead if that is your preferred user binary directory.
 
-### Install from source
+### Build from source
+
+The current source requires Go 1.27.3 or later.
+
+#### Install with Go
 
 Install the latest released command with Go:
 
@@ -30,6 +34,19 @@ Ensure `$HOME/go/bin` is on your `PATH`, then verify the installation:
 
 ```bash
 geneos version
+```
+
+#### Clone and build manually
+
+Clone the repository, build the command from its module directory, and install the binary:
+
+```bash
+git clone https://github.com/itrs-group/cordial.git
+cd cordial/tools/geneos
+go build -o geneos .
+mkdir -p "$HOME/.local/bin"
+install -m 0755 geneos "$HOME/.local/bin/geneos"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ## First-time setup

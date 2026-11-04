@@ -79,5 +79,9 @@ func main() {
 			slog.Error("generate command documentation", "directory", d.dir, "error", err)
 			os.Exit(1)
 		}
+		if err := GenMarkdownBook(d.dir, "COMMANDS.md"); err != nil {
+			slog.Error("generate command book", "directory", d.dir, "error", err)
+			os.Exit(1)
+		}
 	}
 }

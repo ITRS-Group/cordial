@@ -46,7 +46,7 @@ The supplied configuration is [internal/profile/profiles.defaults.yaml](../../pr
 | --- | --- |
 | `all` | A Gateway and Webserver named for the host, a Netprobe named `localhost`, and a License Daemon named `perm`. The License Daemon uses port `7041`. |
 | `demo` | A Gateway named `Demo Gateway` with `options=-demo`, a Netprobe, and a Webserver named `Demo Webserver`. The Gateway has best-practice includes. The Webserver port is `8443`, or `8080` when `--insecure` is selected. |
-| `motm` | A SAN for Monitor Of The Monitors (MOTM). It requests host monitoring and creates managed entities for installed Gateways, Netprobes, minimal Netprobes, File Agents, License Daemons, and Webservers. |
+| `motm` | A SAN for Monitor-Of-The-Monitors (MOTM). It requests host monitoring and creates managed entities for installed Gateways, Netprobes, minimal Netprobes, File Agents, License Daemons, and Webservers. |
 | `motm-gateway` | A host-named MOTM Gateway with best-practice includes, and a Netprobe. It is the receiving side of an MOTM installation. |
 
 `all` is a starting example, not an inherited base profile. Profiles do not inherit settings from one another.
