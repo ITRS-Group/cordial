@@ -22,8 +22,19 @@ release: base docs
 	-docker rm cordial-docs-$(VERSION)
 	docker create --name cordial-docs-$(VERSION) cordial-docs:$(VERSION)
 	docker cp cordial-docs-$(VERSION):/docs/. release-$(VERSION)/docs/
+	rm -f release-$(VERSION)/docs/geneos.md release-$(VERSION)/docs/geneos.pdf
+	rm -f release-$(VERSION)/docs/geneos/geneos-readme.md release-$(VERSION)/docs/geneos/geneos-readme.pdf
+	rm -f release-$(VERSION)/docs/geneos/geneos-documentation.* release-$(VERSION)/docs/geneos/geneos-install.* release-$(VERSION)/docs/geneos/geneos-ims.*
+	rm -f release-$(VERSION)/docs/ims-gateway/SDP-AUTH.md release-$(VERSION)/docs/ims-gateway/SDP-AUTH.pdf
+	rm -f release-$(VERSION)/docs/geneos/*.mermaid.md release-$(VERSION)/docs/geneos/*.mermaid-*.svg release-$(VERSION)/docs/gdna/*.mermaid.md release-$(VERSION)/docs/gdna/*.mermaid-*.svg
+	for file in release-$(VERSION)/docs/geneos/*.md release-$(VERSION)/docs/geneos/*.pdf; do \
+		case "$${file##*/}" in geneos-*|README.md|README.pdf) ;; *) rm -f "$$file" ;; esac; \
+	done
+	for file in release-$(VERSION)/docs/gdna/*.md release-$(VERSION)/docs/gdna/*.pdf; do \
+		case "$${file##*/}" in gdna-[a-z]*.md|gdna-[a-z]*.pdf) ;; *) rm -f "$$file" ;; esac; \
+	done
 
-.PHONY: build gdna
+.PHONY: build docs gdna
 
 build:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
@@ -36,9 +47,9 @@ gdna:
 	docker image tag gdna $(NAMESPACE)/gdna:release
 
 docs:
+	cd tools/geneos/utils/docs && go build && ./docs
 	docker build --tag cordial-docs:$(VERSION) --target cordial-docs .
 	cd utils/docs && go build && ./docs
-	cd tools/geneos/utils/docs && go build && ./docs
 
 clean:
 	-docker rm cordial-build-$(VERSION)

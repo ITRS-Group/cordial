@@ -19,7 +19,7 @@ The [`geneos`](tools/geneos/README.md) command brings common management tasks in
 
 - **Operational audit:** Selected command invocations and instance actions are recorded in global and per-instance logs. You can review who ran a command, what action it took, and whether it succeeded. Recognized sensitive values are redacted from logged command details.
 
-- **MOTM (preview):** The supplied profile can configure a Self-Announcing Netprobe to report installed Geneos components to a central MOTM Gateway. This gives you a consolidated view without defining every managed entity by hand. Rebuild the profile after estate changes to refresh that view.
+- **Monitor-Of-The-Monitors (MOTM, preview):** The supplied profile can configure a Self-Announcing Netprobe to report installed Geneos components to a central MOTM Gateway. This gives you a consolidated view without defining every managed entity by hand. Rebuild the profile after estate changes to refresh that view.
 
 ### Review monitoring coverage with GDNA
 

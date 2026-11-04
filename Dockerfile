@@ -157,8 +157,8 @@ COPY libraries /app/cordial/libraries/
 COPY gdna /app/cordial/gdna
 
 WORKDIR /docs
-COPY tools/geneos/README.md geneos.md
 COPY tools/ims-gateway/*.md ims-gateway/
+COPY tools/ims-gateway/screenshots/ ims-gateway/screenshots/
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
 COPY tools/san-config/README.md san-config.md
@@ -171,9 +171,57 @@ COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/geneos tools/dv2email tools/san-config integrations/servicenow integrations/servicenow2 integrations/pagerduty libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/dv2email tools/san-config integrations/servicenow integrations/servicenow2 integrations/pagerduty libraries/libemail libraries/libalert"
 RUN set -eux; \
+    rm -f /app/cordial/tools/geneos/DOCUMENTATION.md /app/cordial/tools/geneos/NOTES.md /app/cordial/tools/geneos/IMS.md /app/cordial/tools/geneos/INSTALL.md; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
+    mkdir -p geneos; \
+    for i in /app/cordial/tools/geneos/*.md; \
+    do \
+            b=$(basename "$i" .md); \
+            case "$b" in AGENTS|NOTES|DOCUMENTATION|IMS|INSTALL) continue ;; esac; \
+            name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
+            destination="geneos-${name}.md"; \
+            if [ "$b" = README ]; then destination=README.md; fi; \
+            cp "$i" "geneos/$destination"; \
+        done; \
+        for i in /app/cordial/tools/geneos/*.md; \
+        do \
+            b=$(basename "$i" .md); \
+            case "$b" in AGENTS|NOTES|DOCUMENTATION|IMS|INSTALL) continue ;; esac; \
+            name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
+            destination="geneos-${name}.md"; \
+            if [ "$b" = README ]; then destination=README.md; fi; \
+            for target in geneos/*.md; \
+            do \
+                sed -i "s#(${b}\\.md#(${destination}#g" "$target"; \
+            done; \
+    done; \
+        sed -i 's#(docs/geneos.md#(geneos-commands.md#g' geneos/*.md; \
+        for i in geneos/*.md; \
+        do \
+            b=$(basename "$i" .md); \
+            mmdc -p /puppeteer.json -i "$i" -o "/tmp/${b}${MERMAID}.md"; \
+            mdpdf "/tmp/${b}${MERMAID}.md" "${i%.md}.pdf" --border=15mm --gh-style; \
+        done; \
+            for i in ims-gateway/*.md; \
+            do \
+                b=$(basename "$i" .md); \
+                if [ "$b" = README ]; then \
+                    destination=README.md; \
+                    output=README.pdf; \
+                else \
+                    name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
+                    destination="ims-gateway-${name}.md"; \
+                    output="ims-gateway-${name}.pdf"; \
+                    mv "$i" "ims-gateway/$destination"; \
+                fi; \
+                if [ "$b" = README ]; then \
+                    sed -i 's#(SDP-AUTH.md#(ims-gateway-sdp-auth.md#g' "ims-gateway/$destination"; \
+                fi; \
+                mmdc -p /puppeteer.json -i "/app/cordial/tools/ims-gateway/${b}.md" -o "/app/cordial/tools/ims-gateway/${b}${MERMAID}.md"; \
+                mdpdf "/app/cordial/tools/ims-gateway/${b}${MERMAID}.md" "ims-gateway/$output" --border=15mm --gh-style; \
+            done; \
     for i in ${READMEDIRS}; \
     do \
             mmdc -p /puppeteer.json -i /app/cordial/$i/README.md -o /app/cordial/$i/README${MERMAID}.md; \
@@ -181,11 +229,25 @@ RUN set -eux; \
     done; \
     for i in gdna/*.md; \
     do \
-            b=$(basename ${i%.md}); \
-            mmdc -p /puppeteer.json -i /app/cordial/$i -o /app/cordial/gdna/${b}${MERMAID}.md; \
-            mdpdf /app/cordial/gdna/${b}${MERMAID}.md gdna/gdna-${b##*/}.pdf --border=15mm --gh-style; \
-            mv gdna/$b.md gdna/gdna-$b.md; \
+            b=$(basename "$i" .md); \
+            name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
+            mmdc -p /puppeteer.json -i "/app/cordial/gdna/${b}.md" -o "/app/cordial/gdna/${b}${MERMAID}.md"; \
+            mdpdf "/app/cordial/gdna/${b}${MERMAID}.md" "gdna/gdna-${name}.pdf" --border=15mm --gh-style; \
+            mv "$i" "gdna/gdna-${name}.md"; \
     done; \
+        for target in gdna/gdna-*.md; \
+        do \
+            for source in /app/cordial/gdna/*.md; \
+            do \
+                b=$(basename "$source" .md); \
+                name=$(printf '%s' "$b" | tr '[:upper:]_' '[:lower:]-'); \
+                sed -i "s#(${b}\\.md#(gdna-${name}.md#g" "$target"; \
+            done; \
+        done; \
+    cp /app/cordial/tools/geneos/docs/COMMANDS.md geneos/geneos-commands.md; \
+    mmdc -p /puppeteer.json -i /app/cordial/tools/geneos/docs/COMMANDS.md -o /tmp/geneos-commands${MERMAID}.md; \
+    sed 's#^---$#<div style="break-before: page; page-break-before: always;"></div>#' /tmp/geneos-commands${MERMAID}.md > /tmp/geneos-commands-pdf.md; \
+    mdpdf /tmp/geneos-commands-pdf.md geneos/geneos-commands.pdf --border=15mm --gh-style; \
     mmdc -p /puppeteer.json -i /app/cordial/CHANGELOG.md -o /app/cordial/CHANGELOG${MERMAID}.md; \
     mdpdf /app/cordial/CHANGELOG${MERMAID}.md CHANGELOG.pdf --border=15mm --gh-style; \
     mmdc -p /puppeteer.json -i /app/cordial/README.md -o /app/cordial/README${MERMAID}.md; \
@@ -198,8 +260,7 @@ RUN set -eux; \
 FROM alpine AS cordial-build
 
 COPY --from=build /app/cordial/VERSION /
-COPY --from=build /app/cordial/CHANGELOG.md /cordial/docs/
-COPY --from=build /app/cordial/README.md /cordial/docs/
+COPY --from=cordial-docs /docs/. /cordial/docs/
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
@@ -214,9 +275,6 @@ COPY --from=build /app/cordial/tools/geneos/includes/*.xml /cordial/etc/geneos/i
 # san-config and default YAML
 COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
 COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
-
-# docs
-# COPY --from=cordial-docs /app/cordial/doc-output /cordial/docs/
 
 # servicenow
 COPY --from=build /app/cordial/integrations/servicenow/servicenow /cordial/bin/

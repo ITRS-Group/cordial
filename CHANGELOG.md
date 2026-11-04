@@ -3,7 +3,7 @@
 ## Version v1.30.0
 
 > [!NOTE]
-> **Released 2026-xx-xx** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> **Released 2026-11-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ## Version v1.30.0 Highlights
 
@@ -44,7 +44,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. As part of this new feature, the the `geneos init demo` and `geneos init all` commands are now implemented as profiles and the `geneos init` and `geneos deploy` commands are the principle ways of creating configurations based on profiles. Many other commands treat profiles as groups of components, such as `geneos start profile demo`, for example. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience).
   
-    The `geneos` command will extract an embedded profiles configurtion file when one does not already exist. This default file contains the specifications for `demo` and `all` as mentioned above, but also `motm` and `motm-gateway` profiles to assist with the simple deployment of "Monitor of the Monitors" setups. You can add your own custom profiles to this file as needed to support your specific deployment scenarios. The format oif this file is documents in the [PROFILES.md](tools/geneos/internal/component/profile/profile.md) document.
+    The `geneos` command extracts the embedded profile configuration automatically when no user profile file exists. Run `geneos profile extract` to explicitly write the embedded defaults; an existing profile file is backed up before replacement, and no changes are made when it already matches the embedded defaults. The default file contains the `demo` and `all` profiles, as well as `motm` and `motm-gateway` profiles for Monitor-Of-The-Monitors setups. You can add your own custom profiles to support your deployment scenarios. See the [profile documentation](tools/geneos/internal/component/profile/profile.md) for details.
 
   * The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios. For existing deployments use the `geneos includes extract` command to write-out the embedded include files to the local filesystem.
 
@@ -118,9 +118,21 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * Fix `geneos tls export` for instances to only write out the private key once.
 
+  * Fix `geneos tls renew --roll` and `--unroll` to restore files correctly when a roll operation fails partway through.
+
+  * Make the `geneos ps --files` and `--network` options mutually exclusive.
+
 * `tools/ims-gateway`
 
   * Fix the tense of "exclude" and "include" field filters.
+
+* `gdna`
+
+  * Propagate report rendering and closing errors during email generation instead of continuing with incomplete report content.
+
+* `integrations/servicenow2`
+
+  * Reject incident field names that are duplicates ignoring case, preventing ambiguous ServiceNow fields.
 
 ---
 
