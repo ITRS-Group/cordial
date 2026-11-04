@@ -207,6 +207,7 @@ var deployCmd = &cobra.Command{
 				profile.WithCertBundlePassword(deployCmdBundlePassword),
 				profile.WithValues(deployCmdExtras),
 				profile.WithFlags(command.Flags()),
+				profile.WithStartAfterAdd(deployCmdStart || deployCmdLogs),
 				profile.WithFollowLogs(deployCmdLogs),
 				profile.WithImportFiles(deployCmdImportFiles),
 				profile.WithInsecure(deployCmdInsecure),

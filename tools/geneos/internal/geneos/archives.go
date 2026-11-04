@@ -19,11 +19,14 @@ package geneos
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -210,6 +213,21 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 	body = w
 
 	return
+}
+
+func withDownloadTimeoutHint(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var timeoutErr net.Error
+	if !errors.Is(err, context.DeadlineExceeded) &&
+		!errors.Is(err, os.ErrDeadlineExceeded) &&
+		(!errors.As(err, &timeoutErr) || !timeoutErr.Timeout()) {
+		return err
+	}
+
+	return fmt.Errorf("%w; temporarily increase the timeout with ITRS_DOWNLOAD_TIMEOUT=5m", err)
 }
 
 // unarchive unpacks the gzipped archive passed as an io.Reader on the

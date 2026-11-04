@@ -161,6 +161,7 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 
 	archive, filename, filesize, err = OpenArchive(h, ct, options...)
 	if err != nil {
+		err = withDownloadTimeoutHint(err)
 		if errors.Is(err, fs.ErrExist) {
 			ctFromFile, version, platform, _, _ := FilenameToComponentVersion(ct, filename)
 			if platform != "" {

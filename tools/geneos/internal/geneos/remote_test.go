@@ -18,7 +18,11 @@ limitations under the License.
 package geneos
 
 import (
+	"context"
+	"errors"
+	"net/url"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -39,5 +43,41 @@ func TestNexusArtifactIDs(t *testing.T) {
 		if got := nexusArtifactIDs(ct, tt.variant); !slices.Equal(got, tt.want) {
 			t.Errorf("nexusArtifactIDs(%q, %q) = %v, want %v", tt.nexus, tt.variant, got, tt.want)
 		}
+	}
+}
+
+func TestWithDownloadTimeoutHint(t *testing.T) {
+	nonTimeoutErr := errors.New("package not found")
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "deadline", err: context.DeadlineExceeded, want: true},
+		{
+			name: "wrapped HTTP deadline",
+			err:  &url.Error{Op: "Get", URL: "https://example.test/package", Err: context.DeadlineExceeded},
+			want: true,
+		},
+		{name: "other error", err: nonTimeoutErr},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := withDownloadTimeoutHint(tt.err)
+			if tt.want {
+				if !strings.Contains(got.Error(), "ITRS_DOWNLOAD_TIMEOUT=5m") {
+					t.Fatalf("error %q does not suggest the timeout override", got)
+				}
+				if !errors.Is(got, context.DeadlineExceeded) {
+					t.Fatalf("error %q does not wrap the deadline error", got)
+				}
+			} else if got != tt.err {
+				t.Fatalf("non-timeout error changed: got %v, want %v", got, tt.err)
+			}
+		})
+	}
+	if got := withDownloadTimeoutHint(nil); got != nil {
+		t.Fatalf("nil error changed: got %v", got)
 	}
 }

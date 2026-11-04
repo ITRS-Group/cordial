@@ -25,7 +25,6 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	instances := ListComponents(h, pf, name)
 	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
 
-	installed := []geneos.Instance{}
 	for _, pi := range instances {
 		ct := geneos.ParseComponent(pi.Component)
 		if ct == nil {
@@ -135,7 +134,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			extras.Params = []string{}
 			extras.SecureParams = values.SecureValues{}
 
-			i, err := instance.Add(h, ct, pi.Name,
+			_, err := instance.Add(h, ct, pi.Name,
 				instance.WithPort(opts.port),
 				instance.WithValues(extras),
 				instance.WithTemplate(opts.template),
@@ -152,7 +151,6 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			if err != nil {
 				return err
 			}
-			installed = append(installed, i)
 		}
 	}
 
@@ -178,7 +176,8 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	}
 
 	if opts.followLogs {
-		instance.FollowInstanceLogs(installed, instance.WithStderr(true))
+		members := instance.Instances(h, nil, instance.MatchParameters(config.Join("config", "profile")+"="+name))
+		instance.FollowInstanceLogs(members, instance.WithStderr(true))
 	}
 
 	return nil
