@@ -18,10 +18,15 @@ Use this index to find installation guidance, common workflows, command syntax, 
 ## Common tasks
 
 - [Manage a Gateway](USER_GUIDE.md#managing-a-gateway)
+
 - [Configure remote hosts](USER_GUIDE.md#remote-host-management)
+
 - [Manage certificates](USER_GUIDE.md#certificate-management)
+
 - [Automate operations](USER_GUIDE.md#automation-and-scripting)
+
 - [Migrate from legacy tools](USER_GUIDE.md#legacy-migration)
+
 - [Troubleshoot issues](USER_GUIDE.md#troubleshooting)
 
 ## Command help

@@ -5,17 +5,25 @@ The `geneos` command is Cordial's command-line tool for managing ITRS Geneos. It
 ## Documentation
 
 - [Getting started](GETTING_STARTED.md) for installation and first steps
+
 - [User guide](USER_GUIDE.md) for common management workflows
+
 - [Quick reference](QUICKREFGUIDE.md) for command syntax
+
 - [Usage examples](USAGE.md) for sample operations
+
 - [Documentation index](DOCUMENTATION.md) to find other guides
 
 ## Why use the `geneos` command?
 
 - **One operational interface:** Manage Geneos components and packages through consistent commands across hosts.
+
 - **Repeatable deployments:** Use profiles and ready-made Gateway includes as starting points for common monitoring setups.
+
 - **Security by default:** New deployments use TLS and can use certificates issued by a private certificate authority managed with the command.
+
 - **Built-in diagnostics:** Review running processes, logs, configuration, startup commands, and Gateway Dataviews without assembling a separate toolset.
+
 - **Operational visibility:** Audit records capture selected command invocations and instance actions; recognized sensitive values are redacted.
 
 ## Current release highlights
@@ -23,8 +31,11 @@ The `geneos` command is Cordial's command-line tool for managing ITRS Geneos. It
 The current development release adds capabilities that support these workflows:
 
 - **Profiles and includes (preview):** Reuse deployment settings and embedded best-practice Gateway configuration for common scenarios.
+
 - **Gateway snapshots (preview):** Capture Dataviews as JSON or Toolkit-compatible output, including multi-Dataview output for supported Netprobes.
+
 - **Audit logging:** Review selected command and instance actions in global and per-instance logs.
+
 - **Active Dashboard tools:** Use `geneos adb info` and `geneos adb clean` to inspect and clean Active Dashboard files.
 
 ## Quick start
@@ -104,8 +115,11 @@ geneos COMMAND [flags] [TYPE] [NAME...]
 ```
 
 - `COMMAND` is the command name and may include a subcommand.
+
 - `flags` are optional settings; use `geneos help COMMAND` to check available options.
+
 - `TYPE` is an optional component type, such as `gateway` or `netprobe`.
+
 - `NAME` is an optional instance name. Where supported, add `@HOST` to target a specific host, or use `--host`/`-H` to limit the operation.
 
 Options can differ between commands. Check the command help before using a flag in an operational script.
@@ -178,9 +192,13 @@ Use `geneos login` to store credentials for supported operations, such as packag
 Use the built-in commands to investigate common operational issues without assembling a separate set of tools:
 
 - `geneos ps` lists running instances. Use `geneos ps --files` to inspect open files or `geneos ps --network` to inspect TCP sockets; these views are mutually exclusive.
+
 - `geneos logs --follow --lines 50 gateway MyGateway` follows recent logs for a Gateway. Logs can also be filtered and read from remote hosts.
+
 - `geneos command gateway MyGateway` shows the command and environment used to start an instance.
+
 - `geneos show --validate gateway MyGateway` asks the Gateway to validate its setup.
+
 - `geneos snapshot gateway MyGateway XPATH` fetches matching Dataview data. Snapshot output can be JSON or Toolkit format.
 
 Check `geneos help COMMAND` for options and prerequisites. For example, Gateway snapshots require the Gateway REST Command API to be enabled.

@@ -5,12 +5,19 @@ Use this guide to manage Geneos with the `geneos` command. It covers common admi
 ## Table of Contents
 
 - [What is the geneos command?](#what-is-the-geneos-command)
+
 - [Quick Start](#quick-start)
+
 - [Your First 5 Minutes](#your-first-5-minutes)
+
 - [Essential Workflows](#essential-workflows)
+
 - [Common Tasks](#common-tasks)
+
 - [Advanced Usage](#advanced-usage)
+
 - [Troubleshooting](#troubleshooting)
+
 - [Reference](#reference)
 
 ## What is the `geneos` command?
@@ -20,17 +27,25 @@ The `geneos` command-line tool provides one interface for managing ITRS Geneos e
 ### Operational benefits
 
 - **Consistent management:** Manage Gateways, Netprobes, Licence Daemons, and other components through one command-line interface.
+
 - **Remote operations:** Manage instances across configured hosts from one location.
+
 - **Repeatable workflows:** Use commands in scripts and automation.
+
 - **Compatibility:** Adopt existing installations and use supported legacy command aliases.
 
 ### What You Can Do
 
 - Install and update Geneos software packages
+
 - Create, configure, and manage instances
+
 - Start, stop, and monitor services
+
 - Handle certificates and secure connections
+
 - Manage configurations and templates
+
 - Deploy across multiple hosts
 
 ## Quick Start
@@ -416,57 +431,85 @@ geneos COMMAND [flags] [TYPE] [NAMES...]
 ```
 
 - **COMMAND**: What to do (start, stop, list, etc.)
+
 - **flags**: Options like `-p` for port, `-l` for logs
+
 - **TYPE**: Component type (gateway, netprobe, san, etc.)
+
 - **NAMES**: Instance names, can use wildcards
 
 ### Instance Naming
 
 Instances can be referenced as:
+
 - `NAME` - Local instance
+
 - `NAME@HOST` - Instance on specific host
+
 - `TYPE:NAME` - Specific type (useful for SANs/Floating Netprobes)
 
 ### Useful Aliases
 
 Many commands have shorter aliases:
+
 - `geneos ls` = `geneos list`
+
 - `geneos ps` = `geneos status`
+
 - `geneos cp` = `geneos copy`
+
 - `geneos mv` = `geneos move`
+
 - `geneos rm` = `geneos delete`
 
 ### Environment Variables
 
 Key environment variables:
+
 - `ITRS_HOME` - Base Geneos directory
+
 - `GENEOS_NON_INTERACTIVE` - Disable prompts for automation
+
 - `PATH` - Must include geneos binary location
 
 ### File Locations
 
 Default locations:
+
 - Config: `~/.config/geneos.json`
+
 - Instances: `$ITRS_HOME/TYPE/TYPEs/INSTANCE/`
+
 - Packages: `$ITRS_HOME/packages/`
+
 - Logs: `$ITRS_HOME/TYPE/TYPEs/INSTANCE/logs/`
 
 ## Next Steps
 
 1. **Explore the Examples**: Try the commands in this guide with your environment
+
 2. **Read Component-Specific Help**: Use `geneos gateway help`, `geneos netprobe help`, etc.
+
 3. **Set Up Automation**: Start incorporating geneos into your operational scripts
+
 4. **Configure Remote Hosts**: Extend management to your entire infrastructure
+
 5. **Implement Security**: Set up TLS certificates for secure communications
 
 For detailed command reference, see:
+
 - [Complete Command Reference](docs/geneos.md)
+
 - [Usage Examples](USAGE.md)
+
 - [Quick Reference Card](QUICKREFGUIDE.md)
 
 ---
 
 **Need More Help?**
+
 - Run `geneos help` for built-in assistance
+
 - Check the logs with `geneos logs -f`
+
 - Visit the [ITRS Geneos Documentation](https://docs.itrsgroup.com/docs/geneos/)

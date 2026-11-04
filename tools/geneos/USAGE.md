@@ -7,44 +7,83 @@ You should already have installed the `geneos` command-line tool in a location t
 <!-- TOC -->
 
 * [Core Commands](#core-commands)
+
     * [geneos list](#geneos-list)
+
     * [geneos status](#geneos-status)
+
     * [geneos start, geneos stop and geneos restart](#geneos-start-geneos-stop-and-geneos-restart)
+
 * [Managing Software Releases](#managing-software-releases)
+
     * [geneos package list](#geneos-package-list)
+
     * [geneos package install](#geneos-package-install)
+
     * [geneos package update](#geneos-package-update)
+
     * [geneos package uninstall](#geneos-package-uninstall)
+
 * [Managing Instances](#managing-instances)
+
     * [geneos add](#geneos-add)
+
     * [geneos deploy](#geneos-deploy)
+
     * [geneos set and geneos unset](#geneos-set-and-geneos-unset)
+
     * [geneos rebuild](#geneos-rebuild)
+
 * [Secure Connections](#secure-connections)
+
     * [geneos tls init](#geneos-tls-init)
+
     * [geneos tls new and geneos tls renew](#geneos-tls-new-and-geneos-tls-renew)
+
     * [geneos tls list](#geneos-tls-list)
+
     * [geneos tls sync](#geneos-tls-sync)
+
 * [Diagnostics](#diagnostics)
+
     * [geneos logs](#geneos-logs)
+
     * [geneos show](#geneos-show)
+
     * [geneos command](#geneos-command)
+
 * [Remote Hosts](#remote-hosts)
+
     * [geneos host list](#geneos-host-list)
+
     * [geneos host add](#geneos-host-add)
+
 * [AES256 Encrypted Secrets and Credential Storage](#aes256-encrypted-secrets-and-credential-storage)
+
     * [geneos aes new](#geneos-aes-new)
+
     * [geneos aes encode and geneos aes decode](#geneos-aes-encode-and-geneos-aes-decode)
+
         * [App Keys](#app-keys)
+
     * [geneos aes password](#geneos-aes-password)
+
     * [geneos login](#geneos-login)
+
 * [Miscellaneous](#miscellaneous)
+
     * [geneos import](#geneos-import)
+
     * [geneos protect](#geneos-protect)
+
     * [geneos disable and geneos enable](#geneos-disable-and-geneos-enable)
+
     * [geneos migrate and geneos revert](#geneos-migrate-and-geneos-revert)
+
     * [geneos clean](#geneos-clean)
+
     * [geneos delete](#geneos-delete)
+
     * [geneos copy and geneos move](#geneos-copy-and-geneos-move)
 
 <!-- /TOC -->
@@ -604,8 +643,11 @@ Geneos Gateways support customer AES256 key files for the transparent encryption
 You can store encrypted credentials using `geneos login` for a number of uses:
 
 1. Downloading Geneos releases
+
 2. Use by other tools, including libemail.so and dv2email for both Gateway and SMTP Relay authentication
+
 3. Gateway REST Command API authentication
+
     * e.g. the `geneos snapshot` command
 
 The credentials are encrypted using an AES256 key-file, which defaults to your user key-file; See the section above for more details. The credentials file itself is in JSON format and without the key-file to encrypt the included credentials it is not at risk of revealing the plain text versions of them.

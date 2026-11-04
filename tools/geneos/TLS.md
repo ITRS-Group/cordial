@@ -47,6 +47,7 @@ PEM is an encoding format, not encryption. X.509 certificates and certificate ch
 The following external website are highly recommended reading for understanding TLS certificate management concepts (but are not specific to Geneos):
 
 * UK National Cyber Security Centre - [Design and build a privately hosted PKI](https://www.ncsc.gov.uk/collection/in-house-public-key-infrastructure)
+
 * Smallstep - [Everything PKI](https://smallstep.com/blog/everything-pki/)
 
 ## Java Keystore and Truststore Support
@@ -112,10 +113,15 @@ This command has undergone major changes to provide a more useful features. Not 
 Changes:
 
 * The output of the command is now a single bundle file in PEM format that contains the private key, the certificate and trust chain _including_ the root CA certificate. This is to ensure that the output can be used directly by TLS clients that may require the full trust chain to validate the certificate.
+
 * The `--days/-D` flag has been replaced by `--expiry/-E` to align with other commands. The value is still specified in days.
+
 * The `--out/-o` flags has been replaced by `--dest/-D` as this should make it clearer that the destination is a directory and not as file.
+
 * The `--bundle/-b` flag has been removed as this is not necessary any more.
+
 * A new `--signer/-S` flag has been added to create a new signer certificate bundle instead if an instance certificate bundle. The signer certificate can then be used on another system to sign instance certificates. The bundle includes the root CA certificate as well as the signer certificate and private key in a format that can be directly ingested by `geneos tls import`.
+
 * The `--san/-s` flag has been removed and replaced by four new flags: `--san-dns/-s`, `--san-ip/-i`, `--san-email/-e` and `--san-uri/-u` to allow more fine-grained control over the Subject Alternative Names (SANs) included in the certificate.
 
 ### `geneos tls new`

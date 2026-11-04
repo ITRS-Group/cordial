@@ -82,19 +82,24 @@ where:
 
   * `gateway/gateway_config/` contains common Gateway configuration as
     include `XML` files.
+
   * `gateway/gateways/` contains one sub-directory for each Gateway
     instance named after the gateway instance. These sub-directories
     will be used as working directories for the corresponding gateway
     instances.
+
   * `gateway/gateway_shared/` contains shared Gateway data such as
     include `XML` files or scritped tools.
+
   * `gateway/templates/` contains Gateway configuration templates in the
     form of Golang XML templates.
 
 * `hosts/` contains configurations for supporting control of Geneos
   component instances running on remote hosts.
+
 * `licd/` (License Daemon) contains settings & instance data related to
   the `licd` component type.
+
   * `licd/licds/` contains one sub-directory for each licd instance
     named after the licd instance. This sub-directories will be used as
     working directories for the corresponding License Daemon (licd)
@@ -102,6 +107,7 @@ where:
 
 * `netprobe/` contains settings & instance data related to the
   `netprobe` component type.
+
   * `netprobe/netprobes/` contains one sub-directory for each Netprobe
     instance named after the netprobe instance. These sub-directories
     will be used as working directories for the corresponding netprobe
@@ -109,28 +115,35 @@ where:
 
 * `packages/` contains the Geneos binaries / software packages
   installed.
+
   * `packages/downloads/` contains files downloaded from the ITRS
     download portal, or the file repository used.
+
   * `packages/fa2/` contains one sub-directory for each version of Fix
     Analyser installed, as well as symlinks (e.g. `active_prod`)
     pointing to the current default version. These sub-directory will
     contain the corresponding binaries.
+
   * `packages/fileagent/` contains one sub-directory for each version of
     File Agent installed, as well as symlinks (e.g. `active_prod`)
     pointing to the current default version. These sub-directory will
     contain the corresponding binaries.
+
   * `packages/gateway/` contains one sub-directory for each version of
     Gateway installed, as well as a symlinks (e.g. `active_prod`)
     pointing to the current default version.  These sub-directory will
     contain the corresponding binaries.
+
   * `packages/licd/` contains one sub-directory for each version of
     License Daemon (licd) installed, as well as a symlinks (e.g.
     `active_prod`) pointing to the current default version. These
     sub-directory will contain the corresponding binaries.
+
   * `packages/netprobe/` contains one sub-directory for each version of
     Netprobe installed, as well as a symlinks (e.g. `active_prod`)
     pointing to the current default version. These sub-directory will
     contain the corresponding binaries.
+
   * `packages/webserver/` contains one sub-directory for each version of
     Webserver (for web dashboards) installed, as well as a symlinks
     (e.g. `active_prod`) pointing to the current default version. These
@@ -138,15 +151,18 @@ where:
 
 * `san/` (Self-Announcing Netprobe) contains settings & instance data
   related to the `san` component type.
+
   * `san/sans/` contains one sub-directory for each Self-Announcing
     Netprobe instance named after the san instance. These
     sub-directories will be used as working directories for the
     corresponding san instances.
+
   * `san/templates/` contains Self-Announcing Netprobe configuration
     templates in the form of Golang XML templates.
 
 * `webserver/` (Webserver for web dashbaords) contains settings &
   instance data related to the `webserver` component type.
+
   * `webserver/webservers/` contains one sub-directory for each
     Webserver instance named after the webserver instance. These
     sub-directories will be used as working directories for the
