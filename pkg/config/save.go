@@ -102,7 +102,7 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 	// modifying the original config with any expansions or
 	// transformations needed for saving.
 
-	nv := New()
+	nv := New(options...)
 
 	c.rwmutex.RLock()
 	for _, k := range c.allKeys() {

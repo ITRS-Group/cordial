@@ -71,6 +71,7 @@ var loginCmd = &cobra.Command{
 				config.AppName(cordial.ExecutableName()),
 				config.UseDefaults(false),
 				config.SkipWorkingDir(),
+				config.KeyDelimiter("::"),
 			)
 			if err2 != nil {
 				return err2
