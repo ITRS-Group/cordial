@@ -73,6 +73,10 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		}
 	}
 
+	if ct.PortRange != "" {
+		config.Set(cf, "port", 0)
+	}
+
 	i.Log().Debug("writing config for new instance")
 	if resp := Write(i, NoRebuild()); resp.Err != nil {
 		return nil, resp.Err

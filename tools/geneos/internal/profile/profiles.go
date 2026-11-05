@@ -78,6 +78,7 @@ var Profiles *config.Config
 //	"gateway"
 //	"include"
 //	"insecure"
+//	"licence"
 //	"minimal"
 //	"type"
 //	"variable"
@@ -88,6 +89,7 @@ var IncludeFlags = []string{
 	"gateway",
 	"include",
 	"insecure",
+	"licence",
 	"minimal",
 	"type",
 	"variable",
@@ -284,9 +286,6 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common 
 				port = uint16(pv)
 			}
 		}
-		// clear params, they should only come from config not command line
-		vals.Params = []string{}
-		vals.SecureParams = values.SecureValues{}
 		i, err = instance.Add(geneos.LOCAL, ct, name,
 			instance.WithValues(vals),
 			instance.WithCertBundle(common.CertBundle),

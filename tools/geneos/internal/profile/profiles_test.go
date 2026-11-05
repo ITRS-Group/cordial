@@ -2,6 +2,8 @@ package profile_test
 
 import (
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -10,6 +12,7 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/logger"
 
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
@@ -28,9 +31,67 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/trgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
+
+func TestApplyInstancePreservesProfileParameters(t *testing.T) {
+	root := t.TempDir()
+	key := cordial.ExecutableName()
+	previousRoot := config.Get[string](config.Global(), key)
+	previousLocal, previousAll, previousHostname := geneos.LOCAL, geneos.ALL, geneos.LOCALHOST
+	previousHandler := logger.LogHandler
+	t.Cleanup(func() {
+		config.Set(config.Global(), key, previousRoot)
+		geneos.LOCAL, geneos.ALL, geneos.LOCALHOST = previousLocal, previousAll, previousHostname
+		logger.LogHandler = previousHandler
+	})
+	config.Set(config.Global(), key, root)
+	logger.LogHandler = slog.NewTextHandler(io.Discard, nil)
+	geneos.LOCALHOST = "localhost"
+	geneos.LOCAL = nil
+	geneos.LOCAL = geneos.NewHost(geneos.LOCALHOST)
+	geneos.ALL = geneos.NewHost(geneos.ALLHOSTS)
+	if err := os.MkdirAll(filepath.Join(root, "packages", "licd", "active_prod"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	ct := geneos.ParseComponent("licd")
+	port := instance.NextFreePort(geneos.LOCAL, ct)
+	pf := config.New()
+	common := profile.Common{
+		Name:   "profile-member",
+		Params: []string{fmt.Sprintf("port=%d", port)},
+	}
+	for _, state := range []string{"created", "updated"} {
+		t.Run(state, func(t *testing.T) {
+			common.Params = []string{fmt.Sprintf("port=%d", port), "profile-value=" + state}
+			vals := profile.ApplyCommonParams(pf, "test-profile", &common, nil)
+			if err := profile.ApplyInstance(pf, ct, common.Name, common, vals, nil, false); err != nil {
+				t.Fatal(err)
+			}
+			member, err := instance.GetWithHost(geneos.LOCAL, ct, common.Name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = member.Unload() })
+			saved, err := config.Read("licd", config.FromDir(member.Home()), config.UseDefaults(false), config.MustExist())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := config.Get[string](saved, saved.Join("config", "profile")); got != "test-profile" {
+				t.Errorf("saved config.profile = %q, want test-profile", got)
+			}
+			if got := config.Get[string](saved, "profile-value"); got != state {
+				t.Errorf("saved profile-value = %q, want %q", got, state)
+			}
+			if got := config.Get[uint16](saved, "port"); got != port {
+				t.Errorf("saved port = %d, want %d", got, port)
+			}
+		})
+	}
+}
 
 func TestEmbeddedDefaultsVersion(t *testing.T) {
 	defaults := profile.EmbeddedDefaults()

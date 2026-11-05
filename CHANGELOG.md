@@ -1,11 +1,14 @@
 # Change Log
 
-## Version v1.30.0
+## Version v1.30.1
 
-> [!NOTE]
-> **Released 2026-11-04** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+>[!IMPORTANT]
+> This patch release replaces v1.30.0 as some issues were reported by users and identified during post-release testing, addressing bugs and improving overall stability. Please use this version instead of v1.30.0 if you have already downloaded that.
 
-## Version v1.30.0 Highlights
+>[!NOTE]
+>**Released 2026-11-05** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+## Version v1.30.1 Highlights
 
 This release introduces significant new features for the `geneos` command, along with a number of minor breaking changes. Please read this changelog carefully before upgrading.
 
