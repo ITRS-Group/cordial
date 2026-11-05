@@ -3,7 +3,7 @@
 ## Version v1.30.1
 
 >[!IMPORTANT]
-> This patch release replaces v1.30.0 as some issues were reported by users and identified during post-release testing, addressing bugs and improving overall stability. Please use this version instead of v1.30.0 if you have already downloaded that.
+>This patch release replaces v1.30.0 as some issues were reported by users and identified during post-release testing, addressing bugs and improving overall stability. Please use this version instead of v1.30.0 if you have already downloaded that.
 
 >[!NOTE]
 >**Released 2026-11-05** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
@@ -35,7 +35,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 >
 >1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
 
-## Version v1.30.0 Changes
+## Version v1.30.1 Changes
 
 * Updated to use Go 1.27.3 and update dependencies
 
@@ -64,11 +64,11 @@ A number of the new features have been introduced as part of a larger Monitor-Of
   * The `geneos set` and `geneos unset` commands have been enhanced to support more complex configuration parameters, such as multiple managed entities for `san` components. These also require the updated templates included in the release. To update the templates used in an existing `geneos` command managed environment, you should run `geneos init templates` after upgrading the binary.
 
     For gateway components, include files (`--include`/`-i` options) can now be given using pipe symbols (`|`) to denote include group hierarchies, which also require the updated templates included in this release. For example:
-    
+
     ```shell
     geneos set gateway EXAMPLE -i '100:Top-Level Group | Sub-Group | /path/to/include.xml'
     ```
- 
+
     The above will result in an include file with priority 100 and the path given, being placed in two levels of include groups, `Top-Level Group` and `Sub-Group`. Specifying multiple include files with similar hierarchies will create the corresponding nested include groups for each file in the way expected. Note, as in previous releases, that this only works on creation of gateways for the initial `gateway.setup.xml` file unless the `config.rebuild` option is explicitly set to `always`, which is very rarely the desired behaviour.
 
     For self-announcing netprobes, using the updated `san` template file, multiple managed entities can now be specified when setting using attributes, types and variables with names including a forward slash (`/`) to denote the name of the entity, e.g.
@@ -97,7 +97,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * Add support for looped expansion of configuration values (up to 10 times by default to prevent infinite recursion). This means that now configuration values that reference other configuration items will be repeatedly expanded up to a specified number of iterations. There is a small chance this will change existing behaviour of user-maintained configuration files if they rely on single-pass expansion.
 
-## Version v1.30.0 Fixes
+## Version v1.30.1 Fixes
 
 * `pkg/certs`
 
@@ -113,7 +113,17 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * For PEM files, support the expansion of a leading `~/` in file paths as the user's home directory
 
+  * **\[Fixed in v1.30.1\]** Fix the handling of configuration key delimiters when reading and writing credentials files, so that domain names containing dots are preserved correctly.
+
 * `tools/geneos`
+
+  * **\[Fixed in v1.30.1\]** Fix `geneos init` to recognise an installation directory given on the command line and to exit when the directory prompt is cancelled using CTRL-C.
+
+  * **\[Fixed in v1.30.1\]** Fix port allocation when adding instances so that a new instance's default port is not treated as already allocated to itself. For example, `geneos add licd` will now use port 7041 when it is available, rather than skipping to port 7100.
+
+  * **\[Fixed in v1.30.1\]** Fix the `--licence`/`-L` option for profile-based initialisation, so that the licence file location is passed to the profile correctly.
+
+  * **\[Fixed in v1.30.1\]** Fix profile application to preserve profile parameters when creating new instances, including the `config.profile` setting used to identify profile members.
 
   * Fix `geneos set` and `geneos unset` to not decode or expand existing values. Previously, encoded secrets were inadvertantly decoded, leading to visibility of plain text secrets. As an added benefit, previously expanded parameters will now be left unchanged, so that interpolated directory paths etc. will remain intact.
 

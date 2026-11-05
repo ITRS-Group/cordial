@@ -16,8 +16,14 @@ ARG GOVERSION=1.27.3
 # However without executable signing this will not run on a Mac unless built locally.
 
 FROM golang:${GOVERSION} AS build
+WORKDIR /app/cordial
+ENV GOMODCACHE=/go/pkg/mod
+ENV GOCACHE=/root/.cache/go-build
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    go mod download -x
 # base files
-COPY go.mod go.sum cordial.go VERSION README.md CHANGELOG.md /app/cordial/
+COPY cordial.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, san-config
 COPY tools /app/cordial/tools
@@ -27,11 +33,6 @@ COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
-ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=cache,target="/root/.cache/go-build" \
     set -eux; \
@@ -65,12 +66,19 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 
 # build non-static binaries (shared libs) with UBI8 for GLIBC backward compatibility
 FROM redhat/ubi8 AS build-ubi8
-RUN set -eux; \
-    yum -y install gcc make golang
+RUN --mount=type=cache,id=ubi8-dnf,target=/var/cache/dnf,sharing=locked \
+    set -eux; \
+    yum -y --setopt=keepcache=True install gcc make golang
 ARG GOVERSION
 ENV GOTOOLCHAIN=go${GOVERSION}
+ENV GOMODCACHE=/go/pkg/mod
+ENV GOCACHE=/root/.cache/go-build
+WORKDIR /app/cordial
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    go mod download -x
 # base files
-COPY go.mod go.sum cordial.go VERSION README.md CHANGELOG.md /app/cordial/
+COPY cordial.go VERSION README.md CHANGELOG.md /app/cordial/
 COPY pkg /app/cordial/pkg
 # geneos, dv2email, san-config
 COPY tools /app/cordial/tools
@@ -80,11 +88,6 @@ COPY integrations /app/cordial/integrations/
 COPY libraries /app/cordial/libraries/
 # gdna
 COPY gdna /app/cordial/gdna
-RUN --mount=type=cache,target=/go/pkg/mod/ \
-    --mount=type=bind,source=go.sum,target=go.sum \
-    --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
-ENV GOCACHE=/root/.cache/go-build
 RUN --mount=type=cache,target=/go/pkg/mod/ \
     --mount=type=cache,target="/root/.cache/go-build" \
     set -eux; \
@@ -105,18 +108,18 @@ ARG NODE_ENV=production
 ENV NODE_ENV=$NODE_ENV
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,id=docs-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=docs-apt-lists,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
     rm -f /etc/apt/apt.conf.d/docker-clean; \
-    apt update; \
-    apt install -y --no-install-recommends \
+    apt-get update; \
+    apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
         wget \
         gnupg; \
     wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -; \
     sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'; \
     apt-get update; \
-    apt-get install -y --no-install-recommends \
+    apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
         fonts-noto-color-emoji \
         fonts-ipafont-gothic \
         fonts-wqy-zenhei \
@@ -137,12 +140,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         libxrandr2 \
         libgbm1 \
         libasound2 \
-        libxss1; \
-    rm -fr /var/lib/apt/lists/*;
-RUN set -eux; \
+        libxss1;
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+    set -eux; \
     mkdir node_modules; \
-    npm install --verbose --global git+https://github.com/elliotblackburn/mdpdf.git#3.0.4; \
-    npm install --global @mermaid-js/mermaid-cli
+    npm install --prefer-offline --verbose --global git+https://github.com/elliotblackburn/mdpdf.git#3.0.4; \
+    npm install --prefer-offline --global @mermaid-js/mermaid-cli
 
 # base files
 COPY VERSION README.md CHANGELOG.md /app/cordial/
@@ -259,6 +262,9 @@ RUN set -eux; \
 #
 FROM alpine AS cordial-build
 
+RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
+    apk add tar
+
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
 
@@ -305,7 +311,6 @@ RUN rm -f /cordial/etc/geneos/gdna/*.history
 # build tar
 # upx -q /cordial/bin/*; \
 RUN set -eux; \
-    apk add tar; \
     cp -r /cordial /cordial-$(cat /VERSION); \
     tar --sort=name -czf /cordial-$(cat /VERSION).tar.gz cordial-$(cat /VERSION)
 
@@ -316,69 +321,65 @@ CMD [ "bash" ]
 # create a runnable test image using basic debian
 # FROM ubuntu:jammy AS cordial-run-ubuntu
 FROM debian:stable AS cordial-run-debian
-COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build /app/cordial/tools/san-config/san-config /bin/
-COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
-COPY --from=build /app/cordial/gdna/gdna /bin/
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,id=debian-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=debian-apt-lists,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
     rm -f /etc/apt/apt.conf.d/docker-clean; \
-    apt update; \
-    apt install -y --no-install-recommends \
+    apt-get update; \
+    apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
     fontconfig \
     ca-certificates \
     openjdk-21-jre-headless \
     ; \
     useradd -ms /bin/bash geneos
+COPY --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
+COPY --from=build /app/cordial/tools/san-config/san-config /bin/
+COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
+COPY --from=build /app/cordial/gdna/gdna /bin/
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
 
 # build a UBI8 for testing
 FROM redhat/ubi8 AS cordial-run-ubi8
+RUN --mount=type=cache,id=ubi8-dnf,target=/var/cache/dnf,sharing=locked \
+    set -eux; \
+    dnf install -y --setopt=keepcache=True libnsl2 fontconfig \
+    ; \
+    ln -s /usr/lib64/libnsl.so.2 /usr/lib64/libnsl.so.1
+RUN useradd -ms /bin/bash geneos
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
-RUN set -eux; \
-    dnf install -y libnsl2 fontconfig \
-    ; \
-    dnf clean all; \
-    ln -s /usr/lib64/libnsl.so.2 /usr/lib64/libnsl.so.1
-RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
 
 # build a UBI9
 FROM redhat/ubi9 AS cordial-run-ubi9
+RUN --mount=type=cache,id=ubi9-dnf,target=/var/cache/dnf,sharing=locked \
+    dnf install -y --setopt=keepcache=True fontconfig
+RUN useradd -ms /bin/bash geneos
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
-RUN set -eux; \
-    dnf install -y fontconfig \
-    ; \
-    dnf clean all
-RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
 
 # build a UBI10
 FROM redhat/ubi10 AS cordial-run-ubi10
+RUN --mount=type=cache,id=ubi10-dnf,target=/var/cache/dnf,sharing=locked \
+    dnf install -y --setopt=keepcache=True libnsl libxcrypt-compat fontconfig
+RUN useradd -ms /bin/bash geneos
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
-RUN set -eux; \
-    dnf install -y libnsl libxcrypt-compat fontconfig \
-    ; \
-    dnf clean all
-RUN useradd -ms /bin/bash geneos
 WORKDIR /home/geneos
 USER geneos
 CMD [ "bash" ]
@@ -386,30 +387,27 @@ CMD [ "bash" ]
 # create a runnable gdna test image using basic debian
 FROM debian:stable AS gdna
 
-COPY --from=build /app/cordial/tools/geneos/geneos /bin/
-
-COPY --from=build /app/cordial/gdna/gdna /bin/
-COPY --from=build /app/cordial/gdna/cmd/gdna.defaults.yaml /etc/geneos/
-COPY --from=build /app/cordial/gdna/gdna.example.yaml /etc/geneos/
-COPY --from=build /app/cordial/gdna/geneos/* /etc/geneos/gdna/
-
-COPY --chmod=555 gdna/docker/start-up.sh /etc/geneos/gdna/start-up.sh
-
 ENV DEBIANFRONTEND=noninteractive
 ENV ITRS_DOWNLOAD_TIMEOUT=5m
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+RUN --mount=type=cache,id=debian-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=debian-apt-lists,target=/var/lib/apt/lists,sharing=locked \
     set -eux; \
-    apt update; \
-    apt install -y --no-install-recommends \
+    rm -f /etc/apt/apt.conf.d/docker-clean; \
+    apt-get update; \
+    apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
         ca-certificates \
         fontconfig \
         fonts-open-sans \
         sqlite3 \
         ; \
-    rm -fr /var/lib/apt/lists/*; \
-    chmod +x /bin/geneos; \
     useradd -ms /bin/bash geneos
+
+COPY --chmod=755 --from=build /app/cordial/tools/geneos/geneos /bin/
+COPY --from=build /app/cordial/gdna/gdna /bin/
+COPY --from=build /app/cordial/gdna/cmd/gdna.defaults.yaml /etc/geneos/
+COPY --from=build /app/cordial/gdna/gdna.example.yaml /etc/geneos/
+COPY --from=build /app/cordial/gdna/geneos/* /etc/geneos/gdna/
+COPY --chmod=555 gdna/docker/start-up.sh /etc/geneos/gdna/start-up.sh
 
 WORKDIR /home/geneos
 USER geneos
