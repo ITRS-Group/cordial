@@ -2596,18 +2596,26 @@ A number of ready-made includes are available to help streamline common tasks an
 
 | Command | Description |
 | --- | --- |
+| `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
 | `geneos includes extract` | Extract embedded includes and configuration templates |
+| `geneos includes install` | Install a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |
 
 All commands can be limited to a configured host with the global `--host`/`-H` option. Use `geneos includes COMMAND --help` for command options and output details.
+
+## Release Archives
+
+The archive contains a `v`-prefixed semantic-version directory of managed include files and a separate, unversioned `config/` directory of configuration templates. Install it with `geneos includes install ARCHIVE.tar.gz`. Existing configuration templates are never replaced. Missing top-level include links are created; use `--update` to replace existing paths with links to the installed version.
 
 
 ## Commands
 
 | Command / Aliases | Description |
 |-------|-------|
+| [`geneos includes delete / remove`](#geneos-includes-delete)	 | Delete unlinked include versions |
 | [`geneos includes extract`](#geneos-includes-extract)	 | Extract includes |
+| [`geneos includes install`](#geneos-includes-install)	 | Install includes from an archive |
 | [`geneos includes list / ls`](#geneos-includes-list)	 | List all available include files |
 | [`geneos includes update`](#geneos-includes-update)	 | Update includes |
 
@@ -2626,17 +2634,63 @@ All commands can be limited to a configured host with the global `--host`/`-H` o
 
 ---
 
+# `geneos includes delete`
+
+<sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
+
+Delete unlinked version directories from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
+
+With no version pattern, all unlinked semantic-version directories are removed and linked versions are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match directory names exactly, including any `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+
+Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory. A link to even one file protects the entire version directory, including every unlinked file within it. Relative and absolute targets, link chains, directory aliases, and dangling references into the version are protected.
+
+Positional patterns are processed in order. If a pattern selects any linked version, none of the versions matching that pattern are deleted, and an error identifies the version and its protecting symlink. Later patterns are still processed, and collected errors are returned after the list is complete. If a link cannot be inspected or resolved safely, that pattern fails without proceeding with deletion.
+
+Links originating elsewhere are not considered: those are manually managed by the user. Configuration templates, non-version directories, and directory symlinks are never deleted. Missing includes directories and patterns that match no versions are harmless no-ops.
+
+```shell
+geneos includes delete
+geneos includes delete 'v1.30.*'
+geneos includes delete 'v1.29.*' 'v1.30.*'
+geneos includes delete --version 'v1.31.0-rc.*'
+geneos includes remove -V 'v1.29.*'
+```
+
+Use the global `--host` (`-H`) option to select the installation destination. Links are checked again immediately before each directory is removed. Deleted directories are not backed up; earlier deletions are not rolled back if a later filesystem operation fails or a new protecting link appears during deletion.
+
+## Usage
+
+```text
+geneos includes delete [VERSION_PATTERN...] [flags]
+```
+
+### Options
+
+```text
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --version string    Select include versions using a shell-style pattern
+```
+
+## SEE ALSO
+
+* [geneos includes](#geneos-includes)	 - Manage includes
+
+---
+
 # `geneos includes extract`
 
 <sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
 
 Extract the include files embedded in the `geneos` executable to the selected host.
 
-Managed include files are written under `gateway/includes/<version>`. Existing files that differ are moved to timestamped `.bak` files before replacement. Unchanged files are left in place. If the version directory already exists, extraction requires `--force`.
+Managed include files are written under `gateway/includes/<version>`, including when the version directory already exists. Existing files that differ are moved to timestamped `.bak` files before replacement. Unchanged files are left in place.
 
 Configuration templates are written under `gateway/includes/config`. Existing configuration templates are never overwritten because they may contain local changes.
 
-Use `--update` to update the top-level links to the extracted version after extraction. `--force` also allows those links to be replaced. If extraction or a filesystem operation fails, the command returns an error; successfully completed earlier operations are not rolled back.
+Missing top-level include links are created automatically; existing files and links are left alone. Use `--update` to replace existing top-level files and links with links to the extracted version after extraction. If extraction or a filesystem operation fails, the command returns an error; successfully completed earlier operations are not rolled back.
 
 ## Usage
 
@@ -2649,7 +2703,49 @@ geneos includes extract [flags]
 ```text
       --allow-root        allow running as root (not recommended)
   -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -F, --force             Overwrite existing files
+  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -U, --update            Update version links for existing include files
+```
+
+## SEE ALSO
+
+* [geneos includes](#geneos-includes)	 - Manage includes
+
+---
+
+# `geneos includes install`
+
+<sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
+
+Install include files from a local `.tar.gz` archive to the selected host.
+
+The archive must contain one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`), containing `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins.
+
+Managed includes are installed under `gateway/includes/<version>`, including when that directory already exists. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
+
+Configuration templates are installed under `gateway/includes/config` only when no path of the same name exists. Local configuration files and existing symlinks are never replaced.
+
+Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. Updates target the version in the archive, not the version embedded in the executable.
+
+```shell
+geneos includes install cordial-includes-v1.31.0.tar.gz
+geneos includes install --update cordial-includes-v1.31.1.tar.gz
+```
+
+The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.
+
+## Usage
+
+```text
+geneos includes install ARCHIVE.tar.gz [flags]
+```
+
+### Options
+
+```text
+      --allow-root        allow running as root (not recommended)
+  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
   -U, --update            Update version links for existing include files
@@ -2727,7 +2823,7 @@ Update the top-level include symlinks to point to files in a versioned include d
 
 By default, the links are updated to the version embedded in the running `geneos` executable. Use `--version` to select another semantic version already present under `gateway/includes`. If the selected version directory is missing, the command returns an error; the current embedded version is extracted automatically when needed.
 
-Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, the command returns an error unless `--force` is specified. `--force` removes the existing path before creating the new symlink.
+Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink.
 
 Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
 ## Usage
@@ -2741,7 +2837,6 @@ geneos includes update [flags]
 ```text
       --allow-root        allow running as root (not recommended)
   -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -F, --force             Overwrite existing files
   -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
   -V, --version string    Specify version to update includes to

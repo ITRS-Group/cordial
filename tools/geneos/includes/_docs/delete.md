@@ -1,0 +1,19 @@
+Delete unlinked version directories from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
+
+With no version pattern, all unlinked semantic-version directories are removed and linked versions are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match directory names exactly, including any `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+
+Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory. A link to even one file protects the entire version directory, including every unlinked file within it. Relative and absolute targets, link chains, directory aliases, and dangling references into the version are protected.
+
+Positional patterns are processed in order. If a pattern selects any linked version, none of the versions matching that pattern are deleted, and an error identifies the version and its protecting symlink. Later patterns are still processed, and collected errors are returned after the list is complete. If a link cannot be inspected or resolved safely, that pattern fails without proceeding with deletion.
+
+Links originating elsewhere are not considered: those are manually managed by the user. Configuration templates, non-version directories, and directory symlinks are never deleted. Missing includes directories and patterns that match no versions are harmless no-ops.
+
+```shell
+geneos includes delete
+geneos includes delete 'v1.30.*'
+geneos includes delete 'v1.29.*' 'v1.30.*'
+geneos includes delete --version 'v1.31.0-rc.*'
+geneos includes remove -V 'v1.29.*'
+```
+
+Use the global `--host` (`-H`) option to select the installation destination. Links are checked again immediately before each directory is removed. Deleted directories are not backed up; earlier deletions are not rolled back if a later filesystem operation fails or a new protecting link appears during deletion.

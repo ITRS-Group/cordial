@@ -16,6 +16,7 @@ release: base docs
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/cordial-includes-$(VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
 # 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
@@ -34,7 +35,15 @@ release: base docs
 		case "$${file##*/}" in gdna-[a-z]*.md|gdna-[a-z]*.pdf) ;; *) rm -f "$$file" ;; esac; \
 	done
 
-.PHONY: build docs gdna
+.PHONY: build docs gdna includes
+
+includes:
+	docker build --tag cordial-includes:$(VERSION) --target cordial-includes .
+	mkdir -p release-$(VERSION)/
+	-docker rm cordial-includes-$(VERSION)
+	docker create --name cordial-includes-$(VERSION) cordial-includes:$(VERSION)
+	docker cp cordial-includes-$(VERSION):/cordial-includes-$(VERSION).tar.gz release-$(VERSION)/
+	docker rm cordial-includes-$(VERSION)
 
 build:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
