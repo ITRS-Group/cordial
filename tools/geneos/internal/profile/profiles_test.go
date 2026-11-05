@@ -1,6 +1,7 @@
 package profile_test
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -35,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -177,6 +179,192 @@ func TestDeployProfileImportsOnce(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type profileLifecycleInstance struct {
+	geneos.Instance
+	events     *[]string
+	imported   string
+	force      *bool
+	rebuildErr error
+	reloadErr  error
+}
+
+func (i *profileLifecycleInstance) Rebuild(force bool) (bool, error) {
+	*i.events = append(*i.events, "rebuild")
+	*i.force = force
+	contents, err := os.ReadFile(i.imported)
+	if err != nil || string(contents) != "imported before rebuild" {
+		return false, fmt.Errorf("rebuild ran before import: %q, %v", contents, err)
+	}
+	return i.rebuildErr == nil, i.rebuildErr
+}
+
+func (i *profileLifecycleInstance) Reload() error {
+	*i.events = append(*i.events, "reload")
+	return i.reloadErr
+}
+
+func TestApplyInstanceLifecycle(t *testing.T) {
+	failure := errors.New("lifecycle failure")
+	for _, test := range []struct {
+		name       string
+		missing    bool
+		rebuildErr error
+		reloadErr  error
+		wantErr    error
+		events     []string
+	}{
+		{name: "success", events: []string{"rebuild", "reload"}},
+		{name: "import failure", missing: true, wantErr: os.ErrNotExist},
+		{name: "rebuild failure", rebuildErr: failure, wantErr: failure, events: []string{"rebuild"}},
+		{name: "reload failure", reloadErr: failure, wantErr: failure, events: []string{"rebuild", "reload"}},
+		{name: "unsupported rebuild", rebuildErr: geneos.ErrNotSupported, events: []string{"rebuild"}},
+		{name: "unsupported reload", reloadErr: geneos.ErrNotSupported, events: []string{"rebuild", "reload"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := newProfileTestRoot(t)
+			ct := geneos.ParseComponent("licd")
+			member, err := instance.Add(geneos.LOCAL, ct, "lifecycle-member", instance.Insecure(true))
+			if err != nil {
+				t.Fatal(err)
+			}
+			source := filepath.Join(root, "source.txt")
+			if !test.missing {
+				if err := os.WriteFile(source, []byte("imported before rebuild"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			var events []string
+			var force bool
+			factory := ct.New
+			t.Cleanup(func() {
+				ct.New = factory
+				_ = member.Unload()
+			})
+			ct.New = func(name string) geneos.Instance {
+				return &profileLifecycleInstance{
+					Instance: factory(name), events: &events, force: &force,
+					imported:   filepath.Join(member.Home(), "applied.txt"),
+					rebuildErr: test.rebuildErr, reloadErr: test.reloadErr,
+				}
+			}
+			common := profile.Common{Imports: []string{"applied.txt=" + source}}
+			err = profile.ApplyInstance(config.New(), ct, member.Name(), common, values.Values{}, nil, true)
+			if !errors.Is(err, test.wantErr) {
+				t.Fatalf("ApplyInstance error = %v, want %v", err, test.wantErr)
+			}
+			if !slices.Equal(events, test.events) {
+				t.Fatalf("calls = %v, want %v", events, test.events)
+			}
+			if len(events) > 0 && !force {
+				t.Fatal("force flag was not passed to the rebuild")
+			}
+		})
+	}
+}
+
+func TestProfileDispatchTargets(t *testing.T) {
+	newProfileTestRoot(t)
+	pf := config.New(config.WithDefaults([]byte("profiles:\n  dispatch-test:\n    _short: Dispatch test\n"), "yaml"))
+	previousProfiles := cmd.Profiles
+	cmd.Profiles = pf
+	t.Cleanup(func() {
+		for _, member := range instance.Instances(geneos.LOCAL, nil) {
+			_ = member.Unload()
+		}
+		cmd.Profiles = previousProfiles
+	})
+	if _, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "dispatch-member",
+		instance.Insecure(true), instance.WithValues(values.Values{Params: []string{"config.profile=dispatch-test"}}),
+	); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("profile"), "dispatch-test",
+		instance.WithFlags(pflag.NewFlagSet("test", pflag.ContinueOnError)),
+	); err != nil {
+		t.Fatal(err)
+	}
+	for _, serial := range []bool{false, true} {
+		for _, test := range []struct {
+			mode instance.ProfileTargets
+			want []string
+		}{
+			{instance.ProfileAndMembers, []string{"licd", "profile"}},
+			{instance.ProfileOnly, []string{"profile"}},
+			{instance.ProfileMembersOnly, []string{"licd"}},
+		} {
+			t.Run(fmt.Sprintf("serial=%t/mode=%d", serial, test.mode), func(t *testing.T) {
+				run := instance.Do
+				if serial {
+					run = instance.DoSerial
+				}
+				var visited []string
+				results := run("test", geneos.LOCAL, geneos.ParseComponent("profile"), []string{"dispatch-test"},
+					func(member geneos.Instance, args ...any) *responses.General {
+						if len(args) != 1 || args[0] != "payload" {
+							t.Errorf("callback arguments = %v, want payload only", args)
+						}
+						visited = append(visited, member.Type().Name)
+						return responses.New[responses.General](member)
+					}, "payload", test.mode,
+				)
+				if !slices.Equal(visited, test.want) || len(results) != len(test.want) {
+					t.Fatalf("targets = %v (%d results), want %v", visited, len(results), test.want)
+				}
+			})
+		}
+	}
+}
+
+func TestProfileRebuildPropagatesForce(t *testing.T) {
+	newProfileTestRoot(t)
+	ct := geneos.ParseComponent("licd")
+	member, err := instance.Add(geneos.LOCAL, ct, "force-member", instance.Insecure(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	imported := filepath.Join(member.Home(), "applied.txt")
+	if err := os.WriteFile(imported, []byte("imported before rebuild"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	pf := config.New(config.WithDefaults([]byte("profiles:\n  force-profile:\n    licd:\n      - name: force-member\n"), "yaml"))
+	previousProfiles, factory := cmd.Profiles, ct.New
+	cmd.Profiles = pf
+	subject := geneos.ParseComponent("profile").New("force-profile")
+	t.Cleanup(func() {
+		cmd.Profiles, ct.New = previousProfiles, factory
+		_ = subject.Unload()
+		_ = member.Unload()
+	})
+	var events []string
+	var force bool
+	ct.New = func(name string) geneos.Instance {
+		return &profileLifecycleInstance{Instance: factory(name), events: &events, imported: imported, force: &force}
+	}
+	for _, want := range []bool{false, true} {
+		events = nil
+		force = !want
+		if changed, err := subject.Rebuild(want); err != nil || !changed {
+			t.Fatalf("Rebuild(%t) = %t, %v", want, changed, err)
+		}
+		if force != want || !slices.Equal(events, []string{"rebuild", "reload"}) {
+			t.Fatalf("Rebuild(%t): member force=%t, calls=%v", want, force, events)
+		}
+	}
+}
+
+func TestAddReturnsImportFailure(t *testing.T) {
+	root := newProfileTestRoot(t)
+	_, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "missing-import-member",
+		instance.Insecure(true), instance.WithImports([]string{"geneos.lic=" + filepath.Join(root, "missing.lic")}),
+	)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("Add error = %v, want missing import source", err)
+	}
+	if member, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("licd"), "missing-import-member"); err == nil {
+		t.Cleanup(func() { _ = member.Unload() })
 	}
 }
 

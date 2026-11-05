@@ -313,26 +313,36 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common 
 			config.Delete(cf, key)
 		}
 
-		if ncf, err := values.Set(i, vals, keyfile); err == nil {
-			i.SetConfig(ncf)
+		ncf, err := values.Set(i, vals, keyfile)
+		if err != nil {
+			return err
 		}
+		i.SetConfig(ncf)
 
 		if common.CertBundle != "" {
 			_, err := instance.ImportCertificates(i, common.CertBundle, "", common.CertBundlePassword)
 			if err != nil {
-				i.Log().Error("failed to import certificates", slog.Any("error", err))
+				return fmt.Errorf("import certificates for instance %q: %w", name, err)
 			}
 		}
 
-		if resp := instance.Write(i); resp.Err != nil {
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
 
 		if err = instance.ImportFiles(i, common.Imports...); err != nil {
-			i.Log().Error("failed to import files", slog.Any("error", err))
+			return fmt.Errorf("import files for instance %q: %w", name, err)
 		}
 
-		i.Rebuild(forceRebuild)
+		changed, err := i.Rebuild(forceRebuild)
+		if err != nil && !errors.Is(err, geneos.ErrNotSupported) {
+			return fmt.Errorf("rebuild instance %q: %w", name, err)
+		}
+		if changed && err == nil {
+			if err := i.Reload(); err != nil && !errors.Is(err, geneos.ErrNotSupported) && !errors.Is(err, os.ErrProcessDone) {
+				return fmt.Errorf("reload instance %q: %w", name, err)
+			}
+		}
 	}
 
 	return nil

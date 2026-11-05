@@ -168,7 +168,9 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		i.Rebuild(true)
 	}
 
-	_ = ImportFiles(i, opts.Imports...)
+	if err = ImportFiles(i, opts.Imports...); err != nil {
+		return nil, err
+	}
 
 	// make sure base version link exists
 	if basename, found := config.Lookup[string](cf, "version"); found {

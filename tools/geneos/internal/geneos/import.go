@@ -18,6 +18,9 @@ limitations under the License.
 package geneos
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -27,6 +30,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -114,12 +118,10 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 			// create a directory
 			dstIsDir = true
 			if dst, err = CleanRelativePath(dst); err != nil {
-				log.Error("dest path must be relative", slog.Any("error", err))
-				os.Exit(1)
+				return "", "", fmt.Errorf("destination must be relative: %w", err)
 			}
 		} else if dst, err = CleanRelativePath(dst); err != nil {
-			log.Error("dest path must be relative", slog.Any("error", err))
-			os.Exit(1)
+			return "", "", fmt.Errorf("destination must be relative: %w", err)
 		}
 		item = src
 	} else {
@@ -151,15 +153,9 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 
 			// import directory
 			err = importDirectory(h, dir, item)
-			if err != nil {
-				log.Error("failed to import directory", slog.String("item", item), slog.Any("error", err))
-				os.Exit(1)
-			}
-
 			return
 		}
-		log.Error("cannot open source", slog.String("item", item), slog.Any("error", err))
-		os.Exit(1)
+		return "", item, fmt.Errorf("open import source %q: %w", item, err)
 	}
 	defer from.Close()
 
@@ -175,7 +171,7 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 	filename = path.Base(dst)
 
 	// test for same source and dest, return err. only on localhost.
-	if h.IsLocalhost() {
+	if h.IsLocalhost() && !strings.Contains(item, "://") {
 		item = config.ResolveHome(item)
 		sfi, err := h.Stat(item)
 		if err != nil {
@@ -191,57 +187,116 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 		}
 	}
 
-	// check to containing directory, as destfile above may be a
-	// relative path under destdir and not just a filename
-	if _, err := h.Stat(path.Dir(dst)); err != nil {
-		err = h.MkdirAll(path.Dir(dst), 0775)
-		if err != nil && !errors.Is(err, fs.ErrExist) {
-			log.Error("failed to create directory", slog.String("dir", path.Dir(dst)), slog.Any("error", err))
-			os.Exit(1)
-		}
-	}
-
-	// create a backup if the file exists, save the destination path
-	// in case we need to restore it
-	var backuppath string
-	if s, err := h.Stat(dst); err == nil {
-		if !s.Mode().IsRegular() {
-			log.Error("dest exists and is not a plain file", slog.String("dest", dst))
-			os.Exit(1)
-		}
-		backuppath = dst + "." + time.Now().UTC().Format("20060102150405") + ".old"
-		// datetime := time.Now().UTC().Format("20060102150405")
-		if err = h.Rename(dst, backuppath); err != nil {
-			return filename, source, err
-		}
-	}
-
-	cf, err := h.Create(dst, 0664)
+	source = item
+	changed, err := importFile(h, dst, from, 0664)
 	if err != nil {
-		if backuppath != "" {
-			// try and restore backup
-			_ = h.Rename(backuppath, dst)
-		}
 		return filename, source, err
 	}
-	defer cf.Close()
-
-	if _, err = io.Copy(cf, from); err != nil {
-		if backuppath != "" {
-			// try and restore backup
-			_ = h.Rename(backuppath, dst)
-		}
-		return filename, source, err
+	if changed {
+		fmt.Printf("imported %q to %s:%s\n", item, h.String(), dst)
 	}
-	fmt.Printf("imported %q to %s:%s\n", item, h.String(), dst)
 
 	return filename, source, nil
 }
 
+var importFileLocks sync.Map
+
+func importFile(h *Host, destination string, from io.Reader, perms fs.FileMode) (changed bool, err error) {
+	if err := h.MkdirAll(path.Dir(destination), 0775); err != nil {
+		return false, err
+	}
+	mutex, _ := importFileLocks.LoadOrStore(h.String()+":"+path.Clean(destination), &sync.Mutex{})
+	lock := mutex.(*sync.Mutex)
+	lock.Lock()
+	defer lock.Unlock()
+
+	lockPath := destination + ".import.lock"
+	lockFile, err := h.GetFs().OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err != nil {
+		return false, fmt.Errorf("lock import destination %q: %w", destination, err)
+	}
+	defer h.Remove(lockPath)
+	if err := lockFile.Close(); err != nil {
+		return false, err
+	}
+
+	stagedPath := destination + "." + rand.Text() + ".new"
+	staged, err := h.GetFs().OpenFile(stagedPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, perms)
+	if err != nil {
+		return false, err
+	}
+	defer h.Remove(stagedPath)
+	digest := sha256.New()
+	written, copyErr := io.Copy(io.MultiWriter(staged, digest), from)
+	closeErr := staged.Close()
+	if err := errors.Join(copyErr, closeErr); err != nil {
+		return false, err
+	}
+
+	var backup string
+	if info, err := h.Stat(destination); err == nil {
+		if !info.Mode().IsRegular() {
+			return false, fmt.Errorf("import destination %q is not a regular file", destination)
+		}
+		if info.Size() == written {
+			current, err := h.Open(destination)
+			if err != nil {
+				return false, err
+			}
+			existingDigest := sha256.New()
+			_, copyErr := io.Copy(existingDigest, current)
+			closeErr := current.Close()
+			if err := errors.Join(copyErr, closeErr); err != nil {
+				return false, err
+			}
+			if bytes.Equal(digest.Sum(nil), existingDigest.Sum(nil)) {
+				return false, nil
+			}
+		}
+		backup, err = reserveImportBackup(h, destination, time.Now())
+		if err != nil {
+			return false, err
+		}
+		if err := h.Rename(destination, backup); err != nil {
+			_ = h.Remove(backup)
+			return false, err
+		}
+	} else if !errors.Is(err, fs.ErrNotExist) {
+		return false, err
+	}
+	if err := h.Rename(stagedPath, destination); err != nil {
+		if backup != "" {
+			return false, errors.Join(err, h.Rename(backup, destination))
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func reserveImportBackup(h *Host, destination string, now time.Time) (string, error) {
+	prefix := destination + "." + now.UTC().Format("20060102150405")
+	for sequence := 0; ; sequence++ {
+		candidate := prefix + ".old"
+		if sequence > 0 {
+			candidate = fmt.Sprintf("%s.%d.old", prefix, sequence)
+		}
+		reserved, err := h.GetFs().OpenFile(candidate, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+		if errors.Is(err, fs.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		if err := reserved.Close(); err != nil {
+			_ = h.Remove(candidate)
+			return "", err
+		}
+		return candidate, nil
+	}
+}
+
 // import directory from local source directory to dir on host h
 func importDirectory(h *Host, dir, source string) (err error) {
-	var backuppath string
-
 	// check dest is a directory
 	if dir == "" {
 		err = ErrInvalidArgs
@@ -254,7 +309,10 @@ func importDirectory(h *Host, dir, source string) (err error) {
 		dir = filepath.Join(dir, filepath.Base(source))
 	}
 
-	fs.WalkDir(os.DirFS(source), ".", func(file string, di fs.DirEntry, _ error) error {
+	return fs.WalkDir(os.DirFS(source), ".", func(file string, di fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
 		destfile := path.Join(dir, file)
 
 		st, err := di.Info()
@@ -270,32 +328,16 @@ func importDirectory(h *Host, dir, source string) (err error) {
 		if err != nil {
 			return err
 		}
-
-		if s, err := h.Stat(destfile); err == nil {
-			if !s.Mode().IsRegular() {
-				log.Error("dest exists and is not a plain file", slog.String("dest", destfile))
-				os.Exit(1)
-			}
-			datetime := time.Now().UTC().Format("20060102150405")
-			backuppath = destfile + "." + datetime + ".old"
-			if err = h.Rename(destfile, backuppath); err != nil {
-				return err
-			}
-		}
-
-		to, err := h.Create(destfile, st.Mode().Perm())
+		defer from.Close()
+		changed, err := importFile(h, destfile, from, st.Mode().Perm())
 		if err != nil {
 			return err
 		}
-		defer to.Close()
-
-		if _, err = io.Copy(to, from); err != nil {
-			return err
+		if changed {
+			fmt.Printf("imported %q to %s:%s\n", path.Join(source, file), h.String(), destfile)
 		}
-		fmt.Printf("imported %q to %s:%s\n", path.Join(source, file), h.String(), destfile)
 		return nil
 	})
-	return
 }
 
 // ImportCommons copies a file to an instance common directory.

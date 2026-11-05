@@ -153,28 +153,43 @@ func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 	return i.Host().Signal(int(pid), signal)
 }
 
-// Do calls function fn for each matching instance and gathers the
-// return values into responses for handling by the caller. The
-// functions are executed in goroutines and must be concurrency safe.
-//
-// The values are passed to each function called and must not be changed
-// by the called function. The called function should validate and cast
-// values for use.
-//
-// Do calls Instances() to resolve the names given to a list of matching
-// instances on host h (which can be geneos.ALL to look on all hosts)
-// and for type ct, which can be nil to look across all component types.
-//
-// If the command annotations indicate that auditing is enabled, an
-// audit event will be generated for each instance function called and
-// the success or failure will be recorded in an attribute "result".
+// ProfileTargets selects the targets of a profile-specific action.
+type ProfileTargets uint8
+
+const (
+	ProfileAndMembers ProfileTargets = iota
+	ProfileOnly
+	ProfileMembersOnly
+)
+
+func profileTargets(values []any) (ProfileTargets, []any) {
+	targets := ProfileAndMembers
+	args := make([]any, 0, len(values))
+	for _, value := range values {
+		if mode, ok := value.(ProfileTargets); ok {
+			targets = mode
+		} else {
+			args = append(args, value)
+		}
+	}
+	return targets, args
+}
+
+// Do calls fn for matching instances concurrently. A ProfileTargets value
+// in values selects profile objects, their members, or both, and is not
+// passed to fn. Other values are passed unchanged. Actions are audited
+// when enabled by the command annotations.
 func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	targets, values := profileTargets(values)
 	if ct.IsA("profile") {
 		rs = make(responses.GeneralResponses)
 
 		for _, n := range names {
 			// action instances first, stop on error
-			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
+			var instances []geneos.Instance
+			if targets != ProfileOnly {
+				instances = Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
+			}
 			respmap := DoInstances(action, instances, fn, values...)
 			maps.Copy(rs, respmap)
 
@@ -183,6 +198,10 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 				if resp.Err != nil {
 					return
 				}
+			}
+
+			if targets == ProfileMembersOnly {
+				continue
 			}
 
 			// do profile after instances
@@ -212,13 +231,17 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 // audit event will be generated for each instance function called and
 // the success or failure will be recorded in an attribute "result".
 func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	targets, values := profileTargets(values)
 	rs = make(responses.GeneralResponses)
 
 	if ct.IsA("profile") {
 		for _, n := range names {
 
 			// the instances
-			instances := Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
+			var instances []geneos.Instance
+			if targets != ProfileOnly {
+				instances = Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
+			}
 			for _, i := range instances {
 				resp := fn(i, values...)
 				responses.Finished(resp)
@@ -227,6 +250,10 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 					resp.Audited = true
 				}
 				rs[i.String()] = resp
+			}
+
+			if targets == ProfileMembersOnly {
+				continue
 			}
 
 			// do profile after instances
@@ -506,6 +533,7 @@ type instanceOptions struct {
 	parameters         []string
 	matchParentPackage bool
 }
+
 // InstanceOption TODO: Describe its purpose and intended use.
 type InstanceOption func(*instanceOptions)
 

@@ -76,7 +76,7 @@ var rebuildCmd = &cobra.Command{
 			}
 			resp2 := ReloadInstance(i)
 			return responses.MergeResponse(resp, resp2)
-		}).Report(os.Stdout)
+		}, instance.ProfileOnly).Report(os.Stdout)
 		return
 	},
 }

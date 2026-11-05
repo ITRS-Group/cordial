@@ -261,7 +261,7 @@ func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 
 	flags := config.Get[map[string]any](cf, cf.Join("config", "options"))
 	profile.SetExpandOptions(pf, flags, nil)
-	if err = profile.Apply(pf, i.Name(), false); err != nil {
+	if err = profile.Apply(pf, i.Name(), initial); err != nil {
 		return false, err
 	}
 
