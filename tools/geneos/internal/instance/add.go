@@ -164,7 +164,9 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	// reload config as instance data is not updated by Add() as an interface value
 	i.Unload()
 	i.Load()
-	i.Rebuild(true)
+	if !ct.IsA("profile") {
+		i.Rebuild(true)
+	}
 
 	_ = ImportFiles(i, opts.Imports...)
 

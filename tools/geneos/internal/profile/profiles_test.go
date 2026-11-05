@@ -13,7 +13,9 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/spf13/pflag"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ca3"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
@@ -36,7 +38,8 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-func TestApplyInstancePreservesProfileParameters(t *testing.T) {
+func newProfileTestRoot(t *testing.T) string {
+	t.Helper()
 	root := t.TempDir()
 	key := cordial.ExecutableName()
 	previousRoot := config.Get[string](config.Global(), key)
@@ -53,10 +56,16 @@ func TestApplyInstancePreservesProfileParameters(t *testing.T) {
 	geneos.LOCAL = nil
 	geneos.LOCAL = geneos.NewHost(geneos.LOCALHOST)
 	geneos.ALL = geneos.NewHost(geneos.ALLHOSTS)
-	if err := os.MkdirAll(filepath.Join(root, "packages", "licd", "active_prod"), 0o755); err != nil {
-		t.Fatal(err)
+	for _, component := range []string{"licd", "profile"} {
+		if err := os.MkdirAll(filepath.Join(root, "packages", component, "active_prod"), 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
+	return root
+}
 
+func TestApplyInstancePreservesProfileParameters(t *testing.T) {
+	newProfileTestRoot(t)
 	ct := geneos.ParseComponent("licd")
 	port := instance.NextFreePort(geneos.LOCAL, ct)
 	pf := config.New()
@@ -88,6 +97,84 @@ func TestApplyInstancePreservesProfileParameters(t *testing.T) {
 			}
 			if got := config.Get[uint16](saved, "port"); got != port {
 				t.Errorf("saved port = %d, want %d", got, port)
+			}
+		})
+	}
+}
+
+func TestDeployProfileImportsOnce(t *testing.T) {
+	for _, existing := range []bool{false, true} {
+		t.Run(fmt.Sprintf("existing-member=%t", existing), func(t *testing.T) {
+			root := newProfileTestRoot(t)
+			profileName := fmt.Sprintf("apac-trading-%t", existing)
+			previousProfiles, previousCmdProfiles := profile.Profiles, cmd.Profiles
+			t.Cleanup(func() {
+				for _, member := range instance.Instances(geneos.LOCAL, nil) {
+					_ = member.Unload()
+				}
+				profile.Profiles, cmd.Profiles = previousProfiles, previousCmdProfiles
+			})
+			pf := config.New(config.WithDefaults(fmt.Appendf(nil, `profiles:
+  %s:
+    licd:
+      - name: import-test
+        imports:
+          - geneos.lic=${option:licfile}
+          - recipe.txt=${option:recipe}/recipe.txt
+`, profileName), "yaml"))
+			profile.Profiles, cmd.Profiles = pf, pf
+			licfile := filepath.Join(root, "source.lic")
+			recipeFile := filepath.Join(root, "recipe.txt")
+			for _, source := range []string{licfile, recipeFile} {
+				if err := os.WriteFile(source, []byte("original"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			params := []string{"recipe=" + root, "licfile=" + licfile}
+			profile.SetExpandOptions(pf, nil, params)
+			if existing {
+				if _, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "import-test", instance.Insecure(true)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := profile.DeployProfile(geneos.LOCAL, profileName,
+				profile.WithValues(values.Values{Params: params}),
+				profile.WithFlags(pflag.NewFlagSet("test", pflag.ContinueOnError)),
+				profile.WithInsecure(true),
+			); err != nil {
+				t.Fatal(err)
+			}
+			member, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("licd"), "import-test")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, filename := range []string{"geneos.lic", "recipe.txt"} {
+				destination := filepath.Join(member.Home(), filename)
+				contents, err := os.ReadFile(destination)
+				if err != nil || string(contents) != "original" {
+					t.Fatalf("imported %s = %q, err = %v", filename, contents, err)
+				}
+				backups, err := filepath.Glob(destination + ".*.old")
+				if err != nil || len(backups) != 0 {
+					t.Fatalf("unexpected duplicate import backups for %s: %v, err = %v", filename, backups, err)
+				}
+			}
+			deployed, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("profile"), profileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, force := range []bool{false, true} {
+				want := fmt.Sprintf("updated-force=%t", force)
+				if err := os.WriteFile(licfile, []byte(want), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if changed, err := deployed.Rebuild(force); err != nil || !changed {
+					t.Fatalf("Rebuild(%t) = %t, %v", force, changed, err)
+				}
+				contents, err := os.ReadFile(filepath.Join(member.Home(), "geneos.lic"))
+				if err != nil || string(contents) != want {
+					t.Fatalf("rebuilt licence = %q, err = %v, want %q", contents, err, want)
+				}
 			}
 		})
 	}
