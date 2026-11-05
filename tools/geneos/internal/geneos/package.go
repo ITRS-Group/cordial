@@ -167,7 +167,11 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 			if platform != "" {
 				version = version + "+" + platform
 			}
-			fmt.Printf("%s release on %s %q already installed from %s\n", ctFromFile, h, version, filename)
+			result := "installed"
+			if opts.downloadonly {
+				result = "downloaded"
+			}
+			fmt.Printf("%s release on %s %q already %s from %s\n", ctFromFile, h, version, result, filename)
 			// log.Error("release already installed", slog.String("host", h.String()), slog.String("component", ctFromFile.String()), slog.String("version", version+platform), slog.String("source", filename))
 			return
 		}
@@ -186,6 +190,9 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	defer archive.Close()
 
 	if opts.downloadonly {
+		if filesize == -1 {
+			fmt.Printf("%s archive already downloaded to %s\n", ct, path.Join(opts.source, filename))
+		}
 		return
 	}
 
