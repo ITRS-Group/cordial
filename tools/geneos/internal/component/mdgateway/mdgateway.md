@@ -70,19 +70,19 @@ geneos restart md-gateway prod1
 
 The application does not reload YAML on signal; restart after every change.
 
-Each operational event is appended as one JSON line to the instance audit log (default `md-gateway-audit.log`). Each record uses a fixed field order: `timestamp`, `event`, `username`, `module`, then event-specific fields (sorted by key). Filter with `jq` on the `event` field:
+Local instances write each audit event as one JSON line to the instance audit log (default `md-gateway-audit.log`). Remote instances write only to any configured global audit destination. Records contain an `action`, a `command_id`, `username`, nested `instance` details, a `result`, and action-specific fields. Filter with `jq` on the `action` field:
 
 ```json
-{"timestamp":"2026-08-28T02:35:10Z","event":"import","username":"jenkins","module":"md-gateway","bytes":4521,"file":"/opt/geneos/md-gateway/prod1/md-gateway.yaml","sha256":"abc..."}
-{"timestamp":"2026-08-28T02:40:00Z","event":"start","username":"jenkins","module":"md-gateway","command":"/path/to/java ...","pid":12345}
-{"timestamp":"2026-08-28T02:45:00Z","event":"stop","username":"jenkins","module":"md-gateway","pid":12345}
-{"timestamp":"2026-08-28T02:46:00Z","event":"restart","username":"jenkins","module":"md-gateway","newPid":12346,"oldPid":12345}
-{"timestamp":"2026-08-28T03:00:00Z","event":"update","username":"jenkins","module":"md-gateway","base":"active_prod","version":"1.0.0"}
-{"timestamp":"2026-08-28T03:05:00Z","event":"set","username":"jenkins","module":"md-gateway","keys":"xms,xmx"}
-{"timestamp":"2026-08-28T03:10:00Z","event":"add","username":"jenkins","module":"md-gateway","port":"18000"}
+{"timestamp":"2026-08-28T02:35:10Z","action":"import","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","source":"./prod1.yaml","file":"md-gateway.yaml"}
+{"timestamp":"2026-08-28T02:40:00Z","action":"start","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","commandline":"/path/to/java ...","pid":12345}
+{"timestamp":"2026-08-28T02:45:00Z","action":"stop","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","pid":12345}
+{"timestamp":"2026-08-28T02:46:00Z","action":"restart","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","newPid":12346,"oldPid":12345}
+{"timestamp":"2026-08-28T03:00:00Z","action":"update","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","version":"1.0.0","base":"active_prod"}
+{"timestamp":"2026-08-28T03:05:00Z","action":"set","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","values":"[xms=512m xmx=1024m]"}
+{"timestamp":"2026-08-28T03:10:00Z","action":"add","command_id":"<uuid>","username":"jenkins","instance":{"component":"md-gateway","name":"prod1","host":"localhost"},"result":"success","port":18000}
 ```
 
-Events are also recorded for `delete`, `enable`, and `disable`. `geneos logs` follows the Java log (`md-gateway.log`), not the audit file.
+`geneos logs` follows the Java log (`md-gateway.log`), not the audit file. Configure the audit filename with `audit.file`.
 
 The archive also contains `geneos/md-gateway-rules.xml` for a Geneos Gateway include; that file is not used by this component.
 
@@ -99,6 +99,6 @@ For general instance parameters see `geneos help set`. Parameters specific to `m
 * `main-class` (Default: `com.itrsgroup.mdgateway.Main`)
 * `program` (Default: bundled `jdk/bin/java` under the selected package version)
 * `logback` (Default: packaged `config/logback.xml`)
-* `audit-log` (Default: `md-gateway-audit.log`) — operational audit log basename in the instance home directory.
+* `audit.file` (Default: `md-gateway-audit.log`) — audit log path relative to the instance home directory.
 * `xms` / `xmx` (Default: `512m`) — JVM heap sizes.
 * `java-options` — extra JVM flags, split on spaces.
