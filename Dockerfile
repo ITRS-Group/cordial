@@ -260,6 +260,21 @@ RUN set -eux; \
 # assemble files from previous stages into a .tar.gz ready for extraction in the
 # Makefile
 #
+FROM alpine AS cordial-includes
+
+RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
+    apk add tar
+
+COPY VERSION /VERSION
+COPY tools/geneos/includes/files/itrs.*.xml /includes-source/
+COPY tools/geneos/includes/files/config.*.xml /includes-source/
+RUN set -eux; \
+    version=$(cat /VERSION); \
+    mkdir -p "/includes/$version" /includes/config; \
+    cp /includes-source/itrs.*.xml "/includes/$version/"; \
+    cp /includes-source/config.*.xml /includes/config/; \
+    tar --sort=name -czf "/cordial-includes-$version.tar.gz" -C /includes "$version" config
+
 FROM alpine AS cordial-build
 
 RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
@@ -267,6 +282,7 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
+COPY --from=cordial-includes /cordial-includes-*.tar.gz /
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/
@@ -276,7 +292,7 @@ COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
 
 # tools/geneos include files
-COPY --from=build /app/cordial/tools/geneos/includes/*.xml /cordial/etc/geneos/includes/
+COPY --from=build /app/cordial/tools/geneos/includes/files/*.xml /cordial/etc/geneos/includes/
 
 # san-config and default YAML
 COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/

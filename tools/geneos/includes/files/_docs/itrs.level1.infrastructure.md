@@ -24,7 +24,7 @@ These files are embedded in the `geneos` program, shipped as part of the `cordia
 geneos includes extract --update
 ```
 
-This commands will not overwrite existing real files stored in versioned directories, unless also give the `--force` option. It will update symbolic links to point to the latest extracted versions however..
+This command backs up changed files in versioned directories before replacing them, leaves unchanged files and existing configuration templates in place, and updates top-level links to point to the extracted version.
 
 ## Usage
 

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"path/filepath"
 	"strings"
 
 	goversion "github.com/hashicorp/go-version"
@@ -22,12 +21,9 @@ var includeUpdateCmdDescription string
 
 var includesUpdateCmdVersion string
 
-var includeUpdateCmdForce bool
-
 func init() {
 	includesCmd.AddCommand(includesUpdateCmd)
 
-	includesUpdateCmd.Flags().BoolVarP(&includeUpdateCmdForce, "force", "F", false, "Overwrite existing files")
 	includesUpdateCmd.Flags().StringVarP(&includesUpdateCmdVersion, "version", "V", "", "Specify version to update includes to")
 }
 
@@ -46,7 +42,7 @@ var includesUpdateCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)
 
-		err = Update(h, includesUpdateCmdVersion, includeUpdateCmdForce)
+		err = Update(h, includesUpdateCmdVersion, true)
 		if err != nil {
 			return err
 		}
@@ -87,44 +83,5 @@ func Update(h *geneos.Host, version string, override bool) (err error) {
 	}
 
 	// now update the include file symlinks for the given version
-	ents, err := h.ReadDir(dir)
-	if err != nil {
-		fmt.Println("Failed to read include directory", dir, ":", err)
-		return err
-	}
-	for _, ent := range ents {
-		if ent.IsDir() {
-			continue
-		}
-		if filepath.Ext(ent.Name()) != ".xml" {
-			continue
-		}
-
-		newname := h.PathTo(ct, "includes", ent.Name())
-		oldname := h.Join(version, ent.Name())
-		info, statErr := h.Lstat(newname)
-		if statErr == nil {
-			if info.Mode()&fs.ModeSymlink != 0 {
-				linkTarget, readlinkErr := h.Readlink(newname)
-				if readlinkErr == nil && linkTarget == oldname {
-					fmt.Println("Symlink already up-to-date", newname, "->", oldname)
-					continue
-				}
-			}
-			if !override {
-				return fmt.Errorf("include path %q already exists and --force was not specified", newname)
-			}
-			if err = h.Remove(newname); err != nil {
-				return fmt.Errorf("failed to remove existing include path %q: %w", newname, err)
-			}
-		} else if !errors.Is(statErr, fs.ErrNotExist) {
-			return fmt.Errorf("failed to inspect include path %q: %w", newname, statErr)
-		}
-		if err = h.Symlink(oldname, newname); err != nil {
-			return fmt.Errorf("failed to create symlink %q -> %q: %w", newname, oldname, err)
-		}
-		fmt.Println("Updated symlink", newname, "->", oldname)
-	}
-
-	return nil
+	return updateIncludeLinks(h, version, override, false)
 }

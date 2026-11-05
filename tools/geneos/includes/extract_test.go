@@ -1,10 +1,12 @@
 package includes
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
+	"testing/fstest"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -13,6 +15,40 @@ import (
 )
 
 var testGatewayComponentOnce sync.Once
+
+func TestExtractIncludesPreservesExistingConfig(t *testing.T) {
+	for _, symlink := range []bool{false, true} {
+		t.Run(fmt.Sprint(symlink), func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			configDir := h.PathTo("gateway", "includes", "config")
+			if err := os.MkdirAll(configDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			configPath := filepath.Join(configDir, "config.test.xml")
+			if symlink {
+				if err := os.Symlink("missing.xml", configPath); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(configPath, []byte("local"), 0664); err != nil {
+				t.Fatal(err)
+			}
+			source := fstest.MapFS{
+				"files/itrs.test.xml":   &fstest.MapFile{Data: []byte("include")},
+				"files/config.test.xml": &fstest.MapFile{Data: []byte("template")},
+			}
+			if err := extractIncludes(h, source, "v1.2.3", true); err != nil {
+				t.Fatal(err)
+			}
+			if symlink {
+				if target, err := os.Readlink(configPath); err != nil || target != "missing.xml" {
+					t.Fatalf("config symlink = %q, %v", target, err)
+				}
+			} else if data, err := os.ReadFile(configPath); err != nil || string(data) != "local" {
+				t.Fatalf("config contents = %q, %v", data, err)
+			}
+		})
+	}
+}
 
 func newTestGatewayHost(t *testing.T) *geneos.Host {
 	t.Helper()
@@ -34,6 +70,40 @@ func TestExtractRejectsExistingVersionDirectoryWithoutForce(t *testing.T) {
 
 	if err := Extract(h, false); err == nil {
 		t.Fatal("Extract() succeeded with an existing version directory and no force")
+	}
+}
+
+func TestExtractCreatesMissingLinksAndPreservesExistingPaths(t *testing.T) {
+	for _, existingFile := range []bool{false, true} {
+		t.Run(fmt.Sprint(existingFile), func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			includesDir := h.PathTo("gateway", "includes")
+			if err := os.MkdirAll(includesDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			existing := filepath.Join(includesDir, "itrs.level0.authentication.xml")
+			if existingFile {
+				if err := os.WriteFile(existing, []byte("local"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.Symlink("previous/itrs.level0.authentication.xml", existing); err != nil {
+				t.Fatal(err)
+			}
+			if err := Extract(h, true); err != nil {
+				t.Fatal(err)
+			}
+			if existingFile {
+				if data, err := os.ReadFile(existing); err != nil || string(data) != "local" {
+					t.Fatalf("existing file = %q, %v", data, err)
+				}
+			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.authentication.xml" {
+				t.Fatalf("existing link = %q, %v", target, err)
+			}
+			missing := filepath.Join(includesDir, "itrs.level0.geneos.xml")
+			if target, err := os.Readlink(missing); err != nil || target != filepath.Join(cordial.VERSION, "itrs.level0.geneos.xml") {
+				t.Fatalf("new link = %q, %v", target, err)
+			}
+		})
 	}
 }
 
