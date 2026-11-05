@@ -1,5 +1,28 @@
 # Change Log
 
+## Version v1.31.0
+
+> [!NOTE]
+> **In development** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+
+## Version v1.31.0 Fixes
+
+* `tools/geneos`
+
+  * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
+
+  * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
+
+  * Fix `geneos rebuild profile` to rebuild members through the profile only, rather than rebuilding each member directly and then applying the profile again. The `--force` option is also passed through to member rebuilds correctly.
+
+  * Fix `geneos set profile` and `geneos unset profile` to update profile members without immediately reapplying the original profile settings and repeating its imports.
+
+  * Fix file and directory imports to leave unchanged files alone, without rewriting them or creating backups. Backup file names now remain unique when multiple imports take place within the same second, and imports to the same destination are protected against concurrent writes.
+
+  * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
+
+---
+
 ## Version v1.30.1
 
 >[!IMPORTANT]
