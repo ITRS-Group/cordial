@@ -6,7 +6,137 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/itrs-group/cordial"
 )
+
+func TestInstallEmbeddedLinkModes(t *testing.T) {
+	for _, update := range []bool{false, true} {
+		name := "preserve"
+		if update {
+			name = "update"
+		}
+		t.Run(name, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			includesDir := h.PathTo("gateway", "includes")
+			if err := os.MkdirAll(includesDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			link := filepath.Join(includesDir, "itrs.level0.authentication.xml")
+			if err := os.Symlink("previous/itrs.level0.authentication.xml", link); err != nil {
+				t.Fatal(err)
+			}
+			if err := Install(h, "", true, update); err != nil {
+				t.Fatal(err)
+			}
+			want := "previous/itrs.level0.authentication.xml"
+			if update {
+				want = filepath.Join(cordial.VERSION, "itrs.level0.authentication.xml")
+			}
+			if target, err := os.Readlink(link); err != nil || target != want {
+				t.Fatalf("include link = %q, %v; want %q", target, err, want)
+			}
+		})
+	}
+}
+
+func TestIncludesInstallArgumentsAndAlias(t *testing.T) {
+	for _, args := range [][]string{nil, {"includes.tar.gz"}} {
+		if err := includesInstallCmd.Args(includesInstallCmd, args); err != nil {
+			t.Fatalf("install rejected %v: %v", args, err)
+		}
+	}
+	if err := includesInstallCmd.Args(includesInstallCmd, []string{"one", "two"}); err == nil {
+		t.Fatal("install accepted multiple archives")
+	}
+	if !includesInstallCmd.HasAlias("extract") {
+		t.Fatal("install has no extract alias")
+	}
+	command, args, err := includesCmd.Find([]string{"extract"})
+	if err != nil || command != includesInstallCmd || len(args) != 0 {
+		t.Fatalf("extract resolved to %v, %v, %v; want install", command, args, err)
+	}
+}
+
+func TestInstallEmbeddedRejectsExistingVersionDirectoryWithoutForce(t *testing.T) {
+	h := newTestGatewayHost(t)
+	versionDir := h.PathTo("gateway", "includes", cordial.VERSION)
+	if err := os.MkdirAll(versionDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := Install(h, "", false, false); err == nil {
+		t.Fatal("Install() succeeded with an existing version directory and no force")
+	}
+}
+
+func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.T) {
+	for _, existingFile := range []bool{false, true} {
+		name := "symlink"
+		if existingFile {
+			name = "file"
+		}
+		t.Run(name, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			includesDir := h.PathTo("gateway", "includes")
+			if err := os.MkdirAll(includesDir, 0755); err != nil {
+				t.Fatal(err)
+			}
+			existing := filepath.Join(includesDir, "itrs.level0.authentication.xml")
+			if existingFile {
+				if err := os.WriteFile(existing, []byte("local"), 0644); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.Symlink("previous/itrs.level0.authentication.xml", existing); err != nil {
+				t.Fatal(err)
+			}
+			if err := Install(h, "", true, false); err != nil {
+				t.Fatal(err)
+			}
+			if existingFile {
+				if data, err := os.ReadFile(existing); err != nil || string(data) != "local" {
+					t.Fatalf("existing file = %q, %v", data, err)
+				}
+			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.authentication.xml" {
+				t.Fatalf("existing link = %q, %v", target, err)
+			}
+			missing := filepath.Join(includesDir, "itrs.level0.geneos.xml")
+			if target, err := os.Readlink(missing); err != nil || target != filepath.Join(cordial.VERSION, "itrs.level0.geneos.xml") {
+				t.Fatalf("new link = %q, %v", target, err)
+			}
+		})
+	}
+}
+
+func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
+	h := newTestGatewayHost(t)
+	if err := Install(h, "", false, false); err != nil {
+		t.Fatal(err)
+	}
+	versionDir := h.PathTo("gateway", "includes", cordial.VERSION)
+	versionFiles, err := os.ReadDir(versionDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(versionFiles) == 0 {
+		t.Fatal("Install() created no versioned include files")
+	}
+	for _, entry := range versionFiles {
+		info, err := entry.Info()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != 0444 {
+			t.Errorf("versioned file %q permissions = %04o, want 0444", entry.Name(), got)
+		}
+	}
+	configFiles, err := os.ReadDir(h.PathTo("gateway", "includes", "config"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(configFiles) == 0 {
+		t.Fatal("Install() created no config template files")
+	}
+}
 
 type includeArchiveEntry struct {
 	name     string

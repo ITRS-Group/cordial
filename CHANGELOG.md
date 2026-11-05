@@ -11,6 +11,8 @@
 
   * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
 
+  * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.
+
   * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. With no arguments, all unlinked versions are removed. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. A link from the parent includes directory to even one file protects the entire version directory from deletion; manually created links from other locations are not considered.
 
   * Release distributions now include a separate `cordial-includes-vX.Y.Z.tar.gz` archive containing the current include files and configuration templates, for use with `geneos includes install`.

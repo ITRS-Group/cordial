@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -21,9 +22,10 @@ func init() {
 }
 
 var includesInstallCmd = &cobra.Command{
-	Use:          "install ARCHIVE.tar.gz",
-	Args:         cobra.ExactArgs(1),
-	Short:        "Install includes from an archive",
+	Use:          "install [ARCHIVE.tar.gz]",
+	Aliases:      []string{"extract"},
+	Args:         cobra.MaximumNArgs(1),
+	Short:        "Install embedded includes or includes from an archive",
 	Long:         includeInstallCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -33,11 +35,21 @@ var includesInstallCmd = &cobra.Command{
 		cmd.CmdAuditActions: "never",
 	},
 	RunE: func(command *cobra.Command, args []string) error {
-		return Install(geneos.GetHost(cmd.Hostname), args[0], true, includeInstallCmdUpdate)
+		var archive string
+		if len(args) != 0 {
+			archive = args[0]
+		}
+		return Install(geneos.GetHost(cmd.Hostname), archive, true, includeInstallCmdUpdate)
 	},
 }
 
 func Install(h *geneos.Host, archive string, override, update bool) error {
+	if archive == "" {
+		if err := extractIncludes(h, IncludesFS, cordial.VERSION, override); err != nil {
+			return err
+		}
+		return updateIncludeLinks(h, cordial.VERSION, override, !update)
+	}
 	source, err := os.Open(archive)
 	if err != nil {
 		return err
