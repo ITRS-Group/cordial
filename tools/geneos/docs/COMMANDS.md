@@ -2597,12 +2597,13 @@ A number of ready-made includes are available to help streamline common tasks an
 | Command | Description |
 | --- | --- |
 | `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
-| `geneos includes extract` | Extract embedded includes and configuration templates |
-| `geneos includes install` | Install a versioned include archive and missing configuration templates |
+| `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |
 
 All commands can be limited to a configured host with the global `--host`/`-H` option. Use `geneos includes COMMAND --help` for command options and output details.
+
+Run `geneos includes install` without an archive to install the embedded include files and configuration templates. `extract` is an alias for `install`. Use `--update` to replace existing top-level files and links with links to the installed version.
 
 ## Release Archives
 
@@ -2614,8 +2615,7 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 | Command / Aliases | Description |
 |-------|-------|
 | [`geneos includes delete / remove`](#geneos-includes-delete)	 | Delete unlinked include versions |
-| [`geneos includes extract`](#geneos-includes-extract)	 | Extract includes |
-| [`geneos includes install`](#geneos-includes-install)	 | Install includes from an archive |
+| [`geneos includes install / extract`](#geneos-includes-install)	 | Install embedded includes or includes from an archive |
 | [`geneos includes list / ls`](#geneos-includes-list)	 | List all available include files |
 | [`geneos includes update`](#geneos-includes-update)	 | Update includes |
 
@@ -2680,45 +2680,11 @@ geneos includes delete [VERSION_PATTERN...] [flags]
 
 ---
 
-# `geneos includes extract`
-
-<sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
-
-Extract the include files embedded in the `geneos` executable to the selected host.
-
-Managed include files are written under `gateway/includes/<version>`, including when the version directory already exists. Existing files that differ are moved to timestamped `.bak` files before replacement. Unchanged files are left in place.
-
-Configuration templates are written under `gateway/includes/config`. Existing configuration templates are never overwritten because they may contain local changes.
-
-Missing top-level include links are created automatically; existing files and links are left alone. Use `--update` to replace existing top-level files and links with links to the extracted version after extraction. If extraction or a filesystem operation fails, the command returns an error; successfully completed earlier operations are not rolled back.
-
-## Usage
-
-```text
-geneos includes extract [flags]
-```
-
-### Options
-
-```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -U, --update            Update version links for existing include files
-```
-
-## SEE ALSO
-
-* [geneos includes](#geneos-includes)	 - Manage includes
-
----
-
 # `geneos includes install`
 
 <sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
 
-Install include files from a local `.tar.gz` archive to the selected host.
+Install include files embedded in the `geneos` executable or from a local `.tar.gz` archive to the selected host. With no archive argument, the embedded files and configuration templates are installed. `extract` is an alias for `install` and accepts the same arguments and options.
 
 The archive must contain one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`), containing `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins.
 
@@ -2726,9 +2692,11 @@ Managed includes are installed under `gateway/includes/<version>`, including whe
 
 Configuration templates are installed under `gateway/includes/config` only when no path of the same name exists. Local configuration files and existing symlinks are never replaced.
 
-Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. Updates target the version in the archive, not the version embedded in the executable.
+Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
 
 ```shell
+geneos includes install
+geneos includes install --update
 geneos includes install cordial-includes-v1.31.0.tar.gz
 geneos includes install --update cordial-includes-v1.31.1.tar.gz
 ```
@@ -2738,7 +2706,7 @@ The archive is read locally; the global `--host` (`-H`) option selects the insta
 ## Usage
 
 ```text
-geneos includes install ARCHIVE.tar.gz [flags]
+geneos includes install [ARCHIVE.tar.gz] [flags]
 ```
 
 ### Options

@@ -21,10 +21,10 @@ Files included in this group, relative to your Geneos installation directory:
 These files are embedded in the `geneos` program, shipped as part of the `cordial` tools. Unless you are setting up a new installation, in which case this next step is automatic, you will need to extract the files and also update the version-specific links to point to the correct locations for your installation. To do this run the following:
 
 ```bash
-geneos includes extract --update
+geneos includes install --update
 ```
 
-This command backs up changed files in versioned directories before replacing them, leaves unchanged files and existing configuration templates in place, and updates top-level links to point to the extracted version.
+This command installs the embedded files, backs up changed files in versioned directories before replacing them, leaves unchanged files and existing configuration templates in place, and updates top-level links to point to the installed version.
 
 ## Usage
 

@@ -37,7 +37,7 @@ func TestIncludesListFormatValidation(t *testing.T) {
 }
 
 func TestIncludesSubcommandsRejectUnexpectedArguments(t *testing.T) {
-	for _, command := range []*cobra.Command{includesExtractCmd, includesUpdateCmd} {
+	for _, command := range []*cobra.Command{includesUpdateCmd} {
 		t.Run(command.Name(), func(t *testing.T) {
 			if err := command.Args(command, []string{"unexpected"}); err == nil {
 				t.Fatalf("%s accepted an unexpected positional argument", command.Name())

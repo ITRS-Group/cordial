@@ -9,12 +9,13 @@ A number of ready-made includes are available to help streamline common tasks an
 | Command | Description |
 | --- | --- |
 | `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
-| `geneos includes extract` | Extract embedded includes and configuration templates |
-| `geneos includes install` | Install a versioned include archive and missing configuration templates |
+| `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |
 
 All commands can be limited to a configured host with the global `--host`/`-H` option. Use `geneos includes COMMAND --help` for command options and output details.
+
+Run `geneos includes install` without an archive to install the embedded include files and configuration templates. `extract` is an alias for `install`. Use `--update` to replace existing top-level files and links with links to the installed version.
 
 ## Release Archives
 
@@ -26,8 +27,7 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 | Command / Aliases | Description |
 |-------|-------|
 | [`geneos includes delete / remove`](geneos_includes_delete.md)	 | Delete unlinked include versions |
-| [`geneos includes extract`](geneos_includes_extract.md)	 | Extract includes |
-| [`geneos includes install`](geneos_includes_install.md)	 | Install includes from an archive |
+| [`geneos includes install / extract`](geneos_includes_install.md)	 | Install embedded includes or includes from an archive |
 | [`geneos includes list / ls`](geneos_includes_list.md)	 | List all available include files |
 | [`geneos includes update`](geneos_includes_update.md)	 | Update includes |
 
