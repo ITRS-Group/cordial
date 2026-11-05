@@ -98,7 +98,9 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 				opts.geneosdir = filepath.Join(opts.geneosdir, cordial.ExecutableName())
 			}
 
-			if dir, err := opts.promptRootDir("Geneos Directory (default %q): ", opts.geneosdir); err == nil {
+			if dir, err := opts.promptRootDir("Geneos Directory (default %q): ", opts.geneosdir); err != nil {
+				os.Exit(1)
+			} else {
 				log.Debug("prompted for geneos directory", slog.String("directory", dir))
 				if dir != "" {
 					opts.geneosdir = dir

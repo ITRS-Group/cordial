@@ -148,7 +148,7 @@ geneos init
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
 	// TODO: Call any registered initializer funcs from components
-	RunE: func(command *cobra.Command, allargs []string) (err error) {
+	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log := log.With("command", "init")
 
 		ct, args, params, err := cmd.FetchArgs(command)
@@ -169,13 +169,18 @@ geneos init
 		// precedence. if none found, the Initialise function will
 		// determine the root directory.
 		var root string
-		args = slices.DeleteFunc(args, func(a string) bool {
+		params = slices.DeleteFunc(params, func(a string) bool {
+			if strings.Contains(a, "=") {
+				return false
+			}
 			if filepath.IsAbs(a) {
 				root = a
 				return true
 			}
 			return false
 		})
+
+		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)
 
 		if len(args) == 0 {
 			// init basics
