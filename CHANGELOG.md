@@ -19,6 +19,14 @@
 
   * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
 
+## Version v1.31.0 Changes
+
+* `pkg/geneos`
+
+  * Gateway configuration support has been expanded with safer read and write operations, making it easier for applications to inspect and update Gateway setups reliably.
+
+  * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
+
 ## Version v1.31.0 Fixes
 
 * `tools/geneos`
