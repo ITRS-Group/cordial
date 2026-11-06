@@ -948,7 +948,7 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 		}
 
 		disabled := slices.ContainsFunc(groups, func(group geneosxml.IncludeGroup) bool {
-			return group.Disabled
+			return group.Disabled != nil && *group.Disabled
 		})
 
 		if fi != nil {
@@ -972,7 +972,7 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 			Required:       inc.Required,
 			ReloadInterval: inc.ReloadInterval,
 			Location:       inc.Location,
-			Disabled:       disabled || inc.Disabled,
+			Disabled:       disabled || inc.Disabled != nil && *inc.Disabled,
 		})
 	}
 

@@ -45,19 +45,82 @@ type Gateway struct {
 	Includes             *Includes             `xml:"includes,omitempty"`
 	Probes               *Probes               `xml:"probes"`
 	ManagedEntities      *ManagedEntities      `xml:"managedEntities,omitempty"`
+	DynamicEntities      *RawXMLElement        `xml:"dynamicEntities,omitempty"`
 	Types                *Types                `xml:"types,omitempty"`
 	Samplers             *Samplers             `xml:"samplers,omitempty"`
+	SamplerIncludes      *SamplerIncludes      `xml:"samplerIncludes,omitempty"`
+	Actions              *Actions              `xml:"actions,omitempty"`
+	Effects              *Effects              `xml:"effects,omitempty"`
+	Annotations          *Annotations          `xml:"annotations,omitempty"`
+	Commands             *Commands             `xml:"commands,omitempty"`
+	ScheduledCommands    *RawXMLElement        `xml:"scheduledCommands,omitempty"`
 	Rules                *Rules                `xml:"rules,omitempty"`
+	Alerting             *Alerting             `xml:"alerting,omitempty"`
+	ActiveTimes          *ActiveTimes          `xml:"activeTimes,omitempty"`
+	DataSets             *RawXMLElement        `xml:"dataSets,omitempty"`
+	HotStandby           *HotStandby           `xml:"hotStandby,omitempty"`
+	DatabaseLogging      *RawXMLElement        `xml:"databaseLogging,omitempty"`
+	TickerEventLogger    *RawXMLElement        `xml:"tickerEventLogger,omitempty"`
+	Authentication       *Authentication       `xml:"authentication,omitempty"`
 	Environments         *Environments         `xml:"environments,omitempty"`
-	ProcessDescriptors   *ProcessDescriptors   `xml:"staticVars>processDescriptors,omitempty"`
+	AuditOutputs         *RawXMLElement        `xml:"auditOutputs,omitempty"`
+	KnowledgeBase        *RawXMLElement        `xml:"knowledgeBase,omitempty"`
+	Persistence          *Persistence          `xml:"persistence,omitempty"`
+	StaticVars           *StaticVars           `xml:"staticVars,omitempty"`
+	ProcessDescriptors   *ProcessDescriptors   `xml:"-"`
+	ExpressReports       *RawXMLElement        `xml:"expressReports,omitempty" geneos:"deprecated"`
+	RestrictedSections   *RawXMLElement        `xml:"restrictedSections,omitempty"`
+	SelfAnnouncingProbes *RawXMLElement        `xml:"selfAnnouncingProbes,omitempty"`
+	ExportedData         *ExportedData         `xml:"exportedData,omitempty"`
+	ImportedData         *ImportedData         `xml:"importedData,omitempty"`
+	Publishing           *RawXMLElement        `xml:"publishing,omitempty"`
+	GatewayHub           *RawXMLElement        `xml:"gatewayHub,omitempty"`
+	ObcervConnection     *RawXMLElement        `xml:"obcervConnection,omitempty"`
 	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
+	Other                []RawXMLElement       `xml:",any"`
+}
+
+type gatewayXML Gateway
+
+func (g Gateway) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	start.Name.Local = "gateway"
+	value := gatewayXML(g)
+	if g.ProcessDescriptors != nil {
+		if value.StaticVars == nil {
+			value.StaticVars = &StaticVars{}
+		}
+		if value.StaticVars.ProcessDescriptors == nil {
+			value.StaticVars.ProcessDescriptors = &StaticProcessDescriptors{
+				ProcessDescriptors:      g.ProcessDescriptors.ProcessDescriptors,
+				ProcessDescriptorGroups: g.ProcessDescriptors.ProcessDescriptorGroups,
+			}
+		}
+	}
+	return e.EncodeElement(value, start)
+}
+
+func (g *Gateway) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	var value gatewayXML
+	if err := d.DecodeElement(&value, &start); err != nil {
+		return err
+	}
+	*g = Gateway(value)
+	if g.StaticVars != nil {
+		if descriptors := g.StaticVars.ProcessDescriptors; descriptors != nil {
+			g.ProcessDescriptors = &ProcessDescriptors{
+				ProcessDescriptors:      descriptors.ProcessDescriptors,
+				ProcessDescriptorGroups: descriptors.ProcessDescriptorGroups,
+			}
+		}
+	}
+	return nil
 }
 
 // OperatingEnvironment contains the Gateway identity and listener ports.
 type OperatingEnvironment struct {
 	XMLName      xml.Name `xml:"operatingEnvironment"`
 	Comment      string   `xml:",comment"`
-	GatewayID    int      `xml:"gatewayId"`
+	GatewayID    int      `xml:"gatewayId" geneos:"deprecated"`
 	GatewayName  string   `xml:"gatewayName"`
 	SecurePort   int      `xml:"listenPorts>secure>listenPort,omitempty"`
 	InsecurePort int      `xml:"listenPorts>insecure>listenPort,omitempty"`
@@ -73,6 +136,7 @@ type Dataview struct {
 // DataviewAdditions groups variable headlines, columns, and rows added to a dataview.
 type DataviewAdditions struct {
 	XMLName   xml.Name                  `xml:"additions" json:"-" yaml:"-"`
+	Comment   string                    `xml:",comment"`
 	Headlines DataviewAdditionHeadlines `xml:"var-headlines,omitempty"`
 	Columns   DataviewAdditionColumns   `xml:"var-columns,omitempty"`
 	Rows      DataviewAdditionRows      `xml:"var-rows,omitempty"`
@@ -94,6 +158,10 @@ func (v *DataviewAdditions) UnmarshalXML(d *xml.Decoder, start xml.StartElement)
 				return nil
 			}
 			return err
+		}
+		if comment, ok := tok.(xml.Comment); ok {
+			v.Comment = string(comment)
+			continue
 		}
 		element, ok := tok.(xml.StartElement)
 		if !ok {
@@ -129,6 +197,7 @@ func (v *DataviewAdditions) UnmarshalXML(d *xml.Decoder, start xml.StartElement)
 // DataviewAddition represents one static headline addition to a dataview.
 type DataviewAddition struct {
 	XMLName xml.Name             `xml:"data" json:"-" yaml:"-"`
+	Comment string               `xml:",comment"`
 	Name    *SingleLineStringVar `xml:"headline,omitempty"`
 }
 
@@ -136,29 +205,34 @@ type DataviewAddition struct {
 type DataviewAdditionHeadlines struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>headline,omitempty"`
+	Comment   string                `xml:",comment"`
 }
 
 // DataviewAdditionColumns contains column values and an optional source variable.
 type DataviewAdditionColumns struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>column,omitempty"`
+	Comment   string                `xml:",comment"`
 }
 
 // DataviewAdditionRows contains row values and an optional source variable.
 type DataviewAdditionRows struct {
 	Var       *Var                  `xml:"var,omitempty"`
 	Headlines []SingleLineStringVar `xml:"data>rows,omitempty"`
+	Comment   string                `xml:",comment"`
 }
 
 // Schemas contains the dataview schemas declared in a Gateway configuration.
 type Schemas struct {
 	Dataviews *[]DataviewSchema `xml:"dataviews>dataviewSchema,omitempty"`
+	Comment   string            `xml:",comment"`
 }
 
 // DataviewSchema associates a dataview name with its schema.
 type DataviewSchema struct {
 	Dataview string `xml:"dataview,omitempty"`
 	Schema   Schema `xml:"schema>data"`
+	Comment  string `xml:",comment"`
 }
 
 // Schema describes the headlines, columns, and publishing behavior of a dataview.
@@ -167,6 +241,7 @@ type Schema struct {
 	Columns   *[]SchemaTypedItem `xml:"columns>column,omitempty"`
 	Pivot     bool               `xml:"pivot,omitempty"`
 	Publish   bool               `xml:"publish"`
+	Comment   string             `xml:",comment"`
 }
 
 // SchemaTypedItem describes one typed headline or column in a dataview schema.
@@ -180,6 +255,7 @@ type SchemaTypedItem struct {
 	Int64    *UnitOfMeasure `xml:"int64,omitempty"`
 	Date     *EmptyStruct   `xml:"date,omitempty"`
 	DateTime *EmptyStruct   `xml:"dateTime,omitempty"`
+	Comment  string         `xml:",comment"`
 }
 
 // UOM identifies a unit of measure used by typed Geneos schema values.
@@ -207,29 +283,34 @@ const (
 
 // UnitOfMeasure attaches a unit to a typed schema value.
 type UnitOfMeasure struct {
-	Unit UOM `xml:"unitOfMeasure"`
+	Unit    UOM    `xml:"unitOfMeasure"`
+	Comment string `xml:",comment"`
 }
 
 // StandardisedFormatting contains formatting rules shared by Gateway dataviews.
 type StandardisedFormatting struct {
 	Dataviews []StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
+	Comment   string                           `xml:",comment"`
 }
 
 // StandardisedFormattingDataview applies shared formatting to a named dataview.
 type StandardisedFormattingDataview struct {
 	Name      string                           `xml:"name"` // do not omitempty
 	Variables []StandardisedFormattingVariable `xml:"variables>variable"`
+	Comment   string                           `xml:",comment"`
 }
 
 // StandardisedFormattingVariable groups a value type with its applicability rules.
 type StandardisedFormattingVariable struct {
 	Type          *StandardisedFormattingType          `xml:"type"`
 	Applicability *StandardisedFormattingApplicability `xml:"applicability"`
+	Comment       string                               `xml:",comment"`
 }
 
 // StandardisedFormattingType selects the formatting rules for a value type.
 type StandardisedFormattingType struct {
 	DateTime *StandardisedFormattingDateTime `xml:"dateTime"`
+	Comment  string                          `xml:",comment"`
 }
 
 // StandardisedFormattingDateTime defines accepted and overridden datetime formats.
@@ -238,6 +319,7 @@ type StandardisedFormattingDateTime struct {
 	Exceptions                []string `xml:"exceptions,omitempty"`
 	IgnoreErrorsIfFormatFails bool     `xml:"ignoreErrorsIfFormatsFail,omitempty"`
 	OverrideTimezone          string   `xml:"overrideTimezone,omitempty"`
+	Comment                   string   `xml:",comment"`
 }
 
 // StandardisedFormattingApplicability limits formatting rules to matching schema items.
@@ -245,17 +327,20 @@ type StandardisedFormattingApplicability struct {
 	Headlines []Regex                      `xml:"headlines>pattern,omitempty"`
 	Columns   []Regex                      `xml:"columns>pattern,omitempty"`
 	Cells     []StandardisedFormattingCell `xml:"cells>cell,omitempty"`
+	Comment   string                       `xml:",comment"`
 }
 
 // StandardisedFormattingCell selects an individual row and column for formatting.
 type StandardisedFormattingCell struct {
-	Row    string `xml:"row"`
-	Column string `xml:"column"`
+	Row     string `xml:"row"`
+	Column  string `xml:"column"`
+	Comment string `xml:",comment"`
 }
 
 // ActiveTimeRef refers to an active-time definition by name or variable.
 type ActiveTimeRef struct {
 	XMLName    xml.Name          `xml:"activeTime"`
+	Comment    string            `xml:",comment"`
 	ActiveTime *ActiveTimeByName `xml:"activeTime,omitempty"`
 	Var        *Var              `xml:"var,omitempty"`
 }
@@ -263,5 +348,6 @@ type ActiveTimeRef struct {
 // ActiveTimeByName stores the name of a referenced active-time definition.
 type ActiveTimeByName struct {
 	XMLName    xml.Name `xml:"activeTime"`
+	Comment    string   `xml:",comment"`
 	ActiveTime string   `xml:"ref,attr"`
 }

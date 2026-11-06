@@ -213,6 +213,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 	log.Debug("include file", slog.String("includeFile", includeFile))
 
 	samplers := make([]geneos.Sampler, len(csvFiles))
+	sampleOnStartup := true
 	for i, c := range csvFiles {
 		samplerConftable := config.LookupTable(map[string]string{
 			"gateway":   gateway,
@@ -224,7 +225,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 
 		samplers[i] = geneos.Sampler{
 			Name:            config.Get[string](cf, "output.toolkit-include.sampler-name", samplerConftable),
-			SampleOnStartup: true,
+			SampleOnStartup: &sampleOnStartup,
 			Group:           geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-group", samplerConftable)),
 			Plugin: &geneos.Plugin{Toolkit: &geneos.ToolkitPlugin{
 				SamplerScript: geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-script", samplerConftable)),

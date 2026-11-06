@@ -35,6 +35,10 @@ type KeyedObject interface {
 	GetKey() string
 }
 
+func boolPointerIsTrue(value *bool) bool {
+	return value != nil && *value
+}
+
 // RemoveDuplicates iterates over any slice that satisfies KeyedObject
 // and returns a slice of the same type but with duplicates removed. The
 // first item is kept in all cases.
@@ -61,13 +65,13 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 	}
 
 	for _, p := range in.Probes {
-		if p.Disabled {
+		if p.Disabled != nil && *p.Disabled {
 			continue
 		}
 		probes[p.Name] = p
 	}
 	for _, f := range in.FloatingProbes {
-		if f.Disabled {
+		if f.Disabled != nil && *f.Disabled {
 			continue
 		}
 		probes[f.Name] = Probe{
@@ -78,7 +82,7 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 		}
 	}
 	for _, v := range in.VirtualProbes {
-		if v.Disabled {
+		if v.Disabled != nil && *v.Disabled {
 			continue
 		}
 		probes[v.Name] = Probe{
@@ -93,13 +97,13 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 	for _, g := range in.ProbeGroups {
 		p, f, v := unrollProbeGroup(&g)
 		for _, p := range p {
-			if p.Disabled {
+			if p.Disabled != nil && *p.Disabled {
 				continue
 			}
 			probes[p.Name] = p
 		}
 		for _, f := range f {
-			if f.Disabled {
+			if f.Disabled != nil && *f.Disabled {
 				continue
 			}
 			probes[f.Name] = Probe{
@@ -110,7 +114,7 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 			}
 		}
 		for _, v := range v {
-			if v.Disabled {
+			if v.Disabled != nil && *v.Disabled {
 				continue
 			}
 			probes[v.Name] = Probe{
@@ -126,12 +130,12 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 // unrollProbeGroup works through a geneos.ProbeGroup and applies
 // defaults to all it's contents and returns three slices of probe types
 func unrollProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []FloatingProbe, virtualProbes []VirtualProbe) {
-	if in.Disabled {
+	if in.Disabled != nil && *in.Disabled {
 		return
 	}
 
 	for _, p := range in.Probes {
-		if p.Disabled {
+		if p.Disabled != nil && *p.Disabled {
 			continue
 		}
 		setDefaults(in.ProbeInfo, &p.ProbeInfo)
@@ -139,14 +143,14 @@ func unrollProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []Floating
 
 	}
 	for _, f := range in.FloatingProbes {
-		if f.Disabled {
+		if f.Disabled != nil && *f.Disabled {
 			continue
 		}
 		setDefaults(in.ProbeInfoWithoutPort, &f.ProbeInfoWithoutPort)
 		floatingProbes = append(floatingProbes, f)
 	}
 	for _, v := range in.VirtualProbes {
-		if v.Disabled {
+		if v.Disabled != nil && *v.Disabled {
 			continue
 		}
 		// virtual probes have no other settings, defaults do not matter
@@ -158,21 +162,21 @@ func unrollProbeGroup(in *ProbeGroup) (probes []Probe, floatingProbes []Floating
 		p, f, v := unrollProbeGroup(&g)
 
 		for _, p := range p {
-			if p.Disabled {
+			if p.Disabled != nil && *p.Disabled {
 				continue
 			}
 			probes = append(probes, p)
 
 		}
 		for _, f := range f {
-			if f.Disabled {
+			if f.Disabled != nil && *f.Disabled {
 				continue
 			}
 			// updateStruct(&f.ProbeInfoWithoutPort, in.ProbeInfoWithoutPort)
 			floatingProbes = append(floatingProbes, f)
 		}
 		for _, v := range v {
-			if v.Disabled {
+			if v.Disabled != nil && *v.Disabled {
 				continue
 			}
 			virtualProbes = append(virtualProbes, v)
@@ -191,7 +195,7 @@ func UnrollEntities(in *ManagedEntities, types map[string]Type) (entities map[st
 	}
 
 	for _, entity := range in.Entities {
-		if entity.Disabled {
+		if boolPointerIsTrue(entity.Disabled) {
 			continue
 		}
 
@@ -203,7 +207,7 @@ func UnrollEntities(in *ManagedEntities, types map[string]Type) (entities map[st
 		resolveGroup(&group, types)
 		unrolledEntities := unrollEntityGroup(&group, types)
 		for _, entity := range unrolledEntities {
-			if entity.Disabled {
+			if boolPointerIsTrue(entity.Disabled) {
 				continue
 			}
 			entities[entity.Name] = entity
@@ -217,14 +221,14 @@ func UnrollEntities(in *ManagedEntities, types map[string]Type) (entities map[st
 func unrollEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entities map[string]ManagedEntity) {
 	entities = make(map[string]ManagedEntity)
 
-	if group.Disabled {
+	if boolPointerIsTrue(group.Disabled) {
 		return
 	}
 
 	// fix-up group here - resolve samplers etc.
 
 	for _, entity := range group.Entities {
-		if entity.Disabled {
+		if boolPointerIsTrue(entity.Disabled) {
 			continue
 		}
 
@@ -249,7 +253,7 @@ func unrollEntityGroup(group *ManagedEntityGroup, types map[string]Type) (entiti
 
 		unrolledEntities := unrollEntityGroup(&childGroup, types)
 		for _, entity := range unrolledEntities {
-			if entity.Disabled {
+			if boolPointerIsTrue(entity.Disabled) {
 				continue
 			}
 			entities[entity.Name] = entity
@@ -267,7 +271,7 @@ func resolveGroup(group *ManagedEntityGroup, types map[string]Type) {
 	if group.AddTypes != nil {
 		for _, at := range group.AddTypes.Types {
 			for _, sampler := range types[at.Type].Samplers {
-				if !sampler.Disabled {
+				if !boolPointerIsTrue(sampler.Disabled) {
 					group.ResolvedSamplers[at.Type+":"+sampler.Name] = true
 				}
 			}
@@ -305,7 +309,7 @@ func resolveSamplersFromGroup(from ManagedEntityInfo, to *ManagedEntityInfo, typ
 	if to.AddTypes != nil {
 		for _, at := range to.AddTypes.Types {
 			for _, sampler := range types[at.Type].Samplers {
-				if !sampler.Disabled {
+				if !boolPointerIsTrue(sampler.Disabled) {
 					to.ResolvedSamplers[at.Type+":"+sampler.Name] = true
 				}
 			}
@@ -340,7 +344,7 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 	}
 
 	for _, s := range entity.Samplers {
-		if !s.Disabled {
+		if !boolPointerIsTrue(s.Disabled) {
 			entity.ResolvedSamplers[":"+s.Name] = true
 		}
 	}
@@ -348,7 +352,7 @@ func resolveEntitySamplers(group *ManagedEntityGroup, entity *ManagedEntity, typ
 	if entity.AddTypes != nil {
 		for _, at := range entity.AddTypes.Types {
 			for _, sampler := range types[at.Type].Samplers {
-				if !sampler.Disabled {
+				if !boolPointerIsTrue(sampler.Disabled) {
 					entity.ResolvedSamplers[at.Type+":"+sampler.Name] = true
 				}
 			}
@@ -365,7 +369,7 @@ func UnrollTypes(in *Types) (types map[string]Type) {
 	}
 
 	for _, t := range in.Types {
-		if t.Disabled {
+		if boolPointerIsTrue(t.Disabled) {
 			continue
 		}
 		types[t.Name] = t
@@ -374,7 +378,7 @@ func UnrollTypes(in *Types) (types map[string]Type) {
 	for _, g := range in.TypeGroups {
 		t := unrollTypeGroup(&g)
 		for _, t := range t {
-			if t.Disabled {
+			if boolPointerIsTrue(t.Disabled) {
 				continue
 			}
 			types[t.Name] = t
@@ -386,7 +390,7 @@ func UnrollTypes(in *Types) (types map[string]Type) {
 func unrollTypeGroup(in *TypeGroup) (types map[string]Type) {
 	types = make(map[string]Type)
 	for _, t := range in.Types {
-		if t.Disabled {
+		if boolPointerIsTrue(t.Disabled) {
 			continue
 		}
 		types[t.Name] = t
@@ -394,7 +398,7 @@ func unrollTypeGroup(in *TypeGroup) (types map[string]Type) {
 	for _, g := range in.TypeGroups {
 		t := unrollTypeGroup(&g)
 		for _, t := range t {
-			if t.Disabled {
+			if boolPointerIsTrue(t.Disabled) {
 				continue
 			}
 			types[t.Name] = t
@@ -412,18 +416,15 @@ func UnrollSamplers(in *Samplers) (samplers map[string]Sampler) {
 	}
 
 	for _, s := range in.Samplers {
-		if s.Disabled {
+		if boolPointerIsTrue(s.Disabled) {
 			continue
 		}
-		samplers[s.Name] = s
-	}
-	for _, s := range in.Samplers {
 		samplers[s.Name] = s
 	}
 	for _, g := range in.SamplerGroups {
 		s := unrollSamplerGroup(&g)
 		for _, s := range s {
-			if s.Disabled {
+			if boolPointerIsTrue(s.Disabled) {
 				continue
 			}
 			samplers[s.Name] = s
@@ -435,7 +436,7 @@ func UnrollSamplers(in *Samplers) (samplers map[string]Sampler) {
 func unrollSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	samplers = make(map[string]Sampler)
 	for _, s := range in.Samplers {
-		if s.Disabled {
+		if boolPointerIsTrue(s.Disabled) {
 			continue
 		}
 		samplers[s.Name] = s
@@ -443,7 +444,7 @@ func unrollSamplerGroup(in *SamplerGroup) (samplers map[string]Sampler) {
 	for _, g := range in.SamplerGroups {
 		s := unrollSamplerGroup(&g)
 		for _, s := range s {
-			if s.Disabled {
+			if boolPointerIsTrue(s.Disabled) {
 				continue
 			}
 			samplers[s.Name] = s
@@ -513,16 +514,19 @@ func UnrollRules(in *Rules) (rules map[string]Rule) {
 	}
 
 	for _, p := range in.Rules {
-		if p.Disabled {
+		if boolPointerIsTrue(p.Disabled) {
 			continue
 		}
 		rules[p.Name] = p
 	}
 
 	for _, g := range in.RuleGroups {
+		if boolPointerIsTrue(g.Disabled) {
+			continue
+		}
 		p, grouppath := unrollRuleGroups(&g, "")
 		for _, p := range p {
-			if p.Disabled {
+			if boolPointerIsTrue(p.Disabled) {
 				continue
 			}
 			rules[grouppath+" > "+p.Name] = p
@@ -533,6 +537,9 @@ func UnrollRules(in *Rules) (rules map[string]Rule) {
 
 func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, grouppath string) {
 	rules = make(map[string]Rule)
+	if boolPointerIsTrue(in.Disabled) {
+		return
+	}
 	if parentpath != "" {
 		grouppath = parentpath + " > " + in.Name
 	} else {
@@ -540,7 +547,7 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 	}
 
 	for _, p := range in.Rules {
-		if p.Disabled {
+		if boolPointerIsTrue(p.Disabled) {
 			continue
 		}
 		rules[grouppath+" > "+p.Name] = p
@@ -548,7 +555,7 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 	for _, g := range in.RuleGroups {
 		p, lowerpath := unrollRuleGroups(&g, grouppath)
 		for _, p := range p {
-			if p.Disabled {
+			if boolPointerIsTrue(p.Disabled) {
 				continue
 			}
 			rules[lowerpath+" > "+p.Name] = p
