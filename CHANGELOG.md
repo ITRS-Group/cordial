@@ -15,7 +15,7 @@
 
   * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. With no arguments, all unlinked versions are removed. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. A link from the parent includes directory to even one file protects the entire version directory from deletion; manually created links from other locations are not considered.
 
-  * Release distributions now include a separate `cordial-includes-vX.Y.Z.tar.gz` archive containing the current include files and configuration templates, for use with `geneos includes install`.
+  * Release distributions now include a separate `geneos-includes.tar.gz` archive containing the current include files and configuration templates, for use with `geneos includes install`.
 
   * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
 

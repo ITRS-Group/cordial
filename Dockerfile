@@ -260,7 +260,7 @@ RUN set -eux; \
 # assemble files from previous stages into a .tar.gz ready for extraction in the
 # Makefile
 #
-FROM alpine AS cordial-includes
+FROM alpine AS geneos-includes
 
 RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
     apk add tar
@@ -273,7 +273,9 @@ RUN set -eux; \
     mkdir -p "/includes/$version" /includes/config; \
     cp /includes-source/itrs.*.xml "/includes/$version/"; \
     cp /includes-source/config.*.xml /includes/config/; \
-    tar --sort=name -czf "/cordial-includes-$version.tar.gz" -C /includes "$version" config
+    find /includes -type f -exec chmod a-x {} \;; \
+    find "/includes/$version" -type f -exec chmod a-w {} \;; \
+    tar --sort=name -czf /geneos-includes.tar.gz -C /includes "$version" config
 
 FROM alpine AS cordial-build
 
@@ -282,7 +284,7 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
-COPY --from=cordial-includes /cordial-includes-*.tar.gz /
+COPY --from=geneos-includes /geneos-includes.tar.gz /
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/

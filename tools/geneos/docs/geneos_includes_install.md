@@ -13,8 +13,8 @@ Missing top-level include links are created automatically. Existing files and li
 ```shell
 geneos includes install
 geneos includes install --update
-geneos includes install cordial-includes-v1.31.0.tar.gz
-geneos includes install --update cordial-includes-v1.31.1.tar.gz
+geneos includes install geneos-includes.tar.gz
+geneos includes install --update geneos-includes.tar.gz
 ```
 
 The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.

@@ -16,7 +16,7 @@ release: base docs
 	-docker rm cordial-build-$(VERSION)
 	docker create --name cordial-build-$(VERSION) cordial-build:$(VERSION)
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION).tar.gz release-$(VERSION)/
-	docker cp cordial-build-$(VERSION):/cordial-includes-$(VERSION).tar.gz release-$(VERSION)/
+	docker cp cordial-build-$(VERSION):/geneos-includes.tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
 # 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
@@ -38,12 +38,12 @@ release: base docs
 .PHONY: build docs gdna includes
 
 includes:
-	docker build --tag cordial-includes:$(VERSION) --target cordial-includes .
+	docker build --tag geneos-includes:$(VERSION) --target geneos-includes .
 	mkdir -p release-$(VERSION)/
-	-docker rm cordial-includes-$(VERSION)
-	docker create --name cordial-includes-$(VERSION) cordial-includes:$(VERSION)
-	docker cp cordial-includes-$(VERSION):/cordial-includes-$(VERSION).tar.gz release-$(VERSION)/
-	docker rm cordial-includes-$(VERSION)
+	-docker rm geneos-includes-$(VERSION)
+	docker create --name geneos-includes-$(VERSION) geneos-includes:$(VERSION)
+	docker cp geneos-includes-$(VERSION):/geneos-includes.tar.gz release-$(VERSION)/
+	docker rm geneos-includes-$(VERSION)
 
 build:
 	docker build --tag cordial-build:$(VERSION) --target cordial-build .
