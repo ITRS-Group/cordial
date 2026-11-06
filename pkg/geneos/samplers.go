@@ -24,6 +24,7 @@ import (
 // Samplers TODO: Describe its purpose and intended use.
 type Samplers struct {
 	XMLName       xml.Name       `xml:"samplers" json:"-" yaml:"-"`
+	Comment       string         `xml:",comment"`
 	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
 }
@@ -31,8 +32,9 @@ type Samplers struct {
 // SamplerGroup TODO: Describe its purpose and intended use.
 type SamplerGroup struct {
 	XMLName       xml.Name       `xml:"samplerGroup" json:"-" yaml:"-"`
+	Comment       string         `xml:",comment"`
 	Name          string         `xml:"name,attr"`
-	Disabled      bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Disabled      *bool          `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
 }
@@ -42,12 +44,18 @@ type SamplerGroup struct {
 type Sampler struct {
 	XMLName                xml.Name                `xml:"sampler" json:"-" yaml:"-"`
 	Name                   string                  `xml:"name,attr"`
-	Disabled               bool                    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Disabled               *bool                   `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Comment                string                  `xml:",comment" json:",omitempty" yaml:",omitempty"`
 	Group                  *SingleLineStringVar    `xml:"var-group,omitempty" json:",omitempty" yaml:",omitempty"`
-	GroupNoVar             *SingleLineStringVar    `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
+	GroupNoVar             *SingleLineStringVar    `xml:"group,omitempty" json:",omitempty" yaml:",omitempty" geneos:"deprecated"`
+	Description            *string                 `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
+	DisplayName            *string                 `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
 	Interval               *Value                  `xml:"sampleInterval,omitempty" json:",omitempty" yaml:",omitempty"`
-	SampleOnStartup        bool                    `xml:"sampleOnStartup" json:",omitempty" yaml:",omitempty"`
+	SampleOnStartup        *bool                   `xml:"sampleOnStartup,omitempty" json:",omitempty" yaml:",omitempty"`
+	IsVisible              *bool                   `xml:"isVisible,omitempty" json:",omitempty" yaml:",omitempty"`
+	Publish                *bool                   `xml:"publish,omitempty" json:",omitempty" yaml:",omitempty" geneos:"deprecated"`
+	SampleTimesOverride    *bool                   `xml:"sampleTimesOverride,omitempty" json:",omitempty" yaml:",omitempty"`
+	ExpectRowsInitialDelay *Value                  `xml:"expectRowsInitialDelay,omitempty" json:",omitempty" yaml:",omitempty"`
 	Plugin                 *Plugin                 `xml:"plugin,omitempty" json:"plugin,omitempty" yaml:"plugin,omitempty"`
 	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -84,7 +92,7 @@ type Plugin struct {
 	GatewayLicenceUsage                 *GatewayLicenceUsagePlugin                 `xml:"Gateway-licenceUsage,omitempty" json:"Gateway-licenceUsage,omitempty" yaml:"Gateway-licenceUsage,omitempty"`
 	GatewayLoad                         *GatewayLoadPlugin                         `xml:"Gateway-gatewayLoad,omitempty" json:"Gateway-gatewayLoad,omitempty" yaml:"Gateway-gatewayLoad,omitempty"`
 	GatewayManagedEntityData            *GatewayManagedEntityDataPlugin            `xml:"Gateway-managedEntitiesData,omitempty" json:"Gateway-managedEntitiesData,omitempty" yaml:"Gateway-managedEntitiesData,omitempty"`
-	GatewayObcervConnection             *GatewayObcervConnectionPlugin             `xml:"Gateway-obcervConnection,omitempty" json:"Gateway-obcervConnection,omitempty" yaml:"Gateway-obcervConnection,omitempty"`
+	GatewayObcervConnection             *GatewayObcervConnectionPlugin             `xml:"Gateway-obcervConnection,omitempty" json:"Gateway-obcervConnection,omitempty" yaml:"Gateway-obcervConnection,omitempty" geneos:"deprecated"`
 	GatewayProbeData                    *GatewayProbeDataPlugin                    `xml:"Gateway-probeData,omitempty" json:"Gateway-probeData,omitempty" yaml:"Gateway-probeData,omitempty"`
 	GatewayScheduledCommandsHistoryData *GatewayScheduledCommandsHistoryDataPlugin `xml:"Gateway-scheduledCommandsHistoryData,omitempty" json:"Gateway-scheduledCommandsHistoryData,omitempty" yaml:"Gateway-scheduledCommandsHistoryData,omitempty"`
 	GatewayScheduledCommandData         *GatewayScheduledCommandDataPlugin         `xml:"Gateway-scheduledCommandData,omitempty" json:"Gateway-scheduledCommandData,omitempty" yaml:"Gateway-scheduledCommandData,omitempty"`
@@ -152,12 +160,15 @@ type Plugin struct {
 	XPing *XPingPlugin `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
 
 	// unsupported - put config in 'Other'
-	Other *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Other   *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment string             `xml:",comment"`
 }
 
 // UnsupportedPlugin records any unsupported Plugin, capturing the
 // element in XMLName and the raw XML in RawXML for later analysis.
 type UnsupportedPlugin struct {
-	XMLName xml.Name
-	RawXML  string `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
+	XMLName    xml.Name
+	Comment    string     `xml:",comment"`
+	Attributes []xml.Attr `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	RawXML     string     `xml:",innerxml" json:",omitempty" yaml:",omitempty"`
 }

@@ -125,7 +125,10 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 		case geneos.ProbeTypeProbe:
 			probename = probe.Name
 			hostname = probe.Hostname
-			port = probe.Port
+			port = 7036
+			if probe.Port != nil {
+				port = *probe.Port
+			}
 			if probe.Secure != nil {
 				secure = *probe.Secure
 			}
@@ -407,7 +410,7 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 				} else if s.ServiceName.Regex != nil {
 					sn = s.ServiceName.Regex.String()
 				}
-				if s.ServiceName.BasicShowUnavailable {
+				if s.ServiceName.BasicShowUnavailable != nil && *s.ServiceName.BasicShowUnavailable {
 					sn += " *"
 				}
 			}

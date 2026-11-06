@@ -22,12 +22,14 @@ import "encoding/xml"
 // EnvironmentRef TODO: Describe its purpose and intended use.
 type EnvironmentRef struct {
 	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
+	Comment string   `xml:",comment"`
 	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // Environments TODO: Describe its purpose and intended use.
 type Environments struct {
 	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
+	Comment      string             `xml:",comment"`
 	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
@@ -35,6 +37,7 @@ type Environments struct {
 // EnvironmentGroup TODO: Describe its purpose and intended use.
 type EnvironmentGroup struct {
 	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
+	Comment      string        `xml:",comment"`
 	Name         string        `xml:"name,attr"`
 	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 }
@@ -42,6 +45,7 @@ type EnvironmentGroup struct {
 // Environment TODO: Describe its purpose and intended use.
 type Environment struct {
 	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
+	Comment      string        `xml:",comment"`
 	Name         string        `xml:"name,attr"`
 	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
 	Vars         []Vars        `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
