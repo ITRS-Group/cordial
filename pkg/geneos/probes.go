@@ -33,6 +33,7 @@ import "encoding/xml"
 // Probes TODO: Describe its purpose and intended use.
 type Probes struct {
 	XMLName        xml.Name        `xml:"probes" json:"-" yaml:"-"`
+	Comment        string          `xml:",comment"`
 	ProbeGroups    []ProbeGroup    `xml:"probeGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
 	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
 	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
@@ -42,9 +43,11 @@ type Probes struct {
 // ProbeGroup TODO: Describe its purpose and intended use.
 type ProbeGroup struct {
 	XMLName        xml.Name `xml:"probeGroup" json:"-" yaml:"-"`
+	Comment        string   `xml:",comment"`
 	Name           string   `xml:"name,attr"`
-	Disabled       bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Disabled       *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProbeInfo      `yaml:",inline" mapstructure:",squash"`
+	LicensingGroup *string         `xml:"licensingGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"licensinggroup"`
 	ProbeGroups    []ProbeGroup    `xml:"probeGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probegroup"`
 	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
 	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
@@ -56,16 +59,32 @@ type ProbeGroup struct {
 // The mapstructure tags are needed otherwise the embedding uses the
 // structure name, not the field
 type ProbeInfo struct {
-	Port                 int   `xml:"port,omitempty" json:"port,omitempty" yaml:",omitempty" mapstructure:"port"`
-	Secure               *bool `xml:"secure,omitempty" json:"secure,omitempty" yaml:",omitempty" mapstructure:"secure"`
+	Port                 *int    `xml:"port,omitempty" json:"port,omitempty" yaml:",omitempty" mapstructure:"port"`
+	Secure               *bool   `xml:"secure,omitempty" json:"secure,omitempty" yaml:",omitempty" mapstructure:"secure" geneos:"deprecated"`
+	ConnectionSecurity   *string `xml:"connectionSecurity,omitempty" json:"connectionSecurity,omitempty" yaml:",omitempty" mapstructure:"connectionsecurity"`
 	ProbeInfoWithoutPort `yaml:",inline" mapstructure:",squash"`
+	Comment              string `xml:",comment"`
 }
 
 // ProbeInfoWithoutPort TODO: Describe its purpose and intended use.
 type ProbeInfoWithoutPort struct {
-	CommandTimeOut         int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"commandtimeout"`
-	MaxDatabaseConnections int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxdatabaseconnections"`
-	MaxToolkitProcesses    int `xml:",omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxtoolkitprocesses"`
+	MaxLogFileSize          *int    `xml:"maxLogFileSize,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxlogfilesize"`
+	ProcessListCommand      *string `xml:"processListCommand,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"processlistcommand"`
+	WideProcessListCommand  *string `xml:"wideProcessListCommand,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"wideprocesslistcommand"`
+	CacheProcessNames       *bool   `xml:"cacheProcessNames,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"cacheprocessnames"`
+	MaxDatabaseConnections  *int    `xml:"maxDatabaseConnections,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxdatabaseconnections"`
+	DisableSelfAnnounce     *bool   `xml:"disableSelfAnnounce,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"disableselfannounce"`
+	CaseInsensitiveFilename *bool   `xml:"caseInsensitiveFilename,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"caseinsensitivefilename"`
+	CommandTimeOut          *int    `xml:"commandTimeOut,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"commandtimeout"`
+	FKMLockFilePath         *string `xml:"fkmLockFilePath,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"fkmlockfilepath"`
+	MaxToolkitProcesses     *int    `xml:"maxToolkitProcesses,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"maxtoolkitprocesses"`
+	RestAPIHTTPPort         *int    `xml:"restApiHttpPort,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"restapihttpport"`
+	RestAPIHTTPSPort        *int    `xml:"restApiHttpsPort,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"restapihttpsport"`
+	Timezone                *string `xml:"timezone,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"timezone"`
+	CyberArkApplicationID   *string `xml:"cyberArkApplicationID,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"cyberarkapplicationid"`
+	CyberArkSDKPathUnix     *string `xml:"cyberArkSdkPathUnix,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"cyberarksdkpathunix"`
+	CyberArkSDKPathWindows  *string `xml:"cyberArkSdkPathWindows,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"cyberarksdkpathwindows"`
+	Comment                 string  `xml:",comment"`
 }
 
 const (
@@ -79,25 +98,39 @@ const (
 
 // Probe TODO: Describe its purpose and intended use.
 type Probe struct {
-	XMLName   xml.Name `xml:"probe" json:"-" yaml:"-"`
-	Type      int      `xml:"-" json:"-" yaml:"-"`
-	Name      string   `xml:"name,attr" json:"name" yaml:"name"`
-	Disabled  bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Hostname  string   `xml:"hostname" json:"hostname" yaml:"hostname"`
-	ProbeInfo `json:",inline" yaml:",inline" mapstructure:",squash"`
+	XMLName        xml.Name `xml:"probe" json:"-" yaml:"-"`
+	Comment        string   `xml:",comment"`
+	Type           int      `xml:"-" json:"-" yaml:"-"`
+	Name           string   `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled       *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Group          *string  `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
+	Description    *string  `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
+	DisplayName    *string  `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
+	LicensingGroup *string  `xml:"licensingGroup,omitempty" json:",omitempty" yaml:",omitempty"`
+	Hostname       string   `xml:"hostname" json:"hostname" yaml:"hostname"`
+	ProbeInfo      `json:",inline" yaml:",inline" mapstructure:",squash"`
 }
 
 // VirtualProbe TODO: Describe its purpose and intended use.
 type VirtualProbe struct {
-	XMLName  xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
-	Name     string   `xml:"name,attr" json:"name" yaml:"name"`
-	Disabled bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName     xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
+	Comment     string   `xml:",comment"`
+	Name        string   `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled    *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Group       *string  `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
+	Description *string  `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
+	DisplayName *string  `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 // FloatingProbe TODO: Describe its purpose and intended use.
 type FloatingProbe struct {
 	XMLName              xml.Name `xml:"floatingProbe" json:"-" yaml:"-"`
-	Name                 string   `xml:"name.attr" json:"name" yaml:"name"`
-	Disabled             bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Comment              string   `xml:",comment"`
+	Name                 string   `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled             *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Group                *string  `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
+	Description          *string  `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
+	DisplayName          *string  `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
+	LicensingGroup       *string  `xml:"licensingGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProbeInfoWithoutPort `yaml:",inline" mapstructure:",squash"`
 }

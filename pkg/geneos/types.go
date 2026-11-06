@@ -22,6 +22,7 @@ import "encoding/xml"
 // Types TODO: Describe its purpose and intended use.
 type Types struct {
 	XMLName    xml.Name    `xml:"types" json:"-" yaml:"-"`
+	Comment    string      `xml:",comment"`
 	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
@@ -29,25 +30,29 @@ type Types struct {
 // TypeGroup TODO: Describe its purpose and intended use.
 type TypeGroup struct {
 	XMLName    xml.Name    `xml:"typeGroup" json:"-" yaml:"-"`
+	Comment    string      `xml:",comment"`
 	Name       string      `xml:"name,attr"`
-	Disabled   bool        `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Disabled   *bool       `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
 	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
 }
 
 // Type TODO: Describe its purpose and intended use.
 type Type struct {
-	XMLName     xml.Name     `xml:"type" json:"-" yaml:"-"`
-	Name        string       `xml:"name,attr"`
-	Disabled    bool         `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Environment *Reference   `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars        []Vars       `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
-	Samplers    []SamplerRef `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	XMLName         xml.Name            `xml:"type" json:"-" yaml:"-"`
+	Comment         string              `xml:",comment"`
+	Name            string              `xml:"name,attr"`
+	Disabled        *bool               `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Environment     *Reference          `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars            []Vars              `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	Samplers        []SamplerRef        `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerIncludes []SamplerIncludeRef `xml:"samplerInclude,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplerinclude"`
 }
 
 // SamplerRef TODO: Describe its purpose and intended use.
 type SamplerRef struct {
 	XMLName  xml.Name `xml:"sampler" json:"-" yaml:"-"`
+	Comment  string   `xml:",comment"`
 	Name     string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
-	Disabled bool     `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Disabled *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 }
