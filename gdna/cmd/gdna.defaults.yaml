@@ -1131,7 +1131,7 @@ db:
       CREATE TABLE ${db.tokens.active} AS
         SELECT DISTINCT token, total, used, free, t.firstSeen firstSeen, t.lastSeen lastSeen, t.source source -- ${db.tokens.columns}
           FROM ${db.tokens.table} t, ${db.sources.table} s
-         WHERE t.lastSeen = s.lastSeen AND s.valid = 1
+         WHERE t.lastSeen = s.lastSeen AND t.source = s.source AND s.valid = 1
       ;
 
   #
@@ -1172,7 +1172,7 @@ db:
         SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
         WHERE plugin IN ${plugins.level1.table}
-        GROUP BY server, plugin;
+        GROUP BY gateway, server, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l1plugins-per-server.table}_idx_1 ON ${db.l1plugins-per-server.table}(server);
 
   l1missing-plugins-per-server:
@@ -1415,8 +1415,7 @@ db:
         WHERE gateway IN (SELECT gateway FROM ${db.l1covered-gateways.table})
           AND gateway IN (SELECT gateway FROM ${db.l2covered-gateways.table})
           AND gateway IN (SELECT gateway FROM ${db.l3covered-gateways.table})
-       GROUP BY gateway
-      HAVING count(*) = (SELECT count(*) FROM ${db.servers.table} WHERE gateway = ${db.gateways.active}.gateway);
+       GROUP BY gateway;
 
   empty-gateways:
     table: empty_gateways
@@ -3210,7 +3209,7 @@ reports:
                           ORDER BY 1
                       )), '') plugins
         FROM ${db.probes.active} p
-       WHERE server = (SELECT server FROM ${db.probes.active} GROUP BY server HAVING COUNT(DISTINCT os) > 1)
+        WHERE server IN (SELECT server FROM ${db.probes.active} GROUP BY server HAVING COUNT(DISTINCT os) > 1)
 
       ORDER BY 1
       ;

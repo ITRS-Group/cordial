@@ -29,6 +29,10 @@
 
 ## Version v1.31.0 Fixes
 
+* `gdna`
+
+  * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
+
 * `tools/geneos`
 
   * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
