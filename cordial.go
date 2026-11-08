@@ -46,7 +46,10 @@ func RenderHelpAsMD(command *cobra.Command) {
 `)
 }
 
-var executableName string
+var (
+	executablePath string // cached absolute path to the executable, with symlinks resolved
+	executableName string // cached processed executable name, with symlinks resolved and version suffix removed if present
+)
 
 // ExecutableName returns a processed executable name. Symlinks are
 // resolved and the basename of the resulting file has, at most, one
@@ -65,6 +68,7 @@ func ExecutableName(version ...string) (execname string) {
 
 	execname, _ = os.Executable()
 	execname, _ = filepath.EvalSymlinks(execname)
+	executablePath = execname
 	execname = path.Base(filepath.ToSlash(execname))
 
 	// strip any case-insensitive "exe" extension from the binary, to
@@ -87,6 +91,22 @@ func ExecutableName(version ...string) (execname string) {
 	// cache
 	executableName = execname
 	return
+}
+
+// ExecutablePath returns the absolute path to the executable, with all
+// symlinks resolved. The result is cached after the first call to avoid
+// repeated filesystem lookups.
+func ExecutablePath() string {
+	if executablePath != "" {
+		return executablePath
+	}
+	execname, _ := os.Executable()
+	executablePath, _ = filepath.EvalSymlinks(execname)
+	// fallback in case EvalSymlinks failed
+	if executablePath == "" {
+		executablePath = execname
+	}
+	return executablePath
 }
 
 func renderMD(in string) (out string) {
