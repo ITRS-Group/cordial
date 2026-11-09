@@ -289,18 +289,36 @@ func (c *Config) AllSettings() (value map[string]any) {
 	return c.allSettings()
 }
 
-// SetEnvPrefix sets the prefix used when mapping environment variables to keys.
+// SetEnvPrefix sets the prefix used when mapping environment variables
+// to keys. This prefix will be prepended to all environment variable
+// names when AutomaticEnv() is called and looking up configuration
+// values. For example, if the prefix is set to "ITRS" and the key is
+// "geneos_home", the environment variable "ITRS_GENEOS_HOME" will be
+// used.
 func (c *Config) SetEnvPrefix(prefix string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.setEnvPrefix(prefix)
 }
 
-// AutomaticEnv enables lookup of environment variables for configuration keys.
+// AutomaticEnv enables lookup of environment variables for
+// configuration keys.
 func (c *Config) AutomaticEnv() {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.automaticEnv()
+}
+
+// BindEnv binds the named configuration key to environment variables.
+// The first argument is the key in the configuration, and the subsequent
+// arguments are the environment variable names to bind to that key. If
+// no environment variable names are provided, it will default to using
+// the prefix set by SetEnvPrefix followed by "_" and the key as the
+// environment variable name.
+func (c *Config) BindEnv(key string, envs ...string) (err error) {
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
+	return c.bindEnv(key, envs...)
 }
 
 // Default sets value as the fallback for key when no other source defines it.
@@ -329,11 +347,4 @@ func (c *Config) RegisterAlias(alias, key string) {
 	c.rwmutex.Lock()
 	defer c.rwmutex.Unlock()
 	c.registerAlias(alias, key)
-}
-
-// BindEnv binds the named configuration key or keys to environment variables.
-func (c *Config) BindEnv(input ...string) (err error) {
-	c.rwmutex.Lock()
-	defer c.rwmutex.Unlock()
-	return c.bindEnv(input...)
 }

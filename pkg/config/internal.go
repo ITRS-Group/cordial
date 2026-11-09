@@ -119,12 +119,26 @@ func (c *Config) watchConfig() {
 	c.config.WatchConfig()
 }
 
+// automaticEnv enables lookup of environment variables for
+// configuration keys. When this is enabled, the configuration system
+// will automatically check for environment variables that match the
+// keys in the configuration, using the prefix set by SetEnvPrefix if
+// applicable. This allows environment variables to override
+// configuration values without explicitly binding each key to an
+// environment variable.
 func (c *Config) automaticEnv() {
 	c.config.AutomaticEnv()
 }
 
-func (c *Config) bindEnv(input ...string) error {
-	return c.config.BindEnv(input...)
+// bindEnv binds the named configuration key to one or more environment
+// variables. The first argument is the key in the configuration, and
+// the subsequent arguments are the environment variable names to bind
+// to that key. If no environment variable names are provided, it will
+// default to using prefix + "_" + key as the environment variable name.
+//
+// prefix refers to the environment variable prefix set by SetEnvPrefix.
+func (c *Config) bindEnv(key string, input ...string) error {
+	return c.config.BindEnv(append([]string{key}, input...)...)
 }
 
 // bindPFlag binds a pflag.Flag to a key in the configuration.
@@ -775,6 +789,11 @@ func (c *Config) setDefault(key string, value any) {
 	c.config.SetDefault(key, value)
 }
 
+// setEnvPrefix sets the prefix used when mapping environment variables
+// to configuration keys. This prefix will be prepended to all
+// environment variable names when looking up configuration values. For
+// example, if the prefix is set to "ITRS" and the key is "GENEOS_HOME",
+// the environment variable "ITRS_GENEOS_HOME" will be used.
 func (c *Config) setEnvPrefix(prefix string) {
 	c.config.SetEnvPrefix(prefix)
 }
