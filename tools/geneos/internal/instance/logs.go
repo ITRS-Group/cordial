@@ -33,7 +33,9 @@ var tails *sync.Map
 // set. It never returns.
 func FollowLog(i geneos.Instance, options ...LogWatcherOptions) {
 	done := make(chan bool)
-	tails = watchLogs()
+	if tails == nil {
+		tails = watchLogs()
+	}
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -49,7 +51,9 @@ func FollowLog(i geneos.Instance, options ...LogWatcherOptions) {
 func FollowLogs(cmdName string, h *geneos.Host, ct *geneos.Component, names []string, options ...LogWatcherOptions) {
 	// logCmdStderr = stderr
 	done := make(chan bool)
-	tails = watchLogs()
+	if tails == nil {
+		tails = watchLogs()
+	}
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -62,7 +66,9 @@ func FollowLogs(cmdName string, h *geneos.Host, ct *geneos.Component, names []st
 func FollowInstanceLogs(instances []geneos.Instance, options ...LogWatcherOptions) {
 	// logCmdStderr = stderr
 	done := make(chan bool)
-	tails = watchLogs()
+	if tails == nil {
+		tails = watchLogs()
+	}
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -179,7 +185,7 @@ func logCatInstanceFile(i geneos.Instance, logfile string, kind string, opts log
 	return
 }
 
-// FollowInstanceLogs follows the logs for a given instance. It sets up
+// FollowInstance follows the logs for a given instance. It sets up
 // watchers for the instance's logs and handles new log entries as they
 // appear.
 func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
@@ -187,6 +193,9 @@ func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	if i.Type().IsA("profile") {
 		resp.Err = geneos.ErrNotSupported
 		return
+	}
+	if tails == nil {
+		tails = watchLogs()
 	}
 	options := []LogWatcherOptions{}
 	for _, arg := range args {

@@ -287,7 +287,7 @@ var deployCmd = &cobra.Command{
 
 		if deployCmdLogs {
 			// single instance log follow
-			instance.FollowInstance(i) // never returns
+			instance.FollowLog(i) // never returns
 		}
 
 		return
