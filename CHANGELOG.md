@@ -35,6 +35,8 @@
 
 * `tools/geneos`
 
+  * Fix `geneos deploy --log` (`-l`) to keep following logs after creating and starting an instance, rather than panicking or returning immediately.
+
   * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
 
   * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
