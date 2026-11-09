@@ -227,7 +227,11 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *ex
 		} else {
 			env = append(env, "HOME="+userprofile)
 		}
+	}
 
+	// finally, set `GENEOS_HOME` if it is not already defined
+	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "GENEOS_HOME=") }) {
+		env = append(env, "GENEOS_HOME="+h.PathTo())
 	}
 
 	cmd = exec.Command(binary, args...)

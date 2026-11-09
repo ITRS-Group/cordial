@@ -79,13 +79,16 @@ You can do one of the following:
 
 * To adopt an existing environment, which you currently manage using scripts like |gatewayctl| and |netprobectl|, use
 
-    geneos config set geneos=/PATH
+	# Replace "/opt/itrs/geneos" with the actual location of the Geneos installation.
+    geneos config set geneos=/opt/itrs/geneos
 	
-  where "/PATH" is the location of the Geneos installation. Also consider using |geneos migrate -X| to replace those script with symbolic links to the this program.
+  You may also consider using |geneos migrate -X| to replace those script with symbolic links to the this program.
 
-* Another option, for advanced uses is to set the |GENEOS_HOME| or |ITRS_HOME| environment variables, either once or in your |${HOME}/.profile| or |${HOME}/.bash_profile|:
+* Another option, for advanced use cases is to set the |GENEOS_HOME| (or the older, legacy |ITRS_HOME|) environment variables, either once or in your |${HOME}/.profile| or |${HOME}/.bash_profile|:
 
-    export GENEOS_HOME=/PATH
+	# Replace "/opt/itrs/geneos" with the actual location of the Geneos installation.
+    export GENEOS_HOME=/opt/itrs/geneos
+
 
 `, "|", "`"), 76))
 
@@ -422,7 +425,8 @@ func initGlobalConfig() (cf *config.Config, err error) {
 		log.Debug("no configuration file found, using defaults and environment variables")
 	}
 
-	// support old set-ups
+	// bind the global executable name, normally `geneos` to environment
+	// variables, to support alternative or legacy set-ups
 	cf.BindEnv(cordial.ExecutableName(), "GENEOS_HOME", "ITRS_HOME")
 
 	// manual alias+remove as the config.RegisterAlias doesn't work as expected

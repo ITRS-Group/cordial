@@ -79,7 +79,7 @@ If you already manage Geneos with older tools such as `gatewayctl` or `netprobec
 geneos config set geneos=/opt/itrs
 ```
 
-You can also set `ITRS_HOME` to this directory. Start by checking the installation with read-only commands:
+You can also set `GENEOS_HOME` or `ITRS_HOME` to this directory. Start by checking the installation with read-only commands:
 
 ```bash
 geneos list
@@ -292,7 +292,7 @@ Instance directories are stored under the Geneos root, often `/opt/itrs` or `/op
 GENEOS_BASE_DIRECTORY/TYPE/TYPEs/INSTANCE/TYPE.json
 ```
 
-## Example directory layout
+## Directory Layout
 
 ```mermaid
 %%{ init: { 'theme': 'neutral', 'flowchart': { 'curve': 'basis' } } }%%

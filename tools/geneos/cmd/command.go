@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/spf13/cobra"
 
@@ -101,7 +102,9 @@ func commandInstance(i geneos.Instance, params ...any) (resp *responses.General)
 		"environment:",
 	)
 
-	for _, e := range cmd.Environ() {
+	envs := cmd.Environ()
+	slices.Sort(envs)
+	for _, e := range envs {
 		lines = append(lines, fmt.Sprint("\t", logger.Redact(e)))
 	}
 	lines = append(lines, "")

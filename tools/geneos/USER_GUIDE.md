@@ -360,7 +360,7 @@ echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 geneos config set geneos=/opt/itrs
 
 # Or set environment variable
-export ITRS_HOME=/opt/itrs
+export GENEOS_HOME=/opt/itrs
 ```
 
 #### Instance won't start
@@ -466,7 +466,8 @@ Many commands have shorter aliases:
 
 Key environment variables:
 
-- `ITRS_HOME` - Base Geneos directory
+- `GENEOS_HOME` - Base Geneos directory (preferred)
+- `ITRS_HOME` - Base Geneos directory (legacy support)
 
 - `GENEOS_NON_INTERACTIVE` - Disable prompts for automation
 
@@ -478,11 +479,11 @@ Default locations:
 
 - Config: `~/.config/geneos.json`
 
-- Instances: `$ITRS_HOME/TYPE/TYPEs/INSTANCE/`
+- Instances: `${GENEOS_HOME}/TYPE/TYPEs/INSTANCE/`
 
-- Packages: `$ITRS_HOME/packages/`
+- Packages: `${GENEOS_HOME}/packages/`
 
-- Logs: `$ITRS_HOME/TYPE/TYPEs/INSTANCE/logs/`
+- Logs: `${GENEOS_HOME}/TYPE/TYPEs/INSTANCE/logs/`
 
 ## Next Steps
 
