@@ -22,10 +22,12 @@ import (
 
 //go:embed _docs/info.md
 var infoCmdDescription string
-var infoCmdShowXPaths bool
+var infoCmdShowXPaths, infoCmdShowURLs, infoCmdShowAll bool
 
 func init() {
-	infoCmd.Flags().BoolVarP(&infoCmdShowXPaths, "show-xpaths", "X", false, "Show a list of XPaths rather than totals for element values")
+	infoCmd.Flags().BoolVarP(&infoCmdShowXPaths, "show-xpaths", "X", false, "List XPaths only")
+	infoCmd.Flags().BoolVar(&infoCmdShowURLs, "show-urls", false, "List URL targets only")
+	infoCmd.Flags().BoolVar(&infoCmdShowAll, "show-all", false, "List both XPaths and URL targets")
 
 	adbCmd.AddCommand(infoCmd)
 }
@@ -88,19 +90,20 @@ func infoCommand(file string) (err error) {
 			scanner := bufio.NewScanner(rc)
 			for scanner.Scan() {
 				line := scanner.Text()
-				log.Debug("Processing line: %s", "line", line)
+				// log.Debug("Processing line: %s", "line", line)
 				processLine(line)
 			}
 			if err := scanner.Err(); err != nil {
 				return fmt.Errorf("error reading %s: %v", f.Name, err)
 			}
 
-			if infoCmdShowXPaths {
-				fmt.Printf("File %q - XPaths: %d\n", file, len(xpaths))
-				xps := slices.Sorted(maps.Keys(xpaths))
-				for _, name := range xps {
-					fmt.Println(name)
-				}
+			if infoCmdShowXPaths || infoCmdShowURLs || infoCmdShowAll {
+				fmt.Print(formatTargetLists(
+					infoCmdShowXPaths || infoCmdShowAll,
+					infoCmdShowURLs || infoCmdShowAll,
+					xpaths,
+					urls,
+				))
 				continue
 			}
 
@@ -166,6 +169,12 @@ func infoCommand(file string) (err error) {
 					fmt.Printf("  %q: %d\n", name, types[name])
 				}
 			}
+			linkTypes := slices.Sorted(maps.Keys(links))
+			linkCount := 0
+			for _, name := range linkTypes {
+				linkCount += links[name]
+			}
+			fmt.Printf("Links: %d\n", linkCount)
 
 			dvs := slices.Sorted(maps.Keys(dataviews))
 			fmt.Printf("Dataviews: %d\n", len(dataviews))
@@ -190,6 +199,28 @@ var samplers = make(map[string]int)
 var types = make(map[string]int)
 var dataviews = make(map[string]int)
 var xpaths = make(map[string]int)
+var links = make(map[string]int)
+var urls = make(map[string]int)
+
+func formatTargetLists(showXPaths, showURLs bool, xpaths, urls map[string]int) string {
+	var output strings.Builder
+	if showXPaths {
+		fmt.Fprintf(&output, "XPaths: %d\n", len(xpaths))
+		for _, value := range slices.Sorted(maps.Keys(xpaths)) {
+			fmt.Fprintln(&output, value)
+		}
+	}
+	if showURLs {
+		if showXPaths {
+			output.WriteByte('\n')
+		}
+		fmt.Fprintf(&output, "URLs: %d\n", len(urls))
+		for _, value := range slices.Sorted(maps.Keys(urls)) {
+			fmt.Fprintln(&output, value)
+		}
+	}
+	return output.String()
+}
 
 // processLine processes a single line from an Activedashboard file and
 // updates the global maps accordingly.
@@ -236,45 +267,23 @@ func processLine(line string) {
 			fmt.Println("Error parsing DataItemExprNode line:", err)
 			return
 		}
-		firstDataItem := true
-		for di := range strings.SplitSeq(de.URLTarget, "dataitem(") {
-			if firstDataItem {
-				firstDataItem = false
-				continue
+
+		targets := findLinkTargets(de.URLTarget)
+		foundDataitem := false
+		for _, target := range targets {
+			switch target.kind {
+			case "dataitem":
+				foundDataitem = true
+				processDataitemTarget(target.value)
+			case "wwwpage":
+				urls[target.value]++
 			}
-			di = strings.TrimSuffix(di, ")")
-			xpaths[di]++
-			xp, err := xpath.Parse(di)
-			if err != nil {
-				log.Error("Failed to parse DataitemXpath", slog.Any("error", err), slog.String("DataitemXpath", di))
-			} else {
-				log.Debug("Parsed DataitemXpath", slog.String("DataitemXpath", di), slog.Any("XPath", xp))
-				if xp.Gateway != nil {
-					gateways[xp.Gateway.Name]++
-					if xp.Probe != nil {
-						probes[xp.Probe.Name]++
-						if xp.Entity != nil {
-							entities[xp.Entity.Name]++
-							for name, value := range xp.Entity.Attributes {
-								if _, ok := attributes[name]; !ok {
-									attributes[name] = make(map[string]int)
-								}
-								attributes[name][value]++
-							}
-							if xp.Sampler != nil {
-								samplers[xp.Sampler.Name]++
-								if xp.Sampler.Type != nil {
-									t := *xp.Sampler.Type
-									types[t]++
-								}
-								if xp.Dataview != nil {
-									dataviews[xp.Dataview.Name]++
-								}
-							}
-						}
-					}
-				}
-			}
+		}
+		if strings.HasPrefix(de.URLTarget, "geneos://") {
+			urls[de.URLTarget]++
+		}
+		if !foundDataitem {
+			log.Debug("No dataitem matches found, skipping line", slog.String("URLTarget", de.URLTarget))
 		}
 	case dataItemSeverityNodeClass:
 		var ds dataItemSeverityNodeFields
@@ -282,93 +291,81 @@ func processLine(line string) {
 			fmt.Println("Error parsing DataItemSeverityNode line:", err)
 			return
 		}
-		firstDataItem := true
-		for di := range strings.SplitSeq(ds.URLTarget, "dataitem(") {
-			if firstDataItem {
-				firstDataItem = false
-				continue
+		targets := findLinkTargets(ds.URLTarget)
+		foundDataitem := false
+		for _, target := range targets {
+			switch target.kind {
+			case "dataitem":
+				foundDataitem = true
+				processDataitemTarget(target.value)
+			case "wwwpage":
+				urls[target.value]++
 			}
-			di = strings.TrimSuffix(di, ")")
-			xpaths[di]++
-			xp, err := xpath.Parse(di)
-			if err != nil {
-				log.Error("Failed to parse DataitemXpath", slog.Any("error", err), slog.String("DataitemXpath", di))
-			} else {
-				log.Debug("Parsed DataitemXpath", slog.String("DataitemXpath", di), slog.Any("XPath", xp))
-				if xp.Gateway != nil {
-					gateways[xp.Gateway.Name]++
-					if xp.Probe != nil {
-						probes[xp.Probe.Name]++
-						if xp.Entity != nil {
-							entities[xp.Entity.Name]++
-							for name, value := range xp.Entity.Attributes {
-								if _, ok := attributes[name]; !ok {
-									attributes[name] = make(map[string]int)
-								}
-								attributes[name][value]++
-							}
-							if xp.Sampler != nil {
-								samplers[xp.Sampler.Name]++
-								if xp.Sampler.Type != nil {
-									t := *xp.Sampler.Type
-									types[t]++
-								}
-								if xp.Dataview != nil {
-									dataviews[xp.Dataview.Name]++
-								}
-							}
-						}
-					}
-				}
-			}
+		}
+		if strings.HasPrefix(ds.URLTarget, "geneos://") {
+			urls[ds.URLTarget]++
+		}
+		if !foundDataitem {
+			log.Debug("No dataitem matches found, skipping line", slog.String("URLTarget", ds.URLTarget))
 		}
 	case geneosURLClass:
 		var gu geneosURL
 		if err := unmarshalLineToStruct(line, &gu); err != nil {
-			fmt.Println("Error parsing GeneosURL line:", err)
+			log.Debug("Error parsing GeneosURL line, skipping", slog.Any("error", err))
 			return
 		}
-		firstDataItem := true
-		for di := range strings.SplitSeq(gu.URLTarget, "dataitem(") {
-			if firstDataItem {
-				firstDataItem = false
-				continue
-			}
-			di = strings.TrimSuffix(di, ")")
-			xpaths[di]++
-			xp, err := xpath.Parse(di)
-			if err != nil {
-				log.Error("Failed to parse DataitemXpath", slog.Any("error", err), slog.String("DataitemXpath", di))
+
+		targets := findLinkTargets(gu.URLTarget)
+		if len(targets) == 1 && targets[0].start == 0 && targets[0].end == len(gu.URLTarget) {
+			target := targets[0]
+			links[target.kind+"(...)"]++
+			if target.kind == "dataitem" {
+				processDataitemTarget(target.value)
 			} else {
-				log.Debug("Parsed DataitemXpath", slog.String("DataitemXpath", di), slog.Any("XPath", xp))
-				if xp.Gateway != nil {
-					gateways[xp.Gateway.Name]++
-					if xp.Probe != nil {
-						probes[xp.Probe.Name]++
-						if xp.Entity != nil {
-							entities[xp.Entity.Name]++
-							for name, value := range xp.Entity.Attributes {
-								if _, ok := attributes[name]; !ok {
-									attributes[name] = make(map[string]int)
-								}
-								attributes[name][value]++
-							}
-							if xp.Sampler != nil {
-								samplers[xp.Sampler.Name]++
-								if xp.Sampler.Type != nil {
-									t := *xp.Sampler.Type
-									types[t]++
-								}
-								if xp.Dataview != nil {
-									dataviews[xp.Dataview.Name]++
-								}
-							}
-						}
+				urls[target.value]++
+			}
+		} else if strings.HasPrefix(gu.URLTarget, "geneos://") {
+			links["geneos://..."]++
+			urls[gu.URLTarget]++
+		} else {
+			links["other"]++
+			urls[gu.URLTarget]++
+		}
+	default:
+		// something else, ignore
+	}
+}
+
+func processDataitemTarget(di string) {
+	xpaths[di]++
+	xp, err := xpath.Parse(di)
+	if err != nil {
+		log.Debug("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", di))
+		return
+	}
+	log.Debug("Parsed DataitemXpath", slog.String("DataitemXpath", di), slog.Any("XPath", xp))
+	if xp.Gateway != nil {
+		gateways[xp.Gateway.Name]++
+		if xp.Probe != nil {
+			probes[xp.Probe.Name]++
+			if xp.Entity != nil {
+				entities[xp.Entity.Name]++
+				for name, value := range xp.Entity.Attributes {
+					if _, ok := attributes[name]; !ok {
+						attributes[name] = make(map[string]int)
+					}
+					attributes[name][value]++
+				}
+				if xp.Sampler != nil {
+					samplers[xp.Sampler.Name]++
+					if xp.Sampler.Type != nil {
+						types[*xp.Sampler.Type]++
+					}
+					if xp.Dataview != nil {
+						dataviews[xp.Dataview.Name]++
 					}
 				}
 			}
 		}
-	default:
-
 	}
 }

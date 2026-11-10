@@ -27,6 +27,8 @@
 
 * `tools/geneos`
 
+  * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
+
   * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
 
   * `geneos includes list --gateway` now accepts instance names and glob patterns to show includes for matching gateways only.

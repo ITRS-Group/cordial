@@ -9,9 +9,10 @@ The commands operate on files. They do not connect to a Gateway or change a runn
 ```text
 geneos adb info [flags] [PATH...]
 geneos adb clean [flags] PATH...
+geneos adb edit [flags] PATH...
 ```
 
-`dashboard` and `dashboards` are aliases for `adb`. Both subcommands accept multiple file paths. Quote paths that contain spaces. The shell can expand a file pattern; the commands do not search directories recursively.
+`dashboard` and `dashboards` are aliases for `adb`; `edit` is an alias for `clean`. The commands accept multiple file paths. Quote paths that contain spaces. The shell can expand a file pattern; the commands do not search directories recursively.
 
 ```bash
 geneos adb info /opt/itrs/dashboards/application.adb
@@ -26,9 +27,11 @@ No Geneos installation directory is required for these subcommands. `clean` requ
 
 | Option | Default | Use |
 | --- | --- | --- |
-| `--show-xpaths`, `-X` | `false` | Show sorted, distinct data-item XPaths instead of element totals. |
+| `--show-xpaths`, `-X` | `false` | List sorted, distinct XPaths only. |
+| `--show-urls` | `false` | List sorted, distinct URL destinations only, without link wrappers or source labels. |
+| `--show-all` | `false` | List both XPaths and URLs in separate blocks. |
 
-Without `--show-xpaths`, the report lists Gateway, Probe, Managed Entity, Attribute, Sampler, Type, and Dataview names found in supported data-item references. Each heading shows the number of distinct names. Each name has an occurrence count. For Attributes, the report also shows distinct values and their counts. A lack of name for an element is shown as `<no name>`. An empty Type name appears as `<empty>`, while the lack of a Type on a Sampler is not recorded.
+Without a list option, the report lists Gateway, Probe, Managed Entity, Attribute, Sampler, Type, and Dataview names found in supported data-item references. Each heading shows the number of distinct names. Each name has an occurrence count. For Attributes, the report also shows distinct values and their counts. A lack of name for an element is shown as `<no name>`. An empty Type name appears as `<empty>`, while the lack of a Type on a Sampler is not recorded.
 
 1. Get a summary of one dashboard:
 
@@ -44,7 +47,7 @@ Without `--show-xpaths`, the report lists Gateway, Probe, Managed Entity, Attrib
 
 3. Use the names and paths to select the changes needed before you run `clean`.
 
-Counts and XPath lists accumulate across files in one invocation. For independent reports, run `info` once per file. The report is not a full inventory of all dashboard objects or URL types.
+Counts and XPath/URL lists accumulate across files in one invocation. For independent reports, run `info` once per file. The report is not a full inventory of all dashboard objects.
 
 ## Choose Output Handling
 
@@ -65,6 +68,8 @@ There is no dry-run option. Review the cleaned copy before you replace or import
 ## Clean a Dashboard
 
 `clean` updates supported `dataitem(...)` references in modifier expressions, severity modifiers, and Geneos URL links. It processes `.Activedashboard` entries in the archive. It copies other archive entries, except `.dbo` startup-data entries, which it removes by default.
+
+Use the `edit` alias when making targeted changes without the default cleanup: it preserves Gateway, Probe, Managed Entity, and Type values and `.dbo` startup data unless explicit options request changes.
 
 With no action options, cleanup has these defaults:
 

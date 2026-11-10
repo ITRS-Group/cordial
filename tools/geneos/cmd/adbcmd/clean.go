@@ -39,9 +39,11 @@ type filterType struct {
 	Sampler    string
 	Type       string
 	Dataview   string
+	URLs       optionSlice
 }
 
 var filters filterType = filterType{}
+var cleanURLFilters []*regexp.Regexp
 
 func init() {
 	adbCmd.AddCommand(cleanCmd)
@@ -55,6 +57,7 @@ func init() {
 		Samplers:   optionSlice{"keep"},
 		Types:      optionSlice{"remove-empty"},
 		Dataviews:  optionSlice{"keep"},
+		WebPages:   optionSlice{},
 	}
 
 	cleanCmd.Flags().StringVarP(&cleanCmdOutput, "output", "o", "",
@@ -89,6 +92,14 @@ repeated and are applied in the order given, are:
                         matching the regexp pattern R. The
                         replacement is applied as many times as
                         P matches
+`,
+	)
+	cleanCmd.Flags().Var(&cleanOptions.WebPages, "wwwpage",
+		`Web page URL updates. Apply regular-expression replacements to the URL
+inside each wwwpage(...) target. Repeat to apply actions in order:
+
+'replace:#PATTERN#REPLACEMENT#' - replace matching URL text. The delimiter
+can be any character and must not conflict with the pattern or replacement.
 `,
 	)
 
@@ -142,6 +153,7 @@ All the above filters support glob patterns (not regular expressions).
 `,
 	)
 	cleanCmd.Flags().Var(&filters.Attributes, "filter-attribute", "Filter for matching attributes in the form `NAME=VALUE` where\nVALUE should be '*' if you want to match any value. Can be repeated.\n")
+	cleanCmd.Flags().Var(&filters.URLs, "filter-url", "Only process wwwpage URLs matching any supplied regular expression. Can be repeated.\n")
 
 	cleanCmd.Flags().BoolVarP(&cleanCmdKeepAll, "keep-all", "k", false, "Set default action for all processing actions to 'keep' or do nothing")
 	cleanCmd.Flags().BoolVar(&cleanCmdSkipModifiers, "skip-modifiers", false, "Skip processing of modifier elements")
@@ -157,6 +169,8 @@ All the above filters support glob patterns (not regular expressions).
 	cleanCmd.Flags().Lookup("type").DefValue = ""
 	cleanCmd.Flags().Lookup("dataview").DefValue = ""
 	cleanCmd.Flags().Lookup("filter-attribute").DefValue = ""
+	cleanCmd.Flags().Lookup("wwwpage").DefValue = ""
+	cleanCmd.Flags().Lookup("filter-url").DefValue = ""
 
 	// add aliases for flags if needed
 	cleanCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
@@ -184,9 +198,26 @@ All the above filters support glob patterns (not regular expressions).
 
 var cleanFilterXPath *xpath.XPath = &xpath.XPath{}
 
+func applyCleanDefaults(editMode, startupDataExplicit bool) {
+	if cleanCmdKeepAll || editMode {
+		cleanOptions.Gateways[0] = "keep"
+		cleanOptions.Probes[0] = "keep"
+		cleanOptions.Entities[0] = "keep"
+	}
+	if editMode {
+		if len(cleanOptions.Types) == 1 && cleanOptions.Types[0] == "remove-empty" {
+			cleanOptions.Types[0] = "keep"
+		}
+		if !startupDataExplicit {
+			cleanCmdKeepStartupData = true
+		}
+	}
+}
+
 var cleanCmd = &cobra.Command{
 	Use:          "clean [flags] [PATH...]",
-	Short:        "Clean ADB file(s)",
+	Aliases:      []string{"edit"},
+	Short:        "Clean or edit ADB file(s)",
 	Long:         cleanCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -206,11 +237,7 @@ var cleanCmd = &cobra.Command{
 			return fmt.Errorf("cannot skip both modifiers and links")
 		}
 
-		if cleanCmdKeepAll {
-			cleanOptions.Gateways[0] = "keep"
-			cleanOptions.Probes[0] = "keep"
-			cleanOptions.Entities[0] = "keep"
-		}
+		applyCleanDefaults(command.CalledAs() == "edit", command.Flags().Changed("keep-startup-data"))
 
 		// update options elements to remove initial default if any
 		// other options have been set
@@ -238,6 +265,14 @@ var cleanCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("invalid filter XPath: %w", err)
 			}
+		}
+		cleanURLFilters = make([]*regexp.Regexp, 0, len(filters.URLs))
+		for _, pattern := range filters.URLs {
+			re, err := regexp.Compile(pattern)
+			if err != nil {
+				return fmt.Errorf("invalid URL filter %q: %w", pattern, err)
+			}
+			cleanURLFilters = append(cleanURLFilters, re)
 		}
 
 		// these have to be evaluated in order as ResolveTo() will
@@ -417,42 +452,31 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 			// like info does
 			parts := strings.Split(line, string(fieldSeparator))
 
-			// parts[4] may have multiple dataitem() values
-			dataitems := strings.Split(parts[4], "dataitem(")
-			if len(dataitems) > 1 {
-				// throw away the first empty element resulting from the split
-				dataitems = dataitems[1:]
-				for i, di := range dataitems {
-					dataitems[i] = strings.TrimSuffix(di, ")")
-				}
-			}
-
 			modifierChanged := false
-			for i, xp := range dataitems {
-				xpp, err := xpath.Parse(xp)
-				if err != nil {
-					log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", xp))
-					dataitems[i] = "dataitem(" + xp + ")"
-					continue
+			parts[4] = rewriteLinkTargets(parts[4], func(kind, target string) string {
+				switch kind {
+				case "dataitem":
+					xpp, err := xpath.Parse(target)
+					if err != nil {
+						log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", target))
+						return target
+					}
+					if cleanFilterXPath != nil && !xpp.Match(cleanFilterXPath) {
+						log.Debug("Skipping DataitemXpath due to filter", slog.String("DataitemXpath", xpp.String()), slog.String("Filter", cleanFilterXPath.String()))
+						return target
+					}
+					originalPath := xpp.String()
+					updatedPath := updateDataitemXpath(xpp, cleanOptions).String()
+					if updatedPath != originalPath {
+						modifierChanged = true
+					}
+					return updatedPath
+				case "wwwpage":
+					return updateWebPageURL(target, cleanOptions.WebPages, cleanURLFilters)
+				default:
+					return target
 				}
-
-				// filter here
-				if cleanFilterXPath != nil && !xpp.Match(cleanFilterXPath) {
-					log.Debug("Skipping DataitemXpath due to filter", slog.String("DataitemXpath", xpp.String()), slog.String("Filter", cleanFilterXPath.String()))
-					dataitems[i] = "dataitem(" + xp + ")"
-					continue
-				}
-
-				originalPath := xpp.String()
-				xpp = updateDataitemXpath(xpp, cleanOptions)
-				updatedPath := xpp.String()
-				if updatedPath != originalPath {
-					modifierChanged = true
-				}
-				dataitems[i] = "dataitem(" + updatedPath + ")"
-			}
-
-			parts[4] = strings.Join(dataitems, "")
+			})
 			if modifierChanged {
 				parts[5] = EMPTY_STRING
 			}
@@ -471,35 +495,33 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 				fmt.Println("Error parsing GeneosURL line:", err)
 				break
 			}
-			if !strings.HasPrefix(gu.URLTarget, "dataitem(") {
-				// ignore other URL types
+			targets := findLinkTargets(gu.URLTarget)
+			if len(targets) != 1 || targets[0].start != 0 || targets[0].end != len(gu.URLTarget) {
+				// GeneosURL records contain one complete target per entry.
 				break
 			}
-
-			di := strings.TrimSuffix(strings.TrimPrefix(gu.URLTarget, "dataitem("), ")")
-			xp, err := xpath.Parse(di)
-			if err != nil {
-				log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", gu.URLTarget))
-				break
+			target := targets[0]
+			updatedTarget := target.value
+			switch target.kind {
+			case "dataitem":
+				xp, err := xpath.Parse(target.value)
+				if err != nil {
+					log.Warn("Failed to parse DataitemXpath, skipping", slog.Any("error", err), slog.String("DataitemXpath", gu.URLTarget))
+					break
+				}
+				if cleanFilterXPath != nil && !xp.Match(cleanFilterXPath) {
+					log.Debug("Skipping DataitemXpath due to filter", slog.String("DataitemXpath", xp.String()), slog.String("Filter", cleanFilterXPath.String()))
+					break
+				}
+				updatedTarget = updateDataitemXpath(xp, cleanOptions).String()
+			case "wwwpage":
+				updatedTarget = updateWebPageURL(target.value, cleanOptions.WebPages, cleanURLFilters)
 			}
-
-			// filter here
-			if cleanFilterXPath != nil && !xp.Match(cleanFilterXPath) {
-				log.Debug("Skipping DataitemXpath due to filter", slog.String("DataitemXpath", xp.String()), slog.String("Filter", cleanFilterXPath.String()))
-				break
+			if updatedTarget != target.value {
+				parts := strings.Split(line, string(fieldSeparator))
+				parts[2] = target.kind + "(" + updatedTarget + ")"
+				line = strings.Join(parts, string(fieldSeparator))
 			}
-
-			// update here
-			xp = updateDataitemXpath(xp, cleanOptions)
-
-			// reconstruct the URLTarget with the cleaned dataitems
-			// reconstruct the line with the updated URLTarget
-			line = strings.Join([]string{
-				gu.Class,
-				gu.Version,
-				"dataitem(" + xp.String() + ")",
-				gu.Name,
-			}, "~") + "~"
 		default:
 			// skip all other lines, leave them as-is
 		}
@@ -787,6 +809,28 @@ type cleaningOptions struct {
 	Samplers   optionSlice
 	Types      optionSlice
 	Dataviews  optionSlice
+	WebPages   optionSlice
+}
+
+func updateWebPageURL(url string, options optionSlice, filters []*regexp.Regexp) string {
+	if len(filters) > 0 {
+		matched := false
+		for _, filter := range filters {
+			if filter.MatchString(url) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return url
+		}
+	}
+	for _, option := range options {
+		if strings.HasPrefix(option, "replace:") {
+			url = replaceAll(url, strings.TrimPrefix(option, "replace:"))
+		}
+	}
+	return url
 }
 
 // String TODO: Document its behavior, inputs, and effects.

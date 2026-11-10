@@ -2,11 +2,78 @@ package adbcmd
 
 import (
 	"log/slog"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/geneos/xpath"
 )
+
+func TestApplyCleanDefaults(t *testing.T) {
+	originalOptions := cleanOptions
+	originalKeepAll := cleanCmdKeepAll
+	originalKeepStartupData := cleanCmdKeepStartupData
+	defer func() {
+		cleanOptions = originalOptions
+		cleanCmdKeepAll = originalKeepAll
+		cleanCmdKeepStartupData = originalKeepStartupData
+	}()
+
+	cleanOptions = cleaningOptions{
+		Gateways: optionSlice{"remove-all"},
+		Probes:   optionSlice{"remove-all"},
+		Entities: optionSlice{"remove-all"},
+		Types:    optionSlice{"remove-empty"},
+	}
+	cleanCmdKeepAll = false
+	cleanCmdKeepStartupData = false
+	applyCleanDefaults(true, false)
+	if cleanOptions.Gateways[0] != "keep" || cleanOptions.Probes[0] != "keep" || cleanOptions.Entities[0] != "keep" {
+		t.Fatalf("edit name defaults = %v, %v, %v; want keep", cleanOptions.Gateways, cleanOptions.Probes, cleanOptions.Entities)
+	}
+	if cleanOptions.Types[0] != "keep" {
+		t.Errorf("edit Type default = %q, want keep", cleanOptions.Types[0])
+	}
+	if !cleanCmdKeepStartupData {
+		t.Error("edit should preserve startup data by default")
+	}
+
+	cleanOptions.Types = optionSlice{"remove-empty", "set:System"}
+	cleanCmdKeepStartupData = false
+	applyCleanDefaults(true, true)
+	if cleanOptions.Types[1] != "set:System" {
+		t.Errorf("explicit Type action = %q, want set:System", cleanOptions.Types[1])
+	}
+	if cleanCmdKeepStartupData {
+		t.Error("explicit startup-data choice should be preserved")
+	}
+
+	cleanOptions = cleaningOptions{
+		Gateways: optionSlice{"remove-all"},
+		Probes:   optionSlice{"remove-all"},
+		Entities: optionSlice{"remove-all"},
+		Types:    optionSlice{"remove-empty"},
+	}
+	cleanCmdKeepAll = true
+	cleanCmdKeepStartupData = false
+	applyCleanDefaults(false, false)
+	if cleanOptions.Gateways[0] != "keep" || cleanOptions.Types[0] != "remove-empty" {
+		t.Errorf("regular --keep-all defaults = gateway %q, type %q; want keep and remove-empty", cleanOptions.Gateways[0], cleanOptions.Types[0])
+	}
+	if cleanCmdKeepStartupData {
+		t.Error("regular --keep-all should not preserve startup data by itself")
+	}
+}
+
+func TestCleanEditAliasIsRegistered(t *testing.T) {
+	command, _, err := adbCmd.Find([]string{"edit"})
+	if err != nil {
+		t.Fatalf("adbCmd.Find(edit) error = %v", err)
+	}
+	if command != cleanCmd {
+		t.Fatalf("edit resolves to %v, want clean command", command)
+	}
+}
 
 func TestUpdateDataitemXpathTypes(t *testing.T) {
 	typeValue := func(value string) *string { return &value }
@@ -210,5 +277,96 @@ func TestCleanActivedashboardModifierAlias(t *testing.T) {
 				t.Errorf("URLAlias = %q, want %q", parts[5], test.wantAlias)
 			}
 		})
+	}
+}
+
+func TestCleanActivedashboardWebPageTargets(t *testing.T) {
+	originalFilter := cleanFilterXPath
+	originalOptions := cleanOptions
+	originalSkipModifiers := cleanCmdSkipModifiers
+	originalSkipLinks := cleanCmdSkipLinks
+	originalURLFilters := cleanURLFilters
+	originalLog := log
+	defer func() {
+		cleanFilterXPath = originalFilter
+		cleanOptions = originalOptions
+		cleanCmdSkipModifiers = originalSkipModifiers
+		cleanCmdSkipLinks = originalSkipLinks
+		cleanURLFilters = originalURLFilters
+		log = originalLog
+	}()
+
+	cleanFilterXPath = nil
+	cleanOptions = cleaningOptions{
+		Gateways: optionSlice{"set:Updated"},
+		WebPages: optionSlice{"replace:#^http://([^/]+)#https://${1}#"},
+	}
+	cleanCmdSkipModifiers = false
+	cleanCmdSkipLinks = false
+	cleanURLFilters = []*regexp.Regexp{
+		regexp.MustCompile(`^https://other\.example/`),
+		regexp.MustCompile(`^http://host\.example/`),
+	}
+	log = slog.Default()
+
+	dataitemPath := `/geneos/gateway[(@name="Old")]/directory/probe[(@name="Probe")]/managedEntity[(@name="Entity")]/sampler[(@name="CPU")]/dataview[(@name="CPU")]`
+	updatedPath := strings.Replace(dataitemPath, `name="Old"`, `name="Updated"`, 1)
+	unknownTarget := `droppedItem()/replace(/cell[(@column="field")])`
+	modifierLine := strings.Join([]string{
+		dataItemExprNodeClass,
+		"7.0",
+		"$0$",
+		"Value",
+		"dataitem(" + dataitemPath + ")wwwpage(http://host.example/path)" + unknownTarget,
+		"saved-alias",
+		"1",
+	}, string(fieldSeparator))
+
+	var output strings.Builder
+	if err := cleanActivedashboard(strings.NewReader(modifierLine), &output); err != nil {
+		t.Fatalf("cleanActivedashboard() error = %v", err)
+	}
+	modifierFields := strings.Split(strings.TrimSuffix(output.String(), "\n"), string(fieldSeparator))
+	wantTarget := "dataitem(" + updatedPath + ")wwwpage(https://host.example/path)" + unknownTarget
+	if modifierFields[4] != wantTarget {
+		t.Errorf("modifier URLTarget = %q, want %q", modifierFields[4], wantTarget)
+	}
+	if modifierFields[5] != EMPTY_STRING {
+		t.Errorf("modifier URLAlias = %q, want %q", modifierFields[5], EMPTY_STRING)
+	}
+
+	filteredLine := strings.Replace(modifierLine, "http://host.example/path", "http://unmatched.example/path", 1)
+	output.Reset()
+	if err := cleanActivedashboard(strings.NewReader(filteredLine), &output); err != nil {
+		t.Fatalf("cleanActivedashboard() with filtered URL error = %v", err)
+	}
+	filteredFields := strings.Split(strings.TrimSuffix(output.String(), "\n"), string(fieldSeparator))
+	if !strings.Contains(filteredFields[4], "wwwpage(http://unmatched.example/path)") {
+		t.Errorf("non-matching wwwpage URL was changed: %q", filteredFields[4])
+	}
+
+	geneosLine := strings.Join([]string{
+		geneosURLClass,
+		"3.0",
+		"wwwpage(http://host.example/path)",
+		"Example",
+		"",
+	}, string(fieldSeparator))
+	output.Reset()
+	if err := cleanActivedashboard(strings.NewReader(geneosLine), &output); err != nil {
+		t.Fatalf("cleanActivedashboard() for GeneosURL error = %v", err)
+	}
+	geneosFields := strings.Split(strings.TrimSuffix(output.String(), "\n"), string(fieldSeparator))
+	if geneosFields[2] != "wwwpage(https://host.example/path)" {
+		t.Errorf("GeneosURL target = %q, want wwwpage(https://host.example/path)", geneosFields[2])
+	}
+
+	concatenatedLine := geneosURLClass + `~3.0~wwwpage(http://host.example/path)wwwpage(http://host.example/second)~Example~`
+	output.Reset()
+	if err := cleanActivedashboard(strings.NewReader(concatenatedLine), &output); err != nil {
+		t.Fatalf("cleanActivedashboard() for concatenated GeneosURL error = %v", err)
+	}
+	if got := strings.TrimSuffix(output.String(), "\n"); got != concatenatedLine {
+		t.Errorf("concatenated GeneosURL = %q, want unchanged %q", got, concatenatedLine)
 	}
 }

@@ -4,11 +4,30 @@ This command is currently applicable only to simple Geneos XPaths used in modifi
 
 Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify.
 
+`geneos adb edit` is an alias for this command with preserve-by-default behavior: it keeps Gateway, Probe, Managed Entity, and Type values and retains `.dbo` startup data. Explicit action flags still apply, and `--keep-startup-data=false` explicitly disables startup-data preservation.
+
 The original file is saved by renaming it in the same location as the source file (even when running the command from a different directory) with a timestamp added before the file extension, and the processed file replacing the original. If you specify an output directory using `--output`/`-o`, the processed file will be written there instead, and no backup of the original will be made unless the directory is the same as the one for the source.
 
 If you use the `--keep-all`/`-k` flag, the default action for Gateway, Probe, and Managed Entity names will be `keep`. Type processing still uses `remove-empty` unless overridden. This can be combined with `--filter-*` options to selectively apply the modifications to specific XPaths and modifiers.
 
 To only process modifiers or links, you can use the `--skip-modifiers` and `--skip-links` flags to exclude the respective elements from processing. Note that both flags cannot be used simultaneously, as this would result in no elements being processed.
+
+## Update Web Page URLs
+
+Use `--wwwpage` to apply regular-expression replacements to the URL argument inside each `wwwpage(...)` target. Repeat the flag to apply replacements in order. The replacement syntax uses a caller-selected delimiter, so choose one such as `#` when the pattern or replacement contains `/`:
+
+```bash
+geneos adb clean \
+	--keep-all \
+	--type keep \
+	--filter-url '^http://old\.example/' \
+	--filter-url '^https://old\.example/' \
+	--wwwpage 'replace:#^http://#https://#' \
+	--wwwpage 'replace:#old\.example#new.example#' \
+	/opt/itrs/dashboards/application.adb
+```
+
+`--filter-url REGEXP` can be repeated. A URL is eligible when it matches any supplied regular expression; without this filter, all `wwwpage(...)` URLs are eligible. Filters match the URL argument, not the `wwwpage(...)` wrapper. Web URL actions apply to both `GeneosURL` records and web-page targets embedded in modifier records. Other expressions in modifier targets are preserved.
 
 The `--filter-*` flags allows you to specify either an XPath or specific component matches to selectively apply the cleaning modifications to matching dataitems within the Active Dashboard files. The strings in the filter are applied as "globs", i.e. like shell wildcards. Only the elements matching the filter will be affected by the cleaning options.
 
