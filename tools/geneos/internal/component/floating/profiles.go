@@ -17,7 +17,7 @@ type FloatingProfile struct {
 	Gateways       []string `yaml:"gateways,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
+func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var floatings []FloatingProfile
 
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &floatings, config.NoExpand())
@@ -27,7 +27,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
+		"hostname": h.String(),
 	}
 
 	// build param key delete list
@@ -39,6 +39,9 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 	for _, floating := range floatings {
 		// does it already exist?
 		instanceName := config.Expand[string](pf, floating.Name, config.LookupTable(lookup))
+		if instanceName == "" {
+			return fmt.Errorf("profile %q contains an empty floating instance name", name)
+		}
 
 		vals := profile.ApplyCommonParams(pf, name, &floating.Common, lookup)
 
@@ -48,7 +51,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 			vals.Gateways = append(vals.Gateways, gw)
 		}
 
-		if err := profile.ApplyInstance(pf, ct, instanceName, floating.Common, vals, clearKeys, forceRebuild); err != nil {
+		if err := profile.ApplyInstance(h, pf, ct, instanceName, floating.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

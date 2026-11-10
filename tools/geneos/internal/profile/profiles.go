@@ -164,11 +164,11 @@ type Common struct {
 	Imports            []string          `yaml:"imports,omitempty"`
 }
 
-// Apply applies the profile name to the local configuration. It
+// Apply applies the profile `name` to the local configuration. It
 // iterates over all the components defined in the profile and applies
 // their respective profile settings by calling the component's
 // ApplyProfile function if it is defined.
-func Apply(pf *config.Config, name string, forceRebuild bool) error {
+func Apply(h *geneos.Host, pf *config.Config, name string, forceRebuild bool) error {
 	components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 	if !found {
 		log.Error("profile not found", slog.String("profile", name))
@@ -183,7 +183,7 @@ func Apply(pf *config.Config, name string, forceRebuild bool) error {
 		ct := geneos.ParseComponent(component)
 		if ct.ApplyProfile != nil {
 			log.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
-			if err := ct.ApplyProfile(ct, pf, name, component, forceRebuild); err != nil {
+			if err := ct.ApplyProfile(h, ct, pf, name, component, forceRebuild); err != nil {
 				return fmt.Errorf("failed to apply profile %q for component %q: %w", name, ct.String(), err)
 			}
 		}
@@ -268,10 +268,10 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 // the instance configuration before applying new values. The
 // forceRebuild flag determines whether the instance should be rebuilt
 // after applying changes if it's config.rebuild is not set to always..
-func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
+func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
 	var i geneos.Instance
 
-	instances := instance.Instances(geneos.LOCAL, ct, instance.MatchNames(name))
+	instances := instance.Instances(h, ct, instance.MatchNames(name))
 
 	if len(instances) == 0 {
 		// create here
@@ -286,7 +286,7 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common 
 				port = uint16(pv)
 			}
 		}
-		i, err = instance.Add(geneos.LOCAL, ct, name,
+		i, err = instance.Add(h, ct, name,
 			instance.WithValues(vals),
 			instance.WithCertBundle(common.CertBundle),
 			instance.WithCertBundlePassword(common.CertBundlePassword),
@@ -350,7 +350,7 @@ func ApplyInstance(pf *config.Config, ct *geneos.Component, name string, common 
 
 // ApplyCommonProfile applies the common profile to the given component.
 // It can be used for component types that do not need special handling.
-func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
+func ApplyCommonProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var commons []Common
 
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &commons, config.NoExpand()); err != nil {
@@ -359,7 +359,7 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
+		"hostname": h.String(),
 	}
 
 	// build param key delete list
@@ -374,7 +374,7 @@ func ApplyCommonProfile(ct *geneos.Component, pf *config.Config, name, key strin
 
 		vals := ApplyCommonParams(pf, name, &common, lookup)
 
-		if err := ApplyInstance(pf, ct, instanceName, common, vals, clearKeys, forceRebuild); err != nil {
+		if err := ApplyInstance(h, pf, ct, instanceName, common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

@@ -21,7 +21,7 @@ type GatewayProfile struct {
 	Variables      []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
+func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var gateways []GatewayProfile
 
 	if err := pf.UnmarshalKey(pf.Join("profiles", name, key), &gateways, config.NoExpand()); err != nil {
@@ -30,7 +30,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
+		"hostname": h.String(),
 	}
 
 	// build param key delete list
@@ -44,7 +44,6 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 
 	for _, gateway := range gateways {
 		instanceName := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
-
 		if instanceName == "" {
 			return fmt.Errorf("profile %q contains an empty gateway name", name)
 		}
@@ -53,7 +52,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 		vals.Includes = gateway.Includes
 		vals.Variables = gateway.Variables
 
-		if err := profile.ApplyInstance(pf, ct, instanceName, gateway.Common, vals, clearKeys, forceRebuild); err != nil {
+		if err := profile.ApplyInstance(h, pf, ct, instanceName, gateway.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}

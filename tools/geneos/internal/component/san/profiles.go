@@ -35,7 +35,7 @@ type ManagedEntity struct {
 	Variables  []values.Variable `yaml:"variables,omitempty"`
 }
 
-func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
+func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name, key string, forceRebuild bool) (err error) {
 	var sans []SanProfile
 
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand())
@@ -45,7 +45,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 
 	// global lookup table, add values here as needed
 	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
+		"hostname": h.String(),
 	}
 
 	// build param key delete list
@@ -61,6 +61,9 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 	for _, san := range sans {
 		// does it already exist?
 		instanceName := config.Expand[string](pf, san.Name, config.LookupTable(lookup))
+		if instanceName == "" {
+			return fmt.Errorf("profile %q contains an empty SAN instance name", name)
+		}
 
 		vals := profile.ApplyCommonParams(pf, name, &san.Common, lookup)
 
@@ -97,7 +100,7 @@ func applyProfile(ct *geneos.Component, pf *config.Config, name, key string, for
 			}
 		}
 
-		if err := profile.ApplyInstance(pf, ct, instanceName, san.Common, vals, clearKeys, forceRebuild); err != nil {
+		if err := profile.ApplyInstance(h, pf, ct, instanceName, san.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err
 		}
 	}
@@ -153,24 +156,29 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			// based on the profile
 			cf.SetDefaultExpandOptions(pf.DefaultExpandOptions()...)
 
+			// per ME lookup table for expansion, add items as required from metadata
+			lookup := map[string]string{
+				"type": ct.String(),
+			}
+
 			// build entity using lookup table for expansion, with custom functions
 			variables := make(values.Variables, len(entity.Variables))
 			for idx, v := range entity.Variables {
 				variables[idx] = values.Variable{
 					Type:  v.Type,
 					Name:  v.Name,
-					Value: config.Expand[string](cf, v.Value),
+					Value: config.Expand[string](cf, v.Value, config.LookupTable(lookup)),
 				}
 			}
 
 			var attrs values.NameValues
-			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String()), ",") {
+			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String(), config.LookupTable(lookup)), ",") {
 				attrs = append(attrs, attr)
 			}
 
 			e := ManagedEntity{
-				Name:       config.Expand[string](cf, entity.Name),
-				Types:      cf.ExpandStringSlice(entity.Types),
+				Name:       config.Expand[string](cf, entity.Name, config.LookupTable(lookup)),
+				Types:      cf.ExpandStringSlice(entity.Types, config.LookupTable(lookup)),
 				Attributes: attrs,
 				Variables:  variables,
 			}

@@ -79,7 +79,7 @@ func TestApplyInstancePreservesProfileParameters(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			common.Params = []string{fmt.Sprintf("port=%d", port), "profile-value=" + state}
 			vals := profile.ApplyCommonParams(pf, "test-profile", &common, nil)
-			if err := profile.ApplyInstance(pf, ct, common.Name, common, vals, nil, false); err != nil {
+			if err := profile.ApplyInstance(geneos.LOCAL, pf, ct, common.Name, common, vals, nil, false); err != nil {
 				t.Fatal(err)
 			}
 			member, err := instance.GetWithHost(geneos.LOCAL, ct, common.Name)
@@ -133,7 +133,7 @@ func TestDeployProfileImportsOnce(t *testing.T) {
 				}
 			}
 			params := []string{"recipe=" + root, "licfile=" + licfile}
-			profile.SetExpandOptions(pf, nil, params)
+			profile.SetExpandOptions(geneos.LOCAL, pf, nil, params)
 			if existing {
 				if _, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "import-test", instance.Insecure(true)); err != nil {
 					t.Fatal(err)
@@ -251,7 +251,7 @@ func TestApplyInstanceLifecycle(t *testing.T) {
 				}
 			}
 			common := profile.Common{Imports: []string{"applied.txt=" + source}}
-			err = profile.ApplyInstance(config.New(), ct, member.Name(), common, values.Values{}, nil, true)
+			err = profile.ApplyInstance(geneos.LOCAL, config.New(), ct, member.Name(), common, values.Values{}, nil, true)
 			if !errors.Is(err, test.wantErr) {
 				t.Fatalf("ApplyInstance error = %v, want %v", err, test.wantErr)
 			}
@@ -421,7 +421,7 @@ func TestComponentProfileEntryPoints(t *testing.T) {
 					}
 					data := fmt.Sprintf("profiles:\n  test:\n    %s: invalid\n", key)
 					pf := config.New(config.WithDefaults([]byte(data), "yaml"))
-					err := profile.Apply(pf, "test", false)
+					err := profile.Apply(geneos.LOCAL, pf, "test", false)
 					if err == nil || !strings.Contains(err.Error(), "unmarshal") || !strings.Contains(err.Error(), fmt.Sprintf("component %q", component.Name)) {
 						t.Fatalf("Apply() error = %v, want component profile decoding error", err)
 					}
@@ -457,7 +457,7 @@ func TestMOTMComponentCoverage(t *testing.T) {
 			t.Errorf("component %q is missing its name or profile attributes", entity.ForEach)
 		}
 		if !slices.Contains(entity.Types, "Level 2 - Basic Application") || !slices.ContainsFunc(entity.Types, func(name string) bool {
-			return strings.HasPrefix(name, "Level 2 - Geneos ")
+			return strings.HasPrefix(name, "Level 3 - Geneos ")
 		}) {
 			t.Errorf("component %q is missing its application or Geneos Type", entity.ForEach)
 		}

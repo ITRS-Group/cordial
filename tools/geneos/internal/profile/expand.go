@@ -61,7 +61,7 @@ func PflagSetToMap(flagset *pflag.FlagSet, include ...string) map[string]any {
 // SetExpandOptions sets the default expansion options for the given
 // profile configuration based on the command's flags and arguments.
 // Arguments, to be used, nmust be in the form `name=value`..
-func SetExpandOptions(pf *config.Config, flags map[string]any, args []string) {
+func SetExpandOptions(h *geneos.Host, pf *config.Config, flags map[string]any, args []string) {
 	if flags == nil {
 		flags = make(map[string]any)
 	}
@@ -72,7 +72,7 @@ func SetExpandOptions(pf *config.Config, flags map[string]any, args []string) {
 	config.Set(pf, pf.Join("config", "options"), flags)
 
 	lookup := map[string]string{
-		"hostname": geneos.LOCAL.String(),
+		"hostname": h.String(),
 	}
 	pf.SetDefaultExpandOptions(
 		config.ExternalLookups(false),

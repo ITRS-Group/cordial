@@ -217,7 +217,7 @@ func (i *Profile) Add(options ...any) (err error) {
 	}
 	config.Set(cf, cf.Join("config", "options"), confOpts)
 
-	if err = profile.Apply(pf, i.Name(), true); err != nil {
+	if err = profile.Apply(i.Host(), pf, i.Name(), true); err != nil {
 		return err
 	}
 
@@ -260,8 +260,8 @@ func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	pf := cmd.Profiles
 
 	flags := config.Get[map[string]any](cf, cf.Join("config", "options"))
-	profile.SetExpandOptions(pf, flags, nil)
-	if err = profile.Apply(pf, i.Name(), initial); err != nil {
+	profile.SetExpandOptions(i.Host(), pf, flags, nil)
+	if err = profile.Apply(i.Host(), pf, i.Name(), initial); err != nil {
 		return false, err
 	}
 

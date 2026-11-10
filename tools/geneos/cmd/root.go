@@ -263,7 +263,7 @@ geneos restart
 		// boot-strap profile function map, no that flags are parsed
 		// set defaults for all profile expansion
 
-		profile.SetExpandOptions(Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
+		profile.SetExpandOptions(geneos.GetHost(Hostname), Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 
 		// check if user is root, and only proceed if conditions are met:
 		// * the command has the `allow-root` annotation set to "true", or
