@@ -21,6 +21,8 @@
 
 ## Version v1.31.0 Changes
 
+* Updated to use Go 1.27.4 and update dependencies
+
 * `tools/geneos`
 
   * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
