@@ -8,7 +8,8 @@ A number of ready-made includes are available to help streamline common tasks an
 
 | Command | Description |
 | --- | --- |
-| `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
+| `geneos includes delete / remove` | Delete unused versions and their links, optionally matching a version pattern |
+| `geneos includes fix` | Repair broken gateway include references with unique same-basename replacements |
 | `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |
@@ -26,7 +27,8 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 
 | Command / Aliases | Description |
 |-------|-------|
-| [`geneos includes delete / remove`](geneos_includes_delete.md)	 | Delete unlinked include versions |
+| [`geneos includes delete / remove`](geneos_includes_delete.md)	 | Delete unused include versions and links |
+| [`geneos includes fix`](geneos_includes_fix.md)	 | Repair broken gateway include references |
 | [`geneos includes install / extract`](geneos_includes_install.md)	 | Install embedded includes or includes from an archive |
 | [`geneos includes list / ls`](geneos_includes_list.md)	 | List all available include files |
 | [`geneos includes update`](geneos_includes_update.md)	 | Update includes |

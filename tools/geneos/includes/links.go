@@ -144,12 +144,13 @@ func unusedIncludeVersionLinks(h *geneos.Host, directory string, protectDirector
 		plannedLinks = append(plannedLinks, path.Join(resolvedParent, replacement))
 	}
 	references := make(map[string][]string)
-	for _, gw := range instance.Instances(h, geneos.ParseComponent("gateway")) {
-		setup, err := instance.ReadGatewaySetup(gw)
+	for _, i := range instance.Instances(h, geneos.ParseComponent("gateway")) {
+		setup, err := instance.ReadGatewaySetup(i)
 		if err != nil {
-			return nil, "", fmt.Errorf("failed to check includes for gateway %q: %w", gw.Name(), err)
+			return nil, "", fmt.Errorf("failed to check includes for gateway %q: %w", i.Name(), err)
 		}
-		locations := []string{config.Get[string](gw.Config(), "setup")}
+		cf := i.Config()
+		locations := []string{config.Get[string](cf, "setup")}
 		var addIncludes func([]geneosxml.Include, []geneosxml.IncludeGroup)
 		addIncludes = func(includes []geneosxml.Include, groups []geneosxml.IncludeGroup) {
 			for _, include := range includes {
@@ -167,17 +168,17 @@ func unusedIncludeVersionLinks(h *geneos.Host, directory string, protectDirector
 				continue
 			}
 			if !h.IsAbs(location) {
-				location = h.Join(gw.Home(), location)
+				location = h.Join(i.Home(), location)
 			}
 			target, err := resolveIncludePath(h, location, protectedDirectory, plannedLinks...)
 			if err != nil {
-				return nil, "", fmt.Errorf("failed to resolve gateway %q include %q: %w", gw.Name(), location, err)
+				return nil, "", fmt.Errorf("failed to resolve gateway %q include %q: %w", i.Name(), location, err)
 			}
 			if slices.Contains(protectedLinks, target) || protectDirectory && (target == resolvedDirectory || strings.HasPrefix(target, resolvedDirectory+"/")) {
 				if slices.Contains(protectedLinks, target) {
 					location = target
 				}
-				references[location] = append(references[location], gw.Name())
+				references[location] = append(references[location], i.Name())
 			}
 		}
 	}
@@ -235,9 +236,13 @@ func removeIncludeLinks(h *geneos.Host, links []string) error {
 }
 
 func resolveIncludePath(h *geneos.Host, name, protectedDirectory string, protectedLinks ...string) (string, error) {
-	absolute, err := h.Abs(name)
-	if err != nil {
-		return "", err
+	absolute := name
+	if !h.IsAbs(absolute) {
+		directory, err := h.Getwd()
+		if err != nil {
+			return "", err
+		}
+		absolute = h.Join(directory, absolute)
 	}
 	volume := h.ToSlash(h.VolumeName(absolute))
 	root := volume + "/"

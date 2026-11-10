@@ -10,6 +10,8 @@ Configuration templates are installed under `gateway/includes/config` only when 
 
 Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
 
+With `--update`, a preflight checks obsolete links against gateway setups before any links are changed, as for `includes update`. Same-basename replacement files in the installed version are valid updates, regardless of the old target directory. If any obsolete link without a replacement is referenced, the update fails with all links unchanged; extracted files remain installed. After a successful preflight, links are updated and unused obsolete links are removed. Without `--update`, no obsolete links are removed.
+
 ```shell
 geneos includes install
 geneos includes install --update

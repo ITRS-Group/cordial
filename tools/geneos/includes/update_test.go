@@ -8,7 +8,86 @@ import (
 	"testing"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/host"
 )
+
+type canonicalizingIncludeHost struct {
+	host.Host
+	workingDirectory string
+	absCalls         int
+}
+
+func (h *canonicalizingIncludeHost) Abs(name string) (string, error) {
+	h.absCalls++
+	if !filepath.IsAbs(name) {
+		name = filepath.Join(h.workingDirectory, name)
+	}
+	return filepath.EvalSymlinks(name)
+}
+
+func (h *canonicalizingIncludeHost) Getwd() (string, error) { return h.workingDirectory, nil }
+func (h *canonicalizingIncludeHost) IsLocalhost() bool      { return false }
+
+func TestResolveIncludePathPreservesRemoteLinkReferences(t *testing.T) {
+	for _, kind := range []string{"absolute", "relative", "chain", "dangling"} {
+		t.Run(kind, func(t *testing.T) {
+			h := newTestGatewayHost(t)
+			parent := h.PathTo("gateway", "includes")
+			version := filepath.Join(parent, "v1.0.0")
+			if err := os.MkdirAll(version, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if kind != "dangling" {
+				if err := os.WriteFile(filepath.Join(version, "managed.xml"), nil, 0444); err != nil {
+					t.Fatal(err)
+				}
+			}
+			link := filepath.Join(parent, "managed.xml")
+			if err := os.Symlink(filepath.Join("v1.0.0", "managed.xml"), link); err != nil {
+				t.Fatal(err)
+			}
+			name := link
+			if kind == "relative" {
+				name = "managed.xml"
+			}
+			if kind == "chain" {
+				name = filepath.Join(parent, "alias.xml")
+				if err := os.Symlink("managed.xml", name); err != nil {
+					t.Fatal(err)
+				}
+			}
+			remote := &canonicalizingIncludeHost{Host: h.Host, workingDirectory: parent}
+			h.Host = remote
+			resolved, err := resolveIncludePath(h, name, "", link)
+			if err != nil || resolved != link {
+				t.Fatalf("resolveIncludePath() = %q, %v; want protected link %q", resolved, err, link)
+			}
+			if remote.absCalls != 0 {
+				t.Fatal("resolver used canonicalizing host Abs before inspecting links")
+			}
+			writeTestGatewaySetup(t, h, `<gateway><includes><include><location>`+link+`</location></include></includes></gateway>`)
+			newDirectory := filepath.Join(parent, "v2.0.0")
+			if err := os.MkdirAll(newDirectory, 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(newDirectory, "new.xml"), nil, 0444); err != nil {
+				t.Fatal(err)
+			}
+			if err := Update(h, "v2.0.0", true); !errors.Is(err, ErrIncludeVersionLinked) {
+				t.Fatalf("remote Update() error = %v; want referenced obsolete link error", err)
+			}
+			if target, err := os.Readlink(link); err != nil || target != filepath.Join("v1.0.0", "managed.xml") {
+				t.Fatalf("blocked remote update changed old link: target %q, error %v", target, err)
+			}
+			if _, err := os.Lstat(filepath.Join(parent, "new.xml")); !os.IsNotExist(err) {
+				t.Fatalf("blocked remote update created a new link: %v", err)
+			}
+			if remote.absCalls != 0 {
+				t.Fatal("update preflight used canonicalizing host Abs")
+			}
+		})
+	}
+}
 
 func TestIncludesCommandsDoNotExposeForce(t *testing.T) {
 	for _, command := range includesCmd.Commands() {

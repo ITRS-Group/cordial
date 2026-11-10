@@ -10,7 +10,6 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -808,21 +807,8 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 	includesByGateway = make(map[string][]gatewayInclude)
 	includesByPath = make(map[string]includeFile)
 
-	for _, gw := range instance.Instances(h, geneos.ParseComponent("gateway")) {
-		if len(names) > 0 && !slices.ContainsFunc(names, func(pattern string) bool {
-			selectedHost, selectedType, name := instance.ParseName(pattern, h)
-			if selectedType != nil && selectedType != geneos.ParseComponent("gateway") {
-				return false
-			}
-			if selectedHost == nil || selectedHost != geneos.ALL && selectedHost.String() != h.String() {
-				return false
-			}
-			if name == "all" {
-				name = "*"
-			}
-			matched, _ := path.Match(name, gw.Name())
-			return matched
-		}) {
+	for _, i := range instance.Instances(h, nil, instance.MatchNames(names...)) {
+		if !instance.IsA(i, "gateway") {
 			continue
 		}
 		var remote bool
@@ -833,13 +819,14 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 		var size *int64
 		var reload *int
 
-		g, err := instance.ReadGatewaySetup(gw)
+		g, err := instance.ReadGatewaySetup(i)
 		if err != nil || g.Includes == nil {
 			continue
 		}
 
 		// handle the main setup file for the gateway, determining if it's local or remote and gathering its metadata
-		setup := config.Get[string](gw.Config(), "setup")
+		cf := i.Config()
+		setup := config.Get[string](cf, "setup")
 
 		if strings.HasPrefix(setup, "https://") || strings.HasPrefix(setup, "http://") {
 			remote = true
@@ -865,7 +852,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 			if h.IsAbs(setup) {
 				fullpath = setup
 			} else {
-				fullpath = h.Join(gw.Home(), setup)
+				fullpath = h.Join(i.Home(), setup)
 			}
 			fi, _ = h.Stat(fullpath)
 			if fi != nil {
@@ -881,7 +868,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 
 		// add the main setup file too
 		gatewaySetup := gatewayInclude{
-			Gateway:        gw,
+			Gateway:        i,
 			Priority:       g.Includes.Priority,
 			Required:       &[]bool{true}[0],
 			ReloadInterval: reload,
@@ -896,14 +883,14 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 
 		includesByPath[gatewaySetup.Path] = gatewaySetup.includeFile
 
-		incByGateway := getIncludesFromSetup(h, gw, g.Includes.Includes, g.Includes.IncludeGroups, []string{}, versioned)
+		incByGateway := getIncludesFromSetup(h, i, g.Includes.Includes, g.Includes.IncludeGroups, []string{}, versioned)
 		for _, gwp := range incByGateway {
 			for _, inc := range gwp {
 				includesByPath[inc.Path] = inc.includeFile
 			}
 		}
 
-		incByGateway[gw.Name()] = append(incByGateway[gw.Name()], gatewaySetup)
+		incByGateway[i.Name()] = append(incByGateway[i.Name()], gatewaySetup)
 
 		// merge them in
 		maps.Copy(includesByGateway, incByGateway)

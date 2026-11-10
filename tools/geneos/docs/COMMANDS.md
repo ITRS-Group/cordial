@@ -2599,7 +2599,8 @@ A number of ready-made includes are available to help streamline common tasks an
 
 | Command | Description |
 | --- | --- |
-| `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
+| `geneos includes delete / remove` | Delete unused versions and their links, optionally matching a version pattern |
+| `geneos includes fix` | Repair broken gateway include references with unique same-basename replacements |
 | `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |
@@ -2617,7 +2618,8 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 
 | Command / Aliases | Description |
 |-------|-------|
-| [`geneos includes delete / remove`](#geneos-includes-delete)	 | Delete unlinked include versions |
+| [`geneos includes delete / remove`](#geneos-includes-delete)	 | Delete unused include versions and links |
+| [`geneos includes fix`](#geneos-includes-fix)	 | Repair broken gateway include references |
 | [`geneos includes install / extract`](#geneos-includes-install)	 | Install embedded includes or includes from an archive |
 | [`geneos includes list / ls`](#geneos-includes-list)	 | List all available include files |
 | [`geneos includes update`](#geneos-includes-update)	 | Update includes |
@@ -2641,15 +2643,15 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 
 <sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
 
-Delete unlinked version directories from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
+Delete unused version directories and their top-level symlinks from `gateway/includes` on the selected host. The `remove` alias has the same behaviour.
 
-With no version pattern, all unlinked semantic-version directories are removed and linked versions are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match directory names exactly, including any `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
+With no version pattern, all unused semantic-version directories are removed and versions referenced by gateways are skipped. To select versions, supply one or more shell-style patterns as positional arguments, or one pattern using `--version` (`-V`). Patterns match directory names exactly, including any `v` prefix, and support `*`, `?`, and character classes such as `[12]`. Quote patterns so the shell does not expand them. Supplying positional arguments together with the flag is an error.
 
-Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory. A link to even one file protects the entire version directory, including every unlinked file within it. Relative and absolute targets, link chains, directory aliases, and dangling references into the version are protected.
+Before removing any version, the command checks every symlink directly in the parent `gateway/includes` directory and loads gateway setups using the same loader as `list --gateway`. All links for a version are checked before any are removed. A gateway reference to even one link or directly into the version protects every link and the entire version directory. Include groups, disabled and optional includes, relative and absolute targets, link chains, directory aliases, and dangling references into the version are checked.
 
-Positional patterns are processed in order. If a pattern selects any linked version, none of the versions matching that pattern are deleted, and an error identifies the version and its protecting symlink. Later patterns are still processed, and collected errors are returned after the list is complete. If a link cannot be inspected or resolved safely, that pattern fails without proceeding with deletion.
+Positional patterns are processed in order. If a pattern selects any referenced version, none of the versions or links matching that pattern are deleted, and an error identifies the version and its protecting reference. Later patterns are still processed, and collected errors are returned after the list is complete. If a gateway setup cannot be loaded or a link cannot be inspected or resolved safely, that pattern fails without proceeding with deletion.
 
-Links originating elsewhere are not considered: those are manually managed by the user. Configuration templates, non-version directories, and directory symlinks are never deleted. Missing includes directories and patterns that match no versions are harmless no-ops.
+Links originating elsewhere are not removed: those are manually managed by the user, although gateway references through them still protect the version. Configuration templates, non-version directories, and version-directory symlinks are never deleted. Missing includes directories and patterns that match no versions are harmless no-ops.
 
 ```shell
 geneos includes delete
@@ -2670,11 +2672,55 @@ geneos includes delete [VERSION_PATTERN...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -V, --version string    Select include versions using a shell-style pattern
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --version string            Select include versions using a shell-style pattern
+```
+
+## SEE ALSO
+
+* [geneos includes](#geneos-includes)	 - Manage includes
+
+---
+
+# `geneos includes fix`
+
+<sub>[Up: geneos includes](#geneos-includes) | [Top: geneos](#geneos)</sub>
+
+Repair broken local include references in gateway setup files on the selected host. With no names, all gateways are checked. Optional instance names and shell-style glob patterns select gateways just as for `includes list --gateway`; quote patterns to prevent shell expansion. Only matching gateways are changed, but valid include references from all gateways remain available as repair candidates.
+
+Only references with exactly one valid same-basename replacement are changed. HTTP and HTTPS locations, valid files, unmatched names, and ambiguous matches are left unchanged. Candidates are installed shared and versioned includes and valid include references from gateway setups. Symlinks and paths resolving to the same file count as one candidate. Multiple distinct versions of a file make the match ambiguous.
+
+Each matching gateway reports its repairs or `no changes made`. Broken references without a unique replacement are reported with the number of matching files and left unchanged; these skips are not command errors.
+
+Replacement locations under the installation's top-level `gateway` directory are relative to the gateway instance directory. Locations outside it are absolute. Matching paths in the instance configuration's `includes` key are updated through the standard instance read/write APIs, including include entries containing pipe-separated labels. Other configuration keys are not inspected or changed. JSON and YAML configurations retain their selected format. Gateway setups are not rebuilt or reloaded.
+
+Use `--dry-run` (`-n`) to list proposed changes without writing files or backups.
+
+```shell
+geneos includes fix --dry-run
+geneos includes fix
+geneos includes fix --dry-run 'prod-*'
+geneos includes fix gateway-a gateway-b
+```
+
+Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+## Usage
+
+```text
+geneos includes fix [NAMES...] [flags]
+```
+
+### Options
+
+```text
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -n, --dry-run[=true|false]      List repairs without changing files
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2696,6 +2742,8 @@ Managed includes are installed under `gateway/includes/<version>`, including whe
 Configuration templates are installed under `gateway/includes/config` only when no path of the same name exists. Local configuration files and existing symlinks are never replaced.
 
 Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
+
+With `--update`, a preflight checks obsolete links against gateway setups before any links are changed, as for `includes update`. Same-basename replacement files in the installed version are valid updates, regardless of the old target directory. If any obsolete link without a replacement is referenced, the update fails with all links unchanged; extracted files remain installed. After a successful preflight, links are updated and unused obsolete links are removed. Without `--update`, no obsolete links are removed.
 
 ```shell
 geneos includes install
@@ -2740,6 +2788,13 @@ The version view lists the current include links and available semantic-version 
 
 The Gateway view lists includes configured for each Gateway, ordered by priority. The `File` field contains only the include file's basename; nested group names do not change it. Gateway-local includes are omitted unless `--all` is set.
 
+With `--gateway`, optional instance names or shell-style glob patterns limit output to matching Gateways. Patterns support `*`, `?`, and character classes such as `[ab]`; quote them to prevent shell expansion. Multiple names or patterns are combined without duplicate rows. With no names, all Gateways are listed; patterns matching no Gateways produce no rows. Name filtering applies only to the Gateway view.
+
+```shell
+geneos includes list --gateway 'prod-*'
+geneos includes list --gateway gateway-a gateway-b
+```
+
 Use `--long` for version, permissions, and owner columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column output uses human-readable sizes, while machine-readable formats use byte counts.
 
 Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Empty fields are omitted, as is `owner` because owner data is not collected. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
@@ -2761,7 +2816,7 @@ Remote locations are queried with HTTP HEAD requests for modification time and s
 ## Usage
 
 ```text
-geneos includes list [flags]
+geneos includes list [NAMES...] [flags]
 ```
 
 ### Options
@@ -2795,6 +2850,10 @@ Update the top-level include symlinks to point to files in a versioned include d
 By default, the links are updated to the version embedded in the running `geneos` executable. Use `--version` to select another semantic version already present under `gateway/includes`. If the selected version directory is missing, the command returns an error; the current embedded version is extracted automatically when needed.
 
 Links that already point to the selected version are left unchanged. If a target path already exists with a different link or file, it is removed before creating the new symlink.
+
+Before changing any links, a preflight checks obsolete top-level symlinks using the same gateway setup loader as `list --gateway`, including nested include groups. Links with same-basename replacement files in the selected version are valid updates, regardless of their current target directory or link chain. If a gateway references an obsolete link with no replacement, the entire update fails without changing or removing any links. The error lists the affected links and gateway names; update those gateway setups to remove or replace the obsolete include references, then retry. Disabled and optional includes also protect obsolete links. Unreadable setups or unsafe link resolution also fail the preflight.
+
+After a successful preflight, replacement links are updated and unused obsolete links are removed. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
 
 Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
 ## Usage

@@ -2,12 +2,14 @@ package includes
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -64,14 +66,21 @@ func newTestGatewayHost(t *testing.T) *geneos.Host {
 
 type includeTestGateway struct {
 	geneos.Instance
-	conf *config.Config
-	home string
+	conf   *config.Config
+	home   string
+	host   *geneos.Host
+	loaded time.Time
 }
 
-func (g *includeTestGateway) Name() string           { return filepath.Base(g.home) }
-func (g *includeTestGateway) Home() string           { return g.home }
-func (g *includeTestGateway) Config() *config.Config { return g.conf }
-func (g *includeTestGateway) Load() error            { return nil }
+func (g *includeTestGateway) Name() string               { return filepath.Base(g.home) }
+func (g *includeTestGateway) Home() string               { return g.home }
+func (g *includeTestGateway) Config() *config.Config     { return g.conf }
+func (g *includeTestGateway) Host() *geneos.Host         { return g.host }
+func (g *includeTestGateway) Type() *geneos.Component    { return geneos.ParseComponent("gateway") }
+func (g *includeTestGateway) Loaded() time.Time          { return g.loaded }
+func (g *includeTestGateway) SetLoaded(loaded time.Time) { g.loaded = loaded }
+func (g *includeTestGateway) Log() *slog.Logger          { return slog.Default() }
+func (g *includeTestGateway) Load() error                { return nil }
 
 func writeTestGatewaySetup(t *testing.T, h *geneos.Host, setup string, names ...string) {
 	t.Helper()
@@ -94,7 +103,7 @@ func writeTestGatewaySetup(t *testing.T, h *geneos.Host, setup string, names ...
 		}
 		conf := config.New()
 		config.Set(conf, "setup", filename)
-		gateways[name] = &includeTestGateway{conf: conf, home: home}
+		gateways[name] = &includeTestGateway{conf: conf, home: home, host: h}
 	}
 	ct := geneos.ParseComponent("gateway")
 	previous := ct.New

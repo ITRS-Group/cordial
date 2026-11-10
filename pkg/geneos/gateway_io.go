@@ -10,21 +10,29 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/spf13/afero"
 	"golang.org/x/net/html/charset"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 type gatewayReadOptions struct {
+	host               host.Host
 	insecureSkipVerify bool
 	timeout            time.Duration
 }
 
 // GatewayReadOption configures ReadGateway.
 type GatewayReadOption func(*gatewayReadOptions)
+
+// WithGatewayReadHost selects the host used to open filesystem sources.
+func WithGatewayReadHost(h host.Host) GatewayReadOption {
+	return func(options *gatewayReadOptions) { options.host = h }
+}
 
 // WithGatewayInsecureSkipVerify disables TLS certificate verification for an
 // HTTPS source. Use it only when the server certificate cannot be validated
@@ -61,11 +69,14 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 	if source == "" {
 		return nil, errors.New("gateway source is empty")
 	}
-	readOptions := &gatewayReadOptions{}
+	readOptions := &gatewayReadOptions{host: host.Localhost}
 	for _, option := range options {
 		if option != nil {
 			option(readOptions)
 		}
+	}
+	if readOptions.host == nil {
+		return nil, errors.New("gateway read host is nil")
 	}
 
 	parsed, err := url.Parse(source)
@@ -120,12 +131,12 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 		if parsed.Path == "" {
 			return nil, errors.New("file URL has an empty path")
 		}
-		input, err = os.Open(filepath.FromSlash(parsed.Path))
+		input, err = readOptions.host.Open(filepath.FromSlash(parsed.Path))
 		if err != nil {
 			return nil, fmt.Errorf("open gateway XML %q: %w", source, err)
 		}
 	case "":
-		input, err = os.Open(source)
+		input, err = readOptions.host.Open(source)
 		if err != nil {
 			return nil, fmt.Errorf("open gateway XML %q: %w", source, err)
 		}
@@ -154,6 +165,7 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 const DefaultGatewayHistoryLimit = 10
 
 type gatewayWriteOptions struct {
+	host         host.Host
 	backup       bool
 	overwrite    bool
 	historyLimit int
@@ -161,6 +173,11 @@ type gatewayWriteOptions struct {
 
 // GatewayWriteOption configures WriteGateway.
 type GatewayWriteOption func(*gatewayWriteOptions)
+
+// WithGatewayWriteHost selects the host used for writes and history backups.
+func WithGatewayWriteHost(h host.Host) GatewayWriteOption {
+	return func(options *gatewayWriteOptions) { options.host = h }
+}
 
 // WithGatewayBackup enables numbered history backups when replacing a file.
 func WithGatewayBackup() GatewayWriteOption {
@@ -185,11 +202,14 @@ func WithGatewayHistoryLimit(limit int) GatewayWriteOption {
 }
 
 func evalGatewayWriteOptions(options ...GatewayWriteOption) (*gatewayWriteOptions, error) {
-	result := &gatewayWriteOptions{}
+	result := &gatewayWriteOptions{host: host.Localhost}
 	for _, option := range options {
 		if option != nil {
 			option(result)
 		}
+	}
+	if result.host == nil {
+		return nil, errors.New("gateway write host is nil")
 	}
 	if result.backup && result.overwrite {
 		return nil, errors.New("gateway write cannot request both backup and overwrite")
@@ -216,6 +236,7 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	if err != nil {
 		return "", err
 	}
+	h := writeOptions.host
 
 	data, err := xml.MarshalIndent(gateway, "", "  ")
 	if err != nil {
@@ -224,12 +245,12 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	data = append(data, '\n')
 
 	lockPath := destination + ".lck"
-	if err := os.Mkdir(lockPath, 0o700); err != nil {
+	if err := h.Mkdir(lockPath, 0o700); err != nil {
 		return "", fmt.Errorf("lock gateway destination %q: %w", destination, err)
 	}
-	defer os.Remove(lockPath)
+	defer h.Remove(lockPath)
 
-	info, err := os.Lstat(destination)
+	info, err := h.Lstat(destination)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return "", fmt.Errorf("stat gateway destination %q: %w", destination, err)
 	}
@@ -242,13 +263,13 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 		}
 	}
 
-	directory := filepath.Dir(destination)
-	temporary, err := os.CreateTemp(directory, "."+filepath.Base(destination)+".tmp-*")
+	directory := h.Dir(destination)
+	temporary, err := afero.TempFile(h.GetFs(), directory, "."+h.Base(destination)+".tmp-")
 	if err != nil {
 		return "", fmt.Errorf("create temporary gateway file in %q: %w", directory, err)
 	}
 	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
+	defer h.Remove(temporaryPath)
 
 	mode := fs.FileMode(0o600)
 	if info != nil {
@@ -256,13 +277,16 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	}
 	writeErr := func() (err error) {
 		defer func() { err = errors.Join(err, temporary.Close()) }()
-		if err := temporary.Chmod(mode); err != nil {
+		if err := h.GetFs().Chmod(temporaryPath, mode); err != nil {
 			return err
 		}
 		if _, err := temporary.Write(data); err != nil {
 			return err
 		}
-		return temporary.Sync()
+		if h.IsLocalhost() {
+			return temporary.Sync()
+		}
+		return nil
 	}()
 	if writeErr != nil {
 		return "", fmt.Errorf("write temporary gateway file: %w", writeErr)
@@ -273,18 +297,18 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 		if historyLimit == 0 {
 			historyLimit = DefaultGatewayHistoryLimit
 		}
-		if err := rotateGatewayHistory(destination, historyLimit); err != nil {
+		if err := rotateGatewayHistory(h, destination, historyLimit); err != nil {
 			return "", err
 		}
 		backupPath = gatewayHistoryPath(destination, 1)
-		if err := os.Rename(destination, backupPath); err != nil {
+		if err := h.Rename(destination, backupPath); err != nil {
 			return "", fmt.Errorf("backup existing gateway file to %q: %w", backupPath, err)
 		}
 	}
 
-	if err := os.Rename(temporaryPath, destination); err != nil {
+	if err := h.Rename(temporaryPath, destination); err != nil {
 		if backupPath != "" {
-			if restoreErr := os.Rename(backupPath, destination); restoreErr != nil {
+			if restoreErr := h.Rename(backupPath, destination); restoreErr != nil {
 				return backupPath, errors.Join(fmt.Errorf("install gateway file: %w", err), fmt.Errorf("restore backup %q: %w", backupPath, restoreErr))
 			}
 		}
@@ -293,20 +317,20 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	return backupPath, nil
 }
 
-func rotateGatewayHistory(destination string, limit int) error {
+func rotateGatewayHistory(h host.Host, destination string, limit int) error {
 	oldest := gatewayHistoryPath(destination, limit)
-	if err := os.Remove(oldest); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	if err := h.Remove(oldest); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("remove oldest gateway history %q: %w", oldest, err)
 	}
 	for sequence := limit - 1; sequence >= 1; sequence-- {
 		from := gatewayHistoryPath(destination, sequence)
-		if _, err := os.Lstat(from); errors.Is(err, fs.ErrNotExist) {
+		if _, err := h.Lstat(from); errors.Is(err, fs.ErrNotExist) {
 			continue
 		} else if err != nil {
 			return fmt.Errorf("stat gateway history %q: %w", from, err)
 		}
 		to := gatewayHistoryPath(destination, sequence+1)
-		if err := os.Rename(from, to); err != nil {
+		if err := h.Rename(from, to); err != nil {
 			return fmt.Errorf("shift gateway history from %q to %q: %w", from, to, err)
 		}
 	}

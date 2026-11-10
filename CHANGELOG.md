@@ -9,6 +9,8 @@
 
 * `tools/geneos`
 
+  * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
+
   * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
 
   * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.

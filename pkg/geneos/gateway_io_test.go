@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -12,9 +13,75 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/spf13/afero"
+
+	"github.com/itrs-group/cordial/pkg/host"
 )
 
 const gatewayTestXML = `<gateway compatibility="1"><probes/></gateway>`
+
+type gatewayIOTestHost struct {
+	host.Host
+	filesystem afero.Fs
+	failWrite  string
+}
+
+func (h *gatewayIOTestHost) GetFs() afero.Fs   { return h.filesystem }
+func (h *gatewayIOTestHost) IsLocalhost() bool { return false }
+func (h *gatewayIOTestHost) Open(name string) (io.ReadSeekCloser, error) {
+	return h.filesystem.Open(name)
+}
+func (h *gatewayIOTestHost) Lstat(name string) (fs.FileInfo, error) { return h.filesystem.Stat(name) }
+func (h *gatewayIOTestHost) Mkdir(name string, mode os.FileMode) error {
+	return h.filesystem.Mkdir(name, mode)
+}
+func (h *gatewayIOTestHost) Remove(name string) error { return h.filesystem.Remove(name) }
+func (h *gatewayIOTestHost) Rename(from, to string) error {
+	if to == h.failWrite && strings.Contains(filepath.Base(from), ".tmp-") {
+		return fs.ErrPermission
+	}
+	return h.filesystem.Rename(from, to)
+}
+
+func TestGatewayIOUsesSuppliedHost(t *testing.T) {
+	h := &gatewayIOTestHost{Host: host.NewLocal(), filesystem: afero.NewMemMapFs()}
+	filename := "/gateway/setup.xml"
+	if err := h.filesystem.MkdirAll("/gateway", 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := afero.WriteFile(h.filesystem, filename, []byte(gatewayTestXML), 0640); err != nil {
+		t.Fatal(err)
+	}
+	gateway, err := ReadGateway(filename, WithGatewayReadHost(h))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gateway.Compatibility = 2
+	backup, err := WriteGateway(filename, gateway, WithGatewayWriteHost(h), WithGatewayBackup())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if original, err := afero.ReadFile(h.filesystem, backup); err != nil || string(original) != gatewayTestXML {
+		t.Fatalf("host backup = %q, %v; want original XML", original, err)
+	}
+	updated, err := ReadGateway(filename, WithGatewayReadHost(h))
+	if err != nil || updated.Compatibility != 2 {
+		t.Fatalf("updated host setup = %#v, %v", updated, err)
+	}
+	if info, err := h.filesystem.Stat(filename); err != nil || info.Mode().Perm() != 0640 {
+		t.Fatalf("host setup permissions changed: %v, %v", info, err)
+	}
+	h.failWrite = filename
+	updated.Compatibility = 3
+	if _, err := WriteGateway(filename, updated, WithGatewayWriteHost(h), WithGatewayBackup()); err == nil {
+		t.Fatal("host installation failure was ignored")
+	}
+	restored, err := ReadGateway(filename, WithGatewayReadHost(h))
+	if err != nil || restored.Compatibility != 2 {
+		t.Fatalf("failed host write did not restore original: %#v, %v", restored, err)
+	}
+}
 
 func TestReadGatewayFromFileAndURL(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "gateway setup.xml")

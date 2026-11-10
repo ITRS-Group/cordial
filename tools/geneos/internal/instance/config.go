@@ -77,6 +77,7 @@ func Read(i geneos.Instance) (err error) {
 	// have we loaded a file with the same modtime before?
 	if !i.Loaded().IsZero() {
 		conf := config.Path(i.Type().Name,
+			config.Format(ConfigFileType()),
 			config.Host(h),
 			config.FromDir(home),
 			config.UseDefaults(false),
@@ -93,6 +94,7 @@ func Read(i geneos.Instance) (err error) {
 	aliases := i.Type().LegacyParameters
 
 	cf, err := config.Read(i.Type().Name,
+		config.Format(ConfigFileType()),
 		config.Host(h),
 		config.FromDir(home),
 		config.UseDefaults(false),
@@ -104,11 +106,15 @@ func Read(i geneos.Instance) (err error) {
 	config.Set(i.Config(), "home", home)
 
 	used := config.Path(i.Type().Name,
+		config.Format(ConfigFileType()),
 		config.Host(h),
 		config.FromDir(home),
 		config.UseDefaults(false),
 	)
 
+	if err == nil {
+		i.Config().SetConfigType(cf.ConfigType())
+	}
 	if err != nil {
 		if err = ReadRCConfig(h, cf, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
 			return
@@ -274,8 +280,13 @@ func write(i geneos.Instance) (err error) {
 	}
 
 	lpKeys := slices.Collect(maps.Keys(i.Type().LegacyParameters))
+	format := i.Config().ConfigType()
+	if format == "" {
+		format = ConfigFileType()
+	}
 
 	if err = i.Config().Write(i.Type().Name,
+		config.Format(format),
 		config.Host(i.Host()),
 		config.SearchDirs(Home(i)),
 		config.AppName(i.Name()),
@@ -731,6 +742,7 @@ type configOptions struct {
 	noRebuild bool
 	noReload  bool
 }
+
 // ConfigOption TODO: Describe its purpose and intended use.
 type ConfigOption func(*configOptions)
 

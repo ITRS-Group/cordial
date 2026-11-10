@@ -10,7 +10,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/itrs-group/cordial/pkg/config"
 	genecmd "github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/spf13/cobra"
 )
@@ -39,6 +41,9 @@ func TestIncludesListFormatValidation(t *testing.T) {
 }
 
 func TestIncludesListGatewayPatterns(t *testing.T) {
+	previousAll := geneos.ALL
+	geneos.ALL = geneos.NewHost(geneos.ALLHOSTS)
+	t.Cleanup(func() { geneos.ALL = previousAll })
 	oldGateway, oldVersion, oldInclude := includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude
 	oldFormat, oldAll := includesListCmdFormat, includesListCmdAll
 	oldHostname := genecmd.Hostname
@@ -138,6 +143,48 @@ func TestIncludesSubcommandsRejectUnexpectedArguments(t *testing.T) {
 				t.Fatalf("%s accepted an unexpected positional argument", command.Name())
 			}
 		})
+	}
+}
+
+type includeTestNonGateway struct {
+	*includeTestGateway
+	component  *geneos.Component
+	configRead bool
+}
+
+func (i *includeTestNonGateway) Type() *geneos.Component { return i.component }
+func (i *includeTestNonGateway) Config() *config.Config {
+	i.configRead = true
+	return i.includeTestGateway.Config()
+}
+
+func TestIncludesSkipNonGateways(t *testing.T) {
+	h := newTestGatewayHost(t)
+	writeTestGatewaySetup(t, h, `<gateway/>`)
+	component := geneos.ParseComponent("netprobe")
+	if component == nil {
+		component = &geneos.Component{Name: "netprobe"}
+		component.Register(nil)
+	}
+	home := h.PathTo(component, "netprobes", "probe")
+	if err := os.MkdirAll(home, 0755); err != nil {
+		t.Fatal(err)
+	}
+	other := &includeTestNonGateway{
+		includeTestGateway: &includeTestGateway{conf: config.New(), home: home, host: h},
+		component:          component,
+	}
+	previous := component.New
+	component.New = func(string) geneos.Instance { return other }
+	t.Cleanup(func() { component.New = previous })
+	if gateways, _ := getGatewayIncludes(h, nil, "probe"); len(gateways) != 0 {
+		t.Fatal("list included a non-gateway instance")
+	}
+	if err := Fix(h, false, "probe"); err != nil {
+		t.Fatalf("fix attempted to process a non-gateway: %v", err)
+	}
+	if other.configRead {
+		t.Fatal("includes inspected a selected non-gateway's configuration")
 	}
 }
 

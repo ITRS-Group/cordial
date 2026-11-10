@@ -18,6 +18,7 @@ limitations under the License.
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -133,6 +134,9 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 	}
 
 	nv.setFs(h.GetFs())
+	if info, statErr := h.Stat(p); statErr == nil {
+		nv.config.SetConfigPermissions(info.Mode().Perm())
+	}
 
 	// write to path with process ID and original extension appended and
 	// then try to atomically rename
@@ -143,7 +147,7 @@ func (c *Config) Write(module string, options ...FileOption) (err error) {
 
 	// if write is OK, rename the temp file
 	if err = h.Rename(tmpFile, p); err != nil { // try to remove tmp file is rename fails
-		err = h.Remove(tmpFile)
+		err = errors.Join(err, h.Remove(tmpFile))
 	}
 
 	return
