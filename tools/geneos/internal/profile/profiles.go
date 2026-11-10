@@ -123,26 +123,25 @@ func Initialise(appName string) (written bool) {
 // ReadConfig reads the profiles configuration from the specified file.
 // Also sets the global Profiles variable.
 func ReadConfig(profilesFile string) (pf *config.Config, err error) {
-	pf, err = config.Read("profiles",
+	options := []config.FileOption{
 		config.AppName(cordial.ExecutableName()),
 		config.FilePath(profilesFile),
 		config.Format("yaml"),
 		config.SkipWorkingDir(),
 		config.UseDefaults(false),
 		config.WithDefaults(profilesDefault, "yaml"),
-	)
-	if err != nil {
-		log.Error("error reading configuration", slog.Any("error", err))
+	}
+	if profilesFile != "" {
+		options = append(options, config.MustExist())
 	}
 
-	configPath := config.Path("profiles",
-		config.AppName(cordial.ExecutableName()),
-		config.FilePath(profilesFile),
-		config.Format("yaml"),
-		config.SkipWorkingDir(),
-		config.UseDefaults(false),
-		config.WithDefaults(profilesDefault, "yaml"),
-	)
+	pf, err = config.Read("profiles", options...)
+	Profiles = pf
+	if err != nil {
+		return pf, err
+	}
+
+	configPath := config.Path("profiles", options...)
 
 	if configPath != "" {
 		log.Debug("profiles loaded", slog.String("from", configPath))
@@ -150,7 +149,6 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 		log.Debug("no profiles file found, using defaults")
 	}
 
-	Profiles = pf
 	return
 }
 

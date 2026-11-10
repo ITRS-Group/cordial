@@ -19,4 +19,10 @@ func TestCommandFlagNormalization(t *testing.T) {
 			}
 		})
 	}
+	if Cmd.PersistentFlags().Lookup("profile") == nil {
+		t.Error("global --profile alias is not registered")
+	}
+	if Cmd.PersistentFlags().Lookup("profiles") == nil {
+		t.Error("global --profiles flag is not registered")
+	}
 }

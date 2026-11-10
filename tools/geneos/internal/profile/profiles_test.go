@@ -66,6 +66,13 @@ func newProfileTestRoot(t *testing.T) string {
 	return root
 }
 
+func TestReadConfigMissingExplicitFile(t *testing.T) {
+	filename := filepath.Join(t.TempDir(), "missing-profiles.yaml")
+	if _, err := profile.ReadConfig(filename); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("ReadConfig(%q) error = %v, want file-not-found", filename, err)
+	}
+}
+
 func TestApplyInstancePreservesProfileParameters(t *testing.T) {
 	newProfileTestRoot(t)
 	ct := geneos.ParseComponent("licd")

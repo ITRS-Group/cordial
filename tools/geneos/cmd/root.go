@@ -47,6 +47,7 @@ const (
 var (
 	cfgFile      string
 	profilesFile string
+	profilesErr  error
 	debug        bool
 	quiet        bool
 	log          = logger.Logger
@@ -102,10 +103,7 @@ func init() {
 			log.Error("failed to initialize global config", slog.Any("error", err))
 		}
 
-		Profiles, err = profile.ReadConfig(profilesFile)
-		if err != nil {
-			log.Error("failed to initialize profiles config", slog.Any("error", err))
-		}
+		Profiles, profilesErr = profile.ReadConfig(profilesFile)
 
 		// if we are initialising and environment via init, deploy etc.
 		// then this is not run, do it in those separately
@@ -147,6 +145,8 @@ func init() {
 			config.SkipUserConfDir(),
 			config.SkipWorkingDir())+
 		")")
+	Cmd.PersistentFlags().StringVar(&profilesFile, "profile", "", "profiles configuration")
+	Cmd.PersistentFlags().MarkHidden("profile")
 
 	Cmd.PersistentFlags().BoolVar(&AllowRoot, "allow-root", false, "allow running as root (not recommended)")
 	Cmd.PersistentFlags().StringVarP(&Hostname, "host", "H", "all", "Limit actions to `HOSTNAME` (not for commands given instance@host parameters)")
@@ -257,6 +257,10 @@ geneos restart
 	DisableFlagsInUseLine: true,
 	// SilenceErrors:      true, - this blocks all child errors too, don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		if profilesErr != nil {
+			return fmt.Errorf("failed to initialize profiles config: %w", profilesErr)
+		}
+
 		ctx := context.WithValue(context.Background(), CmdKey, &CmdValType{})
 		command.SetContext(ctx)
 
