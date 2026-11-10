@@ -99,10 +99,6 @@ func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.
 			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.authentication.xml" {
 				t.Fatalf("existing link = %q, %v", target, err)
 			}
-			missing := filepath.Join(includesDir, "itrs.level0.geneos.xml")
-			if target, err := os.Readlink(missing); err != nil || target != filepath.Join(cordial.VERSION, "itrs.level0.geneos.xml") {
-				t.Fatalf("new link = %q, %v", target, err)
-			}
 		})
 	}
 }

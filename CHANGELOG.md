@@ -13,7 +13,7 @@
 
   * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.
 
-  * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. With no arguments, all unlinked versions are removed. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. A link from the parent includes directory to even one file protects the entire version directory from deletion; manually created links from other locations are not considered.
+  * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
 
   * Release distributions now include a separate `geneos-includes.tar.gz` archive containing the current include files and configuration templates, for use with `geneos includes install`.
 
@@ -22,6 +22,10 @@
 ## Version v1.31.0 Changes
 
 * `tools/geneos`
+
+  * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
+
+  * `geneos includes list --gateway` now accepts instance names and glob patterns to show includes for matching gateways only.
 
   * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types.
 

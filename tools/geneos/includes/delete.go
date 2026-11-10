@@ -18,7 +18,7 @@ import (
 //go:embed _docs/delete.md
 var includeDeleteCmdDescription string
 
-var ErrIncludeVersionLinked = errors.New("include version is referenced by a parent-directory symlink")
+var ErrIncludeVersionLinked = errors.New("include version is referenced by a gateway")
 
 func init() {
 	includesCmd.AddCommand(includesDeleteCmd)
@@ -34,7 +34,7 @@ var includesDeleteCmd = &cobra.Command{
 		}
 		return nil
 	},
-	Short:        "Delete unlinked include versions",
+	Short:        "Delete unused include versions and links",
 	Long:         includeDeleteCmdDescription,
 	SilenceUsage: true,
 	Annotations: map[string]string{
@@ -121,15 +121,15 @@ func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
 		if !info.IsDir() {
 			continue
 		}
-		link, err := includeVersionLink(h, directory)
+		_, link, err := unusedIncludeVersionLinks(h, directory, true)
 		if err != nil {
 			return err
 		}
 		if link != "" {
 			if allUnlinked {
-				fmt.Println("Skipping linked include version", entry.Name(), "referenced by", link)
+				fmt.Println("Skipping referenced include version", entry.Name(), "referenced by", link)
 			} else {
-				blocked = append(blocked, fmt.Errorf("%w: cannot delete version %q, linked from %q", ErrIncludeVersionLinked, entry.Name(), link))
+				blocked = append(blocked, fmt.Errorf("%w: cannot delete version %q, referenced by %s", ErrIncludeVersionLinked, entry.Name(), link))
 			}
 			continue
 		}
@@ -146,16 +146,19 @@ func deleteIncludeVersionPattern(h *geneos.Host, pattern string) error {
 		if !info.IsDir() {
 			return fmt.Errorf("include version path %q is no longer a directory", directory)
 		}
-		link, err := includeVersionLink(h, directory)
+		links, link, err := unusedIncludeVersionLinks(h, directory, true)
 		if err != nil {
 			return err
 		}
 		if link != "" {
 			if allUnlinked {
-				fmt.Println("Skipping linked include version", h.Base(directory), "referenced by", link)
+				fmt.Println("Skipping referenced include version", h.Base(directory), "referenced by", link)
 				continue
 			}
-			return fmt.Errorf("%w: cannot delete version %q, linked from %q", ErrIncludeVersionLinked, h.Base(directory), link)
+			return fmt.Errorf("%w: cannot delete version %q, referenced by %s", ErrIncludeVersionLinked, h.Base(directory), link)
+		}
+		if err := removeIncludeLinks(h, links); err != nil {
+			return err
 		}
 		if err := h.RemoveAll(directory); err != nil {
 			return fmt.Errorf("failed to delete include version %q: %w", h.Base(directory), err)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"testing/fstest"
@@ -59,4 +60,53 @@ func newTestGatewayHost(t *testing.T) *geneos.Host {
 	h := &geneos.Host{Host: host.NewLocal(), Config: config.New()}
 	config.Set(h.Config, cordial.ExecutableName(), t.TempDir())
 	return h
+}
+
+type includeTestGateway struct {
+	geneos.Instance
+	conf *config.Config
+	home string
+}
+
+func (g *includeTestGateway) Name() string           { return filepath.Base(g.home) }
+func (g *includeTestGateway) Home() string           { return g.home }
+func (g *includeTestGateway) Config() *config.Config { return g.conf }
+func (g *includeTestGateway) Load() error            { return nil }
+
+func writeTestGatewaySetup(t *testing.T, h *geneos.Host, setup string, names ...string) {
+	t.Helper()
+	previousHost := geneos.LOCAL
+	geneos.LOCAL = h
+	config.Set(h.Config, "name", "localhost")
+	t.Cleanup(func() { geneos.LOCAL = previousHost })
+	if len(names) == 0 {
+		names = []string{"test"}
+	}
+	gateways := make(map[string]*includeTestGateway)
+	for _, name := range names {
+		home := h.PathTo("gateway", "gateways", name)
+		if err := os.MkdirAll(home, 0755); err != nil {
+			t.Fatal(err)
+		}
+		filename := filepath.Join(home, "gateway.setup.xml")
+		if err := os.WriteFile(filename, []byte(setup), 0644); err != nil {
+			t.Fatal(err)
+		}
+		conf := config.New()
+		config.Set(conf, "setup", filename)
+		gateways[name] = &includeTestGateway{conf: conf, home: home}
+	}
+	ct := geneos.ParseComponent("gateway")
+	previous := ct.New
+	t.Cleanup(func() { ct.New = previous })
+	ct.New = func(name string) geneos.Instance {
+		local, _, _ := strings.Cut(name, "@")
+		if gateway, ok := gateways[local]; ok {
+			return gateway
+		}
+		if previous != nil {
+			return previous(name)
+		}
+		return nil
+	}
 }

@@ -6,7 +6,7 @@ A number of ready-made includes are available to help streamline common tasks an
 
 | Command | Description |
 | --- | --- |
-| `geneos includes delete / remove` | Delete unlinked versions, optionally matching a version pattern |
+| `geneos includes delete / remove` | Delete unused versions and their links, optionally matching a version pattern |
 | `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
 | `geneos includes list` | List available and configured include files |
 | `geneos includes update` | Update links to a versioned include set |

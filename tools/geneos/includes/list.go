@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -63,7 +64,7 @@ func init() {
 }
 
 var includeListCmd = &cobra.Command{
-	Use:          "list",
+	Use:          "list [NAMES...]",
 	Aliases:      []string{"ls"},
 	Short:        "List all available include files",
 	Long:         includesListCmdDescription,
@@ -78,7 +79,8 @@ var includeListCmd = &cobra.Command{
 		geneos.CmdAuditActions:         "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) error {
-		if _, _, _, err := genecmd.FetchArgs(command); err != nil {
+		_, names, _, err := genecmd.FetchArgs(command)
+		if err != nil {
 			return err
 		}
 		if err := validateIncludesListFormat(includesListCmdFormat); err != nil {
@@ -88,7 +90,7 @@ var includeListCmd = &cobra.Command{
 			includesListCmdByInclude = true
 		}
 
-		return listIncludes(geneos.GetHost(genecmd.Hostname))
+		return listIncludes(geneos.GetHost(genecmd.Hostname), names...)
 	},
 }
 
@@ -138,7 +140,7 @@ var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Versi
 // supports listing by gateway, by version, or by shared include files,
 // and can optionally exclude remote include files if the --no-remote
 // flag is set.
-func listIncludes(h *geneos.Host) (err error) {
+func listIncludes(h *geneos.Host, names ...string) (err error) {
 	root := h.PathTo("gateway")
 	longFormat := includeListLongFormat()
 
@@ -294,7 +296,11 @@ func listIncludes(h *geneos.Host) (err error) {
 	if err != nil {
 		return err
 	}
-	gatewayIncludes, includesByPath := getGatewayIncludes(h, versionedIncludes)
+	var gatewayNames []string
+	if includesListCmdByGateway {
+		gatewayNames = names
+	}
+	gatewayIncludes, includesByPath := getGatewayIncludes(h, versionedIncludes, gatewayNames...)
 
 	// update includesByPath with shared and versioned includes
 	sharedPaths := make(map[string]struct{}, len(sharedIncludes))
@@ -798,11 +804,27 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 // names and the values are slices of gatewayInclude structures
 // containing detailed information about each include, such as its
 // location, version, and file metadata.
-func getGatewayIncludes(h *geneos.Host, versioned []includeFile) (includesByGateway map[string][]gatewayInclude, includesByPath map[string]includeFile) {
+func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string) (includesByGateway map[string][]gatewayInclude, includesByPath map[string]includeFile) {
 	includesByGateway = make(map[string][]gatewayInclude)
 	includesByPath = make(map[string]includeFile)
 
 	for _, gw := range instance.Instances(h, geneos.ParseComponent("gateway")) {
+		if len(names) > 0 && !slices.ContainsFunc(names, func(pattern string) bool {
+			selectedHost, selectedType, name := instance.ParseName(pattern, h)
+			if selectedType != nil && selectedType != geneos.ParseComponent("gateway") {
+				return false
+			}
+			if selectedHost == nil || selectedHost != geneos.ALL && selectedHost.String() != h.String() {
+				return false
+			}
+			if name == "all" {
+				name = "*"
+			}
+			matched, _ := path.Match(name, gw.Name())
+			return matched
+		}) {
+			continue
+		}
 		var remote bool
 		var local bool
 		var fullpath string

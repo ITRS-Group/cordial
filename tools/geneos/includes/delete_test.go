@@ -52,6 +52,7 @@ func TestDeleteProtectsEntireSelectedVersion(t *testing.T) {
 			if err := os.Symlink(target, link); err != nil {
 				t.Fatal(err)
 			}
+			writeTestGatewaySetup(t, h, `<gateway><includes><include><location>`+link+`</location></include></includes></gateway>`)
 			for _, pattern := range []string{"v1.2.3", "v1.*", "*"} {
 				err := Delete(h, pattern)
 				if !errors.Is(err, ErrIncludeVersionLinked) {
@@ -88,6 +89,7 @@ func TestDeleteDefaultRemovesOnlyUnlinkedVersions(t *testing.T) {
 	if err := os.Symlink("v1.2.3/linked.xml", filepath.Join(parent, "current.xml")); err != nil {
 		t.Fatal(err)
 	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>../../includes/current.xml</location></include></includes></gateway>`)
 	if err := os.Symlink(filepath.Join(parent, "v1.0.0/linked.xml"), filepath.Join(t.TempDir(), "manual.xml")); err != nil {
 		t.Fatal(err)
 	}
@@ -173,6 +175,30 @@ func TestDeleteRejectsInvalidPatternsAndUnsafeLinks(t *testing.T) {
 	})
 }
 
+func TestDeleteRemovesUnreferencedVersionLinks(t *testing.T) {
+	h := newTestGatewayHost(t)
+	directory := h.PathTo("gateway", "includes", "v1.2.3")
+	if err := os.MkdirAll(directory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"first.xml", "second.xml"} {
+		if err := os.WriteFile(filepath.Join(directory, name), nil, 0444); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(filepath.Join("v1.2.3", name), filepath.Join(filepath.Dir(directory), name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Delete(h, "v1.2.3"); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"v1.2.3", "first.xml", "second.xml"} {
+		if _, err := os.Lstat(filepath.Join(filepath.Dir(directory), name)); !os.IsNotExist(err) {
+			t.Fatalf("unreferenced version path %q remains: %v", name, err)
+		}
+	}
+}
+
 func TestDeleteMissingIncludesDirectory(t *testing.T) {
 	if err := Delete(newTestGatewayHost(t), ""); err != nil {
 		t.Fatal(err)
@@ -224,6 +250,7 @@ func TestDeleteWorksThroughPatterns(t *testing.T) {
 	if err := os.Symlink("v1.2.3/linked.xml", link); err != nil {
 		t.Fatal(err)
 	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>`+link+`</location></include></includes></gateway>`)
 	err := Delete(h, "v1.*", "[", "v2.*", "v2.0.0", "v3.0.0")
 	if !errors.Is(err, ErrIncludeVersionLinked) || !strings.Contains(err.Error(), link) || !strings.Contains(err.Error(), "invalid include version pattern") {
 		t.Fatalf("Delete() error = %v; want linked and invalid pattern errors", err)

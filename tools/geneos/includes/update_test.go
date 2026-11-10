@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,5 +178,209 @@ func TestUpdateForceReplacesExistingLink(t *testing.T) {
 	}
 	if target != filepath.Join(version, "managed.xml") {
 		t.Fatalf("link target = %q, want %q", target, filepath.Join(version, "managed.xml"))
+	}
+}
+
+func TestIncludeVersionLinkCleanup(t *testing.T) {
+	for _, operation := range []string{"update", "install-update", "install-preserve", "delete"} {
+		for _, reference := range []string{"unused", "relative-group", "absolute", "chain", "direct", "updated", "updated-chain", "direct-updated", "invalid-setup"} {
+			t.Run(operation+"/"+reference, func(t *testing.T) {
+				h := newTestGatewayHost(t)
+				parent := h.PathTo("gateway", "includes")
+				oldDirectory := filepath.Join(parent, "v1.0.0")
+				newDirectory := filepath.Join(parent, "v2.0.0")
+				for _, directory := range []string{oldDirectory, newDirectory} {
+					if err := os.MkdirAll(directory, 0755); err != nil {
+						t.Fatal(err)
+					}
+				}
+				for _, name := range []string{"aaa-unused.xml", "zzz-used.xml", "itrs.managed.xml"} {
+					if err := os.WriteFile(filepath.Join(oldDirectory, name), nil, 0444); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Symlink(filepath.Join("v1.0.0", name), filepath.Join(parent, name)); err != nil {
+						t.Fatal(err)
+					}
+				}
+				if err := os.WriteFile(filepath.Join(newDirectory, "itrs.managed.xml"), nil, 0444); err != nil {
+					t.Fatal(err)
+				}
+				setup := `<gateway><includes/></gateway>`
+				switch reference {
+				case "relative-group":
+					setup = `<gateway><includes><includeGroup name="outer"><includeGroup name="inner" disabled="true"><include disabled="true"><required>false</required><location>../../includes/zzz-used.xml</location></include></includeGroup></includeGroup></includes></gateway>`
+				case "absolute":
+					setup = `<gateway><includes><include><location>` + filepath.Join(parent, "zzz-used.xml") + `</location></include></includes></gateway>`
+				case "chain":
+					alias := filepath.Join(t.TempDir(), "alias.xml")
+					if err := os.Symlink(filepath.Join(parent, "zzz-used.xml"), alias); err != nil {
+						t.Fatal(err)
+					}
+					setup = `<gateway><includes><include><location>` + alias + `</location></include></includes></gateway>`
+				case "direct":
+					setup = `<gateway><includes><include><location>` + filepath.Join(oldDirectory, "zzz-used.xml") + `</location></include></includes></gateway>`
+				case "updated":
+					setup = `<gateway><includes><include><location>` + filepath.Join(parent, "itrs.managed.xml") + `</location></include></includes></gateway>`
+				case "updated-chain":
+					link := filepath.Join(parent, "itrs.managed.xml")
+					if err := os.Remove(link); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Symlink("zzz-used.xml", link); err != nil {
+						t.Fatal(err)
+					}
+					setup = `<gateway><includes><include><location>` + link + `</location></include></includes></gateway>`
+				case "direct-updated":
+					setup = `<gateway><includes><include><location>` + filepath.Join(oldDirectory, "itrs.managed.xml") + `</location></include></includes></gateway>`
+				case "invalid-setup":
+					setup = `<gateway>`
+				}
+				writeTestGatewaySetup(t, h, setup)
+				var err error
+				switch operation {
+				case "update":
+					err = Update(h, "v2.0.0", true)
+				case "install-update", "install-preserve":
+					archive := writeTestIncludeArchive(t, includeArchiveEntry{name: "v2.0.0/itrs.managed.xml", contents: "include"})
+					err = Install(h, archive, true, operation == "install-update")
+				case "delete":
+					err = Delete(h, "v1.0.0")
+				}
+				obsoleteReferenced := reference == "relative-group" || reference == "absolute" || reference == "chain"
+				wantError := operation != "install-preserve" && (reference == "invalid-setup" || obsoleteReferenced || operation == "delete" && reference != "unused")
+				if (err != nil) != wantError {
+					t.Fatalf("cleanup error = %v; want error %v", err, wantError)
+				}
+				if operation == "delete" && reference != "unused" && reference != "invalid-setup" && !errors.Is(err, ErrIncludeVersionLinked) {
+					t.Fatalf("delete error = %v; want referenced-version error", err)
+				}
+				if operation == "update" || operation == "install-update" {
+					target, err := os.Readlink(filepath.Join(parent, "itrs.managed.xml"))
+					wantVersion := "v2.0.0"
+					if wantError {
+						wantVersion = "v1.0.0"
+					}
+					if err != nil || target != filepath.Join(wantVersion, "itrs.managed.xml") {
+						t.Fatalf("replacement link = %q, %v; want version %s", target, err, wantVersion)
+					}
+				}
+				removed := operation != "install-preserve" && (reference == "unused" || operation != "delete" && (reference == "direct" || reference == "updated" || reference == "updated-chain" || reference == "direct-updated"))
+				for _, name := range []string{"aaa-unused.xml", "zzz-used.xml"} {
+					target, err := os.Readlink(filepath.Join(parent, name))
+					if removed {
+						if !os.IsNotExist(err) {
+							t.Fatalf("unused link %q remains: %v", name, err)
+						}
+					} else if err != nil || target != filepath.Join("v1.0.0", name) {
+						t.Fatalf("protected version lost link %q: target %q, error %v", name, target, err)
+					}
+				}
+				if operation != "delete" || !removed {
+					if _, err := os.Stat(oldDirectory); err != nil {
+						t.Fatalf("version directory should remain: %v", err)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestUpdatePreflightChecksAllVersions(t *testing.T) {
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway", "includes")
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		t.Fatal(err)
+	}
+	originalTargets := map[string]string{
+		"aaa-unused.xml":   filepath.Join("v0.5.0", "aaa-unused.xml"),
+		"zzz-used.xml":     filepath.Join("v1.0.0", "zzz-used.xml"),
+		"itrs.managed.xml": filepath.Join(t.TempDir(), "itrs.managed.xml"),
+	}
+	for name, target := range originalTargets {
+		filename := target
+		if !filepath.IsAbs(filename) {
+			filename = filepath.Join(parent, target)
+		}
+		if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filename, nil, 0444); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink(target, filepath.Join(parent, name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	newDirectory := filepath.Join(parent, "v2.0.0")
+	if err := os.MkdirAll(newDirectory, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"itrs.managed.xml", "itrs.new.xml"} {
+		if err := os.WriteFile(filepath.Join(newDirectory, name), nil, 0444); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>../../includes/itrs.managed.xml</location></include><include><location>../../includes/zzz-used.xml</location></include></includes></gateway>`)
+	if err := Update(h, "v2.0.0", true); !errors.Is(err, ErrIncludeVersionLinked) {
+		t.Fatalf("Update() error = %v; want referenced obsolete link error", err)
+	} else {
+		for _, message := range []string{"in use by gateway test", "update the gateway setups", "no include links were changed"} {
+			if !strings.Contains(err.Error(), message) {
+				t.Errorf("Update() error = %v; missing guidance %q", err, message)
+			}
+		}
+	}
+	for name, want := range originalTargets {
+		if target, err := os.Readlink(filepath.Join(parent, name)); err != nil || target != want {
+			t.Fatalf("blocked preflight changed %q: target %q, error %v; want %q", name, target, err, want)
+		}
+	}
+	if _, err := os.Lstat(filepath.Join(parent, "itrs.new.xml")); !os.IsNotExist(err) {
+		t.Fatalf("blocked preflight created a new link: %v", err)
+	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>../../includes/itrs.managed.xml</location></include></includes></gateway>`)
+	if err := Update(h, "v2.0.0", true); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"itrs.managed.xml", "itrs.new.xml"} {
+		if target, err := os.Readlink(filepath.Join(parent, name)); err != nil || target != filepath.Join("v2.0.0", name) {
+			t.Fatalf("updated link %q = %q, %v; want selected version", name, target, err)
+		}
+	}
+	for _, name := range []string{"aaa-unused.xml", "zzz-used.xml"} {
+		if _, err := os.Lstat(filepath.Join(parent, name)); !os.IsNotExist(err) {
+			t.Fatalf("obsolete link %q remains after successful preflight: %v", name, err)
+		}
+	}
+}
+
+func TestUpdatePreflightListsAllGateways(t *testing.T) {
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway", "includes")
+	for _, version := range []string{"v1.0.0", "v2.0.0"} {
+		if err := os.MkdirAll(filepath.Join(parent, version), 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := filepath.Join(parent, "obsolete.xml")
+	if err := os.Symlink(filepath.Join("v1.0.0", "obsolete.xml"), link); err != nil {
+		t.Fatal(err)
+	}
+	setup := `<gateway><includes><include><location>../../includes/obsolete.xml</location></include><includeGroup name="duplicate"><include><location>../../includes/obsolete.xml</location></include></includeGroup></includes></gateway>`
+	writeTestGatewaySetup(t, h, setup, "C", "A", "B")
+	err := Update(h, "v2.0.0", true)
+	if !errors.Is(err, ErrIncludeVersionLinked) {
+		t.Fatalf("Update() error = %v; want referenced obsolete link error", err)
+	}
+	for _, message := range []string{link, "in use by gateways A, B, C", "update the gateway setups", "no include links were changed"} {
+		if !strings.Contains(err.Error(), message) {
+			t.Errorf("Update() error = %v; missing %q", err, message)
+		}
+	}
+	if strings.Count(err.Error(), "in use by gateways") != 1 {
+		t.Fatalf("duplicate include references were not combined: %v", err)
+	}
+	if target, err := os.Readlink(link); err != nil || target != filepath.Join("v1.0.0", "obsolete.xml") {
+		t.Fatalf("blocked preflight changed obsolete link: target %q, error %v", target, err)
 	}
 }

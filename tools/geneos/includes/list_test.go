@@ -2,6 +2,7 @@ package includes
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	genecmd "github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +35,99 @@ func TestIncludesListFormatValidation(t *testing.T) {
 	}
 	if err := validateIncludesListFormat("xml"); err == nil {
 		t.Fatal("validateIncludesListFormat accepted unsupported xml format")
+	}
+}
+
+func TestIncludesListGatewayPatterns(t *testing.T) {
+	oldGateway, oldVersion, oldInclude := includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude
+	oldFormat, oldAll := includesListCmdFormat, includesListCmdAll
+	oldHostname := genecmd.Hostname
+	genecmd.Hostname = "localhost"
+	includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude = true, false, false
+	includesListCmdFormat, includesListCmdAll = "json", true
+	t.Cleanup(func() {
+		includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude = oldGateway, oldVersion, oldInclude
+		includesListCmdFormat, includesListCmdAll = oldFormat, oldAll
+		genecmd.Hostname = oldHostname
+	})
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway", "includes")
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(parent, "shared.xml"), []byte("<gateway/>"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	setup := `<gateway><includes><include><location>../../includes/shared.xml</location></include></includes></gateway>`
+	writeTestGatewaySetup(t, h, setup, "prod-a", "prod-b", "test-a")
+	for _, test := range []struct {
+		name     string
+		patterns []string
+		want     []string
+	}{
+		{name: "all", want: []string{"prod-a", "prod-b", "test-a"}},
+		{name: "exact", patterns: []string{"prod-a"}, want: []string{"prod-a"}},
+		{name: "glob", patterns: []string{"prod-*"}, want: []string{"prod-a", "prod-b"}},
+		{name: "question", patterns: []string{"prod-?"}, want: []string{"prod-a", "prod-b"}},
+		{name: "class", patterns: []string{"prod-[ab]"}, want: []string{"prod-a", "prod-b"}},
+		{name: "multiple", patterns: []string{"prod-b", "test-*"}, want: []string{"prod-b", "test-a"}},
+		{name: "overlap", patterns: []string{"prod-a", "prod-*"}, want: []string{"prod-a", "prod-b"}},
+		{name: "qualified", patterns: []string{"prod-a@localhost"}, want: []string{"prod-a"}},
+		{name: "component", patterns: []string{"gateway:prod-*"}, want: []string{"prod-a", "prod-b"}},
+		{name: "all-keyword", patterns: []string{"all"}, want: []string{"prod-a", "prod-b", "test-a"}},
+		{name: "unmatched", patterns: []string{"missing-*"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			output, err := os.CreateTemp(t.TempDir(), "includes-*.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			previousStdout := os.Stdout
+			os.Stdout = output
+			t.Cleanup(func() {
+				os.Stdout = previousStdout
+				output.Close()
+			})
+			previousContext := includeListCmd.Context()
+			includeListCmd.SetContext(context.WithValue(context.Background(), genecmd.CmdKey, &genecmd.CmdValType{}))
+			t.Cleanup(func() { includeListCmd.SetContext(previousContext) })
+			if err := genecmd.ParseArgs(includeListCmd, test.patterns); err != nil {
+				t.Fatal(err)
+			}
+			if err := includeListCmd.RunE(includeListCmd, test.patterns); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(output.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rows []map[string]any
+			if err := json.Unmarshal(data, &rows); err != nil {
+				t.Fatalf("invalid JSON output %q: %v", data, err)
+			}
+			counts := make(map[string]int)
+			for _, row := range rows {
+				gateway, ok := row["gateway"].(string)
+				if !ok {
+					t.Fatalf("row lacks gateway name: %#v", row)
+				}
+				counts[gateway]++
+			}
+			if len(counts) != len(test.want) {
+				t.Fatalf("gateway counts = %v; want %v", counts, test.want)
+			}
+			for _, gateway := range test.want {
+				if counts[gateway] != 2 {
+					t.Errorf("gateway %q has %d rows; want setup and shared include", gateway, counts[gateway])
+				}
+			}
+		})
+	}
+	if gateways, _ := getGatewayIncludes(h, nil, "missing-*"); len(gateways) != 0 {
+		t.Fatalf("unmatched pattern loaded gateways: %v", gateways)
+	}
+	if gateways, _ := getGatewayIncludes(h, nil, "prod-a@unknown"); len(gateways) != 0 {
+		t.Fatalf("unknown host loaded gateways: %v", gateways)
 	}
 }
 
