@@ -5,6 +5,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -43,6 +44,9 @@ func evaluateProfileDeployOptions(options ...ProfileDeployOption) *profileDeploy
 	}
 	for _, opt := range options {
 		opt(pf)
+	}
+	if pf.archive != "" && !geneos.IsURL(pf.archive) {
+		pf.local = true
 	}
 	return pf
 }

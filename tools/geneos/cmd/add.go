@@ -115,6 +115,9 @@ geneos add netprobe infraprobe12 --start --log
 			instance.LogsAfterAdd(addCmdLogs),
 			instance.WithProfiles(Profiles),
 		)
+		if err != nil {
+			return err
+		}
 		if addCmdLogs {
 			instance.FollowLog(i, instance.WithStderr(true)) // never returns
 		}

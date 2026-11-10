@@ -4,9 +4,11 @@ The `install` command will, with no other options, download and unarchive the la
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
+Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line.
+
 If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
 
-To install all component types use the `--all`/`-A` flag.
+To install all component types use the `--all` flag. Its former `-A` shorthand now selects `--archive`, matching `deploy` and `init`.
 
 Components with package variants, such as the exchange packages of `md-gateway` and `tr-gateway`, also accept `TYPE-VARIANT`, e.g. `md-gateway-asx`. Only archives, files and Nexus artifacts for that variant are then used. See `geneos help md-gateway` for details.
 
@@ -47,28 +49,31 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 ### Options
 
 ```text
-  -u, --username string     Username for downloads, defaults to configuration value in download.username
-  -L, --local               Install from local files only.
-                            * Implied if files or directories are given on command line.
-  -n, --nosave              Do not save a local copy of any downloads.
-                            * Implied if files or directories are given on command line.
-  -D, --download            Download only, to the current directory.
-                            Cannot be combined with --nosave
-  -U, --update              Update the base directory symlink, will restart unprotected instances
-  -F, --force               Force restart of protected instances, implies --update
-  -b, --base string         Override the base active_prod link name (default "active_prod")
-  -V, --version string      Download this version, defaults to latest. Doesn't work for EL8 archives.
-                            Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
-  -O, --override string     Override the TYPE:VERSION for archive files with non-standard names
-  -N, --nexus               Download from nexus.itrsgroup.com. Requires auth.
-  -S, --snapshots           Download from nexus snapshots (pre-releases), not releases. Requires -N
-  -A, --all                 Install all types available, not just those types already installed
-      --header NAME=VALUE   HTTP header in the format NAME=VALUE
-                            (Repeat as required)
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string       Username for downloads, defaults to configuration value in download.username
+  -L, --local                 Install from local files only.
+                              * Implied if files or directories are given on command line.
+  -n, --nosave                Do not save a local copy of any downloads.
+                              * Implied if files or directories are given on command line.
+  -D, --download              Download only, to the current directory.
+                              Cannot be combined with --nosave
+  -U, --update                Update the base directory symlink, will restart unprotected instances
+  -F, --force                 Force restart of protected instances, implies --update
+  -b, --base string           Override the base active_prod link name (default "active_prod")
+  -V, --version string        Download this version, defaults to latest. Doesn't work for EL8 archives.
+                              Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
+  -O, --override string       Override the TYPE:VERSION for archive files with non-standard names
+  -N, --nexus                 Download from nexus.itrsgroup.com. Requires auth.
+  -S, --snapshots             Download from nexus snapshots (pre-releases), not releases. Requires -N
+      --all                   Install all types available, not just those types already installed
+  -A, --archive stringArray   URL or file path to release archive
+                              or a directory to search for local release archives.
+                              Added to positional sources (repeat as required)
+      --header NAME=VALUE     HTTP header in the format NAME=VALUE
+                              (Repeat as required)
+      --allow-root            allow running as root (not recommended)
+  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

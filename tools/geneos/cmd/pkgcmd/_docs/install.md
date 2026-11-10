@@ -2,9 +2,11 @@ The `install` command will, with no other options, download and unarchive the la
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
+Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line.
+
 If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
 
-To install all component types use the `--all`/`-A` flag.
+To install all component types use the `--all` flag. Its former `-A` shorthand now selects `--archive`, matching `deploy` and `init`.
 
 Components with package variants, such as the exchange packages of `md-gateway` and `tr-gateway`, also accept `TYPE-VARIANT`, e.g. `md-gateway-asx`. Only archives, files and Nexus artifacts for that variant are then used. See `geneos help md-gateway` for details.
 

@@ -1362,25 +1362,27 @@ General options are loaded from the global file first, then the user file and an
 
 * `geneos`
 
-The home directory for all other commands. See [Directory Layout](#directory-layout) below. If set, the environment variable ITRS_HOME overrides any settings in the files. This is to maintain backward compatibility with older tools. The default, if not set anywhere else, is the home directory of the user running the command or, if running as root, the home directory of the `geneos` or `itrs` users (in that order). (To be fully implemented) This value is also set by the environment variables `ITRS_HOME` or `ITRS_GENEOS`
+  The home directory for all other commands.
+
+  If set, the environment variable `GENEOS_HOME` overrides any settings in save configuration file. This is to maintain backward compatibility with older tools. This value is can also be set with the environment variables `ITRS_HOME` for legacy support.
 
 * `download.url`
 
-The base URL for downloads for automating installations. Not yet used. If files are locally downloaded then this can either be a `file://` style URL or a directory path.
+  The base URL for downloads for automating installations. Not yet used. If files are locally downloaded then this can either be a `file://` style URL or a directory path.
 
 * `download.username` `download.password`
 
   These specify the username and password to use when downloading packages. They can also be set as the environment variables, but the environment variables are not subject to expansion and so cannot contain Geneos encoded passwords (see below):
 
-    * `ITRS_DOWNLOAD_USERNAME`
-    * `ITRS_DOWNLOAD_PASSWORD`
+  * `ITRS_DOWNLOAD_USERNAME`
+  * `ITRS_DOWNLOAD_PASSWORD`
 
 * `snapshot.username` `snapshot.password`
 
   Similarly to the above, these specify the username and password to use when taking dataview snapshots. They can also be set as the environment variables, with the same restrictions as above:
 
-    * `ITRS_SNAPSHOT_USERNAME`
-    * `ITRS_SNAPSHOT_PASSWORD`
+  * `ITRS_SNAPSHOT_USERNAME`
+  * `ITRS_SNAPSHOT_PASSWORD`
 
 * `GatewayPortRange` & `NetprobePortRange` & `LicdPortRange`
 
@@ -1737,7 +1739,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Doesn't work for EL8/9/10 archives. (default "latest")
   -L, --local                         Install from local archives only
   -A, --archive string                URL or file path to release archive
-                                      or a directory to search for local release archives
+                                      or a directory to search for local release archives.
+                                      Local paths imply --local
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
       --nexus                         Download from nexus.itrsgroup.com
@@ -2850,12 +2853,12 @@ A backup file will not contain a TLS root or signing certificate and private key
 
 ## Adopting An Existing Installation
 
-If you have an existing, now old, Geneos installation that you manage with the command like `gatewayctl`/`netprobectl`/etc. then you can use `geneos` to manage those once you have set the path to the Geneos installation.
+If you have an existing, now old, Geneos installation that you manage with the command like `gatewayctl`/`netprobectl`/etc. then you can use `geneos` to manage those once you have set the path to the Geneos installation using the `GENEOS_HOME` or `ITRS_HOME` environment variables, or the configuration file.
 
 >[!WARNING]
 > `geneos` ignores any changes to the global `.rc` files in your existing installation. You **must** check and adjust individual instance settings to duplicate settings. This can sometimes be very simple, for example if your `netprobectl.rc` files contains a line that sets `JAVA_HOME` then you can set this across all the Netprobes using `geneos set netprobe -e JAVA_HOME=/path/to/java`. More complex changes, such as library paths, will need careful consideration
 
-You can use the environment variable `ITRS_HOME` pointing to the top-level directory of your installation or set the location in the (user or global) configuration file:
+You can use the environment variable `GENEOS_HOME` pointing to the top-level directory of your installation or set the location in the (user or global) configuration file:
 
 ```bash
 geneos config set geneos=/path/to/install
@@ -3535,9 +3538,11 @@ The `install` command will, with no other options, download and unarchive the la
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
+Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line.
+
 If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
 
-To install all component types use the `--all`/`-A` flag.
+To install all component types use the `--all` flag. Its former `-A` shorthand now selects `--archive`, matching `deploy` and `init`.
 
 Components with package variants, such as the exchange packages of `md-gateway` and `tr-gateway`, also accept `TYPE-VARIANT`, e.g. `md-gateway-asx`. Only archives, files and Nexus artifacts for that variant are then used. See `geneos help md-gateway` for details.
 
@@ -3578,28 +3583,31 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 ### Options
 
 ```text
-  -u, --username string     Username for downloads, defaults to configuration value in download.username
-  -L, --local               Install from local files only.
-                            * Implied if files or directories are given on command line.
-  -n, --nosave              Do not save a local copy of any downloads.
-                            * Implied if files or directories are given on command line.
-  -D, --download            Download only, to the current directory.
-                            Cannot be combined with --nosave
-  -U, --update              Update the base directory symlink, will restart unprotected instances
-  -F, --force               Force restart of protected instances, implies --update
-  -b, --base string         Override the base active_prod link name (default "active_prod")
-  -V, --version string      Download this version, defaults to latest. Doesn't work for EL8 archives.
-                            Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
-  -O, --override string     Override the TYPE:VERSION for archive files with non-standard names
-  -N, --nexus               Download from nexus.itrsgroup.com. Requires auth.
-  -S, --snapshots           Download from nexus snapshots (pre-releases), not releases. Requires -N
-  -A, --all                 Install all types available, not just those types already installed
-      --header NAME=VALUE   HTTP header in the format NAME=VALUE
-                            (Repeat as required)
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string       Username for downloads, defaults to configuration value in download.username
+  -L, --local                 Install from local files only.
+                              * Implied if files or directories are given on command line.
+  -n, --nosave                Do not save a local copy of any downloads.
+                              * Implied if files or directories are given on command line.
+  -D, --download              Download only, to the current directory.
+                              Cannot be combined with --nosave
+  -U, --update                Update the base directory symlink, will restart unprotected instances
+  -F, --force                 Force restart of protected instances, implies --update
+  -b, --base string           Override the base active_prod link name (default "active_prod")
+  -V, --version string        Download this version, defaults to latest. Doesn't work for EL8 archives.
+                              Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
+  -O, --override string       Override the TYPE:VERSION for archive files with non-standard names
+  -N, --nexus                 Download from nexus.itrsgroup.com. Requires auth.
+  -S, --snapshots             Download from nexus snapshots (pre-releases), not releases. Requires -N
+      --all                   Install all types available, not just those types already installed
+  -A, --archive stringArray   URL or file path to release archive
+                              or a directory to search for local release archives.
+                              Added to positional sources (repeat as required)
+      --header NAME=VALUE     HTTP header in the format NAME=VALUE
+                              (Repeat as required)
+      --allow-root            allow running as root (not recommended)
+  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

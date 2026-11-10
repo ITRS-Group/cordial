@@ -81,6 +81,9 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 			log.Debug("source opened, returning")
 			return
 		}
+		if !errors.Is(err, ErrIsADirectory) && (opts.localOnly || opts.source != path.Join(LocalRoot(), "packages", "downloads")) {
+			return
+		}
 		if IsDir(opts.source) && opts.source != path.Join(LocalRoot(), "packages", "downloads") {
 			log.Debug("source is a directory, and not the download cache, so setting local directory search flag")
 			opts.localOnly = true

@@ -109,7 +109,8 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       Doesn't work for EL8/9/10 archives. (default "latest")
   -L, --local                         Install from local archives only
   -A, --archive string                URL or file path to release archive
-                                      or a directory to search for local release archives
+                                      or a directory to search for local release archives.
+                                      Local paths imply --local
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
       --nexus                         Download from nexus.itrsgroup.com

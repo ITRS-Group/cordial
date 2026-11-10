@@ -88,7 +88,7 @@ func init() {
 	deployCmd.Flags().StringVarP(&deployCmdBase, "base", "b", "active_prod", "Select the base version name for the instance.\nDefaults to 'active_prod' which is the default\nsymlink to the installed release.")
 	deployCmd.Flags().StringVarP(&deployCmdVersion, "version", "V", "latest", "Use this `VERSION` of package\nDoesn't work for EL8/9/10 archives.")
 	deployCmd.Flags().BoolVarP(&deployCmdLocal, "local", "L", false, "Install from local archives only")
-	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "URL or file path to release archive\nor a directory to search for local release archives")
+	deployCmd.Flags().StringVarP(&deployCmdArchive, "archive", "A", "", "URL or file path to release archive\nor a directory to search for local release archives.\nLocal paths imply --local")
 	deployCmd.Flags().StringVarP(&deployCmdOverride, "override", "O", "", "Override the `[TYPE:]VERSION` for archive\nfiles with non-standard names")
 
 	deployCmd.Flags().BoolVar(&deployCmdNexus, "nexus", false, "Download from nexus.itrsgroup.com\nRequires ITRS internal credentials")
@@ -128,6 +128,12 @@ var deployCmd = &cobra.Command{
 		CmdRequireHome:  "false",
 		CmdAuditCommand: "always",
 		CmdAuditActions: "always",
+	},
+	PreRun: func(command *cobra.Command, args []string) {
+		deployCmdStart = deployCmdStart || deployCmdLogs
+		if deployCmdArchive != "" && !geneos.IsURL(deployCmdArchive) {
+			deployCmdLocal = true
+		}
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		var name string

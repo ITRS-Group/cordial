@@ -43,6 +43,7 @@ var installCmdBase, installCmdOverride, installCmdVersion, installCmdUsername st
 var installCmdDownloadOnly, installCmdAllTypes bool
 var installCmdPassword config.Secret
 var installCmdHeaders values.NameValues
+var installCmdArchives []string
 
 func init() {
 	packageCmd.AddCommand(installCmd)
@@ -69,7 +70,8 @@ func init() {
 	installCmd.Flags().BoolVarP(&installCmdNexus, "nexus", "N", false, "Download from nexus.itrsgroup.com. Requires auth.")
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 
-	installCmd.Flags().BoolVarP(&installCmdAllTypes, "all", "A", false, "Install all types available, not just those types already installed")
+	installCmd.Flags().BoolVar(&installCmdAllTypes, "all", false, "Install all types available, not just those types already installed")
+	installCmd.Flags().StringArrayVarP(&installCmdArchives, "archive", "A", nil, "URL or file path to release archive\nor a directory to search for local release archives.\nAdded to positional sources (repeat as required)")
 
 	installCmd.Flags().Var(&installCmdHeaders, "header", values.HeadersOptionsText)
 
@@ -118,6 +120,7 @@ geneos package install md-gateway-asx -N -S
 
 		log.Debug("args and params", slog.Any("args", args), slog.Any("params", params))
 		params = append(args, params...)
+		params = append(params, installCmdArchives...)
 		for _, p := range params {
 			if strings.HasPrefix(p, "@") {
 				return fmt.Errorf("the @HOST format is not valid here, perhaps you meant `-H HOST`?")

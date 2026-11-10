@@ -21,6 +21,10 @@
 
 ## Version v1.31.0 Changes
 
+* `tools/geneos`
+
+  * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types.
+
 * `pkg/geneos`
 
   * Gateway configuration support has been expanded with safer read and write operations, making it easier for applications to inspect and update Gateway setups reliably.
@@ -35,7 +39,13 @@
 
 * `tools/geneos`
 
-  * Fix `geneos deploy --log` (`-l`) to keep following logs after creating and starting an instance, rather than panicking or returning immediately.
+  * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
+
+  * Fix local archive handling in `geneos deploy` and `geneos init` to avoid unnecessary download credential prompts.
+
+  * Preserve archive file errors rather than reporting misleading directory errors when a file cannot be opened.
+
+  * Fix `geneos add --log` to return creation or startup errors instead of attempting to follow logs for a failed instance.
 
   * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
 
