@@ -270,7 +270,7 @@ func (i *CA3) Add(options ...any) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	baseDir := path.Join(instance.BaseVersion(i), "collection_agent")
+	baseDir := i.Host().Join(instance.BaseVersion(i), "collection_agent")
 	config.Set(i.Config(), "port", opts.Port)
 
 	// copy default configs
@@ -307,8 +307,8 @@ func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err 
 	cf := i.Config()
 	home = i.Home()
 
-	classPath := path.Join(instance.BaseVersion(i), "collection_agent")
-	logback := path.Join(i.Home(), "logback.xml")
+	classPath := i.Host().Join(instance.BaseVersion(i), "collection_agent")
+	logback := i.Host().Join(i.Home(), "logback.xml")
 
 	checks = append(checks, classPath)
 	checks = append(checks, logback)
@@ -318,7 +318,7 @@ func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err 
 		"-Xms" + strings.TrimPrefix(config.Get[string](cf, "xms", config.PromoteFrom("minheap"), config.DefaultValue("512m")), "-Xms"),
 		"-Xmx" + strings.TrimPrefix(config.Get[string](cf, "xmx", config.PromoteFrom("maxheap"), config.DefaultValue("512m")), "-Xmx"),
 		"-Dlogback.configurationFile=" + logback,
-		"-cp", path.Join(classPath, "*"),
+		"-cp", i.Host().Join(classPath, "*"),
 		"-DCOLLECTION_AGENT_DIR=" + i.Home(),
 		"com.itrsgroup.collection.ca.Main",
 		config.Get[string](cf, "setup", config.PromoteFrom("config")),
@@ -329,9 +329,9 @@ func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err 
 		hostname = "localhost"
 	}
 
-	checks = append(checks, config.Get[string](cf, "plugins", config.DefaultValue(path.Join(classPath, "plugins"))))
+	checks = append(checks, config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(classPath, "plugins"))))
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(path.Join(classPath, "plugins")))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(classPath, "plugins")))),
 		fmt.Sprintf("HEALTH_CHECK_PORT=%d", config.Get[uint16](cf, "health-check-port", config.DefaultValue(9136))),
 		fmt.Sprintf("TCP_REPORTER_PORT=%d", config.Get[uint16](cf, "tcp-reporter-port", config.DefaultValue(9137))),
 		fmt.Sprintf("HOSTNAME=%s", config.Get[string](cf, "hostname", config.DefaultValue(hostname))),

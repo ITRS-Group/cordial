@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -231,7 +230,7 @@ func (i *Profile) Command(skipFileCheck bool) (args, env []string, home string, 
 
 	home = i.Home()
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, filepath.Dir(logFile))
+	checks = append(checks, i.Host().Dir(logFile))
 	args = []string{
 		i.Name(),
 	}

@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -347,10 +346,10 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 	home = i.Home()
 
 	base := instance.BaseVersion(i)
-	logback := config.Get[string](cf, "logback", config.DefaultValue(path.Join(i.Home(), "logback.xml")))
-	classPath := path.Join(instance.BaseVersion(i), "lib")
+	logback := config.Get[string](cf, "logback", config.DefaultValue(i.Host().Join(i.Home(), "logback.xml")))
+	classPath := i.Host().Join(instance.BaseVersion(i), "lib")
 
-	checks = append(checks, path.Join(base, "lib"))
+	checks = append(checks, i.Host().Join(base, "lib"))
 	checks = append(checks, logback)
 
 	args = []string{
@@ -358,7 +357,7 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 		"-XX:+UseG1GC",
 		"-Xms" + strings.TrimPrefix(config.Get[string](cf, "xms", config.PromoteFrom("minheap"), config.DefaultValue("512m")), "-Xms"),
 		"-Xmx" + strings.TrimPrefix(config.Get[string](cf, "xmx", config.PromoteFrom("maxheap"), config.DefaultValue("1024m")), "-Xmx"),
-		"-cp", path.Join(classPath, "*"),
+		"-cp", i.Host().Join(classPath, "*"),
 	}
 
 	javaopts := strings.Fields(config.Get[string](cf, "java-options"))
@@ -377,7 +376,7 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 	}
 
 	env = []string{
-		fmt.Sprintf("PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(path.Join(base, "plugins")))),
+		fmt.Sprintf("PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(base, "plugins")))),
 		fmt.Sprintf("COLLECTOR_PORT=%d", config.Get[uint16](cf, "port", config.DefaultValue(4317))),
 		fmt.Sprintf("REPORTER_PORT=%d", config.Get[uint16](cf, "reporter-port", config.DefaultValue(4318))),
 		fmt.Sprintf("REPORTER_HOST=%s", config.Get[string](cf, "reporter-host", config.DefaultValue("localhost"))),
@@ -409,12 +408,12 @@ func pidCheckFn(customArg any, cmdline []string) bool {
 		return false
 	}
 
-	if path.Base(cmdline[0]) != "java" {
+	if i.Host().Base(cmdline[0]) != "java" && i.Host().Base(cmdline[0]) != "java.exe" {
 		return false
 	}
 
-	classPath := path.Join(instance.BaseVersion(i), "lib")
-	cp := path.Join(classPath, "*")
+	classPath := i.Host().Join(instance.BaseVersion(i), "lib")
+	cp := i.Host().Join(classPath, "*")
 
 	for _, arg := range cmdline[1:] {
 		if arg == cp {

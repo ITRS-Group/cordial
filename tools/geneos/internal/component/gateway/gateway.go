@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -460,8 +459,8 @@ func (i *Gateway) Command(skipFileCheck bool) (args, env []string, home string, 
 	}
 
 	// always required
-	resourceDir := path.Join(instance.BaseVersion(i), "resources")
-	logDir := filepath.Dir(instance.LogFilePath(i))
+	resourceDir := i.Host().Join(instance.BaseVersion(i), "resources")
+	logDir := i.Host().Dir(instance.LogFilePath(i))
 	checks = append(checks, resourceDir, logDir)
 
 	args = append(args,

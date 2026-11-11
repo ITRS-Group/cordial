@@ -22,7 +22,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -286,7 +285,7 @@ func seedPackagedYAML(i *TRGateway) {
 	if _, err := h.Stat(setup); err == nil {
 		return
 	}
-	src := path.Join(instance.BaseVersion(i), "config", path.Base(setup))
+	src := i.Host().Join(instance.BaseVersion(i), "config", i.Host().Base(setup))
 	data, err := h.ReadFile(src)
 	if err != nil {
 		return
@@ -294,7 +293,7 @@ func seedPackagedYAML(i *TRGateway) {
 	if err := h.WriteFile(setup, data, 0664); err != nil {
 		return
 	}
-	i.AuditEvent("action/import", nil, slog.Any("file", path.Base(setup)))
+	i.AuditEvent("action/import", nil, slog.Any("file", i.Host().Base(setup)))
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
@@ -314,9 +313,9 @@ func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string
 	mainClass := config.Get[string](cf, "main-class", config.PromoteFrom("mainclass"), config.DefaultValue("com.itrsgroup.trgateway.Main"))
 	setup := instance.PathTo(i, "setup")
 
-	jarPath := path.Join(base, jar)
-	pluginsDir := path.Join(base, "plugins")
-	classpath := jarPath + ":" + path.Join(pluginsDir, "*")
+	jarPath := i.Host().Join(base, jar)
+	pluginsDir := i.Host().Join(base, "plugins")
+	classpath := jarPath + ":" + i.Host().Join(pluginsDir, "*")
 
 	args = []string{
 		"--enable-native-access=ALL-UNNAMED",
@@ -348,10 +347,10 @@ func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string
 	// this is overridden if the instance env var is set, as those are
 	// added after this function is called and `cmd.Env` only uses the
 	// last value of each named var
-	env = []string{"JAVA_HOME=" + path.Join(base, "jdk")}
+	env = []string{"JAVA_HOME=" + i.Host().Join(base, "jdk")}
 
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, path.Dir(logFile), jarPath, pluginsDir, setup)
+	checks = append(checks, i.Host().Dir(logFile), jarPath, pluginsDir, setup)
 	if logback != "" {
 		checks = append(checks, logback)
 	}
@@ -384,7 +383,7 @@ func pidCheckFn(arg any, cmdline []string) bool {
 	if !ok || g == nil {
 		return false
 	}
-	if path.Base(cmdline[0]) != "java" && path.Base(cmdline[0]) != "java.exe" {
+	if g.Host().Base(cmdline[0]) != "java" && g.Host().Base(cmdline[0]) != "java.exe" {
 		return false
 	}
 

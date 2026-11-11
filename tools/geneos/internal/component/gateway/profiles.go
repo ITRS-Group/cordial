@@ -28,10 +28,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		return fmt.Errorf("failed to unmarshal Gateways for profile %q: %w", name, err)
 	}
 
-	// global lookup table, add values here as needed
-	lookup := map[string]string{
-		"hostname": h.String(),
-	}
+	lookup := profile.CommonLookups(h)
 
 	// build param key delete list
 	clearKeys := []string{
@@ -50,7 +47,14 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 
 		vals := profile.ApplyCommonParams(pf, name, &gateway.Common, lookup)
 		vals.Includes = gateway.Includes
-		vals.Variables = gateway.Variables
+		vals.Variables = make(values.Variables, len(gateway.Variables))
+		for idx, variable := range gateway.Variables {
+			vals.Variables[idx] = values.Variable{
+				Type:  variable.Type,
+				Name:  variable.Name,
+				Value: config.Expand[string](pf, variable.Value),
+			}
+		}
 
 		if err := profile.ApplyInstance(h, pf, ct, instanceName, gateway.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err

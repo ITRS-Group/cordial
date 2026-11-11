@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -267,6 +266,12 @@ func (i *Floating) Add(options ...any) (err error) {
 	config.Set(cf, "variables", make(map[string]string))
 	config.Set(cf, "gateways", make(map[string]string))
 
+	// create and fkm persistence directory
+	fkmdir := i.Host().Join(i.Home(), "fkm")
+	if err = i.Host().MkdirAll(fkmdir, 0775); err != nil {
+		return
+	}
+
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
@@ -331,7 +336,7 @@ func (i *Floating) Command(skipFileCheck bool) (args, env []string, home string,
 	home = i.Home()
 
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, filepath.Dir(logFile))
+	checks = append(checks, i.Host().Dir(logFile))
 
 	args = []string{
 		i.Name(),
@@ -340,7 +345,7 @@ func (i *Floating) Command(skipFileCheck bool) (args, env []string, home string,
 		"-setup", config.Get[string](cf, "setup"),
 		// "-setup-interval", "300",
 	}
-	checks = append(checks, config.Get[string](cf, "setup"))
+	checks = append(checks, i.Host().Join(home, config.Get[string](cf, "setup")))
 
 	// secureArgs := instance.SetSecureArgs(i)
 	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)

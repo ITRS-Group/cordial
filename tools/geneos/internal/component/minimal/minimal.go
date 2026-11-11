@@ -268,6 +268,12 @@ func (i *Minimal) Add(options ...any) (err error) {
 	}
 	config.Set(i.Config(), "port", opts.Port)
 
+	// create and fkm persistence directory
+	fkmdir := i.Host().Join(i.Home(), "fkm")
+	if err = i.Host().MkdirAll(fkmdir, 0775); err != nil {
+		return
+	}
+
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
@@ -291,7 +297,7 @@ func (i *Minimal) Command(skipFileCheck bool) (args, env []string, home string, 
 	h := i.Host()
 
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, filepath.Dir(logFile))
+	checks = append(checks, i.Host().Dir(logFile))
 
 	args = []string{
 		i.Name(),

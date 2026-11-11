@@ -25,10 +25,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		return fmt.Errorf("failed to unmarshal floating profiles: %w", err)
 	}
 
-	// global lookup table, add values here as needed
-	lookup := map[string]string{
-		"hostname": h.String(),
-	}
+	lookup := profile.CommonLookups(h)
 
 	// build param key delete list
 	clearKeys := []string{

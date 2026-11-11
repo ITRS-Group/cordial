@@ -199,6 +199,7 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | Form | Result |
 | --- | --- |
 | `${hostname}` | Host name supplied by the profile lookup table. |
+| `${execpath}` | Absolute path to the running `geneos` executable, with symlinks resolved. |
 | `${env:NAME}` | Environment variable from the `geneos` process. An unset variable produces an empty value. |
 | `${option:EXPRESSION}` | Result of a `goval` expression using selected command options and `NAME=VALUE` arguments. |
 | `${config:KEY}` | Value from the current configuration. In a SAN `for-each` entry, this is the matched instance's configuration. |

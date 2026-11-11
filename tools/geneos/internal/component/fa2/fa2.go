@@ -282,7 +282,7 @@ func (i *FA2) Command(skipFileCheck bool) (args, env []string, home string, err 
 
 	home = i.Home()
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, filepath.Dir(logFile))
+	checks = append(checks, i.Host().Dir(logFile))
 	args = []string{
 		i.Name(),
 		"-port", config.Get[string](i.Config(), "port"),

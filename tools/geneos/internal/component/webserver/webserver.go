@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -282,7 +281,7 @@ func (i *Webserver) Add(options ...any) (err error) {
 		return
 	}
 
-	webappsdir := path.Join(i.Home(), "webapps")
+	webappsdir := i.Host().Join(i.Home(), "webapps")
 	if err = i.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}
@@ -394,7 +393,7 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	}
 
 	// tmpdir must exist
-	tmpdir := path.Join(home, "webapps")
+	tmpdir := i.Host().Join(home, "webapps")
 	if err = i.Host().MkdirAll(tmpdir, 0775); err != nil {
 		return
 	}
@@ -404,18 +403,18 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 		"-server",
 		"-Djava.io.tmpdir="+tmpdir,
 		"-Djava.awt.headless=true",
-		"-DsecurityConfig="+path.Join(home, "config/security.xml"),
-		"-Dcom.itrsgroup.configuration.file="+path.Join(home, "config/config.xml"),
+		"-DsecurityConfig="+i.Host().Join(home, "config/security.xml"),
+		"-Dcom.itrsgroup.configuration.file="+i.Host().Join(home, "config/config.xml"),
 		// "-Dcom.itrsgroup.dashboard.dir=<Path to dashboards directory>",
-		"-Dcom.itrsgroup.dashboard.resources.dir="+path.Join(base, "resources"),
+		"-Dcom.itrsgroup.dashboard.resources.dir="+i.Host().Join(base, "resources"),
 		"-Djava.library.path="+config.Get[string](cf, "libpaths"),
-		"-Dlog4j2.configurationFile=file:"+path.Join(home, "config/log4j2.properties"),
+		"-Dlog4j2.configurationFile=file:"+i.Host().Join(home, "config/log4j2.properties"),
 		"-Dworking.directory="+home,
 		"-Dvalid.host.header="+config.Get[string](cf, "valid-host-header", config.DefaultValue(".*")),
 		"-Dcom.itrsgroup.legacy.database.maxconnections=100",
 		// SSO
-		"-Dcom.itrsgroup.sso.config.file="+path.Join(home, "config/sso.properties"),
-		"-Djava.security.auth.login.config="+path.Join(home, "config/login.conf"),
+		"-Dcom.itrsgroup.sso.config.file="+i.Host().Join(home, "config/sso.properties"),
+		"-Djava.security.auth.login.config="+i.Host().Join(home, "config/login.conf"),
 		"-Djava.security.krb5.conf=/etc/krb5.conf",
 		"-Dcom.itrsgroup.bdosync=DataView,BDOSyncType_Level,DV1_SyncLevel_RedAmberCells",
 		// "-Dcom.sun.management.jmxremote.port=$JMX_PORT -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false",
@@ -423,10 +422,10 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 		"-XX:HeapDumpPath=/tmp",
 	)
 	checks = append(checks,
-		path.Join(home, "config/security.xml"),
-		path.Join(home, "config/config.xml"),
-		path.Join(home, "config/log4j2.properties"),
-		path.Join(home, "config/sso.properties"),
+		i.Host().Join(home, "config/security.xml"),
+		i.Host().Join(home, "config/config.xml"),
+		i.Host().Join(home, "config/log4j2.properties"),
+		i.Host().Join(home, "config/sso.properties"),
 	)
 
 	javaopts := strings.Fields(config.Get[string](cf, "java-options"))
@@ -494,7 +493,7 @@ func pidCheckFn(customArg any, cmdline []string) bool {
 		return false
 	}
 
-	if path.Base(cmdline[0]) != "java" {
+	if i.Host().Base(cmdline[0]) != "java" && i.Host().Base(cmdline[0]) != "java.exe" {
 		return false
 	}
 

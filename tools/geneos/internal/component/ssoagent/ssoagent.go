@@ -28,7 +28,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -309,7 +308,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	// read the SSO agent configuration from the conf/sso-agent.conf
 	// file as HOCON. The config must exist.
 	sf := config.New()
-	if err = sf.MergeHOCONFile(path.Join(i.Home(), "conf/sso-agent.conf")); err != nil {
+	if err = sf.MergeHOCONFile(i.Host().Join(i.Home(), "conf", "sso-agent.conf")); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
@@ -528,17 +527,17 @@ func (i *SSOAgent) Command(skipFileCheck bool) (args, env []string, home string,
 	home = i.Home()
 
 	ssoconf := config.New()
-	if err = ssoconf.MergeHOCONFile(path.Join(home, "conf/sso-agent.conf")); err != nil {
+	if err = ssoconf.MergeHOCONFile(i.Host().Join(home, "conf", "sso-agent.conf")); err != nil {
 		return
 	}
 
 	base := instance.BaseVersion(i)
-	checks = append(checks, path.Join(base, "lib"))
+	checks = append(checks, i.Host().Join(base, "lib"))
 
 	args = []string{
-		"-classpath", home + "/conf:" + base + "/lib/*",
+		"-classpath", i.Host().Join(home, "conf") + ":" + i.Host().Join(base, "lib", "*"),
 		"-Dapp.name=sso-agent",
-		"-Dapp.repo=" + base + "/lib",
+		"-Dapp.repo=" + i.Host().Join(base, "lib"),
 		"-Dapp.home=" + home,
 		"-Dbasedir=" + base,
 	}
@@ -576,7 +575,7 @@ func pidCheckFn(customArg any, cmdline []string) bool {
 		return false
 	}
 
-	if path.Base(cmdline[0]) != "java" {
+	if i.Host().Base(cmdline[0]) != "java" && i.Host().Base(cmdline[0]) != "java.exe" {
 		return false
 	}
 

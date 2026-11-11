@@ -22,7 +22,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -249,7 +248,7 @@ func (i *FileAgent) Command(skipFileCheck bool) (args, env []string, home string
 
 	home = i.Home()
 	logFile := instance.LogFilePath(i)
-	checks = append(checks, filepath.Dir(logFile))
+	checks = append(checks, i.Host().Dir(logFile))
 	args = []string{
 		i.Name(),
 		"-port", config.Get[string](i.Config(), "port"),
