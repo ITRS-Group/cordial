@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA5.10.1-211027/gateway.xsd">
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<includes>
 		<priority>1</priority>
 		<include>
@@ -33,17 +33,6 @@
 			</role>
 		</roles>
 	</authentication>
-	<selfAnnouncingProbes>
-		<enabled>true</enabled>
-		<disconnectedProbeTimeout>3600</disconnectedProbeTimeout>
-	</selfAnnouncingProbes>
-	<operatingEnvironment>
-		<writeStatsToFile>
-			<filename>stats.xml</filename>
-			<enablePeriodicWrite>true</enablePeriodicWrite>
-			<writeInterval>20</writeInterval>
-		</writeStatsToFile>
-	</operatingEnvironment>
 </gateway>
 
 {{- define "includes" }}
