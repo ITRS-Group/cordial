@@ -5387,8 +5387,6 @@ Java based components, such as `webserver` and `sso-agent` will also support cus
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
 
-# `geneos tls create`
-
 Creates a new TLS certificate bundle including a private key and trust chain. This can either be an instance bundle, suitable for use with remote Geneos components, for example Windows Netprobes, or a signing certificate bundle for use on other systems where `geneos` will be used.
 
 The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
@@ -5456,8 +5454,6 @@ geneos tls create [flags]
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
 
-# `geneos tls export`
-
 Exports either the local signer private key, certificate and root certificate suitable for importing into another cordial `geneos` installation or, if you specify either component TYPE or instance NAMEs then the private key, instance certificate and other certificates up to and including the trust root for matching instances is output instead.
 
 The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
@@ -5495,8 +5491,6 @@ geneos tls export gateway mygateway
 # `geneos tls import`
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
-
-# `geneos tls import`
 
 Import a certificate bundle. If no instance TYPE of NAMEs are provided then this is assumed to be a signer bundle containing the private key, signer certificate and root certificate in PEM format. If you specify a TYPE or NAMEs then the input is treated as an instance bundle instead, which must contains the private key, instance certificate and any intermediate certificates up to and including the trust root.
 
@@ -5617,8 +5611,6 @@ geneos tls info [PATH...] [flags]
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
 
-# `geneos tls init`
-
 Initialise the TLS environment by creating a self-signed root certificate to act as a CA and a signing certificate signed by the root. Any instances will have certificates created for them but configurations will not be rebuilt.
 
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
@@ -5696,8 +5688,6 @@ geneos tls list [flags] [TYPE] [NAME...]
 # `geneos tls migrate`
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
-
-# `geneos tls migrate`
 
 Migrate existing Geneos TLS certificates and related files to the updated layout and naming conventions.
 
@@ -5867,8 +5857,6 @@ geneos tls renew [TYPE] [NAME...] [flags]
 # `geneos tls sync`
 
 <sub>[Up: geneos tls](#geneos-tls) | [Top: geneos](#geneos)</sub>
-
-# `geneos tls sync`
 
 The `geneos tls sync` command synchronises TLS certificates and keys from the local TLS environment to remote Geneos instances. This is useful when you have initialised or renewed certificates locally and need to distribute them to the instances. It also forces a rebuild of the local `ca-bundle.db` from `ca-bundle.pem` file which is a Java trust store containing the root CA certificate. The command will also remove any invalid or expired trust roots from the `ca-bundle.pem` file before rebuilding the trust store.
 
