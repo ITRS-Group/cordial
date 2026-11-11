@@ -29,34 +29,34 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -o, --output directory   Write to directory. Files have the common name as the basename.
-                           For bundles use a dash '-' for stdout. (default ".")
-  -c, --cname CNAME        Common Name for certificate. CNAME defaults to hostname except.
-                           Ignored for --signing.
-  -S, --signing CNAME      Create a new signing certificate bundle using CNAME for the Common Name.
-                           If written to a directory the file will be called
-                           "geneos-signing-certificate-(CNAME).pem".
-                           Requires a root certificate ("rootCA.pem") and private key ("rootCA.key")
-                           to be present in the user configuration directory.
-  -E, --expiry days        Certificate expiry duration in days. Ignored for --signing (default 365)
-  -F, --force              Runs "tls init" (but do not replace existing root and signing)
-                           and overwrite any existing file in the 'out' directory
-  -K, --private-key        Create a private key without a certificate. Ignored for --signing.
-  -k, --key-type KeyType   Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
-                           or ecdh). Ignored for --signing. Defaults to the same type as
-                           the signing certificate key or a default type if that cannot be determined.
-  -s, --san-dns VALUE      Subject-Alternative-Name DNS Name (repeat as required).
-                           Ignored for --signing.
-  -i, --san-ip VALUE       Subject-Alternative-Name IP Address (repeat as required).
-                           Ignored for --signing.
-  -e, --san-email VALUE    Subject-Alternative-Name Email Address (repeat as required).
-                           Ignored for --signing.
-  -u, --san-url VALUE      Subject-Alternative-Name URL (repeat as required).
-                           Ignored for --signing.
-      --allow-root         allow running as root (not recommended)
-  -G, --config string      config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string    profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output directory           Write to directory. Files have the common name as the basename.
+                                   For bundles use a dash '-' for stdout. (default ".")
+  -c, --cname CNAME                Common Name for certificate. CNAME defaults to hostname except.
+                                   Ignored for --signing.
+  -S, --signing CNAME              Create a new signing certificate bundle using CNAME for the Common Name.
+                                   If written to a directory the file will be called
+                                   "geneos-signing-certificate-(CNAME).pem".
+                                   Requires a root certificate ("rootCA.pem") and private key ("rootCA.key")
+                                   to be present in the user configuration directory.
+  -E, --expiry days                Certificate expiry duration in days. Ignored for --signing (default 365)
+  -F, --force[=true|false]         Runs "tls init" (but do not replace existing root and signing)
+                                   and overwrite any existing file in the 'out' directory
+  -K, --private-key[=true|false]   Create a private key without a certificate. Ignored for --signing.
+  -k, --key-type KeyType           Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
+                                   or ecdh). Ignored for --signing. Defaults to the same type as
+                                   the signing certificate key or a default type if that cannot be determined.
+  -s, --san-dns VALUE              Subject-Alternative-Name DNS Name (repeat as required).
+                                   Ignored for --signing.
+  -i, --san-ip VALUE               Subject-Alternative-Name IP Address (repeat as required).
+                                   Ignored for --signing.
+  -e, --san-email VALUE            Subject-Alternative-Name Email Address (repeat as required).
+                                   Ignored for --signing.
+  -u, --san-url VALUE              Subject-Alternative-Name URL (repeat as required).
+                                   Ignored for --signing.
+      --allow-root[=true|false]    allow running as root (not recommended)
+  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

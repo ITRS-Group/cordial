@@ -69,30 +69,30 @@ geneos init [PROFILE] [flags] [DIRECTORY]
 
 ```text
   -R, --restore PATH                     Restore from backup file PATH
-  -X, --no-install                       Don't install any releases after restore
-  -M, --minimal                          use a minimal Netprobe release
+  -X, --no-install[=true|false]          Don't install any releases after restore
+  -M, --minimal[=true|false]             use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
   -L, --licence string                   Licence file location (default "geneos.lic")
-  -l, --log                              Follow logs after starting instance(s)
-  -F, --force                            Ignore existing directories and files and overwrite
+  -l, --log[=true|false]                 Follow logs after starting instance(s)
+  -F, --force[=true|false]               Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
-      --insecure                         Do not create internal certificates for TLS support
+      --insecure[=true|false]            Do not create internal certificates for TLS support
   -A, --archive string                   Directory of releases for installation
-  -N, --nexus                            Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -S, --snapshots                        Download from nexus snapshots. Implies -N
+  -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -S, --snapshots[=true|false]           Download from nexus snapshots. Implies -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string                  Username for downloads (password prompted)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)
-      --allow-root                       allow running as root (not recommended)
+      --allow-root[=true|false]          allow running as root (not recommended)
   -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)

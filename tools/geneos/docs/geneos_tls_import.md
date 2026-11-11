@@ -21,15 +21,15 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ### Options
 
 ```text
-  -p, --password SECRET   Plaintext password for PFX/PKCS#12 file decryption.
-                          You will be prompted if not supplied as an argument.
-                          PFX/PKCS#12 files are identified by the .pfx or .p12
-                          file extension and only supported for instance bundles
-  -k, --key file          Private key file for certificate, PEM format only
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -p, --password SECRET           Plaintext password for PFX/PKCS#12 file decryption.
+                                  You will be prompted if not supplied as an argument.
+                                  PFX/PKCS#12 files are identified by the .pfx or .p12
+                                  file extension and only supported for instance bundles
+  -k, --key file                  Private key file for certificate, PEM format only
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

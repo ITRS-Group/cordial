@@ -27,15 +27,15 @@ geneos host add [flags] [NAME] [SSHURL]
 ### Options
 
 ```text
-  -I, --init              Initialise the remote host directories and component files
-  -p, --prompt            Prompt for password
-  -P, --password SECRET   Password
-  -k, --keyfile KEYFILE   Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
-  -i, --privatekey PATH   Private key file
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -I, --init[=true|false]         Initialise the remote host directories and component files
+  -p, --prompt[=true|false]       Prompt for password
+  -P, --password SECRET           Password
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
+  -i, --privatekey PATH           Private key file
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

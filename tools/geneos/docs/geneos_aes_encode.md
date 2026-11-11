@@ -45,20 +45,20 @@ geneos aes encode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -e, --expandable             Output in 'expandable' format
-  -k, --keyfile KEYFILE        Path to keyfile
-  -c, --crc string             CRC of existing component shared keyfile to use (extension optional)
-  -p, --password SECRET        Password
-  -s, --source string          Alternative source for plaintext password
-  -o, --once                   Only prompt for password once, do not verify. Normally use '-s -' for stdin
-  -A, --app-key PROVIDER       SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
-  -C, --client-id SECRET       Client ID for --app-key, prompted if not set
-  -S, --client-secret SECRET   Client Secret for --app-key, prompted if not set
-  -a, --app-key-file string    App-key filename, if saving per instance, otherwise defaults to STDOUT
-      --allow-root             allow running as root (not recommended)
-  -G, --config string          config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME          Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string        profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -e, --expandable[=true|false]   Output in 'expandable' format
+  -k, --keyfile KEYFILE           Path to keyfile
+  -c, --crc string                CRC of existing component shared keyfile to use (extension optional)
+  -p, --password SECRET           Password
+  -s, --source string             Alternative source for plaintext password
+  -o, --once[=true|false]         Only prompt for password once, do not verify. Normally use '-s -' for stdin
+  -A, --app-key PROVIDER          SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
+  -C, --client-id SECRET          Client ID for --app-key, prompted if not set
+  -S, --client-secret SECRET      Client Secret for --app-key, prompted if not set
+  -a, --app-key-file string       App-key filename, if saving per instance, otherwise defaults to STDOUT
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

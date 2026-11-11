@@ -118,10 +118,10 @@ The subsystems below group related functions together and have their own sub-com
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -152,10 +152,10 @@ geneos ac2
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -179,9 +179,10 @@ The commands operate on files. They do not connect to a Gateway or change a runn
 ```text
 geneos adb info [flags] [PATH...]
 geneos adb clean [flags] PATH...
+geneos adb edit [flags] PATH...
 ```
 
-`dashboard` and `dashboards` are aliases for `adb`. Both subcommands accept multiple file paths. Quote paths that contain spaces. The shell can expand a file pattern; the commands do not search directories recursively.
+`dashboard` and `dashboards` are aliases for `adb`; `edit` is an alias for `clean`. The commands accept multiple file paths. Quote paths that contain spaces. The shell can expand a file pattern; the commands do not search directories recursively.
 
 ```bash
 geneos adb info /opt/itrs/dashboards/application.adb
@@ -196,9 +197,11 @@ No Geneos installation directory is required for these subcommands. `clean` requ
 
 | Option | Default | Use |
 | --- | --- | --- |
-| `--show-xpaths`, `-X` | `false` | Show sorted, distinct data-item XPaths instead of element totals. |
+| `--show-xpaths`, `-X` | `false` | List sorted, distinct XPaths only. |
+| `--show-urls` | `false` | List sorted, distinct URL destinations only, without link wrappers or source labels. |
+| `--show-all` | `false` | List both XPaths and URLs in separate blocks. |
 
-Without `--show-xpaths`, the report lists Gateway, Probe, Managed Entity, Attribute, Sampler, Type, and Dataview names found in supported data-item references. Each heading shows the number of distinct names. Each name has an occurrence count. For Attributes, the report also shows distinct values and their counts. A lack of name for an element is shown as `<no name>`. An empty Type name appears as `<empty>`, while the lack of a Type on a Sampler is not recorded.
+Without a list option, the report lists Gateway, Probe, Managed Entity, Attribute, Sampler, Type, and Dataview names found in supported data-item references. Each heading shows the number of distinct names. Each name has an occurrence count. For Attributes, the report also shows distinct values and their counts. A lack of name for an element is shown as `<no name>`. An empty Type name appears as `<empty>`, while the lack of a Type on a Sampler is not recorded.
 
 1. Get a summary of one dashboard:
 
@@ -214,7 +217,7 @@ Without `--show-xpaths`, the report lists Gateway, Probe, Managed Entity, Attrib
 
 3. Use the names and paths to select the changes needed before you run `clean`.
 
-Counts and XPath lists accumulate across files in one invocation. For independent reports, run `info` once per file. The report is not a full inventory of all dashboard objects or URL types.
+Counts and XPath/URL lists accumulate across files in one invocation. For independent reports, run `info` once per file. The report is not a full inventory of all dashboard objects.
 
 ## Choose Output Handling
 
@@ -236,6 +239,8 @@ There is no dry-run option. Review the cleaned copy before you replace or import
 
 `clean` updates supported `dataitem(...)` references in modifier expressions, severity modifiers, and Geneos URL links. It processes `.Activedashboard` entries in the archive. It copies other archive entries, except `.dbo` startup-data entries, which it removes by default.
 
+Use the `edit` alias when making targeted changes without the default cleanup: it preserves Gateway, Probe, Managed Entity, and Type values and `.dbo` startup data unless explicit options request changes.
+
 With no action options, cleanup has these defaults:
 
 | Element | Default action |
@@ -249,6 +254,8 @@ With no action options, cleanup has these defaults:
 | Dataview name | Keep the name. |
 
 Removing a name predicate broadens the data-item path. It does not delete the dashboard object or the XPath element. The command also clears the stored URL alias in processed modifier records.
+
+After each file is processed, `clean` and `edit` report the number of updated XPath and URL links, which XPath components changed, and any modifier aliases or startup-data entries removed. A file with no changes is reported as such.
 
 1. Inspect the source with `geneos adb info`.
 2. Write a cleaned copy:
@@ -513,18 +520,18 @@ Additional limits:
 
 ## Commands
 
-| Command | Description |
+| Command / Aliases | Description |
 |-------|-------|
-| [`geneos adb clean`](#geneos-adb-clean)	 | Clean ADB file(s) |
+| [`geneos adb clean / edit`](#geneos-adb-clean)	 | Clean or edit ADB file(s) |
 | [`geneos adb info`](#geneos-adb-info)	 | Info about ADB file(s) |
 
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -543,11 +550,32 @@ This command is currently applicable only to simple Geneos XPaths used in modifi
 
 Given one or more Active Dashboard files (normally with an `.adb` extension) this command will apply the specified modifications and create an updated version of each file, by default with the following elements having their name predicates removed: "gateway", "probe" and "entity". With command line flags you can exercise more granular control over which elements to keep, remove, or modify.
 
+`geneos adb edit` is an alias for this command with preserve-by-default behavior: it keeps Gateway, Probe, Managed Entity, and Type values and retains `.dbo` startup data. Explicit action flags still apply, and `--keep-startup-data=false` explicitly disables startup-data preservation.
+
 The original file is saved by renaming it in the same location as the source file (even when running the command from a different directory) with a timestamp added before the file extension, and the processed file replacing the original. If you specify an output directory using `--output`/`-o`, the processed file will be written there instead, and no backup of the original will be made unless the directory is the same as the one for the source.
 
 If you use the `--keep-all`/`-k` flag, the default action for Gateway, Probe, and Managed Entity names will be `keep`. Type processing still uses `remove-empty` unless overridden. This can be combined with `--filter-*` options to selectively apply the modifications to specific XPaths and modifiers.
 
+After processing each file, the command prints a concise summary of changed links, the XPath components changed, modifier aliases cleared, and startup-data entries removed. Files with no changes are reported as such.
+
 To only process modifiers or links, you can use the `--skip-modifiers` and `--skip-links` flags to exclude the respective elements from processing. Note that both flags cannot be used simultaneously, as this would result in no elements being processed.
+
+## Update Web Page URLs
+
+Use `--wwwpage` to apply regular-expression replacements to the URL argument inside each `wwwpage(...)` target. Repeat the flag to apply replacements in order. The replacement syntax uses a caller-selected delimiter, so choose one such as `#` when the pattern or replacement contains `/`:
+
+```bash
+geneos adb clean \
+	--keep-all \
+	--type keep \
+	--filter-url '^http://old\.example/' \
+	--filter-url '^https://old\.example/' \
+	--wwwpage 'replace:#^http://#https://#' \
+	--wwwpage 'replace:#old\.example#new.example#' \
+	/opt/itrs/dashboards/application.adb
+```
+
+`--filter-url REGEXP` can be repeated. A URL is eligible when it matches any supplied regular expression; without this filter, all `wwwpage(...)` URLs are eligible. Filters match the URL argument, not the `wwwpage(...)` wrapper. Web URL actions apply to both `GeneosURL` records and web-page targets embedded in modifier records. Other expressions in modifier targets are preserved.
 
 The `--filter-*` flags allows you to specify either an XPath or specific component matches to selectively apply the cleaning modifications to matching dataitems within the Active Dashboard files. The strings in the filter are applied as "globs", i.e. like shell wildcards. Only the elements matching the filter will be affected by the cleaning options.
 
@@ -593,78 +621,86 @@ geneos adb clean [flags] [PATH...]
 ### Options
 
 ```text
-  -o, --output directory              Specify the output directory for cleaned ADB files.
-                                      If not specified, the cleaned files will replace the
-                                      original files in place and a backup of the original
-                                      will be created with a timestamp added before the ".adb"
-                                      extension.
-                                      
-      --gateway OPTION                Gateway name updates. Default 'remove-all'
-      --probe OPTION                  Probe name updates. Default 'remove-all'
-      --entity OPTION                 Entity name updates. Default 'remove-all'
-      --sampler OPTION                Sampler name updates. Default 'keep'
-      --dataview OPTION               Dataview name updates. Default 'keep'.
-                                      
-                                      For the above xpath components the valid options, which can be
-                                      repeated and are applied in the order given, are:
-                                      
-                                      'remove-all'          - remove all names
-                                      'keep'                - keep all names
-                                      'remove:NAME'         - remove names matching NAME. NAME can be
-                                                              a glob (not regexp) pattern
-                                      'set:ABC'             - set the name to ABC
-                                      'replace:/P/R/'       - apply replacement R to names
-                                                              matching the regexp pattern R. The
-                                                              replacement is applied as many times as
-                                                              P matches
-                                      
-      --type OPTION                   Type updates. Default 'remove-empty'.
-                                      
-                                      As for xpath components above, but with the addtional options:
-                                      
-                                      'remove-empty'        - Remove types with an empty name
-                                      'set-empty'           - Set types with an empty name. Note that
-                                                              this is different from no type.
-                                      
-      --attribute OPTION              Attribute updates.
-                                      
-                                      For each attribute, the valid options, which can be repeated and
-                                      are applied in the order given, are:
-                                      
-                                      'remove:NAME[=VALUE]' - remove attribute NAME, optionally only
-                                                              those matching VALUE. Both KEY and VALUE
-                                                              can be glob (not regexp) patterns
-                                      'add:NAME=VALUE'      - add attribute NAME with VALUE
-                                      'replace:NAME=VALUE'  - replace attribute NAME with VALUE
-                                      'replace:NAME=/P/R/'  - replace attribute NAME with
-                                                              the result of applying the regexp
-                                                              pattern P to replacement R. The
-                                                              replacement is applied as many times as
-                                                              P matches
-                                      'remove-all'          - remove all attributes
-                                      
-      --filter-xpath string           Filter for matching XPaths, leaving others unchanged
-                                      (applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name="LDN*")]')
-      --filter-gateway string         Filter for matching gateways
-      --filter-probe string           Filter for matching probes
-      --filter-entity string          Filter for matching entities
-      --filter-sampler string         Filter for matching samplers
-      --filter-type string            Filter for matching types
-      --filter-dataview string        Filter for matching dataviews
-                                      
-                                      All the above filters support glob patterns (not regular expressions).
-                                      
-      --filter-attribute NAME=VALUE   Filter for matching attributes in the form NAME=VALUE where
-                                      VALUE should be '*' if you want to match any value. Can be repeated.
-                                      
-  -k, --keep-all                      Set default action for all processing actions to 'keep' or do nothing
-      --skip-modifiers                Skip processing of modifier elements
-      --skip-links                    Skip processing of link elements
-      --keep-startup-data             Keep startup data (default is to remove)
-      --allow-root                    allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output directory                 Specify the output directory for cleaned ADB files.
+                                         If not specified, the cleaned files will replace the
+                                         original files in place and a backup of the original
+                                         will be created with a timestamp added before the ".adb"
+                                         extension.
+                                         
+      --gateway OPTION                   Gateway name updates. Default 'remove-all'
+      --probe OPTION                     Probe name updates. Default 'remove-all'
+      --entity OPTION                    Entity name updates. Default 'remove-all'
+      --sampler OPTION                   Sampler name updates. Default 'keep'
+      --dataview OPTION                  Dataview name updates. Default 'keep'.
+                                         
+                                         For the above xpath components the valid options, which can be
+                                         repeated and are applied in the order given, are:
+                                         
+                                         'remove-all'          - remove all names
+                                         'keep'                - keep all names
+                                         'remove:NAME'         - remove names matching NAME. NAME can be
+                                                                 a glob (not regexp) pattern
+                                         'set:ABC'             - set the name to ABC
+                                         'replace:/P/R/'       - apply replacement R to names
+                                                                 matching the regexp pattern R. The
+                                                                 replacement is applied as many times as
+                                                                 P matches
+                                         
+      --wwwpage OPTION                   Web page URL updates. Apply regular-expression replacements to the URL
+                                         inside each wwwpage(...) target. Repeat to apply actions in order:
+                                         
+                                         'replace:#PATTERN#REPLACEMENT#' - replace matching URL text. The delimiter
+                                         can be any character and must not conflict with the pattern or replacement.
+                                         
+      --type OPTION                      Type updates. Default 'remove-empty'.
+                                         
+                                         As for xpath components above, but with the addtional options:
+                                         
+                                         'remove-empty'        - Remove types with an empty name
+                                         'set-empty'           - Set types with an empty name. Note that
+                                                                 this is different from no type.
+                                         
+      --attribute OPTION                 Attribute updates.
+                                         
+                                         For each attribute, the valid options, which can be repeated and
+                                         are applied in the order given, are:
+                                         
+                                         'remove:NAME[=VALUE]' - remove attribute NAME, optionally only
+                                                                 those matching VALUE. Both KEY and VALUE
+                                                                 can be glob (not regexp) patterns
+                                         'add:NAME=VALUE'      - add attribute NAME with VALUE
+                                         'replace:NAME=VALUE'  - replace attribute NAME with VALUE
+                                         'replace:NAME=/P/R/'  - replace attribute NAME with
+                                                                 the result of applying the regexp
+                                                                 pattern P to replacement R. The
+                                                                 replacement is applied as many times as
+                                                                 P matches
+                                         'remove-all'          - remove all attributes
+                                         
+      --filter-xpath string              Filter for matching XPaths, leaving others unchanged
+                                         (applies glob patterns not xpath expressions, e.g. '//managedEntity[(@name="LDN*")]')
+      --filter-gateway string            Filter for matching gateways
+      --filter-probe string              Filter for matching probes
+      --filter-entity string             Filter for matching entities
+      --filter-sampler string            Filter for matching samplers
+      --filter-type string               Filter for matching types
+      --filter-dataview string           Filter for matching dataviews
+                                         
+                                         All the above filters support glob patterns (not regular expressions).
+                                         
+      --filter-attribute NAME=VALUE      Filter for matching attributes in the form NAME=VALUE where
+                                         VALUE should be '*' if you want to match any value. Can be repeated.
+                                         
+      --filter-url OPTION                Only process wwwpage URLs matching any supplied regular expression. Can be repeated.
+                                         
+  -k, --keep-all[=true|false]            Set default action for all processing actions to 'keep' or do nothing
+      --skip-modifiers[=true|false]      Skip processing of modifier elements
+      --skip-links[=true|false]          Skip processing of link elements
+      --keep-startup-data[=true|false]   Keep startup data (default is to remove)
+      --allow-root[=true|false]          allow running as root (not recommended)
+  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -681,7 +717,11 @@ Show information about the given ADB file(s)
 
 Without options the output lists the number of each element in the ADB file(s). The counts for each value are also shown, and for attributes the counts for each attribute value are displayed.
 
-The `--show-xpaths`/`-X` option displays a list of all XPaths found in the ADB file(s) instead of the counts for each element.
+By default, the command reports counts for each element and value.
+
+`--show-xpaths`/`-X` lists unique XPaths only. `--show-urls` lists unique URL targets only. `--show-all` lists both, in separate `XPaths` and `URLs` blocks. Each list is sorted, and URL values are shown without their link wrapper or source type.
+
+Dataitem targets from modifier records and `GeneosURL` records appear in the XPath list. `wwwpage(...)` and `geneos://...` destinations are listed as URL values without wrappers. Web destinations embedded in modifier records are included too.
 ## Usage
 
 ```text
@@ -691,11 +731,13 @@ geneos adb info [PATH...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -X, --show-xpaths       Show a list of XPaths rather than totals for element values
+      --allow-root[=true|false]    allow running as root (not recommended)
+  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --show-all[=true|false]      List both XPaths and URL targets
+      --show-urls[=true|false]     List URL targets only
+  -X, --show-xpaths[=true|false]   List XPaths only
 ```
 
 ## SEE ALSO
@@ -751,8 +793,8 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
 ### Options
 
 ```text
-  -S, --start                         Start new instance after creation
-  -l, --log                           Follow the logs after starting the instance.
+  -S, --start[=true|false]            Start new instance after creation
+  -l, --log[=true|false]              Follow the logs after starting the instance.
                                       Implies -S to start the instance
   -p, --port uint16                   Override the default port selection
   -e, --env NAME=VALUE                Environment variable for instance start-up in the format NAME=VALUE
@@ -783,9 +825,9 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
-      --insecure                      Do not create certificates for TLS support.
+      --insecure[=true|false]         Do not create certificates for TLS support.
                                       Ignored if --certs-bundle is given.
-      --allow-root                    allow running as root (not recommended)
+      --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
@@ -831,10 +873,10 @@ In addition to the functionality built-in to Geneos as described in the Gateway 
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -870,16 +912,16 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
-  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
-  -e, --expandable string   The keyfile and ciphertext in expandable format (including '${...}')
-  -p, --password string     Geneos formatted AES256 password
-  -s, --source string       Alternative source for password
-  -r, --raw                 Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --keyfile KEYFILE           Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
+  -v, --previous KEYFILE          Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
+  -e, --expandable string         The keyfile and ciphertext in expandable format (including '${...}')
+  -p, --password string           Geneos formatted AES256 password
+  -s, --source string             Alternative source for password
+  -r, --raw[=true|false]          Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -955,20 +997,20 @@ geneos aes encode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -e, --expandable             Output in 'expandable' format
-  -k, --keyfile KEYFILE        Path to keyfile
-  -c, --crc string             CRC of existing component shared keyfile to use (extension optional)
-  -p, --password SECRET        Password
-  -s, --source string          Alternative source for plaintext password
-  -o, --once                   Only prompt for password once, do not verify. Normally use '-s -' for stdin
-  -A, --app-key PROVIDER       SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
-  -C, --client-id SECRET       Client ID for --app-key, prompted if not set
-  -S, --client-secret SECRET   Client Secret for --app-key, prompted if not set
-  -a, --app-key-file string    App-key filename, if saving per instance, otherwise defaults to STDOUT
-      --allow-root             allow running as root (not recommended)
-  -G, --config string          config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME          Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string        profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -e, --expandable[=true|false]   Output in 'expandable' format
+  -k, --keyfile KEYFILE           Path to keyfile
+  -c, --crc string                CRC of existing component shared keyfile to use (extension optional)
+  -p, --password SECRET           Password
+  -s, --source string             Alternative source for plaintext password
+  -o, --once[=true|false]         Only prompt for password once, do not verify. Normally use '-s -' for stdin
+  -A, --app-key PROVIDER          SSO PROVIDER, one of ssoAgent, obcerv, gatewayHub
+  -C, --client-id SECRET          Client ID for --app-key, prompted if not set
+  -S, --client-secret SECRET      Client Secret for --app-key, prompted if not set
+  -a, --app-key-file string       App-key filename, if saving per instance, otherwise defaults to STDOUT
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1002,15 +1044,15 @@ geneos aes list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -S, --shared            List shared key files
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -c, --csv               Output CSV
-  -t, --toolkit           Output Toolkit formatted CSV
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -S, --shared[=true|false]       List shared key files
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -c, --csv[=true|false]          Output CSV
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1050,16 +1092,16 @@ geneos aes new [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE   Path to key file, defaults to STDOUT
-      --user              Write to user key file (typically "${HOME}/.config/geneos/keyfile.aes")
-  -b, --backup string     Backup existing keyfile with extension given (default "-prev")
-  -F, --force             Force overwriting an existing key file
-  -S, --shared            Write the keyfile to matching component shared directories
-  -U, --update            Update keyfile settings on matching instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --keyfile KEYFILE           Path to key file, defaults to STDOUT
+      --user[=true|false]         Write to user key file (typically "${HOME}/.config/geneos/keyfile.aes")
+  -b, --backup string             Backup existing keyfile with extension given (default "-prev")
+  -F, --force[=true|false]        Force overwriting an existing key file
+  -S, --shared[=true|false]       Write the keyfile to matching component shared directories
+  -U, --update[=true|false]       Update keyfile settings on matching instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1096,12 +1138,12 @@ geneos aes password [flags]
 ### Options
 
 ```text
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -p, --password SECRET     Password
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -s, --source PATH|URL|-   External source for password PATH|URL|-
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -p, --password SECRET           Password
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -s, --source PATH|URL|-         External source for password PATH|URL|-
 ```
 
 ## SEE ALSO
@@ -1135,16 +1177,16 @@ geneos aes set [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile PATH|URL|-   Key file to use. PATH|URL|-
-                             Path to a local file, a URL or a dash for STDIN. (default "-")
-  -c, --crc CRC              CRC of an existing shared keyfile to use
-  -b, --backup string        Backup any existing keyfile with extension given (default "-prev")
-  -N, --no-roll              Do not roll any existing keyfile to previous keyfile setting
-  -s, --shared               Set as a shared keyfile, using the CRC as the file name prefix
-      --allow-root           allow running as root (not recommended)
-  -G, --config string        config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME        Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string      profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --keyfile PATH|URL|-        Key file to use. PATH|URL|-
+                                  Path to a local file, a URL or a dash for STDIN. (default "-")
+  -c, --crc CRC                   CRC of an existing shared keyfile to use
+  -b, --backup string             Backup any existing keyfile with extension given (default "-prev")
+  -N, --no-roll[=true|false]      Do not roll any existing keyfile to previous keyfile setting
+  -s, --shared[=true|false]       Set as a shared keyfile, using the CRC as the file name prefix
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1194,25 +1236,25 @@ geneos backup [flags] [all] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -o, --output string     Write to "DEST". Without a destination filename the command creates
-                          a file in the current directory with a name based on the contents of the
-                          archive. If DEST is a directory or has a "/" suffix then the file is
-                          written to that directory using the same naming format as if no file was
-                          given. Directories are created as required.
-  -D, --datetime          Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names
-  -z, --compress type     Compression type. One of `gzip`, `bzip2` or `none`. (default "gzip")
-  -s, --size string       Skip files larger than this size unless --all is used. Accepts suffixes
-                          with common scale units such as K, M, G with both B and iB units,
-                          e.g. "2MiB". "0" (zero) means no limit to file sizes. (default "2MiB")
-  -A, --all               Include all files except AES key files, certificates and private keys.
-      --shared            Include per-component shared directories from outside instance directories.
-                          
-      --aes               Include AES key files.
-      --tls               Include certificates, private keys and certificate chains.
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output string             Write to "DEST". Without a destination filename the command creates
+                                  a file in the current directory with a name based on the contents of the
+                                  archive. If DEST is a directory or has a "/" suffix then the file is
+                                  written to that directory using the same naming format as if no file was
+                                  given. Directories are created as required.
+  -D, --datetime[=true|false]     Add a datetime string (YYYYMMDDhhmmss) the auto-generated file names
+  -z, --compress type             Compression type. One of `gzip`, `bzip2` or `none`. (default "gzip")
+  -s, --size string               Skip files larger than this size unless --all is used. Accepts suffixes
+                                  with common scale units such as K, M, G with both B and iB units,
+                                  e.g. "2MiB". "0" (zero) means no limit to file sizes. (default "2MiB")
+  -A, --all[=true|false]          Include all files except AES key files, certificates and private keys.
+      --shared[=true|false]       Include per-component shared directories from outside instance directories.
+                                  
+      --aes[=true|false]          Include AES key files.
+      --tls[=true|false]          Include certificates, private keys and certificate chains.
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1256,10 +1298,10 @@ geneos ca3
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1289,10 +1331,10 @@ geneos clean [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1329,13 +1371,13 @@ geneos command [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -e, --env NAME=VALUE    Extra environment variable (Repeat as required)
-  -x, --extras string     Extra args passed to process, split on spaces and quoting ignored
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -j, --json              JSON formatted output
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
+  -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -j, --json[=true|false]         JSON formatted output
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1399,10 +1441,10 @@ General options are loaded from the global file first, then the user file and an
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1427,10 +1469,10 @@ geneos config import [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1466,10 +1508,10 @@ geneos config set [KEY=VALUE...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -1506,11 +1548,11 @@ geneos config show [KEY...] [flags]
 ### Options
 
 ```text
-  -a, --all               Show all the parameters including all defaults
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -a, --all[=true|false]          Show all the parameters including all defaults
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1536,10 +1578,10 @@ geneos config unset [KEY...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1577,10 +1619,10 @@ geneos copy [TYPE] SOURCE DESTINATION [KEY=VALUE...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1612,12 +1654,12 @@ geneos delete [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -S, --stop              Stop instances first
-  -F, --force             Force delete of protected instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -S, --stop[=true|false]         Stop instances first
+  -F, --force[=true|false]        Force delete of protected instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1706,13 +1748,13 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```text
   -D, --geneos GENEOS_HOME            Installation directory. Prompted if not given and not found
                                       in existing user configuration or environment ${GENEOS_HOME}
-  -S, --start                         Start new instance after creation
-  -l, --log                           Start created instance and follow logs.
+  -S, --start[=true|false]            Start new instance after creation
+  -l, --log[=true|false]              Start created instance and follow logs.
                                       (Implies --start to start the instance)
   -x, --extras string                 Extra args passed to initial start, split on spaces and quoting ignored
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
-  -n, --nosave                        Do not save a local copy of any downloads
+  -n, --nosave[=true|false]           Do not save a local copy of any downloads
   -C, --signing-bundle string         signing certificate bundle file, in PEM or PFX/PKCS#12 format.
                                       Use a dash ('-') to be prompted for PEM from console.
                                       PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -1722,7 +1764,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --certs-password SECRET         Password for PFX/PKCS#12 signing or certificate bundle file.
                                       You will be prompted if required and have not supplied one as an argument.
                                       The password can be in cordial expandable format.
-      --insecure                      Do not initialise TLS subsystem.
+      --insecure[=true|false]         Do not initialise TLS subsystem.
                                       Ignored if --certs-bundle is given.
       --keyfile PATH                  Keyfile PATH to use. Default is to create one
                                       for TYPEs that support them
@@ -1737,15 +1779,15 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       symlink to the installed release. (default "active_prod")
   -V, --version VERSION               Use this VERSION of package
                                       Doesn't work for EL8/9/10 archives. (default "latest")
-  -L, --local                         Install from local archives only
+  -L, --local[=true|false]            Install from local archives only
   -A, --archive string                URL or file path to release archive
                                       or a directory to search for local release archives.
                                       Local paths imply --local
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
-      --nexus                         Download from nexus.itrsgroup.com
+      --nexus[=true|false]            Download from nexus.itrsgroup.com
                                       Requires ITRS internal credentials
-      --snapshots                     Download from nexus snapshots
+      --snapshots[=true|false]        Download from nexus snapshots
                                       Implies --nexus
       --template PATH|URL|-           Template file to use (if supported for TYPE). PATH|URL|-
   -I, --import [DEST=]PATH|URL        import file(s) to instance. DEST defaults to the base
@@ -1766,7 +1808,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       (Repeat as required, san only)
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
-      --allow-root                    allow running as root (not recommended)
+      --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
@@ -1801,12 +1843,12 @@ geneos disable [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-  -S, --stop              Stop instances
-  -F, --force             Force disable instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -S, --stop[=true|false]         Stop instances
+  -F, --force[=true|false]        Force disable instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1832,11 +1874,11 @@ geneos enable [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -S, --start             Start enabled instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -S, --start[=true|false]        Start enabled instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1859,10 +1901,10 @@ geneos fa2
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1888,10 +1930,10 @@ geneos fileagent
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1914,10 +1956,10 @@ geneos floating
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2052,10 +2094,10 @@ geneos gateway
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2089,10 +2131,10 @@ geneos home [TYPE] [NAME]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -2189,10 +2231,10 @@ The remote connections over SSH mean there are limitations to the features avail
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2232,15 +2274,15 @@ geneos host add [flags] [NAME] [SSHURL]
 ### Options
 
 ```text
-  -I, --init              Initialise the remote host directories and component files
-  -p, --prompt            Prompt for password
-  -P, --password SECRET   Password
-  -k, --keyfile KEYFILE   Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
-  -i, --privatekey PATH   Private key file
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -I, --init[=true|false]         Initialise the remote host directories and component files
+  -p, --prompt[=true|false]       Prompt for password
+  -P, --password SECRET           Password
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
+  -i, --privatekey PATH           Private key file
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -2273,13 +2315,13 @@ geneos host delete [flags] NAME...
 ### Options
 
 ```text
-  -F, --force             Delete instances without checking if disabled
-  -R, --all               Recursively delete all instances on the host before removing the host config
-  -S, --stop              Stop all instances on the host before deleting the local entry
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -F, --force[=true|false]        Delete instances without checking if disabled
+  -R, --all[=true|false]          Recursively delete all instances on the host before removing the host config
+  -S, --stop[=true|false]         Stop all instances on the host before deleting the local entry
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2303,15 +2345,15 @@ geneos host list [flags] [NAME...]
 ### Options
 
 ```text
-  -a, --all               Show all hosts
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -c, --csv               Output CSV
-  -t, --toolkit           Output Toolkit formatted CSV
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -a, --all[=true|false]          Show all hosts
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -c, --csv[=true|false]          Output CSV
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2335,14 +2377,14 @@ geneos host set [flags] [NAME...] [KEY=VALUE...]
 ### Options
 
 ```text
-  -p, --prompt            Prompt for password
-  -P, --password SECRET   password
-  -k, --keyfile KEYFILE   Keyfile
-  -i, --privatekey PATH   Private key file
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -p, --prompt[=true|false]       Prompt for password
+  -P, --password SECRET           password
+  -k, --keyfile KEYFILE           Keyfile
+  -i, --privatekey PATH           Private key file
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2368,10 +2410,10 @@ geneos host show [flags] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2395,13 +2437,13 @@ geneos host unset [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --key KEY           Unset configuration parameter KEY
-                          (Repeat as required)
-  -i, --privatekey PATH   Private key file
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --key KEY                   Unset configuration parameter KEY
+                                  (Repeat as required)
+  -i, --privatekey PATH           Private key file
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -2444,11 +2486,11 @@ geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 ### Options
 
 ```text
-  -c, --common SUFFIX     Import files to a component directory named TYPE_SUFFIX
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --common SUFFIX             Import files to a component directory named TYPE_SUFFIX
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -2509,10 +2551,10 @@ geneos incident
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2538,15 +2580,15 @@ geneos incident query [FLAGS] [flags]
 ### Options
 
 ```text
-  -c, --config string       config file to use
-  -i, --ims string          IMS type, e.g. "snow" or "sdp". If not specified, the default is taken from config file
-  -T, --snow-table string   ServiceNow table, defaults to incident
-  -R, --snow-raw            turn ServiceNow sys_display off, i.e. return raw values instead of display values
-  -Q, --query string        query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. If not specified, the default is taken from config file
-  -f, --format string       output format: "csv" or "json" (default "csv")
-      --allow-root          allow running as root (not recommended)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --config string             config file to use
+  -i, --ims string                IMS type, e.g. "snow" or "sdp". If not specified, the default is taken from config file
+  -T, --snow-table string         ServiceNow table, defaults to incident
+  -R, --snow-raw[=true|false]     turn ServiceNow sys_display off, i.e. return raw values instead of display values
+  -Q, --query string              query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. If not specified, the default is taken from config file
+  -f, --format string             output format: "csv" or "json" (default "csv")
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2572,13 +2614,13 @@ geneos incident raise [FLAGS] [field=value ...] [flags]
 ### Options
 
 ```text
-  -c, --config string         config file to use
-  -i, --ims string            IMS type, e.g. snow or sdp. default taken from config file
-  -p, --profile string        profile to use for field creation
-  -t, --snow-table incident   ServiceNow table, typically incident
-      --allow-root            allow running as root (not recommended)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --config string             config file to use
+  -i, --ims string                IMS type, e.g. snow or sdp. default taken from config file
+  -p, --profile string            profile to use for field creation
+  -t, --snow-table incident       ServiceNow table, typically incident
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2627,10 +2669,10 @@ The archive contains a `v`-prefixed semantic-version directory of managed includ
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2763,11 +2805,11 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -U, --update            Update version links for existing include files
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -U, --update[=true|false]       Update version links for existing include files
 ```
 
 ## SEE ALSO
@@ -2822,17 +2864,17 @@ geneos includes list [NAMES...] [flags]
 ### Options
 
 ```text
-  -a, --all               List all include files, including those in versioned directories
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -f, --format string     Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'. (default "column")
-  -g, --gateway           List include files by gateway usage
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -i, --include           List include files by shared include files
-  -l, --long              Long format with extra information
-  -n, --no-remote         Exclude remote include files lookups
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -v, --version           List include files by version
+  -a, --all[=true|false]          List all include files, including those in versioned directories
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -f, --format string             Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'. (default "column")
+  -g, --gateway[=true|false]      List include files by gateway usage
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -i, --include[=true|false]      List include files by shared include files
+  -l, --long[=true|false]         Long format with extra information
+  -n, --no-remote[=true|false]    Exclude remote include files lookups
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -v, --version[=true|false]      List include files by version
 ```
 
 ## SEE ALSO
@@ -2865,11 +2907,11 @@ geneos includes update [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -V, --version string    Specify version to update includes to
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --version string            Specify version to update includes to
 ```
 
 ## SEE ALSO
@@ -2951,30 +2993,30 @@ geneos init [PROFILE] [flags] [DIRECTORY]
 
 ```text
   -R, --restore PATH                     Restore from backup file PATH
-  -X, --no-install                       Don't install any releases after restore
-  -M, --minimal                          use a minimal Netprobe release
+  -X, --no-install[=true|false]          Don't install any releases after restore
+  -M, --minimal[=true|false]             use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
   -L, --licence string                   Licence file location (default "geneos.lic")
-  -l, --log                              Follow logs after starting instance(s)
-  -F, --force                            Ignore existing directories and files and overwrite
+  -l, --log[=true|false]                 Follow logs after starting instance(s)
+  -F, --force[=true|false]               Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
-      --insecure                         Do not create internal certificates for TLS support
+      --insecure[=true|false]            Do not create internal certificates for TLS support
   -A, --archive string                   Directory of releases for installation
-  -N, --nexus                            Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-  -S, --snapshots                        Download from nexus snapshots. Implies -N
+  -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -S, --snapshots[=true|false]           Download from nexus snapshots. Implies -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
   -u, --username string                  Username for downloads (password prompted)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)
-      --allow-root                       allow running as root (not recommended)
+      --allow-root[=true|false]          allow running as root (not recommended)
   -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
@@ -3014,26 +3056,26 @@ geneos init templates [TYPE] [flags]
 ### Options
 
 ```text
-      --allow-root                       allow running as root (not recommended)
+      --allow-root[=true|false]          allow running as root (not recommended)
   -A, --archive string                   Directory of releases for installation
   -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
-  -F, --force                            Ignore existing directories and files and overwrite
+  -F, --force[=true|false]               Ignore existing directories and files and overwrite
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --insecure                         Do not create internal certificates for TLS support
-  -l, --log                              Follow logs after starting instance(s)
+      --insecure[=true|false]            Do not create internal certificates for TLS support
+  -l, --log[=true|false]                 Follow logs after starting instance(s)
   -n, --name string                      Use name for instances and configurations instead of the hostname
-  -N, --nexus                            Download from nexus.itrsgroup.com. Requires ITRS internal credentials
+  -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
       --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
-  -S, --snapshots                        Download from nexus snapshots. Implies -N
+  -S, --snapshots[=true|false]           Download from nexus snapshots. Implies -N
   -u, --username string                  Username for downloads (password prompted)
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
 ```
@@ -3079,10 +3121,10 @@ geneos licd
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3120,14 +3162,14 @@ geneos list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -c, --csv               Output CSV
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -t, --toolkit           Output Toolkit formatted CSV
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --csv[=true|false]          Output CSV
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3167,14 +3209,14 @@ geneos login [flags] [DOMAIN]
 ### Options
 
 ```text
-  -u, --username string   Username
-  -p, --password SECRET   Password
-  -k, --keyfile KEYFILE   Key file to use
-  -l, --list              List the names of the currently stored credentials
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string           Username
+  -p, --password SECRET           Password
+  -k, --keyfile KEYFILE           Key file to use
+  -l, --list[=true|false]         List the names of the currently stored credentials
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3200,11 +3242,11 @@ geneos logout [flags] [DOMAIN...]
 ### Options
 
 ```text
-  -A, --all               remove all credentials
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -A, --all[=true|false]          remove all credentials
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3242,20 +3284,20 @@ geneos logs [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -f, --follow            Follow file
-  -n, --lines int         Lines to tail (default 10)
-  -c, --cat               Output whole file
-  -E, --console           Show console (stdout/stderr) output files
-  -N, --no-normal         Do NOT show normal instance log files
-  -X, --no-headers        Do not show log file headers, useful for --match/-g output
-  -C, --ca                Include Collection Agent log for Netprobe instances
-  -A, --audit             Show only audit log files
-  -g, --match string      Match lines with STRING
-  -v, --ignore string     Match lines without STRING
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -f, --follow[=true|false]       Follow file
+  -n, --lines int                 Lines to tail (default 10)
+  -c, --cat[=true|false]          Output whole file
+  -E, --console[=true|false]      Show console (stdout/stderr) output files
+  -N, --no-normal[=true|false]    Do NOT show normal instance log files
+  -X, --no-headers[=true|false]   Do not show log file headers, useful for --match/-g output
+  -C, --ca[=true|false]           Include Collection Agent log for Netprobe instances
+  -A, --audit[=true|false]        Show only audit log files
+  -g, --match string              Match lines with STRING
+  -v, --ignore string             Match lines without STRING
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3382,10 +3424,10 @@ geneos md-gateway
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3411,11 +3453,11 @@ geneos migrate [--executables|-X] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -X, --executables       Migrate executables by symlinking to this binary
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -X, --executables[=true|false]   Migrate executables by symlinking to this binary
+      --allow-root[=true|false]    allow running as root (not recommended)
+  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3440,10 +3482,10 @@ geneos minimal
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3481,10 +3523,10 @@ geneos move [TYPE] SOURCE DESTINATION [KEY=VALUE...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3540,10 +3582,10 @@ geneos netprobe
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3577,10 +3619,10 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3642,31 +3684,31 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 ### Options
 
 ```text
-  -u, --username string       Username for downloads, defaults to configuration value in download.username
-  -L, --local                 Install from local files only.
-                              * Implied if files or directories are given on command line.
-  -n, --nosave                Do not save a local copy of any downloads.
-                              * Implied if files or directories are given on command line.
-  -D, --download              Download only, to the current directory.
-                              Cannot be combined with --nosave
-  -U, --update                Update the base directory symlink, will restart unprotected instances
-  -F, --force                 Force restart of protected instances, implies --update
-  -b, --base string           Override the base active_prod link name (default "active_prod")
-  -V, --version string        Download this version, defaults to latest. Doesn't work for EL8 archives.
-                              Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
-  -O, --override string       Override the TYPE:VERSION for archive files with non-standard names
-  -N, --nexus                 Download from nexus.itrsgroup.com. Requires auth.
-  -S, --snapshots             Download from nexus snapshots (pre-releases), not releases. Requires -N
-      --all                   Install all types available, not just those types already installed
-  -A, --archive stringArray   URL or file path to release archive
-                              or a directory to search for local release archives.
-                              Added to positional sources (repeat as required)
-      --header NAME=VALUE     HTTP header in the format NAME=VALUE
-                              (Repeat as required)
-      --allow-root            allow running as root (not recommended)
-  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string           Username for downloads, defaults to configuration value in download.username
+  -L, --local[=true|false]        Install from local files only.
+                                  * Implied if files or directories are given on command line.
+  -n, --nosave[=true|false]       Do not save a local copy of any downloads.
+                                  * Implied if files or directories are given on command line.
+  -D, --download[=true|false]     Download only, to the current directory.
+                                  Cannot be combined with --nosave
+  -U, --update[=true|false]       Update the base directory symlink, will restart unprotected instances
+  -F, --force[=true|false]        Force restart of protected instances, implies --update
+  -b, --base string               Override the base active_prod link name (default "active_prod")
+  -V, --version string            Download this version, defaults to latest. Doesn't work for EL8 archives.
+                                  Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
+  -O, --override string           Override the TYPE:VERSION for archive files with non-standard names
+  -N, --nexus[=true|false]        Download from nexus.itrsgroup.com. Requires auth.
+  -S, --snapshots[=true|false]    Download from nexus snapshots (pre-releases), not releases. Requires -N
+      --all[=true|false]          Install all types available, not just those types already installed
+  -A, --archive stringArray       URL or file path to release archive
+                                  or a directory to search for local release archives.
+                                  Added to positional sources (repeat as required)
+      --header NAME=VALUE         HTTP header in the format NAME=VALUE
+                                  (Repeat as required)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -3704,15 +3746,15 @@ geneos package list [flags] [TYPE]
 ### Options
 
 ```text
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -c, --csv               Output CSV
-  -t, --toolkit           Output Toolkit formatted CSV
-  -I, --instances         Show instances using each version in toolkit mode, using '#' as a separator
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -c, --csv[=true|false]          Output CSV
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
+  -I, --instances[=true|false]    Show instances using each version in toolkit mode, using '#' as a separator
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3752,17 +3794,17 @@ geneos package uninstall [flags] [TYPE] [VERSION]
 ### Options
 
 ```text
-  -b, --base BASE         Remove the base link BASE for matching TYPEs if no instances reference it.
-                          This overrides other options below.
-  -V, --version VERSION   Uninstall VERSION
-  -A, --all               Uninstall all releases, stopping and disabling running instances
-  -k, --keep              Keep cached downloads
-  -U, --update            Update base links for instances to latest before restarting and removing
-  -F, --force             Force uninstall, stopping protected instances first. Also requires --update
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -b, --base BASE                 Remove the base link BASE for matching TYPEs if no instances reference it.
+                                  This overrides other options below.
+  -V, --version VERSION           Uninstall VERSION
+  -A, --all[=true|false]          Uninstall all releases, stopping and disabling running instances
+  -k, --keep[=true|false]         Keep cached downloads
+  -U, --update[=true|false]       Update base links for instances to latest before restarting and removing
+  -F, --force[=true|false]        Force uninstall, stopping protected instances first. Also requires --update
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -3808,14 +3850,14 @@ geneos package update [flags] [TYPE] [VERSION]
 ### Options
 
 ```text
-  -V, --version string    Update to this version, defaults to latest
-  -b, --base string       Base name for the symlink, defaults to active_prod (default "active_prod")
-  -R, --restart           Restart all instances that may have an update applied (default true)
-  -F, --force             Will also update and restart protected instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --version string            Update to this version, defaults to latest
+  -b, --base string               Base name for the symlink, defaults to active_prod (default "active_prod")
+  -R, --restart[=true|false]      Restart all instances that may have an update applied (default true)
+  -F, --force[=true|false]        Will also update and restart protected instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -4035,7 +4077,7 @@ For component parameters, see the [show command reference](#geneos-show) and [se
 
 ## Value Expansion
 
-Expansion replaces `${...}` text when the profile is applied. Use it in instance names, common string values, SAN Gateway lists, SAN Types and attributes, and SAN variable values. Do not assume that every YAML key is expanded in the same context.
+Expansion replaces `${...}` text when the profile is applied. Use it in instance names, common string values, SAN Gateway lists, SAN Types and attributes, SAN managed-entity names, and SAN variable values. Do not assume that every YAML key is expanded in the same context.
 
 | Form | Result |
 | --- | --- |
@@ -4043,6 +4085,7 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | `${env:NAME}` | Environment variable from the `geneos` process. An unset variable produces an empty value. |
 | `${option:EXPRESSION}` | Result of a `goval` expression using selected command options and `NAME=VALUE` arguments. |
 | `${config:KEY}` | Value from the current configuration. In a SAN `for-each` entry, this is the matched instance's configuration. |
+| `${type}` | Component type of the matched instance in a SAN managed-entity entry with `for-each` (for example, `gateway`). Available in `name`, `types`, `attributes`, and `variables`. |
 | `${expr:EXPRESSION}` | Result of a `goval` expression using current configuration values. Process environment variables are available through the `env` map. |
 | `${select:KEY1:KEY2:DEFAULT}` | First non-empty string configuration value, or the final literal default. Use an empty final field to return an empty string. |
 | `${replace:KEY1:KEY2:/PATTERN/TEXT/}` | Regular-expression replacement on the first non-empty string configuration value. The final delimiter must match the other delimiters. A delimiter other than `/` is allowed, but not `:`. |
@@ -4201,6 +4244,16 @@ san:
 
 `for-each` examines installed instances when the profile is applied. It does not detect later installation changes automatically.
 
+For `for-each` entries, `${type}` expands to the matched instances' component type and can be used to build the entity name or its values:
+
+```yaml
+managed-entities:
+  - for-each: gateway
+    name: ${config:name} ${type}
+    attributes:
+      - COMPONENT=${type}
+```
+
 ## Floating Netprobe Configuration
 
 A `floating` entry accepts common keys and `gateways`. It does not accept the SAN-specific `types`, `attributes`, `variables`, or `managed-entities` keys.
@@ -4296,10 +4349,10 @@ geneos profile
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4324,10 +4377,10 @@ geneos profile extract
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4350,11 +4403,11 @@ geneos profile list
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -f, --format string     Specify the output format: column, csv, json, pretty, table or toolkit (default "column")
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -f, --format string             Specify the output format: column, csv, json, pretty, table or toolkit (default "column")
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4380,11 +4433,11 @@ geneos protect [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -U, --unprotect         unprotect instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -U, --unprotect[=true|false]    unprotect instances
 ```
 
 ## SEE ALSO
@@ -4415,17 +4468,17 @@ geneos ps [flags] [TYPE] [NAMES...]
 ### Options
 
 ```text
-  -f, --files             Show open files
-  -n, --network           Show TCP sockets
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -l, --long              Show more output (remote ports etc.)
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -c, --csv               Output CSV
-  -t, --toolkit           Output Toolkit formatted CSV
+  -f, --files[=true|false]        Show open files
+  -n, --network[=true|false]      Show TCP sockets
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -l, --long[=true|false]         Show more output (remote ports etc.)
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -c, --csv[=true|false]          Output CSV
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
 ```
 
 ## SEE ALSO
@@ -4461,12 +4514,12 @@ geneos rebuild [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -F, --force             Force rebuild
-  -r, --reload            Reload instances after rebuild
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -F, --force[=true|false]        Force rebuild
+  -r, --reload[=true|false]       Reload instances after rebuild
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4490,10 +4543,10 @@ geneos reload [TYPE] [NAME...]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4521,11 +4574,11 @@ geneos reset [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -F, --force             Force reset (require for proteced instances) even if instance is running
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -F, --force[=true|false]        Force reset (require for proteced instances) even if instance is running
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -4570,17 +4623,17 @@ geneos restart [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -a, --all               Start all matching instances, not just those already running
-  -F, --force             Force restart of protected instances
-  -K, --kill              Force stop by sending an immediate SIGKILL
-  -p, --port uint16       Restart instance matching port (overrides TYPE and NAME)
-  -x, --extras string     Extra args passed to process, split on spaces and quoting ignored
-  -e, --env NAME=VALUE    Extra environment variable (Repeat as required)
-  -l, --log               Run 'logs -f' after starting instance(s)
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -a, --all[=true|false]          Start all matching instances, not just those already running
+  -F, --force[=true|false]        Force restart of protected instances
+  -K, --kill[=true|false]         Force stop by sending an immediate SIGKILL
+  -p, --port uint16               Restart instance matching port (overrides TYPE and NAME)
+  -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
+  -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
+  -l, --log[=true|false]          Run 'logs -f' after starting instance(s)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4620,15 +4673,15 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
 ### Options
 
 ```text
-  -s, --shared            include shared files
-  -z, --decompress TYPE   use decompression TYPE, one of `gzip`, `bzip2` or `none`
-                          if not given then the file name is used to guess the type
-                          MUST be supplied if the source is stdin (`-`)
-  -l, --list              list the contents of the archive(s)
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -s, --shared[=true|false]       include shared files
+  -z, --decompress TYPE           use decompression TYPE, one of `gzip`, `bzip2` or `none`
+                                  if not given then the file name is used to guess the type
+                                  MUST be supplied if the source is stdin (`-`)
+  -l, --list[=true|false]         list the contents of the archive(s)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -4668,11 +4721,11 @@ geneos revert [--executables|-X] | [TYPE] [NAME...]
 ### Options
 
 ```text
-  -X, --executables       Revert 'ctl' executables
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -X, --executables[=true|false]   Revert 'ctl' executables
+      --allow-root[=true|false]    allow running as root (not recommended)
+  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4755,10 +4808,10 @@ geneos router
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4859,10 +4912,10 @@ geneos san
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5026,7 +5079,7 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
                                       (Repeat as required, san only)
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
-      --allow-root                    allow running as root (not recommended)
+      --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
@@ -5079,17 +5132,17 @@ geneos show [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -o, --output string     Output file, default stdout
-  -r, --raw               Show raw (unexpanded) configuration values
-  -s, --setup             Show the instance Geneos configuration file, if any
-  -m, --merge             Merge Gateway configurations using the Gateway -dump-xml flag
-  -V, --validate          Validate Gateway configurations using the Gateway -validate flag
-      --hooks string      Hooks directory
-                          (may clash with instance parameters if set for normal execution)
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output string             Output file, default stdout
+  -r, --raw[=true|false]          Show raw (unexpanded) configuration values
+  -s, --setup[=true|false]        Show the instance Geneos configuration file, if any
+  -m, --merge[=true|false]        Merge Gateway configurations using the Gateway -dump-xml flag
+  -V, --validate[=true|false]     Validate Gateway configurations using the Gateway -validate flag
+      --hooks string              Hooks directory
+                                  (may clash with instance parameters if set for normal execution)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5129,18 +5182,18 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
 ### Options
 
 ```text
-  -V, --value             Request cell values (default true)
-  -S, --severity          Request cell severities
-  -Z, --snooze            Request cell snooze info
-  -U, --userassignment    Request cell user assignment info
-  -u, --username string   Username
-  -f, --format string     Output format (json, toolkit, toolkit-multi) (default "json")
-  -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
-  -x, --xpaths            just show matching xpaths
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --value[=true|false]            Request cell values (default true)
+  -S, --severity[=true|false]         Request cell severities
+  -Z, --snooze[=true|false]           Request cell snooze info
+  -U, --userassignment[=true|false]   Request cell user assignment info
+  -u, --username string               Username
+  -f, --format string                 Output format (json, toolkit, toolkit-multi) (default "json")
+  -l, --limit int                     limit matching items to display. default is unlimited. results unsorted.
+  -x, --xpaths[=true|false]           just show matching xpaths
+      --allow-root[=true|false]       allow running as root (not recommended)
+  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5188,10 +5241,10 @@ geneos sso-agent
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5223,14 +5276,14 @@ geneos start [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -p, --port uint16       Start instance matching port (overrides TYPE and NAME)
-  -x, --extras string     Extra args passed to process, split on spaces and quoting ignored
-  -e, --env NAME=VALUE    Extra environment variable (Repeat as required)
-  -l, --log               Follow logs after starting instance
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -p, --port uint16               Start instance matching port (overrides TYPE and NAME)
+  -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
+  -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
+  -l, --log[=true|false]          Follow logs after starting instance
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5259,13 +5312,13 @@ geneos stop [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -p, --port uint16       Stop instance matching port (overrides TYPE and NAME)
-  -F, --force             Stop protected instances
-  -K, --kill              Force immediate stop by sending an immediate SIGKILL
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -p, --port uint16               Stop instance matching port (overrides TYPE and NAME)
+  -F, --force[=true|false]        Stop protected instances
+  -K, --kill[=true|false]         Force immediate stop by sending an immediate SIGKILL
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5318,10 +5371,10 @@ Java based components, such as `webserver` and `sso-agent` will also support cus
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5363,34 +5416,34 @@ geneos tls create [flags]
 ### Options
 
 ```text
-  -o, --output directory   Write to directory. Files have the common name as the basename.
-                           For bundles use a dash '-' for stdout. (default ".")
-  -c, --cname CNAME        Common Name for certificate. CNAME defaults to hostname except.
-                           Ignored for --signing.
-  -S, --signing CNAME      Create a new signing certificate bundle using CNAME for the Common Name.
-                           If written to a directory the file will be called
-                           "geneos-signing-certificate-(CNAME).pem".
-                           Requires a root certificate ("rootCA.pem") and private key ("rootCA.key")
-                           to be present in the user configuration directory.
-  -E, --expiry days        Certificate expiry duration in days. Ignored for --signing (default 365)
-  -F, --force              Runs "tls init" (but do not replace existing root and signing)
-                           and overwrite any existing file in the 'out' directory
-  -K, --private-key        Create a private key without a certificate. Ignored for --signing.
-  -k, --key-type KeyType   Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
-                           or ecdh). Ignored for --signing. Defaults to the same type as
-                           the signing certificate key or a default type if that cannot be determined.
-  -s, --san-dns VALUE      Subject-Alternative-Name DNS Name (repeat as required).
-                           Ignored for --signing.
-  -i, --san-ip VALUE       Subject-Alternative-Name IP Address (repeat as required).
-                           Ignored for --signing.
-  -e, --san-email VALUE    Subject-Alternative-Name Email Address (repeat as required).
-                           Ignored for --signing.
-  -u, --san-url VALUE      Subject-Alternative-Name URL (repeat as required).
-                           Ignored for --signing.
-      --allow-root         allow running as root (not recommended)
-  -G, --config string      config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string    profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output directory           Write to directory. Files have the common name as the basename.
+                                   For bundles use a dash '-' for stdout. (default ".")
+  -c, --cname CNAME                Common Name for certificate. CNAME defaults to hostname except.
+                                   Ignored for --signing.
+  -S, --signing CNAME              Create a new signing certificate bundle using CNAME for the Common Name.
+                                   If written to a directory the file will be called
+                                   "geneos-signing-certificate-(CNAME).pem".
+                                   Requires a root certificate ("rootCA.pem") and private key ("rootCA.key")
+                                   to be present in the user configuration directory.
+  -E, --expiry days                Certificate expiry duration in days. Ignored for --signing (default 365)
+  -F, --force[=true|false]         Runs "tls init" (but do not replace existing root and signing)
+                                   and overwrite any existing file in the 'out' directory
+  -K, --private-key[=true|false]   Create a private key without a certificate. Ignored for --signing.
+  -k, --key-type KeyType           Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
+                                   or ecdh). Ignored for --signing. Defaults to the same type as
+                                   the signing certificate key or a default type if that cannot be determined.
+  -s, --san-dns VALUE              Subject-Alternative-Name DNS Name (repeat as required).
+                                   Ignored for --signing.
+  -i, --san-ip VALUE               Subject-Alternative-Name IP Address (repeat as required).
+                                   Ignored for --signing.
+  -e, --san-email VALUE            Subject-Alternative-Name Email Address (repeat as required).
+                                   Ignored for --signing.
+  -u, --san-url VALUE              Subject-Alternative-Name URL (repeat as required).
+                                   Ignored for --signing.
+      --allow-root[=true|false]    allow running as root (not recommended)
+  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5418,11 +5471,11 @@ geneos tls export [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -o, --output FILE       Output to FILE, default to stdout
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -o, --output FILE               Output to FILE, default to stdout
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -5464,15 +5517,15 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
 ### Options
 
 ```text
-  -p, --password SECRET   Plaintext password for PFX/PKCS#12 file decryption.
-                          You will be prompted if not supplied as an argument.
-                          PFX/PKCS#12 files are identified by the .pfx or .p12
-                          file extension and only supported for instance bundles
-  -k, --key file          Private key file for certificate, PEM format only
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -p, --password SECRET           Plaintext password for PFX/PKCS#12 file decryption.
+                                  You will be prompted if not supplied as an argument.
+                                  PFX/PKCS#12 files are identified by the .pfx or .p12
+                                  file extension and only supported for instance bundles
+  -k, --key file                  Private key file for certificate, PEM format only
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -5540,18 +5593,18 @@ geneos tls info [PATH...] [flags]
 ### Options
 
 ```text
-  -L, --leaf-only             Only output leaf certificates (i.e. skip CA certificates and any
-                              certificate without a matching private key in any file)
-  -l, --long                  Output long format (more columns)
-  -f, --format string         Output format (column, table, csv, toolkit) (default "column")
-  -p, --password SECRET       Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
-  -c, --connect connect       Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.
-      --connect-file string   Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
-  -r, --roots roots           Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
-      --allow-root            allow running as root (not recommended)
-  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -L, --leaf-only[=true|false]    Only output leaf certificates (i.e. skip CA certificates and any
+                                  certificate without a matching private key in any file)
+  -l, --long[=true|false]         Output long format (more columns)
+  -f, --format string             Output format (column, table, csv, toolkit) (default "column")
+  -p, --password SECRET           Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
+  -c, --connect connect           Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.
+      --connect-file string       Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
+  -r, --roots roots               Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5580,12 +5633,12 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType   Key type for root. One of ecdh, ecdsa, ed25519 or rsa
-  -F, --force             Overwrite any existing root and signing certificates
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -F, --force[=true|false]        Overwrite any existing root and signing certificates
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5622,16 +5675,16 @@ geneos tls list [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -a, --all               Show all certs, including root and signing certs
-  -l, --long              Long output
-  -j, --json              Output JSON
-  -i, --pretty            Output indented JSON
-  -c, --csv               Output CSV
-  -t, --toolkit           Output Toolkit formatted CSV
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -a, --all[=true|false]          Show all certs, including root and signing certs
+  -l, --long[=true|false]         Long output
+  -j, --json[=true|false]         Output JSON
+  -i, --pretty[=true|false]       Output indented JSON
+  -c, --csv[=true|false]          Output CSV
+  -t, --toolkit[=true|false]      Output Toolkit formatted CSV
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5683,11 +5736,11 @@ geneos tls migrate [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -c, --check             check if instance is already migrated
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -c, --check[=true|false]        check if instance is already migrated
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5726,11 +5779,11 @@ geneos tls new [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -E, --expiry int        Certificate expiry duration in days (default 365)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -E, --expiry int                Certificate expiry duration in days (default 365)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5793,16 +5846,16 @@ geneos tls renew [TYPE] [NAME...] [flags]
 ### Options
 
 ```text
-      --signing           Renew the signing certificate instead of instance certificates
-  -E, --expiry int        Instance certificate expiry duration in days.
-                          (No effect with --signing) (default 365)
-  -P, --prepare           Prepare renewal without overwriting existing certificates
-  -R, --roll              Roll previously prepared certificates and backup existing ones
-  -U, --unroll            Unroll previously rolled certificates to restore backups
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --signing[=true|false]      Renew the signing certificate instead of instance certificates
+  -E, --expiry int                Instance certificate expiry duration in days.
+                                  (No effect with --signing) (default 365)
+  -P, --prepare[=true|false]      Prepare renewal without overwriting existing certificates
+  -R, --roll[=true|false]         Roll previously prepared certificates and backup existing ones
+  -U, --unroll[=true|false]       Unroll previously rolled certificates to restore backups
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5828,10 +5881,10 @@ geneos tls sync [flags]
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5956,10 +6009,10 @@ geneos tr-gateway
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5989,26 +6042,26 @@ geneos unset [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --key KEY            Unset configuration parameter KEY
-                           (Repeat as required)
-  -e, --env NAME           Remove an environment variable NAME
-                           (Repeat as required)
-  -i, --include PRIORITY   Remove an include file with PRIORITY
-                           (Repeat as required, gateways only)
-  -g, --gateway NAME       Remove the gateway NAME
-                           (Repeat as required, san and floating only)
-  -a, --attribute NAME     Remove the attribute NAME
-                           (Repeat as required, san only)
-  -t, --type NAME          Remove the type NAME
-                           (Repeat as required, san only)
-  -v, --variable NAME      Remove the variable NAME
-                           (Repeat as required, san only)
-  -M, --entity NAME        Remove a managed entity NAME
-                           (Repeat as required, san only)
-      --allow-root         allow running as root (not recommended)
-  -G, --config string      config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string    profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --key KEY                   Unset configuration parameter KEY
+                                  (Repeat as required)
+  -e, --env NAME                  Remove an environment variable NAME
+                                  (Repeat as required)
+  -i, --include PRIORITY          Remove an include file with PRIORITY
+                                  (Repeat as required, gateways only)
+  -g, --gateway NAME              Remove the gateway NAME
+                                  (Repeat as required, san and floating only)
+  -a, --attribute NAME            Remove the attribute NAME
+                                  (Repeat as required, san only)
+  -t, --type NAME                 Remove the type NAME
+                                  (Repeat as required, san only)
+  -v, --variable NAME             Remove the variable NAME
+                                  (Repeat as required, san only)
+  -M, --entity NAME               Remove a managed entity NAME
+                                  (Repeat as required, san only)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples
@@ -6042,11 +6095,11 @@ geneos version
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -t, --toolkit           toolkit formatted CSV output
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -t, --toolkit[=true|false]      toolkit formatted CSV output
 ```
 
 ## SEE ALSO
@@ -6076,10 +6129,10 @@ geneos webserver
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

@@ -42,17 +42,17 @@ geneos includes list [NAMES...] [flags]
 ### Options
 
 ```text
-  -a, --all               List all include files, including those in versioned directories
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -f, --format string     Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'. (default "column")
-  -g, --gateway           List include files by gateway usage
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -i, --include           List include files by shared include files
-  -l, --long              Long format with extra information
-  -n, --no-remote         Exclude remote include files lookups
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -v, --version           List include files by version
+  -a, --all[=true|false]          List all include files, including those in versioned directories
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -f, --format string             Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'. (default "column")
+  -g, --gateway[=true|false]      List include files by gateway usage
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -i, --include[=true|false]      List include files by shared include files
+  -l, --long[=true|false]         Long format with extra information
+  -n, --no-remote[=true|false]    Exclude remote include files lookups
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -v, --version[=true|false]      List include files by version
 ```
 
 ## SEE ALSO

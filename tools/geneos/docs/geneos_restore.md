@@ -27,15 +27,15 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
 ### Options
 
 ```text
-  -s, --shared            include shared files
-  -z, --decompress TYPE   use decompression TYPE, one of `gzip`, `bzip2` or `none`
-                          if not given then the file name is used to guess the type
-                          MUST be supplied if the source is stdin (`-`)
-  -l, --list              list the contents of the archive(s)
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -s, --shared[=true|false]       include shared files
+  -z, --decompress TYPE           use decompression TYPE, one of `gzip`, `bzip2` or `none`
+                                  if not given then the file name is used to guess the type
+                                  MUST be supplied if the source is stdin (`-`)
+  -l, --list[=true|false]         list the contents of the archive(s)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

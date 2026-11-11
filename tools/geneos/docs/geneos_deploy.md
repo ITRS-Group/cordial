@@ -76,13 +76,13 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```text
   -D, --geneos GENEOS_HOME            Installation directory. Prompted if not given and not found
                                       in existing user configuration or environment ${GENEOS_HOME}
-  -S, --start                         Start new instance after creation
-  -l, --log                           Start created instance and follow logs.
+  -S, --start[=true|false]            Start new instance after creation
+  -l, --log[=true|false]              Start created instance and follow logs.
                                       (Implies --start to start the instance)
   -x, --extras string                 Extra args passed to initial start, split on spaces and quoting ignored
                                       Use this option for bootstrapping instances, such as with Centralised Config
   -p, --port port                     Override the default port selection
-  -n, --nosave                        Do not save a local copy of any downloads
+  -n, --nosave[=true|false]           Do not save a local copy of any downloads
   -C, --signing-bundle string         signing certificate bundle file, in PEM or PFX/PKCS#12 format.
                                       Use a dash ('-') to be prompted for PEM from console.
                                       PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -92,7 +92,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --certs-password SECRET         Password for PFX/PKCS#12 signing or certificate bundle file.
                                       You will be prompted if required and have not supplied one as an argument.
                                       The password can be in cordial expandable format.
-      --insecure                      Do not initialise TLS subsystem.
+      --insecure[=true|false]         Do not initialise TLS subsystem.
                                       Ignored if --certs-bundle is given.
       --keyfile PATH                  Keyfile PATH to use. Default is to create one
                                       for TYPEs that support them
@@ -107,15 +107,15 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       symlink to the installed release. (default "active_prod")
   -V, --version VERSION               Use this VERSION of package
                                       Doesn't work for EL8/9/10 archives. (default "latest")
-  -L, --local                         Install from local archives only
+  -L, --local[=true|false]            Install from local archives only
   -A, --archive string                URL or file path to release archive
                                       or a directory to search for local release archives.
                                       Local paths imply --local
   -O, --override [TYPE:]VERSION       Override the [TYPE:]VERSION for archive
                                       files with non-standard names
-      --nexus                         Download from nexus.itrsgroup.com
+      --nexus[=true|false]            Download from nexus.itrsgroup.com
                                       Requires ITRS internal credentials
-      --snapshots                     Download from nexus snapshots
+      --snapshots[=true|false]        Download from nexus snapshots
                                       Implies --nexus
       --template PATH|URL|-           Template file to use (if supported for TYPE). PATH|URL|-
   -I, --import [DEST=]PATH|URL        import file(s) to instance. DEST defaults to the base
@@ -136,7 +136,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
                                       (Repeat as required, san only)
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
-      --allow-root                    allow running as root (not recommended)
+      --allow-root[=true|false]       allow running as root (not recommended)
   -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)

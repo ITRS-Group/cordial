@@ -25,14 +25,14 @@ geneos package update [flags] [TYPE] [VERSION]
 ### Options
 
 ```text
-  -V, --version string    Update to this version, defaults to latest
-  -b, --base string       Base name for the symlink, defaults to active_prod (default "active_prod")
-  -R, --restart           Restart all instances that may have an update applied (default true)
-  -F, --force             Will also update and restart protected instances
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --version string            Update to this version, defaults to latest
+  -b, --base string               Base name for the symlink, defaults to active_prod (default "active_prod")
+  -R, --restart[=true|false]      Restart all instances that may have an update applied (default true)
+  -F, --force[=true|false]        Will also update and restart protected instances
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

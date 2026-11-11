@@ -15,12 +15,12 @@ geneos aes password [flags]
 ### Options
 
 ```text
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-  -p, --password SECRET     Password
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
-  -s, --source PATH|URL|-   External source for password PATH|URL|-
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+  -p, --password SECRET           Password
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -s, --source PATH|URL|-         External source for password PATH|URL|-
 ```
 
 ## SEE ALSO

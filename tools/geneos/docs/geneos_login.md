@@ -27,14 +27,14 @@ geneos login [flags] [DOMAIN]
 ### Options
 
 ```text
-  -u, --username string   Username
-  -p, --password SECRET   Password
-  -k, --keyfile KEYFILE   Key file to use
-  -l, --list              List the names of the currently stored credentials
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string           Username
+  -p, --password SECRET           Password
+  -k, --keyfile KEYFILE           Key file to use
+  -l, --list[=true|false]         List the names of the currently stored credentials
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

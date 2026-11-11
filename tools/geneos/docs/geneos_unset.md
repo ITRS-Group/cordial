@@ -17,26 +17,26 @@ geneos unset [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --key KEY            Unset configuration parameter KEY
-                           (Repeat as required)
-  -e, --env NAME           Remove an environment variable NAME
-                           (Repeat as required)
-  -i, --include PRIORITY   Remove an include file with PRIORITY
-                           (Repeat as required, gateways only)
-  -g, --gateway NAME       Remove the gateway NAME
-                           (Repeat as required, san and floating only)
-  -a, --attribute NAME     Remove the attribute NAME
-                           (Repeat as required, san only)
-  -t, --type NAME          Remove the type NAME
-                           (Repeat as required, san only)
-  -v, --variable NAME      Remove the variable NAME
-                           (Repeat as required, san only)
-  -M, --entity NAME        Remove a managed entity NAME
-                           (Repeat as required, san only)
-      --allow-root         allow running as root (not recommended)
-  -G, --config string      config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME      Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string    profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --key KEY                   Unset configuration parameter KEY
+                                  (Repeat as required)
+  -e, --env NAME                  Remove an environment variable NAME
+                                  (Repeat as required)
+  -i, --include PRIORITY          Remove an include file with PRIORITY
+                                  (Repeat as required, gateways only)
+  -g, --gateway NAME              Remove the gateway NAME
+                                  (Repeat as required, san and floating only)
+  -a, --attribute NAME            Remove the attribute NAME
+                                  (Repeat as required, san only)
+  -t, --type NAME                 Remove the type NAME
+                                  (Repeat as required, san only)
+  -v, --variable NAME             Remove the variable NAME
+                                  (Repeat as required, san only)
+  -M, --entity NAME               Remove a managed entity NAME
+                                  (Repeat as required, san only)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

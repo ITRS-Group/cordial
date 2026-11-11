@@ -196,7 +196,7 @@ For component parameters, see the [show command reference](../../../docs/geneos_
 
 ## Value Expansion
 
-Expansion replaces `${...}` text when the profile is applied. Use it in instance names, common string values, SAN Gateway lists, SAN Types and attributes, and SAN variable values. Do not assume that every YAML key is expanded in the same context.
+Expansion replaces `${...}` text when the profile is applied. Use it in instance names, common string values, SAN Gateway lists, SAN Types and attributes, SAN managed-entity names, and SAN variable values. Do not assume that every YAML key is expanded in the same context.
 
 | Form | Result |
 | --- | --- |
@@ -204,6 +204,7 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | `${env:NAME}` | Environment variable from the `geneos` process. An unset variable produces an empty value. |
 | `${option:EXPRESSION}` | Result of a `goval` expression using selected command options and `NAME=VALUE` arguments. |
 | `${config:KEY}` | Value from the current configuration. In a SAN `for-each` entry, this is the matched instance's configuration. |
+| `${type}` | Component type of the matched instance in a SAN managed-entity entry with `for-each` (for example, `gateway`). Available in `name`, `types`, `attributes`, and `variables`. |
 | `${expr:EXPRESSION}` | Result of a `goval` expression using current configuration values. Process environment variables are available through the `env` map. |
 | `${select:KEY1:KEY2:DEFAULT}` | First non-empty string configuration value, or the final literal default. Use an empty final field to return an empty string. |
 | `${replace:KEY1:KEY2:/PATTERN/TEXT/}` | Regular-expression replacement on the first non-empty string configuration value. The final delimiter must match the other delimiters. A delimiter other than `/` is allowed, but not `:`. |
@@ -362,6 +363,16 @@ san:
 
 `for-each` examines installed instances when the profile is applied. It does not detect later installation changes automatically.
 
+For `for-each` entries, `${type}` expands to the matched instances' component type and can be used to build the entity name or its values:
+
+```yaml
+managed-entities:
+  - for-each: gateway
+    name: ${config:name} ${type}
+    attributes:
+      - COMPONENT=${type}
+```
+
 ## Floating Netprobe Configuration
 
 A `floating` entry accepts common keys and `gateways`. It does not accept the SAN-specific `types`, `attributes`, `variables`, or `managed-entities` keys.
@@ -457,10 +468,10 @@ geneos profile
 ### Options
 
 ```text
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

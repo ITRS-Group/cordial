@@ -21,16 +21,16 @@ geneos aes set [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile PATH|URL|-   Key file to use. PATH|URL|-
-                             Path to a local file, a URL or a dash for STDIN. (default "-")
-  -c, --crc CRC              CRC of an existing shared keyfile to use
-  -b, --backup string        Backup any existing keyfile with extension given (default "-prev")
-  -N, --no-roll              Do not roll any existing keyfile to previous keyfile setting
-  -s, --shared               Set as a shared keyfile, using the CRC as the file name prefix
-      --allow-root           allow running as root (not recommended)
-  -G, --config string        config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME        Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string      profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --keyfile PATH|URL|-        Key file to use. PATH|URL|-
+                                  Path to a local file, a URL or a dash for STDIN. (default "-")
+  -c, --crc CRC                   CRC of an existing shared keyfile to use
+  -b, --backup string             Backup any existing keyfile with extension given (default "-prev")
+  -N, --no-roll[=true|false]      Do not roll any existing keyfile to previous keyfile setting
+  -s, --shared[=true|false]       Set as a shared keyfile, using the CRC as the file name prefix
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

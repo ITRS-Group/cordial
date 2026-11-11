@@ -23,16 +23,16 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE     Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
-  -v, --previous KEYFILE    Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
-  -e, --expandable string   The keyfile and ciphertext in expandable format (including '${...}')
-  -p, --password string     Geneos formatted AES256 password
-  -s, --source string       Alternative source for password
-  -r, --raw                 Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)
-      --allow-root          allow running as root (not recommended)
-  -G, --config string       config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -k, --keyfile KEYFILE           Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
+  -v, --previous KEYFILE          Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
+  -e, --expandable string         The keyfile and ciphertext in expandable format (including '${...}')
+  -p, --password string           Geneos formatted AES256 password
+  -s, --source string             Alternative source for password
+  -r, --raw[=true|false]          Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

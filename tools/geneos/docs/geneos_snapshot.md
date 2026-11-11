@@ -27,18 +27,18 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
 ### Options
 
 ```text
-  -V, --value             Request cell values (default true)
-  -S, --severity          Request cell severities
-  -Z, --snooze            Request cell snooze info
-  -U, --userassignment    Request cell user assignment info
-  -u, --username string   Username
-  -f, --format string     Output format (json, toolkit, toolkit-multi) (default "json")
-  -l, --limit int         limit matching items to display. default is unlimited. results unsorted.
-  -x, --xpaths            just show matching xpaths
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -V, --value[=true|false]            Request cell values (default true)
+  -S, --severity[=true|false]         Request cell severities
+  -Z, --snooze[=true|false]           Request cell snooze info
+  -U, --userassignment[=true|false]   Request cell user assignment info
+  -u, --username string               Username
+  -f, --format string                 Output format (json, toolkit, toolkit-multi) (default "json")
+  -l, --limit int                     limit matching items to display. default is unlimited. results unsorted.
+  -x, --xpaths[=true|false]           just show matching xpaths
+      --allow-root[=true|false]       allow running as root (not recommended)
+  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

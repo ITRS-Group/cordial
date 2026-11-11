@@ -45,18 +45,18 @@ geneos tls info [PATH...] [flags]
 ### Options
 
 ```text
-  -L, --leaf-only             Only output leaf certificates (i.e. skip CA certificates and any
-                              certificate without a matching private key in any file)
-  -l, --long                  Output long format (more columns)
-  -f, --format string         Output format (column, table, csv, toolkit) (default "column")
-  -p, --password SECRET       Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
-  -c, --connect connect       Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.
-      --connect-file string   Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
-  -r, --roots roots           Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
-      --allow-root            allow running as root (not recommended)
-  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -L, --leaf-only[=true|false]    Only output leaf certificates (i.e. skip CA certificates and any
+                                  certificate without a matching private key in any file)
+  -l, --long[=true|false]         Output long format (more columns)
+  -f, --format string             Output format (column, table, csv, toolkit) (default "column")
+  -p, --password SECRET           Password for PFX/PKCS#12 file(s), if needed. Defaults to prompting for each file. Use -p "" to specify empty password.
+  -c, --connect connect           Connect to a URL or HOST[:PORT] to get TLS certificates. Can be specified multiple times for multiple instances.
+      --connect-file string       Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
+  -r, --roots roots               Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

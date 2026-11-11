@@ -27,17 +27,17 @@ geneos package uninstall [flags] [TYPE] [VERSION]
 ### Options
 
 ```text
-  -b, --base BASE         Remove the base link BASE for matching TYPEs if no instances reference it.
-                          This overrides other options below.
-  -V, --version VERSION   Uninstall VERSION
-  -A, --all               Uninstall all releases, stopping and disabling running instances
-  -k, --keep              Keep cached downloads
-  -U, --update            Update base links for instances to latest before restarting and removing
-  -F, --force             Force uninstall, stopping protected instances first. Also requires --update
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -b, --base BASE                 Remove the base link BASE for matching TYPEs if no instances reference it.
+                                  This overrides other options below.
+  -V, --version VERSION           Uninstall VERSION
+  -A, --all[=true|false]          Uninstall all releases, stopping and disabling running instances
+  -k, --keep[=true|false]         Keep cached downloads
+  -U, --update[=true|false]       Update base links for instances to latest before restarting and removing
+  -F, --force[=true|false]        Force uninstall, stopping protected instances first. Also requires --update
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

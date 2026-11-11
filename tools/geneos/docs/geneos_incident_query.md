@@ -13,15 +13,15 @@ geneos incident query [FLAGS] [flags]
 ### Options
 
 ```text
-  -c, --config string       config file to use
-  -i, --ims string          IMS type, e.g. "snow" or "sdp". If not specified, the default is taken from config file
-  -T, --snow-table string   ServiceNow table, defaults to incident
-  -R, --snow-raw            turn ServiceNow sys_display off, i.e. return raw values instead of display values
-  -Q, --query string        query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. If not specified, the default is taken from config file
-  -f, --format string       output format: "csv" or "json" (default "csv")
-      --allow-root          allow running as root (not recommended)
-  -H, --host HOSTNAME       Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string     profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --config string             config file to use
+  -i, --ims string                IMS type, e.g. "snow" or "sdp". If not specified, the default is taken from config file
+  -T, --snow-table string         ServiceNow table, defaults to incident
+  -R, --snow-raw[=true|false]     turn ServiceNow sys_display off, i.e. return raw values instead of display values
+  -Q, --query string              query to use for the specified IMS type, e.g. a ServiceNow encoded query or a ServiceDesk Plus JSON query. If not specified, the default is taken from config file
+  -f, --format string             output format: "csv" or "json" (default "csv")
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

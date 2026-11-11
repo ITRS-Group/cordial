@@ -49,31 +49,31 @@ geneos package install [flags] [TYPE] [FILE|URL...]
 ### Options
 
 ```text
-  -u, --username string       Username for downloads, defaults to configuration value in download.username
-  -L, --local                 Install from local files only.
-                              * Implied if files or directories are given on command line.
-  -n, --nosave                Do not save a local copy of any downloads.
-                              * Implied if files or directories are given on command line.
-  -D, --download              Download only, to the current directory.
-                              Cannot be combined with --nosave
-  -U, --update                Update the base directory symlink, will restart unprotected instances
-  -F, --force                 Force restart of protected instances, implies --update
-  -b, --base string           Override the base active_prod link name (default "active_prod")
-  -V, --version string        Download this version, defaults to latest. Doesn't work for EL8 archives.
-                              Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
-  -O, --override string       Override the TYPE:VERSION for archive files with non-standard names
-  -N, --nexus                 Download from nexus.itrsgroup.com. Requires auth.
-  -S, --snapshots             Download from nexus snapshots (pre-releases), not releases. Requires -N
-      --all                   Install all types available, not just those types already installed
-  -A, --archive stringArray   URL or file path to release archive
-                              or a directory to search for local release archives.
-                              Added to positional sources (repeat as required)
-      --header NAME=VALUE     HTTP header in the format NAME=VALUE
-                              (Repeat as required)
-      --allow-root            allow running as root (not recommended)
-  -G, --config string         config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -u, --username string           Username for downloads, defaults to configuration value in download.username
+  -L, --local[=true|false]        Install from local files only.
+                                  * Implied if files or directories are given on command line.
+  -n, --nosave[=true|false]       Do not save a local copy of any downloads.
+                                  * Implied if files or directories are given on command line.
+  -D, --download[=true|false]     Download only, to the current directory.
+                                  Cannot be combined with --nosave
+  -U, --update[=true|false]       Update the base directory symlink, will restart unprotected instances
+  -F, --force[=true|false]        Force restart of protected instances, implies --update
+  -b, --base string               Override the base active_prod link name (default "active_prod")
+  -V, --version string            Download this version, defaults to latest. Doesn't work for EL8 archives.
+                                  Ignored if local file(s) - not directories - are given to install on command-line (default "latest")
+  -O, --override string           Override the TYPE:VERSION for archive files with non-standard names
+  -N, --nexus[=true|false]        Download from nexus.itrsgroup.com. Requires auth.
+  -S, --snapshots[=true|false]    Download from nexus snapshots (pre-releases), not releases. Requires -N
+      --all[=true|false]          Install all types available, not just those types already installed
+  -A, --archive stringArray       URL or file path to release archive
+                                  or a directory to search for local release archives.
+                                  Added to positional sources (repeat as required)
+      --header NAME=VALUE         HTTP header in the format NAME=VALUE
+                                  (Repeat as required)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## Examples

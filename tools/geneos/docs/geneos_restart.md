@@ -23,17 +23,17 @@ geneos restart [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -a, --all               Start all matching instances, not just those already running
-  -F, --force             Force restart of protected instances
-  -K, --kill              Force stop by sending an immediate SIGKILL
-  -p, --port uint16       Restart instance matching port (overrides TYPE and NAME)
-  -x, --extras string     Extra args passed to process, split on spaces and quoting ignored
-  -e, --env NAME=VALUE    Extra environment variable (Repeat as required)
-  -l, --log               Run 'logs -f' after starting instance(s)
-      --allow-root        allow running as root (not recommended)
-  -G, --config string     config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
-  -H, --host HOSTNAME     Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string   profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -a, --all[=true|false]          Start all matching instances, not just those already running
+  -F, --force[=true|false]        Force restart of protected instances
+  -K, --kill[=true|false]         Force stop by sending an immediate SIGKILL
+  -p, --port uint16               Restart instance matching port (overrides TYPE and NAME)
+  -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
+  -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
+  -l, --log[=true|false]          Run 'logs -f' after starting instance(s)
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO

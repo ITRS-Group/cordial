@@ -13,13 +13,13 @@ geneos incident raise [FLAGS] [field=value ...] [flags]
 ### Options
 
 ```text
-  -c, --config string         config file to use
-  -i, --ims string            IMS type, e.g. snow or sdp. default taken from config file
-  -p, --profile string        profile to use for field creation
-  -t, --snow-table incident   ServiceNow table, typically incident
-      --allow-root            allow running as root (not recommended)
-  -H, --host HOSTNAME         Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string       profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+  -c, --config string             config file to use
+  -i, --ims string                IMS type, e.g. snow or sdp. default taken from config file
+  -p, --profile string            profile to use for field creation
+  -t, --snow-table incident       ServiceNow table, typically incident
+      --allow-root[=true|false]   allow running as root (not recommended)
+  -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
+      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
 ```
 
 ## SEE ALSO
