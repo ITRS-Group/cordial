@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"slices"
 	"strings"
 	"time"
@@ -61,7 +60,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 			continue
 		}
 
-		fullpath := path.Join(basedir, name)
+		fullpath := h.Join(basedir, name)
 
 		// dir
 		if strings.HasSuffix(f.Name, "/") {
@@ -79,7 +78,7 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 			return err
 		}
 
-		dir := path.Dir(fullpath)
+		dir := h.Dir(fullpath)
 		var st fs.FileInfo
 		if st, err = h.Stat(dir); errors.Is(err, fs.ErrNotExist) {
 			if err = h.MkdirAll(dir, 0775); err != nil {

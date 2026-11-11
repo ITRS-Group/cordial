@@ -25,7 +25,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -144,7 +143,7 @@ func CreateKey(destination string, overwrite bool, keytype certs.KeyType) (key c
 	}
 
 	if destination != "-" {
-		basepath = path.Join(destination, strings.ReplaceAll(basename, " ", "-"))
+		basepath = geneos.LOCAL.Join(destination, strings.ReplaceAll(basename, " ", "-"))
 		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 			err = os.ErrExist
 			return
@@ -184,7 +183,7 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		return config.ErrNoUserConfigDir
 	}
 	if destination != "-" {
-		basepath = path.Join(destination, strings.ReplaceAll(commonName, " ", "-"))
+		basepath = geneos.LOCAL.Join(destination, strings.ReplaceAll(commonName, " ", "-"))
 		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 			return os.ErrExist
 		}
@@ -247,7 +246,7 @@ func CreateSigningCert(destination string, overwrite bool, hostname string) (err
 		return config.ErrNoUserConfigDir
 	}
 	if destination != "-" {
-		basepath = path.Join(destination, strings.ReplaceAll(cn, " ", "-"))
+		basepath = geneos.LOCAL.Join(destination, strings.ReplaceAll(cn, " ", "-"))
 		if _, err = os.Stat(basepath + certs.PEMExtension); err == nil && !overwrite {
 			return os.ErrExist
 		}

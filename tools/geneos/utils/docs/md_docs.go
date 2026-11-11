@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -52,7 +52,7 @@ func GenMarkdownBook(dir, filename string) error {
 			continue
 		}
 
-		content, err := os.ReadFile(path.Join(dir, entry.Name()))
+		content, err := os.ReadFile(filepath.Join(dir, entry.Name()))
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func GenMarkdownBook(dir, filename string) error {
 	}
 	book.WriteByte('\n')
 
-	return os.WriteFile(path.Join(dir, filename), book.Bytes(), 0644)
+	return os.WriteFile(filepath.Join(dir, filename), book.Bytes(), 0644)
 }
 
 func rewriteMarkdownPageLinks(content string, pages map[string]struct{}) string {
@@ -75,7 +75,7 @@ func rewriteMarkdownPageLinks(content string, pages map[string]struct{}) string 
 			return link
 		}
 
-		page := path.Base(destination)
+		page := filepath.Base(destination)
 		if _, ok := pages[page]; !ok {
 			return link
 		}
@@ -291,7 +291,7 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	}
 
 	basename := strings.ReplaceAll(cmd.CommandPath(), " ", "_") + ".md"
-	filename := path.Join(dir, basename)
+	filename := filepath.Join(dir, basename)
 	f, err := os.Create(filename)
 	if err != nil {
 		return err

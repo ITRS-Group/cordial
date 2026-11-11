@@ -59,14 +59,14 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 		if name, err = CleanRelativePath(name); err != nil {
 			return
 		}
-		fullpath := path.Join(dir, name)
+		fullpath := h.Join(dir, name)
 		if err = rejectSymlinkPath(h, dir, name); err != nil {
 			return
 		}
 		switch hdr.Typeflag {
 		case tar.TypeReg:
 			// check (and created) containing directories - account for munged tar files
-			dir := path.Dir(fullpath)
+			dir := h.Dir(fullpath)
 			if err = h.MkdirAll(dir, 0775); err != nil {
 				return
 			}
@@ -98,7 +98,7 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 		case tar.TypeSymlink, tar.TypeGNULongLink:
 			target := h.ToSlash(hdr.Linkname)
 			if !h.IsAbs(hdr.Linkname) {
-				target = strings.TrimSuffix(h.ToSlash(path.Dir(fullpath)), "/") + "/" + target
+				target = strings.TrimSuffix(h.ToSlash(h.Dir(fullpath)), "/") + "/" + target
 			}
 			if err = rejectSymlinkPath(h, dir, target); err != nil {
 				return

@@ -407,7 +407,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 		var w io.WriteCloser
 
 		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(path.Dir(destPath), 0775); err != nil {
+		if err = h.MkdirAll(h.Dir(destPath), 0775); err != nil {
 			return
 		}
 
@@ -456,7 +456,7 @@ func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOp
 		}
 
 		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(path.Dir(h.PathTo(fp)), 0775); err != nil {
+		if err = h.MkdirAll(h.Dir(h.PathTo(fp)), 0775); err != nil {
 			return
 		}
 
@@ -515,7 +515,7 @@ func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restor
 		}
 
 		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(path.Dir(h.PathTo(fp)), 0775); err != nil {
+		if err = h.MkdirAll(h.Dir(h.PathTo(fp)), 0775); err != nil {
 			return
 		}
 

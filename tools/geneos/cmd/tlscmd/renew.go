@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -89,7 +88,7 @@ var renewCmd = &cobra.Command{
 			if rootKey == nil {
 				return fmt.Errorf("no root private key found")
 			}
-			if signing, err := certs.WriteNewSigningCert(path.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
+			if signing, err := certs.WriteNewSigningCert(geneos.LOCAL.Join(confDir, geneos.SigningCertBasename), rootCert, rootKey,
 				cordial.ExecutableName()+" "+geneos.SigningCertLabel+" ("+geneos.LOCALHOST+")",
 			); err != nil {
 				return err

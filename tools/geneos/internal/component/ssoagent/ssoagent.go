@@ -28,7 +28,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -97,8 +97,8 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join(name, name+"s"),
+		path.Join("packages", name),
+		path.Join(name, name+"s"),
 	},
 	GetPID: pidCheckFn,
 }
@@ -471,7 +471,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	// only add root CAs to the truststore if it is different from the
 	// default CA bundle, which could be a `cacerts` without an
 	// extension as well as `ca-bundle.db`
-	if strings.TrimSuffix(truststorePath, filepath.Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
+	if strings.TrimSuffix(truststorePath, i.Host().Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
 		roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
 		for _, cert := range roots {
 			if !certs.IsValidRootCA(cert) {

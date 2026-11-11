@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -96,13 +96,13 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", component),
-		filepath.Join(component, "shared"),
-		filepath.Join(component, "netprobes"),
+		path.Join("packages", component),
+		path.Join(component, "shared"),
+		path.Join(component, "netprobes"),
 	},
 	SharedDirectories: []string{
-		filepath.Join(component, "netprobes_shared"),
-		filepath.Join(component, "shared"),
+		path.Join(component, "netprobes_shared"),
+		path.Join(component, "shared"),
 	},
 	ApplyProfile: profile.ApplyCommonProfile,
 }

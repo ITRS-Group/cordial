@@ -28,7 +28,6 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -275,7 +274,7 @@ geneos backup all
 
 		root := h.PathTo()
 		for _, f := range contents {
-			p := path.Join(root, f)
+			p := h.Join(root, f)
 			fi, err := h.Stat(p)
 			if err != nil {
 				return err

@@ -1,7 +1,6 @@
 package instance
 
 import (
-	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -83,22 +82,23 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 // writing config back if changed which triggers rebuild and reload
 func RollAESKeyFile(i geneos.Instance, nkv *config.KeyValues, backup string) (keyfile config.KeyFile, crc uint32, err error) {
 	kp := config.Get[string](i.Config(), "keyfile")
+	h := i.Host()
 
 	// if existing keyfile is in a shared keyfile folder do not backup
 	// and write new keyfile in instance folder
-	if path.Dir(kp) == i.Type().Shared(i.Host(), "keyfiles") {
+	if h.Dir(kp) == i.Type().Shared(h, "keyfiles") {
 		config.Set(i.Config(), "prevkeyfile", kp)
 		return WriteAESKeyFile(i, nkv)
 	}
 
 	// check for any existing keyfile, backup if it exists and suffix
 	// given and not in component shared directory with CRC prefix
-	if _, err := i.Host().Stat(kp); err == nil && backup != "" {
-		ext := path.Ext(kp)
-		basename := strings.TrimSuffix(path.Base(kp), ext)
-		dir := path.Dir(kp)
-		bkp := path.Join(dir, basename+backup+ext)
-		if err := i.Host().Rename(kp, bkp); err != nil {
+	if _, err := h.Stat(kp); err == nil && backup != "" {
+		ext := h.Ext(kp)
+		basename := strings.TrimSuffix(h.Base(kp), ext)
+		dir := h.Dir(kp)
+		bkp := h.Join(dir, basename+backup+ext)
+		if err := h.Rename(kp, bkp); err != nil {
 			return "", 0, err
 		}
 		config.Set(i.Config(), "prevkeyfile", bkp)

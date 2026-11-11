@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -190,7 +189,7 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 		fmt.Printf("keyfile %s.aes already exists in %s shared directory on %s\n", crc, ct, h)
 		return
 	}
-	if err = h.MkdirAll(path.Dir(p), 0775); err != nil {
+	if err = h.MkdirAll(h.Dir(p), 0775); err != nil {
 		log.Error("cannot create directory", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
 		return
 	}

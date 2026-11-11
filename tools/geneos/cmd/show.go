@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 
@@ -132,6 +131,7 @@ var showCmd = &cobra.Command{
 func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 	cf := i.Config()
+	h := i.Host()
 
 	setup := config.Get[string](cf, "setup")
 	if setup == "" {
@@ -139,8 +139,8 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Gen
 	}
 	if instance.IsA(i, "gateway") {
 		// temp file for JSON output
-		tempfile := path.Join(i.Host().TempDir(), "validate-"+i.Name()+".json")
-		defer i.Host().Remove(tempfile)
+		tempfile := h.Join(h.TempDir(), "validate-"+i.Name()+".json")
+		defer h.Remove(tempfile)
 
 		// run a gateway with -dump-xml and consume the result, discard the heading
 		cmd, err := instance.BuildCmd(i, false)
@@ -153,7 +153,7 @@ func showValidateInstance(i geneos.Instance, params ...any) (resp *responses.Gen
 			cmd.Path,
 			i.Name(),
 			"-resources-dir",
-			path.Join(instance.BaseVersion(i), "resources"),
+			h.Join(instance.BaseVersion(i), "resources"),
 			"-setup",
 			config.Get[string](cf, "setup"),
 			"-nolog",
@@ -229,7 +229,7 @@ func showInstanceConfig(i geneos.Instance, params ...any) (resp *responses.Gener
 		cmd.Args = []string{
 			cmd.Path,
 			"-resources-dir",
-			path.Join(instance.BaseVersion(i), "resources"),
+			i.Host().Join(instance.BaseVersion(i), "resources"),
 			"-nolog",
 			"-skip-cache",
 			"-setup",

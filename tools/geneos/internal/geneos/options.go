@@ -19,7 +19,7 @@ package geneos
 
 import (
 	"io"
-	"path"
+	"path/filepath"
 	"slices"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -69,7 +69,7 @@ func evalOptions(options ...GeneosOption) (d *geneosOptions) {
 	d = &geneosOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
-		source:       path.Join(LocalRoot(), "packages", "downloads"),
+		source:       filepath.Join(LocalRoot(), "packages", "downloads"),
 		host:         LOCAL,
 	}
 	for _, opt := range options {
@@ -189,7 +189,7 @@ func LocalOnly(local bool) GeneosOption {
 func Source(source string) GeneosOption {
 	return func(d *geneosOptions) {
 		if source == "" {
-			d.source = path.Join(LocalRoot(), "packages", "downloads")
+			d.source = filepath.Join(LocalRoot(), "packages", "downloads")
 			return
 		}
 		d.source = source

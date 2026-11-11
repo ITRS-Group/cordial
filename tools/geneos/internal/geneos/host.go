@@ -25,7 +25,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"sync"
@@ -455,7 +455,7 @@ func LoadHostConfig() {
 		config.SkipWorkingDir(),
 	)
 
-	confFile = config.MigrateFile(host.Localhost, hostsfile, path.Join(userConfDir, OldUserHostFile))
+	confFile = config.MigrateFile(host.Localhost, hostsfile, filepath.Join(userConfDir, OldUserHostFile))
 
 	// note that SetAppName only matters when PromoteFile returns an empty path
 	h, err := config.Read(

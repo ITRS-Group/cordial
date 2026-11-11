@@ -2,7 +2,6 @@ package geneos
 
 import (
 	"fmt"
-	"path"
 )
 
 // Initialise templates for the given component on the specified host.
@@ -18,7 +17,7 @@ func WriteTemplates(h *Host, ct *Component, override bool) (err error) {
 		for _, t := range ct.Templates {
 			tmpl := t.Content
 
-			output := path.Join(templateDir, t.Filename)
+			output := h.Join(templateDir, t.Filename)
 			if _, err := h.Stat(output); err == nil && !override {
 				continue
 			}

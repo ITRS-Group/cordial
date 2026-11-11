@@ -22,7 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -94,13 +94,13 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join("netprobe", name+"s"),
-		filepath.Join("netprobe", "shared"),
+		path.Join("packages", name),
+		path.Join("netprobe", name+"s"),
+		path.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
-		filepath.Join("netprobe", "netprobes_shared"),
-		filepath.Join("netprobe", "shared"),
+		path.Join("netprobe", "netprobes_shared"),
+		path.Join("netprobe", "shared"),
 	},
 }
 

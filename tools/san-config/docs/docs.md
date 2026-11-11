@@ -17,12 +17,12 @@ docs
 ### Options
 
 ```text
-      --config string   path to configuration file
-  -H, --host HOSTNAME   create configuration for HOSTNAME
-  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
-  -N, --nowatch         Do not watch configuration file for changes
-  -o, --output FILE     output to FILE
-  -T, --type string     override hosttype
+      --config string          path to configuration file
+  -H, --host HOSTNAME          create configuration for HOSTNAME
+  -l, --logfile file           Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -N, --nowatch[=true|false]   Do not watch configuration file for changes
+  -o, --output FILE            output to FILE
+  -T, --type string            override hosttype
 ```
 
 ## SEE ALSO

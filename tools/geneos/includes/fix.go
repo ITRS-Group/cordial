@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -336,7 +335,7 @@ func fixIncludeLocation(h *geneos.Host, home, location string, candidates map[st
 		return "", err
 	}
 	if replacement != root && strings.HasPrefix(h.ToSlash(replacement), strings.TrimSuffix(h.ToSlash(root), "/")+"/") {
-		relative, err := filepath.Rel(home, replacement)
+		relative, err := h.Rel(home, replacement)
 		if err != nil {
 			return "", err
 		}

@@ -24,7 +24,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -75,8 +74,8 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 	var links = make(map[string][]string)
 	for _, dir := range ents {
 		if dir.Type()&fs.ModeSymlink != 0 {
-			if link, err := h.Readlink(path.Join(basedir, dir.Name())); err == nil {
-				link = filepath.Clean(link)
+			if link, err := h.Readlink(h.Join(basedir, dir.Name())); err == nil {
+				link = h.Clean(link)
 				links[link] = append(links[link], dir.Name())
 			}
 		}
@@ -112,7 +111,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 				Latest:    ent.Name() == latest,
 				Links:     links[ent.Name()],
 				ModTime:   info.ModTime().UTC(),
-				Path:      path.Join(basedir, ent.Name()),
+				Path:      h.Join(basedir, ent.Name()),
 			})
 		}
 	}
@@ -191,7 +190,7 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 
 	if opts.downloadonly {
 		if filesize == -1 {
-			fmt.Printf("%s archive already downloaded to %s\n", ct, path.Join(opts.source, filename))
+			fmt.Printf("%s archive already downloaded to %s\n", ct, filepath.Join(opts.source, filename))
 		}
 		return
 	}
@@ -245,7 +244,7 @@ func CheckBasename(h *Host, ct *Component, options ...GeneosOption) (exists bool
 	opts := evalOptions(options...)
 
 	basedir := h.PathTo("packages", ct.String())
-	basepath := path.Join(basedir, opts.basename)
+	basepath := h.Join(basedir, opts.basename)
 
 	exists = false
 	if _, err = h.Stat(basepath); err != nil {
@@ -322,7 +321,7 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	log.Debug("checking and updating", slog.String("component", ct.String()), slog.String("host", h.String()), slog.String("basename", opts.basename), slog.String("version", opts.version))
 
 	basedir := h.PathTo("packages", ct.String()) // use the actual ct not the parent, if there is one
-	basepath := path.Join(basedir, opts.basename)
+	basepath := h.Join(basedir, opts.basename)
 
 	if opts.version == "latest" {
 		opts.version = ""
@@ -359,7 +358,7 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	}
 
 	// before removing existing link, check there is something to link to
-	if _, err = h.Stat(path.Join(basedir, version)); err != nil {
+	if _, err = h.Stat(h.Join(basedir, version)); err != nil {
 		return fmt.Errorf("cannot update %s on %s using filter %q: %w", ct, h, opts.version, os.ErrNotExist)
 	}
 
@@ -399,6 +398,6 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	for _, c := range restarted {
 		c.AuditEvent("action/update", nil, slog.String("version", version), slog.String("base", opts.basename))
 	}
-	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, path.Base(basepath), version)
+	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, h.Base(basepath), version)
 	return nil
 }

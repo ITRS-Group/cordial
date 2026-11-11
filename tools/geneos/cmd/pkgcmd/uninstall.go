@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 	"unicode"
@@ -120,7 +118,7 @@ geneos uninstall --version 7.4.2
 					if pattern == "" {
 						pattern = ct.Name
 					}
-					files, err := filepath.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
+					files, err := h.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
 					if err != nil {
 						return fmt.Errorf("find cached packages for %s: %w", ct, err)
 					}
@@ -221,7 +219,7 @@ geneos uninstall --version 7.4.2
 						stopped = append(stopped, c)
 					}
 					// remove the release
-					if err = h.RemoveAll(path.Join(basedir, release.Version)); err != nil {
+					if err = h.RemoveAll(h.Join(basedir, release.Version)); err != nil {
 						log.Error("cannot remove release", slog.Any("error", err), slog.String("release", release.Version))
 						continue
 					}
@@ -231,7 +229,7 @@ geneos uninstall --version 7.4.2
 						if uninstallCmdAll {
 							// remove all links to this release if given --all flag
 							for _, l := range release.Links {
-								h.Remove(path.Join(basedir, l))
+								h.Remove(h.Join(basedir, l))
 							}
 						} else {
 							// update to latest version, remove all others
@@ -272,7 +270,7 @@ geneos uninstall --version 7.4.2
 // map to the same old target to the new one.
 func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release *geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
 	for _, l := range release.Links {
-		link := path.Join(releaseDir, l)
+		link := h.Join(releaseDir, l)
 		if err := h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			log.Error("cannot remove link", slog.Any("error", err), slog.String("link", link))
 			continue

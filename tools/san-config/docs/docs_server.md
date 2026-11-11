@@ -11,10 +11,10 @@ docs server [flags]
 ### Options
 
 ```text
-      --config string    path to configuration file
-  -D, --daemon           Run as a daemon
-  -L, --logfile string   Override configured log file path
-  -N, --nowatch          Do not watch configuration file for changes
+      --config string          path to configuration file
+  -D, --daemon[=true|false]    Run as a daemon
+  -L, --logfile string         Override configured log file path
+  -N, --nowatch[=true|false]   Do not watch configuration file for changes
 ```
 
 ## SEE ALSO

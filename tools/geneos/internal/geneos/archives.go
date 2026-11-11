@@ -29,7 +29,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -81,10 +81,10 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 			log.Debug("source opened, returning")
 			return
 		}
-		if !errors.Is(err, ErrIsADirectory) && (opts.localOnly || opts.source != path.Join(LocalRoot(), "packages", "downloads")) {
+		if !errors.Is(err, ErrIsADirectory) && (opts.localOnly || opts.source != filepath.Join(LocalRoot(), "packages", "downloads")) {
 			return
 		}
-		if IsDir(opts.source) && opts.source != path.Join(LocalRoot(), "packages", "downloads") {
+		if IsDir(opts.source) && opts.source != filepath.Join(LocalRoot(), "packages", "downloads") {
 			log.Debug("source is a directory, and not the download cache, so setting local directory search flag")
 			opts.localOnly = true
 		}
@@ -134,7 +134,7 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 			return
 		}
 		var f io.ReadSeekCloser
-		fp := path.Join(opts.source, filename)
+		fp := filepath.Join(opts.source, filename)
 		if f, err = LOCAL.Open(fp); err != nil {
 			err = fmt.Errorf("local installation selected but no suitable file found for %s (%w)", ct, err)
 			return
@@ -166,7 +166,7 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 	}
 
 	LOCAL.MkdirAll(opts.source, 0775)
-	archivePath := path.Join(opts.source, filename)
+	archivePath := filepath.Join(opts.source, filename)
 	s, err := LOCAL.Stat(archivePath)
 	if err == nil && s.Size() == resp.ContentLength {
 		if f, err := LOCAL.Open(archivePath); err == nil {
@@ -275,7 +275,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		}
 
 		// grab suffix
-		suffix = strings.TrimPrefix(path.Ext(filename), ".")
+		suffix = strings.TrimPrefix(filepath.Ext(filename), ".")
 	}
 
 	// unarchive in non-parent package dir, e.g. fa2 not netprobe
@@ -344,7 +344,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 
 	// only create a new base link, not overwrite
 	basedir = h.PathTo("packages", ct.String())
-	basepath := path.Join(basedir, opts.basename)
+	basepath := h.Join(basedir, opts.basename)
 
 	log.Debug("basepath", slog.String("basepath", basepath), slog.String("version", version))
 
@@ -357,7 +357,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		return h.HostPath(basedir), err
 	}
 
-	fmt.Printf("%s %q on %s set to %s\n", ct, path.Base(basepath), h, version)
+	fmt.Printf("%s %q on %s set to %s\n", ct, h.Base(basepath), h, version)
 	return h.HostPath(basedir), nil
 
 }

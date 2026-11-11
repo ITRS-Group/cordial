@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -82,7 +81,7 @@ func RootCertificatePath() (string, error) {
 	if confDir == "" {
 		return "", config.ErrNoUserConfigDir
 	}
-	return path.Join(confDir, RootCABasename+certs.PEMExtension), nil
+	return LOCAL.Join(confDir, RootCABasename+certs.PEMExtension), nil
 }
 
 // ReadRootCertificateAndKey reads the root certificate and private key
@@ -115,7 +114,7 @@ func ReadRootCertificateAndKey() (cert *x509.Certificate, key certs.PrivateKey, 
 		return
 	}
 
-	if key, err = certs.ReadPrivateKey(LOCAL, path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && errors.Is(err, os.ErrNotExist) {
+	if key, err = certs.ReadPrivateKey(LOCAL, LOCAL.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && errors.Is(err, os.ErrNotExist) {
 		err = nil
 	}
 
@@ -129,7 +128,7 @@ func SigningCertificatePath() (string, error) {
 	if confDir == "" {
 		return "", config.ErrNoUserConfigDir
 	}
-	return path.Join(confDir, SigningCertBasename+certs.PEMExtension), nil
+	return LOCAL.Join(confDir, SigningCertBasename+certs.PEMExtension), nil
 }
 
 // SigningPrivateKeyPath returns the path to the signing certificate
@@ -139,7 +138,7 @@ func SigningPrivateKeyPath() (string, error) {
 	if confDir == "" {
 		return "", config.ErrNoUserConfigDir
 	}
-	return path.Join(confDir, SigningCertBasename+certs.KEYExtension), nil
+	return LOCAL.Join(confDir, SigningCertBasename+certs.KEYExtension), nil
 }
 
 // ReadSigningCertificateAndKey reads the signing certificate and private
@@ -221,7 +220,7 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 
 	var certBundle *certs.CertificateBundle
 
-	if path.Ext(signingBundleSource) == ".pfx" || path.Ext(signingBundleSource) == ".p12" {
+	if LOCAL.Ext(signingBundleSource) == ".pfx" || LOCAL.Ext(signingBundleSource) == ".p12" {
 		if signingBundlePrompt != nil && len(signingBundlePassword) == 0 {
 			signingBundlePassword, err = signingBundlePrompt(false, 0, "Password")
 			if err != nil {
@@ -288,24 +287,24 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 		return errors.New("no root certificate found in signing bundle")
 	}
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
+	if err = certs.WriteCertificates(LOCAL, LOCAL.Join(confDir, SigningCertBasename+certs.PEMExtension), cert); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.PEMExtension))
+	fmt.Printf("%s signing certificate written to %s\n", cordial.ExecutableName(), LOCAL.Join(confDir, SigningCertBasename+certs.PEMExtension))
 
-	if err = certs.WritePrivateKey(LOCAL, path.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
+	if err = certs.WritePrivateKey(LOCAL, LOCAL.Join(confDir, SigningCertBasename+certs.KEYExtension), key); err != nil {
 		return err
 	}
-	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), path.Join(confDir, SigningCertBasename+certs.KEYExtension))
+	fmt.Printf("%s signing certificate key written to %s\n", cordial.ExecutableName(), LOCAL.Join(confDir, SigningCertBasename+certs.KEYExtension))
 
-	if err = certs.WriteCertificates(LOCAL, path.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
+	if err = certs.WriteCertificates(LOCAL, LOCAL.Join(confDir, RootCABasename+certs.PEMExtension), certBundle.Root); err != nil {
 		return err
 	}
-	fmt.Printf("root CA certificate written to %s\n", path.Join(confDir, RootCABasename+certs.PEMExtension))
+	fmt.Printf("root CA certificate written to %s\n", LOCAL.Join(confDir, RootCABasename+certs.PEMExtension))
 
 	// remove any existing root private key
-	if err := LOCAL.Remove(path.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && !errors.Is(err, os.ErrNotExist) {
-		fmt.Printf("cannot delete existing root private key %q. Please delete manually\n", path.Join(confDir, RootCABasename+certs.KEYExtension))
+	if err := LOCAL.Remove(LOCAL.Join(confDir, RootCABasename+certs.KEYExtension)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		fmt.Printf("cannot delete existing root private key %q. Please delete manually\n", LOCAL.Join(confDir, RootCABasename+certs.KEYExtension))
 	}
 
 	if updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
@@ -347,7 +346,7 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 	}
 
 	root, err := certs.WriteNewRootCert(
-		path.Join(confDir, RootCABasename),
+		LOCAL.Join(confDir, RootCABasename),
 		cordial.ExecutableName()+" root certificate",
 		keytype)
 	if err != nil {
@@ -370,7 +369,7 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 		return err
 	}
 
-	signing, err := certs.WriteNewSigningCert(path.Join(confDir, SigningCertBasename), rootCert, rootKey,
+	signing, err := certs.WriteNewSigningCert(LOCAL.Join(confDir, SigningCertBasename), rootCert, rootKey,
 		cordial.ExecutableName()+" "+SigningCertLabel+" ("+hostname+")",
 	)
 	if err != nil {

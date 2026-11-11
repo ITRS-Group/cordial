@@ -10,7 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"sort"
 	"strconv"
@@ -189,7 +189,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 				for _, f := range vinc {
 					if longFormat {
 						resp.Dataview.Table = append(resp.Dataview.Table, []string{
-							"current # " + filepath.Base(f.Path),
+							"current # " + h.Base(f.Path),
 							"-",
 							f.Version,
 							includePermissions(f.FileInfo.Mode(), true), // perms
@@ -200,7 +200,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 						})
 					} else {
 						resp.Dataview.Table = append(resp.Dataview.Table, []string{
-							"current # " + filepath.Base(f.Path),
+							"current # " + h.Base(f.Path),
 							"-",
 							f.ModTime.Format(time.RFC3339),
 							includeSizeString(f),
@@ -224,7 +224,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 			}
 			count := 0
 			for _, f := range files {
-				if !f.IsDir() && filepath.Ext(f.Name()) == ".xml" {
+				if !f.IsDir() && h.Ext(f.Name()) == ".xml" {
 					count++
 				}
 			}
@@ -251,7 +251,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 
 			if includesListCmdAll {
 				for _, f := range files {
-					if !f.IsDir() && filepath.Ext(f.Name()) == ".xml" {
+					if !f.IsDir() && h.Ext(f.Name()) == ".xml" {
 						fi, err := f.Info()
 						if err != nil {
 							return fmt.Errorf("failed to get file info for %s: %w", f.Name(), err)
@@ -328,7 +328,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		// paths that have that basename
 		basenameMap := make(map[string][]string)
 		for _, include := range includesByPath {
-			base := filepath.Base(include.Path)
+			base := h.Base(include.Path)
 			if _, ok := basenameMap[base]; !ok {
 				basenameMap[base] = []string{}
 			}
@@ -359,7 +359,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 			if inc.Local && !includesListCmdAll {
 				continue
 			}
-			base := filepath.Base(path)
+			base := h.Base(path)
 			paths := basenameMap[base]
 			if len(paths) > 1 {
 				total := 0
@@ -578,7 +578,10 @@ func includeSummaryRow(name string, copies, gatewayCount int, long bool) []strin
 }
 
 func gatewayIncludeRow(gateway string, include gatewayInclude, long bool) []string {
-	name := filepath.Base(include.Location)
+	name := path.Base(include.Location)
+	if include.Gateway != nil {
+		name = include.Gateway.Host().Base(include.Location)
+	}
 	modified := ""
 	if !include.ModTime.IsZero() {
 		modified = include.ModTime.Format(time.RFC3339)
@@ -692,7 +695,7 @@ func getSharedIncludes(h *geneos.Host, gwDir string) (includes []includeFile, er
 				return nil
 			}
 
-			if filepath.Ext(d.Name()) != ".xml" {
+			if h.Ext(d.Name()) != ".xml" {
 				return nil
 			}
 
@@ -744,7 +747,7 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 				}
 				return fs.SkipDir
 			} else if info, err := ent.Info(); err == nil && info.Mode()&fs.ModeSymlink != 0 {
-				if filepath.Ext(ent.Name()) != ".xml" {
+				if h.Ext(ent.Name()) != ".xml" {
 					return nil
 				}
 				// save symlink, decompose target path to check if it points to a versioned directory
@@ -753,7 +756,7 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 					return err
 				}
 
-				v := filepath.Dir(target)
+				v := h.Dir(target)
 				fi, err := h.Stat(p)
 				if err != nil {
 					return err
@@ -767,7 +770,7 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 					Size:     &size,
 				})
 			} else {
-				if filepath.Ext(ent.Name()) != ".xml" {
+				if h.Ext(ent.Name()) != ".xml" {
 					return nil
 				}
 

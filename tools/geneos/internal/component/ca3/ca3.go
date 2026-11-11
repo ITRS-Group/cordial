@@ -23,7 +23,6 @@ import (
 	"log/slog"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -83,13 +82,13 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join("netprobe", name+"s"),
-		filepath.Join("netprobe", "shared"),
+		path.Join("packages", name),
+		path.Join("netprobe", name+"s"),
+		path.Join("netprobe", "shared"),
 	},
 	SharedDirectories: []string{
-		filepath.Join("netprobe", "shared"),
-		filepath.Join("netprobe", "netprobes_shared"),
+		path.Join("netprobe", "shared"),
+		path.Join("netprobe", "netprobes_shared"),
 	},
 	GetPID: pidCheckFn,
 }
@@ -362,7 +361,7 @@ func pidCheckFn(customArg any, cmdline []string) bool {
 		return false
 	}
 
-	if path.Base(cmdline[0]) != "java" {
+	if i.Host().Base(cmdline[0]) != "java" {
 		return false
 	}
 

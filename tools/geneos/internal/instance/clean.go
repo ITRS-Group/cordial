@@ -22,9 +22,10 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -40,17 +41,17 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 	opts := evalCleanOptions(options...)
 
 	ct := i.Type()
+	h := i.Host()
+	listSeparator := host.ListSeparators[h.OS()]
 
-	// TODO: move from filepath.SplitList to strings.Split and use platform specific separator in config
-	cleanlist := filepath.SplitList(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])))
+	cleanlist := splitPathList(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])), listSeparator)
 	if geneos.RootComponent.CleanList != "" {
-		cleanlist = append(cleanlist, filepath.SplitList(geneos.RootComponent.CleanList)...)
+		cleanlist = append(cleanlist, splitPathList(geneos.RootComponent.CleanList, listSeparator)...)
 	}
 
-	// TODO: move from filepath.SplitList to strings.Split and use platform specific separator in config
-	purgelist := filepath.SplitList(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])))
+	purgelist := splitPathList(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])), listSeparator)
 	if geneos.RootComponent.PurgeList != "" {
-		purgelist = append(purgelist, filepath.SplitList(geneos.RootComponent.PurgeList)...)
+		purgelist = append(purgelist, splitPathList(geneos.RootComponent.PurgeList, listSeparator)...)
 	}
 
 	if !opts.full {
@@ -86,6 +87,16 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 		err = Start(i)
 	}
 	return
+}
+
+func splitPathList(value, separator string) []string {
+	if value == "" {
+		return nil
+	}
+	if separator == "" {
+		return []string{value}
+	}
+	return strings.Split(value, separator)
 }
 
 // RemovePaths removes all files and directories in list

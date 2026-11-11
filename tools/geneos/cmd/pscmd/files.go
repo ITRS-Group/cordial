@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"path"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -90,7 +89,7 @@ func psFilesJSON(i geneos.Instance, pid int) (files []psInstanceFiles, err error
 	})
 
 	for _, fd := range openFiles {
-		if path.IsAbs(fd.Path) {
+		if h.IsAbs(fd.Path) {
 			uid, gid := host.GetFileOwner(h, fd.Stat)
 			path := fd.Path
 			fdPerm := ""
@@ -155,7 +154,7 @@ func psFilesCSV(i geneos.Instance, pid int, resp *responses.General) (err error)
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	for _, fd := range process.OpenFiles(h, pid) {
-		if path.IsAbs(fd.Path) {
+		if h.IsAbs(fd.Path) {
 			uid, gid := host.GetFileOwner(h, fd.Stat)
 			path := fd.Path
 			fdPerm := ""
@@ -223,7 +222,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 	})
 
 	for _, fd := range process.OpenFiles(h, pid) {
-		if !path.IsAbs(fd.Path) {
+		if !h.IsAbs(fd.Path) {
 			continue
 		}
 
@@ -276,7 +275,7 @@ func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err erro
 		})
 
 		for _, fd := range capi.OpenFiles {
-			if !path.IsAbs(fd.Path) {
+			if !h.IsAbs(fd.Path) {
 				continue
 			}
 

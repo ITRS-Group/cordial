@@ -25,7 +25,6 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"path"
 	"slices"
 	"strings"
 	"text/template"
@@ -69,13 +68,15 @@ func isMap(v any) bool {
 	return ok
 }
 
-var fnmap = template.FuncMap{
-	"first":    first,
-	"join":     path.Join,
-	"nameOf":   nameOf,
-	"valueOf":  valueOf,
-	"isString": isString,
-	"isMap":    isMap,
+func templateFuncMap(h *geneos.Host) template.FuncMap {
+	return template.FuncMap{
+		"first":    first,
+		"join":     h.Join,
+		"nameOf":   nameOf,
+		"valueOf":  valueOf,
+		"isString": isString,
+		"isMap":    isMap,
+	}
 }
 
 // ExecuteTemplate loads the template name from the component
@@ -100,10 +101,10 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	outputPathTmp := outputPath + ".new"
 
-	t := template.New("").Funcs(fnmap).Option("missingkey=zero")
+	t := template.New("").Funcs(templateFuncMap(h)).Option("missingkey=zero")
 	if t, err = t.ParseGlob(h.PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
 		i.Log().Warn("Cannot parse template(s)", slog.Any("error", err))
-		t = template.New(name).Funcs(fnmap).Option("missingkey=zero")
+		t = template.New(name).Funcs(templateFuncMap(h)).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
 		i.Log().Warn("No templates found, using internal defaults", slog.String("path", h.PathTo(i.Type(), "templates")))
 		t = template.Must(t.Parse(string(defaultTemplate)))

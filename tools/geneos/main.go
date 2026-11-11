@@ -20,7 +20,7 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial"
@@ -79,7 +79,7 @@ func main() {
 	// resolved name, including following symlinks, and we want to know
 	// if the are being called through a symlink for command emulation,
 	// so roll our own here
-	execname := path.Base(os.Args[0])
+	execname := filepath.Base(os.Args[0])
 
 	// if the executable does not have a `ctl` suffix then execute the
 	// underlying code directly

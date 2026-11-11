@@ -27,7 +27,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -129,16 +128,16 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 	}
 
 	// if the destination exists, is it a directory?
-	if s, err := h.Stat(path.Join(dir, dst)); err == nil {
+	if s, err := h.Stat(h.Join(dir, dst)); err == nil {
 		if s.IsDir() {
-			dir = path.Join(dir, dst)
+			dir = h.Join(dir, dst)
 			dst = ""
 			dstIsDir = false
 		}
 	}
 
 	if dstIsDir {
-		dir = path.Join(dir, dst)
+		dir = h.Join(dir, dst)
 		dst = ""
 	}
 
@@ -167,8 +166,8 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 	}
 
 	// return final basename
-	dst = path.Join(dir, dst)
-	filename = path.Base(dst)
+	dst = h.Join(dir, dst)
+	filename = h.Base(dst)
 
 	// test for same source and dest, return err. only on localhost.
 	if h.IsLocalhost() && !strings.Contains(item, "://") {
@@ -202,10 +201,10 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 var importFileLocks sync.Map
 
 func importFile(h *Host, destination string, from io.Reader, perms fs.FileMode) (changed bool, err error) {
-	if err := h.MkdirAll(path.Dir(destination), 0775); err != nil {
+	if err := h.MkdirAll(h.Dir(destination), 0775); err != nil {
 		return false, err
 	}
-	mutex, _ := importFileLocks.LoadOrStore(h.String()+":"+path.Clean(destination), &sync.Mutex{})
+	mutex, _ := importFileLocks.LoadOrStore(h.String()+":"+h.Clean(destination), &sync.Mutex{})
 	lock := mutex.(*sync.Mutex)
 	lock.Lock()
 	defer lock.Unlock()
@@ -306,14 +305,14 @@ func importDirectory(h *Host, dir, source string) (err error) {
 
 	// if source ends with '/' then copy contents only, not the directory named
 	if !strings.HasSuffix(source, "/") {
-		dir = filepath.Join(dir, filepath.Base(source))
+		dir = h.Join(dir, filepath.Base(source))
 	}
 
 	return fs.WalkDir(os.DirFS(source), ".", func(file string, di fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		destfile := path.Join(dir, file)
+		destfile := h.Join(dir, file)
 
 		st, err := di.Info()
 		if err != nil {
@@ -324,7 +323,7 @@ func importDirectory(h *Host, dir, source string) (err error) {
 			return h.MkdirAll(destfile, st.Mode().Perm())
 		}
 
-		from, err := os.Open(path.Join(source, file))
+		from, err := os.Open(filepath.Join(source, file))
 		if err != nil {
 			return err
 		}
@@ -334,7 +333,7 @@ func importDirectory(h *Host, dir, source string) (err error) {
 			return err
 		}
 		if changed {
-			fmt.Printf("imported %q to %s:%s\n", path.Join(source, file), h.String(), destfile)
+			fmt.Printf("imported %q to %s:%s\n", filepath.Join(source, file), h.String(), destfile)
 		}
 		return nil
 	})

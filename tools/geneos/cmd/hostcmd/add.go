@@ -22,9 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
-	"path"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -221,17 +218,14 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		// set remote geneos dir:
 		//   * if the user has set the path, use it without question
-		//   * if the OS on the remote is different convert the path separators
+		//   * normalize the home path to slash separators for SSH path handling
 		//   * use the user home dir with optional subdir if the last component is not the same
 		if sshurl.Path != "" {
 			config.Set(h.Config, cordial.ExecutableName(), sshurl.Path)
 		} else {
-			geneosdir := config.Get[string](h.Config, "homedir")
-			if path.Base(geneosdir) != cordial.ExecutableName() {
-				geneosdir = path.Join(geneosdir, cordial.ExecutableName())
-			}
-			if runtime.GOOS == "windows" {
-				geneosdir = filepath.ToSlash(geneosdir)
+			geneosdir := h.ToSlash(config.Get[string](h.Config, "homedir"))
+			if h.Base(geneosdir) != cordial.ExecutableName() {
+				geneosdir = h.Join(geneosdir, cordial.ExecutableName())
 			}
 			config.Set(h.Config, cordial.ExecutableName(), geneosdir)
 		}

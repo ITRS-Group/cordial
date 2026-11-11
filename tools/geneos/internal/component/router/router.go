@@ -23,7 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
@@ -92,9 +92,9 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join(name, name+"s"),
-		filepath.Join(name, "templates"),
+		path.Join("packages", name),
+		path.Join(name, name+"s"),
+		path.Join(name, "templates"),
 	},
 	GetPID: pidCheckFn,
 }

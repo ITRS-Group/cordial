@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"path"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -55,7 +54,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			// TODO: loop and single config makes no sense
 			for _, t := range ct.Templates {
 				tmpl := t.Content
-				output := path.Join(templateDir, t.Filename)
+				output := h.Join(templateDir, t.Filename)
 				if _, err := h.Stat(output); err == nil {
 					continue
 				}

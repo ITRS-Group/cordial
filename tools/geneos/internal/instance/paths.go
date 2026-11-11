@@ -18,8 +18,6 @@ limitations under the License.
 package instance
 
 import (
-	"path"
-	"path/filepath"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -78,13 +76,8 @@ func FileOf(i geneos.Instance, name string) (filename string) {
 	if cf == nil {
 		return
 	}
-	base := path.Base
-	if h.IsLocalhost() {
-		base = filepath.Base
-	}
-
 	// return empty and not a "."
-	filename = base(config.Get[string](cf, name))
+	filename = h.Base(config.Get[string](cf, name))
 	if filename == "." {
 		filename = ""
 	}
@@ -101,20 +94,11 @@ func HomeRel(i geneos.Instance, file string) (result string) {
 		return
 	}
 
-	if h.IsLocalhost() {
-		// always use filepath for local paths
-		result = filepath.Clean(file)
-		if filepath.IsAbs(result) {
-			return
-		}
-		return filepath.Join(i.Home(), result)
-	}
-
-	result = path.Clean(file)
-	if path.IsAbs(result) {
+	result = h.Clean(file)
+	if h.IsAbs(result) {
 		return
 	}
-	return path.Join(i.Home(), result)
+	return h.Join(i.Home(), result)
 }
 
 // PathTo returns the full path to the file identified by the

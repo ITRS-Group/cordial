@@ -25,6 +25,10 @@
 
 * Updated to use Go 1.27.4 and update dependencies
 
+* `pkg/host`
+
+  * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
+
 * `tools/geneos`
 
   * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
@@ -32,6 +36,8 @@
   * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
 
   * `geneos includes list --gateway` now accepts instance names and glob patterns to show includes for matching gateways only.
+
+  * Use host-specific path operations for file handling across commands, instances, packages, includes, templates, and restore operations, including paths that previously relied on the client OS's `path` or `filepath` behavior.
 
   * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types.
 

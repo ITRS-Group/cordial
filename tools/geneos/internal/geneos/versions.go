@@ -22,7 +22,6 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -45,7 +44,7 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 	// as soon as it is not a link.
 	for i = 0; i < 10; i++ {
 		var lversion string
-		basepath := path.Join(dir, version)
+		basepath := h.Join(dir, version)
 		_, err = h.Lstat(basepath)
 		if err != nil {
 			version = "unknown"
@@ -62,11 +61,11 @@ func CurrentVersion(h *Host, ct *Component, base string) (version string, err er
 		}
 		version = lversion
 
-		if filepath.IsAbs(version) {
+		if h.IsAbs(version) {
 			// if the version is absolute then we need to make it relative to the
 			// directory we are in so that it can be used as a relative path
 			// in the config file.
-			version, err = filepath.Rel(dir, version)
+			version, err = h.Rel(dir, version)
 			if err != nil {
 				log.Debug("relative path", slog.Any("error", err))
 			}
@@ -104,7 +103,7 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 
 	// remove non-directories
 	ents = slices.DeleteFunc(ents, func(d fs.DirEntry) bool {
-		st, err := h.Lstat(filepath.Join(dir, d.Name()))
+		st, err := h.Lstat(h.Join(dir, d.Name()))
 		return err != nil || !st.IsDir()
 	})
 

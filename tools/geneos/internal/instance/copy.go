@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -178,7 +177,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	}(src.String(), src.Host(), src.Home(), dst)
 
 	// XXX update *Home manually, as it's not just the prefix
-	config.Set(ncf, "home", path.Join(dst.Type().InstancesDir(dHost), dName))
+	config.Set(ncf, "home", dHost.Join(dst.Type().InstancesDir(dHost), dName))
 
 	// only set a new port if not set through command line parameters
 	if config.Get[uint16](ncf, "port") == 0 {

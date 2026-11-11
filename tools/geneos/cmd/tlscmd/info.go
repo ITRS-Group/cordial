@@ -34,7 +34,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -274,7 +273,7 @@ var infoCmd = &cobra.Command{
 		for i, ci := range certInfos {
 			if ci.Error != nil {
 				lines = append(lines, []string{
-					strings.TrimSuffix(path.Base(ci.Path), ":443"),
+					strings.TrimSuffix(filepath.Base(ci.Path), ":443"),
 					"ERROR: " + ci.Error.Error(),
 				})
 				continue
@@ -298,9 +297,9 @@ var infoCmd = &cobra.Command{
 					if c.IsCA {
 						continue
 					}
-					fileandindex = strings.TrimSuffix(path.Base(certInfos[i].Path), ":443")
+					fileandindex = strings.TrimSuffix(filepath.Base(certInfos[i].Path), ":443")
 				} else {
-					name := strings.TrimSuffix(path.Base(certInfos[i].Path), ":443")
+					name := strings.TrimSuffix(filepath.Base(certInfos[i].Path), ":443")
 					if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
 						fileandindex = fmt.Sprintf("%s/%s", name, certInfos[i].Alias[n])
 					} else {
@@ -565,7 +564,7 @@ func readFile(p string, ci *certInfo) (err error) {
 
 	// treat a cacerts file specially, setting the password to
 	// "changeit" and only reading trusted certificate entries
-	if path.Base(p) == "cacerts" {
+	if filepath.Base(p) == "cacerts" {
 		k, err := certs.ReadKeystore(geneos.LOCAL, p, config.Secret("changeit"))
 		if err != nil {
 			log.Error("unable to read Java keystore", slog.Any("error", err), slog.String("file", p))
@@ -661,7 +660,7 @@ func readFile(p string, ci *certInfo) (err error) {
 		return err
 	}
 
-	ext := strings.ToLower(path.Ext(p))
+	ext := strings.ToLower(filepath.Ext(p))
 	if ext == ".pfx" || ext == ".p12" {
 		if len(infoCmdPassword) == 0 {
 			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")

@@ -41,8 +41,8 @@ gateway-reporter
 ### Options
 
 ```text
-  -f, --config string   config file (default is $HOME/.config/geneos/docs.yaml)
-  -d, --debug           enable extra debug output
+  -f, --config string        config file (default is $HOME/.config/geneos/docs.yaml)
+  -d, --debug[=true|false]   enable extra debug output
 ```
 
 ## SEE ALSO

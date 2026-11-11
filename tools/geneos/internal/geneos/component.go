@@ -20,7 +20,6 @@ package geneos
 import (
 	"iter"
 	"os"
-	"path"
 	"regexp"
 	"slices"
 	"strings"
@@ -269,7 +268,7 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 	}
 	geneos := config.Get[string](h.Config, cordial.ExecutableName()) // root for host h
 	for _, d := range initDirs[name] {
-		dir := path.Join(geneos, d)
+		dir := h.Join(geneos, d)
 		if err = h.MkdirAll(dir, 0775); err != nil {
 			return
 		}

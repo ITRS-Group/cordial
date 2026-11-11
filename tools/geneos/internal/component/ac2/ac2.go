@@ -23,7 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -79,8 +79,8 @@ var Component = geneos.Component{
 		`autostart=false`,
 	},
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join(name, "ac2s"),
+		path.Join("packages", name),
+		path.Join(name, "ac2s"),
 	},
 	GetPID: pidCheckFn,
 }

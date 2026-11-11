@@ -22,7 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -88,8 +88,8 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join(name, name+"s"),
+		path.Join("packages", name),
+		path.Join(name, name+"s"),
 	},
 
 	ApplyProfile: profile.ApplyCommonProfile,

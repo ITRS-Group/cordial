@@ -2,7 +2,6 @@ package pscmd
 
 import (
 	"fmt"
-	"path"
 	"strings"
 	"time"
 
@@ -106,7 +105,7 @@ func checkCA(i geneos.Instance, children []int) (pi *instance.ProcessInfo, ok bo
 			continue
 		}
 
-		if path.Base(pi.Cmdline[0]) != "java" {
+		if h.Base(pi.Cmdline[0]) != "java" {
 			continue
 		}
 

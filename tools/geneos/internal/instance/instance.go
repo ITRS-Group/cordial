@@ -120,16 +120,17 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 	if i == nil {
 		return ""
 	}
-	logdir := path.Clean(config.Get[string](i.Config(), "logdir"))
+	h := i.Host()
+	logdir := h.Clean(config.Get[string](i.Config(), "logdir"))
 	switch {
 	case logdir == "":
 		logfile = i.Home()
-	case path.IsAbs(logdir):
+	case h.IsAbs(logdir):
 		logfile = logdir
 	default:
-		logfile = path.Join(i.Home(), logdir)
+		logfile = h.Join(i.Home(), logdir)
 	}
-	logfile = path.Join(logfile, config.Get[string](i.Config(), "logfile"))
+	logfile = h.Join(logfile, config.Get[string](i.Config(), "logfile"))
 	return
 }
 
@@ -714,11 +715,12 @@ func ImportFiles(i geneos.Instance, files ...string) (err error) {
 			continue
 		}
 		setup := config.Get[string](i.Config(), "setup")
-		setupBase := path.Base(PathTo(i, "setup"))
+		h := i.Host()
+		setupBase := h.Base(PathTo(i, "setup"))
 		if setupBase == "." {
-			setupBase = path.Base(setup)
+			setupBase = h.Base(setup)
 		}
-		if dest != setupBase && dest != path.Base(setup) && dest != setup {
+		if dest != setupBase && dest != h.Base(setup) && dest != setup {
 			continue
 		}
 		i.AuditEvent("action/import", err, slog.String("source", source), slog.String("file", dest))

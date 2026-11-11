@@ -24,7 +24,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 
@@ -163,7 +162,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp.Err = config.ErrNoUserConfigDir
 			return
 		}
-		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, path.Join(confDir, geneos.RootCABasename+certs.PEMExtension))
+		rootPool, ok = certs.ReadCACertPool(geneos.LOCAL, geneos.LOCAL.Join(confDir, geneos.RootCABasename+certs.PEMExtension))
 		if !ok {
 			resp.Err = fmt.Errorf("no CA certificates found to verify %s %q", i.Type(), i.Name())
 			return

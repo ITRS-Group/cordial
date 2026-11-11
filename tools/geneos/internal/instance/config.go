@@ -26,8 +26,6 @@ import (
 	"log/slog"
 	"maps"
 	"os"
-	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
@@ -516,13 +514,14 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 	cf := i.Config()
 
 	// check if instance directory is up-to date
-	current := path.Dir(i.Home())
-	shouldbe := i.Type().InstancesDir(i.Host())
+	h := i.Host()
+	current := h.Dir(i.Home())
+	shouldbe := i.Type().InstancesDir(h)
 	if current != shouldbe {
-		if resp.Err = i.Host().MkdirAll(shouldbe, 0775); resp.Err != nil {
+		if resp.Err = h.MkdirAll(shouldbe, 0775); resp.Err != nil {
 			return
 		}
-		if resp.Err = i.Host().Rename(i.Home(), path.Join(shouldbe, i.Name())); resp.Err != nil {
+		if resp.Err = h.Rename(i.Home(), h.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe))
@@ -567,29 +566,28 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 	return
 }
 
-// a template function to support "{{join .X .Y}}"
-var textJoinFuncs = template.FuncMap{"join": path.Join}
-
 // SetDefaults is a common function called by component factory
 // functions to iterate over the component specific instance
 // struct and set the defaults as defined in the 'defaults'
 // struct tags.
 func SetDefaults(i geneos.Instance, name string) (err error) {
 	cf := i.Config()
+	h := i.Host()
 	if cf == nil {
 		i.Log().Error("no config found")
 		return fmt.Errorf("no configuration initialised")
 	}
 
 	aliases := i.Type().LegacyParameters
-	root := config.Get[string](i.Host().Config, cordial.ExecutableName())
+	root := config.Get[string](h.Config, cordial.ExecutableName())
 	cf.Default("name", name)
 
 	// add a bootstrap for 'root'
 	// data to a template must be renewed each time
 	settings := cf.ExpandAllSettings(config.NoDecode(true))
 	settings["root"] = root
-	settings["os"] = config.Get[string](i.Host().Config, "os")
+	settings["os"] = config.Get[string](h.Config, "os")
+	textJoinFuncs := template.FuncMap{"join": h.Join}
 
 	// set bootstrap values used by templates
 	for _, s := range i.Type().Defaults {
@@ -660,12 +658,12 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
 
 	newGeneosDir := config.Get[string](h.Config, "geneos")
-	oldGeneosDir := strings.TrimSuffix(oldHome, path.Join("/", nct, ct.String()+"s", name))
+	oldGeneosDir := strings.TrimSuffix(oldHome, h.Join("/", nct, ct.String()+"s", name))
 
 	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", nct)
 
-	oldShared := path.Join(path.Dir(path.Dir(oldHome)), ct.String()+"_shared")
+	oldShared := h.Join(h.Dir(h.Dir(oldHome)), ct.String()+"_shared")
 	newShared := ct.Shared(h)
 
 	version := config.Get[string](cf, "version")
@@ -716,19 +714,26 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	np := "${config:install}"
 	nv := "${config:version}"
 
-	for _, p := range filepath.SplitList(config.Get[string](cf, "libpaths", config.NoExpand())) {
-		if after, ok := strings.CutPrefix(p, oldInstall+"/"); ok {
+	libpathList := config.Get[string](cf, "libpaths", config.NoExpand())
+	var libpathValues []string
+	if libpathList != "" {
+		libpathValues = strings.Split(libpathList, host.ListSeparators[h.OS()])
+	}
+	libpathPrefix := strings.TrimSuffix(h.ToSlash(oldInstall), "/") + "/"
+	for _, p := range libpathValues {
+		p = h.ToSlash(p)
+		if after, ok := strings.CutPrefix(p, libpathPrefix); ok {
 			subpath := after
 			if after, ok := strings.CutPrefix(subpath, version); ok {
-				libpaths = append(libpaths, path.Join(np, nv, after))
+				libpaths = append(libpaths, h.Join(np, nv, after))
 			} else {
-				libpaths = append(libpaths, path.Join(np, subpath))
+				libpaths = append(libpaths, h.Join(np, subpath))
 			}
 		} else {
 			libpaths = append(libpaths, p)
 		}
 	}
-	config.Set(cf, "libpaths", strings.Join(libpaths, ":"))
+	config.Set(cf, "libpaths", strings.Join(libpaths, host.ListSeparators[h.OS()]))
 
 	config.Delete(cf, "user")
 

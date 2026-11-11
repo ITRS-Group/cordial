@@ -23,7 +23,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -127,19 +127,19 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		filepath.Join("packages", name),
-		filepath.Join(name, "config"),
-		filepath.Join(name, "gateways"),
-		filepath.Join(name, "includes"),
-		filepath.Join(name, "shared"),
-		filepath.Join(name, "templates"),
+		path.Join("packages", name),
+		path.Join(name, "config"),
+		path.Join(name, "gateways"),
+		path.Join(name, "includes"),
+		path.Join(name, "shared"),
+		path.Join(name, "templates"),
 	},
 	SharedDirectories: []string{
-		filepath.Join(name, "config"),
-		filepath.Join(name, "gateway_shared"),
-		filepath.Join(name, "gateway_config"),
-		filepath.Join(name, "includes"),
-		filepath.Join(name, "shared"),
+		path.Join(name, "config"),
+		path.Join(name, "gateway_shared"),
+		path.Join(name, "gateway_config"),
+		path.Join(name, "includes"),
+		path.Join(name, "shared"),
 	},
 
 	ApplyProfile: applyProfile,
