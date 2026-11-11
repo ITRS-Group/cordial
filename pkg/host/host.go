@@ -24,7 +24,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path"
 	"strings"
 	"syscall"
 	"time"
@@ -48,17 +47,9 @@ var ListSeparators = map[string]string{
 	"darwin":  ":",
 }
 
-// Host encapsulates all the methods required by callers to manage Geneos
-// installs on a host.
-//
-// This should have been based on (and extending) something like Afero, but this
-// was quicker for the moment. This interface also provides process handling
-// etc.
-type Host interface {
-	// informational
+// HostInfo provides informational methods about a host.
+type HostInfo interface {
 	String() string
-	GetFs() afero.Fs
-	HostPath(p string) string // return the path as a string, prefixed with "host:" if not local
 	Hostname() string
 	ServerVersion() string // return the SSH server version if remote, or the same as OS() if local
 	OS() string            // return whatever runtime.GOOS would return for the host
@@ -67,11 +58,13 @@ type Host interface {
 	LastError() error
 	Uname() (string, string, error)
 	Username() string
+}
 
-	// filepath operations
+// HostPaths provides path operations using the host's path conventions.
+type HostPaths interface {
 	Abs(name string) (string, error)
 	Base(string) string
-	// Clean()
+	Clean(string) string
 	Dir(string) string
 	// EvalSymlinks()
 	Ext(string) string
@@ -80,15 +73,18 @@ type Host interface {
 	Join(...string) string
 	// Localize()
 	// Match()
-	// Rel()
+	Rel(basepath, targpath string) (string, error)
 	Split(string) (dir, file string)
 	// SplitList()
 	ToSlash(string) string
 	VolumeName(string) string
-	// Walk()
-	WalkDir(dir string, fn fs.WalkDirFunc) error
+}
 
-	// file operations
+// HostFiles provides filesystem operations on a host.
+type HostFiles interface {
+	GetFs() afero.Fs
+	HostPath(p string) string // return the path as a string, prefixed with "host:" if not local
+	WalkDir(dir string, fn fs.WalkDirFunc) error
 	Getwd() (dir string, err error)
 	Chown(name string, uid, gid int) (err error)
 	Chtimes(path string, atime time.Time, mtime time.Time) (err error)
@@ -113,12 +109,35 @@ type Host interface {
 	// these two do not conform to the afero / os interface
 	Open(name string) (f io.ReadSeekCloser, err error)
 	Create(p string, perms fs.FileMode) (out io.WriteCloser, err error)
+}
 
-	// process control
+// HostProcess provides process control on a host.
+type HostProcess interface {
 	Signal(pid int, signal syscall.Signal) (err error)
 	Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error)
 	Run(cmd *exec.Cmd, options ...ProcessOption) (stdout []byte, err error)
 }
+
+// Host encapsulates the methods required to manage Geneos installs on a host.
+// It retains the complete method set while exposing the capabilities separately
+// for consumers that need only a subset.
+type Host interface {
+	HostInfo
+	HostPaths
+	HostFiles
+	HostProcess
+}
+
+var (
+	_ HostInfo    = (*Local)(nil)
+	_ HostPaths   = (*Local)(nil)
+	_ HostFiles   = (*Local)(nil)
+	_ HostProcess = (*Local)(nil)
+	_ HostInfo    = (*SSHRemote)(nil)
+	_ HostPaths   = (*SSHRemote)(nil)
+	_ HostFiles   = (*SSHRemote)(nil)
+	_ HostProcess = (*SSHRemote)(nil)
+)
 
 var (
 	// ErrInvalidArgs TODO: Describe its purpose and intended use.
@@ -154,10 +173,10 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 	ds, err := dstHost.Stat(dstPath)
 	if err == nil {
 		if ds.IsDir() {
-			dstPath = path.Join(dstPath, path.Base(srcPath))
+			dstPath = dstHost.Join(dstPath, srcHost.Base(srcPath))
 		}
 	} else {
-		dstHost.MkdirAll(path.Dir(dstPath), 0775)
+		dstHost.MkdirAll(dstHost.Dir(dstPath), 0775)
 	}
 
 	df, err := dstHost.Create(dstPath, ss.Mode())
@@ -183,8 +202,8 @@ func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err erro
 			if err != nil {
 				return err
 			}
-			dstPath := path.Join(dstDir, file)
-			srcPath := path.Join(srcDir, file)
+			dstPath := dstHost.Join(dstDir, file)
+			srcPath := srcHost.Join(srcDir, file)
 			return processDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
 		})
 	}
@@ -202,7 +221,7 @@ func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err erro
 			}
 			fi := w.Stat()
 			srcPath := w.Path()
-			dstPath := path.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
+			dstPath := dstHost.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
 			if err = processDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
 				return
 			}

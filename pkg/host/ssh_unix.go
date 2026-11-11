@@ -22,8 +22,6 @@ package host
 import (
 	"net"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"golang.org/x/crypto/ssh/agent"
 )
@@ -36,18 +34,4 @@ func sshConnectAgent() (agentClient agent.ExtendedAgent) {
 		}
 	}
 	return
-}
-
-// IsAbs run from unix will use path.IsAbs unless the remote is windows
-// in which case it checks the volume name, stripping it and testing the
-// rest of the path
-func (h *SSHRemote) IsAbs(name string) bool {
-	if h.OS() == "windows" {
-		n := filepath.VolumeName(name)
-		if n == "" {
-			return false
-		}
-		return filepath.IsAbs(filepath.ToSlash(strings.TrimPrefix(name, n)))
-	}
-	return filepath.IsAbs(name)
 }

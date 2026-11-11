@@ -24,7 +24,6 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sync"
@@ -95,6 +94,11 @@ func (h *Local) Dir(path string) string {
 	return filepath.Dir(path)
 }
 
+// Clean returns the shortest path name equivalent to path using local path rules.
+func (h *Local) Clean(path string) string {
+	return filepath.Clean(path)
+}
+
 // Ext returns path's file extension using local path rules.
 func (h *Local) Ext(path string) string {
 	return filepath.Ext(path)
@@ -103,6 +107,11 @@ func (h *Local) Ext(path string) string {
 // Join joins path elements using local path rules.
 func (h *Local) Join(elem ...string) string {
 	return filepath.Join(elem...)
+}
+
+// Rel returns a relative path from basepath to targpath using local path rules.
+func (h *Local) Rel(basepath, targpath string) (string, error) {
+	return filepath.Rel(basepath, targpath)
 }
 
 // ToSlash converts path separators to slash characters.
@@ -278,7 +287,7 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err err
 	if errfile == "" {
 		errfile = os.DevNull
 	} else if !h.IsAbs(errfile) {
-		errfile = path.Join(cmd.Dir, errfile)
+		errfile = filepath.Join(cmd.Dir, errfile)
 	}
 
 	// Start is not thread-safe due to the use of cmd.Process.Release()
@@ -328,7 +337,7 @@ func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err
 	if errfile == "" {
 		errfile = os.DevNull
 	} else if !h.IsAbs(errfile) {
-		errfile = path.Join(cmd.Dir, errfile)
+		errfile = filepath.Join(cmd.Dir, errfile)
 	}
 
 	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)

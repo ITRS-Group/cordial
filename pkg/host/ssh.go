@@ -28,7 +28,6 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -195,7 +194,7 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 
 	// XXX we need this because:
 	// https://github.com/golang/go/issues/29286#issuecomment-1160958614
-	kh, err := knownhosts.NewDB(path.Join(homedir, userSSHdir, "known_hosts"))
+	kh, err := knownhosts.NewDB(filepath.Join(homedir, userSSHdir, "known_hosts"))
 	if err != nil {
 		return
 	}
@@ -364,83 +363,82 @@ func (h *SSHRemote) Abs(dir string) (string, error) {
 	}
 }
 
-// Base TODO: Document its behavior, inputs, and effects.
+// Base returns the final slash-separated path element.
 func (h *SSHRemote) Base(file string) string {
-	if h.OS() == "windows" {
-		if runtime.GOOS == "windows" {
-			return filepath.Base(file)
-		}
-		// TODO: fix logic
-		return path.Base(file)
-	}
 	return path.Base(file)
 }
 
-// Dir TODO: Document its behavior, inputs, and effects.
+// Clean returns the shortest slash-separated path name equivalent to file.
+func (h *SSHRemote) Clean(file string) string {
+	return path.Clean(file)
+}
+
+// Dir returns the directory portion of a slash-separated path.
 func (h *SSHRemote) Dir(file string) string {
-	if h.OS() == "windows" {
-		if runtime.GOOS == "windows" {
-			return filepath.Dir(file)
-		}
-		// TODO: fix logic
-		return path.Dir(file)
-	}
 	return path.Dir(file)
 }
 
-// Ext TODO: Document its behavior, inputs, and effects.
+// Ext returns the extension of a slash-separated path.
 func (h *SSHRemote) Ext(file string) string {
 	return path.Ext(file)
 }
 
-// Join TODO: Document its behavior, inputs, and effects.
+// IsAbs reports whether name is an absolute slash-separated path.
+func (h *SSHRemote) IsAbs(name string) bool {
+	return path.IsAbs(name)
+}
+
+// Join joins slash-separated path elements.
 func (h *SSHRemote) Join(elem ...string) string {
-	sep, ok := Seperators[h.OS()]
-	if !ok {
-		sep = "/"
-	}
-	return strings.Join(elem, sep)
+	return path.Join(elem...)
 }
 
-// ToSlash TODO: Document its behavior, inputs, and effects.
-func (h *SSHRemote) ToSlash(path string) string {
-	if h.OS() == "windows" {
-		return strings.ReplaceAll(path, `\`, `/`)
+// Rel returns a slash-separated path from basepath to targpath.
+func (h *SSHRemote) Rel(basepath, targpath string) (string, error) {
+	basepath = path.Clean(basepath)
+	targpath = path.Clean(targpath)
+	if path.IsAbs(basepath) != path.IsAbs(targpath) {
+		return "", fmt.Errorf("Rel: can't make %q relative to %q", targpath, basepath)
 	}
-	return path
+
+	base := splitSlashPath(basepath)
+	target := splitSlashPath(targpath)
+	common := 0
+	for common < len(base) && common < len(target) && base[common] == target[common] {
+		common++
+	}
+
+	parts := make([]string, 0, len(base)-common+len(target)-common)
+	for index := 0; index < len(base)-common; index++ {
+		parts = append(parts, "..")
+	}
+	parts = append(parts, target[common:]...)
+	if len(parts) == 0 {
+		return ".", nil
+	}
+	return strings.Join(parts, "/"), nil
 }
 
-// VolumeName TODO: Document its behavior, inputs, and effects.
-func (h *SSHRemote) VolumeName(path string) string {
-	if h.OS() == "windows" {
-		if runtime.GOOS == "windows" {
-			return filepath.VolumeName(path)
-		}
-		// return either `C:` or `\\host\share` depending on the path, or "" if not found
-		if idx := strings.Index(path, `:\`); idx != -1 {
-			return path[:idx+2]
-		}
-		if idx := strings.Index(path, `\\`); idx != -1 {
-			idx2 := strings.Index(path[idx+2:], `\`)
-			if idx2 != -1 {
-				return path[:idx+2+idx2]
-			}
-		}
-		return ""
+func splitSlashPath(file string) []string {
+	file = strings.Trim(file, "/")
+	if file == "" || file == "." {
+		return nil
 	}
+	return strings.Split(file, "/")
+}
+
+// ToSlash converts backslash separators to slashes.
+func (h *SSHRemote) ToSlash(file string) string {
+	return strings.ReplaceAll(file, `\`, "/")
+}
+
+// VolumeName returns an empty volume for slash-based SSH paths.
+func (h *SSHRemote) VolumeName(string) string {
 	return ""
 }
 
-// Split TODO: Document its behavior, inputs, and effects.
+// Split separates a slash-separated path into its directory and final element.
 func (h *SSHRemote) Split(file string) (dir, base string) {
-	if h.OS() == "windows" {
-		if runtime.GOOS == "windows" {
-			return filepath.Split(file)
-		}
-		base = h.Base(file)
-		dir = strings.TrimSuffix(file, base)
-		return
-	}
 	return path.Split(file)
 }
 
@@ -942,7 +940,7 @@ func (h *SSHRemote) WalkDir(dir string, fn fs.WalkDirFunc) error {
 		if w.Err() != nil {
 			return w.Err()
 		}
-		p, _ := filepath.Rel(dir, w.Path())
+		p, _ := h.Rel(dir, w.Path())
 		if err = fn(p, fs.FileInfoToDirEntry(w.Stat()), err); err != nil {
 			if err == fs.SkipDir {
 				break
