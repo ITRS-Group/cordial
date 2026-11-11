@@ -85,6 +85,8 @@ With no action options, cleanup has these defaults:
 
 Removing a name predicate broadens the data-item path. It does not delete the dashboard object or the XPath element. The command also clears the stored URL alias in processed modifier records.
 
+After each file is processed, `clean` and `edit` report the number of updated XPath and URL links, which XPath components changed, and any modifier aliases or startup-data entries removed. A file with no changes is reported as such.
+
 1. Inspect the source with `geneos adb info`.
 2. Write a cleaned copy:
 

@@ -10,6 +10,8 @@ The original file is saved by renaming it in the same location as the source fil
 
 If you use the `--keep-all`/`-k` flag, the default action for Gateway, Probe, and Managed Entity names will be `keep`. Type processing still uses `remove-empty` unless overridden. This can be combined with `--filter-*` options to selectively apply the modifications to specific XPaths and modifiers.
 
+After processing each file, the command prints a concise summary of changed links, the XPath components changed, modifier aliases cleared, and startup-data entries removed. Files with no changes are reported as such.
+
 To only process modifiers or links, you can use the `--skip-modifiers` and `--skip-links` flags to exclude the respective elements from processing. Note that both flags cannot be used simultaneously, as this would result in no elements being processed.
 
 ## Update Web Page URLs

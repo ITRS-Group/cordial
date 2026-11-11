@@ -370,3 +370,68 @@ func TestCleanActivedashboardWebPageTargets(t *testing.T) {
 		t.Errorf("concatenated GeneosURL = %q, want unchanged %q", got, concatenatedLine)
 	}
 }
+
+func TestCleanActivedashboardStats(t *testing.T) {
+	originalFilter := cleanFilterXPath
+	originalOptions := cleanOptions
+	originalSkipModifiers := cleanCmdSkipModifiers
+	originalSkipLinks := cleanCmdSkipLinks
+	originalURLFilters := cleanURLFilters
+	originalLog := log
+	defer func() {
+		cleanFilterXPath = originalFilter
+		cleanOptions = originalOptions
+		cleanCmdSkipModifiers = originalSkipModifiers
+		cleanCmdSkipLinks = originalSkipLinks
+		cleanURLFilters = originalURLFilters
+		log = originalLog
+	}()
+
+	cleanFilterXPath = nil
+	cleanOptions = cleaningOptions{
+		Gateways: optionSlice{"set:Updated"},
+		WebPages: optionSlice{"replace:#^http://#https://#"},
+	}
+	cleanCmdSkipModifiers = false
+	cleanCmdSkipLinks = false
+	cleanURLFilters = nil
+	log = slog.Default()
+
+	dataitemPath := `/geneos/gateway[(@name="Old")]/directory/probe[(@name="Probe")]/managedEntity[(@name="Entity")]/sampler[(@name="CPU")]/dataview[(@name="CPU")]`
+	modifierLine := strings.Join([]string{
+		dataItemExprNodeClass,
+		"7.0",
+		"$0$",
+		"Value",
+		"dataitem(" + dataitemPath + ")wwwpage(http://example.invalid/path)",
+		"saved-alias",
+		"1",
+	}, string(fieldSeparator))
+	geneosLine := strings.Join([]string{
+		geneosURLClass,
+		"3.0",
+		"dataitem(" + dataitemPath + ")",
+		"Example",
+		"",
+	}, string(fieldSeparator))
+
+	var output strings.Builder
+	stats := cleanStats{}
+	if err := cleanActivedashboardWithStats(strings.NewReader(modifierLine+"\n"+geneosLine), &output, &stats); err != nil {
+		t.Fatalf("cleanActivedashboardWithStats() error = %v", err)
+	}
+	if stats.xpathLinks != 2 || stats.urlLinks != 1 {
+		t.Errorf("updated links = %d XPaths, %d URLs; want 2 XPaths, 1 URL", stats.xpathLinks, stats.urlLinks)
+	}
+	if stats.gatewaysChanged != 2 || stats.modifierAliasesCleared != 1 {
+		t.Errorf("changes = %d Gateways, %d modifier aliases; want 2 and 1", stats.gatewaysChanged, stats.modifierAliasesCleared)
+	}
+	wantSummary := "3 links updated (2 XPaths, 1 URL); XPath changes: 2 Gateways; 1 modifier alias cleared"
+	if got := stats.summary(); got != wantSummary {
+		t.Errorf("summary = %q, want %q", got, wantSummary)
+	}
+
+	if got := (cleanStats{startupDataRemoved: 2}).summary(); got != "No links updated; 2 startup-data entries removed" {
+		t.Errorf("no-link summary = %q", got)
+	}
+}

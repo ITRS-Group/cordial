@@ -318,8 +318,11 @@ var cleanCmd = &cobra.Command{
 		}
 
 		for _, file := range paths {
-			if err = cleanCommand(file, cleanCmdOutput); err != nil {
+			var stats cleanStats
+			if stats, err = cleanCommand(file, cleanCmdOutput); err != nil {
 				log.Error("Failed to clean file", "file", file, "error", err)
+			} else {
+				fmt.Printf("%s: %s\n", file, stats.summary())
 			}
 		}
 
@@ -330,13 +333,131 @@ var cleanCmd = &cobra.Command{
 // cleanCommand processes a single Activedashboard file, creating a
 // cleaned version with updated XPaths and optionally keeping startup
 // data (any `.dbo` files in the archive).
-func cleanCommand(file, outputDir string) (err error) {
+type cleanStats struct {
+	xpathLinks             int
+	urlLinks               int
+	modifierAliasesCleared int
+	startupDataRemoved     int
+	gatewaysChanged        int
+	probesChanged          int
+	entitiesChanged        int
+	attributesChanged      int
+	samplersChanged        int
+	typesChanged           int
+	dataviewsChanged       int
+}
+
+func (s *cleanStats) recordXPathChange(before, after *xpath.XPath) {
+	s.xpathLinks++
+	if (before.Gateway == nil) != (after.Gateway == nil) || before.Gateway != nil && before.Gateway.Name != after.Gateway.Name {
+		s.gatewaysChanged++
+	}
+	if (before.Probe == nil) != (after.Probe == nil) || before.Probe != nil && before.Probe.Name != after.Probe.Name {
+		s.probesChanged++
+	}
+	if (before.Entity == nil) != (after.Entity == nil) || before.Entity != nil && before.Entity.Name != after.Entity.Name {
+		s.entitiesChanged++
+	}
+	var beforeAttributes, afterAttributes map[string]string
+	if before.Entity != nil {
+		beforeAttributes = before.Entity.Attributes
+	}
+	if after.Entity != nil {
+		afterAttributes = after.Entity.Attributes
+	}
+	if !maps.Equal(beforeAttributes, afterAttributes) {
+		s.attributesChanged++
+	}
+	if (before.Sampler == nil) != (after.Sampler == nil) || before.Sampler != nil && before.Sampler.Name != after.Sampler.Name {
+		s.samplersChanged++
+	}
+	var beforeType, afterType *string
+	if before.Sampler != nil {
+		beforeType = before.Sampler.Type
+	}
+	if after.Sampler != nil {
+		afterType = after.Sampler.Type
+	}
+	if !equalOptionalString(beforeType, afterType) {
+		s.typesChanged++
+	}
+	if (before.Dataview == nil) != (after.Dataview == nil) || before.Dataview != nil && before.Dataview.Name != after.Dataview.Name {
+		s.dataviewsChanged++
+	}
+}
+
+func equalOptionalString(a, b *string) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
+func (s cleanStats) summary() string {
+	linkCount := s.xpathLinks + s.urlLinks
+	parts := make([]string, 0, 4)
+	if linkCount == 0 {
+		parts = append(parts, "No links updated")
+	} else {
+		linkTypes := make([]string, 0, 2)
+		if s.xpathLinks > 0 {
+			linkTypes = append(linkTypes, pluralCount(s.xpathLinks, "XPath"))
+		}
+		if s.urlLinks > 0 {
+			linkTypes = append(linkTypes, pluralCount(s.urlLinks, "URL"))
+		}
+		parts = append(parts, fmt.Sprintf("%s updated (%s)", pluralCount(linkCount, "link"), strings.Join(linkTypes, ", ")))
+	}
+
+	xpathChanges := make([]string, 0, 7)
+	for _, change := range []struct {
+		name  string
+		count int
+	}{
+		{"Gateway", s.gatewaysChanged},
+		{"Probe", s.probesChanged},
+		{"Managed Entity", s.entitiesChanged},
+		{"Attribute", s.attributesChanged},
+		{"Sampler", s.samplersChanged},
+		{"Type", s.typesChanged},
+		{"Dataview", s.dataviewsChanged},
+	} {
+		if change.count > 0 {
+			xpathChanges = append(xpathChanges, pluralCount(change.count, change.name))
+		}
+	}
+	if len(xpathChanges) > 0 {
+		parts = append(parts, "XPath changes: "+strings.Join(xpathChanges, ", "))
+	}
+	if s.modifierAliasesCleared > 0 {
+		parts = append(parts, pluralCount(s.modifierAliasesCleared, "modifier alias")+" cleared")
+	}
+	if s.startupDataRemoved > 0 {
+		parts = append(parts, pluralCount(s.startupDataRemoved, "startup-data entry")+" removed")
+	}
+	return strings.Join(parts, "; ")
+}
+
+func pluralCount(count int, singular string) string {
+	if count == 1 {
+		return fmt.Sprintf("1 %s", singular)
+	}
+	if strings.HasSuffix(singular, "entry") || strings.HasSuffix(singular, "entity") {
+		return fmt.Sprintf("%d %sies", count, strings.TrimSuffix(singular, "y"))
+	}
+	if strings.HasSuffix(singular, "alias") {
+		return fmt.Sprintf("%d %ses", count, singular)
+	}
+	return fmt.Sprintf("%d %ss", count, singular)
+}
+
+func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
 	dest := file
 
 	// create output directory if specified, or fail
 	if outputDir != "" {
 		if err := os.MkdirAll(outputDir, 0775); err != nil {
-			return err
+			return stats, err
 		}
 		dest = filepath.Join(outputDir, filepath.Base(file))
 	}
@@ -366,16 +487,15 @@ func cleanCommand(file, outputDir string) (err error) {
 			// do stuff and write it to the archive
 			r, err := f.Open()
 			if err != nil {
-
-				return err
+				return stats, err
 			}
 			wr, err := zw.Create(f.Name)
 			if err != nil {
-				return err
+				return stats, err
 			}
-			err = cleanActivedashboard(r, wr)
+			err = cleanActivedashboardWithStats(r, wr, &stats)
 			if err != nil {
-				return err
+				return stats, err
 			}
 		case ".dbo":
 			// skip if told to, else copy as-is
@@ -384,6 +504,8 @@ func cleanCommand(file, outputDir string) (err error) {
 				if err != nil {
 					return
 				}
+			} else {
+				stats.startupDataRemoved++
 			}
 		default:
 			// copy everything else as-is
@@ -405,11 +527,11 @@ func cleanCommand(file, outputDir string) (err error) {
 	if outputDir != "" {
 		absOutDir, err := filepath.Abs(outputDir)
 		if err != nil {
-			return err
+			return stats, err
 		}
 		srcDir, err := filepath.Abs(filepath.Dir(file))
 		if err != nil {
-			return err
+			return stats, err
 		}
 
 		// if the source and dest directories are different, no backup is needed
@@ -429,13 +551,18 @@ func cleanCommand(file, outputDir string) (err error) {
 		}
 	}
 
-	return os.Rename(dest+".cleaned", dest)
+	err = os.Rename(dest+".cleaned", dest)
+	return stats, err
 }
 
 // cleanActivedashboard processes an Activedashboard extension file,
 // cleaning up DataItemExprNode and DataItemSeverityNode lines as
 // specified by the command flags.
 func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
+	return cleanActivedashboardWithStats(r, w, nil)
+}
+
+func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) (err error) {
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -469,15 +596,26 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 					updatedPath := updateDataitemXpath(xpp, cleanOptions).String()
 					if updatedPath != originalPath {
 						modifierChanged = true
+						if stats != nil {
+							originalXPath, _ := xpath.Parse(originalPath)
+							stats.recordXPathChange(originalXPath, xpp)
+						}
 					}
 					return updatedPath
 				case "wwwpage":
-					return updateWebPageURL(target, cleanOptions.WebPages, cleanURLFilters)
+					updatedURL := updateWebPageURL(target, cleanOptions.WebPages, cleanURLFilters)
+					if updatedURL != target && stats != nil {
+						stats.urlLinks++
+					}
+					return updatedURL
 				default:
 					return target
 				}
 			})
 			if modifierChanged {
+				if parts[5] != EMPTY_STRING && stats != nil {
+					stats.modifierAliasesCleared++
+				}
 				parts[5] = EMPTY_STRING
 			}
 
@@ -514,8 +652,15 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 					break
 				}
 				updatedTarget = updateDataitemXpath(xp, cleanOptions).String()
+				if updatedTarget != target.value && stats != nil {
+					originalXPath, _ := xpath.Parse(target.value)
+					stats.recordXPathChange(originalXPath, xp)
+				}
 			case "wwwpage":
 				updatedTarget = updateWebPageURL(target.value, cleanOptions.WebPages, cleanURLFilters)
+				if updatedTarget != target.value && stats != nil {
+					stats.urlLinks++
+				}
 			}
 			if updatedTarget != target.value {
 				parts := strings.Split(line, string(fieldSeparator))
