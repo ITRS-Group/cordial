@@ -24,6 +24,24 @@ func TestParseXPathRoundTrip(t *testing.T) {
 	}
 }
 
+func TestXPathStringSortsEntityAttributes(t *testing.T) {
+	x := &XPath{
+		Gateway: &Gateway{Name: "gw"},
+		Probe:   &Probe{},
+		Entity: &Entity{Attributes: map[string]string{
+			"DOMAIN":      "Trading and Investment",
+			"APPLICATION": "PB India",
+			"DEPARTMENT":  "PBW",
+			"CATEGORY":    "Database",
+		}},
+	}
+	want := `/geneos/gateway[(@name="gw")]/directory/probe/managedEntity[(attr("APPLICATION")="PB India")][(attr("CATEGORY")="Database")][(attr("DEPARTMENT")="PBW")][(attr("DOMAIN")="Trading and Investment")]`
+
+	if got := x.String(); got != want {
+		t.Errorf("String() = %q, want %q", got, want)
+	}
+}
+
 func TestParseXPathRejectsInvalidPaths(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -44,6 +44,7 @@ import (
 	"log/slog"
 	"path"
 	"regexp"
+	"sort"
 	"strings"
 	"unicode"
 )
@@ -431,8 +432,13 @@ func (x *XPath) String() (p string) {
 	if x.Entity.Name != "" {
 		p += fmt.Sprintf("[(@name=%q)]", x.Entity.Name)
 	}
-	for k, v := range x.Entity.Attributes {
-		p += fmt.Sprintf("[(attr(%q)=%q)]", k, v)
+	attributeNames := make([]string, 0, len(x.Entity.Attributes))
+	for name := range x.Entity.Attributes {
+		attributeNames = append(attributeNames, name)
+	}
+	sort.Strings(attributeNames)
+	for _, name := range attributeNames {
+		p += fmt.Sprintf("[(attr(%q)=%q)]", name, x.Entity.Attributes[name])
 	}
 
 	if x.Sampler == nil {

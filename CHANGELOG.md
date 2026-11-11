@@ -49,6 +49,8 @@
 
 * `tools/geneos`
 
+  * Make XPath serialization order Managed Entity attributes consistently, preventing spurious `adb clean`/`edit` link updates on repeated runs.
+
   * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
 
   * Fix local archive handling in `geneos deploy` and `geneos init` to avoid unnecessary download credential prompts.
