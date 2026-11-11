@@ -194,7 +194,7 @@ profiles:
           types:
             - Level 2 - Basic Application
             - Level 3 - Geneos Gateway
-            - Level 3 - Geneos Gateway Load Monitor
+            - Level 3 - Geneos Gateway Load
           variables:
             - type: string
               name: instanceName
