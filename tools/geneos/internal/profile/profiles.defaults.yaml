@@ -169,231 +169,446 @@ profiles:
     san:
       name: ${option:minimal?"minimal:":""}${hostname}-MOTM-SAN
       gateways: ${option:gateway}
-      attributes: ${option:attribute}
+      attributes:
+        - APPLICATION=Geneos
+        - CATEGORY=Monitoring
+        - COMPONENT=MOTM-SAN
+        - ${option:attribute}
       types:
-        - Level 0 - Geneos
-        - Level 0 - Geneos Extras
         - Level 1 - Infrastructure
+        - Level 3 - Geneos Instances
+        - Level 3 - Geneos Diagnostics
+      variables:
+        - type: string
+          name: geneosExecPath
+          value: ${execpath}
       managed-entities:
         - for-each: gateway
           name: ${replace:gatewayname:name:/ /_/} Gateway
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Gateway
-            - GATEWAY=${config:name}
+            - ${option:attribute}
+            - GATEWAY=${select:gatewayname:name:Unknown}
           types:
-            - Level 0 - Load Monitoring
             - Level 2 - Basic Application
-            - Level 2 - Geneos Gateway
+            - Level 3 - Geneos Gateway
+            - Level 3 - Geneos Gateway Load Monitor
           variables:
             - type: string
-              name: gatewayName
-              value: ${config:gatewayname}
+              name: instanceName
+              value: ${config:name}
             - type: string
-              name: logfile
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
             - type: string
-              name: consolelogfile
-              value: ${config:home}/gateway.txt
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
+            - type: string
+              name: statsFilePath
+              value: ${config:home}/stats.xml
 
         - for-each: netprobe
           name: ${config:name} Netprobe
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Netprobe
+            - ${option:attribute}
             - NETPROBE=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Netprobe
+            - Level 3 - Geneos Netprobe
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
             - type: string
-              name: calogfile
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
+            - type: string
+              name: CALogFilePath
               value: ${config:home}/${config:calogfile}
 
         - for-each: minimal
           name: ${config:name} Netprobe
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Netprobe
+            - ${option:attribute}
             - NETPROBE=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Netprobe
+            - Level 3 - Geneos Netprobe
           variables:
             - type: string
-              name: logfile
-              value: ${config:home}/${config:logfile}
-
-        - for-each: fileagent
-          name: ${config:name} Fileagent
-          attributes:
-            - ${option:attribute}
-            - COMPONENT=Fileagent
-            - FILEAGENT=${config:name}
-          types:
-            - Level 2 - Basic Application
-            - Level 2 - Geneos Fileagent
-          variables:
+              name: instanceName
+              value: ${config:name}
             - type: string
-              name: logfile
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: licd
-          name: ${config:name} Licd
+          name: ${config:name} Licence Daemon
           attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=Licence Daemon
             - ${option:attribute}
-            - COMPONENT=Licd
-            - LICD=${config:name}
+            - LICENCE_DAEMON=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Licd
+            - Level 3 - Geneos Licence Daemon
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: webserver
           name: ${config:name} Webserver
           attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=Web Dashboard Server
             - ${option:attribute}
-            - COMPONENT=Webserver
-            - WEBSERVER=${config:name}
+            - WEB_DASHBOARD_SERVER=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Webserver
+            - Level 3 - Geneos Webserver
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: ac2
           name: ${config:name} Active Console
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Active Console
-            - AC2=${config:name}
+            - ${option:attribute}
+            - ACTIVE_CONSOLE=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Active Console
+            - Level 3 - Geneos Active Console
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: ca3
           name: ${config:name} Collection-Agent
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Collection-Agent
-            - CA3=${config:name}
+            - ${option:attribute}
+            - COLLECTION_AGENT=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Collection-Agent
+            - Level 3 - Geneos Collection-Agent
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: fa2
           name: ${config:name} FIX Analyser Netprobe
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=FIX Analyser Netprobe
-            - FA2=${config:name}
+            - ${option:attribute}
+            - FIX2_NETPROBE=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos FIX Analyser Netprobe
+            - Level 3 - Geneos FIX Analyser Netprobe
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
+
+        - for-each: fileagent
+          name: ${config:name} Fileagent
+          attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=File Agent
+            - ${option:attribute}
+            - FILE_AGENT=${config:name}
+          types:
+            - Level 2 - Basic Application
+            - Level 3 - Geneos File Agent
+          variables:
+            - type: string
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
+              value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: floating
           name: ${config:name} Floating Netprobe
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Floating Netprobe
-            - FLOATING=${config:name}
+            - ${option:attribute}
+            - FLOATING_NETPROBE=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Floating Netprobe
+            - Level 3 - Geneos Floating Netprobe
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: md-gateway
           name: ${config:name} MD-Gateway
           attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=Market-Data Gateway
             - ${option:attribute}
-            - COMPONENT=MD-Gateway
-            - MDGATEWAY=${config:name}
+            - MD_GATEWAY=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos MD-Gateway
+            - Level 3 - Geneos Market-Data Gateway
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: netprobe-router
           name: ${config:name} Netprobe-Router
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=Netprobe-Router
-            - ROUTER=${config:name}
+            - ${option:attribute}
+            - NETPROBE_ROUTER=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos Netprobe-Router
+            - Level 3 - Geneos Netprobe-Router
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: san
           name: ${config:name} SAN
           attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=Self Announcing Netprobe
             - ${option:attribute}
-            - COMPONENT=SAN
             - SAN=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos SAN
+            - Level 3 - Geneos Self Announcing Netprobe
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: sso-agent
           name: ${config:name} SSO-Agent
           attributes:
-            - ${option:attribute}
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
             - COMPONENT=SSO-Agent
-            - SSOAGENT=${config:name}
+            - ${option:attribute}
+            - SSO_AGENT=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos SSO-Agent
+            - Level 3 - Geneos SSO-Agent
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
         - for-each: tr-gateway
-          name: ${config:name} TR-Gateway
+          name: ${config:name} Trade Gateway
           attributes:
+            - APPLICATION=Geneos
+            - CATEGORY=MOTM
+            - COMPONENT=Trade Gateway
             - ${option:attribute}
-            - COMPONENT=TR-Gateway
-            - TRGATEWAY=${config:name}
+            - TR_GATEWAY=${config:name}
           types:
             - Level 2 - Basic Application
-            - Level 2 - Geneos TR-Gateway
+            - Level 3 - Geneos Trade Gateway
           variables:
             - type: string
-              name: logfile
+              name: instanceName
+              value: ${config:name}
+            - type: string
+              name: instanceType
+              value: ${type}
+            - type: string
+              name: instanceExecPath
+              value: ${config:program}
+            - type: string
+              name: logFilePath
               value: ${config:home}/${config:logfile}
+            - type: string
+              name: consoleLogFilePath
+              value: ${config:home}/${type}.txt
 
   motm-gateway:
     _short: "MOTM gateway profile"
@@ -403,34 +618,47 @@ profiles:
     gateways:
       - name: ${hostname}-motm
         includes:
-          0050: >
+          # Level 0 - Foundation includes for the MOTM gateway
+          10000: >
             ITRS Geneos Best Practice |
-            Level 0 |
-            ../../includes/itrs.level0.geneos.xml
-          1000: >
+            Level 0 - Foundation |
+            ../../includes/itrs.level0.foundation.xml
+
+          # Level 1 - Infrastructure includes for the MOTM gateway
+          11000: >
             ITRS Geneos Best Practice |
             Level 1 - Infrastructure |
             ../../includes/itrs.level1.infrastructure.xml
-          0500: >
+          00500: >
             ITRS Geneos Best Practice |
             Configuration |
             ../../includes/config/config.level1.infrastructure.xml
-          1010: >
+
+          # Level 2 - Basic application includes for the MOTM gateway
+          01010: >
             ITRS Geneos Best Practice |
             Level 2 - Basic Application |
             ../../includes/itrs.level2.basic-application.xml
-          0510: >
+          00510: >
             ITRS Geneos Best Practice |
             Configuration |
             ../../includes/config/config.level2.basic-application.xml
-          1020: >
+
+          # Level 3 - Advanced application includes for the MOTM gateway
+          01020: >
             ITRS Geneos Best Practice |
-            Level 2 - Basic Application |
-            ../../includes/itrs.level2.geneos.xml
-          520: >
+            Level 3 - Advanced Application |
+            ../../includes/itrs.level3.geneos.xml
+          00520: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../includes/config/config.level2.geneos.xml
+            ../../includes/config/config.level3.geneos.xml
+            
+        variables:
+          - type: string
+            name: logFilePath
+            value: ${config:home}/${config:logfile}
+
     netprobes:
       - name: ${option:minimal?"minimal:":""}${hostname}-MOTM-Probe
 

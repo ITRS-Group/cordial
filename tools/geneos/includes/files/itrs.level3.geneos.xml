@@ -1,0 +1,2953 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-11 14:32:00 by PeterGalbavy on ITRSLP372-->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
+	<managedEntities>
+		<managedEntityGroup name="Level 3 - Geneos">
+			<attribute name="APPLICATION">Geneos</attribute>
+			<attribute name="CATEGORY">Information</attribute>
+			<attribute name="COMPONENT">Geneos</attribute>
+			<addTypes>
+				<type ref="Level 0 - Geneos">
+					<environment ref="Level 3 - Geneos Overrides"/>
+				</type>
+			</addTypes>
+			<managedEntity disabled="true" name="example">
+				<!--To enable, create a matching Managed Entity hierarchy in your main setup file and add a new Managed Entity connected to a Netprobe on the server you with to monitor.
+
+You may need to define your own Environment to override the paths to the binary etc.-->
+				<probe ref="localhost"/>
+			</managedEntity>
+			<managedEntityGroup name="With Diagnostic Views">
+				<!--Place the Managed Entity in this group to add extra Dataviews including open files and network connections.-->
+				<addTypes>
+					<type ref="Level 0 - Geneos Extras">
+						<environment ref="Level 3 - Geneos Overrides"/>
+					</type>
+				</addTypes>
+			</managedEntityGroup>
+		</managedEntityGroup>
+	</managedEntities>
+	<types>
+		<typeGroup name="Level 3 - Geneos">
+			<type name="Level 3 - Geneos Instances">
+				<environment ref="Level 3 - Geneos Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Geneos Instances</string>
+				</var>
+				<sampler ref="AES Files"/>
+				<sampler ref="Certificates"/>
+				<sampler ref="Installed Releases"/>
+				<sampler ref="Instances"/>
+				<sampler ref="Running"/>
+				<sampler ref="Summary"/>
+				<sampler ref="Include Files"/>
+			</type>
+			<type name="Level 3 - Geneos Diagnostics">
+				<environment ref="Level 3 - Geneos Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Geneos Instances</string>
+				</var>
+				<sampler ref="Open Files"/>
+				<sampler ref="Open TCP Ports"/>
+			</type>
+		</typeGroup>
+		<typeGroup name="Level 3 - Geneos Components">
+			<type name="Level 3 - Geneos Floating Netprobe">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Gateway">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Licence Daemon">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Netprobe">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Self Announcing Netprobe">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Webserver">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Active Console">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos Netprobe-Router">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+			<type name="Level 3 - Geneos SSO-Agent">
+				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
+				<samplerInclude ref="Level 3 - Geneos Component Process"/>
+			</type>
+		</typeGroup>
+		<typeGroup name="Level 3 - Geneos Gateway Load Monitor">
+			<type name="Level 3 - Geneos Gateway Load Monitor">
+				<environment ref="Level 3 - Geneos Load Monitor Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Gateway Load</string>
+				</var>
+				<sampler ref="Components"/>
+				<sampler ref="Connections"/>
+				<sampler ref="Rules"/>
+				<sampler ref="Rules by Sampler"/>
+				<sampler ref="Rules by Probe"/>
+				<sampler ref="Rules By Entity"/>
+				<sampler ref="Database Logging By Entity"/>
+				<sampler ref="Database Logging By Item"/>
+				<sampler ref="Gateway SQL by Entity"/>
+				<sampler ref="Gateway SQL by Sampler"/>
+				<sampler ref="Rules by Type"/>
+				<sampler ref="Rules by Plugin"/>
+				<sampler ref="Rule Threads"/>
+				<sampler disabled="true" ref="Rules by Sampler and Rule"/>
+				<sampler disabled="true" ref="Rules by Entity-Rule"/>
+				<sampler ref="Data Quality"/>
+			</type>
+			<type name="Level 3 - Geneos Gateway Load Monitor XPaths">
+				<environment ref="Level 3 - Geneos Load Monitor Defaults"/>
+				<var name="SAMPLER_GROUP">
+					<string>Gateway Load</string>
+				</var>
+				<sampler ref="XPaths Absolute"/>
+				<sampler ref="XPaths Relative"/>
+			</type>
+		</typeGroup>
+	</types>
+	<samplers>
+		<samplerGroup name="Level 3 - Geneos">
+			<samplerGroup name="Level 3 - Geneos Instances">
+				<sampler name="AES Files">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> aes ls -t </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Certificates">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<data>0</data>
+					</sampleInterval>
+					<sampleTimes>
+						<time>
+							<data>01:00</data>
+						</time>
+					</sampleTimes>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> tls ls -tal </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Include Files">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> includes ls -f toolkit </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Installed Releases">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> package ls -t </data>
+								<var ref="geneosExecHosts"/>
+								<data> -I</data>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Instances">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> ls -t </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Running">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> ps -tl </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Summary">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> version -t </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+						</toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Level 3 - Geneos Diagnostics">
+				<sampler name="Open Files">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> ps -tf </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Open TCP Ports">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> ps -nt </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+			</samplerGroup>
+			<samplerGroup name="Level 3 - Geneos Gateway Load Monitor">
+				<sampler name="Components">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<componentStats/>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Components">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Connections">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<connectionStats/>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Connections">
+                        
+                    </dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Data Quality">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<stateTracker>
+							<columns>
+								<renameTrackerColumn>
+									<data>metric</data>
+								</renameTrackerColumn>
+							</columns>
+							<templateOptions>
+								<hideTrackerIDs>
+									<data>true</data>
+								</hideTrackerIDs>
+							</templateOptions>
+							<performance>
+								<skipMidSampleUpdates>
+									<data>true</data>
+								</skipMidSampleUpdates>
+							</performance>
+							<trackerGroup name="Data Quality">
+								<columns>
+									<column>
+										<data>period</data>
+									</column>
+									<column>
+										<data>lifetime</data>
+									</column>
+								</columns>
+								<trackers>
+									<tracker name="Data Age Stats">
+										<filename>
+											<var ref="_gatewayLogFile"/>
+										</filename>
+										<rewind>
+											<data>true</data>
+										</rewind>
+										<messageTimestamp>
+											<identifyingPattern>
+												<data>^(\d+-\d+-\d+\s\d+:\d+:.+)\+</data>
+											</identifyingPattern>
+											<datePatternGroup>0</datePatternGroup>
+											<dateFormat>
+												<data>%Y-%m-%d %H:%M:%S%f</data>
+											</dateFormat>
+										</messageTimestamp>
+										<template>
+											<data>true</data>
+										</template>
+										<transitionStates>
+											<defaultState name="starting">
+
+                                        </defaultState>
+											<state name="update">
+												<keys>
+													<key>
+														<regularExpression>
+															<data>
+																<regex>INFO: DataQuality\s+(?&lt;id&gt;[^:]+): period - (\d+ \w+),\s+lifetime - (\d+ \w+)</regex>
+															</data>
+														</regularExpression>
+													</key>
+												</keys>
+											</state>
+										</transitionStates>
+									</tracker>
+								</trackers>
+							</trackerGroup>
+						</stateTracker>
+					</plugin>
+					<dataviews>
+						<dataview name="Data Quality">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadEnvHistory Columns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Database Logging By Entity">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>managedEntity</group>
+										</grouping>
+										<statistics>
+											<expandType>dbLogging</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Database Logging By Entity">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadDatabaseColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Database Logging By Item">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>dbItem</group>
+										</grouping>
+										<statistics>
+											<expandType>dbLogging</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Database Logging By Item">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadDatabaseColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Gateway SQL by Entity">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<displayName>Gateway SQL by Entity</displayName>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<Gateway-sql>
+										<grouping>
+											<group>managedEntity</group>
+										</grouping>
+										<statistics>
+											<expandType>times</expandType>
+										</statistics>
+									</Gateway-sql>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Gateway SQL by Entity">
+							<displayName>Gateway SQL by Entity</displayName>
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Gateway SQL by Sampler">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<Gateway-sql>
+										<grouping>
+											<group>sampler</group>
+										</grouping>
+										<statistics>
+											<expandType>times</expandType>
+										</statistics>
+									</Gateway-sql>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Gateway SQL by Sampler">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rule Threads">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<displayName>Rule Threads</displayName>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<componentStats>
+										<grouping>
+											<group>ThreadID</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</componentStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rule Threads">
+							<displayName>Rule Threads</displayName>
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>rule</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules By Entity">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>managedEntity</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules By Entity">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Entity-Rule">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>managedEntity</group>
+											<group>rule</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Entity-Rule">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Plugin">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>plug-in</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Plugin">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Probe">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>probe</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Probe">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Sampler">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>sampler</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Sampler">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Sampler and Rule">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>sampler</group>
+											<group>rule</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Sampler and Rule">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="Rules by Type">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<displayName>Rules by Type</displayName>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<directoryStats>
+										<grouping>
+											<group>type</group>
+										</grouping>
+										<statistics>
+											<expandType>rules</expandType>
+										</statistics>
+									</directoryStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="Rules by Type">
+							<displayName>Rules by Type</displayName>
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="XPaths Absolute">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<xpathStats>
+										<filter>
+											<method>getItems</method>
+										</filter>
+									</xpathStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="XPaths Absolute">
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+				<sampler name="XPaths Relative">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<displayName>XPaths - Relative</displayName>
+					<sampleInterval>
+						<var ref="NORMAL_SAMPLE"/>
+					</sampleInterval>
+					<sampleOnStartup>false</sampleOnStartup>
+					<plugin>
+						<Gateway-gatewayLoad>
+							<view>
+								<category>
+									<xpathStats>
+										<filter>
+											<method>getRelativeItems</method>
+										</filter>
+									</xpathStats>
+								</category>
+								<source>
+									<file>
+										<var ref="statsFilePath"/>
+									</file>
+								</source>
+							</view>
+						</Gateway-gatewayLoad>
+					</plugin>
+					<dataviews>
+						<dataview name="XPaths Relative">
+							<displayName>XPaths - Relative</displayName>
+							<additions>
+								<var-columns>
+									<var ref="gwLoadHistoryColumns"/>
+								</var-columns>
+							</additions>
+						</dataview>
+					</dataviews>
+				</sampler>
+			</samplerGroup>
+		</samplerGroup>
+	</samplers>
+	<samplerIncludes>
+		<samplerIncludeGroup name="Level 3 - Geneos Components">
+			<samplerInclude name="Level 3 - Geneos Component Logs">
+				<sampler ref="Logs"/>
+				<plugin>
+					<fkm>
+						<files>
+							<file>
+								<source>
+									<processDescriptor ref="Geneos Component Instance"/>
+								</source>
+								<alias>
+									<var ref="instanceType"/>
+									<data> Log</data>
+								</alias>
+							</file>
+							<file>
+								<source>
+									<filename>
+										<var ref="consoleLogFilePath"/>
+									</filename>
+								</source>
+								<alias>
+									<var ref="instanceType"/>
+									<data> Console Logs</data>
+								</alias>
+							</file>
+						</files>
+					</fkm>
+				</plugin>
+			</samplerInclude>
+			<samplerInclude name="Level 3 - Geneos Component Process">
+				<sampler ref="Processes"/>
+				<plugin>
+					<processes>
+						<processes>
+							<process>
+								<processDescriptor ref="Geneos Component Instance"/>
+							</process>
+						</processes>
+					</processes>
+				</plugin>
+			</samplerInclude>
+		</samplerIncludeGroup>
+	</samplerIncludes>
+	<commands>
+		<commandGroup name="Geneos">
+			<command name="Restart NetProbe">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity</target>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview/headlines/cell[(@name=&quot;samplingStatus&quot;)]</target>
+				</targets>
+				<task>
+					<commands>
+						<commandRef>
+							<internalCommand>
+								<name>/RMS:restart</name>
+							</internalCommand>
+							<stopOnError>true</stopOnError>
+						</commandRef>
+					</commands>
+				</task>
+			</command>
+			<command name="View Configuration for Dataview">
+				<targets>
+					<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview</target>
+				</targets>
+				<task>
+					<commands>
+						<commandRef>
+							<internalCommand>
+								<name>/PLUGIN:viewSetup</name>
+							</internalCommand>
+							<stopOnError>true</stopOnError>
+						</commandRef>
+					</commands>
+				</task>
+			</command>
+			<command name="View Gateway Logfile">
+				<targets>
+					<target>/geneos/gateway/directory</target>
+				</targets>
+				<userCommand>
+					<type>script</type>
+					<runLocation>gateway</runLocation>
+					<args>
+						<arg>
+							<userInput>
+								<description>Tail or Head</description>
+								<options>
+									<option>
+										<label>Tail</label>
+										<value>tail</value>
+									</option>
+									<option>
+										<label>Head</label>
+										<value>head</value>
+									</option>
+								</options>
+							</userInput>
+						</arg>
+						<arg>
+							<static>-</static>
+						</arg>
+						<arg>
+							<concatenate>true</concatenate>
+							<userInput>
+								<description>Number of Lines</description>
+								<integer>200</integer>
+							</userInput>
+						</arg>
+						<arg>
+							<xpath>descendant-or-self::sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayData&quot;)]/dataview/rows/row[(@name=&quot;gatewayLogFile&quot;)]/cell[(@column=&quot;value&quot;)]/@value</xpath>
+						</arg>
+					</args>
+				</userCommand>
+			</command>
+		</commandGroup>
+	</commands>
+	<rules>
+		<ruleGroup name="Level 3 - Geneos">
+			<ruleGroup name="Level 3 - Geneos Diagnostics">
+				<default name="Level 0 - Geneos Extras">
+					<rule>
+						<contexts>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
+						</contexts>
+						<priorityGroup>100</priorityGroup>
+					</rule>
+				</default>
+				<ruleGroup name="Open TCP Ports">
+					<rule name="Status">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string/>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+								<if>
+									<and>
+										<notEqual>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string>LISTEN</string>
+										</notEqual>
+										<notEqual>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string>ESTABLISHED</string>
+										</notEqual>
+									</and>
+									<transaction>
+										<delay unit="samples">2</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>undefined</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+					<rule name="Queues Growing">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;txqueue&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview[(@name=&quot;Open TCP Ports&quot;)]/rows/row/cell[(@column=&quot;rxqueue&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<gt>
+									<rate>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<delay unit="samples">2</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+			</ruleGroup>
+			<ruleGroup name="Level 3 - Geneos Instances">
+				<default name="Level 0 - Geneos">
+					<rule>
+						<contexts>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
+						</contexts>
+						<priorityGroup>100</priorityGroup>
+					</rule>
+				</default>
+				<ruleGroup name="AES Files">
+					<rule name="Missing or Invalid AES File">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;AES Files&quot;)]/rows/row/cell[(@column=&quot;crc32&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>-</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Certificates">
+					<rule name="Invalid Certs Headline">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Expiring Certs 30 Days">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT30Days&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Expiring Certs 7 Days">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;expiringLT7Days&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<gt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Invalid Certs">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;valid&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>OK</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Remaining Days">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/rows/row/cell[(@column=&quot;remaining&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<lt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<multiply>
+										<multiply>
+											<integer>7</integer>
+											<integer>24</integer>
+										</multiply>
+										<integer>3600</integer>
+									</multiply>
+								</lt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<lt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<multiply>
+											<multiply>
+												<integer>30</integer>
+												<integer>24</integer>
+											</multiply>
+											<integer>3600</integer>
+										</multiply>
+									</lt>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Installed Releases">
+					<rule name="Old Versions In Use">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Installed Releases&quot;)]/rows/row[contains(@name,&quot;#&quot;)]/cell[(@column=&quot;latestInstalled&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>true</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Instances">
+					<rule name="TLS Enabled">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;tls&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<notEqual>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Y</string>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Disabled">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Instances&quot;)]/rows/row/cell[(@column=&quot;disabled&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<equal>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>Y</string>
+								</equal>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Running">
+					<rule name="Version Mismatch">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;version&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<like>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>*&lt;&gt;*</string>
+								</like>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="Leaking Files and Sockets">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;openfiles&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Running&quot;)]/rows/row/cell[(@column=&quot;opensockets&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<gt>
+									<rate>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+									</rate>
+									<integer>0</integer>
+								</gt>
+								<transaction>
+									<delay unit="samples">2</delay>
+									<update>
+										<property>state/@severity</property>
+										<severity>warning</severity>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>undefined</severity>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+			</ruleGroup>
+			<ruleGroup name="Level 3 - Geneos Components">
+				<ruleGroup name="Processes">
+					<default name="GLOBAL Process Default">
+						<rule>
+							<priorityGroup>10000</priorityGroup>
+						</rule>
+					</default>
+					<rule name="Instance Count">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;PROCESSES&quot;)]/dataview/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;instanceCount&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<block>
+							<if>
+								<lt>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<integer>1</integer>
+								</lt>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>critical</severity>
+									</update>
+								</transaction>
+								<if>
+									<gt>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<integer>1</integer>
+									</gt>
+									<transaction>
+										<delay unit="samples">1</delay>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>ok</severity>
+										</update>
+									</transaction>
+								</if>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="Logs">
+					<rule name="FKM">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Logs&quot;)]/dataview[(@name=&quot;Logs&quot;)]/rows/row/cell[(@column=&quot;status&quot;)]</target>
+						</targets>
+						<priority>5</priority>
+						<block>
+							<if>
+								<like>
+									<dataItem>
+										<property>@value</property>
+									</dataItem>
+									<string>OK</string>
+								</like>
+								<transaction>
+									<update>
+										<property>state/@severity</property>
+										<severity>ok</severity>
+									</update>
+								</transaction>
+								<if>
+									<like>
+										<dataItem>
+											<property>@value</property>
+										</dataItem>
+										<string>NOT_FOUND*</string>
+									</like>
+									<transaction>
+										<update>
+											<property>state/@severity</property>
+											<severity>warning</severity>
+										</update>
+									</transaction>
+									<if>
+										<like>
+											<dataItem>
+												<property>@value</property>
+											</dataItem>
+											<string/>
+										</like>
+										<if>
+											<like>
+												<target>
+													<rowName/>
+												</target>
+												<string>*fail*</string>
+											</like>
+											<transaction>
+												<update>
+													<property>state/@severity</property>
+													<severity>critical</severity>
+												</update>
+											</transaction>
+											<if>
+												<like>
+													<target>
+														<rowName/>
+													</target>
+													<string>*warning*</string>
+												</like>
+												<transaction>
+													<update>
+														<property>state/@severity</property>
+														<severity>warning</severity>
+													</update>
+												</transaction>
+											</if>
+										</if>
+										<transaction>
+											<update>
+												<property>state/@severity</property>
+												<severity>undefined</severity>
+											</update>
+										</transaction>
+									</if>
+								</if>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+			</ruleGroup>
+		</ruleGroup>
+		<ruleGroup name="Level 3 - Geneos Gateway Load Monitor">
+			<ruleGroup name="Load History Compute">
+				<ruleGroup name="time">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Plugin&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Probe&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Type&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rule Threads&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Plugin&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Probe&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Type&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rule Threads&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpu5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuMin&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Plugin&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Probe&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Type&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rule Threads&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Components&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Plugin&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Probe&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Type&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rule Threads&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Entity-Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Rules by Sampler and Rule&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;cpuDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;time&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="totalTime">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpu5Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(param(&quot;PluginName&quot;)=&quot;Gateway-gatewayLoad&quot;)]/dataview/rows/row/cell[(@column=&quot;totalTime&quot;)]/../cell[(@column=&quot;cpuDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="time">../cell[(@column=&quot;totalTime&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="time"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="time"/>
+								<dataItem>
+									<pathAlias ref="time"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="time"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<format>
+											<string>%.2f %%</string>
+											<divide>
+												<multiply>
+													<var ref="delta"/>
+													<integer>100</integer>
+												</multiply>
+												<var ref="seconds"/>
+											</divide>
+										</format>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+				<ruleGroup name="updates">
+					<rule name="1 minute">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates1Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>60</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 minute"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="5 minutes">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updates5Min&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>300</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="5 minutes"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 hour">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesHour&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>3600</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 hour"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+					<rule name="1 day">
+						<targets>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Entity&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Database Logging By Item&quot;)][(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]/dataview/rows/row/cell[(@column=&quot;updatesDay&quot;)]</target>
+						</targets>
+						<priority>1</priority>
+						<pathAliases>
+							<pathAlias name="updates">../cell[(@column=&quot;updates&quot;)]</pathAlias>
+						</pathAliases>
+						<block>
+							<set>
+								<var ref="seconds"/>
+								<integer>86400</integer>
+							</set>
+							<set>
+								<var ref="min"/>
+								<minimum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</minimum>
+							</set>
+							<set>
+								<var ref="max"/>
+								<maximum>
+									<historicalDataItem>
+										<pathAlias ref="updates"/>
+										<property>@value</property>
+										<historyPeriod ref="1 day"/>
+									</historicalDataItem>
+								</maximum>
+							</set>
+							<set>
+								<var ref="updates"/>
+								<dataItem>
+									<pathAlias ref="updates"/>
+									<property>@value</property>
+								</dataItem>
+							</set>
+							<set>
+								<var ref="delta"/>
+								<subtract>
+									<var ref="max"/>
+									<var ref="min"/>
+								</subtract>
+							</set>
+							<!-- if the current valkue and the maximum in the history period are different-->
+							<!-- then the stats have been reset and the history period is not valid. As there-->
+							<!-- is no way to reset the history period directly, this rule just ignores the-->
+							<!-- numbers until they catch-up again. -->
+							<if>
+								<notEqual>
+									<var ref="max"/>
+									<var ref="updates"/>
+								</notEqual>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<string>collecting</string>
+									</update>
+								</transaction>
+								<transaction>
+									<update>
+										<property>@value</property>
+										<var ref="delta"/>
+									</update>
+								</transaction>
+							</if>
+						</block>
+					</rule>
+				</ruleGroup>
+			</ruleGroup>
+			<ruleGroup name="Environment History Compute">
+				<rule name="1 hour">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Gateway Environment&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;hour&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="period">../cell[(@column=&quot;period&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="seconds"/>
+							<integer>3600</integer>
+						</set>
+						<set>
+							<var ref="max"/>
+							<maximum>
+								<historicalDataItem>
+									<pathAlias ref="period"/>
+									<property>@value</property>
+									<historyPeriod ref="1 hour"/>
+								</historicalDataItem>
+							</maximum>
+						</set>
+						<set>
+							<var ref="period"/>
+							<dataItem>
+								<pathAlias ref="period"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<format>
+									<string>%d %s</string>
+									<var ref="max"/>
+									<stringAfter>
+										<var ref="period"/>
+										<string> </string>
+									</stringAfter>
+								</format>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+				<rule name="1 day">
+					<targets>
+						<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@name=&quot;Data Quality&quot;)][(@type=&quot;Gateway Environment&quot;)]/dataview[(@name=&quot;Data Quality&quot;)]/rows/row/cell[(@column=&quot;day&quot;)]</target>
+					</targets>
+					<priority>1</priority>
+					<pathAliases>
+						<pathAlias name="period">../cell[(@column=&quot;period&quot;)]</pathAlias>
+					</pathAliases>
+					<block>
+						<set>
+							<var ref="seconds"/>
+							<integer>86400</integer>
+						</set>
+						<set>
+							<var ref="max"/>
+							<maximum>
+								<historicalDataItem>
+									<pathAlias ref="period"/>
+									<property>@value</property>
+									<historyPeriod ref="1 day"/>
+								</historicalDataItem>
+							</maximum>
+						</set>
+						<set>
+							<var ref="period"/>
+							<dataItem>
+								<pathAlias ref="period"/>
+								<property>@value</property>
+							</dataItem>
+						</set>
+						<transaction>
+							<update>
+								<property>@value</property>
+								<format>
+									<string>%d %s</string>
+									<var ref="max"/>
+									<stringAfter>
+										<var ref="period"/>
+										<string> </string>
+									</stringAfter>
+								</format>
+							</update>
+						</transaction>
+					</block>
+				</rule>
+			</ruleGroup>
+		</ruleGroup>
+	</rules>
+	<environments>
+		<environmentGroup name="Level 3 - Geneos">
+			<environment name="Level 3 - Geneos Defaults">
+				<!--Note: geneosExecConfigPath has a intentional default of a single space character. Without this space the command line containing an empty variable creates errors in the Netprobe log.-->
+				<var name="geneosExecHosts">
+					<string>-H localhost</string>
+				</var>
+				<var name="geneosExecPath">
+					<string>/usr/local/bin/geneos</string>
+				</var>
+				<var name="geneosExecConfigPath">
+					<string> </string>
+				</var>
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+			</environment>
+			<environment name="Level 3 - Geneos Overrides"><!--This environment is an empty placeholder for any user settings required.
+
+Create a copy of this environment, in the same hierarchy, in your main setup file and add variables as required.--></environment>
+		</environmentGroup>
+		<environmentGroup name="Level 3 - Geneos Gateway Load Monitor">
+			<environment name="Level 3 - Geneos Load Monitor Defaults">
+				<var name="statsFile">
+					<string>stats.xml</string>
+				</var>
+				<var name="gwLoadHistoryColumns">
+					<stringList>
+						<string>cpu1Min</string>
+						<string>cpu5Min</string>
+					</stringList>
+				</var>
+				<var name="gwLoadEnvHistory Columns">
+					<stringList>
+						<string>hour</string>
+						<string>day</string>
+					</stringList>
+				</var>
+				<var name="gwLoadDatabaseColumns">
+					<stringList>
+						<string>cpu1Min</string>
+						<string>cpu5Min</string>
+						<string>updates1Min</string>
+						<string>updates5Min</string>
+					</stringList>
+				</var>
+				<var name="SLOW_SAMPLE">
+					<integer>300</integer>
+				</var>
+				<var name="NORMAL_SAMPLE">
+					<integer>20</integer>
+				</var>
+				<var name="FAST_SAMPLE">
+					<integer>5</integer>
+				</var>
+			</environment>
+			<environment name="Level 3 - Geneos Load Monitor Overrides"/>
+		</environmentGroup>
+	</environments>
+	<staticVars>
+		<processDescriptors>
+			<processDescriptorGroup name="Level 3 - Geneos Components">
+				<processDescriptor name="Geneos Component Instance">
+					<alias>
+						<var ref="instanceType"/>
+						<data> </data>
+						<var ref="instanceName"/>
+					</alias>
+					<ID>
+						<searchString>
+							<data>^</data>
+							<var ref="instanceExecPath"/>
+							<data>\b.*\b</data>
+							<var ref="instanceName"/>
+							<data>\b</data>
+						</searchString>
+					</ID>
+					<start>
+						<data>/usr/local/bin/geneos start </data>
+						<var ref="instanceType"/>
+						<data> </data>
+						<var ref="instanceName"/>
+					</start>
+					<stop>
+						<data>/usr/local/bin/geneos stop </data>
+						<var ref="instanceType"/>
+						<data> </data>
+						<var ref="instanceName"/>
+					</stop>
+					<logFile>
+						<var ref="logFilePath"/>
+					</logFile>
+				</processDescriptor>
+			</processDescriptorGroup>
+		</processDescriptors>
+	</staticVars>
+	<exportedData>
+		<dataSet name="Level 3 - Geneos">
+			<paths>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instance&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Gateway&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Gateway Load Monitor&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Gateway Load Monitor XPaths&quot;)]</path>
+			</paths>
+		</dataSet>
+	</exportedData>
+	<operatingEnvironment>
+		<customDataviewMaxRows>500</customDataviewMaxRows>
+	</operatingEnvironment>
+</gateway>

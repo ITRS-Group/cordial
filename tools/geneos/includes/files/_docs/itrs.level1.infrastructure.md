@@ -2,56 +2,100 @@
 
 ## Overview
 
-The ITRS Level 1 Infrastructure include file provides pre-configured monitoring setups for Geneos Gateways, enabling efficient tracking and management of Level 1 infrastructure components. These files are maintained by ITRS and are intended to be used as-is, with local customizations applied through corresponding configuration files.
+The ITRS Level 1 Infrastructure include file provides pre-configured, best practice monitoring of basic server infrastructure - CPU, disk, memory / hardware and network - through a single Gateway Type, `Level 1 - Infrastructure`. It is embedded in the `geneos` program, used by the `demo` and `motm-gateway` profiles, and can be added to any Gateway.
 
-## Files Included
+Files included, relative to your Geneos installation directory:
+
+| File | Purpose |
+| ---- | ------- |
+| `gateway/includes/itrs.level1.infrastructure.xml` | ITRS monitoring definitions - read-only, replaced on update |
+| `gateway/includes/config/config.level1.infrastructure.xml` | Your local overrides - empty by default, never overwritten |
+
+The `itrs` file is extracted into a version directory and linked from the `includes` directory, so Gateways always reference the same path:
+
+```text
+gateway/includes/
+├── itrs.level1.infrastructure.xml -> vx.y.z/itrs.level1.infrastructure.xml
+├── vx.y.z/itrs.level1.infrastructure.xml
+└── config/config.level1.infrastructure.xml
+```
 
 >[!NOTE]
->All include files with an `itrs` prefix are created and maintained by ITRS and should be treated as read-only and not edited directly. This way we can release updated versions in future releases and these can be safely applied without overwriting local customizations. To make changes to suit your local requirements, follow the directions below.
->
->The corresponding `config` file below is a good place to put your local customizations and overrides, ensuring that your changes are applied without modifying the original ITRS-maintained include files. If you need to add overrides for just one Gateway then these should go in the main Gateway configuration file for that Gateway.
-
-Files included in this group, relative to your Geneos installation directory:
-
-- `gateway/includes/itrs.level1.infrastructure.xml`
-- `gateway/includes/config/config.level1.infrastructure.xml`
+>Do not edit the `itrs` file. Put changes in the `config` file, or in the main setup file of a single Gateway, as these have a higher include priority and override the ITRS defaults. See [Gateway Setup Files](https://docs.itrsgroup.com/docs/geneos/7.12.0/processing/configuration/gateway_setup_files/index.html).
 
 ## Installation
 
-These files are embedded in the `geneos` program, shipped as part of the `cordial` tools. Unless you are setting up a new installation, in which case this next step is automatic, you will need to extract the files and also update the version-specific links to point to the correct locations for your installation. To do this run the following:
+New installations created with `geneos` set this up automatically. After upgrading `geneos`, extract the new version and update the links:
 
 ```bash
-geneos includes install --update
+geneos includes extract --update
 ```
 
-This command installs the embedded files, backs up changed files in versioned directories before replacing them, leaves unchanged files and existing configuration templates in place, and updates top-level links to point to the installed version.
+Existing version directories are only overwritten with `--force` (changed files are backed up first). `config` files are never overwritten. To switch to another extracted version use `geneos includes update --version vx.y.z`. See [`geneos includes`](../../../docs/geneos_includes.md).
 
 ## Usage
 
 >[!NOTE]
->If you have used a "profile" to install Geneos then this include file is most likely already included and you can skip the step below.
+>If you have used a profile to install Geneos then the include is most likely already configured and you can go to step 2.
 
-Use the file in your Gateway configuration like this (copy the text below, hover over `Includes` in the GSE and select `Paste XML`):
+1. Add both files to your Gateway, either with `geneos set gateway NAME -i ...` (see [gateway](../../../internal/component/gateway/gateway.md)) or by pasting this XML under `Includes` in the GSE:
 
-```xml
-<includeGroup name="ITRS Level 1 - Infrastructure">
-    <include>
-        <priority>1000</priority>
-        <required>true</required>
-        <location>../../includes/itrs.level1.infrastructure.xml</location>
-    </include>
-    <include>
-        <priority>500</priority>
-        <required>true</required>
-        <location>../../includes/config/config.level1.infrastructure.xml</location>
-    </include>
-</includeGroup>
-```
+   ```xml
+   <includeGroup name="ITRS Level 1 - Infrastructure">
+       <include>
+           <priority>1000</priority>
+           <required>true</required>
+           <location>../../includes/itrs.level1.infrastructure.xml</location>
+       </include>
+       <include>
+           <priority>500</priority>
+           <required>true</required>
+           <location>../../includes/config/config.level1.infrastructure.xml</location>
+       </include>
+   </includeGroup>
+   ```
 
-To use the features included load it into your Gateway set-up, as above, and then add Probes and Managed Entities with the following Types and Environments linked:
+2. Attach the Type to your Managed Entities, either by placing them in a Managed Entity Group named `Level 1 - Infrastructure`, or by adding the Type directly:
 
-| Type                     | Environment                        |
-| ------------------------ | ---------------------------------- |
-| Level 1 - Infrastructure | Level 1 - Infrastructure Overrides |
+   | Type | Environment |
+   | ---- | ----------- |
+   | `Level 1 - Infrastructure` | `Level 1 - Infrastructure Overrides` |
 
-The `Level 1 - Infrastructure Overrides` environment is empty by default and to add you own settings you should define your own environment in the right Environment Group, as below, so that the Gateway will correctly apply your configuration over the underlying settings in the lower-priority include file.
+   For Self-Announcing Netprobes use `-t 'Level 1 - Infrastructure'`.
+
+To change the defaults, define the variables to override in the `Level 1 - Infrastructure Overrides` environment (in the `Level 1 - Infrastructure` environment group) in your `config` file. Samplers and rules can be overridden by redefining them with the same name and group. Redefined items replace the ITRS version completely, so copy the full item before changing it. See [User Variables and Environments](https://docs.itrsgroup.com/docs/geneos/6.0.0/processing/gateway-administration/gateway_user_variables_and_environments/).
+
+## Contents
+
+### Samplers
+
+| Sampler | Plugin | Interval | Notes |
+| ------- | ------ | -------- | ----- |
+| CPU | [cpu](https://docs.itrsgroup.com/docs/geneos/7.4.0/collection/cpu/index.html) | `FAST_SAMPLE` | |
+| Disk | [disk](https://docs.itrsgroup.com/docs/geneos/7.4.0/collection/disk/index.html) | `SLOW_SAMPLE` | Auto-detects local partitions; excludes pseudo, virtual and removable file systems; NFS not checked |
+| Hardware | [hardware](https://docs.itrsgroup.com/docs/geneos/7.4.0/collection/hardware/) | `NORMAL_SAMPLE` | |
+| Network | [network](https://docs.itrsgroup.com/docs/geneos/7.4.0/collection/network/index.html) | `FAST_SAMPLE` | Excludes loopback and unconfigured NICs; rates in Mbits |
+
+### Variables
+
+| Variable | Default | Purpose |
+| -------- | ------- | ------- |
+| `FAST_SAMPLE` | `5` | CPU and Network sample interval (seconds) |
+| `NORMAL_SAMPLE` | `20` | Hardware sample interval (seconds) |
+| `SLOW_SAMPLE` | `300` | Disk sample interval (seconds) |
+| `EXPECTED_PARTITIONS` | empty | Partitions expected in the Disk view |
+
+### Rules
+
+| Rule | Warning | Critical |
+| ---- | ------- | -------- |
+| CPU Utilisation | > 80% | > 90% |
+| Disk Percentage Used | > 85% and free < 10000, or > 80% and free < 20000 | > 90% and free < 10000 |
+| Memory Used Percent | > 80% | > 90% |
+| Swap Used | > 90% | - |
+| Zombie Process (Unix) | > 10 | - |
+| Network Status (Unix) | not `OK` | `DOWN` |
+| TCP Retransmission Rate (Windows) | > 20/s | - |
+| Paging | - | - |
+
+Rules with no threshold use a placeholder value (`999999`) that you can override with a realistic value. Managed Entities in the group get the attributes `CATEGORY=Infrastructure` and `COMPONENT=System`. Samplers appear under the `System` sampler group.
