@@ -17,8 +17,8 @@ gdna fetch
 ### Options
 
 ```text
-  -p, --post-process                 post process data for reporting database
-  -T, --time                         Override file times with the current time (for testing only)
+  -p, --post-process[=true|false]    post process data for reporting database
+  -T, --time[=true|false]            Override file times with the current time (for testing only)
   -L, --source URL | PATH            Override configured licence source.
                                      (Repeat as required)
   -S, --save-remote-sources string   Save data downloaded from remote sources to this directory (for testing only)

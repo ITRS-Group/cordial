@@ -48,28 +48,28 @@ gdna report
 ### Options
 
 ```text
-  -o, --output file         output destination file, default is console (stdout) (default "-")
-  -F, --format format       output format - one of: dataview, table, html, markdown,
-                            toolkit, csv, xslx (default "dataview")
-  -Z, --zip                 Compress report output into a ZIP archive (only for table, html, markdown and csv formats)
-  -A, --adhoc               Ad-hoc reporting: Fetch license reports, build data in-memory and report
-                            (default format CSV, dataview output not supported)
-  -L, --source URL | PATH   Override configured licence source.
-                            (Repeat as required)
-  -r, --reports string      Run only the matching reports, for multiple reports use a
-                            comma-separated list. Report names can include shell-style wildcards.
-                            Split reports can be suffixed with ':value' to limit the report
-                            to the value given.
-  -S, --scramble            Scramble configured column of data in reports with sensitive data
-  -H, --hostname hostname   Connect to netprobe at hostname (default "localhost")
-  -P, --port port           Connect to netprobe on port (default 7036)
-  -T, --tls                 Use TLS connection to Netprobe
-  -k, --skip-verify         Skip certificate verification for Netprobe connections
-  -e, --entity Entity       Send reports to Managed Entity (default "GDNA")
-  -s, --sampler Sampler     Send reports to Sampler (default "GDNA")
-  -R, --reset               Reset/Delete configured Dataviews
-  -f, --config FILE         Use configuration FILE
-  -l, --logfile file        Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -o, --output file                output destination file, default is console (stdout) (default "-")
+  -F, --format format              output format - one of: dataview, table, html, markdown,
+                                   toolkit, csv, xslx (default "dataview")
+  -Z, --zip[=true|false]           Compress report output into a ZIP archive (only for table, html, markdown and csv formats)
+  -A, --adhoc[=true|false]         Ad-hoc reporting: Fetch license reports, build data in-memory and report
+                                   (default format CSV, dataview output not supported)
+  -L, --source URL | PATH          Override configured licence source.
+                                   (Repeat as required)
+  -r, --reports string             Run only the matching reports, for multiple reports use a
+                                   comma-separated list. Report names can include shell-style wildcards.
+                                   Split reports can be suffixed with ':value' to limit the report
+                                   to the value given.
+  -S, --scramble[=true|false]      Scramble configured column of data in reports with sensitive data
+  -H, --hostname hostname          Connect to netprobe at hostname (default "localhost")
+  -P, --port port                  Connect to netprobe on port (default 7036)
+  -T, --tls[=true|false]           Use TLS connection to Netprobe
+  -k, --skip-verify[=true|false]   Skip certificate verification for Netprobe connections
+  -e, --entity Entity              Send reports to Managed Entity (default "GDNA")
+  -s, --sampler Sampler            Send reports to Sampler (default "GDNA")
+  -R, --reset[=true|false]         Reset/Delete configured Dataviews
+  -f, --config FILE                Use configuration FILE
+  -l, --logfile file               Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO

@@ -31,8 +31,8 @@ servicenow router [flags]
 ### Options
 
 ```text
-  -D, --daemon        Daemonise the router process
-  -c, --conf string   override config file
+  -D, --daemon[=true|false]   Daemonise the router process
+  -c, --conf string           override config file
 ```
 
 ## SEE ALSO

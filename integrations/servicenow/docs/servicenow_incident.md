@@ -20,15 +20,15 @@ servicenow incident [flags]
 ### Options
 
 ```text
-  -s, --short string      short description
-  -t, --text string       Textual note. Long desceription for new incidents, Work Note for updates.
-      --rawtext string    Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.
-  -i, --id string         Correlation ID. The value is hashed to a 20 byte hex string.
-      --rawid string      Raw Correlation ID. The value is passed as is and must be a valid string.
-  -f, --search string     sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED
-  -S, --severity string   Geneos severity. Maps depending on configuration settings. (default "3")
-  -U, --updateonly        If set no incident creation will be done
-  -c, --conf string       override config file
+  -s, --short string              short description
+  -t, --text string               Textual note. Long desceription for new incidents, Work Note for updates.
+      --rawtext string            Raw textual note, not unquoted. Long desceription for new incidents, Work Note for updates.
+  -i, --id string                 Correlation ID. The value is hashed to a 20 byte hex string.
+      --rawid string              Raw Correlation ID. The value is passed as is and must be a valid string.
+  -f, --search string             sysID search: '[TABLE:]FIELD=VALUE', TABLE defaults to 'cmdb_ci'. REQUIRED
+  -S, --severity string           Geneos severity. Maps depending on configuration settings. (default "3")
+  -U, --updateonly[=true|false]   If set no incident creation will be done
+  -c, --conf string               override config file
 ```
 
 ## SEE ALSO

@@ -12,23 +12,23 @@ gdna start
 ### Options
 
 ```text
-  -D, --daemon              Daemonise the process
-  -1, --once                Run once and exit
-  -O, --on-start            Run immediately on start-up, then follow schedule
-  -E, --on-start-email      Run immediately on start-up, send email report, then follow schedule
-  -r, --reports string      Run only the matching reports, for multiple reports use a
-                            comma-separated list. Report names can include shell-style wildcards.
-                            Split reports can be suffixed with ':value' to limit the report
-                            to the value given.
-  -H, --hostname hostname   Connect to netprobe at hostname (default "localhost")
-  -P, --port port           Connect to netprobe on port (default 7036)
-  -S, --secure              Use TLS connection to Netprobe
-  -k, --skip-verify         Skip certificate verification for Netprobe connections
-  -e, --entity Entity       Send reports to Managed Entity (default "GDNA")
-  -s, --sampler Sampler     Send reports to Sampler (default "GDNA")
-  -R, --reset               Reset/Delete configured Dataviews on first run
-  -f, --config FILE         Use configuration FILE
-  -l, --logfile file        Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -D, --daemon[=true|false]           Daemonise the process
+  -1, --once[=true|false]             Run once and exit
+  -O, --on-start[=true|false]         Run immediately on start-up, then follow schedule
+  -E, --on-start-email[=true|false]   Run immediately on start-up, send email report, then follow schedule
+  -r, --reports string                Run only the matching reports, for multiple reports use a
+                                      comma-separated list. Report names can include shell-style wildcards.
+                                      Split reports can be suffixed with ':value' to limit the report
+                                      to the value given.
+  -H, --hostname hostname             Connect to netprobe at hostname (default "localhost")
+  -P, --port port                     Connect to netprobe on port (default 7036)
+  -S, --secure[=true|false]           Use TLS connection to Netprobe
+  -k, --skip-verify[=true|false]      Skip certificate verification for Netprobe connections
+  -e, --entity Entity                 Send reports to Managed Entity (default "GDNA")
+  -s, --sampler Sampler               Send reports to Sampler (default "GDNA")
+  -R, --reset[=true|false]            Reset/Delete configured Dataviews on first run
+  -f, --config FILE                   Use configuration FILE
+  -l, --logfile file                  Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
 ```
 
 ## SEE ALSO
