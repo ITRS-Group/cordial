@@ -1,5 +1,3 @@
-# `geneos tls migrate`
-
 Migrate existing Geneos TLS certificates and related files to the updated layout and naming conventions.
 
 IMPORTANT: This command modifies existing files and configurations and does not have a "revert" or roll-back option. It is strongly recommended to back up your existing TLS files before running this command. Use the `geneos backup` command to create a backup.
