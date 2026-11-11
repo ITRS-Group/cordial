@@ -71,9 +71,7 @@ func SetExpandOptions(h *geneos.Host, pf *config.Config, flags map[string]any, a
 	// pass to profile eval
 	config.Set(pf, pf.Join("config", "options"), flags)
 
-	lookup := map[string]string{
-		"hostname": h.String(),
-	}
+	lookup := CommonLookups(h)
 	pf.SetDefaultExpandOptions(
 		config.ExternalLookups(false),
 		config.Expressions(true),

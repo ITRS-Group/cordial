@@ -3,8 +3,29 @@ package profile
 import (
 	"testing"
 
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/spf13/pflag"
 )
+
+func TestCommonLookups(t *testing.T) {
+	host := geneos.NewHost("profile-lookup-test")
+	lookups := CommonLookups(host)
+
+	if got, want := lookups["hostname"], host.String(); got != want {
+		t.Errorf("hostname lookup = %q, want %q", got, want)
+	}
+	if got, want := lookups["execpath"], cordial.ExecutablePath(); got != want {
+		t.Errorf("execpath lookup = %q, want %q", got, want)
+	}
+
+	pf := config.New()
+	SetExpandOptions(host, pf, nil, nil)
+	if got, want := config.Expand[string](pf, "${execpath}"), cordial.ExecutablePath(); got != want {
+		t.Errorf("expanded execpath = %q, want %q", got, want)
+	}
+}
 
 func TestProfileLicenceOption(t *testing.T) {
 	for _, test := range []struct {

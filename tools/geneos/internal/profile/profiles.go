@@ -209,9 +209,7 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 		return
 	}
 
-	lookup := map[string]string{
-		"hostname": h.String(),
-	}
+	lookup := CommonLookups(h)
 
 	pf.UnmarshalKey(pf.Join("profiles", name), &components,
 		config.NoDecode(true),
@@ -242,6 +240,14 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 	}
 
 	return
+}
+
+// CommonLookups returns the lookup values available in profile expansion.
+func CommonLookups(h *geneos.Host) map[string]string {
+	return map[string]string{
+		"hostname": h.String(),
+		"execpath": cordial.ExecutablePath(),
+	}
 }
 
 // ApplyCommonParams applies the common parameters from the
@@ -355,10 +361,7 @@ func ApplyCommonProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config,
 		return fmt.Errorf("failed to unmarshal common profile %q for component %q: %w", name, ct.Name, err)
 	}
 
-	// global lookup table, add values here as needed
-	lookup := map[string]string{
-		"hostname": h.String(),
-	}
+	lookup := CommonLookups(h)
 
 	// build param key delete list
 	clearKeys := []string{}
