@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -16,12 +17,22 @@ import (
 
 // SanProfile TODO: Describe its purpose and intended use.
 type SanProfile struct {
-	profile.Common  `mapstructure:",squash"`
-	Gateways        []string          `yaml:"gateways,omitempty"`
-	Types           []string          `yaml:"types,omitempty"`
-	Attributes      values.NameValues `yaml:"attributes,omitempty"`
-	Variables       []values.Variable `yaml:"variables,omitempty"`
-	ManagedEntities []ManagedEntity   `yaml:"managed-entities,omitempty"`
+	profile.Common        `mapstructure:",squash"`
+	Gateways              []string            `yaml:"gateways,omitempty"`
+	Types                 []string            `yaml:"types,omitempty"`
+	Attributes            values.NameValues   `yaml:"attributes,omitempty"`
+	Variables             []values.Variable   `yaml:"variables,omitempty"`
+	ManagedEntitiesCommon ManagedEntityCommon `yaml:"managed-entities-common,omitempty"`
+	ManagedEntities       []ManagedEntity     `yaml:"managed-entities,omitempty"`
+}
+
+// ManagedEntityCommon contains values shared by all managed entities in a SAN.
+type ManagedEntityCommon struct {
+	Match      []string          `yaml:"match,omitempty"`
+	Ignore     []string          `yaml:"ignore,omitempty"`
+	Types      []string          `yaml:"types,omitempty"`
+	Attributes values.NameValues `yaml:"attributes,omitempty"`
+	Variables  []values.Variable `yaml:"variables,omitempty"`
 }
 
 // ManagedEntity TODO: Describe its purpose and intended use.
@@ -41,6 +52,9 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 	err = pf.UnmarshalKey(pf.Join("profiles", name, key), &sans, config.NoExpand())
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal SANs: %w", err)
+	}
+	for idx := range sans {
+		sans[idx].ManagedEntities = applyManagedEntityCommon(sans[idx].ManagedEntitiesCommon, sans[idx].ManagedEntities)
 	}
 
 	lookup := profile.CommonLookups(h)
@@ -104,6 +118,73 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 	return
 }
 
+func applyManagedEntityCommon(common ManagedEntityCommon, entities []ManagedEntity) []ManagedEntity {
+	result := make([]ManagedEntity, 0, len(entities))
+	for _, entity := range entities {
+		entity.Match = mergeStrings(common.Match, entity.Match)
+		entity.Ignore = mergeStrings(common.Ignore, entity.Ignore)
+		entity.Types = mergeStrings(common.Types, entity.Types)
+		entity.Attributes = mergeNameValues(common.Attributes, entity.Attributes)
+		entity.Variables = mergeVariables(common.Variables, entity.Variables)
+		result = append(result, entity)
+	}
+	return result
+}
+
+func mergeStrings(common, specific []string) []string {
+	result := make([]string, 0, len(common)+len(specific))
+	for _, group := range [][]string{common, specific} {
+		for _, value := range group {
+			if !slices.Contains(result, value) {
+				result = append(result, value)
+			}
+		}
+	}
+	return result
+}
+
+func mergeNameValues(common, specific values.NameValues) values.NameValues {
+	result := make(values.NameValues, 0, len(common)+len(specific))
+	for _, group := range []values.NameValues{common, specific} {
+		for _, value := range group {
+			key, _, found := strings.Cut(value, "=")
+			if !found {
+				key = value
+			}
+			idx := slices.IndexFunc(result, func(existing string) bool {
+				existingKey, _, found := strings.Cut(existing, "=")
+				if !found {
+					existingKey = existing
+				}
+				return existingKey == key
+			})
+			if idx >= 0 {
+				result[idx] = value
+			} else {
+				result = append(result, value)
+			}
+		}
+	}
+	return result
+}
+
+func mergeVariables(common, specific []values.Variable) []values.Variable {
+	result := make([]values.Variable, 0, len(common)+len(specific))
+	for _, group := range [][]values.Variable{common, specific} {
+		for _, variable := range group {
+			idx := slices.IndexFunc(result, func(existing values.Variable) bool {
+				return existing.Name == variable.Name
+			})
+			if idx >= 0 {
+				result[idx] = variable
+			} else {
+				result = append(result, variable)
+			}
+		}
+	}
+	return result
+}
+
 func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals values.Values, err error) {
 	entities := []ManagedEntity{entity}
 	// names := entity.Match
@@ -157,6 +238,10 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 			lookup := map[string]string{
 				"type": ct.String(),
 			}
+			expandOptions := []config.ExpandOption{
+				config.LookupTable(lookup),
+				config.Prefix("joinpath", profile.JoinPathPrefix, lookup),
+			}
 
 			// build entity using lookup table for expansion, with custom functions
 			variables := make(values.Variables, len(entity.Variables))
@@ -164,18 +249,18 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 				variables[idx] = values.Variable{
 					Type:  v.Type,
 					Name:  v.Name,
-					Value: config.Expand[string](cf, v.Value, config.LookupTable(lookup)),
+					Value: config.Expand[string](cf, v.Value, expandOptions...),
 				}
 			}
 
 			var attrs values.NameValues
-			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String(), config.LookupTable(lookup)), ",") {
+			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String(), expandOptions...), ",") {
 				attrs = append(attrs, attr)
 			}
 
 			e := ManagedEntity{
-				Name:       config.Expand[string](cf, entity.Name, config.LookupTable(lookup)),
-				Types:      cf.ExpandStringSlice(entity.Types, config.LookupTable(lookup)),
+				Name:       config.Expand[string](cf, entity.Name, expandOptions...),
+				Types:      cf.ExpandStringSlice(entity.Types, expandOptions...),
 				Attributes: attrs,
 				Variables:  variables,
 			}

@@ -460,18 +460,15 @@ func TestMOTMComponentCoverage(t *testing.T) {
 			t.Errorf("duplicate MOTM component %q", entity.ForEach)
 		}
 		covered[component] = true
-		if entity.Name == "" || !slices.Contains(entity.Attributes, "${option:attribute}") {
-			t.Errorf("component %q is missing its name or profile attributes", entity.ForEach)
+		if entity.Name == "" || !slices.ContainsFunc(entity.Attributes, func(attribute string) bool {
+			return strings.HasPrefix(attribute, "COMPONENT=")
+		}) {
+			t.Errorf("component %q is missing its name or component attribute", entity.ForEach)
 		}
-		if !slices.Contains(entity.Types, "Level 2 - Basic Application") || !slices.ContainsFunc(entity.Types, func(name string) bool {
+		if !slices.ContainsFunc(entity.Types, func(name string) bool {
 			return strings.HasPrefix(name, "Level 3 - Geneos ")
 		}) {
-			t.Errorf("component %q is missing its application or Geneos Type", entity.ForEach)
-		}
-		if !slices.ContainsFunc(entity.Variables, func(variable values.Variable) bool {
-			return variable.Type == "string" && variable.Name == "logfile" && variable.Value == "${config:home}/${config:logfile}"
-		}) {
-			t.Errorf("component %q is missing its logfile variable", entity.ForEach)
+			t.Errorf("component %q is missing its Geneos Type", entity.ForEach)
 		}
 	}
 	for _, component := range geneos.RealComponents() {

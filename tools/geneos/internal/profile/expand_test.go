@@ -97,3 +97,50 @@ func TestSelectPrefix(t *testing.T) {
 		})
 	}
 }
+
+func TestJoinPathPrefix(t *testing.T) {
+	pf := config.New()
+	config.Set(pf, "home", "/opt/geneos/../geneos")
+	config.Set(pf, "logs", "not-the-literal")
+	config.Set(pf, "logfile", "../logs/gateway.log")
+	SetExpandOptions(geneos.NewHost("joinpath-test"), pf, nil, nil)
+
+	got := config.Expand[string](pf, `${joinpath:home:"logs":logfile}`)
+	if want := "/opt/geneos/logs/gateway.log"; got != want {
+		t.Errorf("joinpath expansion = %q, want %q", got, want)
+	}
+}
+
+func TestJoinPathPrefixUsesExplicitLookupTable(t *testing.T) {
+	pf := config.New()
+	config.Set(pf, "home", "/opt/geneos")
+	lookup := map[string]string{"type": "gateway"}
+	SetExpandOptions(geneos.NewHost("joinpath-lookup-test"), pf, map[string]any{"licence": "test.lic"}, nil)
+
+	options := []config.ExpandOption{
+		config.LookupTable(lookup),
+		config.Prefix("joinpath", JoinPathPrefix, lookup),
+	}
+	if got, want := config.Expand[string](pf, `${joinpath:home:type}.txt`, options...), "/opt/geneos/gateway.txt"; got != want {
+		t.Errorf("joinpath expansion = %q, want %q", got, want)
+	}
+	if got, want := config.Expand[string](pf, `${option:licence}`, options...), "test.lic"; got != want {
+		t.Errorf("option expansion = %q, want %q", got, want)
+	}
+}
+
+func TestJoinPathPrefixQuotedColon(t *testing.T) {
+	got, err := JoinPathPrefix(map[string]any{"logfile": "gateway.log"}, `joinpath:"logs:archive":logfile`, false)
+	if err != nil {
+		t.Fatalf("JoinPathPrefix() error = %v", err)
+	}
+	if want := "logs:archive/gateway.log"; got != want {
+		t.Errorf("JoinPathPrefix() = %q, want %q", got, want)
+	}
+}
+
+func TestJoinPathPrefixRejectsUnterminatedQuote(t *testing.T) {
+	if _, err := JoinPathPrefix(nil, `joinpath:home:"logs`, false); err == nil {
+		t.Fatal("expected error for unterminated quoted segment")
+	}
+}

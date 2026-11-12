@@ -78,12 +78,110 @@ func SetExpandOptions(h *geneos.Host, pf *config.Config, flags map[string]any, a
 		config.LookupTable(lookup),
 		config.Prefix("select", SelectPrefix),
 		config.Prefix("replace", ReplacePrefix),
+		config.Prefix("joinpath", JoinPathPrefix, lookup),
 		config.Prefix("option", Option, config.Get[map[string]any](pf, pf.Join("config", "options")), args),
 		config.NoDecode(true),
 	)
 }
 
 // Expand* function custom prefix functions
+
+type joinPathSegment struct {
+	value   string
+	literal bool
+}
+
+// JoinPathPrefix joins path segments separated by colons. Unquoted
+// segments are resolved as configuration items; double-quoted segments
+// are treated as literal path components.
+func JoinPathPrefix(ci map[string]any, s string, trim bool, data ...any) (string, error) {
+	s = strings.TrimPrefix(s, "joinpath:")
+	segments, err := splitJoinPathSegments(s)
+	if err != nil {
+		return "", err
+	}
+
+	cf := config.New()
+	cf.MergeConfigMap(ci)
+
+	parts := make([]string, len(segments))
+	for idx, segment := range segments {
+		if segment.literal {
+			parts[idx] = segment.value
+			continue
+		}
+
+		value, ok := ci[segment.value]
+		if !ok {
+			for _, item := range data {
+				lookup, ok := item.(map[string]string)
+				if !ok {
+					continue
+				}
+				if lookupValue, ok := lookup[segment.value]; ok {
+					parts[idx] = lookupValue
+					break
+				}
+			}
+			continue
+		}
+		if value == nil {
+			continue
+		}
+		if str, ok := value.(string); ok {
+			parts[idx] = config.Expand[string](cf, str)
+		} else {
+			parts[idx] = fmt.Sprint(value)
+		}
+	}
+
+	result := path.Join(parts...)
+	if trim {
+		result = strings.TrimSpace(result)
+	}
+	return result, nil
+}
+
+func splitJoinPathSegments(s string) ([]joinPathSegment, error) {
+	var segments []joinPathSegment
+	var segment strings.Builder
+	inQuotes := false
+
+	for _, r := range s {
+		switch r {
+		case '"':
+			inQuotes = !inQuotes
+			segment.WriteRune(r)
+		case ':':
+			if inQuotes {
+				segment.WriteRune(r)
+			} else {
+				segments = append(segments, parseJoinPathSegment(segment.String()))
+				segment.Reset()
+			}
+		default:
+			segment.WriteRune(r)
+		}
+	}
+	if inQuotes {
+		return nil, fmt.Errorf("unterminated quoted joinpath segment")
+	}
+	segments = append(segments, parseJoinPathSegment(segment.String()))
+	for _, item := range segments {
+		if item.value == "" {
+			return nil, fmt.Errorf("empty joinpath segment")
+		}
+	}
+	return segments, nil
+}
+
+func parseJoinPathSegment(s string) joinPathSegment {
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		return joinPathSegment{value: s[1 : len(s)-1], literal: true}
+	}
+	return joinPathSegment{value: s}
+}
 
 // ReplacePrefix supports the "replace" prefix. It accepts a string with
 // four components of the form: `${replace:params:/PATTERN/TEXT/}`

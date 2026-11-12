@@ -207,6 +207,9 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | `${expr:EXPRESSION}` | Result of a `goval` expression using current configuration values. Process environment variables are available through the `env` map. |
 | `${select:KEY1:KEY2:DEFAULT}` | First non-empty string configuration value, or the final literal default. Use an empty final field to return an empty string. |
 | `${replace:KEY1:KEY2:/PATTERN/TEXT/}` | Regular-expression replacement on the first non-empty string configuration value. The final delimiter must match the other delimiters. A delimiter other than `/` is allowed, but not `:`. |
+| `${joinpath:KEY:"literal":KEY}` | Resolves unquoted segments from configuration items, then the active lookup table; double-quoted segments are literal. The joined path is then cleaned using slash-based path rules. |
+
+For example, `${joinpath:home:"logs":logfile}` joins the `home` and `logfile` configuration values with the literal `logs` directory.
 
 Examples from the supplied profiles:
 
@@ -302,6 +305,7 @@ A `san` entry accepts common keys and the following keys:
 | `types` | List of Gateway Type names for the primary managed entity. The Types must exist on the receiving Gateway. |
 | `attributes` | List of `NAME=VALUE` strings for the primary managed entity. Later values replace earlier values with the same name. |
 | `variables` | List of `name`, `type`, and `value` mappings. Uses the [variable format](#variables) described above. |
+| `managed-entities-common` | Shared values added to each additional entity. Entity-specific attributes and variables override common values with the same name; types stack with duplicates removed. |
 | `managed-entities` | List of additional managed entity definitions. Each can be fixed or generated from installed instances. |
 
 The primary entity uses the SAN's configured `sanname`. The default template emits an entity only if it has at least one Type. Attributes and variables alone do not create an entity.
@@ -309,6 +313,29 @@ The primary entity uses the SAN's configured `sanname`. The default template emi
 With no configured Gateways, the default template connects to `localhost:7038` for TLS, or `localhost:7039` without TLS. Certificate and TLS settings determine whether connections are secure; the port number alone does not enable TLS.
 
 ### Additional Managed Entities
+
+Declare `managed-entities-common` beside `managed-entities` in a `san` entry to supply shared fields. Entity-specific attributes and variables override by name, while types from both sections are combined without duplicates.
+
+```yaml
+san:
+  - name: ${hostname}-application-san
+    managed-entities-common:
+      types:
+        - Level 2 - Basic Application
+      attributes:
+        - APPLICATION=Geneos
+        - CATEGORY=Application
+      variables:
+        - name: application
+          type: string
+          value: shared
+    managed-entities:
+      - for-each: gateway
+        types:
+          - Level 3 - Geneos Gateway
+        attributes:
+          - COMPONENT=Gateway
+```
 
 | Key | Format and use |
 | --- | --- |
