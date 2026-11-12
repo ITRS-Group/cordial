@@ -22,11 +22,11 @@ Use this guide to manage Geneos with the `geneos` command. It covers common admi
 
 ## What is the `geneos` command?
 
-The `geneos` command-line tool provides one interface for managing ITRS Geneos environments. It replaces older tools such as `gatewayctl` and `netprobectl` and supports consistent administration across hosts.
+The `geneos` command provides a consistent way to manage ITRS Geneos environments. It replaces older tools such as `gatewayctl` and `netprobectl` and supports administration across hosts.
 
 ### Operational benefits
 
-- **Consistent management:** Manage Gateways, Netprobes, Licence Daemons, and other components through one command-line interface.
+- **Consistent management:** Manage Gateways, Netprobes, Licence Daemons, and other components with the `geneos` command.
 
 - **Remote operations:** Manage instances across configured hosts from one location.
 

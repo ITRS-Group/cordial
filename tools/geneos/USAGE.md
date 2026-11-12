@@ -2,7 +2,7 @@
 
 This guide gives examples of common commands you will likely use day-to-day to manage your Geneos installation.
 
-You should already have installed the `geneos` command-line tool in a location that makes it easy to run. For installation steps, see [Getting Started](GETTING_STARTED.md) or the [README](README.md). The README also explains how to [adopt an existing installation](README.md#adopting-an-existing-installation) managed with `gatewayctl` or related scripts.
+You should already have installed the `geneos` command in a location that makes it easy to run. For installation steps, see [Getting Started](GETTING_STARTED.md) or the [README](README.md). The README also explains how to [adopt an existing installation](README.md#adopting-an-existing-installation) managed with `gatewayctl` or related scripts.
 
 <!-- TOC -->
 

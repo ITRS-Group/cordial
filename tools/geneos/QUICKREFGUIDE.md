@@ -1,6 +1,6 @@
 # Quick Reference for the `geneos` Command
 
-This is a quick reference for common commands provided by the `geneos` command-line tool.
+This is a quick reference for common commands provided by the `geneos` command.
 
 ## Essential Commands
 

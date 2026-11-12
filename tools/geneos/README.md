@@ -1,6 +1,6 @@
 # The `geneos` Command
 
-The `geneos` command is Cordial's command-line tool for managing ITRS Geneos. It brings common lifecycle, configuration, package, security, and diagnostic tasks into one interface for local and remote hosts. This helps you apply changes consistently, reduce repeated manual work, and maintain fewer one-off scripts.
+The `geneos` command manages ITRS Geneos. It brings common lifecycle, configuration, package, security, and diagnostic tasks into one interface for local and remote hosts. This helps you apply changes consistently, reduce repeated manual work, and maintain fewer one-off scripts.
 
 ## Documentation
 

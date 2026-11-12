@@ -2633,27 +2633,136 @@ geneos incident raise [FLAGS] [field=value ...] [flags]
 
 <sub>[Up: geneos](#geneos)</sub>
 
-Geneos gateway includes are reusable pieces of configuration or code that can be incorporated into various parts of the Geneos system to extend functionality or simplify management.
+# Geneos Gateway Includes
 
-A number of ready-made includes are available to help streamline common tasks and configurations within the Geneos system.
+Geneos Gateway includes package reusable monitoring definitions and editable configuration templates. They keep common functionality consistent across Gateways while allowing each Gateway to provide its own entities, variables, and overrides.
 
-## Commands
+The `itrs.*.xml` files are functional includes. Treat them as read-only and upgrade them by installing a newer release. The `config.*.xml` files are local configuration templates; customize these or copy their settings into the Gateway setup. Installing files does not automatically add them to a Gateway's setup or enable monitoring.
 
-| Command | Description |
+## Files
+
+Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, and `scripts/install-includes.sh` for users installing without the `geneos` command. The `geneos includes install` command strips this wrapper and does not copy the standalone script into the Gateway's live include directory.
+
+| File | Purpose |
 | --- | --- |
-| `geneos includes delete / remove` | Delete unused versions and their links, optionally matching a version pattern |
-| `geneos includes fix` | Repair broken gateway include references with unique same-basename replacements |
-| `geneos includes install / extract` | Install embedded includes or a versioned include archive and missing configuration templates |
-| `geneos includes list` | List available and configured include files |
-| `geneos includes update` | Update links to a versioned include set |
+| `itrs.level0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
+| `itrs.level1.infrastructure.xml` | Infrastructure monitoring for CPU, disk, hardware, and network. |
+| `itrs.level2.basic-application.xml` | Baseline `Logs`, `Processes`, and Windows Services samplers for applications. |
+| `itrs.level3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
+| `config.level0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
+| `config.level0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
+| `config.level1.infrastructure.xml` | Gateway setup template for infrastructure configuration and overrides. |
+| `config.level2.basic-application.xml` | Gateway setup template for application configuration. |
+| `config.level3.geneos.xml` | Example managed-entity hierarchy and override environments for Level 3 Geneos. |
+| `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
 
-All commands can be limited to a configured host with the global `--host`/`-H` option. Use `geneos includes COMMAND --help` for command options and output details.
+After installation, files are organized like this:
 
-Run `geneos includes install` without an archive to install the embedded include files and configuration templates. `extract` is an alias for `install`. Use `--update` to replace existing top-level files and links with links to the installed version.
+```text
+gateway/includes/
+├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
+├── v1.31.0/
+│   ├── itrs.level0.foundation.xml
+│   ├── itrs.level1.infrastructure.xml
+│   ├── itrs.level2.basic-application.xml
+│   └── itrs.level3.geneos.xml
+└── config/
+    ├── config.level0.authentication.xml
+    ├── config.level0.foundation.xml
+    ├── config.level1.infrastructure.xml
+    ├── config.level2.basic-application.xml
+    ├── config.level3.geneos.xml
+    └── config.level4.analytics.xml
+```
 
-## Release Archives
+The top-level links let Gateway setups use a stable path while the target version changes. Configuration templates are copied only when absent and are not overwritten by later installs.
 
-The archive contains a `v`-prefixed semantic-version directory of managed include files and a separate, unversioned `config/` directory of configuration templates. Install it with `geneos includes install ARCHIVE.tar.gz`. Existing configuration templates are never replaced. Missing top-level include links are created; use `--update` to replace existing paths with links to the installed version.
+## Installation
+
+### Install with the `geneos` command
+
+Install the includes embedded in the current `geneos` executable, or install a published archive:
+
+```shell
+geneos includes install
+geneos includes install /path/to/geneos-includes.tar.gz
+```
+
+Add `--update` to replace existing top-level include paths with links to the installed version. For archive builds, `make includes` creates `release-<VERSION>/geneos-includes.tar.gz` from the repository root.
+
+### Install with shell tools
+
+Use the external installer included in the release archive at `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
+
+```shell
+tar -xzf /path/to/geneos-includes.tar.gz
+cd geneos-includes-v1.31.0
+./scripts/install-includes.sh /path/to/geneos
+```
+
+The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
+
+## How-To
+
+Installing include files only makes them available on disk. Use Gateway Setup Editor to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+
+### Manage with the `geneos` command
+
+| Task | Command |
+| --- | --- |
+| List configured/available includes | `geneos includes list` |
+| Include version directories in the listing | `geneos includes list --all` |
+| Show include use by Gateway | `geneos includes list --gateway` |
+| Point top-level links at a version | `geneos includes update --version v1.31.0` |
+| Preview repairs for broken include references | `geneos includes fix --dry-run` |
+| Repair broken references with unique same-name replacements | `geneos includes fix` |
+| Delete unused version directories and their links | `geneos includes delete 'v1.30.*'` |
+
+`geneos includes update` and `delete` inspect Gateway setups before removing obsolete links or versions. `install --update` also updates links while installing. Use `geneos includes COMMAND --help` for options; the global `--host`/`-H` option selects the destination host.
+
+### Manage with shell tools
+
+List installed include files and broken top-level links:
+
+```shell
+INCLUDES_DIR=/path/to/geneos/gateway/includes
+find "$INCLUDES_DIR" -maxdepth 2 \( -type f -o -type l \) -name '*.xml' -print | sort
+find "$INCLUDES_DIR" -maxdepth 1 -type l -xtype l -print
+```
+
+To switch links to an already installed version, first inspect the Gateway setup references and back up any regular files at the link paths. Then repoint links for files present in the selected version:
+
+```shell
+VERSION=v1.31.0
+INCLUDES_DIR=/path/to/geneos/gateway/includes
+
+for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do
+    [ -f "$source" ] || continue
+    name=${source##*/}
+    link="$INCLUDES_DIR/$name"
+    if [ -e "$link" ] && [ ! -L "$link" ]; then
+        cp -p "$link" "$link.$(date +%Y%m%d%H%M%S).bak"
+    fi
+    ln -sfn "$VERSION/$name" "$link"
+done
+```
+
+This updates matching links only. It does not detect obsolete references or remove old links. Before removing an old version, inspect its links and every Gateway setup that may refer to them; `geneos includes delete` performs broader reference checks.
+
+```shell
+OLD_VERSION=v1.30.0
+INCLUDES_DIR=/path/to/geneos/gateway/includes
+
+# Preview top-level links with a direct relative target under this version.
+# Inspect absolute links and Gateway setup references separately.
+find "$INCLUDES_DIR" -maxdepth 1 -type l -lname "$OLD_VERSION/*" -print
+
+# Only after confirming no Gateway setup uses this version:
+find "$INCLUDES_DIR" -maxdepth 1 -type l -lname "$OLD_VERSION/*" -exec rm -f -- {} +
+rm -rf -- "$INCLUDES_DIR/$OLD_VERSION"
+```
+
+For a broken link, inspect its target with `readlink` and confirm there is exactly one intended replacement with the same basename before recreating it with `ln -s`. The `geneos includes fix` command performs this matching and Gateway-reference work automatically.
 
 
 ## Commands
@@ -2777,7 +2886,7 @@ geneos includes fix [NAMES...] [flags]
 
 Install include files embedded in the `geneos` executable or from a local `.tar.gz` archive to the selected host. With no archive argument, the embedded files and configuration templates are installed. `extract` is an alias for `install` and accepts the same arguments and options.
 
-The archive must contain one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`), containing `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins.
+The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`) contains `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory; the standalone `scripts/install-includes.sh` may also be included. The wrapper's version must match the version directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins, and `geneos includes install` strips the wrapper before staging the files.
 
 Managed includes are installed under `gateway/includes/<version>`, including when that directory already exists. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
 
@@ -4090,6 +4199,9 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | `${expr:EXPRESSION}` | Result of a `goval` expression using current configuration values. Process environment variables are available through the `env` map. |
 | `${select:KEY1:KEY2:DEFAULT}` | First non-empty string configuration value, or the final literal default. Use an empty final field to return an empty string. |
 | `${replace:KEY1:KEY2:/PATTERN/TEXT/}` | Regular-expression replacement on the first non-empty string configuration value. The final delimiter must match the other delimiters. A delimiter other than `/` is allowed, but not `:`. |
+| `${joinpath:KEY:"literal":KEY}` | Resolves unquoted segments from configuration items, then the active lookup table; double-quoted segments are literal. The joined path is then cleaned using slash-based path rules. |
+
+For example, `${joinpath:home:"logs":logfile}` joins the `home` and `logfile` configuration values with the literal `logs` directory.
 
 Examples from the supplied profiles:
 
@@ -4185,6 +4297,7 @@ A `san` entry accepts common keys and the following keys:
 | `types` | List of Gateway Type names for the primary managed entity. The Types must exist on the receiving Gateway. |
 | `attributes` | List of `NAME=VALUE` strings for the primary managed entity. Later values replace earlier values with the same name. |
 | `variables` | List of `name`, `type`, and `value` mappings. Uses the [variable format](#variables) described above. |
+| `managed-entities-common` | Shared values added to each additional entity. Entity-specific attributes and variables override common values with the same name; types stack with duplicates removed. |
 | `managed-entities` | List of additional managed entity definitions. Each can be fixed or generated from installed instances. |
 
 The primary entity uses the SAN's configured `sanname`. The default template emits an entity only if it has at least one Type. Attributes and variables alone do not create an entity.
@@ -4192,6 +4305,29 @@ The primary entity uses the SAN's configured `sanname`. The default template emi
 With no configured Gateways, the default template connects to `localhost:7038` for TLS, or `localhost:7039` without TLS. Certificate and TLS settings determine whether connections are secure; the port number alone does not enable TLS.
 
 ### Additional Managed Entities
+
+Declare `managed-entities-common` beside `managed-entities` in a `san` entry to supply shared fields. Entity-specific attributes and variables override by name, while types from both sections are combined without duplicates.
+
+```yaml
+san:
+  - name: ${hostname}-application-san
+    managed-entities-common:
+      types:
+        - Level 2 - Basic Application
+      attributes:
+        - APPLICATION=Geneos
+        - CATEGORY=Application
+      variables:
+        - name: application
+          type: string
+          value: shared
+    managed-entities:
+      - for-each: gateway
+        types:
+          - Level 3 - Geneos Gateway
+        attributes:
+          - COMPONENT=Gateway
+```
 
 | Key | Format and use |
 | --- | --- |
@@ -4334,6 +4470,7 @@ Current implementation limits:
 - Application is not transactional. An error can leave some instances updated and others unchanged. Check the result before retrying.
 - Removing an instance from the YAML does not delete the installed instance. Renaming an entry can create a new instance and leave the old one in place.
 - [`geneos profile extract`](#geneos-profile-extract) and its `update` alias write the embedded defaults to the standard user profiles file. If that file differs, it is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before replacement; if it already matches, no file change is made. A custom file selected with `--profiles` is not overwritten.
+
 ## Usage
 
 ```text
