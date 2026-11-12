@@ -56,3 +56,5 @@ for source in "$INCLUDES_DIR/$VERSION"/itrs.*.xml; do
         ln -s "$VERSION/$name" "$link"
     fi
 done
+
+printf 'Includes version %s installed successfully in %s\n' "$VERSION" "$INCLUDES_DIR"

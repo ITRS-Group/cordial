@@ -8,7 +8,7 @@ The `itrs.*.xml` files are functional includes. Treat them as read-only and upgr
 
 ## Files
 
-Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, and `scripts/install-includes.sh` for users installing without the `geneos` command. The `geneos includes install` command strips this wrapper and does not copy the standalone script into the Gateway's live include directory.
+Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
 
 | File | Purpose |
 | --- | --- |
@@ -71,7 +71,7 @@ The script installs into a fresh version directory, keeps existing config templa
 
 ## How-To
 
-Installing include files only makes them available on disk. Use Gateway Setup Editor to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 

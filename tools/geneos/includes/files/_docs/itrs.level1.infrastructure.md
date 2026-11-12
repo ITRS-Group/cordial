@@ -38,7 +38,7 @@ Existing version directories are only overwritten with `--force` (changed files 
 >[!NOTE]
 >If you have used a profile to install Geneos then the include is most likely already configured and you can go to step 2.
 
-1. Add both files to your Gateway, either with `geneos set gateway NAME -i ...` (see [gateway](../../../internal/component/gateway/gateway.md)) or by pasting this XML under `Includes` in the GSE:
+1. Add both files to your Gateway, either with `geneos set gateway NAME -i ...` (see [gateway](../../../internal/component/gateway/gateway.md)) or by pasting this XML under `Includes` in the Gateway Setup Editor (GSE):
 
    ```xml
    <includeGroup name="ITRS Level 1 - Infrastructure">
@@ -61,7 +61,7 @@ Existing version directories are only overwritten with `--force` (changed files 
    | ---- | ----------- |
    | `Level 1 - Infrastructure` | `Level 1 - Infrastructure Overrides` |
 
-   For Self-Announcing Netprobes use `-t 'Level 1 - Infrastructure'`.
+   For a Self-Announcing Netprobe (SAN), use `-t 'Level 1 - Infrastructure'`.
 
 To change the defaults, define the variables to override in the `Level 1 - Infrastructure Overrides` environment (in the `Level 1 - Infrastructure` environment group) in your `config` file. Samplers and rules can be overridden by redefining them with the same name and group. Redefined items replace the ITRS version completely, so copy the full item before changing it. See [User Variables and Environments](https://docs.itrsgroup.com/docs/geneos/6.0.0/processing/gateway-administration/gateway_user_variables_and_environments/).
 

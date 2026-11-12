@@ -77,8 +77,8 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 				return "", fmt.Errorf("include archive contains multiple versions")
 			}
 			version = parts[0]
-		} else if parts[0] != "config" && parts[0] != "scripts" {
-			return "", fmt.Errorf("invalid include archive directory %q: expected a v-prefixed semantic version, config, or scripts", parts[0])
+		} else if parts[0] != "config" && parts[0] != "scripts" && parts[0] != "docs" {
+			return "", fmt.Errorf("invalid include archive directory %q: expected a v-prefixed semantic version, config, scripts, or docs", parts[0])
 		}
 		if header.Typeflag == tar.TypeDir && len(parts) == 1 {
 			continue
@@ -91,14 +91,25 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 			pattern = path.Base(IncludePattern)
 		} else if parts[0] == "scripts" {
 			pattern = "install-includes.sh"
+		} else if parts[0] == "docs" {
+			pattern = ""
+			if path.Ext(parts[1]) != ".md" && path.Ext(parts[1]) != ".pdf" {
+				return "", fmt.Errorf("unexpected include archive documentation file %q", header.Name)
+			}
 		}
-		if matched, _ := path.Match(pattern, parts[1]); !matched {
-			return "", fmt.Errorf("unexpected include archive file %q", header.Name)
+		if pattern != "" {
+			matched, _ := path.Match(pattern, parts[1])
+			if !matched {
+				return "", fmt.Errorf("unexpected include archive file %q", header.Name)
+			}
 		}
 		if seen[parts[1]] {
 			return "", fmt.Errorf("duplicate include archive file %q", header.Name)
 		}
 		seen[parts[1]] = true
+		if parts[0] == "docs" {
+			continue
+		}
 		destination, err := os.OpenFile(filepath.Join(staging, "files", parts[1]), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {
 			return "", err

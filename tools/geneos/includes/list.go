@@ -1,6 +1,8 @@
 package includes
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	_ "embed"
 	"encoding/json"
 	"errors"
@@ -8,6 +10,7 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"net"
 	"net/http"
 	"os"
 	"path"
@@ -103,15 +106,27 @@ func validateIncludesListFormat(format string) error {
 }
 
 type includeFile struct {
-	Path     string
-	Version  string
-	FileInfo os.FileInfo
-	ModTime  time.Time // for remotes, this represents the modification time of the include file on the remote location; for local files, it represents the local modification time
-	Size     *int64    // nil when size metadata is unavailable; a pointer to zero is a known empty file
-	Remote   bool      // Location is a remote URL
-	Local    bool      // Location is in or under the gateway home directory
-	Shared   bool      // Location is in a shared include directory
+	Path      string
+	Version   string
+	Status    string
+	Latency   string
+	CertValid string
+	FileInfo  os.FileInfo
+	ModTime   time.Time // for remotes, this represents the modification time of the include file on the remote location; for local files, it represents the local modification time
+	Size      *int64    // nil when size metadata is unavailable; a pointer to zero is a known empty file
+	Remote    bool      // Location is a remote URL
+	Local     bool      // Location is in or under the gateway home directory
+	Shared    bool      // Location is in a shared include directory
 }
+
+const (
+	includeStatusOK               = "OK"
+	includeStatusDuplicates       = "DUPLICATES"
+	includeStatusNotFound         = "NOT_FOUND"
+	includeStatusPermissionDenied = "PERMISSION_DENIED"
+	includeStatusTimeout          = "TIMEOUT"
+	includeStatusNotChecked       = "-"
+)
 
 type gatewayInclude struct {
 	includeFile
@@ -129,10 +144,12 @@ var versionColumns = []string{"Version", "Files", "Modified", "Size", "Path"}
 var versionColumnsLong = []string{"Version", "Files", "Version", "Perms", "Owner", "LastModified", "Size", "Path"}
 
 var includeColumns = []string{"File", "Copies", "Gateways", "Flags", "LastModified", "Size", "Location"}
-var includeColumnsLong = []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Location"}
+var includeColumnsLong = []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
+var includeColumnsMachine = []string{"File", "Copies", "Gateways", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "Version", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
 
 var gatewayColumns = []string{"Gateway", "File", "Priority", "Flags", "Reload", "LastModified", "Size", "Location"}
-var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Location"}
+var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
+var gatewayColumnsMachine = []string{"Gateway", "File", "Priority", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
 
 // listIncludes lists all available include files for the specified host, taking
 // into account the command-line flags for filtering and formatting. It
@@ -141,7 +158,11 @@ var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Versi
 // flag is set.
 func listIncludes(h *geneos.Host, names ...string) (err error) {
 	root := h.PathTo("gateway")
+	geneosHome := h.PathTo()
+	// Gateway instances share a parent directory, so any instance home gives the same relative paths.
+	gatewayWorkingDir := h.PathTo("gateway", "gateways", "gateway")
 	longFormat := includeListLongFormat()
+	machineFormat := includeListMachineFormat()
 
 	versionDirs, versionedIncludes, err := getVersionedIncludes(h, root)
 	if err != nil {
@@ -372,25 +393,53 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 					count := gatewayCount[p]
 					key := fmt.Sprintf("%s # %d", base, idx+1)
 					resp := responses.New(nil)
-					resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(key, "", count, inc, p, longFormat))
+					rowLocation, err := includeListLocation(h, gatewayWorkingDir, geneosHome, p, inc)
+					if err != nil {
+						return fmt.Errorf("make include location relative for %q: %w", p, err)
+					}
+					var row []string
+					if machineFormat {
+						row = includeFileMachineRow(key, "", count, inc, rowLocation)
+					} else {
+						row = includeFileRow(key, "", count, inc, rowLocation, longFormat)
+					}
+					resp.Dataview.Table = append(resp.Dataview.Table, row)
 					total += count
 					resps[key] = resp
 				}
 
 				// Add a summary row for the basename shared by these files.
 				resp := responses.New(nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, includeSummaryRow(base, len(paths), total, longFormat))
+				var row []string
+				if machineFormat {
+					row = includeSummaryMachineRow(base, len(paths), total)
+				} else {
+					row = includeSummaryRow(base, len(paths), total, longFormat)
+				}
+				resp.Dataview.Table = append(resp.Dataview.Table, row)
 				resps[base] = resp
 			} else {
 				count := gatewayCount[path]
 				resp := responses.New(nil)
-				resp.Dataview.Table = append(resp.Dataview.Table, includeFileRow(base, "1", count, inc, path, longFormat))
+				location, err := includeListLocation(h, gatewayWorkingDir, geneosHome, path, inc)
+				if err != nil {
+					return fmt.Errorf("make include location relative for %q: %w", path, err)
+				}
+				var row []string
+				if machineFormat {
+					row = includeFileMachineRow(base, "1", count, inc, location)
+				} else {
+					row = includeFileRow(base, "1", count, inc, location, longFormat)
+				}
+				resp.Dataview.Table = append(resp.Dataview.Table, row)
 				resps[base] = resp
 			}
 
 		}
 		columns := includeColumns
-		if longFormat {
+		if machineFormat {
+			columns = includeColumnsMachine
+		} else if longFormat {
 			columns = includeColumnsLong
 		}
 		return formatIncludeResponses(os.Stdout, resps, columns)
@@ -400,7 +449,9 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		// build responses.GeneralReponses and call Formatted to output
 		resps := responses.GeneralResponses{}
 		columns := gatewayColumns
-		if longFormat {
+		if machineFormat {
+			columns = gatewayColumnsMachine
+		} else if longFormat {
 			columns = gatewayColumnsLong
 		}
 
@@ -418,7 +469,13 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 					resps[gwname] = resp
 				}
 
-				resp.Dataview.Table = append(resp.Dataview.Table, gatewayIncludeRow(gwname, p, longFormat))
+				var row []string
+				if machineFormat {
+					row = gatewayIncludeMachineRow(gwname, p)
+				} else {
+					row = gatewayIncludeRow(gwname, p, longFormat)
+				}
+				resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 				// Priority is the third column in both output schemas.
 				pri := slices.Index(columns, "Priority")
@@ -437,9 +494,59 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 	return nil
 }
 
+func includeListLocation(h *geneos.Host, gatewayWorkingDir, geneosHome, location string, include includeFile) (string, error) {
+	if include.Remote || !h.IsAbs(location) {
+		return location, nil
+	}
+
+	root := strings.TrimSuffix(h.ToSlash(h.Clean(geneosHome)), "/")
+	target := h.ToSlash(h.Clean(location))
+	if target != root && !strings.HasPrefix(target, root+"/") {
+		return location, nil
+	}
+
+	relative, err := h.Rel(gatewayWorkingDir, location)
+	if err != nil {
+		return "", err
+	}
+	return h.ToSlash(relative), nil
+}
+
 func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, columns []string) error {
 	if !includesListJSON() {
-		return result.Formatted(w, includesListCmdFormat, columns, nil)
+		headings := slices.Clone(columns)
+		delimited := includesListCmdFormat == "csv" || includesListCmdFormat == "toolkit"
+		for i, column := range headings {
+			if delimited {
+				headings[i] = strings.ToLower(column[:1]) + column[1:]
+			} else {
+				headings[i] = strings.ToUpper(column[:1]) + column[1:]
+			}
+		}
+		if delimited {
+			formatted := make(responses.GeneralResponses, len(result))
+			for key, response := range result {
+				if response == nil || response.Dataview == nil {
+					formatted[key] = response
+					continue
+				}
+				copyResponse := *response
+				dataview := *response.Dataview
+				dataview.Table = make([][]string, len(response.Dataview.Table))
+				for i, row := range response.Dataview.Table {
+					dataview.Table[i] = slices.Clone(row)
+					for j, value := range dataview.Table[i] {
+						if j < len(columns) && value == "-" && columns[j] != "File" && columns[j] != "Gateway" && columns[j] != "Location" && columns[j] != "Path" {
+							dataview.Table[i][j] = ""
+						}
+					}
+				}
+				copyResponse.Dataview = &dataview
+				formatted[key] = &copyResponse
+			}
+			result = formatted
+		}
+		return result.Formatted(w, includesListCmdFormat, headings, nil)
 	}
 
 	rows := make([]map[string]any, 0)
@@ -454,20 +561,13 @@ func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, colu
 				if index >= len(row) {
 					break
 				}
-				if column == "Owner" {
-					continue
-				}
-				if column == "Flags" {
-					addIncludeFlagFields(item, row[index])
-					continue
+				switch column {
+				case "shared", "local", "remote", "readOnly", "disabled", "optional", "certValid":
+					if row[index] == "N" || row[index] == "-" || row[index] == "" {
+						continue
+					}
 				}
 				value := includeJSONValue(column, row[index])
-				if column == "Copies" && value == 0 {
-					continue
-				}
-				if text, ok := value.(string); ok && text == "" {
-					continue
-				}
 				name := strings.ToLower(column[:1]) + column[1:]
 				item[name] = value
 			}
@@ -488,7 +588,16 @@ func includesListJSON() bool {
 }
 
 func includeListLongFormat() bool {
-	return includesListCmdLong || includesListJSON()
+	return includesListCmdLong || includeListMachineFormat()
+}
+
+func includeListMachineFormat() bool {
+	switch includesListCmdFormat {
+	case "csv", "toolkit":
+		return true
+	default:
+		return includesListJSON()
+	}
 }
 
 func includePermissions(mode fs.FileMode, includeType bool) string {
@@ -501,21 +610,102 @@ func includePermissions(mode fs.FileMode, includeType bool) string {
 	return mode.Perm().String()
 }
 
-func addIncludeFlagFields(fields map[string]any, flags string) {
-	flagNames := map[rune]string{
-		'D': "disabled",
-		'L': "local",
-		'R': "readOnly",
-		'S': "shared",
-		'U': "remote",
-		'X': "missing",
-		'o': "optional",
+func includeFileStatus(include includeFile) string {
+	if include.Status != "" {
+		return include.Status
 	}
-	for _, flag := range flags {
-		if name, ok := flagNames[flag]; ok {
-			fields[name] = true
+	if include.Remote {
+		return includeStatusNotChecked
+	}
+	if include.FileInfo == nil {
+		return includeStatusNotFound
+	}
+	return includeStatusOK
+}
+
+func includeMetadataValue(value string) string {
+	if value == "" {
+		return includeStatusNotChecked
+	}
+	return value
+}
+
+func includeStatusFromStatError(err error) string {
+	switch {
+	case err == nil:
+		return includeStatusOK
+	case errors.Is(err, fs.ErrNotExist):
+		return includeStatusNotFound
+	case errors.Is(err, fs.ErrPermission):
+		return includeStatusPermissionDenied
+	default:
+		return "FAILED: " + err.Error()
+	}
+}
+
+func includeRemoteStatus(err error) string {
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return includeStatusTimeout
+	}
+	return "FAILED"
+}
+
+func fetchRemoteIncludeMetadata(location string) (time.Time, *int64, string, string, string) {
+	if includesListCmdNoRemote {
+		return time.Time{}, nil, includeStatusNotChecked, includeStatusNotChecked, includeStatusNotChecked
+	}
+
+	started := time.Now()
+	resp, err := http.Head(location)
+	latency := strconv.FormatInt(time.Since(started).Round(time.Millisecond).Milliseconds(), 10) + "ms"
+	certValid := includeCertValid(location, resp, err)
+	if err != nil {
+		return time.Time{}, nil, includeRemoteStatus(err), latency, certValid
+	}
+	defer resp.Body.Close()
+
+	status := includeStatusOK
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		status = fmt.Sprintf("FAILED: %d", resp.StatusCode)
+	}
+
+	var modTime time.Time
+	if lastModified := resp.Header.Get("Last-Modified"); lastModified != "" {
+		if parsed, err := http.ParseTime(lastModified); err == nil {
+			modTime = parsed.Local()
 		}
 	}
+	var size *int64
+	if contentLength := resp.Header.Get("Content-Length"); contentLength != "" {
+		if parsed, err := strconv.ParseInt(contentLength, 10, 64); err == nil {
+			size = &parsed
+		}
+	}
+	return modTime, size, status, latency, certValid
+}
+
+func includeCertValid(location string, resp *http.Response, err error) string {
+	if !strings.HasPrefix(strings.ToLower(location), "https://") {
+		return includeStatusNotChecked
+	}
+	if err != nil {
+		var verificationError *tls.CertificateVerificationError
+		var unknownAuthority x509.UnknownAuthorityError
+		var hostnameError x509.HostnameError
+		var invalidCertificate x509.CertificateInvalidError
+		if errors.As(err, &verificationError) ||
+			errors.As(err, &unknownAuthority) ||
+			errors.As(err, &hostnameError) ||
+			errors.As(err, &invalidCertificate) {
+			return "N"
+		}
+		return includeStatusNotChecked
+	}
+	if resp != nil && resp.TLS != nil && len(resp.TLS.VerifiedChains) > 0 {
+		return "Y"
+	}
+	return "N"
 }
 
 func includeJSONValue(column, value string) any {
@@ -566,13 +756,67 @@ func includeFileRow(name, copies string, gatewayCount int, include includeFile, 
 	if include.FileInfo != nil {
 		permissions = includePermissions(include.FileInfo.Mode(), false)
 	}
-	return []string{name, copies, fmt.Sprintf("%d", gatewayCount), renderFlags(include), include.Version, permissions, "", modified, size, location}
+	return []string{name, copies, fmt.Sprintf("%d", gatewayCount), renderFlags(include), include.Version, permissions, "", modified, size, includeMetadataValue(include.Latency), includeMetadataValue(include.CertValid), location}
+}
+
+func includeFileMachineRow(name, copies string, gatewayCount int, include includeFile, location string) []string {
+	modified := ""
+	if !include.ModTime.IsZero() {
+		modified = include.ModTime.Format(time.RFC3339)
+	}
+	permissions := ""
+	if include.FileInfo != nil {
+		permissions = includePermissions(include.FileInfo.Mode(), false)
+	}
+	return []string{
+		name,
+		copies,
+		fmt.Sprintf("%d", gatewayCount),
+		includeFileStatus(include),
+		includeBooleanValue(include.Shared),
+		includeBooleanValue(include.Local),
+		includeBooleanValue(include.Remote),
+		includeReadOnlyValue(include),
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		include.Version,
+		permissions,
+		"",
+		modified,
+		includeSizeString(include),
+		includeMetadataValue(include.Latency),
+		includeMetadataValue(include.CertValid),
+		location,
+	}
+}
+
+func includeSummaryMachineRow(name string, copies, gatewayCount int) []string {
+	return []string{
+		name,
+		fmt.Sprintf("%d", copies),
+		fmt.Sprintf("%d", gatewayCount),
+		includeStatusDuplicates,
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		"",
+		"",
+		"",
+		"",
+		"",
+		includeStatusNotChecked,
+		includeStatusNotChecked,
+		"",
+	}
 }
 
 func includeSummaryRow(name string, copies, gatewayCount int, long bool) []string {
 	row := []string{name, fmt.Sprintf("%d", copies), fmt.Sprintf("%d", gatewayCount), "", "", "", ""}
 	if long {
-		row = []string{name, fmt.Sprintf("%d", copies), fmt.Sprintf("%d", gatewayCount), "", "", "", "", "", "", ""}
+		row = []string{name, fmt.Sprintf("%d", copies), fmt.Sprintf("%d", gatewayCount), "", "", "", "", "", "", "", "", ""}
 	}
 	return row
 }
@@ -599,7 +843,65 @@ func gatewayIncludeRow(gateway string, include gatewayInclude, long bool) []stri
 	if include.FileInfo != nil {
 		permissions = includePermissions(include.FileInfo.Mode(), false)
 	}
-	return []string{gateway, name, fmt.Sprintf("%d", include.Priority), renderGatewayFlags(include), include.Version, reload, permissions, "", modified, size, include.Location}
+	return []string{gateway, name, fmt.Sprintf("%d", include.Priority), renderGatewayFlags(include), include.Version, reload, permissions, "", modified, size, includeMetadataValue(include.Latency), includeMetadataValue(include.CertValid), include.Location}
+}
+
+func gatewayIncludeMachineRow(gateway string, include gatewayInclude) []string {
+	name := path.Base(include.Location)
+	if include.Gateway != nil {
+		name = include.Gateway.Host().Base(include.Location)
+	}
+	modified := ""
+	if !include.ModTime.IsZero() {
+		modified = include.ModTime.Format(time.RFC3339)
+	}
+	reload := ""
+	if include.ReloadInterval != nil {
+		reload = fmt.Sprintf("%ds", *include.ReloadInterval)
+	}
+	permissions := ""
+	if include.FileInfo != nil {
+		permissions = includePermissions(include.FileInfo.Mode(), false)
+	}
+	optional := includeStatusNotChecked
+	if include.Required != nil {
+		optional = includeBooleanValue(!*include.Required)
+	}
+	return []string{
+		gateway,
+		name,
+		fmt.Sprintf("%d", include.Priority),
+		includeFileStatus(include.includeFile),
+		includeBooleanValue(include.Shared),
+		includeBooleanValue(include.Local),
+		includeBooleanValue(include.Remote),
+		includeReadOnlyValue(include.includeFile),
+		includeBooleanValue(include.Disabled),
+		optional,
+		include.Version,
+		reload,
+		permissions,
+		"",
+		modified,
+		includeSizeString(include.includeFile),
+		includeMetadataValue(include.Latency),
+		includeMetadataValue(include.CertValid),
+		include.Location,
+	}
+}
+
+func includeBooleanValue(value bool) string {
+	if value {
+		return "Y"
+	}
+	return "N"
+}
+
+func includeReadOnlyValue(include includeFile) string {
+	if include.Remote || include.FileInfo == nil {
+		return includeStatusNotChecked
+	}
+	return includeBooleanValue(include.FileInfo.Mode()&0222 == 0)
 }
 
 func renderFlags(p includeFile) (flags string) {
@@ -758,17 +1060,22 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 
 				v := h.Dir(target)
 				fi, err := h.Stat(p)
-				if err != nil {
+				status := includeStatusFromStatError(err)
+				if err != nil && status != includeStatusNotFound && status != includeStatusPermissionDenied {
 					return err
 				}
-				size := fi.Size()
-				versioned = append(versioned, includeFile{
-					Path:     p,
-					Version:  v,
-					FileInfo: fi,
-					ModTime:  fi.ModTime(),
-					Size:     &size,
-				})
+				include := includeFile{
+					Path:    p,
+					Version: v,
+					Status:  status,
+				}
+				if fi != nil {
+					size := fi.Size()
+					include.FileInfo = fi
+					include.ModTime = fi.ModTime()
+					include.Size = &size
+				}
+				versioned = append(versioned, include)
 			} else {
 				if h.Ext(ent.Name()) != ".xml" {
 					return nil
@@ -820,6 +1127,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 		var fi fs.FileInfo
 		var modtime time.Time
 		var size *int64
+		var status, latency, certValid string
 		var reload *int
 
 		g, err := instance.ReadGatewaySetup(i)
@@ -833,23 +1141,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 
 		if strings.HasPrefix(setup, "https://") || strings.HasPrefix(setup, "http://") {
 			remote = true
-			if !includesListCmdNoRemote {
-				// perform a HEAD request and fill in what we can
-				resp, err := http.Head(setup)
-				if err == nil {
-					defer resp.Body.Close()
-					if lm := resp.Header.Get("Last-Modified"); lm != "" {
-						if t, err := http.ParseTime(lm); err == nil {
-							modtime = t.Local()
-						}
-					}
-					if cl := resp.Header.Get("Content-Length"); cl != "" {
-						if s, err := strconv.ParseInt(cl, 10, 64); err == nil {
-							size = &s
-						}
-					}
-				}
-			}
+			modtime, size, status, latency, certValid = fetchRemoteIncludeMetadata(setup)
 		} else {
 			local = true
 			if h.IsAbs(setup) {
@@ -857,7 +1149,8 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 			} else {
 				fullpath = h.Join(i.Home(), setup)
 			}
-			fi, _ = h.Stat(fullpath)
+			fi, err = h.Stat(fullpath)
+			status = includeStatusFromStatError(err)
 			if fi != nil {
 				modtime = fi.ModTime()
 				sizeValue := fi.Size()
@@ -876,6 +1169,9 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 			Required:       &[]bool{true}[0],
 			ReloadInterval: reload,
 			Location:       setup,
+			Status:         status,
+			Latency:        latency,
+			CertValid:      certValid,
 			Path:           fullpath,
 			Local:          local,
 			Remote:         remote,
@@ -918,29 +1214,14 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 		var modtime time.Time
 		var size *int64
 		var version string
+		var status, latency, certValid string
 
 		// leave inc.Location unchanged, for inclusion later
 		abspath := inc.Location
 
 		if strings.HasPrefix(inc.Location, "https://") || strings.HasPrefix(inc.Location, "http://") {
 			remote = true
-			if !includesListCmdNoRemote {
-				// perform a HEAD request and fill in what we can
-				resp, err := http.Head(inc.Location)
-				if err == nil {
-					defer resp.Body.Close()
-					if lm := resp.Header.Get("Last-Modified"); lm != "" {
-						if t, err := http.ParseTime(lm); err == nil {
-							modtime = t.Local()
-						}
-					}
-					if cl := resp.Header.Get("Content-Length"); cl != "" {
-						if s, err := strconv.ParseInt(cl, 10, 64); err == nil {
-							size = &s
-						}
-					}
-				}
-			}
+			modtime, size, status, latency, certValid = fetchRemoteIncludeMetadata(inc.Location)
 		} else {
 			if !h.IsAbs(inc.Location) {
 				abspath = h.Join(gw.Home(), inc.Location)
@@ -948,7 +1229,9 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 			if strings.HasPrefix(abspath, gw.Home()) {
 				local = true
 			}
-			if i, err := h.Stat(abspath); err == nil {
+			i, err := h.Stat(abspath)
+			status = includeStatusFromStatError(err)
+			if err == nil {
 				fi = i
 			}
 		}
@@ -970,13 +1253,16 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 		}
 
 		result[gw.Name()] = append(result[gw.Name()], gatewayInclude{
-			Path:     abspath,
-			FileInfo: fi,
-			ModTime:  modtime,
-			Size:     size,
-			Version:  version,
-			Local:    local,
-			Remote:   remote,
+			Path:      abspath,
+			FileInfo:  fi,
+			ModTime:   modtime,
+			Size:      size,
+			Status:    status,
+			Latency:   latency,
+			CertValid: certValid,
+			Version:   version,
+			Local:     local,
+			Remote:    remote,
 
 			Gateway:        gw,
 			Groups:         groupPath,

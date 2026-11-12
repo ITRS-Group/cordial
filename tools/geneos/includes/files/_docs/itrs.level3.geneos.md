@@ -18,7 +18,7 @@ Use `config.level3.geneos.xml` as a template for a managed-entity hierarchy. Its
 | --- | --- | --- |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Instances | Monitor the Geneos installation on a host. | Runs queries with the local `geneos` command for AES files, certificates, installed releases, configured instances, running processes, version summary, and toolkit include files. |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Diagnostics | Add process-level diagnostics. | Reports open files and open TCP ports. Use where the additional detail is useful; the port rules warn on unexpected connection states and growing queues. |
-| Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Active&nbsp;Console | Monitor an Active Console instance. | Adds component-specific logs and process monitoring through sampler includes used with the Level 2 `Logs` and `Processes` samplers. |
+| Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Active&nbsp;Console | Monitor an Active Console (AC2) instance. | Adds component-specific logs and process monitoring through sampler includes used with the Level 2 `Logs` and `Processes` samplers. |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Floating&nbsp;Netprobe | Monitor a floating Netprobe instance. | Adds component-specific logs and process monitoring through sampler includes used with the Level 2 `Logs` and `Processes` samplers. |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Gateway | Monitor a Gateway process and logs. | Adds component-specific logs and process monitoring through sampler includes used with the Level 2 `Logs` and `Processes` samplers. |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Licence&nbsp;Daemon | Monitor a Licence Daemon instance. | Adds component-specific logs and process monitoring through sampler includes used with the Level 2 `Logs` and `Processes` samplers. |
@@ -68,7 +68,7 @@ Certificates are an exception to the interval defaults: they run once daily at 0
 
 ### Per-Entity Variables
 
-Component Types have no defaults for the following variables. Set them directly on every managed entity that uses a component Type, either manually in Gateway Setup Editor or through a profile. Do not rely on an Environment or Type-level fallback; variable scope can prevent those values from reaching the component samplers. The disabled example entity in `config.level3.geneos.xml` shows one set of variables. Gateway-load types continue to default `statsFilePath` to `stats.xml`; override it on a Gateway entity when its statistics file is elsewhere.
+Component Types have no defaults for the following variables. Set them directly on every managed entity that uses a component Type, either manually in the Gateway Setup Editor (GSE) or through a profile. Do not rely on an Environment or Type-level fallback; variable scope can prevent those values from reaching the component samplers. The disabled example entity in `config.level3.geneos.xml` shows one set of variables. Gateway-load types continue to default `statsFilePath` to `stats.xml`; override it on a Gateway entity when its statistics file is elsewhere.
 
 | Variable | Example value | Used for |
 | --- | --- | --- |
@@ -87,12 +87,12 @@ The include declares sampling defaults and empty override Environment placeholde
 
 ### `Level 3 - Geneos Overrides`
 
-The example hierarchy in `config.level3.geneos.xml` attaches this environment to `Level 3 - Geneos Instances` and, in the nested subgroup, `Level 3 - Geneos Diagnostics`. The config file contains an empty copy under the same environment group; add shared override values to that Environment in Gateway Setup Editor. To use different settings for one type or entity, attach a custom Environment to that Type assignment instead.
+The example hierarchy in `config.level3.geneos.xml` attaches this environment to `Level 3 - Geneos Instances` and, in the nested subgroup, `Level 3 - Geneos Diagnostics`. The config file contains an empty copy under the same environment group; add shared override values to that Environment in the GSE. To use different settings for one type or entity, attach a custom Environment to that Type assignment instead.
 
-For example, to change the sample intervals, use Gateway Setup Editor to add or edit an Environment under the `Level 3 - Geneos` environment group, then select it on the managed entity's `Level 3 - Geneos Instances` Type assignment. Set global command variables under the Gateway's `operatingEnvironment` instead:
+For example, to change the sample intervals, use the GSE to add or edit an Environment under the `Level 3 - Geneos` environment group, then select it on the managed entity's `Level 3 - Geneos Instances` Type assignment. Set global command variables under the Gateway's `operatingEnvironment` instead:
 
 ```text
-Gateway Setup Editor
+GSE
 ├─ Managed entities
 │  └─ Managed entity
 │     └─ Type: Level 3 - Geneos Instances
@@ -108,12 +108,12 @@ Define only the sampling variables to change. The same Environment can be attach
 
 ### `Level 3 - Geneos Load Overrides`
 
-This placeholder is declared but not referenced by either Gateway-load type. The matching config file contains an empty copy under the same environment group. Attach it explicitly to a Gateway-load Type assignment and add variables such as `gwLoadHistoryColumns`, `gwLoadDatabaseColumns`, or sample intervals in Gateway Setup Editor. Override `statsFilePath` on the Gateway entity if the monitoring Netprobe cannot access the file as `stats.xml`.
+This placeholder is declared but not referenced by either Gateway-load type. The matching config file contains an empty copy under the same environment group. Attach it explicitly to a Gateway-load Type assignment and add variables such as `gwLoadHistoryColumns`, `gwLoadDatabaseColumns`, or sample intervals in the GSE. Override `statsFilePath` on the Gateway entity if the monitoring Netprobe cannot access the file as `stats.xml`.
 
-For example, in Gateway Setup Editor, add an Environment under the Gateway-load environment group, set the desired columns, then select it on the Gateway entity's `Level 3 - Geneos Gateway Load` Type assignment:
+For example, in the GSE, add an Environment under the Gateway-load environment group, set the desired columns, then select it on the Gateway entity's `Level 3 - Geneos Gateway Load` Type assignment:
 
 ```text
-Gateway Setup Editor
+GSE
 ├─ Managed entities
 │  └─ Gateway managed entity
 │     └─ Type: Level 3 - Geneos Gateway Load

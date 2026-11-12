@@ -256,6 +256,16 @@ RUN set -eux; \
     mmdc -p /puppeteer.json -i /app/cordial/README.md -o /app/cordial/README${MERMAID}.md; \
     mdpdf /app/cordial/README${MERMAID}.md README.pdf --border=15mm --gh-style
 
+RUN set -eux; \
+    mkdir -p geneos-includes; \
+    for source in /app/cordial/tools/geneos/includes/files/README.md /app/cordial/tools/geneos/includes/files/_docs/*.md; \
+    do \
+        name=$(basename "$source" .md); \
+        cp "$source" "geneos-includes/$name.md"; \
+        mmdc -p /puppeteer.json -i "$source" -o "/tmp/${name}.mermaid.md"; \
+        mdpdf "/tmp/${name}.mermaid.md" "geneos-includes/$name.pdf" --border=15mm --gh-style; \
+    done
+
 #
 # assemble files from previous stages into a .tar.gz ready for extraction in the
 # Makefile
@@ -269,13 +279,15 @@ COPY VERSION /VERSION
 COPY tools/geneos/includes/files/itrs.*.xml /includes-source/
 COPY tools/geneos/includes/files/config.*.xml /includes-source/
 COPY tools/geneos/includes/files/install-includes.sh /includes-source/scripts/install-includes.sh
+COPY --from=cordial-docs /docs/geneos-includes/ /includes-source/docs/
 RUN set -eux; \
     version=$(cat /VERSION); \
     archive_root="geneos-includes-$version"; \
-    mkdir -p "/includes/$archive_root/$version" "/includes/$archive_root/config" "/includes/$archive_root/scripts"; \
+    mkdir -p "/includes/$archive_root/$version" "/includes/$archive_root/config" "/includes/$archive_root/scripts" "/includes/$archive_root/docs"; \
     cp /includes-source/itrs.*.xml "/includes/$archive_root/$version/"; \
     cp /includes-source/config.*.xml "/includes/$archive_root/config/"; \
     cp /includes-source/scripts/install-includes.sh "/includes/$archive_root/scripts/"; \
+    cp /includes-source/docs/* "/includes/$archive_root/docs/"; \
     find /includes -type f -exec chmod a-x {} \;; \
     find "/includes/$archive_root/$version" -type f -exec chmod a-w {} \;; \
     chmod 0555 "/includes/$archive_root/scripts/install-includes.sh"; \

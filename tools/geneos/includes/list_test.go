@@ -3,9 +3,16 @@ package includes
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
+	"errors"
+	"io/fs"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -211,55 +218,337 @@ func TestFormatIncludeResponsesJSON(t *testing.T) {
 	if len(rows) != 2 || rows[0]["gateway"] != "Demo Gateway" || rows[0]["copies"] != float64(2) || rows[0]["size"] != float64(1234) {
 		t.Fatalf("JSON rows = %#v, want two typed include rows", rows)
 	}
-	if _, ok := rows[1]["copies"]; ok {
-		t.Errorf("zero copies field should be omitted, got %#v", rows[1]["copies"])
+	if rows[1]["copies"] != float64(0) {
+		t.Errorf("zero copies field = %#v, want 0", rows[1]["copies"])
 	}
 }
 
-func TestFormatIncludeResponsesExpandsFlags(t *testing.T) {
+func TestFormatIncludeResponsesEmitsMachineFlags(t *testing.T) {
+	oldFormat := includesListCmdFormat
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	filePath := filepath.Join(t.TempDir(), "readonly.xml")
+	if err := os.WriteFile(filePath, nil, 0444); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := responses.New[responses.General](nil)
+	response.Dataview.Table = [][]string{
+		includeFileMachineRow("readonly.xml", "1", 1, includeFile{
+			Status:   includeStatusOK,
+			Shared:   true,
+			FileInfo: info,
+			Version:  "1.2.3",
+			Size:     int64Ptr(0),
+		}, "../../includes/readonly.xml"),
+		includeSummaryMachineRow("same.xml", 2, 1),
+	}
+	for _, format := range []string{"json", "pretty"} {
+		t.Run(format, func(t *testing.T) {
+			includesListCmdFormat = format
+			var output bytes.Buffer
+			if err := formatIncludeResponses(&output, responses.GeneralResponses{"gateway": response}, includeColumnsMachine); err != nil {
+				t.Fatalf("formatIncludeResponses() error = %v", err)
+			}
+			var rows []map[string]any
+			if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
+				t.Fatalf("JSON output is invalid: %v", err)
+			}
+			if len(rows) != 2 {
+				t.Fatalf("JSON rows = %#v, want two rows", rows)
+			}
+			for name, want := range map[string]any{"status": "OK", "shared": "Y", "readOnly": "Y"} {
+				if rows[0][name] != want {
+					t.Errorf("first row %s = %#v, want %#v", name, rows[0][name], want)
+				}
+			}
+			for _, name := range []string{"local", "remote", "disabled", "optional", "certValid"} {
+				if value, ok := rows[0][name]; ok {
+					t.Errorf("first row unexpectedly includes %s = %#v", name, value)
+				}
+			}
+			if rows[1]["status"] != includeStatusDuplicates {
+				t.Errorf("summary status = %#v, want %q", rows[1]["status"], includeStatusDuplicates)
+			}
+			for _, name := range []string{"shared", "local", "remote", "readOnly", "disabled", "optional", "certValid"} {
+				if value, ok := rows[1][name]; ok {
+					t.Errorf("summary unexpectedly includes %s = %#v", name, value)
+				}
+			}
+		})
+	}
+}
+
+func TestJSONCertificateFlag(t *testing.T) {
 	oldFormat := includesListCmdFormat
 	includesListCmdFormat = "json"
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	response := responses.New[responses.General](nil)
+	for _, value := range []string{"Y", "N", "-"} {
+		response.Dataview.Table = append(response.Dataview.Table, []string{value})
+	}
+	var output bytes.Buffer
+	if err := formatIncludeResponses(&output, responses.GeneralResponses{"gateway": response}, []string{"certValid"}); err != nil {
+		t.Fatal(err)
+	}
+	var rows []map[string]any
+	if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 3 || rows[0]["certValid"] != "Y" {
+		t.Fatalf("certificate rows = %#v, want valid certificate flag", rows)
+	}
+	for _, row := range rows[1:] {
+		if value, ok := row["certValid"]; ok {
+			t.Errorf("unexpected certificate flag = %#v", value)
+		}
+	}
+}
+
+func TestMachineFormatsAlwaysUseLongColumns(t *testing.T) {
+	oldFormat, oldLong := includesListCmdFormat, includesListCmdLong
+	t.Cleanup(func() {
+		includesListCmdFormat = oldFormat
+		includesListCmdLong = oldLong
+	})
+	includesListCmdLong = false
+	for _, format := range []string{"csv", "toolkit", "json", "pretty"} {
+		includesListCmdFormat = format
+		if !includeListMachineFormat() || !includeListLongFormat() {
+			t.Errorf("%s format did not select machine long output", format)
+		}
+	}
+	for _, format := range []string{"column", "table"} {
+		includesListCmdFormat = format
+		if includeListMachineFormat() || includeListLongFormat() {
+			t.Errorf("%s format changed without --long", format)
+		}
+		includesListCmdLong = true
+		if !includeListLongFormat() {
+			t.Errorf("%s format did not honor --long", format)
+		}
+		includesListCmdLong = false
+	}
+}
+
+func TestCSVIncludesMachineFields(t *testing.T) {
+	oldFormat := includesListCmdFormat
+	includesListCmdFormat = "csv"
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	response := responses.New[responses.General](nil)
+	response.Dataview.Table = [][]string{includeSummaryMachineRow("same.xml", 2, 1)}
+	var output bytes.Buffer
+	if err := formatIncludeResponses(&output, responses.GeneralResponses{"same.xml": response}, includeColumnsMachine); err != nil {
+		t.Fatalf("formatIncludeResponses() error = %v", err)
+	}
+	records, err := csv.NewReader(&output).ReadAll()
+	if err != nil {
+		t.Fatalf("CSV output is invalid: %v", err)
+	}
+	wantHeader := "file,copies,gateways,status,shared,local,remote,readOnly,disabled,optional,version,perms,owner,lastModified,size,latency,certValid,location"
+	if len(records) != 2 || strings.Join(records[0], ",") != wantHeader {
+		t.Fatalf("CSV records = %#v, want machine headings and one row", records)
+	}
+	if records[1][3] != includeStatusDuplicates || records[1][4] != "" || records[1][15] != "" {
+		t.Fatalf("CSV summary row = %#v, want duplicate status and empty N/A fields", records[1])
+	}
+}
+
+func TestDelimitedIncludeNotApplicableCells(t *testing.T) {
+	oldFormat := includesListCmdFormat
 	t.Cleanup(func() { includesListCmdFormat = oldFormat })
 
 	response := responses.New[responses.General](nil)
 	response.Dataview.Table = [][]string{
-		{"all", "DLRoSUX"},
-		{"readonly", "R"},
+		{"-", "-", "Y", "N", "-", "-"},
 	}
-	var output bytes.Buffer
-	if err := formatIncludeResponses(&output, responses.GeneralResponses{"gateway": response}, []string{"Gateway", "Flags"}); err != nil {
-		t.Fatalf("formatIncludeResponses() error = %v", err)
+	columns := []string{"File", "status", "shared", "local", "latency", "Location"}
+	result := responses.GeneralResponses{"row": response}
+	for _, format := range []string{"csv", "toolkit"} {
+		t.Run(format, func(t *testing.T) {
+			includesListCmdFormat = format
+			var output bytes.Buffer
+			if err := formatIncludeResponses(&output, result, columns); err != nil {
+				t.Fatal(err)
+			}
+			records, err := csv.NewReader(&output).ReadAll()
+			if err != nil || len(records) != 2 {
+				t.Fatalf("invalid output %q: %v", output.String(), err)
+			}
+			want := []string{"-", "", "Y", "N", "", "-"}
+			if !slices.Equal(records[1], want) {
+				t.Errorf("row = %q, want %q", records[1], want)
+			}
+		})
 	}
-	var rows []map[string]any
-	if err := json.Unmarshal(output.Bytes(), &rows); err != nil {
-		t.Fatalf("JSON output is invalid: %v", err)
-	}
-	wantFlags := []string{"disabled", "local", "readOnly", "shared", "remote", "missing", "optional"}
-	if len(rows) != 2 {
-		t.Fatalf("JSON rows = %#v, want two rows", rows)
-	}
-	for _, name := range wantFlags {
-		if rows[0][name] != true {
-			t.Errorf("first row %s = %#v, want true", name, rows[0][name])
-		}
-		if _, ok := rows[1][name]; ok != (name == "readOnly") {
-			t.Errorf("second row has %s = %t, want only readOnly", name, ok)
-		}
-	}
-	if _, ok := rows[0]["flags"]; ok {
-		t.Error("JSON row retained aggregate flags field")
+	if response.Dataview.Table[0][1] != "-" || response.Dataview.Table[0][4] != "-" {
+		t.Errorf("formatting modified the input row: %q", response.Dataview.Table[0])
 	}
 }
 
-func TestFormatIncludeResponsesOmitsEmptyFields(t *testing.T) {
+func TestIncludeListColumnHeadings(t *testing.T) {
+	oldFormat := includesListCmdFormat
+	t.Cleanup(func() { includesListCmdFormat = oldFormat })
+
+	tests := []struct {
+		name    string
+		formats []string
+		columns []string
+		want    []string
+	}{
+		{"include machine", []string{"csv", "toolkit"}, includeColumnsMachine, []string{"file", "copies", "gateways", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "version", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
+		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"gateway", "file", "priority", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
+		{"version machine", []string{"csv", "toolkit"}, versionColumnsLong, []string{"version", "files", "version", "perms", "owner", "lastModified", "size", "path"}},
+		{"include display", []string{"column", "table"}, includeColumnsLong, []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
+		{"gateway display", []string{"column", "table"}, gatewayColumnsLong, []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
+		{"version display", []string{"column", "table"}, versionColumnsLong, []string{"Version", "Files", "Version", "Perms", "Owner", "LastModified", "Size", "Path"}},
+	}
+	for _, test := range tests {
+		for _, format := range test.formats {
+			t.Run(test.name+"/"+format, func(t *testing.T) {
+				includesListCmdFormat = format
+				response := responses.New[responses.General](nil)
+				row := make([]string, len(test.columns))
+				for i := range row {
+					row[i] = "value"
+				}
+				response.Dataview.Table = [][]string{row}
+				var output bytes.Buffer
+				if err := formatIncludeResponses(&output, responses.GeneralResponses{"row": response}, test.columns); err != nil {
+					t.Fatal(err)
+				}
+				var headings []string
+				if format == "csv" || format == "toolkit" {
+					records, err := csv.NewReader(&output).ReadAll()
+					if err != nil || len(records) != 2 {
+						t.Fatalf("invalid output %q: %v", output.String(), err)
+					}
+					headings = records[0]
+				} else {
+					for _, line := range strings.Split(output.String(), "\n") {
+						if strings.Contains(line, test.want[0]) {
+							line = strings.ReplaceAll(line, "│", " ")
+							line = strings.ReplaceAll(line, "|", " ")
+							headings = strings.Fields(line)
+							break
+						}
+					}
+				}
+				if !slices.Equal(headings, test.want) {
+					t.Errorf("headings = %q, want %q; output:\n%s", headings, test.want, output.String())
+				}
+			})
+		}
+	}
+}
+
+func TestMachineGatewayFlags(t *testing.T) {
+	required := false
+	row := gatewayIncludeMachineRow("gw", gatewayInclude{
+		includeFile: includeFile{Status: includeStatusOK, Shared: true},
+		Required:    &required,
+		Disabled:    true,
+	})
+	if len(row) != len(gatewayColumnsMachine) {
+		t.Fatalf("machine gateway row has %d columns, want %d", len(row), len(gatewayColumnsMachine))
+	}
+	for index, want := range map[int]string{
+		3: includeStatusOK,
+		4: "Y",
+		5: "N",
+		6: "N",
+		7: "-",
+		8: "Y",
+		9: "Y",
+	} {
+		if row[index] != want {
+			t.Errorf("machine gateway row[%d] = %q, want %q", index, row[index], want)
+		}
+	}
+}
+
+func TestIncludeStatusErrors(t *testing.T) {
+	for _, test := range []struct {
+		err  error
+		want string
+	}{
+		{want: includeStatusOK},
+		{err: fs.ErrNotExist, want: includeStatusNotFound},
+		{err: fs.ErrPermission, want: includeStatusPermissionDenied},
+		{err: errors.New("unexpected stat error"), want: "FAILED: unexpected stat error"},
+	} {
+		if got := includeStatusFromStatError(test.err); got != test.want {
+			t.Errorf("includeStatusFromStatError(%v) = %q, want %q", test.err, got, test.want)
+		}
+	}
+	if got := includeRemoteStatus(context.DeadlineExceeded); got != includeStatusTimeout {
+		t.Errorf("includeRemoteStatus(deadline exceeded) = %q, want %q", got, includeStatusTimeout)
+	}
+}
+
+func TestFetchRemoteIncludeMetadata(t *testing.T) {
+	oldNoRemote := includesListCmdNoRemote
+	includesListCmdNoRemote = false
+	t.Cleanup(func() { includesListCmdNoRemote = oldNoRemote })
+
+	for _, test := range []struct {
+		name       string
+		statusCode int
+		wantStatus string
+	}{
+		{name: "success", statusCode: http.StatusOK, wantStatus: includeStatusOK},
+		{name: "not found", statusCode: http.StatusNotFound, wantStatus: "FAILED: 404"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				time.Sleep(25 * time.Millisecond)
+				w.Header().Set("Content-Length", "12")
+				w.WriteHeader(test.statusCode)
+			}))
+			defer server.Close()
+
+			_, size, status, latency, certValid := fetchRemoteIncludeMetadata(server.URL)
+			if status != test.wantStatus || size == nil || *size != 12 {
+				t.Fatalf("remote metadata status/size = %q/%v, want %q/12", status, size, test.wantStatus)
+			}
+			milliseconds, err := strconv.ParseInt(strings.TrimSuffix(latency, "ms"), 10, 64)
+			if !strings.HasSuffix(latency, "ms") || err != nil || milliseconds < 25 {
+				t.Errorf("remote latency = %q, want whole milliseconds >= 25 with ms suffix: %v", latency, err)
+			}
+			if certValid != "-" {
+				t.Errorf("HTTP certValid = %q, want not-applicable marker", certValid)
+			}
+		})
+	}
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	defer server.Close()
+	_, _, status, _, certValid := fetchRemoteIncludeMetadata(server.URL)
+	if status != "FAILED" || certValid != "N" {
+		t.Errorf("invalid HTTPS metadata status/certValid = %q/%q, want failure and N", status, certValid)
+	}
+
+	includesListCmdNoRemote = true
+	_, _, status, latency, certValid := fetchRemoteIncludeMetadata("https://example.invalid/include.xml")
+	if status != includeStatusNotChecked || latency != includeStatusNotChecked || certValid != includeStatusNotChecked {
+		t.Errorf("skipped remote metadata = %q/%q/%q, want all not-applicable", status, latency, certValid)
+	}
+}
+
+func TestFormatIncludeResponsesIncludesEmptyFields(t *testing.T) {
 	oldFormat := includesListCmdFormat
 	includesListCmdFormat = "json"
 	t.Cleanup(func() { includesListCmdFormat = oldFormat })
 
 	response := responses.New[responses.General](nil)
-	response.Dataview.Table = [][]string{{"Demo Gateway", "", "-", ""}}
+	response.Dataview.Table = [][]string{{"Demo Gateway", "", ""}}
 	var output bytes.Buffer
-	columns := []string{"Gateway", "Owner", "Flags", "Version"}
+	columns := []string{"Gateway", "Owner", "Version"}
 	if err := formatIncludeResponses(&output, responses.GeneralResponses{"gateway": response}, columns); err != nil {
 		t.Fatalf("formatIncludeResponses() error = %v", err)
 	}
@@ -270,9 +559,9 @@ func TestFormatIncludeResponsesOmitsEmptyFields(t *testing.T) {
 	if len(rows) != 1 || rows[0]["gateway"] != "Demo Gateway" {
 		t.Fatalf("JSON rows = %#v, want gateway field", rows)
 	}
-	for _, omitted := range []string{"owner", "flags", "version", "disabled", "remote"} {
-		if _, ok := rows[0][omitted]; ok {
-			t.Errorf("JSON unexpectedly included %q: %#v", omitted, rows[0][omitted])
+	for _, field := range []string{"owner", "version"} {
+		if value, ok := rows[0][field]; !ok || value != "" {
+			t.Errorf("JSON field %q = %#v, want empty string", field, value)
 		}
 	}
 }
@@ -318,8 +607,8 @@ func TestJSONUsesLongFieldsAndOctalPermissions(t *testing.T) {
 	}
 
 	include := includeFile{FileInfo: info, Size: int64Ptr(0)}
-	row := includeFileRow("readonly.xml", "1", 1, include, filePath, includeListLongFormat())
-	if len(row) != len(includeColumnsLong) || row[5] != "0640" {
+	row := includeFileMachineRow("readonly.xml", "1", 1, include, filePath)
+	if len(row) != len(includeColumnsMachine) || row[11] != "0640" {
 		t.Fatalf("JSON include row = %v, want long fields and octal permissions", row)
 	}
 	if got := includePermissions(info.Mode(), false); got == info.Mode().Perm().String() {
@@ -444,6 +733,52 @@ func TestIncludeRowsHonorStandardAndLongSchemas(t *testing.T) {
 	}
 }
 
+func TestIncludeListLocation(t *testing.T) {
+	h := newTestGatewayHost(t)
+	gatewayWorkingDir := h.PathTo("gateway", "gateways", "gateway")
+	geneosHome := h.PathTo()
+	outside := filepath.Join(t.TempDir(), "shared.xml")
+	tests := []struct {
+		name    string
+		path    string
+		include includeFile
+		want    string
+	}{
+		{
+			name: "within gateway home",
+			path: h.PathTo("gateway", "includes", "config", "shared.xml"),
+			want: h.ToSlash(filepath.Join("..", "..", "includes", "config", "shared.xml")),
+		},
+		{
+			name: "within geneos home outside gateway",
+			path: h.PathTo("packages", "shared.xml"),
+			want: h.ToSlash(filepath.Join("..", "..", "..", "packages", "shared.xml")),
+		},
+		{
+			name: "outside geneos home",
+			path: outside,
+			want: outside,
+		},
+		{
+			name:    "remote",
+			path:    "https://example.invalid/shared.xml",
+			include: includeFile{Remote: true},
+			want:    "https://example.invalid/shared.xml",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := includeListLocation(h, gatewayWorkingDir, geneosHome, test.path, test.include)
+			if err != nil {
+				t.Fatalf("includeListLocation() error = %v", err)
+			}
+			if got != test.want {
+				t.Errorf("includeListLocation() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
 func intPtr(value int) *int { return &value }
 
 func TestIncludeDirectoryDiscovery(t *testing.T) {
@@ -459,6 +794,9 @@ func TestIncludeDirectoryDiscovery(t *testing.T) {
 	if err := os.Symlink(filepath.Join("1.2.3", "versioned.xml"), filepath.Join(root, "includes", "versioned.xml")); err != nil {
 		t.Fatalf("Symlink(versioned) error = %v", err)
 	}
+	if err := os.Symlink(filepath.Join("9.9.9", "missing.xml"), filepath.Join(root, "includes", "missing.xml")); err != nil {
+		t.Fatalf("Symlink(missing) error = %v", err)
+	}
 	sharedDir := filepath.Join(root, "includes", "config")
 	if err := os.MkdirAll(sharedDir, 0755); err != nil {
 		t.Fatalf("MkdirAll(shared) error = %v", err)
@@ -471,8 +809,13 @@ func TestIncludeDirectoryDiscovery(t *testing.T) {
 	if err != nil {
 		t.Fatalf("getVersionedIncludes() error = %v", err)
 	}
-	if len(versions) != 1 || len(versioned) != 1 || versioned[0].Version != "1.2.3" {
-		t.Fatalf("version discovery returned %d directories and files %#v, want one directory and its symlink", len(versions), versioned)
+	if len(versions) != 1 || len(versioned) != 2 {
+		t.Fatalf("version discovery returned %d directories and files %#v, want one directory and two symlinks", len(versions), versioned)
+	}
+	for _, include := range versioned {
+		if filepath.Base(include.Path) == "missing.xml" && include.Status != includeStatusNotFound {
+			t.Errorf("missing versioned link status = %q, want %q", include.Status, includeStatusNotFound)
+		}
 	}
 	shared, err := getSharedIncludes(h, root)
 	if err != nil {

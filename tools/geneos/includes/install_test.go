@@ -187,9 +187,12 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 		includeArchiveEntry{name: root + "/" + version + "/", kind: tar.TypeDir},
 		includeArchiveEntry{name: root + "/config/", kind: tar.TypeDir},
 		includeArchiveEntry{name: root + "/scripts/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/docs/", kind: tar.TypeDir},
 		includeArchiveEntry{name: root + "/" + version + "/itrs.test.xml", contents: "managed"},
 		includeArchiveEntry{name: root + "/config/config.test.xml", contents: "template"},
 		includeArchiveEntry{name: root + "/scripts/install-includes.sh", contents: "#!/bin/sh\\n"},
+		includeArchiveEntry{name: root + "/docs/README.md", contents: "# Includes"},
+		includeArchiveEntry{name: root + "/docs/README.pdf", contents: "PDF"},
 	)
 	if err := Install(h, archive, false, false); err != nil {
 		t.Fatal(err)
@@ -217,6 +220,27 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 	}
 	if _, err := os.Stat(h.PathTo("gateway", "includes", "scripts", "install-includes.sh")); !os.IsNotExist(err) {
 		t.Fatalf("install script was unexpectedly installed into the Gateway include directory: %v", err)
+	}
+	if _, err := os.Stat(h.PathTo("gateway", "includes", "docs")); !os.IsNotExist(err) {
+		t.Fatalf("archive documentation was unexpectedly installed into the Gateway include directory: %v", err)
+	}
+}
+
+func TestInstallRejectsUnexpectedArchiveDocumentation(t *testing.T) {
+	h := newTestGatewayHost(t)
+	root := "geneos-includes-v1.2.3"
+	archive := writeTestIncludeArchive(t,
+		includeArchiveEntry{name: root + "/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/v1.2.3/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/docs/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/v1.2.3/itrs.test.xml", contents: "managed"},
+		includeArchiveEntry{name: root + "/docs/unexpected.txt", contents: "unexpected"},
+	)
+	if err := Install(h, archive, true, true); err == nil {
+		t.Fatal("Install() accepted unexpected documentation in the archive")
+	}
+	if _, err := os.Stat(h.PathTo("gateway", "includes")); !os.IsNotExist(err) {
+		t.Fatalf("invalid archive changed destination, stat error = %v", err)
 	}
 }
 
@@ -251,6 +275,8 @@ func TestInstallLinkModes(t *testing.T) {
 					t.Fatal(err)
 				}
 				archive := writeTestIncludeArchive(t,
+					includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+					includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/", kind: tar.TypeDir},
 					includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"},
 					includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.new.xml", contents: "new"},
 				)
@@ -283,6 +309,8 @@ func TestInstallLinkModes(t *testing.T) {
 func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 	h := newTestGatewayHost(t)
 	first := writeTestIncludeArchive(t,
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/", kind: tar.TypeDir},
 		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "first"},
 		includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.test.xml", contents: "local"},
 	)
@@ -300,6 +328,8 @@ func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 		t.Fatalf("unchanged include backups = %v, %v", backups, err)
 	}
 	second := writeTestIncludeArchive(t,
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/", kind: tar.TypeDir},
 		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "second"},
 		includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.test.xml", contents: "replacement"},
 	)
@@ -362,7 +392,13 @@ func TestInstallRejectsInvalidArchiveEntries(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			h := newTestGatewayHost(t)
-			archive := writeTestIncludeArchive(t, test.entries...)
+			entries := test.entries
+			if test.name != "empty" && test.name != "unwrapped" {
+				entries = append([]includeArchiveEntry{
+					{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+				}, entries...)
+			}
+			archive := writeTestIncludeArchive(t, entries...)
 			if err := Install(h, archive, true, true); err == nil {
 				t.Fatal("Install() accepted an invalid archive")
 			}
@@ -377,7 +413,11 @@ func TestInstallRejectsCorruptArchive(t *testing.T) {
 	for _, kind := range []string{"checksum", "truncated", "not-gzip"} {
 		t.Run(kind, func(t *testing.T) {
 			h := newTestGatewayHost(t)
-			archive := writeTestIncludeArchive(t, includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"})
+			archive := writeTestIncludeArchive(t,
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/", kind: tar.TypeDir},
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"},
+			)
 			data, err := os.ReadFile(archive)
 			if err != nil {
 				t.Fatal(err)

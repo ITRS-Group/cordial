@@ -6,7 +6,7 @@ The `itrs.*.xml` files are functional includes. Treat them as read-only and upgr
 
 ## Files
 
-Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, and `scripts/install-includes.sh` for users installing without the `geneos` command. The `geneos includes install` command strips this wrapper and does not copy the standalone script into the Gateway's live include directory.
+Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
 
 | File | Purpose |
 | --- | --- |
@@ -25,7 +25,10 @@ After installation, files are organized like this:
 
 ```text
 gateway/includes/
+├── itrs.level0.foundation.xml -> v1.31.0/itrs.level0.foundation.xml
 ├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
+├── itrs.level2.basic-application.xml -> v1.31.0/itrs.level2.basic-application.xml
+├── itrs.level3.geneos.xml -> v1.31.0/itrs.level3.geneos.xml
 ├── v1.31.0/
 │   ├── itrs.level0.foundation.xml
 │   ├── itrs.level1.infrastructure.xml
@@ -53,11 +56,11 @@ geneos includes install
 geneos includes install /path/to/geneos-includes.tar.gz
 ```
 
-Add `--update` to replace existing top-level include paths with links to the installed version. For archive builds, `make includes` creates `release-<VERSION>/geneos-includes.tar.gz` from the repository root.
+Add `--update` to replace existing top-level include paths with links to the installed version.
 
 ### Install with shell tools
 
-Use the external installer included in the release archive at `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
+Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
 
 ```shell
 tar -xzf /path/to/geneos-includes.tar.gz
@@ -69,21 +72,21 @@ The script installs into a fresh version directory, keeps existing config templa
 
 ## How-To
 
-Installing include files only makes them available on disk. Use Gateway Setup Editor to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 
-| Task | Command |
-| --- | --- |
-| List configured/available includes | `geneos includes list` |
-| Include version directories in the listing | `geneos includes list --all` |
-| Show include use by Gateway | `geneos includes list --gateway` |
-| Point top-level links at a version | `geneos includes update --version v1.31.0` |
-| Preview repairs for broken include references | `geneos includes fix --dry-run` |
-| Repair broken references with unique same-name replacements | `geneos includes fix` |
-| Delete unused version directories and their links | `geneos includes delete 'v1.30.*'` |
+| Command                                    | Task                                                        |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| `geneos includes list`                     | List configured/available includes                          |
+| `geneos includes list --all`               | Include version directories in the listing                  |
+| `geneos includes list --gateway`           | Show include use by Gateway                                 |
+| `geneos includes update --version v1.31.0` | Point top-level links at a version                          |
+| `geneos includes fix --dry-run`            | Preview repairs for broken include references               |
+| `geneos includes fix`                      | Repair broken references with unique same-name replacements |
+| `geneos includes delete 'v1.30.*'`         | Delete unused version directories and their links           |
 
-`geneos includes update` and `delete` inspect Gateway setups before removing obsolete links or versions. `install --update` also updates links while installing. Use `geneos includes COMMAND --help` for options; the global `--host`/`-H` option selects the destination host.
+Both the `geneos includes update` and `geneos includes delete` commands check Gateway setups before removing obsolete links or versions. The `geneos includes install --update` command also updates links while installing. Use `geneos includes COMMAND --help` to see available options; the global `--host`/`-H` option selects the destination host.
 
 ### Manage with shell tools
 

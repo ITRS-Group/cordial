@@ -2641,7 +2641,7 @@ The `itrs.*.xml` files are functional includes. Treat them as read-only and upgr
 
 ## Files
 
-Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, and `scripts/install-includes.sh` for users installing without the `geneos` command. The `geneos includes install` command strips this wrapper and does not copy the standalone script into the Gateway's live include directory.
+Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
 
 | File | Purpose |
 | --- | --- |
@@ -2704,7 +2704,7 @@ The script installs into a fresh version directory, keeps existing config templa
 
 ## How-To
 
-Installing include files only makes them available on disk. Use Gateway Setup Editor to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 
@@ -2933,7 +2933,7 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
 
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
-The include view reports copies, Gateway usage, status flags, modification time, size, and location. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files.
+The include view reports copies, Gateway usage, status flags, modification time, size, and location. Paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files.
 
 The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
 
@@ -2946,11 +2946,11 @@ geneos includes list --gateway 'prod-*'
 geneos includes list --gateway gateway-a gateway-b
 ```
 
-Use `--long` for version, permissions, and owner columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column output uses human-readable sizes, while machine-readable formats use byte counts.
+Use `--long` for version, permissions, owner, remote latency, and certificate-validity columns where available. Owner information is not currently collected. The `--format` option accepts `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`; column output uses human-readable sizes, while machine-readable formats use byte counts. CSV, toolkit, JSON, and pretty outputs always use the long columns. CSV and toolkit headings use camelCase; column and table headings use NormalCase. Headings contain no spaces.
 
-Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Empty fields are omitted, as is `owner` because owner data is not collected. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
+Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
 
-In JSON output, the aggregate `flags` field is replaced by optional boolean fields: `disabled` (`D`), `local` (`L`), `readOnly` (`R`), `shared` (`S`), `remote` (`U`), `missing` (`X`), and `optional` (`o`). A field is included with value `true` only when that flag applies; false fields are omitted. Versioned includes are identified by their non-empty `version` field, so JSON does not repeat the `V` flag.
+Machine-readable formats include `status`, `shared`, `local`, `remote`, `readOnly`, `disabled`, and `optional` fields. CSV and toolkit use `"Y"` or `"N"` for boolean fields and empty cells for values that do not apply; JSON and pretty output only true flags as `"Y"`, omitting false or inapplicable flags. Status is `OK` by default, `DUPLICATES` on duplicate-basename summary rows, `NOT_FOUND` or `PERMISSION_DENIED` for local file errors, and `-` when a remote lookup is skipped (empty in CSV and toolkit). A remote HEAD request reports `OK`, `FAILED: <status-code>`, `TIMEOUT`, or `FAILED`. Long output also includes `latency` for the connection and HEAD request, rounded to whole milliseconds with an `ms` suffix, and `certValid`; certificate validity is checked only for HTTPS URLs. The same boolean output rules apply to `certValid`, so JSON does not distinguish an invalid certificate from one that was not checked.
 
 Flags identify include properties:
 

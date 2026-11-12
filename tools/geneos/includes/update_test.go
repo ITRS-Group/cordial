@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"archive/tar"
 	"errors"
 	"os"
 	"path/filepath"
@@ -320,7 +321,11 @@ func TestIncludeVersionLinkCleanup(t *testing.T) {
 				case "update":
 					err = Update(h, "v2.0.0", true)
 				case "install-update", "install-preserve":
-					archive := writeTestIncludeArchive(t, includeArchiveEntry{name: "v2.0.0/itrs.managed.xml", contents: "include"})
+					archive := writeTestIncludeArchive(t,
+						includeArchiveEntry{name: "geneos-includes-v2.0.0/", kind: tar.TypeDir},
+						includeArchiveEntry{name: "geneos-includes-v2.0.0/v2.0.0/", kind: tar.TypeDir},
+						includeArchiveEntry{name: "geneos-includes-v2.0.0/v2.0.0/itrs.managed.xml", contents: "include"},
+					)
 					err = Install(h, archive, true, operation == "install-update")
 				case "delete":
 					err = Delete(h, "v1.0.0")
