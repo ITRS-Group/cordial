@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-11 16:44:33 by PeterGalbavy on ITRSLP372-->
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-12 17:38:25 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<types>
 		<typeGroup name="Level 3 - Geneos Instances">
@@ -1294,6 +1294,7 @@
 					<rule name="Invalid Certs Headline">
 						<targets>
 							<target>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
+							<target>/geneos/gateway/directory/probe/managedEntity/sampler/dataview[(@name=&quot;Certificates&quot;)]/headlines/cell[(@name=&quot;invalid&quot;)]</target>
 						</targets>
 						<priority>1</priority>
 						<block>
@@ -2839,31 +2840,6 @@
 	<environments>
 		<environmentGroup name="Level 3 - Geneos">
 			<environment name="Level 3 - Geneos Defaults">
-				<!--Note: geneosExecConfigPath has a intentional default of a single space character. Without this space the command line containing an empty variable creates errors in the Netprobe log.-->
-				<var name="geneosExecHosts">
-					<string>-H localhost</string>
-				</var>
-				<var name="geneosExecPath">
-					<string>/usr/local/bin/geneos</string>
-				</var>
-				<var name="geneosExecConfigPath">
-					<string> </string>
-				</var>
-				<var name="instanceName">
-					<string>unknown</string>
-				</var>
-				<var name="instanceType">
-					<string>unknown</string>
-				</var>
-				<var name="instanceExecPath">
-					<string>unknown</string>
-				</var>
-				<var name="logFilePath">
-					<string>instance.log</string>
-				</var>
-				<var name="consoleLogFilePath">
-					<string>instance.txt</string>
-				</var>
 				<var name="SLOW_SAMPLE">
 					<integer>300</integer>
 				</var>
@@ -2966,5 +2942,15 @@ Create a copy of this environment, in the same hierarchy, in your main setup fil
 	</exportedData>
 	<operatingEnvironment>
 		<customDataviewMaxRows>500</customDataviewMaxRows>
+		<var name="geneosExecPath">
+			<string>/usr/local/bin/geneos</string>
+		</var>
+		<var name="geneosExecHosts">
+			<string>-H localhost</string>
+		</var>
+		<!-- Keep a single space when no command config argument is required. -->
+		<var name="geneosExecConfigPath">
+			<string> </string>
+		</var>
 	</operatingEnvironment>
 </gateway>

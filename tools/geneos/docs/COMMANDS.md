@@ -2653,7 +2653,7 @@ Release archives have a single top-level directory named `geneos-includes-v<vers
 | `config.level0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
 | `config.level1.infrastructure.xml` | Gateway setup template for infrastructure configuration and overrides. |
 | `config.level2.basic-application.xml` | Gateway setup template for application configuration. |
-| `config.level3.geneos.xml` | Example managed-entity hierarchy and override environments for Level 3 Geneos. |
+| `config.level3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Level 3 Geneos. |
 | `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
 
 After installation, files are organized like this:

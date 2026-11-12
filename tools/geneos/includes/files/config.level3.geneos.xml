@@ -14,6 +14,21 @@
 				<!--To enable, create a matching Managed Entity hierarchy in your main setup file and add a new Managed Entity connected to a Netprobe on the server you with to monitor.
 
 You may need to define your own Environment to override the paths to the binary etc.-->
+				<var name="instanceName">
+					<string>example</string>
+				</var>
+				<var name="instanceType">
+					<string>gateway</string>
+				</var>
+				<var name="instanceExecPath">
+					<string>/usr/local/bin/geneos</string>
+				</var>
+				<var name="logFilePath">
+					<string>gateway.log</string>
+				</var>
+				<var name="consoleLogFilePath">
+					<string>gateway.txt</string>
+				</var>
 				<probe ref="localhost"/>
 			</managedEntity>
 			<managedEntityGroup name="With Diagnostic Views">

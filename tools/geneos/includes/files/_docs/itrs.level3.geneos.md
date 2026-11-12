@@ -30,19 +30,26 @@ Use `config.level3.geneos.xml` as a template for a managed-entity hierarchy. Its
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Gateway&nbsp;Load | Inspect Gateway load from the Gateway statistics file. | Components, connections, rules grouped by several dimensions, database logging, Gateway SQL, rule threads, and data-quality history. `Rules by Sampler and Rule` and `Rules by Entity-Rule` are disabled in the type. |
 | Level&nbsp;3&nbsp;-&nbsp;Geneos&nbsp;Gateway&nbsp;Load&nbsp;XPaths | Inspect Gateway XPath load. | Absolute and relative XPath statistics. |
 
-The instance and diagnostic types set `SAMPLER_GROUP` to `Geneos Instances`; the Gateway-load types set it to `Gateway Load`. Component types attach the same two sampler includes, whose log and process selection is driven by the per-entity variables below.
+The instance and diagnostic types set `SAMPLER_GROUP` to `Geneos Instances`; the Gateway-load types set it to `Gateway Load`. Component types attach the same two sampler includes, whose log and process selection is driven by variables on each managed entity.
 
 ## Variables
 
-### Defaults and Tuning
+### Global Geneos Command Variables
 
-`Level 3 - Geneos Defaults` is used by the instance and diagnostics types:
+The `geneos` command settings are global variables under `operatingEnvironment`, not Type or Environment defaults. Change them there to affect toolkit queries in both the Instances and Diagnostics samplers.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `geneosExecPath` | `/usr/local/bin/geneos` | Executable used by the toolkit samplers. |
 | `geneosExecConfigPath` | A single space | Optional `geneos` command configuration argument. Preserve the space when no argument is needed; an empty value can produce malformed command lines. |
 | `geneosExecHosts` | `-H localhost` | Host argument passed to the `geneos` command queries. |
+
+### Sampling Defaults and Tuning
+
+`Level 3 - Geneos Defaults` is used by the instance, diagnostics, and component types. It provides sample intervals only:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
 | `SLOW_SAMPLE` | `300` seconds | Interval for slower inventory and summary samplers. |
 | `NORMAL_SAMPLE` | `20` seconds | Interval for running-process and diagnostic samplers. |
 | `FAST_SAMPLE` | `5` seconds | Defined for reuse; not used by the samplers in this include. |
@@ -61,28 +68,28 @@ Certificates are an exception to the interval defaults: they run once daily at 0
 
 ### Per-Entity Variables
 
-Component types inherit placeholder defaults from `Level 3 - Geneos Defaults`. Override them per entity for accurate process matching and log paths. Gateway-load types default `statsFilePath` to `stats.xml`; override it on a Gateway entity when its statistics file is elsewhere.
+Component Types have no defaults for the following variables. Set them directly on every managed entity that uses a component Type, either manually in Gateway Setup Editor or through a profile. Do not rely on an Environment or Type-level fallback; variable scope can prevent those values from reaching the component samplers. The disabled example entity in `config.level3.geneos.xml` shows one set of variables. Gateway-load types continue to default `statsFilePath` to `stats.xml`; override it on a Gateway entity when its statistics file is elsewhere.
 
-| Variable | Default | Used for |
+| Variable | Example value | Used for |
 | --- | --- | --- |
-| `instanceName` | `unknown` | Process descriptor alias and process matching. |
-| `instanceType` | `unknown` | Process descriptor alias and start/stop command arguments, such as `gateway` or `netprobe`. |
-| `instanceExecPath` | `unknown` | Matching the running process to the instance. |
-| `logFilePath` | `instance.log` | Component log-file monitoring. |
-| `consoleLogFilePath` | `instance.txt` | Console-log monitoring; the FKM include also has the component log file from the process descriptor. |
+| `instanceName` | `example` | Process descriptor alias and process matching; set to the actual instance name. |
+| `instanceType` | `gateway` | Process descriptor alias and start/stop command arguments; set to the component key such as `gateway` or `netprobe`. |
+| `instanceExecPath` | `/usr/local/bin/geneos` | Matching the running process to the instance. |
+| `logFilePath` | `gateway.log` | Component log-file monitoring; set to the actual log path. |
+| `consoleLogFilePath` | `gateway.txt` | Console-log monitoring; set to the actual console-log path. |
 | `statsFilePath` | `stats.xml` | Gateway-load statistics file path. |
 
-The component defaults are placeholders only: `unknown` will not match a real process, and the default log filenames may not exist. Override them with values for each monitored instance. The `statsFilePath` default is the relative filename `stats.xml`; override it on the Gateway entity if that file is not accessible from the monitoring Netprobe.
+The values shown are examples, not defaults supplied by the functional include. Set them to match each monitored instance. The `statsFilePath` default is the relative filename `stats.xml`; override it on the Gateway entity if that file is not accessible from the monitoring Netprobe.
 
 ## Override Environments
 
-The include declares defaults and empty override placeholders. To customize values, use Gateway Setup Editor to create or edit an Environment and set its variables, then select that Environment on the relevant Type assignment for a managed entity. An environment changes variable values; it does not add samplers or change the type's rule logic. The trees below are conceptual Setup Editor views; their top-level order follows Gateway XML, with managed entities before environment definitions.
+The include declares sampling defaults and empty override Environment placeholders. Use Environments for shared sample intervals and other scoped settings; the `geneosExec*` variables are global in `operatingEnvironment`, while component process and log variables must be set on each managed entity. An Environment does not add samplers or change the type's rule logic. The trees below are conceptual Setup Editor views; their top-level order follows Gateway XML, with managed entities before environment definitions.
 
 ### `Level 3 - Geneos Overrides`
 
 The example hierarchy in `config.level3.geneos.xml` attaches this environment to `Level 3 - Geneos Instances` and, in the nested subgroup, `Level 3 - Geneos Diagnostics`. The config file contains an empty copy under the same environment group; add shared override values to that Environment in Gateway Setup Editor. To use different settings for one type or entity, attach a custom Environment to that Type assignment instead.
 
-For example, to change the `geneos` executable, host, or sample intervals, use Gateway Setup Editor to add an Environment under the `Level 3 - Geneos` environment group, set the desired variables, then select it on the managed entity's `Level 3 - Geneos Instances` Type assignment:
+For example, to change the sample intervals, use Gateway Setup Editor to add or edit an Environment under the `Level 3 - Geneos` environment group, then select it on the managed entity's `Level 3 - Geneos Instances` Type assignment. Set global command variables under the Gateway's `operatingEnvironment` instead:
 
 ```text
 Gateway Setup Editor
@@ -93,12 +100,11 @@ Gateway Setup Editor
 └─ Environments
    └─ Environment group: Level 3 - Geneos
       └─ Environment: Level 3 - Geneos Overrides
-         ├─ geneosExecPath = /opt/geneos/bin/geneos
-         ├─ geneosExecHosts = -H geneos-host
-         └─ NORMAL_SAMPLE = 30
+         ├─ NORMAL_SAMPLE = 30
+         └─ SLOW_SAMPLE = 600
 ```
 
-Define only the variables to change. Keep `geneosExecConfigPath` as a single space if no config argument is required. The same environment can be attached to `Level 3 - Geneos Diagnostics`.
+Define only the sampling variables to change. The same Environment can be attached to `Level 3 - Geneos Diagnostics`.
 
 ### `Level 3 - Geneos Load Overrides`
 
