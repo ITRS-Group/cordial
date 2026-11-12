@@ -1,2 +1,37 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd"/>
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
+	<managedEntities>
+		<managedEntityGroup name="Level 3 - Geneos">
+			<attribute name="APPLICATION">Geneos</attribute>
+			<attribute name="CATEGORY">Information</attribute>
+			<attribute name="COMPONENT">Geneos</attribute>
+			<addTypes>
+				<type ref="Level 3 - Geneos Instances">
+					<environment ref="Level 3 - Geneos Overrides"/>
+				</type>
+			</addTypes>
+			<managedEntity disabled="true" name="example">
+				<!--To enable, create a matching Managed Entity hierarchy in your main setup file and add a new Managed Entity connected to a Netprobe on the server you with to monitor.
+
+You may need to define your own Environment to override the paths to the binary etc.-->
+				<probe ref="localhost"/>
+			</managedEntity>
+			<managedEntityGroup name="With Diagnostic Views">
+				<!--Place the Managed Entity in this group to add extra Dataviews including open files and network connections.-->
+				<addTypes>
+					<type ref="Level 3 - Geneos Diagnostics">
+						<environment ref="Level 3 - Geneos Overrides"/>
+					</type>
+				</addTypes>
+			</managedEntityGroup>
+		</managedEntityGroup>
+	</managedEntities>
+	<environments>
+		<environmentGroup name="Level 3 - Geneos">
+			<environment name="Level 3 - Geneos Overrides"/>
+		</environmentGroup>
+		<environmentGroup name="Level 3 - Geneos Gateway Load">
+			<environment name="Level 3 - Geneos Load Overrides"/>
+		</environmentGroup>
+	</environments>
+</gateway>

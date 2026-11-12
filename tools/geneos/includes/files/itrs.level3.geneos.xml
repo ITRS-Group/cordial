@@ -1,32 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-11 16:44:33 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
-	<managedEntities>
-		<managedEntityGroup name="Level 3 - Geneos">
-			<attribute name="APPLICATION">Geneos</attribute>
-			<attribute name="CATEGORY">Information</attribute>
-			<attribute name="COMPONENT">Geneos</attribute>
-			<addTypes>
-				<type ref="Level 0 - Geneos">
-					<environment ref="Level 3 - Geneos Overrides"/>
-				</type>
-			</addTypes>
-			<managedEntity disabled="true" name="example">
-				<!--To enable, create a matching Managed Entity hierarchy in your main setup file and add a new Managed Entity connected to a Netprobe on the server you with to monitor.
-
-You may need to define your own Environment to override the paths to the binary etc.-->
-				<probe ref="localhost"/>
-			</managedEntity>
-			<managedEntityGroup name="With Diagnostic Views">
-				<!--Place the Managed Entity in this group to add extra Dataviews including open files and network connections.-->
-				<addTypes>
-					<type ref="Level 0 - Geneos Extras">
-						<environment ref="Level 3 - Geneos Overrides"/>
-					</type>
-				</addTypes>
-			</managedEntityGroup>
-		</managedEntityGroup>
-	</managedEntities>
 	<types>
 		<typeGroup name="Level 3 - Geneos Instances">
 			<type name="Level 3 - Geneos Instances">
@@ -53,38 +27,47 @@ You may need to define your own Environment to override the paths to the binary 
 		</typeGroup>
 		<typeGroup name="Level 3 - Geneos Components">
 			<type name="Level 3 - Geneos Active Console">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Floating Netprobe">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Gateway">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Licence Daemon">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Netprobe">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Netprobe-Router">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Self Announcing Netprobe">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos SSO-Agent">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
 			<type name="Level 3 - Geneos Webserver">
+				<environment ref="Level 3 - Geneos Defaults"/>
 				<samplerInclude ref="Level 3 - Geneos Component Logs"/>
 				<samplerInclude ref="Level 3 - Geneos Component Process"/>
 			</type>
@@ -1172,11 +1155,11 @@ You may need to define your own Environment to override the paths to the binary 
 	<rules>
 		<ruleGroup name="Level 3 - Geneos">
 			<ruleGroup name="Level 3 - Geneos Diagnostics">
-				<default name="Level 0 - Geneos Extras">
+				<default name="Level 3 - Geneos Diagnostics">
 					<rule>
 						<contexts>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/rows/row/cell</context>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview/headlines/cell</context>
 						</contexts>
 						<priorityGroup>100</priorityGroup>
 					</rule>
@@ -1268,11 +1251,11 @@ You may need to define your own Environment to override the paths to the binary 
 				</ruleGroup>
 			</ruleGroup>
 			<ruleGroup name="Level 3 - Geneos Instances">
-				<default name="Level 0 - Geneos">
+				<default name="Level 3 - Geneos Instances">
 					<rule>
 						<contexts>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos&quot;)]/dataview/rows/row/cell</context>
-							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 0 - Geneos Extras&quot;)]/dataview/headlines/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Instances&quot;)]/dataview/rows/row/cell</context>
+							<context>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 3 - Geneos Diagnostics&quot;)]/dataview/headlines/cell</context>
 						</contexts>
 						<priorityGroup>100</priorityGroup>
 					</rule>
@@ -2866,6 +2849,21 @@ You may need to define your own Environment to override the paths to the binary 
 				<var name="geneosExecConfigPath">
 					<string> </string>
 				</var>
+				<var name="instanceName">
+					<string>unknown</string>
+				</var>
+				<var name="instanceType">
+					<string>unknown</string>
+				</var>
+				<var name="instanceExecPath">
+					<string>unknown</string>
+				</var>
+				<var name="logFilePath">
+					<string>instance.log</string>
+				</var>
+				<var name="consoleLogFilePath">
+					<string>instance.txt</string>
+				</var>
 				<var name="SLOW_SAMPLE">
 					<integer>300</integer>
 				</var>
@@ -2882,7 +2880,7 @@ Create a copy of this environment, in the same hierarchy, in your main setup fil
 		</environmentGroup>
 		<environmentGroup name="Level 3 - Geneos Gateway Load">
 			<environment name="Level 3 - Geneos Load Defaults">
-				<var name="statsFile">
+				<var name="statsFilePath">
 					<string>stats.xml</string>
 				</var>
 				<var name="gwLoadHistoryColumns">

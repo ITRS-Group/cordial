@@ -6,17 +6,17 @@
 				<roleProperties>
 					<roleProperty>Administrators</roleProperty>
 				</roleProperties>
-				<user name="LDN\bob">
+				<user disabled="true" name="LDN\bob">
 					<fullName>Bob Example</fullName>
 					<allowLogin>true</allowLogin>
 					<allowSystemAuth>true</allowSystemAuth>
 				</user>
-				<user name="LDN\bill">
+				<user disabled="true" name="LDN\bill">
 					<fullName>Bill Example</fullName>
 					<allowLogin>true</allowLogin>
 					<allowSystemAuth>true</allowSystemAuth>
 				</user>
-				<user name="Generic User">
+				<user disabled="true" name="Generic User">
 					<genericUser>true</genericUser>
 					<allowLogin>true</allowLogin>
 					<allowSystemAuth>true</allowSystemAuth>
@@ -26,7 +26,7 @@
 				<roleProperties>
 					<roleProperty>ReadOnly</roleProperty>
 				</roleProperties>
-				<user name="GWSharing">
+				<user disabled="true" name="GWSharing">
 					<!--PW geneos-->
 					<fullName>Gateway Sharing Account</fullName>
 					<password>
@@ -39,5 +39,40 @@
 				</user>
 			</userGroup>
 		</users>
+		<roles>
+			<role name="Administrators">
+				<roleProperties>
+					<roleProperty>Administrators</roleProperty>
+				</roleProperties>
+			</role>
+			<role name="ReadOnly">
+				<permissions>
+					<permission>
+						<command>
+							<targets>
+								<target>/*</target>
+							</targets>
+							<names>
+								<name>*</name>
+							</names>
+							<access>none</access>
+						</command>
+					</permission>
+					<permission>
+						<setup>
+							<files>
+								<mainFile>true</mainFile>
+								<file>*</file>
+							</files>
+							<access>none</access>
+							<locking>none</locking>
+						</setup>
+					</permission>
+				</permissions>
+				<roleProperties>
+					<roleProperty>ReadOnly</roleProperty>
+				</roleProperties>
+			</role>
+		</roles>
 	</authentication>
 </gateway>

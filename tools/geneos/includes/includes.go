@@ -15,7 +15,7 @@ var log = logger.Logger
 //go:embed files/*
 var IncludesFS embed.FS
 
-//go:embed README.md
+//go:embed files/README.md
 var includeCmdDescription string
 
 func init() {

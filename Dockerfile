@@ -268,14 +268,18 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 COPY VERSION /VERSION
 COPY tools/geneos/includes/files/itrs.*.xml /includes-source/
 COPY tools/geneos/includes/files/config.*.xml /includes-source/
+COPY tools/geneos/includes/files/install-includes.sh /includes-source/scripts/install-includes.sh
 RUN set -eux; \
     version=$(cat /VERSION); \
-    mkdir -p "/includes/$version" /includes/config; \
-    cp /includes-source/itrs.*.xml "/includes/$version/"; \
-    cp /includes-source/config.*.xml /includes/config/; \
+    archive_root="geneos-includes-$version"; \
+    mkdir -p "/includes/$archive_root/$version" "/includes/$archive_root/config" "/includes/$archive_root/scripts"; \
+    cp /includes-source/itrs.*.xml "/includes/$archive_root/$version/"; \
+    cp /includes-source/config.*.xml "/includes/$archive_root/config/"; \
+    cp /includes-source/scripts/install-includes.sh "/includes/$archive_root/scripts/"; \
     find /includes -type f -exec chmod a-x {} \;; \
-    find "/includes/$version" -type f -exec chmod a-w {} \;; \
-    tar --sort=name -czf /geneos-includes.tar.gz -C /includes "$version" config
+    find "/includes/$archive_root/$version" -type f -exec chmod a-w {} \;; \
+    chmod 0555 "/includes/$archive_root/scripts/install-includes.sh"; \
+    tar --sort=name -czf /geneos-includes.tar.gz -C /includes "$archive_root"
 
 FROM alpine AS cordial-build
 

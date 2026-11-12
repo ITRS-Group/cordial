@@ -22,16 +22,16 @@ func TestInstallEmbeddedLinkModes(t *testing.T) {
 			if err := os.MkdirAll(includesDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			link := filepath.Join(includesDir, "itrs.level0.authentication.xml")
-			if err := os.Symlink("previous/itrs.level0.authentication.xml", link); err != nil {
+			link := filepath.Join(includesDir, "itrs.level0.foundation.xml")
+			if err := os.Symlink("previous/itrs.level0.foundation.xml", link); err != nil {
 				t.Fatal(err)
 			}
 			if err := Install(h, "", true, update); err != nil {
 				t.Fatal(err)
 			}
-			want := "previous/itrs.level0.authentication.xml"
+			want := "previous/itrs.level0.foundation.xml"
 			if update {
-				want = filepath.Join(cordial.VERSION, "itrs.level0.authentication.xml")
+				want = filepath.Join(cordial.VERSION, "itrs.level0.foundation.xml")
 			}
 			if target, err := os.Readlink(link); err != nil || target != want {
 				t.Fatalf("include link = %q, %v; want %q", target, err, want)
@@ -81,12 +81,12 @@ func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.
 			if err := os.MkdirAll(includesDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			existing := filepath.Join(includesDir, "itrs.level0.authentication.xml")
+			existing := filepath.Join(includesDir, "itrs.level0.foundation.xml")
 			if existingFile {
 				if err := os.WriteFile(existing, []byte("local"), 0644); err != nil {
 					t.Fatal(err)
 				}
-			} else if err := os.Symlink("previous/itrs.level0.authentication.xml", existing); err != nil {
+			} else if err := os.Symlink("previous/itrs.level0.foundation.xml", existing); err != nil {
 				t.Fatal(err)
 			}
 			if err := Install(h, "", true, false); err != nil {
@@ -96,7 +96,7 @@ func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.
 				if data, err := os.ReadFile(existing); err != nil || string(data) != "local" {
 					t.Fatalf("existing file = %q, %v", data, err)
 				}
-			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.authentication.xml" {
+			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.foundation.xml" {
 				t.Fatalf("existing link = %q, %v", target, err)
 			}
 		})
@@ -181,11 +181,15 @@ func writeTestIncludeArchive(t *testing.T, entries ...includeArchiveEntry) strin
 func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 	h := newTestGatewayHost(t)
 	version := "v2.3.4-rc.1+build.7"
+	root := "geneos-includes-" + version
 	archive := writeTestIncludeArchive(t,
-		includeArchiveEntry{name: version + "/", kind: tar.TypeDir},
-		includeArchiveEntry{name: "config/", kind: tar.TypeDir},
-		includeArchiveEntry{name: version + "/itrs.test.xml", contents: "managed"},
-		includeArchiveEntry{name: "config/config.test.xml", contents: "template"},
+		includeArchiveEntry{name: root + "/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/" + version + "/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/config/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/scripts/", kind: tar.TypeDir},
+		includeArchiveEntry{name: root + "/" + version + "/itrs.test.xml", contents: "managed"},
+		includeArchiveEntry{name: root + "/config/config.test.xml", contents: "template"},
+		includeArchiveEntry{name: root + "/scripts/install-includes.sh", contents: "#!/bin/sh\\n"},
 	)
 	if err := Install(h, archive, false, false); err != nil {
 		t.Fatal(err)
@@ -210,6 +214,9 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 	link := h.PathTo("gateway", "includes", "itrs.test.xml")
 	if target, err := os.Readlink(link); err != nil || target != version+"/itrs.test.xml" {
 		t.Fatalf("include link = %q, %v", target, err)
+	}
+	if _, err := os.Stat(h.PathTo("gateway", "includes", "scripts", "install-includes.sh")); !os.IsNotExist(err) {
+		t.Fatalf("install script was unexpectedly installed into the Gateway include directory: %v", err)
 	}
 }
 
@@ -244,8 +251,8 @@ func TestInstallLinkModes(t *testing.T) {
 					t.Fatal(err)
 				}
 				archive := writeTestIncludeArchive(t,
-					includeArchiveEntry{name: "v1.2.3/itrs.test.xml", contents: "managed"},
-					includeArchiveEntry{name: "v1.2.3/itrs.new.xml", contents: "new"},
+					includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"},
+					includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.new.xml", contents: "new"},
 				)
 				err := Install(h, archive, options.force, options.update)
 				wantErr := options.update && !options.force
@@ -276,8 +283,8 @@ func TestInstallLinkModes(t *testing.T) {
 func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 	h := newTestGatewayHost(t)
 	first := writeTestIncludeArchive(t,
-		includeArchiveEntry{name: "v1.2.3/itrs.test.xml", contents: "first"},
-		includeArchiveEntry{name: "config/config.test.xml", contents: "local"},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "first"},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.test.xml", contents: "local"},
 	)
 	if err := Install(h, first, false, false); err != nil {
 		t.Fatal(err)
@@ -293,8 +300,8 @@ func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 		t.Fatalf("unchanged include backups = %v, %v", backups, err)
 	}
 	second := writeTestIncludeArchive(t,
-		includeArchiveEntry{name: "v1.2.3/itrs.test.xml", contents: "second"},
-		includeArchiveEntry{name: "config/config.test.xml", contents: "replacement"},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "second"},
+		includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.test.xml", contents: "replacement"},
 	)
 	if err := Install(h, second, true, true); err != nil {
 		t.Fatal(err)
@@ -328,28 +335,30 @@ func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 }
 
 func TestInstallRejectsInvalidArchiveEntries(t *testing.T) {
-	valid := includeArchiveEntry{name: "v1.2.3/itrs.test.xml", contents: "managed"}
+	valid := includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"}
 	for _, test := range []struct {
 		name    string
 		entries []includeArchiveEntry
 	}{
 		{name: "empty"},
-		{name: "config-only", entries: []includeArchiveEntry{{name: "config/config.test.xml"}}},
-		{name: "no-prefix", entries: []includeArchiveEntry{{name: "1.2.3/itrs.test.xml"}}},
-		{name: "short-version", entries: []includeArchiveEntry{{name: "v1.2/itrs.test.xml"}}},
-		{name: "leading-zero", entries: []includeArchiveEntry{{name: "v01.2.3/itrs.test.xml"}}},
-		{name: "prerelease-leading-zero", entries: []includeArchiveEntry{{name: "v1.2.3-01/itrs.test.xml"}}},
-		{name: "multiple-versions", entries: []includeArchiveEntry{valid, {name: "v2.0.0/itrs.other.xml"}}},
+		{name: "unwrapped", entries: []includeArchiveEntry{{name: "v1.2.3/itrs.test.xml"}}},
+		{name: "config-only", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/config/config.test.xml"}}},
+		{name: "no-prefix", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/1.2.3/itrs.test.xml"}}},
+		{name: "short-version", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v1.2/itrs.test.xml"}}},
+		{name: "leading-zero", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v01.2.3/itrs.test.xml"}}},
+		{name: "prerelease-leading-zero", entries: []includeArchiveEntry{{name: "geneos-includes-v1.2.3/v1.2.3-01/itrs.test.xml"}}},
+		{name: "multiple-versions", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v2.0.0/itrs.other.xml"}}},
 		{name: "traversal", entries: []includeArchiveEntry{valid, {name: "../outside.xml"}}},
-		{name: "nested-traversal", entries: []includeArchiveEntry{valid, {name: "v1.2.3/../../outside.xml"}}},
+		{name: "nested-traversal", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/../../outside.xml"}}},
 		{name: "absolute", entries: []includeArchiveEntry{valid, {name: "/outside.xml"}}},
-		{name: "backslash", entries: []includeArchiveEntry{valid, {name: `v1.2.3/itrs.\outside.xml`}}},
+		{name: "backslash", entries: []includeArchiveEntry{valid, {name: `geneos-includes-v1.2.3/v1.2.3/itrs.\outside.xml`}}},
 		{name: "duplicate", entries: []includeArchiveEntry{valid, valid}},
-		{name: "symlink", entries: []includeArchiveEntry{valid, {name: "v1.2.3/itrs.link.xml", kind: tar.TypeSymlink}}},
-		{name: "hardlink", entries: []includeArchiveEntry{valid, {name: "v1.2.3/itrs.link.xml", kind: tar.TypeLink}}},
-		{name: "unexpected-file", entries: []includeArchiveEntry{valid, {name: "v1.2.3/README.md"}}},
-		{name: "versioned-config", entries: []includeArchiveEntry{valid, {name: "v1.2.3/config.test.xml"}}},
-		{name: "nested-file", entries: []includeArchiveEntry{valid, {name: "v1.2.3/sub/itrs.test.xml"}}},
+		{name: "symlink", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/itrs.link.xml", kind: tar.TypeSymlink}}},
+		{name: "hardlink", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/itrs.link.xml", kind: tar.TypeLink}}},
+		{name: "unexpected-file", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/README.md"}}},
+		{name: "unexpected-script", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/scripts/other.sh"}}},
+		{name: "versioned-config", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/config.test.xml"}}},
+		{name: "nested-file", entries: []includeArchiveEntry{valid, {name: "geneos-includes-v1.2.3/v1.2.3/sub/itrs.test.xml"}}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			h := newTestGatewayHost(t)
@@ -368,7 +377,7 @@ func TestInstallRejectsCorruptArchive(t *testing.T) {
 	for _, kind := range []string{"checksum", "truncated", "not-gzip"} {
 		t.Run(kind, func(t *testing.T) {
 			h := newTestGatewayHost(t)
-			archive := writeTestIncludeArchive(t, includeArchiveEntry{name: "v1.2.3/itrs.test.xml", contents: "managed"})
+			archive := writeTestIncludeArchive(t, includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"})
 			data, err := os.ReadFile(archive)
 			if err != nil {
 				t.Fatal(err)

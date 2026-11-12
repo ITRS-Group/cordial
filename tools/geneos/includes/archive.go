@@ -36,6 +36,8 @@ func stageIncludeArchive(source io.Reader, staging string) (string, error) {
 
 func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 	var version string
+	var archiveRoot string
+	var archiveRootVersion string
 	includeCount := 0
 	seen := make(map[string]bool)
 	for {
@@ -51,14 +53,32 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 			return "", fmt.Errorf("invalid include archive path %q", header.Name)
 		}
 		parts := strings.Split(name, "/")
+		if len(parts) == 1 && strings.HasPrefix(parts[0], "geneos-includes-") && header.Typeflag == tar.TypeDir {
+			if archiveRoot != "" {
+				return "", fmt.Errorf("include archive contains multiple root directories")
+			}
+			archiveRoot = parts[0]
+			archiveRootVersion = strings.TrimPrefix(archiveRoot, "geneos-includes-")
+			if !includeVersionPattern.MatchString(archiveRootVersion) {
+				return "", fmt.Errorf("invalid include archive root %q: expected geneos-includes-<version>", archiveRoot)
+			}
+			continue
+		}
+		if archiveRoot == "" || parts[0] != archiveRoot || len(parts) < 2 {
+			return "", fmt.Errorf("include archive entry %q must be inside a geneos-includes-<version> directory", header.Name)
+		}
+		parts = parts[1:]
 		isVersion := includeVersionPattern.MatchString(parts[0])
 		if isVersion {
+			if parts[0] != archiveRootVersion {
+				return "", fmt.Errorf("include archive root version %q does not match contents version %q", archiveRootVersion, parts[0])
+			}
 			if version != "" && version != parts[0] {
 				return "", fmt.Errorf("include archive contains multiple versions")
 			}
 			version = parts[0]
-		} else if parts[0] != "config" {
-			return "", fmt.Errorf("invalid include archive directory %q: expected a v-prefixed semantic version or config", parts[0])
+		} else if parts[0] != "config" && parts[0] != "scripts" {
+			return "", fmt.Errorf("invalid include archive directory %q: expected a v-prefixed semantic version, config, or scripts", parts[0])
 		}
 		if header.Typeflag == tar.TypeDir && len(parts) == 1 {
 			continue
@@ -69,6 +89,8 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 		pattern := path.Base(ConfigPattern)
 		if isVersion {
 			pattern = path.Base(IncludePattern)
+		} else if parts[0] == "scripts" {
+			pattern = "install-includes.sh"
 		}
 		if matched, _ := path.Match(pattern, parts[1]); !matched {
 			return "", fmt.Errorf("unexpected include archive file %q", header.Name)

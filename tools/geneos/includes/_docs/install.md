@@ -1,6 +1,6 @@
 Install include files embedded in the `geneos` executable or from a local `.tar.gz` archive to the selected host. With no archive argument, the embedded files and configuration templates are installed. `extract` is an alias for `install` and accepts the same arguments and options.
 
-The archive must contain one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`), containing `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins.
+The archive must contain a single top-level directory named `geneos-includes-<version>` (for example `geneos-includes-v1.31.0`). Inside it, one directory named with a `v`-prefixed semantic version (for example `v1.31.0` or `v1.31.0-rc.1`) contains `itrs.*.xml` include files. Unversioned `config.*.xml` templates belong in a separate `config/` directory; the standalone `scripts/install-includes.sh` may also be included. The wrapper's version must match the version directory. Links, duplicate files, unexpected entries and unsafe paths are rejected before installation begins, and `geneos includes install` strips the wrapper before staging the files.
 
 Managed includes are installed under `gateway/includes/<version>`, including when that directory already exists. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
 
