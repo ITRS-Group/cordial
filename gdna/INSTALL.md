@@ -491,7 +491,7 @@ imported "etc/geneos/gdna/gdna.include.xml" to localhost:/opt/geneos/gateway/gat
 > [!NOTE]
 > Note the use of the leading `./=` is **not** a typo in the argument `./=etc/geneos/gdna/gdna.include.xml` above. This is so that the path or file name is not interpreted as an instance name. Future version of `geneos` may address this issue through more explicit command line syntax.
 
-Open your GSE and add the new include, using the path `../../gateway_shared/gdna.include.xml` and a priority _that is different_ from all other includes (and the main setup file):
+Open the Gateway Setup Editor (GSE) and add the new include, using the path `../../gateway_shared/gdna.include.xml` and a priority _that is different_ from all other includes (and the main setup file):
 
 ![GSE Add include](screenshots/gdna-1.png)
 
