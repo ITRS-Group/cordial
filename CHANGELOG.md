@@ -103,6 +103,8 @@
 
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
 
+  * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
+
 * `pkg/host`
 
   * Fix `CopyAll` silently ignoring directory walk errors when copying from a remote host.
