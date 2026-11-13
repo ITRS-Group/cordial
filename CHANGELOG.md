@@ -105,6 +105,8 @@
 
   * Fix `geneos deploy profile` (and `geneos add`) leaving partly created instances behind when creation fails, for example when a package download fails. Previously a retry treated the leftover profile as already existing and did not apply it, so members such as a Gateway were created without profile parameters like `options=-demo`. Failed creations are now rolled back, and redeploying an existing profile reapplies it to its members.
 
+  * Fix package installs leaving a partial release directory after a failed or interrupted unpack, which later appeared to be a valid installed version. Archives are now unpacked into a hidden staging directory and only renamed into place when complete; leftover staging directories are ignored and replaced on retry.
+
   * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
 
 * `pkg/host`

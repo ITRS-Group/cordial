@@ -284,9 +284,24 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 	if _, err = h.Stat(basedir); err == nil {
 		return h.HostPath(basedir), fs.ErrExist
 	}
-	if err = h.MkdirAll(basedir, 0775); err != nil {
+
+	// unpack into a hidden staging directory and rename it into place
+	// only when complete, so that a failed or interrupted install never
+	// leaves a partial release that later looks like it is installed
+	finaldir := basedir
+	staging := StagingDir(h, finaldir)
+	if err = h.RemoveAll(staging); err != nil {
 		return
 	}
+	if err = h.MkdirAll(staging, 0775); err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			h.RemoveAll(staging)
+		}
+	}()
+	basedir = staging
 
 	stripFirstDir := func(name string) string {
 		if _, after, ok := strings.Cut(name, "/"); ok {
@@ -339,6 +354,11 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		err = fmt.Errorf("file extension %q not valid", suffix)
 		return
 	}
+
+	if err = h.Rename(staging, finaldir); err != nil {
+		return
+	}
+	basedir = finaldir
 
 	log.Debug("installed archive", slog.String("filename", filename), slog.String("destination", h.HostPath(basedir)))
 

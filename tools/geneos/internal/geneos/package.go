@@ -96,7 +96,7 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 
 	// latest, _ := LatestInstalledVersion(h, ct, "")
 	for _, ent := range ents {
-		if ent.IsDir() {
+		if ent.IsDir() && !IsStagingDir(ent.Name()) {
 			info, err := ent.Info()
 			if err != nil {
 				// skip entries with errors

@@ -101,8 +101,11 @@ func InstalledReleases(h *Host, ct *Component) (versions []string, err error) {
 		return
 	}
 
-	// remove non-directories
+	// remove non-directories and incomplete installs
 	ents = slices.DeleteFunc(ents, func(d fs.DirEntry) bool {
+		if IsStagingDir(d.Name()) {
+			return true
+		}
 		st, err := h.Lstat(h.Join(dir, d.Name()))
 		return err != nil || !st.IsDir()
 	})
@@ -270,4 +273,18 @@ func CompareVersion(version1, version2 string) int {
 	}
 
 	return strings.Compare(v1parts[0], v2parts[0])
+}
+
+const stagingPrefix = ".installing-"
+
+// StagingDir returns the hidden sibling directory used to unpack a
+// release before it is renamed to dir.
+func StagingDir(h *Host, dir string) string {
+	return h.Join(h.Dir(dir), stagingPrefix+h.Base(dir))
+}
+
+// IsStagingDir reports whether name is a release staging directory,
+// which may be left behind by an interrupted install.
+func IsStagingDir(name string) bool {
+	return strings.HasPrefix(name, stagingPrefix)
 }
