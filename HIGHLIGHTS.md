@@ -8,14 +8,11 @@ for full details and fixes, see the [changelog](CHANGELOG.md).
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
 > [!IMPORTANT]
-> The original `servicenow` integration, its example configuration and its
-> documentation are no longer included in releases; v1.30.1 was the last
-> version to ship them. Consider moving to `servicenow2` or `ims-gateway`.
-> `servicenow2` remains in releases.
->
-> The `pagerduty` integration, its default configuration and its documentation
-> are also no longer included in releases; v1.30.1 was the last version to
-> ship them. Retain the earlier release or build the integration from source.
+> The original `servicenow` integration, `pagerduty` and `san-config`, together
+> with their configurations and documentation, are no longer included in
+> releases. Use the versions in v1.30.1 or build them from source. For
+> ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain
+> in releases.
 
 * **Site names:** Set an installation-wide site name for Gateway configuration
   include directories and filename prefixes. Supplied profiles use the site

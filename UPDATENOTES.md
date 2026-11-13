@@ -9,13 +9,14 @@ and fixes, and [Highlights](HIGHLIGHTS.md) for new features.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
-* **Original ServiceNow integration:** Releases no longer include
-  `servicenow`, its example configuration or its documentation. The last
-  version to ship them was v1.30.1. Consider moving to `servicenow2` or
-  `ims-gateway`; `servicenow2` remains in releases.
-* **PagerDuty integration:** Releases no longer include `pagerduty`, its default
-  configuration or its documentation. The last version to ship them was
-  v1.30.1. Retain the earlier release or build the integration from source.
+* **Removed from releases:** The original `servicenow` integration,
+  `pagerduty` and `san-config`, together with their configurations and
+  documentation, are no longer shipped. Use the versions in v1.30.1 or build
+  them from source. For ServiceNow, consider moving to `servicenow2` or
+  `ims-gateway`; both remain in releases.
+* **Release archive includes:** The main archive no longer contains
+  `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive
+  or the embedded files managed by `geneos includes` instead.
 * **Includes commands:** Remove `--force`/`-F` from scripts using `geneos
   includes extract` or `update`. Re-extraction no longer requires it. Existing
   top-level files and links are only replaced with `extract --update`, `install

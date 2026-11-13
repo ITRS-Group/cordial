@@ -45,7 +45,12 @@ sudo mv dv2email geneos /usr/local/bin
 
 ### Configure `dv2email`
 
-Now create `dv2email.yaml` configuration file(s). You will need at least one file for the program to locate your Gateway and SMTP servers. In normal operation you should use these files:
+Now create `dv2email.yaml` configuration file(s). You will need at least one file for the program to locate your Gateway and SMTP servers.
+
+The release archive includes `etc/geneos/dv2email.example.yaml`, a copy of the
+documented built-in defaults, as a reference when creating your configuration.
+
+In normal operation you should use these files:
 
 * `${HOME}/.config/geneos/dv2email.yaml` - where `${HOME}` is the home directory of the user running the Gateway(s)
 

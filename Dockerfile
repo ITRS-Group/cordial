@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 # base files
 COPY cordial.go VERSION README.md CHANGELOG.md UPDATENOTES.md HIGHLIGHTS.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, san-config
+# tools
 COPY tools /app/cordial/tools
 # integrations
 COPY integrations /app/cordial/integrations/
@@ -46,10 +46,6 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     # dv2email
     cd /app/cordial/tools/dv2email; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    # san-config (inc Windows version)
-    cd /app/cordial/tools/san-config; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w'; \
     # servicenow2
     cd /app/cordial/integrations/servicenow2; \
     go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
@@ -74,7 +70,7 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
 # base files
 COPY cordial.go VERSION README.md CHANGELOG.md UPDATENOTES.md HIGHLIGHTS.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, san-config
+# tools
 COPY tools /app/cordial/tools
 # integrations
 COPY integrations /app/cordial/integrations/
@@ -144,7 +140,7 @@ RUN --mount=type=cache,target=/root/.npm,sharing=locked \
 # base files
 COPY VERSION README.md CHANGELOG.md UPDATENOTES.md HIGHLIGHTS.md /app/cordial/
 COPY pkg /app/cordial/pkg
-# geneos, dv2email, san-config
+# tools
 COPY tools /app/cordial/tools
 # integrations
 COPY integrations /app/cordial/integrations/
@@ -158,7 +154,6 @@ COPY tools/ims-gateway/*.md ims-gateway/
 COPY tools/ims-gateway/screenshots/ ims-gateway/screenshots/
 COPY tools/dv2email/README.md dv2email.md
 COPY tools/dv2email/screenshots/ screenshots/
-COPY tools/san-config/README.md san-config.md
 COPY gdna/*.md gdna/
 COPY gdna/screenshots/ screenshots/
 COPY integrations/servicenow2/README.md servicenow2.md
@@ -166,7 +161,7 @@ COPY libraries/libemail/README.md libemail.md
 COPY libraries/libalert/README.md libalert.md
 
 ARG MERMAID=".mermaid"
-ARG READMEDIRS="tools/dv2email tools/san-config integrations/servicenow2 libraries/libemail libraries/libalert"
+ARG READMEDIRS="tools/dv2email integrations/servicenow2 libraries/libemail libraries/libalert"
 RUN set -eux; \
     rm -f /app/cordial/tools/geneos/DOCUMENTATION.md /app/cordial/tools/geneos/NOTES.md /app/cordial/tools/geneos/IMS.md /app/cordial/tools/geneos/INSTALL.md; \
     echo '{ "args": ["--no-sandbox"] }' > /puppeteer.json; \
@@ -253,6 +248,7 @@ RUN set -eux; \
         mmdc -p /puppeteer.json -i "$name.md" -o "/tmp/${name}${MERMAID}.md"; \
         mdpdf "/tmp/${name}${MERMAID}.md" "$name.pdf" --border=15mm --gh-style; \
     done; \
+    cp /app/cordial/README.md README.md; \
     mmdc -p /puppeteer.json -i /app/cordial/README.md -o /app/cordial/README${MERMAID}.md; \
     mdpdf /app/cordial/README${MERMAID}.md README.pdf --border=15mm --gh-style
 
@@ -308,13 +304,7 @@ COPY --from=build /app/cordial/tools/geneos/geneos.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway /cordial/bin/
 COPY --from=build /app/cordial/tools/ims-gateway/ims-gateway.exe /cordial/bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /cordial/bin/
-
-# tools/geneos include files
-COPY --from=build /app/cordial/tools/geneos/includes/files/*.xml /cordial/etc/geneos/includes/
-
-# san-config and default YAML
-COPY --from=build /app/cordial/tools/san-config/san-config /cordial/bin/
-COPY --from=build /app/cordial/tools/san-config/cmd/san-config.defaults.yaml /cordial/etc/geneos/
+COPY --from=build /app/cordial/tools/dv2email/cmd/dv2email.defaults.yaml /cordial/etc/geneos/dv2email.example.yaml
 
 # servicenow2
 COPY --from=build /app/cordial/integrations/servicenow2/servicenow2 /cordial/bin/
@@ -360,7 +350,6 @@ RUN --mount=type=cache,id=debian-apt-cache,target=/var/cache/apt,sharing=locked 
     useradd -ms /bin/bash geneos
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 WORKDIR /home/geneos
@@ -377,7 +366,6 @@ RUN --mount=type=cache,id=ubi8-dnf,target=/var/cache/dnf,sharing=locked \
 RUN useradd -ms /bin/bash geneos
 COPY --from=build /app/cordial/tools/geneos/geneos /bin/
 COPY --from=build /app/cordial/tools/dv2email/dv2email /bin/
-COPY --from=build /app/cordial/tools/san-config/san-config /bin/
 COPY --from=build-ubi8 /app/cordial/libraries/libemail/libemail.so /lib/
 COPY --from=build /app/cordial/gdna/gdna /bin/
 WORKDIR /home/geneos

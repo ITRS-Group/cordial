@@ -29,9 +29,17 @@
 
 ## Version v1.31.0 Changes
 
-* **Breaking Change**: The original `servicenow` integration, its example configuration and its documentation are no longer included in releases. The last release to ship them was v1.30.1. Users should consider moving to `servicenow2` or `ims-gateway`; `servicenow2` remains included in releases.
+* **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
 
-* **Breaking Change**: The `pagerduty` integration, its default configuration and its documentation are no longer included in releases. The last release to ship them was v1.30.1. Existing users should retain the earlier release or build the integration from source.
+  * The original `servicenow` integration
+  * `pagerduty`
+  * `san-config`
+
+  Use the versions shipped in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
+
+* **Breaking Change**: The main Cordial release archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded includes managed by `geneos includes` instead.
+
+* The release archive now includes a `dv2email.example.yaml` configuration reference alongside the other example configurations.
 
 * `tools/geneos`
 
@@ -62,6 +70,8 @@
   * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
 
 ## Version v1.31.0 Fixes
+
+* Include the top-level README in Markdown as well as PDF in release documentation.
 
 * `gdna`
 

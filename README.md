@@ -58,7 +58,6 @@ The `geneos` command also includes tools for many tasks that might otherwise nee
 | Tool | Purpose |
 | --- | --- |
 | [`files2dv`](tools/files2dv/README.md) | Builds Geneos Toolkit-compatible Dataview data from files. Its background push mode is not implemented. |
-| [`san-config`](tools/san-config/README.md) | Serves inventory-based configuration to Self-Announcing Netprobes. |
 
 ## Go packages
 
