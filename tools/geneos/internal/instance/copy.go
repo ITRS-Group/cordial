@@ -121,6 +121,14 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		dst.Unload()
 	}
 
+	// copy into the canonical instance directory, which must not already
+	// exist, so a failure never removes or merges with existing data
+	_, _, dName := ParseName(destination, geneos.LOCAL)
+	dstHome := dHost.Join(ct.InstancesDir(dHost), dName)
+	if _, err = dHost.Stat(dstHome); err == nil {
+		return fmt.Errorf("%s: destination directory %q already exists", destination, dstHome)
+	}
+
 	if opts.move {
 		if IsRunning(src) {
 			if err = Stop(src, WithStopForce(true)); err == nil {
@@ -137,8 +145,6 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		}
 	}
 
-	_, _, dName := ParseName(destination, geneos.LOCAL)
-
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
 	ncf := newdst.Config()
@@ -152,13 +158,8 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 	// set override parameters here
 	ncf.SetKeyValuePairs(opts.params...)
 
-	// copy directory
-	if err = host.CopyAll(src.Host(), src.Home(), dHost, dst.Home()); err != nil {
-		log.Debug("error copying directory", slog.Any("error", err))
-		return
-	}
-
-	// delete one or the other, depending, after finishing other ops
+	// delete one or the other, depending, after finishing other ops.
+	// registered before copying so a partial copy is also removed
 	defer func(srcname string, srcrem *geneos.Host, srchome string, dst geneos.Instance) {
 		if done {
 			if opts.move {
@@ -171,13 +172,19 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			}
 		} else {
 			// remove new instance
-			log.Debug("removing new instance", slog.String("instance", dst.String()))
-			dst.Host().RemoveAll(dst.Home())
+			log.Debug("removing new instance", slog.String("directory", dstHome))
+			dHost.RemoveAll(dstHome)
 		}
 	}(src.String(), src.Host(), src.Home(), dst)
 
+	// copy directory
+	if err = host.CopyAll(src.Host(), src.Home(), dHost, dstHome); err != nil {
+		log.Debug("error copying directory", slog.Any("error", err))
+		return
+	}
+
 	// XXX update *Home manually, as it's not just the prefix
-	config.Set(ncf, "home", dHost.Join(dst.Type().InstancesDir(dHost), dName))
+	config.Set(ncf, "home", dstHome)
 
 	// only set a new port if not set through command line parameters
 	if config.Get[uint16](ncf, "port") == 0 {

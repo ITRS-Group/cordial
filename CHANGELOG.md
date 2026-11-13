@@ -109,6 +109,8 @@
 
   * Fix archive downloads leaving a truncated archive in the download directory after a failure, which a later install could reuse. Downloads are now written to a hidden temporary file and renamed only when complete. HTTP response bodies are now always closed.
 
+  * Fix `geneos copy` and `geneos move` to refuse a destination whose instance directory already exists, rather than copying into it and then deleting it if the operation failed. Partially copied directories are now removed on failure, and the check is made before stopping the source instance for a move.
+
   * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
 
 * `pkg/host`
