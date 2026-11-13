@@ -36,11 +36,9 @@ func NewClient(url *url.URL, options ...Option) (c *Client) {
 	opt := &xmlrpcOptions{}
 	evalOptions(opt, options...)
 	c = &Client{
-		Client: http.Client{
-			Transport: &http.Transport{
-				Proxy:           http.ProxyFromEnvironment,
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: opt.insecureSkipVerify},
-			},
+		Transport: &http.Transport{
+			Proxy:           http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: opt.insecureSkipVerify},
 		},
 		url: url,
 	}

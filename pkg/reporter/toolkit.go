@@ -45,13 +45,11 @@ func init() {
 func newToolkitReporter(format string, w io.Writer, options ...any) (Reporter, error) {
 	opts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
 	return &ToolkitReporter{
-		reporterCommon: reporterCommon{
-			format:        "toolkit",
-			scrambleNames: opts.scrambleNames,
-		},
-		w:         w,
-		c:         csv.NewWriter(w),
-		headlines: make(map[string]string),
+		format:        "toolkit",
+		scrambleNames: opts.scrambleNames,
+		w:             w,
+		c:             csv.NewWriter(w),
+		headlines:     make(map[string]string),
 	}, nil
 }
 

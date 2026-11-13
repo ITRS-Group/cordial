@@ -40,6 +40,16 @@ func retErrIfFalse(ret bool, err error) error {
 	return nil
 }
 
+func newCommand(program Program) (*exec.Cmd, error) {
+	cmd := exec.Command(program.Executable, program.Args...)
+	if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+		return nil, err
+	}
+	cmd.Env = program.Env
+	cmd.Dir = program.WorkingDir
+	return cmd, nil
+}
+
 // Start runs a process on host h. It is run detached in the background
 // unless Foreground is true.
 //
@@ -117,12 +127,10 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 
 	switch {
 	case program.Foreground:
-		cmd := exec.Command(program.Executable, program.Args...)
-		if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+		cmd, err := newCommand(program)
+		if err != nil {
 			return 0, err
 		}
-		cmd.Env = program.Env
-		cmd.Dir = program.WorkingDir
 		if _, err := h.Run(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
@@ -130,12 +138,10 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		go reap.ReapChildren(nil, nil, nil, nil)
 		go func() {
 			for {
-				cmd := exec.Command(program.Executable, program.Args...)
-				if setCredentialsFromUsername(cmd, program.Username) != nil {
+				cmd, err := newCommand(program)
+				if err != nil {
 					return
 				}
-				cmd.Env = program.Env
-				cmd.Dir = program.WorkingDir
 				h.Run(cmd, host.ProcessErrfile(program.ErrLog))
 				if program.Wait != 0 {
 					time.Sleep(program.Wait)
@@ -145,12 +151,10 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 			}
 		}()
 	default:
-		cmd := exec.Command(program.Executable, program.Args...)
-		if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+		cmd, err := newCommand(program)
+		if err != nil {
 			return 0, err
 		}
-		cmd.Env = program.Env
-		cmd.Dir = program.WorkingDir
 		if _, err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}

@@ -8,7 +8,7 @@ import (
 	"net"
 	"path"
 	"regexp"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -214,7 +214,7 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 			ports = append(ports, port)
 		}
 	}
-	sort.Ints(ports)
+	slices.Sort(ports)
 	return
 }
 

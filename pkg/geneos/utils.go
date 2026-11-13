@@ -75,10 +75,10 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 			continue
 		}
 		probes[f.Name] = Probe{
-			Name:      f.Name,
-			Type:      ProbeTypeFloating,
-			Disabled:  f.Disabled,
-			ProbeInfo: ProbeInfo{ProbeInfoWithoutPort: f.ProbeInfoWithoutPort},
+			Name:                 f.Name,
+			Type:                 ProbeTypeFloating,
+			Disabled:             f.Disabled,
+			ProbeInfoWithoutPort: f.ProbeInfoWithoutPort,
 		}
 	}
 	for _, v := range in.VirtualProbes {
@@ -107,10 +107,10 @@ func UnrollProbes(in *Probes) (probes map[string]Probe) {
 				continue
 			}
 			probes[f.Name] = Probe{
-				Name:      f.Name,
-				Type:      ProbeTypeFloating,
-				Disabled:  f.Disabled,
-				ProbeInfo: ProbeInfo{ProbeInfoWithoutPort: f.ProbeInfoWithoutPort},
+				Name:                 f.Name,
+				Type:                 ProbeTypeFloating,
+				Disabled:             f.Disabled,
+				ProbeInfoWithoutPort: f.ProbeInfoWithoutPort,
 			}
 		}
 		for _, v := range v {
@@ -611,7 +611,6 @@ func GetPlugin(plugin *Plugin) any {
 	}
 	v := reflect.ValueOf(plugin).Elem()
 	for _, fv := range v.Fields() {
-		fv := fv
 		if fv.Kind() == reflect.String {
 			return fv.String()
 		}

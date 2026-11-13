@@ -45,20 +45,7 @@ func ReadCertificates(h host.Host, path string) (certs []*x509.Certificate, err 
 		return
 	}
 
-	for {
-		p, rest := pem.Decode(data)
-		if p == nil {
-			break
-		}
-		if p.Type == "CERTIFICATE" {
-			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
-				certs = append(certs, c)
-			}
-		}
-		data = rest
-	}
-
-	return
+	return parseCertificates(data), nil
 }
 
 // ReadCertificatesFrom reads and parses all certificates from the given
@@ -72,20 +59,22 @@ func ReadCertificatesFrom(r io.Reader) (certs []*x509.Certificate, err error) {
 		return
 	}
 
+	return parseCertificates(data), nil
+}
+
+func parseCertificates(data []byte) (certs []*x509.Certificate) {
 	for {
-		p, rest := pem.Decode(data)
-		if p == nil {
-			break
+		block, rest := pem.Decode(data)
+		if block == nil {
+			return certs
 		}
-		if p.Type == "CERTIFICATE" {
-			if c, err := x509.ParseCertificate(p.Bytes); err == nil { // no error
-				certs = append(certs, c)
+		if block.Type == "CERTIFICATE" {
+			if cert, err := x509.ParseCertificate(block.Bytes); err == nil {
+				certs = append(certs, cert)
 			}
 		}
 		data = rest
 	}
-
-	return
 }
 
 // ReadCertPool returns a certificate pool loaded from the file on host

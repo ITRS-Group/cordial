@@ -18,9 +18,10 @@ limitations under the License.
 package samplers
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -54,13 +55,13 @@ type Columns map[string]columndetails
 
 // columndetails has to be it's own type so that it can be used as values in maps
 type columndetails struct {
-	tags     string           // copy of tags for now
-	name     string           // display name of column. name="OMIT" mean not rendered
-	number   int              // column index - convenience for now
-	format   string           // alterative Printf format, default is %v
-// TODO: Revisit unused field convfunc; restore it only when needed.
-// 	convfunc func(any) string // this may happen - not yet used
-	sort     sortType         // if this is the sorting column then what type from above
+	tags   string // copy of tags for now
+	name   string // display name of column. name="OMIT" mean not rendered
+	number int    // column index - convenience for now
+	format string // alterative Printf format, default is %v
+	// TODO: Revisit unused field convfunc; restore it only when needed.
+	// 	convfunc func(any) string // this may happen - not yet used
+	sort sortType // if this is the sorting column then what type from above
 }
 
 const (
@@ -436,33 +437,31 @@ func toFloat(f any) (float64, error) {
 func (c Columns) sortRows(rows [][]string, sortcol string) [][]string {
 	sorttype, sortby := c[sortcol].sort, c[sortcol].number
 
-	sort.Slice(rows, func(a, b int) bool {
+	slices.SortFunc(rows, func(a, b []string) int {
 		switch sorttype {
 		case sortDesc:
-			return rows[a][sortby] >= rows[b][sortby]
+			return cmp.Compare(b[sortby], a[sortby])
 		case sortAscNum:
 			// err is ignored, zero is a valid answer if the
 			// contents are not a float
-			an, _ := strconv.ParseFloat(rows[a][sortby], 64)
-			bn, _ := strconv.ParseFloat(rows[b][sortby], 64)
+			an, _ := strconv.ParseFloat(a[sortby], 64)
+			bn, _ := strconv.ParseFloat(b[sortby], 64)
 			if an == bn {
-				return rows[a][sortby] < rows[b][sortby]
-			} else {
-				return an < bn
+				return strings.Compare(a[sortby], b[sortby])
 			}
+			return cmp.Compare(an, bn)
 		case sortDescNum:
 			// err is ignored, zero is a valid answer if the
 			// contents are not a float
-			an, _ := strconv.ParseFloat(rows[a][sortby], 64)
-			bn, _ := strconv.ParseFloat(rows[b][sortby], 64)
+			an, _ := strconv.ParseFloat(a[sortby], 64)
+			bn, _ := strconv.ParseFloat(b[sortby], 64)
 			if an == bn {
-				return rows[a][sortby] >= rows[b][sortby]
-			} else {
-				return an >= bn
+				return strings.Compare(b[sortby], a[sortby])
 			}
+			return cmp.Compare(bn, an)
 		// case sortNone, sortAsc: - the default
 		default:
-			return rows[a][sortby] < rows[b][sortby]
+			return strings.Compare(a[sortby], b[sortby])
 		}
 	})
 	return rows

@@ -105,15 +105,13 @@ func newXLSXReporter(_ string, w io.Writer, options ...any) (Reporter, error) {
 	opts := evalXLSXReportOptions(CollectOptions[XLSXReporterOption](options...)...)
 
 	x := &XLSXReporter{
-		reporterCommon: reporterCommon{
-			format:        "xlsx",
-			scrambleNames: ropts.scrambleNames,
-		},
-		x:         excelize.NewFile(),
-		w:         w,
-		password:  opts.password,
-		sheets:    map[string]*sheet{},
-		headlines: opts.headlines,
+		format:        "xlsx",
+		scrambleNames: ropts.scrambleNames,
+		x:             excelize.NewFile(),
+		w:             w,
+		password:      opts.password,
+		sheets:        map[string]*sheet{},
+		headlines:     opts.headlines,
 	}
 
 	x.topHeading, _ = x.x.NewStyle(&excelize.Style{

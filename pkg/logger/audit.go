@@ -129,8 +129,8 @@ func newHandler(w io.Writer) slog.Handler {
 				case slog.LevelKey:
 					return slog.Attr{}
 				case slog.MessageKey:
-					if strings.HasPrefix(a.Value.String(), "action/") {
-						a.Value = slog.StringValue(strings.TrimPrefix(a.Value.String(), "action/"))
+					if after, ok := strings.CutPrefix(a.Value.String(), "action/"); ok {
+						a.Value = slog.StringValue(after)
 						a.Key = "action"
 					} else {
 						a.Key = "command"

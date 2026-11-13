@@ -1,9 +1,10 @@
 package process
 
 import (
+	"cmp"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 
 	"github.com/itrs-group/cordial/pkg/host"
 	gprocess "github.com/shirou/gopsutil/v4/process"
@@ -40,6 +41,6 @@ func OpenFiles(h host.Host, pid int) (files []ProcessFDs) {
 			Stat:  info,
 		})
 	}
-	sort.Slice(files, func(i, j int) bool { return files[i].FD < files[j].FD })
+	slices.SortFunc(files, func(a, b ProcessFDs) int { return cmp.Compare(a.FD, b.FD) })
 	return
 }

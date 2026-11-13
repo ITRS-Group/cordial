@@ -79,10 +79,8 @@ func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter,
 	opts := evalFormattedOptions(foptions...)
 
 	fr := &FormattedReporter{
-		reporterCommon: reporterCommon{
-			format:        format,
-			scrambleNames: ropts.scrambleNames,
-		},
+		format:         format,
+		scrambleNames:  ropts.scrambleNames,
 		w:              w,
 		z:              opts.zipWriter,
 		t:              table.NewWriter(),
@@ -107,11 +105,9 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 
 	// reset
 	*fr = FormattedReporter{
-		reporterCommon: reporterCommon{
-			Report:        report,
-			format:        fr.format,
-			scrambleNames: fr.scrambleNames,
-		},
+		Report:        report,
+		format:        fr.format,
+		scrambleNames: fr.scrambleNames,
 		// title:           report.Title,
 		w:               fr.w,
 		t:               table.NewWriter(),
@@ -176,13 +172,13 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	}
 
 	for _, row := range data {
-		order := ""
+		var order strings.Builder
 		for _, c := range orderColumns {
 			if c < len(row) {
-				order += row[c] + "\000"
+				order.WriteString(row[c] + "\000")
 			}
 		}
-		fr.rowsBytableOrder[order] = append(fr.rowsBytableOrder[order], row)
+		fr.rowsBytableOrder[order.String()] = append(fr.rowsBytableOrder[order.String()], row)
 	}
 }
 

@@ -329,7 +329,7 @@ func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 		case reflect.Slice:
 			switch fv.Type().Elem().Kind() {
 			case reflect.Struct:
-				if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
+				if fv.Type().Elem() == reflect.TypeFor[ProcessFDs]() {
 					fv.Set(reflect.ValueOf(of))
 				}
 

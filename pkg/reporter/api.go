@@ -71,10 +71,8 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 	opts := evalAPIOptions(CollectOptions[APIReporterOption](options...)...)
 
 	a := &APIReporter{
-		reporterCommon: reporterCommon{
-			format:        "api",
-			scrambleNames: ropts.scrambleNames,
-		},
+		format:        "api",
+		scrambleNames: ropts.scrambleNames,
 		resetDV:       opts.reset,
 		dvCreateDelay: opts.dvCreateDelay,
 		maxrows:       opts.maxrows,

@@ -18,7 +18,7 @@ func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 			},
 			Alias: common.NewSingleLineString("application log"),
 		}},
-		MonitoringPeriod: &MonitoringPeriod{PeriodAlias: stringPointer("business-hours")},
+		MonitoringPeriod: &MonitoringPeriod{PeriodAlias: new("business-hours")},
 		HolidayDates:     &Holidays{Holidays: []string{"1-Jan"}},
 		Holidays:         &HolidaysVars{Holiday: []*common.SingleLineStringVar{common.NewSingleLineString("$(holiday)")}},
 		MonitoredDays: &common.Weekdays{
@@ -57,4 +57,5 @@ func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 	testhelpers.AssertStable(t, &got, data)
 }
 
-func stringPointer(value string) *string { return &value }
+//go:fix inline
+func stringPointer(value string) *string { return new(value) }

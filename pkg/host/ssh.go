@@ -28,7 +28,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -183,9 +183,9 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 		return
 	}
 
-	homedir, err = os.UserHomeDir()
-	if err != nil {
-		homedir = u.HomeDir
+	homedir = u.HomeDir
+	if home, homeErr := os.UserHomeDir(); homeErr == nil {
+		homedir = home
 	}
 
 	if username == "" {
@@ -673,8 +673,8 @@ func (h *SSHRemote) ReadDir(name string) (dirs []os.DirEntry, err error) {
 	if err != nil {
 		return nil, err
 	}
-	sort.Slice(f, func(i, j int) bool {
-		return f[i].Name() < f[j].Name()
+	slices.SortFunc(f, func(a, b os.FileInfo) int {
+		return strings.Compare(a.Name(), b.Name())
 	})
 	for _, d := range f {
 		dirs = append(dirs, fs.FileInfoToDirEntry(d))
@@ -783,8 +783,7 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 		if err == nil {
 			break
 		}
-		var ocerr *ssh.OpenChannelError
-		if !errors.As(err, &ocerr) {
+		if _, ok := errors.AsType[*ssh.OpenChannelError](err); !ok {
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
@@ -914,7 +913,7 @@ func (h *SSHRemote) Uname() (os, arch string, err error) {
 	if err != nil {
 		return
 	}
-	for _, w := range bytes.Fields(out) {
+	for w := range bytes.FieldsSeq(out) {
 		switch string(bytes.ToLower(w)) {
 		case "linux":
 			os = "linux"
