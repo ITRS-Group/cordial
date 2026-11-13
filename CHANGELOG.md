@@ -107,6 +107,8 @@
 
   * Fix package installs leaving a partial release directory after a failed or interrupted unpack, which later appeared to be a valid installed version. Archives are now unpacked into a hidden staging directory and only renamed into place when complete; leftover staging directories are ignored and replaced on retry.
 
+  * Fix archive downloads leaving a truncated archive in the download directory after a failure, which a later install could reuse. Downloads are now written to a hidden temporary file and renamed only when complete. HTTP response bodies are now always closed.
+
   * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
 
 * `pkg/host`

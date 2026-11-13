@@ -162,6 +162,7 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 	basedir := h.PathTo("packages", ctFromFile.String(), version)
 
 	if _, err = h.Stat(basedir); err == nil {
+		resp.Body.Close()
 		return nil, filename, 0, fs.ErrExist
 	}
 
@@ -191,30 +192,43 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 		return
 	}
 
-	// save the file archive and rewind, return
+	// save the archive to a hidden temporary file and only rename it
+	// into place once complete, so a failed download is never mistaken
+	// for a valid local archive later
+	defer resp.Body.Close()
 	var w *os.File
-	w, err = os.Create(archivePath)
+	w, err = os.CreateTemp(opts.source, ".download-*")
 	if err != nil {
 		return
 	}
-	bar, isterm := getbar(os.Stdout, filename, resp.ContentLength)
-
-	if _, err = io.Copy(io.MultiWriter(w, bar), resp.Body); err != nil {
-		return
-	}
-
+	tmpPath := w.Name()
 	defer func() {
-		if !isterm {
-			fmt.Println(bar.String())
+		if err != nil {
+			w.Close()
+			os.Remove(tmpPath)
 		}
-		bar.Close()
 	}()
 
-	if _, err = w.Seek(0, 0); err != nil {
+	bar, isterm := getbar(os.Stdout, filename, resp.ContentLength)
+	_, err = io.Copy(io.MultiWriter(w, bar), resp.Body)
+	if !isterm {
+		fmt.Println(bar.String())
+	}
+	bar.Close()
+	if err != nil {
 		return
 	}
-	body = w
+	if err = w.Close(); err != nil {
+		return
+	}
+	if err = os.Chmod(tmpPath, 0664); err != nil {
+		return
+	}
+	if err = os.Rename(tmpPath, archivePath); err != nil {
+		return
+	}
 
+	body, err = os.Open(archivePath)
 	return
 }
 

@@ -140,8 +140,11 @@ func LocalArchives(ct *Component, options ...GeneosOption) (archives []string, e
 		return
 	}
 
-	// remove non-files from the list
+	// remove hidden (including in-progress downloads) and non-files
 	entries = slices.DeleteFunc(entries, func(d fs.DirEntry) bool {
+		if strings.HasPrefix(d.Name(), ".") {
+			return true
+		}
 		st, err := os.Lstat(filepath.Join(dir, d.Name()))
 		return err != nil || !st.Mode().IsRegular()
 	})
