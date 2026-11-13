@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-12 18:43:01 by PeterGalbavy on ITRSLP372-->
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-13 14:35:27 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<types>
 		<typeGroup name="Level 3 - Geneos Instances">
@@ -14,7 +14,8 @@
 				<sampler ref="Instances"/>
 				<sampler ref="Running"/>
 				<sampler ref="Summary"/>
-				<sampler ref="Include Files"/>
+				<sampler ref="Shared Includes"/>
+				<sampler ref="Gateway Includes"/>
 			</type>
 			<type name="Level 3 - Geneos Diagnostics">
 				<environment ref="Level 3 - Geneos Defaults"/>
@@ -153,7 +154,7 @@
 						</toolkit>
 					</plugin>
 				</sampler>
-				<sampler name="Include Files">
+				<sampler name="Gateway Includes">
 					<var-group>
 						<var ref="SAMPLER_GROUP"/>
 					</var-group>
@@ -166,7 +167,7 @@
 								<var ref="geneosExecPath"/>
 								<data> </data>
 								<var ref="geneosExecConfigPath"/>
-								<data> includes ls -f toolkit </data>
+								<data> includes ls --gateway  -f toolkit </data>
 								<var ref="geneosExecHosts"/>
 							</samplerScript>
 							<showExecutionDuration>false</showExecutionDuration>
@@ -228,6 +229,26 @@
 								<data> </data>
 								<var ref="geneosExecConfigPath"/>
 								<data> ps -tl </data>
+								<var ref="geneosExecHosts"/>
+							</samplerScript>
+							<showExecutionDuration>false</showExecutionDuration>
+						</toolkit>
+					</plugin>
+				</sampler>
+				<sampler name="Shared Includes">
+					<var-group>
+						<var ref="SAMPLER_GROUP"/>
+					</var-group>
+					<sampleInterval>
+						<var ref="SLOW_SAMPLE"/>
+					</sampleInterval>
+					<plugin>
+						<toolkit>
+							<samplerScript>
+								<var ref="geneosExecPath"/>
+								<data> </data>
+								<var ref="geneosExecConfigPath"/>
+								<data> includes ls -f toolkit </data>
 								<var ref="geneosExecHosts"/>
 							</samplerScript>
 							<showExecutionDuration>false</showExecutionDuration>

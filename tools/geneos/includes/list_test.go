@@ -514,7 +514,7 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 		want    []string
 	}{
 		{"include machine", []string{"csv", "toolkit"}, includeColumnsMachine, []string{"file", "copies", "gateways", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
-		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"gateway", "file", "priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
+		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"ID", "gateway", "file", "priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
 		{"version machine", []string{"csv", "toolkit"}, versionColumnsLong, []string{"version", "files", "version", "perms", "owner", "lastModified", "size", "path"}},
 		{"include display", []string{"column", "table"}, includeColumnsLong, []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
 		{"gateway display", []string{"column", "table"}, gatewayColumnsLong, []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
@@ -570,13 +570,15 @@ func TestMachineGatewayFlags(t *testing.T) {
 		t.Fatalf("machine gateway row has %d columns, want %d", len(row), len(gatewayColumnsMachine))
 	}
 	for index, want := range map[int]string{
-		3: includeStatusOK,
-		4: "Y",
-		5: "N",
+		0: "gw:.",
+		1: "gw",
+		4: includeStatusOK,
+		5: "Y",
 		6: "N",
-		7: "-",
-		8: "Y",
+		7: "N",
+		8: "-",
 		9: "Y",
+		10: "Y",
 	} {
 		if row[index] != want {
 			t.Errorf("machine gateway row[%d] = %q, want %q", index, row[index], want)

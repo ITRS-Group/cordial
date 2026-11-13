@@ -150,7 +150,7 @@ var includeColumnsMachine = []string{"File", "Copies", "Gateways", "status", "sh
 
 var gatewayColumns = []string{"Gateway", "File", "Priority", "Flags", "Reload", "LastModified", "Size", "Location"}
 var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
-var gatewayColumnsMachine = []string{"Gateway", "File", "Priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
+var gatewayColumnsMachine = []string{"ID", "Gateway", "File", "Priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
 
 // listIncludes lists all available include files for the specified host, taking
 // into account the command-line flags for filtering and formatting. It
@@ -525,7 +525,11 @@ func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, colu
 		delimited := includesListCmdFormat == "csv" || includesListCmdFormat == "toolkit"
 		for i, column := range headings {
 			if delimited {
-				headings[i] = strings.ToLower(column[:1]) + column[1:]
+				if column == "ID" {
+					headings[i] = "ID"
+				} else {
+					headings[i] = strings.ToLower(column[:1]) + column[1:]
+				}
 			} else {
 				headings[i] = strings.ToUpper(column[:1]) + column[1:]
 			}
@@ -858,6 +862,7 @@ func gatewayIncludeMachineRow(gateway string, include gatewayInclude) []string {
 	if include.Gateway != nil {
 		name = include.Gateway.Host().Base(include.Location)
 	}
+	id := gateway + ":" + name
 	modified := ""
 	if !include.ModTime.IsZero() {
 		modified = include.ModTime.Format(time.RFC3339)
@@ -875,6 +880,7 @@ func gatewayIncludeMachineRow(gateway string, include gatewayInclude) []string {
 		optional = includeBooleanValue(!*include.Required)
 	}
 	return []string{
+		id,
 		gateway,
 		name,
 		fmt.Sprintf("%d", include.Priority),
