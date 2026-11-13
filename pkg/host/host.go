@@ -216,7 +216,7 @@ func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err erro
 		}
 		w := s.Walk(srcDir)
 		for w.Step() {
-			if w.Err() != nil {
+			if err = w.Err(); err != nil {
 				return
 			}
 			fi := w.Stat()

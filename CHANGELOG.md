@@ -101,6 +101,10 @@
 
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
 
+* `pkg/host`
+
+  * Fix `CopyAll` silently ignoring directory walk errors when copying from a remote host.
+
 ---
 
 ## Version v1.30.1
