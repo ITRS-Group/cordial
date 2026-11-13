@@ -79,7 +79,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		vals := profile.ApplyCommonParams(pf, name, &san.Common, lookup)
 
 		// expand all elements of gateways, join with commas and split again to catch already expanded values
-		for gw := range strings.SplitSeq(strings.Join(pf.ExpandStringSlice(san.Gateways), ","), ",") {
+		for _, gw := range profile.ExpandCommaList(pf, san.Gateways) {
 			// san.Gateways expands to a map of host:port
 			vals.Gateways = append(vals.Gateways, gw)
 		}
@@ -133,11 +133,14 @@ func applyManagedEntityCommon(common ManagedEntityCommon, entities []ManagedEnti
 
 func mergeStrings(common, specific []string) []string {
 	result := make([]string, 0, len(common)+len(specific))
+	seen := make(map[string]struct{}, len(common)+len(specific))
 	for _, group := range [][]string{common, specific} {
 		for _, value := range group {
-			if !slices.Contains(result, value) {
-				result = append(result, value)
+			if _, ok := seen[value]; ok {
+				continue
 			}
+			seen[value] = struct{}{}
+			result = append(result, value)
 		}
 	}
 	return result

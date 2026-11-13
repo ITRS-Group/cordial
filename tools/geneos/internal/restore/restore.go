@@ -439,38 +439,7 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 // entries are used to create directories with matching permissions,
 // again ignoring owner and group.
 func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions) (err error) {
-	h := opts.host
-
-	switch hdr.Typeflag {
-	case tar.TypeDir:
-		// create and set permissions
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
-			return os.ErrExist
-		}
-		return h.MkdirAll(h.PathTo(fp), hdr.FileInfo().Mode().Perm())
-	case tar.TypeReg:
-		var w io.WriteCloser
-
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
-			return os.ErrExist
-		}
-
-		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(h.Dir(h.PathTo(fp)), 0775); err != nil {
-			return
-		}
-
-		if w, err = h.Create(h.PathTo(fp), hdr.FileInfo().Mode()); err != nil {
-			return
-		}
-		defer w.Close()
-
-		_, err = io.Copy(w, tr)
-		return
-	default:
-		// ignore
-	}
-	return
+	return writeSharedEntry(fp, tr, hdr, opts, false)
 }
 
 // writeSharedTLSFile reads the file from the tar reader and, if a
@@ -481,21 +450,25 @@ func writeSharedFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOp
 // are ignored. Directory entries are used to create directories with
 // matching permissions, again ignoring owner and group.
 func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions) (err error) {
+	return writeSharedEntry(fp, tr, hdr, opts, true)
+}
+
+func writeSharedEntry(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreOptions, tls bool) (err error) {
 	h := opts.host
+	destPath := h.PathTo(fp)
 
 	switch hdr.Typeflag {
 	case tar.TypeDir:
 		// create and set permissions
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
+		if _, err := h.Stat(destPath); err == nil {
 			return os.ErrExist
 		}
-		return h.MkdirAll(h.PathTo(fp), hdr.FileInfo().Mode().Perm())
+		return h.MkdirAll(destPath, hdr.FileInfo().Mode().Perm())
 	case tar.TypeReg:
 		var w io.WriteCloser
 
-		if _, err := h.Stat(h.PathTo(fp)); err == nil {
-			if path.Base(fp) == geneos.CABundleBasename+certs.PEMExtension {
-				// merge the existing and new CA bundle files
+		if _, err := h.Stat(destPath); err == nil {
+			if tls && path.Base(fp) == geneos.CABundleBasename+certs.PEMExtension {
 				roots, err := certs.ReadCertificatesFrom(tr)
 				if err != nil {
 					return err
@@ -509,17 +482,15 @@ func writeSharedTLSFile(fp string, tr *tar.Reader, hdr *tar.Header, opts *restor
 				}
 				return nil
 			}
-			// UpdateCACertsFiles writes both PEM and Java truststores
-			// from the PEM file. So ignore others that already exist.
+			// UpdateCACertsFiles writes both PEM and Java truststores.
 			return os.ErrExist
 		}
 
 		// create intermediate dirs, write, set perms
-		if err = h.MkdirAll(h.Dir(h.PathTo(fp)), 0775); err != nil {
+		if err = h.MkdirAll(h.Dir(destPath), 0775); err != nil {
 			return
 		}
-
-		if w, err = h.Create(h.PathTo(fp), hdr.FileInfo().Mode()); err != nil {
+		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
 			return
 		}
 		defer w.Close()

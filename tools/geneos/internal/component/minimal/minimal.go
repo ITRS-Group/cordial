@@ -118,40 +118,16 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if m, ok := minimals.Load(h.FullName(local)); ok {
-		if mn, ok := m.(*Minimal); ok {
-			return mn
-		}
-	}
-
-	i = &Minimal{
-		Conf:         config.New(),
-		InstanceHost: h,
-		Component:    &Component,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Minimal).Logger = instance.Logger(i)
-	i.(*Minimal).AuditLogger = instance.AuditLogger(i)
-	minimals.Store(instance.ShortName(i), i)
-
-	return
+	return instance.Factory(name, &Component, &minimals,
+		func(h *geneos.Host, _ *geneos.Component) *Minimal {
+			return &Minimal{Conf: config.New(), InstanceHost: h, Component: &Component}
+		},
+		nil,
+		func(i *Minimal) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

@@ -116,38 +116,16 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if s, ok := ssoagents.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*SSOAgent); ok {
-			return ss
-		}
-	}
-
-	i = &SSOAgent{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*SSOAgent).Logger = instance.Logger(i)
-	i.(*SSOAgent).AuditLogger = instance.AuditLogger(i)
-	ssoagents.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &ssoagents,
+		func(h *geneos.Host, _ *geneos.Component) *SSOAgent {
+			return &SSOAgent{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *SSOAgent) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // list of file patterns to copy?

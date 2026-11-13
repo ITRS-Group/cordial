@@ -54,10 +54,7 @@ func init() {
 
 	listCmd.Flags().BoolVarP(&listCmdShared, "shared", "S", false, "List shared key files")
 
-	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
-	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
-	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
-	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
+	cmd.AddOutputFormatFlags(listCmd.Flags(), &listCmdJSON, &listCmdIndent, &listCmdCSV, &listCmdToolkit)
 	listCmd.Flags().SortFlags = false
 }
 

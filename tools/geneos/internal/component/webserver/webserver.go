@@ -115,37 +115,16 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-	if w, ok := webservers.Load(h.FullName(local)); ok {
-		if ws, ok := w.(*Webserver); ok {
-			return ws
-		}
-	}
-
-	i = &Webserver{
-		Conf:         config.New(),
-		InstanceHost: h,
-		Component:    &Component,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Webserver).Logger = instance.Logger(i)
-	i.(*Webserver).AuditLogger = instance.AuditLogger(i)
-	webservers.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &webservers,
+		func(h *geneos.Host, _ *geneos.Component) *Webserver {
+			return &Webserver{Conf: config.New(), InstanceHost: h, Component: &Component}
+		},
+		nil,
+		func(i *Webserver) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // list of file patterns to copy?

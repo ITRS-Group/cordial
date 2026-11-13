@@ -117,38 +117,16 @@ func init() {
 var fa2s sync.Map
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if f, ok := fa2s.Load(h.FullName(local)); ok {
-		if fa, ok := f.(*FA2); ok {
-			return fa
-		}
-	}
-	i = &FA2{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*FA2).Logger = instance.Logger(i)
-	i.(*FA2).AuditLogger = instance.AuditLogger(i)
-	fa2s.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &fa2s,
+		func(h *geneos.Host, _ *geneos.Component) *FA2 {
+			return &FA2{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *FA2) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

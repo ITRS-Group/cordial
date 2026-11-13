@@ -117,38 +117,16 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if s, ok := routers.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*Router); ok {
-			return ss
-		}
-	}
-
-	i = &Router{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Router).Logger = instance.Logger(i)
-	i.(*Router).AuditLogger = instance.AuditLogger(i)
-	routers.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &routers,
+		func(h *geneos.Host, _ *geneos.Component) *Router {
+			return &Router{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *Router) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // initialFiles is a list of files to import from the "read-only"

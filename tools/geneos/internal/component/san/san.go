@@ -142,42 +142,22 @@ func init() {
 // If the name has a TYPE prefix then that type is used as the "pkgtype"
 // parameter to select other Netprobe types, such as fa2
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, ct, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-	s, ok := sans.Load(h.FullName(local))
-	if ok {
-		sn, ok := s.(*San)
-		if ok {
-			return sn
-		}
-	}
-	i = &San{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	i.Config().Default("pkgtype", "netprobe")
-	if ct != nil {
-		i.Config().Default("pkgtype", ct.Name)
-	}
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*San).Logger = instance.Logger(i)
-	i.(*San).AuditLogger = instance.AuditLogger(i)
-	sans.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &sans,
+		func(h *geneos.Host, _ *geneos.Component) *San {
+			return &San{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		func(i *San, ct *geneos.Component) error {
+			i.Config().Default("pkgtype", "netprobe")
+			if ct != nil {
+				i.Config().Default("pkgtype", ct.Name)
+			}
+			return nil
+		},
+		func(i *San) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

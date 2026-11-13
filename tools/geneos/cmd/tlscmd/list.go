@@ -81,10 +81,7 @@ func init() {
 	listCmd.Flags().BoolVarP(&listCmdAll, "all", "a", false, "Show all certs, including root and signing certs")
 	listCmd.Flags().BoolVarP(&listCmdLong, "long", "l", false, "Long output")
 
-	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
-	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
-	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
-	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
+	cmd.AddOutputFormatFlags(listCmd.Flags(), &listCmdJSON, &listCmdIndent, &listCmdCSV, &listCmdToolkit)
 
 	listCmd.Flags().SortFlags = false
 }

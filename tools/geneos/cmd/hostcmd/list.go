@@ -51,10 +51,7 @@ func init() {
 	hostCmd.AddCommand(listCmd)
 
 	listCmd.Flags().BoolVarP(&listCmdShowHidden, "all", "a", false, "Show all hosts")
-	listCmd.Flags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
-	listCmd.Flags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
-	listCmd.Flags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
-	listCmd.Flags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
+	cmd.AddOutputFormatFlags(listCmd.Flags(), &listCmdJSON, &listCmdIndent, &listCmdCSV, &listCmdToolkit)
 
 	listCmd.Flags().SortFlags = false
 }
@@ -118,51 +115,48 @@ func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool) error {
 }
 
 func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {
-	flags := "-"
-	if h.Hidden() {
-		flags = "H"
+	row := hostListRow(h)
+	if row.Username == "" {
+		row.Username = "-"
 	}
-	username := config.Get[string](h.Config, "username")
-	if username == "" {
-		username = "-"
-	}
-	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n", config.Get[string](h.Config, "name"), username, config.Get[string](h.Config, "hostname"), flags, config.Get[uint16](h.Config, "port", config.DefaultValue(22)), config.Get[string](h.Config, cordial.ExecutableName()))
+	fmt.Fprintf(w.(io.Writer), "%s\t%s\t%s\t%s\t%d\t%s\n",
+		config.Get[string](h.Config, "name"), row.Username, row.Hostname, row.Flags, row.Port, row.Directory)
 	return
 }
 
 func hostListInstanceCSVHosts(h *geneos.Host, w any) (err error) {
-	flags := "-"
-	if h.Hidden() {
-		flags = "H"
-	}
-	username := config.Get[string](h.Config, "username")
+	row := hostListRow(h)
 
 	c := w.(*csv.Writer)
 	c.Write([]string{
-		h.String(),
-		username,
-		config.Get[string](h.Config, "hostname"),
-		flags,
+		row.Name,
+		row.Username,
+		row.Hostname,
+		row.Flags,
 		config.Get[string](h.Config, "port", config.DefaultValue(22)),
-		config.Get[string](h.Config, cordial.ExecutableName()),
+		row.Directory,
 	})
 	return
 }
 
 func hostListInstanceJSONHosts(h *geneos.Host, w any) (err error) {
+	listCmdEntries = append(listCmdEntries, hostListRow(h))
+	return
+}
+
+func hostListRow(h *geneos.Host) listCmdType {
 	flags := "-"
 	if h.Hidden() {
 		flags = "H"
 	}
 	username := config.Get[string](h.Config, "username")
 
-	listCmdEntries = append(listCmdEntries, listCmdType{
-		h.String(),
-		username,
-		config.Get[string](h.Config, "hostname"),
-		flags,
-		config.Get[uint16](h.Config, "port", config.DefaultValue(22)),
-		config.Get[string](h.Config, cordial.ExecutableName()),
-	})
-	return
+	return listCmdType{
+		Name:      h.String(),
+		Username:  username,
+		Hostname:  config.Get[string](h.Config, "hostname"),
+		Flags:     flags,
+		Port:      config.Get[uint16](h.Config, "port", config.DefaultValue(22)),
+		Directory: config.Get[string](h.Config, cordial.ExecutableName()),
+	}
 }

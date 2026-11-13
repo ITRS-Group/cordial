@@ -83,34 +83,16 @@ func init() {
 var profiles sync.Map
 
 func factory(name string) (i geneos.Instance) {
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-	if f, ok := profiles.Load(h.FullName(local)); ok {
-		if fa, ok := f.(*Profile); ok {
-			return fa
-		}
-	}
-
-	i = &Profile{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Profile).Logger = instance.Logger(i)
-	i.(*Profile).AuditLogger = instance.AuditLogger(i)
-	profiles.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &profiles,
+		func(h *geneos.Host, _ *geneos.Component) *Profile {
+			return &Profile{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *Profile) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

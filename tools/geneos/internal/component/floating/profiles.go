@@ -2,7 +2,6 @@ package floating
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -43,7 +42,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		vals := profile.ApplyCommonParams(pf, name, &floating.Common, lookup)
 
 		// expand all elements of gateways, join with commas and split again to catch already expanded values
-		for gw := range strings.SplitSeq(strings.Join(pf.ExpandStringSlice(floating.Gateways), ","), ",") {
+		for _, gw := range profile.ExpandCommaList(pf, floating.Gateways) {
 			// floating.Gateways expands to a map of host:port
 			vals.Gateways = append(vals.Gateways, gw)
 		}

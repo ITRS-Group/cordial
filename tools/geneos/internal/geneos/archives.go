@@ -289,8 +289,8 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 	}
 
 	stripFirstDir := func(name string) string {
-		if s := strings.Index(name, "/"); s != -1 {
-			name = name[s+1:]
+		if _, after, ok := strings.Cut(name, "/"); ok {
+			name = after
 		}
 		return name
 	}

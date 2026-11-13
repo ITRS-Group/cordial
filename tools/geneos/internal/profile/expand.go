@@ -18,6 +18,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
+// ExpandCommaList expands values and splits their comma-joined result.
+func ExpandCommaList(pf *config.Config, values []string) []string {
+	return strings.Split(strings.Join(pf.ExpandStringSlice(values), ","), ",")
+}
+
 // PflagSetToMap converts a pflag.FlagSet into a map[string]any, parsing
 // the flag values according to their types. Only include flags that
 // match the glob patterns in the include args. If unspecified, all

@@ -57,6 +57,8 @@
 
   * Use host-specific path operations for file handling across commands, instances, packages, includes, templates, and restore operations, including paths that previously relied on the client OS's `path` or `filepath` behavior.
 
+  * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
+
 * Updated to use Go 1.27.4 and update dependencies
 
 * `pkg/host`

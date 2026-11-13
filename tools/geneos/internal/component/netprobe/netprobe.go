@@ -120,52 +120,28 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-
-	h, ct, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if n, ok := netprobes.Load(h.FullName(local)); ok {
-		if np, ok := n.(*Netprobe); ok {
-			return np
-		}
-	}
-
-	i = &Netprobe{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	i.Config().Default("pkgtype", component)
-	if ct != nil {
-		// check for valid pkgtypes by name, as the PackageType field is not set for Netprobe to avoid an import cycle with minimal and fa2
-		switch ct.Name {
-		case "netprobe", "minimal", "fa2":
-			config.Set(i.Config(), "pkgtype", ct.Name)
-		default:
-			slog.Error("invalid package type for netprobe", slog.String("pkgtype", ct.Name))
+	return instance.Factory(name, &Component, &netprobes,
+		func(h *geneos.Host, _ *geneos.Component) *Netprobe {
+			return &Netprobe{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		func(i *Netprobe, ct *geneos.Component) error {
+			i.Config().Default("pkgtype", component)
+			if ct == nil {
+				return nil
+			}
+			switch ct.Name {
+			case "netprobe", "minimal", "fa2":
+				config.Set(i.Config(), "pkgtype", ct.Name)
+			default:
+				return fmt.Errorf("%w: invalid package type for netprobe: %s", geneos.ErrInvalidArgs, ct.Name)
+			}
 			return nil
-		}
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Netprobe).Logger = instance.Logger(i)
-	i.(*Netprobe).AuditLogger = instance.AuditLogger(i)
-	netprobes.Store(h.FullName(local), i)
-
-	return
+		},
+		func(i *Netprobe) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

@@ -1,6 +1,7 @@
 package san
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -97,12 +98,7 @@ func TestEmbeddedMOTMManagedEntityCommon(t *testing.T) {
 }
 
 func contains(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(items, want)
 }
 
 func containsVariable(variables []values.Variable, name string) bool {

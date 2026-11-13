@@ -19,6 +19,7 @@ package responses
 
 import (
 	"io"
+	"maps"
 	"os"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -198,8 +199,6 @@ func AddHeadlines(headlines map[string]string) Option {
 		if wo.headlines == nil {
 			wo.headlines = make(map[string]string)
 		}
-		for k, v := range headlines {
-			wo.headlines[k] = v
-		}
+		maps.Copy(wo.headlines, headlines)
 	}
 }

@@ -108,39 +108,16 @@ func init() {
 var licds sync.Map
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if l, ok := licds.Load(h.FullName(local)); ok {
-		if lc, ok := l.(*Licd); ok {
-			return lc
-		}
-	}
-
-	i = &Licd{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Licd).Logger = instance.Logger(i)
-	i.(*Licd).AuditLogger = instance.AuditLogger(i)
-	licds.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &licds,
+		func(h *geneos.Host, _ *geneos.Component) *Licd {
+			return &Licd{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *Licd) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

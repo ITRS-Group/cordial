@@ -60,6 +60,117 @@ func IsA(i geneos.Instance, names ...string) bool {
 	return false
 }
 
+// Factory returns a configured component instance, reusing the entry in
+// cache when one already exists. prepare applies component-specific
+// settings before defaults are expanded; initialize sets component
+// specific fields after the common configuration is ready.
+func Factory[T geneos.Instance](
+	name string,
+	component *geneos.Component,
+	cache *sync.Map,
+	newInstance func(*geneos.Host, *geneos.Component) T,
+	prepare func(T, *geneos.Component) error,
+	initialize func(T),
+) T {
+	var zero T
+	if name == "" {
+		return zero
+	}
+
+	h, packageType, local := ParseName(name)
+	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
+		return zero
+	}
+
+	key := h.FullName(local)
+	if cached, ok := cache.Load(key); ok {
+		if i, ok := cached.(T); ok {
+			return i
+		}
+	}
+
+	i := newInstance(h, component)
+	if prepare != nil {
+		if err := prepare(i, packageType); err != nil {
+			log.Error("component-specific setup failed", slog.Any("instance", i), slog.Any("error", err))
+			return zero
+		}
+	}
+	if err := SetDefaults(i, local); err != nil {
+		log.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
+		return zero
+	}
+
+	config.Set(i.Config(), "home", Home(i))
+	if initialize != nil {
+		initialize(i)
+	}
+	cache.Store(key, i)
+	return i
+}
+
+// SeedPackagedSetup copies the packaged setup file into an instance home
+// when no setup file exists there yet.
+func SeedPackagedSetup(i geneos.Instance) {
+	if i == nil {
+		return
+	}
+	setup := PathTo(i, "setup")
+	if setup == "" {
+		return
+	}
+	h := i.Host()
+	if _, err := h.Stat(setup); err == nil {
+		return
+	}
+	src := h.Join(BaseVersion(i), "config", h.Base(setup))
+	data, err := h.ReadFile(src)
+	if err != nil {
+		return
+	}
+	if err := h.WriteFile(setup, data, 0664); err != nil {
+		return
+	}
+	i.AuditEvent("action/import", nil, slog.Any("file", h.Base(setup)))
+}
+
+// JavaPIDCheck matches a Java command line to a gateway instance.
+func JavaPIDCheck(i geneos.Instance, cmdline []string, defaultMainClass string) bool {
+	if i == nil || i.Host() == nil || len(cmdline) == 0 {
+		return false
+	}
+	executable := i.Host().Base(cmdline[0])
+	if executable != "java" && executable != "java.exe" {
+		return false
+	}
+
+	mainClass := config.Get[string](i.Config(), "main-class",
+		config.PromoteFrom("mainclass"), config.DefaultValue(defaultMainClass))
+	setup := PathTo(i, "setup")
+	home := i.Home()
+	var homeOK, appOK bool
+	for _, arg := range cmdline[1:] {
+		if arg == "-Dapp.home="+home || arg == setup {
+			homeOK = true
+		}
+		if arg == mainClass {
+			appOK = true
+		}
+		if homeOK && appOK {
+			return true
+		}
+	}
+	return false
+}
+
+func finishResponse(action string, i geneos.Instance, resp *responses.General) {
+	responses.Finished(resp)
+	if geneos.AuditActions() && !resp.Audited {
+		i.AuditEvent("action/"+action, resp.Err)
+		resp.Audited = true
+	}
+}
+
 // DisplayName returns the type, name and non-local host as a string
 // suitable for display.
 func DisplayName(i geneos.Instance) string {
@@ -212,11 +323,7 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 				return
 			}
 			resp := fn(p, values...)
-			responses.Finished(resp)
-			if geneos.AuditActions() && !resp.Audited {
-				p.AuditEvent("action/"+action, resp.Err)
-				resp.Audited = true
-			}
+			finishResponse(action, p, resp)
 			rs["_"+p.String()] = resp
 		}
 		return
@@ -245,11 +352,7 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 			}
 			for _, i := range instances {
 				resp := fn(i, values...)
-				responses.Finished(resp)
-				if geneos.AuditActions() && !resp.Audited {
-					i.AuditEvent("action/"+action, resp.Err)
-					resp.Audited = true
-				}
+				finishResponse(action, i, resp)
 				rs[i.String()] = resp
 			}
 
@@ -264,11 +367,7 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 				continue
 			}
 			resp := fn(p, values...)
-			responses.Finished(resp)
-			if geneos.AuditActions() && !resp.Audited {
-				p.AuditEvent("action/"+action, resp.Err)
-				resp.Audited = true
-			}
+			finishResponse(action, p, resp)
 			rs["_"+p.String()] = resp
 			if resp.Err != nil {
 				return
@@ -282,11 +381,7 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 
 	for _, c := range instances {
 		resp := fn(c, values...)
-		responses.Finished(resp)
-		if geneos.AuditActions() && !resp.Audited {
-			c.AuditEvent("action/"+action, resp.Err)
-			resp.Audited = true
-		}
+		finishResponse(action, c, resp)
 		rs[c.String()] = resp
 	}
 
@@ -316,11 +411,7 @@ func DoInstances(action string, instances []geneos.Instance, fn func(geneos.Inst
 			defer wg.Done()
 
 			resp := fn(c, values...)
-			responses.Finished(resp)
-			if geneos.AuditActions() && !resp.Audited {
-				c.AuditEvent("action/"+action, resp.Err)
-				resp.Audited = true
-			}
+			finishResponse(action, c, resp)
 			ch <- resp
 		}(c)
 	}

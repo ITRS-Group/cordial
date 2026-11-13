@@ -354,7 +354,7 @@ func TestFormatIncludeResponsesEmitsMachineFlags(t *testing.T) {
 			GatewayLocal: true,
 			FileInfo:     info,
 			Version:      "1.2.3",
-			Size:         int64Ptr(0),
+			Size:         new(int64(0)),
 		}, "../../includes/readonly.xml"),
 		includeSummaryMachineRow("same.xml", 2, 1),
 	}
@@ -542,7 +542,7 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 					}
 					headings = records[0]
 				} else {
-					for _, line := range strings.Split(output.String(), "\n") {
+					for line := range strings.SplitSeq(output.String(), "\n") {
 						if strings.Contains(line, test.want[0]) {
 							line = strings.ReplaceAll(line, "│", " ")
 							line = strings.ReplaceAll(line, "|", " ")
@@ -562,22 +562,22 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 func TestMachineGatewayFlags(t *testing.T) {
 	required := false
 	row := gatewayIncludeMachineRow("gw", gatewayInclude{
-		includeFile: includeFile{Status: includeStatusOK, Shared: true},
-		Required:    &required,
-		Disabled:    true,
+		Status: includeStatusOK, Shared: true,
+		Required: &required,
+		Disabled: true,
 	})
 	if len(row) != len(gatewayColumnsMachine) {
 		t.Fatalf("machine gateway row has %d columns, want %d", len(row), len(gatewayColumnsMachine))
 	}
 	for index, want := range map[int]string{
-		0: "gw:.",
-		1: "gw",
-		4: includeStatusOK,
-		5: "Y",
-		6: "N",
-		7: "N",
-		8: "-",
-		9: "Y",
+		0:  "gw:.",
+		1:  "gw",
+		4:  includeStatusOK,
+		5:  "Y",
+		6:  "N",
+		7:  "N",
+		8:  "-",
+		9:  "Y",
 		10: "Y",
 	} {
 		if row[index] != want {
@@ -720,7 +720,7 @@ func TestJSONUsesLongFieldsAndOctalPermissions(t *testing.T) {
 		t.Fatalf("JSON permissions = %q, want 0640", got)
 	}
 
-	include := includeFile{FileInfo: info, Size: int64Ptr(0)}
+	include := includeFile{FileInfo: info, Size: new(int64(0))}
 	row := includeFileMachineRow("readonly.xml", "1", 1, include, filePath)
 	if len(row) != len(includeColumnsMachine) || row[11] != "0640" {
 		t.Fatalf("JSON include row = %v, want long fields and octal permissions", row)
@@ -740,14 +740,14 @@ func TestJSONRowsKeepSizeAsBytesWithColumnFormat(t *testing.T) {
 	includesListCmdFormat = "json"
 	t.Cleanup(func() { includesListCmdFormat = oldFormat })
 
-	row := includeFileRow("file.xml", "1", 0, includeFile{Size: int64Ptr(1536)}, "/shared/file.xml", false)
+	row := includeFileRow("file.xml", "1", 0, includeFile{Size: new(int64(1536))}, "/shared/file.xml", false)
 	if row[5] != "1536" {
 		t.Fatalf("JSON size = %q, want raw byte count", row[5])
 	}
 	if got := includeFileRow("missing.xml", "1", 0, includeFile{}, "/missing.xml", false)[5]; got != "-1" {
 		t.Errorf("unknown JSON size = %q, want -1", got)
 	}
-	if got := includeFileRow("empty.xml", "1", 0, includeFile{Size: int64Ptr(0)}, "/empty.xml", false)[5]; got != "0" {
+	if got := includeFileRow("empty.xml", "1", 0, includeFile{Size: new(int64(0))}, "/empty.xml", false)[5]; got != "0" {
 		t.Errorf("known zero-byte JSON size = %q, want 0", got)
 	}
 	if got := includeJSONValue("Size", ""); got != int64(-1) {
@@ -758,8 +758,7 @@ func TestJSONRowsKeepSizeAsBytesWithColumnFormat(t *testing.T) {
 	}
 }
 
-func int64Ptr(value int64) *int64 { return &value }
-
+//go:fix inline
 func TestRenderIncludeFlags(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "readonly.xml")
 	if err := os.WriteFile(file, nil, 0444); err != nil {
@@ -788,7 +787,7 @@ func TestRenderIncludeFlags(t *testing.T) {
 		})
 	}
 
-	if got := renderGatewayFlags(gatewayInclude{includeFile: includeFile{Shared: true}, Disabled: true, Required: &optional}); got != "DSXo" {
+	if got := renderGatewayFlags(gatewayInclude{Shared: true, Disabled: true, Required: &optional}); got != "DSXo" {
 		t.Errorf("renderGatewayFlags() = %q, want DSXo", got)
 	}
 }
@@ -805,7 +804,7 @@ func TestIncludeRowsHonorStandardAndLongSchemas(t *testing.T) {
 		}
 	}
 	modified := time.Date(2026, time.January, 2, 3, 4, 5, 0, time.UTC)
-	file := includeFile{Version: "1.2.3", FileInfo: info, ModTime: modified, Size: int64Ptr(1024)}
+	file := includeFile{Version: "1.2.3", FileInfo: info, ModTime: modified, Size: new(int64(1024))}
 	standard := includeFileRow("file.xml", "1", 2, file, "/shared/file.xml", false)
 	long := includeFileRow("file.xml", "1", 2, file, "/shared/file.xml", true)
 	if len(standard) != len(includeColumns) || len(long) != len(includeColumnsLong) {
@@ -820,7 +819,7 @@ func TestIncludeRowsHonorStandardAndLongSchemas(t *testing.T) {
 		Groups:         []string{"parent", "child"},
 		Location:       "file.xml",
 		Priority:       5,
-		ReloadInterval: intPtr(30),
+		ReloadInterval: new(30),
 	}
 	standardGateway := gatewayIncludeRow("gw", gateway, false)
 	longGateway := gatewayIncludeRow("gw", gateway, true)
@@ -893,7 +892,7 @@ func TestIncludeListLocation(t *testing.T) {
 	}
 }
 
-func intPtr(value int) *int { return &value }
+//go:fix inline
 
 func TestIncludeDirectoryDiscovery(t *testing.T) {
 	h := newTestGatewayHost(t)

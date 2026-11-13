@@ -125,39 +125,22 @@ func init() {
 var floatings sync.Map
 
 func factory(name string) (i geneos.Instance) {
-	h, ct, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if f, ok := floatings.Load(h.FullName(local)); ok {
-		if ft, ok := f.(*Floating); ok {
-			return ft
-		}
-	}
-
-	i = &Floating{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	i.Config().Default("pkgtype", "netprobe")
-	if ct != nil {
-		i.Config().Default("pkgtype", ct.Name)
-	}
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Floating).Logger = instance.Logger(i)
-	i.(*Floating).AuditLogger = instance.AuditLogger(i)
-	floatings.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &floatings,
+		func(h *geneos.Host, _ *geneos.Component) *Floating {
+			return &Floating{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		func(i *Floating, ct *geneos.Component) error {
+			i.Config().Default("pkgtype", "netprobe")
+			if ct != nil {
+				i.Config().Default("pkgtype", ct.Name)
+			}
+			return nil
+		},
+		func(i *Floating) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

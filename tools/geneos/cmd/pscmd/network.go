@@ -82,12 +82,10 @@ func psNetworkJSON(i geneos.Instance, pid int) (conns []psInstanceNetwork, err e
 				continue
 			}
 			conns = append(conns, psInstanceNetwork{
-				psCommon: psCommon{
-					Type: ct,
-					Name: name,
-					Host: h,
-					PID:  pid,
-				},
+				Type:       ct,
+				Name:       name,
+				Host:       h,
+				PID:        pid,
 				FD:         fd.FD,
 				Protocol:   c.Protocol,
 				LocalAddr:  c.LocalAddr,

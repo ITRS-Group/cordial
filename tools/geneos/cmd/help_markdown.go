@@ -336,16 +336,10 @@ func renderMarkdownTable(rows [][]string, maxWidth int) []string {
 		}
 	}
 
-	contentWidth := maxWidth - columns*3 - 1
-	if contentWidth < columns {
-		contentWidth = columns
-	}
+	contentWidth := max(maxWidth-columns*3-1, columns)
 	if sumWidths(widths) > contentWidth {
 		naturalWidths := append([]int(nil), widths...)
-		minimum := contentWidth / columns
-		if minimum < 1 {
-			minimum = 1
-		}
+		minimum := max(contentWidth/columns, 1)
 		for i := range widths {
 			if widths[i] > minimum {
 				widths[i] = minimum
@@ -392,10 +386,7 @@ func renderMarkdownTable(rows [][]string, maxWidth int) []string {
 			if lineIndex < len(lines) {
 				cell = lines[lineIndex]
 			}
-			padding := widths[i] - len([]rune(cell))
-			if padding < 0 {
-				padding = 0
-			}
+			padding := max(widths[i]-len([]rune(cell)), 0)
 			result.WriteByte(' ')
 			result.WriteString(cell)
 			result.WriteString(strings.Repeat(" ", padding+1))

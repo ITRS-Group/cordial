@@ -971,8 +971,8 @@ func updateWebPageURL(url string, options optionSlice, filters []*regexp.Regexp)
 		}
 	}
 	for _, option := range options {
-		if strings.HasPrefix(option, "replace:") {
-			url = replaceAll(url, strings.TrimPrefix(option, "replace:"))
+		if after, ok := strings.CutPrefix(option, "replace:"); ok {
+			url = replaceAll(url, after)
 		}
 	}
 	return url

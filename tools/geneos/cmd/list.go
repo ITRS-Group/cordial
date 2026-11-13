@@ -52,10 +52,7 @@ var listCmdJSON, listCmdCSV, listCmdIndent, listCmdToolkit bool
 func init() {
 	Cmd.AddCommand(listCmd)
 
-	listCmd.PersistentFlags().BoolVarP(&listCmdJSON, "json", "j", false, "Output JSON")
-	listCmd.PersistentFlags().BoolVarP(&listCmdIndent, "pretty", "i", false, "Output indented JSON")
-	listCmd.PersistentFlags().BoolVarP(&listCmdCSV, "csv", "c", false, "Output CSV")
-	listCmd.PersistentFlags().BoolVarP(&listCmdToolkit, "toolkit", "t", false, "Output Toolkit formatted CSV")
+	AddOutputFormatFlags(listCmd.PersistentFlags(), &listCmdJSON, &listCmdIndent, &listCmdCSV, &listCmdToolkit)
 
 	listCmd.Flags().SortFlags = false
 }

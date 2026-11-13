@@ -53,13 +53,15 @@ func IsAutoStart(i geneos.Instance) bool {
 // BaseVersion returns the absolute path of the base package directory
 // for the instance i.
 func BaseVersion(i geneos.Instance) (dir string) {
-	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
-		t = i.Type().ParentType.String()
-	}
+	return i.Host().PathTo("packages", packageType(i), config.Get[string](i.Config(), "version"))
+}
 
-	pkgtype := config.Get[string](i.Config(), "pkgtype", config.DefaultValue(t))
-	return i.Host().PathTo("packages", pkgtype, config.Get[string](i.Config(), "version"))
+func packageType(i geneos.Instance) string {
+	ct := i.Type()
+	if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
+		ct = ct.ParentType
+	}
+	return config.Get[string](i.Config(), "pkgtype", config.DefaultValue(ct.String()))
 }
 
 // Version returns the base package name, the underlying package version
@@ -72,12 +74,7 @@ func BaseVersion(i geneos.Instance) (dir string) {
 func Version(i geneos.Instance) (base string, version string, err error) {
 	cf := i.Config()
 	base = config.Get[string](cf, "version")
-	t := i.Type().String()
-	if i.Type().ParentType != nil && len(i.Type().PackageTypes) > 0 {
-		t = i.Type().ParentType.String()
-	}
-	pkgtype := config.Get[string](cf, "pkgtype", config.DefaultValue(t))
-	ct := geneos.ParseComponent(pkgtype)
+	ct := geneos.ParseComponent(packageType(i))
 
 	version, err = geneos.CurrentVersion(i.Host(), ct, base)
 	return
@@ -102,7 +99,6 @@ func CompareVersion(i geneos.Instance, version string) int {
 // loops. If the instance is not running or the executable path cannot
 // be determined then actual will be returned as "unknown".
 func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version string, actual string, err error) {
-	ct := i.Type()
 	cf := i.Config()
 	h := i.Host()
 
@@ -110,12 +106,7 @@ func LiveVersion(i geneos.Instance, pi *ProcessInfo) (base string, version strin
 
 	base = config.Get[string](cf, "version")
 
-	t := ct.String()
-	if ct.ParentType != nil && len(ct.PackageTypes) > 0 {
-		t = ct.ParentType.String()
-	}
-	pkgtype := config.Get[string](cf, "pkgtype", config.DefaultValue(t))
-	nct := geneos.ParseComponent(pkgtype)
+	nct := geneos.ParseComponent(packageType(i))
 
 	version, err = geneos.CurrentVersion(h, nct, base)
 	if err != nil {

@@ -64,12 +64,10 @@ func getInstanceData(i geneos.Instance) (data *psInstance, err error) {
 	}
 
 	psData := &psInstance{
-		psCommon: psCommon{
-			Type: ct,
-			Name: name,
-			Host: h,
-			PID:  pi.PID,
-		},
+		Type:      ct,
+		Name:      name,
+		Host:      h,
+		PID:       pi.PID,
 		Ports:     pi.ListeningPorts,
 		User:      pi.Username,
 		Group:     pi.Groupname,

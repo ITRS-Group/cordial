@@ -60,7 +60,7 @@ func TestReserveImportBackupSameSecond(t *testing.T) {
 	h := newImportTestHost()
 	destination := filepath.Join(t.TempDir(), "geneos.lic")
 	now := time.Date(2026, 11, 5, 1, 2, 3, 0, time.UTC)
-	for sequence := 0; sequence < 3; sequence++ {
+	for sequence := range 3 {
 		backup, err := reserveImportBackup(h, destination, now)
 		if err != nil {
 			t.Fatal(err)

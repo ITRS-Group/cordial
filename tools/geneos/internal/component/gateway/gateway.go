@@ -170,40 +170,16 @@ func init() {
 
 // factory is the factory method for Gateways
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if g, ok := gateways.Load(h.FullName(local)); ok {
-		if gw, ok := g.(*Gateway); ok {
-			return gw
-		}
-	}
-
-	i = &Gateway{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*Gateway).Logger = instance.Logger(i)
-	i.(*Gateway).AuditLogger = instance.AuditLogger(i)
-	gateways.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &gateways,
+		func(h *geneos.Host, _ *geneos.Component) *Gateway {
+			return &Gateway{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *Gateway) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // interface method set

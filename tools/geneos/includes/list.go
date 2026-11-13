@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"cmp"
 	"crypto/tls"
 	"crypto/x509"
 	_ "embed"
@@ -15,7 +16,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -483,10 +483,10 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 
 				// Priority is the third column in both output schemas.
 				pri := slices.Index(columns, "Priority")
-				sort.Slice(resp.Dataview.Table, func(i, j int) bool {
-					pi, _ := strconv.Atoi(resp.Dataview.Table[i][pri])
-					pj, _ := strconv.Atoi(resp.Dataview.Table[j][pri])
-					return pi < pj
+				slices.SortFunc(resp.Dataview.Table, func(a, b []string) int {
+					pi, _ := strconv.Atoi(a[pri])
+					pj, _ := strconv.Atoi(b[pri])
+					return cmp.Compare(pi, pj)
 				})
 
 				resps[gwname] = resp
@@ -980,7 +980,7 @@ func renderGatewayFlags(p gatewayInclude) (flags string) {
 
 func sortString(s string) string {
 	r := []rune(s)
-	sort.Slice(r, func(i, j int) bool { return r[i] < r[j] })
+	slices.Sort(r)
 	return string(r)
 }
 

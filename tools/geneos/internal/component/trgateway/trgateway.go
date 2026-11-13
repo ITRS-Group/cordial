@@ -115,39 +115,16 @@ func init() {
 }
 
 func factory(name string) (i geneos.Instance) {
-	if name == "" {
-		return nil
-	}
-	h, _, local := instance.ParseName(name)
-
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
-		return nil
-	}
-
-	if s, ok := trgateways.Load(h.FullName(local)); ok {
-		if ss, ok := s.(*TRGateway); ok {
-			return ss
-		}
-	}
-
-	i = &TRGateway{
-		Component:    &Component,
-		Conf:         config.New(),
-		InstanceHost: h,
-	}
-
-	if err := instance.SetDefaults(i, local); err != nil {
-		slog.Error("set component defaults failed", slog.Any("instance", i), slog.Any("error", err))
-		return nil
-	}
-
-	// set the home dir based on where it might be, default to one above
-	config.Set(i.Config(), "home", instance.Home(i))
-	i.(*TRGateway).Logger = instance.Logger(i)
-	i.(*TRGateway).AuditLogger = instance.AuditLogger(i)
-	trgateways.Store(h.FullName(local), i)
-
-	return
+	return instance.Factory(name, &Component, &trgateways,
+		func(h *geneos.Host, _ *geneos.Component) *TRGateway {
+			return &TRGateway{Component: &Component, Conf: config.New(), InstanceHost: h}
+		},
+		nil,
+		func(i *TRGateway) {
+			i.Logger = instance.Logger(i)
+			i.AuditLogger = instance.AuditLogger(i)
+		},
+	)
 }
 
 // Type TODO: Document its behavior, inputs, and effects.
@@ -274,97 +251,12 @@ func (i *TRGateway) Add(options ...any) error {
 // seedPackagedYAML copies config/{setup} from the installed package into the
 // instance home when the instance does not already have a setup file.
 func seedPackagedYAML(i *TRGateway) {
-	if i == nil {
-		return
-	}
-	setup := instance.PathTo(i, "setup")
-	if setup == "" {
-		return
-	}
-	h := i.Host()
-	if _, err := h.Stat(setup); err == nil {
-		return
-	}
-	src := i.Host().Join(instance.BaseVersion(i), "config", i.Host().Base(setup))
-	data, err := h.ReadFile(src)
-	if err != nil {
-		return
-	}
-	if err := h.WriteFile(setup, data, 0664); err != nil {
-		return
-	}
-	i.AuditEvent("action/import", nil, slog.Any("file", i.Host().Base(setup)))
+	instance.SeedPackagedSetup(i)
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
 func (i *TRGateway) Command(skipFileCheck bool) (args, env []string, home string, err error) {
-	var checks []string
-
-	if i == nil {
-		err = os.ErrInvalid
-		return
-	}
-
-	cf := i.Config()
-	home = i.Home()
-	base := instance.BaseVersion(i)
-
-	jar := config.Get[string](cf, "jar")
-	mainClass := config.Get[string](cf, "main-class", config.PromoteFrom("mainclass"), config.DefaultValue("com.itrsgroup.trgateway.Main"))
-	setup := instance.PathTo(i, "setup")
-
-	jarPath := i.Host().Join(base, jar)
-	pluginsDir := i.Host().Join(base, "plugins")
-	classpath := jarPath + ":" + i.Host().Join(pluginsDir, "*")
-
-	args = []string{
-		"--enable-native-access=ALL-UNNAMED",
-		"-Djava.net.preferIPv4Stack=true",
-	}
-
-	logback := config.Get[string](cf, "logback")
-	if logback != "" {
-		args = append(args, "-Dlogback.configurationFile="+logback)
-	}
-
-	args = append(args,
-		"-Xms"+strings.TrimPrefix(config.Get[string](cf, "xms", config.DefaultValue("512m")), "-Xms"),
-		"-Xmx"+strings.TrimPrefix(config.Get[string](cf, "xmx", config.DefaultValue("512m")), "-Xmx"),
-		"-XX:+UseG1GC",
-		"-Dapp.home="+home,
-	)
-
-	args = append(args,
-		strings.Fields(config.Get[string](cf, "java-options"))...,
-	)
-
-	args = append(args,
-		"-cp", classpath,
-		mainClass,
-		setup,
-	)
-
-	// this is overridden if the instance env var is set, as those are
-	// added after this function is called and `cmd.Env` only uses the
-	// last value of each named var
-	env = []string{"JAVA_HOME=" + i.Host().Join(base, "jdk")}
-
-	logFile := instance.LogFilePath(i)
-	checks = append(checks, i.Host().Dir(logFile), jarPath, pluginsDir, setup)
-	if logback != "" {
-		checks = append(checks, logback)
-	}
-
-	if skipFileCheck {
-		return
-	}
-
-	missing := instance.CheckPaths(i, checks...)
-	if len(missing) > 0 {
-		err = fmt.Errorf("%w: %v", os.ErrNotExist, missing)
-	}
-
-	return
+	return instance.JavaGatewayCommand(i, skipFileCheck, "com.itrsgroup.trgateway.Main")
 }
 
 // Reload TODO: Document its behavior, inputs, and effects.
@@ -380,29 +272,5 @@ func (i *TRGateway) Rebuild(initial bool) (changed bool, err error) {
 
 func pidCheckFn(arg any, cmdline []string) bool {
 	g, ok := arg.(*TRGateway)
-	if !ok || g == nil {
-		return false
-	}
-	if g.Host().Base(cmdline[0]) != "java" && g.Host().Base(cmdline[0]) != "java.exe" {
-		return false
-	}
-
-	home := g.Home()
-
-	mainClass := config.Get[string](g.Config(), "main-class", config.PromoteFrom("mainclass"), config.DefaultValue("com.itrsgroup.trgateway.Main"))
-	setup := instance.PathTo(g, "setup")
-
-	var homeOK, appOK bool
-	for _, a := range cmdline[1:] {
-		if a == "-Dapp.home="+home || a == setup {
-			homeOK = true
-		}
-		if a == mainClass {
-			appOK = true
-		}
-		if homeOK && appOK {
-			return true
-		}
-	}
-	return false
+	return ok && instance.JavaPIDCheck(g, cmdline, "com.itrsgroup.trgateway.Main")
 }
