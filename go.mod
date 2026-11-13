@@ -25,9 +25,9 @@ require (
 	github.com/hectane/go-acl v1.0.0
 	github.com/jcmturner/goidentity/v6 v6.0.1
 	github.com/jcmturner/gokrb5/v8 v8.4.4
-	github.com/jedib0t/go-pretty/v6 v6.8.3
+	github.com/jedib0t/go-pretty/v6 v6.9.1
 	github.com/kolo/xmlrpc v0.0.0-20220921171641-a4b6fa1dd06b
-	github.com/labstack/echo/v4 v4.16.3
+	github.com/labstack/echo/v4 v4.16.4
 	github.com/labstack/gommon v0.5.0
 	github.com/lestrrat-go/strftime v1.2.1
 	github.com/maja42/goval v1.6.0
@@ -47,7 +47,7 @@ require (
 	github.com/tklauser/go-sysconf v0.4.0
 	github.com/wneessen/go-mail v0.8.2
 	github.com/xuri/excelize/v2 v2.11.1
-	golang.org/x/crypto v0.58.0
+	golang.org/x/crypto v0.59.0
 	golang.org/x/net v0.62.0
 	golang.org/x/oauth2 v0.38.0
 	golang.org/x/sys v0.50.0
