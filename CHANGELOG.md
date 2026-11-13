@@ -7,6 +7,8 @@
 
 ## Version v1.31.0 New Features
 
+* Add versioned update notes and feature highlights, in Markdown and PDF, to release documentation.
+
 * `tools/geneos`
 
   * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
@@ -26,6 +28,10 @@
   * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
 ## Version v1.31.0 Changes
+
+* **Breaking Change**: The original `servicenow` integration, its example configuration and its documentation are no longer included in releases. The last release to ship them was v1.30.1. Users should consider moving to `servicenow2` or `ims-gateway`; `servicenow2` remains included in releases.
+
+* **Breaking Change**: The `pagerduty` integration, its default configuration and its documentation are no longer included in releases. The last release to ship them was v1.30.1. Existing users should retain the earlier release or build the integration from source.
 
 * `tools/geneos`
 

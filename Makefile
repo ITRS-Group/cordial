@@ -19,10 +19,13 @@ release: base docs
 	docker cp cordial-build-$(VERSION):/geneos-includes-$(VERSION).tar.gz release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/bin/. release-$(VERSION)/
 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/lib/libemail.so release-$(VERSION)/
+	rm -f release-$(VERSION)/servicenow release-$(VERSION)/pagerduty
 # 	docker cp cordial-build-$(VERSION):/cordial-$(VERSION)/docs/. release-$(VERSION)/docs/
 	-docker rm cordial-docs-$(VERSION)
 	docker create --name cordial-docs-$(VERSION) cordial-docs:$(VERSION)
 	docker cp cordial-docs-$(VERSION):/docs/. release-$(VERSION)/docs/
+	rm -f release-$(VERSION)/docs/servicenow.md release-$(VERSION)/docs/servicenow.pdf
+	rm -f release-$(VERSION)/docs/pagerduty.md release-$(VERSION)/docs/pagerduty.pdf
 	rm -f release-$(VERSION)/docs/geneos.md release-$(VERSION)/docs/geneos.pdf
 	rm -f release-$(VERSION)/docs/geneos/geneos-readme.md release-$(VERSION)/docs/geneos/geneos-readme.pdf
 	rm -f release-$(VERSION)/docs/geneos/geneos-documentation.* release-$(VERSION)/docs/geneos/geneos-install.* release-$(VERSION)/docs/geneos/geneos-ims.*

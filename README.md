@@ -44,7 +44,7 @@ The `geneos` command also includes tools for many tasks that might otherwise nee
 | Integration | Purpose |
 | --- | --- |
 | [`servicenow2`](integrations/servicenow2/README.md) | Creates or updates ServiceNow incidents from Geneos alerts. |
-| [`pagerduty`](integrations/pagerduty/README.md) | Sends Geneos alerts to PagerDuty as events. |
+| [`ims-gateway`](tools/ims-gateway/README.md) | Connects Geneos incident commands to ServiceNow or ServiceDesk Plus. |
 
 ## Libraries
 
@@ -58,7 +58,6 @@ The `geneos` command also includes tools for many tasks that might otherwise nee
 | Tool | Purpose |
 | --- | --- |
 | [`files2dv`](tools/files2dv/README.md) | Builds Geneos Toolkit-compatible Dataview data from files. Its background push mode is not implemented. |
-| [`ims-gateway`](tools/ims-gateway/README.md) | Connects Geneos incident commands to ServiceNow or ServiceDesk Plus. |
 | [`san-config`](tools/san-config/README.md) | Serves inventory-based configuration to Self-Announcing Netprobes. |
 
 ## Go packages
