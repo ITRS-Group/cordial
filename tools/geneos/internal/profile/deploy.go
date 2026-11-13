@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -158,7 +159,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	}
 
 	// finally, install the profile instance
-	_, err = instance.Add(h, geneos.ParseComponent("profile"), name,
+	profileOptions := []instance.AddOption{
 		instance.WithPort(opts.port),
 		instance.WithValues(opts.vals),
 		instance.Base(opts.base),
@@ -171,7 +172,17 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 		instance.StartAfterAdd(opts.startAfterAdd),
 		instance.WithFlags(opts.flags),
 		instance.WithProfiles(pf),
-	)
+	}
+
+	pct := geneos.ParseComponent("profile")
+	if existing := instance.Instances(h, pct, instance.MatchNames(name)); len(existing) > 0 {
+		// the profile instance may be left over from an earlier deploy
+		// that failed part way, so re-apply it to update the member
+		// instances, which are added above without profile values
+		err = reapplyProfile(existing[0], profileOptions)
+	} else {
+		_, err = instance.Add(h, pct, name, profileOptions...)
+	}
 
 	if err != nil {
 		log.Error("failed to add profile instance", slog.Any("error", err))
@@ -184,4 +195,33 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	}
 
 	return nil
+}
+
+// reapplyProfile updates the saved options of an existing profile
+// instance and applies the profile again, using the profile component's
+// Add method, which does both.
+func reapplyProfile(i geneos.Instance, options []instance.AddOption) (err error) {
+	if config.Get[bool](i.Config(), "protected") {
+		return fmt.Errorf("%s is protected, skipping", i)
+	}
+
+	addOptions := make([]any, len(options))
+	for n, o := range options {
+		addOptions[n] = o
+	}
+	if err = i.Add(addOptions...); err != nil {
+		return err
+	}
+	if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+		return resp.Err
+	}
+	fmt.Printf("%s updated\n", i)
+	i.AuditEvent("action/update", nil)
+
+	if instance.EvalAddOptions(addOptions...).Start {
+		if err = instance.Start(i); errors.Is(err, os.ErrProcessDone) {
+			err = nil
+		}
+	}
+	return
 }

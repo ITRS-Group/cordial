@@ -394,6 +394,11 @@ func TestAddReturnsImportFailure(t *testing.T) {
 	if member, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("licd"), "missing-import-member"); err == nil {
 		t.Cleanup(func() { _ = member.Unload() })
 	}
+	// a failed add must not leave a partial instance behind, otherwise a
+	// retry finds it and skips creation as "already exists"
+	if _, err := os.Stat(filepath.Join(root, "licd", "licds", "missing-import-member")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("partial instance directory left after failed Add, stat error = %v", err)
+	}
 }
 
 func TestEmbeddedDefaultsVersion(t *testing.T) {

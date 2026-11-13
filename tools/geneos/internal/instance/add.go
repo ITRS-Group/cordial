@@ -77,6 +77,23 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		config.Set(cf, "port", 0)
 	}
 
+	// remove a partially created instance so that a later retry does not
+	// find it and treat it as already existing. Only the standard
+	// instance directory is removed, never a configured "home" which may
+	// have been overridden by parameters.
+	var created bool
+	newInstance := i
+	defer func() {
+		if err == nil || created {
+			return
+		}
+		if parent := ct.InstancesDir(h); parent != "" && newInstance.Name() != "" {
+			newInstance.Log().Debug("removing partially created instance")
+			h.RemoveAll(h.Join(parent, newInstance.Name()))
+		}
+		newInstance.Unload()
+	}()
+
 	i.Log().Debug("writing config for new instance")
 	if resp := Write(i, NoRebuild()); resp.Err != nil {
 		return nil, resp.Err
@@ -190,6 +207,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		fmt.Printf("%s added\n", i)
 		i.AuditEvent("action/add", nil)
 	}
+	created = true
 
 	if opts.Start || opts.Logs {
 		i.Log().Debug("starting instance after add")
