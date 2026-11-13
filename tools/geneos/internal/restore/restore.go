@@ -151,6 +151,21 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	// to read through the whole archive and process files as we go,
 	// keeping track of what we've done to prevent overwriting files
 	// from the same archive, and to allow for wildcards and renaming.
+	// remember instance directories created by this restore so that a
+	// failure part way through the archive does not leave partial
+	// instances behind
+	created := map[string]bool{}
+	extracted := false
+	defer func() {
+		if extracted || opts.list {
+			return
+		}
+		for dir := range created {
+			log.Debug("removing partially restored instance", slog.String("directory", dir))
+			opts.host.RemoveAll(dir)
+		}
+	}()
+
 	tr := tar.NewReader(tin)
 	for {
 		var ctSubdir string
@@ -256,7 +271,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				if dest == src {
 					if matched, _ := filepath.Match(dest, instanceName); matched {
 						// save
-						if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
 						files[packageCt.String()+":"+instanceName] += 1
@@ -267,7 +282,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				} else {
 					if src == instanceName {
 						// rename and save
-						if err = processFile(dest, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(dest, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
 						files[packageCt.String()+":"+dest] += 1
@@ -282,7 +297,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 		// otherwise restore all instances in the archive
 		if restoreAll {
-			if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+			if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 				return
 			}
 			files[packageCt.String()+":"+instanceName] += 1
@@ -291,6 +306,8 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			}
 		}
 	}
+
+	extracted = true
 
 	if opts.list {
 		fmt.Fprintf(opts.progress, "Contents of archive %s:\n", archive)
@@ -342,7 +359,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	return
 }
 
-func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64, options ...RestoreOption) (err error) {
+func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64, created map[string]bool, options ...RestoreOption) (err error) {
 	opts := evalRestoreOptions(options...)
 
 	ct := opts.component
@@ -372,8 +389,10 @@ func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.
 	sizes[ct.String()+":"+instanceName] = -1
 
 	// write file and update sizes
-	if _, err = h.Stat(h.PathTo(ct, ct.String()+"s", instanceName)); err != nil {
+	instDir := h.PathTo(ct, ct.String()+"s", instanceName)
+	if _, err = h.Stat(instDir); err != nil {
 		// instance does not yet exist
+		created[instDir] = true
 		if err = writeFile(instanceName, instRelFilePath, tr, hdr, opts); err != nil {
 			return
 		}
