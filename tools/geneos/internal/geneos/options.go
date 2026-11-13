@@ -53,6 +53,7 @@ type geneosOptions struct {
 	signingBundlePassword config.Secret
 	signingBundlePrompt   func(bool, int, ...string) (config.Secret, error)
 	source                string
+	sourceExplicit        bool
 	start                 func(Instance, ...any) error
 	stop                  func(Instance, ...any) error
 	username              string
@@ -74,6 +75,9 @@ func evalOptions(options ...GeneosOption) (d *geneosOptions) {
 	}
 	for _, opt := range options {
 		opt(d)
+	}
+	if d.sourceExplicit && !d.downloadonly && !IsURL(d.source) {
+		d.localOnly = true
 	}
 
 	// make sure the components are unique
@@ -180,6 +184,8 @@ func LocalOnly(local bool) GeneosOption {
 // Source is the archive location or the specific release file. It can
 // be a directory, in which case that directory is used for the
 // appropriate archive file(s), a specific file or a URL to a release.
+// An explicit local source implies LocalOnly, except when DownloadOnly
+// uses the source as the destination directory.
 // If the file is a URL, it is downloaded to the local archive
 // directory, which defaults to `packages/downloads`.
 //
@@ -188,6 +194,7 @@ func LocalOnly(local bool) GeneosOption {
 // directory.
 func Source(source string) GeneosOption {
 	return func(d *geneosOptions) {
+		d.sourceExplicit = source != ""
 		if source == "" {
 			d.source = filepath.Join(LocalRoot(), "packages", "downloads")
 			return

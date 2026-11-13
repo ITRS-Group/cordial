@@ -38,6 +38,7 @@ import (
 
 var deployCmdTemplate, deployCmdBase, deployCmdKeyfileCRC string
 var deployCmdGeneosHome, deployCmdUsername, deployCmdExtraOpts string
+var deployCmdSite string
 var deployCmdStart, deployCmdLogs, deployCmdLocal, deployCmdNexus, deployCmdSnapshot, deployCmdNoSave bool
 var deployCmdTLS, deployCmdInsecure bool
 var deployCmdSigningBundle, deployCmdInstanceBundle string
@@ -55,6 +56,7 @@ func init() {
 	Cmd.AddCommand(deployCmd)
 
 	deployCmd.Flags().StringVarP(&deployCmdGeneosHome, "geneos", "D", "", "Installation directory. Prompted if not given and not found\nin existing user configuration or environment ${`GENEOS_HOME`}")
+	deployCmd.Flags().StringVarP(&deployCmdSite, "site", "s", "", "Set the initial installation site name")
 	deployCmd.Flags().BoolVarP(&deployCmdStart, "start", "S", false, "Start new instance after creation")
 	deployCmd.Flags().BoolVarP(&deployCmdLogs, "log", "l", false, "Start created instance and follow logs.\n(Implies --start to start the instance)")
 
@@ -135,9 +137,12 @@ var deployCmd = &cobra.Command{
 			deployCmdLocal = true
 		}
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		var name string
 
+		if command.Flags().Changed("archive") && deployCmdArchive == "" {
+			return fmt.Errorf("--archive must not be empty")
+		}
 		ct, names, params, err := FetchArgs(command)
 		if err != nil {
 			return err
@@ -156,6 +161,15 @@ var deployCmd = &cobra.Command{
 
 		if h == geneos.ALL {
 			h = geneos.LOCAL
+		}
+		if command.Flag("site").Changed {
+			if !h.IsLocalhost() {
+				return fmt.Errorf("--site sets the local installation site and cannot be used for a remote deployment")
+			}
+			if err := geneos.SetInitialSite(deployCmdSite); err != nil {
+				return err
+			}
+			profile.SetExpandOptions(h, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 		}
 
 		// check profile requirements
@@ -185,7 +199,7 @@ var deployCmd = &cobra.Command{
 
 		// if no local root ...
 		if h.IsLocalhost() && geneos.LocalRoot() == "" {
-			geneos.Initialise(command.CommandPath(), h,
+			err = geneos.Initialise(command.CommandPath(), h,
 				// top-level options
 				geneos.UseRoot(deployCmdGeneosHome),
 				geneos.RootDirPrompt(config.ReadUserInputLine),
@@ -199,6 +213,9 @@ var deployCmd = &cobra.Command{
 				geneos.SigningBundlePassword(deployCmdBundlePassword),
 				geneos.SigningBundlePrompt(config.ReadPasswordInput),
 			)
+			if err != nil {
+				return err
+			}
 			if profile.Initialise(cordial.ExecutableName()) {
 				log.Debug("profiles configuration written")
 			}

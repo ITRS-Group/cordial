@@ -4,24 +4,25 @@
 
 The ITRS Level 1 Infrastructure include file provides pre-configured, best practice monitoring of basic server infrastructure - CPU, disk, memory / hardware and network - through a single Gateway Type, `Level 1 - Infrastructure`. It is embedded in the `geneos` program, used by the `demo` and `motm-gateway` profiles, and can be added to any Gateway.
 
-Files included, relative to your Geneos installation directory:
+Files included, relative to your Geneos installation directory, for the example site name `acme`:
 
 | File | Purpose |
 | ---- | ------- |
 | `gateway/includes/itrs.level1.infrastructure.xml` | ITRS monitoring definitions - read-only, replaced on update |
-| `gateway/includes/config/config.level1.infrastructure.xml` | Your local overrides - empty by default, never overwritten |
+| `gateway/acme/acme.level1.infrastructure.xml` | Your site overrides - empty by default, never overwritten |
 
 The `itrs` file is extracted into a version directory and linked from the `includes` directory, so Gateways always reference the same path:
 
 ```text
-gateway/includes/
-├── itrs.level1.infrastructure.xml -> vx.y.z/itrs.level1.infrastructure.xml
-├── vx.y.z/itrs.level1.infrastructure.xml
-└── config/config.level1.infrastructure.xml
+gateway/
+├── includes/
+│   ├── itrs.level1.infrastructure.xml -> vx.y.z/itrs.level1.infrastructure.xml
+│   └── vx.y.z/itrs.level1.infrastructure.xml
+└── acme/acme.level1.infrastructure.xml
 ```
 
 >[!NOTE]
->Do not edit the `itrs` file. Put changes in the `config` file, or in the main setup file of a single Gateway, as these have a higher include priority and override the ITRS defaults. See [Gateway Setup Files](https://docs.itrsgroup.com/docs/geneos/7.12.0/processing/configuration/gateway_setup_files/index.html).
+>Do not edit the `itrs` file. Put changes in the site file, or in the main setup file of a single Gateway, as these have a higher include priority and override the ITRS defaults. If no site name is set, the directory and prefix are `local`. See [Gateway Setup Files](https://docs.itrsgroup.com/docs/geneos/7.12.0/processing/configuration/gateway_setup_files/index.html).
 
 ## Installation
 
@@ -50,7 +51,7 @@ Existing version directories are only overwritten with `--force` (changed files 
        <include>
            <priority>500</priority>
            <required>true</required>
-           <location>../../includes/config/config.level1.infrastructure.xml</location>
+           <location>../../acme/acme.level1.infrastructure.xml</location>
        </include>
    </includeGroup>
    ```

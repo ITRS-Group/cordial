@@ -291,7 +291,7 @@ RUN set -eux; \
     find /includes -type f -exec chmod a-x {} \;; \
     find "/includes/$archive_root/$version" -type f -exec chmod a-w {} \;; \
     chmod 0555 "/includes/$archive_root/scripts/install-includes.sh"; \
-    tar --sort=name -czf /geneos-includes.tar.gz -C /includes "$archive_root"
+    tar --sort=name -czf "/geneos-includes-$version.tar.gz" -C /includes "$archive_root"
 
 FROM alpine AS cordial-build
 
@@ -300,7 +300,7 @@ RUN --mount=type=cache,id=alpine-apk,target=/var/cache/apk,sharing=locked \
 
 COPY --from=build /app/cordial/VERSION /
 COPY --from=cordial-docs /docs/. /cordial/docs/
-COPY --from=geneos-includes /geneos-includes.tar.gz /
+COPY --from=geneos-includes /geneos-includes-*.tar.gz /
 
 # tools binaries
 COPY --from=build /app/cordial/tools/geneos/geneos /cordial/bin/

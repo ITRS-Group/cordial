@@ -57,10 +57,9 @@ profiles:
 
       The initial configuration file for the Gateway is built from the
       default templates, which are installed at the same time, and
-      located in `gateway/templates` but this can be overridden with the
-      `-s` option. For the Gateway component you can add include files
-      using `-i PRIORITY:PATH` flag. This can be repeated multiple
-      times.
+      located in `gateway/templates`. For the Gateway component you can
+      add include files using `-i PRIORITY:PATH` flag. This can be
+      repeated multiple times.
 
       Other flags inherited from the `geneos init` command can be used
       to control the installation.
@@ -107,7 +106,7 @@ profiles:
         500: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../includes/config/config.level1.infrastructure.xml
+          ../../${site}/${site}.level1.infrastructure.xml
         1010: >
           ITRS Geneos Best Practice |
           Level 2 - Basic Application |
@@ -115,7 +114,7 @@ profiles:
         510: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../includes/config/config.level2.basic-application.xml
+          ../../${site}/${site}.level2.basic-application.xml
     netprobe:
       - name: ${option:minimal?"minimal:":""}localhost
         params:
@@ -358,7 +357,7 @@ profiles:
           00500: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../includes/config/config.level1.infrastructure.xml
+            ../../${site}/${site}.level1.infrastructure.xml
 
           # Level 2 - Basic application includes for the MOTM gateway
           01010: >
@@ -368,7 +367,7 @@ profiles:
           00510: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../includes/config/config.level2.basic-application.xml
+            ../../${site}/${site}.level2.basic-application.xml
 
           # Level 3 - Advanced application includes for the MOTM gateway
           01020: >
@@ -378,7 +377,7 @@ profiles:
           00520: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../includes/config/config.level3.geneos.xml
+            ../../${site}/${site}.level3.geneos.xml
             
         variables:
           - type: string

@@ -9,6 +9,12 @@
 
 * `tools/geneos`
 
+  * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
+
+  * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
+
+    Existing files in `gateway/includes/config` are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. Existing user profiles and Gateway setups are not rewritten. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
+
   * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
 
   * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
@@ -17,19 +23,17 @@
 
   * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
 
-  * Release distributions now include a separate `geneos-includes.tar.gz` archive containing the current include files and configuration templates, for use with `geneos includes install`.
-
-  * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
+  * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
 ## Version v1.31.0 Changes
 
-* Updated to use Go 1.27.4 and update dependencies
-
-* `pkg/host`
-
-  * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
-
 * `tools/geneos`
+
+  * **Breaking Change**: `geneos includes list` now uses long-format fields in JSON, pretty, CSV and toolkit output, with separate status and boolean flag fields instead of the compact flags column. CSV and toolkit headings use camelCase, while column and table headings use NormalCase. Gateway-local includes use `gatewayLocal` and `G` instead of `local` and `L`. Long output also reports remote HEAD latency and HTTPS certificate validity where available.
+
+    Include locations under the Geneos home are shown relative to a Gateway instance directory where appropriate. Gateway-local include references retain their configured paths; a local main Gateway setup file is shown relative to its instance directory.
+
+  * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`; explicit URLs are fetched directly.
 
   * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
 
@@ -39,7 +43,11 @@
 
   * Use host-specific path operations for file handling across commands, instances, packages, includes, templates, and restore operations, including paths that previously relied on the client OS's `path` or `filepath` behavior.
 
-  * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types.
+* Updated to use Go 1.27.4 and update dependencies
+
+* `pkg/host`
+
+  * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
 * `pkg/geneos`
 
@@ -59,7 +67,7 @@
 
   * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
 
-  * Fix local archive handling in `geneos deploy` and `geneos init` to avoid unnecessary download credential prompts.
+  * Fix local archive handling in `geneos deploy` and `geneos init` to avoid download credential prompts or download fallback when `--archive` specifies a local path. Missing matching archives are reported; explicit archive URLs are still fetched directly.
 
   * Preserve archive file errors rather than reporting misleading directory errors when a file cannot be opened.
 
@@ -91,6 +99,13 @@
 
 This release introduces significant new features for the `geneos` command, along with a number of minor breaking changes. Please read this changelog carefully before upgrading.
 
+>[!IMPORTANT]
+>**Breaking Changes**
+>
+>1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more common single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
+>
+>1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
+
 A number of the new features have been introduced as part of a larger Monitor-Of-The-Monitors (MOTM) effort. For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
 
 * **Monitor-Of-The-Monitors (MOTM) Framework**: The MOTM framework is an existing collection of monitoring capabilities and best practices designed to provide a unified view and management of multiple monitoring components within the Geneos ecosystem. It serves as the foundation for the new features introduced in this release, including profiles, includes, and enhanced snapshot capabilities. Once these features are fully integrated, they will enable more streamlined and automated management of complex monitoring environments.
@@ -107,16 +122,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
 * **Dashboard Tools**: The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files respectively.
 
->[!IMPORTANT]
->**Breaking Changes**
->
->1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more common single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
->
->1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
-
 ## Version v1.30.1 Changes
-
-* Updated to use Go 1.27.3 and update dependencies
 
 * `tools/geneos`
 
@@ -171,6 +177,8 @@ A number of the new features have been introduced as part of a larger Monitor-Of
   * Update `sso-agent` component suport to support passwords in (encoded) environment variables and correctly rebuild the configured keystore and to support changing the `ssl_alias` and passwords for the keystore and truststore as well as improved validation and error handling.
 
   * Both `webserver` and `sso-agent` have had special support for external, Java command-line truststores removed. This does not affect the component specific functionality which uses specific configuration files. If you need to use additional truststores, you should configure them using the `options` parameters for instances.
+
+* Updated to use Go 1.27.3 and update dependencies
 
 * `pkg/config`
 
@@ -540,6 +548,10 @@ After this release, planned work includes:
 
 ### Version v1.26.1 Highlights
 
+* `pkg/config`
+
+  * A major refactoring, including API changes, to modernise the configuration package and make it easier to use in other projects. In the unlikely event you are using this package (or any from the `pkg` directory) please be aware that breaking changes have been made and you should not update your dependencies to this version until you have reviewed the changes and made any necessary updates to your code.
+
 * `tools/geneos`
 
   * TLS Changes
@@ -565,10 +577,6 @@ After this release, planned work includes:
   * GDNA now supports the License Daemon 7.8.0 and later for real-time fetching of license data from the now protected endpoint(s). It does not yet support the new `licd` binary summary files, but this is planned for a future release.
 
     Additional configuration is required to use this new feature, so please see the updated documentation for details.
-
-* `pkg/config`
-
-  * A major refactoring, including API changes, to modernise the configuration package and make it easier to use in other projects. In the unlikely event you are using this package (or any from the `pkg` directory) please be aware that breaking changes have been made and you should not update your dependencies to this version until you have reviewed the changes and made any necessary updates to your code.
 
 * `tools/ims-gateway`
 
@@ -2011,13 +2019,13 @@ Key files are now enabled for use by default for all new Gateway instances. Key 
 ## v1.8.0 Changes
 
 * [`tools/geneos`](tools/geneos/README.md)
+  - `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
+
   - Enable the use of external key-files for all *new* Gateways running on version GA5.14 and above. Existing Gateways will not be affected as the default is `usekeyfile=false`. If you do not want to use an external key-file set `usekeyfile=false` before starting for the first time. If a Gateway has been started with or without a keyfile and created a cache directory then you must follow the instructions in the documentation, <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm#How_to_change_the_key_file_of_your_Gateway>, otherwise your Gateway will not start-up.
 
   - New options to the `start`, `restart` and `command` sub-commands allow you to add one-off command line arguments and environment variables to an instance. This is useful, for example, to pass a `-skip-cache` argument to a Gateway.
 
   - Extensive rework to the internal handling of loops-over-instances to pass-back an `instance.Response` struct and handle output at the caller. This is preparation for work on non-CLI interfaces (think: REST API and web). This may break some output formatting, please report via github issues.
-
-  - `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
 
 * [`pkg/geneos/api`](pkg/geneos/api/README.md)
   - A new API for inbound data to Geneos. This package is not yet ready for real-world use.

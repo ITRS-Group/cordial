@@ -1497,6 +1497,18 @@ Each value is in the form of `KEY=VALUE` where key is the configuration item and
 
 While you can set arbitrary keys only some have any meaning. The most important one is `geneos`, the path to the root directory of the Geneos installation managed by the program. If you change or remove this value you may break the functionality of the program, so please be careful.
 
+Set the installation's site name with `geneos config set site=acme`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot be `config`, `include`, `includes`, `gateways`, `shared`, `templates`, `gateway_shared`, or `gateway_config` (case-insensitive).
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
 For an explanation of the various configuration parameters see the main documentation.
 
 ## Usage
@@ -1678,6 +1690,20 @@ The difference between `deploy` and `add` or `init` commands is that `deploy` wi
 
 This allows you to create an instance without having to worry about initialising the set-up and so on. The name if the instance can be given on the command line as `NAME` but defaults to the hostname of the system.
 
+For a local installation, `--site`/`-s` sets the initial site name, for example `geneos deploy --site acme gateway`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
+
+Use `--archive`/`-A` to select a release archive or directory on the local machine, or an archive URL. A local path implies `--local`; if it contains no suitable archive, the command does not fall back to downloading. An archive URL is fetched directly.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
 The stages that deploy goes through will help you choose the options you need:
@@ -1748,6 +1774,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```text
   -D, --geneos GENEOS_HOME            Installation directory. Prompted if not given and not found
                                       in existing user configuration or environment ${GENEOS_HOME}
+  -s, --site string                   Set the initial installation site name
   -S, --start[=true|false]            Start new instance after creation
   -l, --log[=true|false]              Start created instance and follow logs.
                                       (Implies --start to start the instance)
@@ -2641,7 +2668,7 @@ The `itrs.*.xml` files are functional includes. Treat them as read-only and upgr
 
 ## Files
 
-Release archives have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
+Release archives are named `geneos-includes-v<version>.tar.gz` and have a single top-level directory named `geneos-includes-v<version>`. It contains the versioned functional includes under a `v`-prefixed semantic-version directory, an unversioned `config/` directory of templates, `scripts/install-includes.sh` for users installing without the `geneos` command, and a `docs/` directory with this README and the Markdown include documentation plus generated PDF versions. The `geneos includes install` command strips this wrapper and does not copy the script or documentation into the Gateway's live include directory.
 
 | File | Purpose |
 | --- | --- |
@@ -2656,26 +2683,42 @@ Release archives have a single top-level directory named `geneos-includes-v<vers
 | `config.level3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Level 3 Geneos. |
 | `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
 
-After installation, files are organized like this:
+Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, for Acme Corp, an installation with `geneos config set site=acme` has files organized like this:
 
 ```text
-gateway/includes/
-├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
-├── v1.31.0/
-│   ├── itrs.level0.foundation.xml
-│   ├── itrs.level1.infrastructure.xml
-│   ├── itrs.level2.basic-application.xml
-│   └── itrs.level3.geneos.xml
-└── config/
-    ├── config.level0.authentication.xml
-    ├── config.level0.foundation.xml
-    ├── config.level1.infrastructure.xml
-    ├── config.level2.basic-application.xml
-    ├── config.level3.geneos.xml
-    └── config.level4.analytics.xml
+gateway/
+├── includes/
+│   ├── itrs.level0.foundation.xml -> v1.31.0/itrs.level0.foundation.xml
+│   ├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
+│   ├── itrs.level2.basic-application.xml -> v1.31.0/itrs.level2.basic-application.xml
+│   ├── itrs.level3.geneos.xml -> v1.31.0/itrs.level3.geneos.xml
+│   └── v1.31.0/
+│       ├── itrs.level0.foundation.xml
+│       ├── itrs.level1.infrastructure.xml
+│       ├── itrs.level2.basic-application.xml
+│       └── itrs.level3.geneos.xml
+└── acme/
+    ├── acme.level0.authentication.xml
+    ├── acme.level0.foundation.xml
+    ├── acme.level1.infrastructure.xml
+    ├── acme.level2.basic-application.xml
+    ├── acme.level3.geneos.xml
+    └── acme.level4.analytics.xml
 ```
 
-The top-level links let Gateway setups use a stable path while the target version changes. Configuration templates are copied only when absent and are not overwritten by later installs.
+The links let Gateway setups use a stable path while the target version changes. Configuration templates are regular files, copied only when absent and not overwritten by later installs. The archive itself always uses the `config` names listed above.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
+On installation, files from the older `gateway/includes/config` directory are copied to the site directory before new templates are installed. Existing destination files are not replaced, and the old directory remains for previous Gateway setups.
 
 ## Installation
 
@@ -2684,41 +2727,42 @@ The top-level links let Gateway setups use a stable path while the target versio
 Install the includes embedded in the current `geneos` executable, or install a published archive:
 
 ```shell
+geneos config set site=acme
 geneos includes install
-geneos includes install /path/to/geneos-includes.tar.gz
+geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 ```
 
-Add `--update` to replace existing top-level include paths with links to the installed version. For archive builds, `make includes` creates `release-<VERSION>/geneos-includes.tar.gz` from the repository root.
+Add `--update` to replace existing top-level include paths with links to the installed version.
 
 ### Install with shell tools
 
-Use the external installer included in the release archive at `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
+Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
 
 ```shell
-tar -xzf /path/to/geneos-includes.tar.gz
+tar -xzf /path/to/geneos-includes-v1.31.0.tar.gz
 cd geneos-includes-v1.31.0
 ./scripts/install-includes.sh /path/to/geneos
 ```
 
-The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
+The script installs into a fresh version directory, keeps existing config templates, and creates only missing top-level links. It uses `gateway/local/local.*.xml` and does not read the `geneos` site setting; use `geneos includes install` for a site name such as `acme`. It is intended for initial installation and does not replace the `geneos includes install` command's archive validation, backups, or Gateway-reference checks. If the version is already present, or you need to update live links, use `geneos includes install --update` or inspect and back up the affected files first.
 
 ## How-To
 
-Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the local template under `config/`, for example `../../includes/config/config.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the site template, for example `../../acme/acme.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 
-| Task | Command |
-| --- | --- |
-| List configured/available includes | `geneos includes list` |
-| Include version directories in the listing | `geneos includes list --all` |
-| Show include use by Gateway | `geneos includes list --gateway` |
-| Point top-level links at a version | `geneos includes update --version v1.31.0` |
-| Preview repairs for broken include references | `geneos includes fix --dry-run` |
-| Repair broken references with unique same-name replacements | `geneos includes fix` |
-| Delete unused version directories and their links | `geneos includes delete 'v1.30.*'` |
+| Command                                    | Task                                                        |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| `geneos includes list`                     | List configured/available includes                          |
+| `geneos includes list --all`               | Include version directories in the listing                  |
+| `geneos includes list --gateway`           | Show include use by Gateway                                 |
+| `geneos includes update --version v1.31.0` | Point top-level links at a version                          |
+| `geneos includes fix --dry-run`            | Preview repairs for broken include references               |
+| `geneos includes fix`                      | Repair broken references with unique same-name replacements |
+| `geneos includes delete 'v1.30.*'`         | Delete unused version directories and their links           |
 
-`geneos includes update` and `delete` inspect Gateway setups before removing obsolete links or versions. `install --update` also updates links while installing. Use `geneos includes COMMAND --help` for options; the global `--host`/`-H` option selects the destination host.
+Both the `geneos includes update` and `geneos includes delete` commands check Gateway setups before removing obsolete links or versions. The `geneos includes install --update` command also updates links while installing. Use `geneos includes COMMAND --help` to see available options; the global `--host`/`-H` option selects the destination host.
 
 ### Manage with shell tools
 
@@ -2890,7 +2934,19 @@ The archive must contain a single top-level directory named `geneos-includes-<ve
 
 Managed includes are installed under `gateway/includes/<version>`, including when that directory already exists. Changed files are backed up to timestamped `.bak` files; unchanged files are left in place.
 
-Configuration templates are installed under `gateway/includes/config` only when no path of the same name exists. Local configuration files and existing symlinks are never replaced.
+Configuration templates are installed under `gateway/<site>/<site>.*.xml`, next to `gateway/includes`. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment; for example, use `geneos config set site=acme` for Acme Corp. The archive retains its original `config/` and `config.*.xml` names.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
+Before installing templates, existing files under `gateway/includes/config` are copied to the new site directory without replacing existing destinations. `config.*` file prefixes become the site name; other files and subdirectories are copied as well. The original directory is left intact for older Gateway setups. Existing symlinks in the old directory are copied as regular files containing their targets' contents; broken links cause an error. Templates are installed only when no destination exists.
 
 Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
 
@@ -2899,8 +2955,8 @@ With `--update`, a preflight checks obsolete links against gateway setups before
 ```shell
 geneos includes install
 geneos includes install --update
-geneos includes install geneos-includes.tar.gz
-geneos includes install --update geneos-includes.tar.gz
+geneos includes install geneos-includes-v1.31.0.tar.gz
+geneos includes install --update geneos-includes-v1.31.0.tar.gz
 ```
 
 The archive is read locally; the global `--host` (`-H`) option selects the installation destination. Completed filesystem operations are not rolled back if a later operation fails.
@@ -2933,7 +2989,7 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
 
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
-The include view reports copies, Gateway usage, status flags, modification time, size, and location. Paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files.
+The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
 The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
 
@@ -2950,12 +3006,12 @@ Use `--long` for version, permissions, owner, remote latency, and certificate-va
 
 Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
 
-Machine-readable formats include `status`, `shared`, `local`, `remote`, `readOnly`, `disabled`, and `optional` fields. CSV and toolkit use `"Y"` or `"N"` for boolean fields and empty cells for values that do not apply; JSON and pretty output only true flags as `"Y"`, omitting false or inapplicable flags. Status is `OK` by default, `DUPLICATES` on duplicate-basename summary rows, `NOT_FOUND` or `PERMISSION_DENIED` for local file errors, and `-` when a remote lookup is skipped (empty in CSV and toolkit). A remote HEAD request reports `OK`, `FAILED: <status-code>`, `TIMEOUT`, or `FAILED`. Long output also includes `latency` for the connection and HEAD request, rounded to whole milliseconds with an `ms` suffix, and `certValid`; certificate validity is checked only for HTTPS URLs. The same boolean output rules apply to `certValid`, so JSON does not distinguish an invalid certificate from one that was not checked.
+Machine-readable formats include `status`, `shared`, `gatewayLocal`, `remote`, `readOnly`, `disabled`, and `optional` fields. CSV and toolkit use `"Y"` or `"N"` for boolean fields and empty cells for values that do not apply; JSON and pretty output only true flags as `"Y"`, omitting false or inapplicable flags. Status is `OK` by default, `DUPLICATES` on duplicate-basename summary rows, `NOT_FOUND` or `PERMISSION_DENIED` for local file errors, and `-` when a remote lookup is skipped (empty in CSV and toolkit). A remote HEAD request reports `OK`, `FAILED: <status-code>`, `TIMEOUT`, or `FAILED`. Long output also includes `latency` for the connection and HEAD request, rounded to whole milliseconds with an `ms` suffix, and `certValid`; certificate validity is checked only for HTTPS URLs. The same boolean output rules apply to `certValid`, so JSON does not distinguish an invalid certificate from one that was not checked.
 
 Flags identify include properties:
 
 * `D` - Disabled in the Gateway setup
-* `L` - Gateway-local include
+* `G` - Gateway-local include
 * `o` - Optional include
 * `R` - Read-only file
 * `S` - Shared include
@@ -3041,6 +3097,20 @@ The installation directory is considered empty if it exists but only contains do
 
 If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories but will not remove or change existing files. If you adopt an existing installation then see the `init templates` command for how to add default template files to the installation for use by new instances.
 
+Use `--site`/`-s` to set the initial site name, for example `geneos init --site acme`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
+
+Use `--archive`/`-A` to select a release archive or directory on the local machine, or an archive URL. A local path restricts installation to local archives; if it contains no suitable archive, the command does not fall back to downloading. An archive URL is fetched directly.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later with `geneos config set` can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
 ## TLS Support
 
 TLS is always enabled on new servers unless the `--insecure` flag is given during initial deployment. By default, new root and signing certificates and private keys are created unless you supply either a signing or a certificate bundle. This typically only makes sense during the initial set-up of Geneos and subsequent deployments should share the trust chain established by the initial deployment.
@@ -3107,6 +3177,7 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
   -L, --licence string                   Licence file location (default "geneos.lic")
+  -s, --site string                      Set the initial installation site name
   -l, --log[=true|false]                 Follow logs after starting instance(s)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname
@@ -3116,7 +3187,8 @@ geneos init [PROFILE] [flags] [DIRECTORY]
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
       --insecure[=true|false]            Do not create internal certificates for TLS support
-  -A, --archive string                   Directory of releases for installation
+  -A, --archive string                   URL, file, or directory of releases for installation.
+                                         Local paths use local archives only
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots[=true|false]           Download from nexus snapshots. Implies -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")
@@ -3166,7 +3238,8 @@ geneos init templates [TYPE] [flags]
 
 ```text
       --allow-root[=true|false]          allow running as root (not recommended)
-  -A, --archive string                   Directory of releases for installation
+  -A, --archive string                   URL, file, or directory of releases for installation.
+                                         Local paths use local archives only
   -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
@@ -3748,7 +3821,7 @@ The `install` command will, with no other options, download and unarchive the la
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
-Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line.
+Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line. A local file or directory implies `--local`: the command does not fall back to downloading if no matching archive is found. A URL is fetched directly. A local `--archive` cannot be combined with `--download`.
 
 If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
 
@@ -3772,7 +3845,7 @@ The `--force`/`-F` flags implies `--update`.
 
 By default the latest version found will be the one installed, either from the download site or locally. To install a specific version from the use the `--version`/`-V` option with a version in the form `MAJOR.MINOR.PATCH` where omitting `PATCH` will get the latest patch release for `MAJOR.MINOR` and omitting `MINOR.PATCH` will get the latest version in the `MAJOR` set. Versions cannot be selected for remote `el8` archives because of a restriction in indexing releases. Specifying a version with either a local only or with a directory name on the command line will apply the same rules to all matching local files. This flag is ignored if specific archive files are given on the command line.
 
-If you have downloaded a release but have changed the file name from the original then you must use the `--override`/`-O` option to inform the `install` command which component type and release version the archive contains, e.g. `-T gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version. If this option is used with either more than on file or a directory on the command line then that is an error.
+If you have downloaded a release but have changed the file name from the original then you must use the `--override`/`-O` option to inform the `install` command which component type and release version the archive contains, e.g. `-O gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version. This option requires a single file or URL, not a directory or multiple sources.
 
 For internal ITRS users there are the `--nexus`/`-N` and `--snapshot`/`-S` options to download archives from the internal nexus server. The `--snapshot`/`-S` option implies `--nexus`/`-N`. You may need to supply different credentials for these downloads.
 
@@ -3811,7 +3884,7 @@ geneos package install [flags] [TYPE] [FILE|URL...]
       --all[=true|false]          Install all types available, not just those types already installed
   -A, --archive stringArray       URL or file path to release archive
                                   or a directory to search for local release archives.
-                                  Added to positional sources (repeat as required)
+                                  Local paths imply --local; repeat as required
       --header NAME=VALUE         HTTP header in the format NAME=VALUE
                                   (Repeat as required)
       --allow-root[=true|false]   allow running as root (not recommended)
@@ -4012,6 +4085,18 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.level1.infrastructure.xml` to `../../acme/acme.level1.infrastructure.xml`.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them, update literal legacy profile paths to use `${site}` if needed, and run `geneos includes install` to populate the new site directory.
+
 ## Use a Supplied Profile
 
 ### Inspect the Definitions
@@ -4048,10 +4133,10 @@ Use `init` for a new installation. You need access to suitable release archives 
 1. Initialise and deploy the profile. Replace the account and absolute directory path:
 
    ```bash
-   geneos init demo /opt/itrs/geneos --username user@example.com
+   geneos init demo /opt/itrs/geneos --site acme --username user@example.com
    ```
 
-   Enter the download password when prompted. Use `--archive /opt/itrs/releases` to use previously downloaded release archives. With `init`, `--minimal` selects the minimal Netprobe package for the supplied profiles.
+   Enter the download password when prompted. Use `--archive /opt/itrs/releases` to use previously downloaded release archives without falling back to downloads if a matching archive is unavailable. An `--archive` URL is fetched directly. With `init`, `--minimal` selects the minimal Netprobe package for the supplied profiles.
 
 2. Check the installed instances and their status:
 
@@ -4192,6 +4277,7 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | --- | --- |
 | `${hostname}` | Host name supplied by the profile lookup table. |
 | `${execpath}` | Absolute path to the running `geneos` executable, with symlinks resolved. |
+| `${site}` | Site name with spaces replaced by underscores, or `local` when unset. |
 | `${env:NAME}` | Environment variable from the `geneos` process. An unset variable produces an empty value. |
 | `${option:EXPRESSION}` | Result of a `goval` expression using selected command options and `NAME=VALUE` arguments. |
 | `${config:KEY}` | Value from the current configuration. In a SAN `for-each` entry, this is the matched instance's configuration. |

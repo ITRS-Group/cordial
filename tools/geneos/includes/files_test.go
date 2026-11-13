@@ -23,11 +23,11 @@ func TestExtractIncludesPreservesExistingConfig(t *testing.T) {
 	for _, symlink := range []bool{false, true} {
 		t.Run(fmt.Sprint(symlink), func(t *testing.T) {
 			h := newTestGatewayHost(t)
-			configDir := h.PathTo("gateway", "includes", "config")
+			configDir := h.PathTo("gateway", "local")
 			if err := os.MkdirAll(configDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			configPath := filepath.Join(configDir, "config.test.xml")
+			configPath := filepath.Join(configDir, "local.test.xml")
 			if symlink {
 				if err := os.Symlink("missing.xml", configPath); err != nil {
 					t.Fatal(err)
@@ -50,6 +50,24 @@ func TestExtractIncludesPreservesExistingConfig(t *testing.T) {
 				t.Fatalf("config contents = %q, %v", data, err)
 			}
 		})
+	}
+}
+
+func TestExtractIncludesRejectsSymlinkedSiteDirectory(t *testing.T) {
+	h := newTestGatewayHost(t)
+	parent := h.PathTo("gateway")
+	if err := os.MkdirAll(parent, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(t.TempDir(), filepath.Join(parent, geneos.SiteName())); err != nil {
+		t.Fatal(err)
+	}
+	source := fstest.MapFS{
+		"files/itrs.test.xml":   &fstest.MapFile{Data: []byte("include")},
+		"files/config.test.xml": &fstest.MapFile{Data: []byte("template")},
+	}
+	if err := extractIncludes(h, source, "v1.2.3", true); err == nil {
+		t.Fatal("symlinked site directory was accepted")
 	}
 }
 

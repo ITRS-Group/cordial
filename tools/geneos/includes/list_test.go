@@ -135,11 +135,122 @@ func TestIncludesListGatewayPatterns(t *testing.T) {
 			}
 		})
 	}
-	if gateways, _ := getGatewayIncludes(h, nil, "missing-*"); len(gateways) != 0 {
-		t.Fatalf("unmatched pattern loaded gateways: %v", gateways)
+	if gateways, _, err := getGatewayIncludes(h, nil, "missing-*"); err != nil || len(gateways) != 0 {
+		t.Fatalf("unmatched pattern loaded gateways: %v, error: %v", gateways, err)
 	}
-	if gateways, _ := getGatewayIncludes(h, nil, "prod-a@unknown"); len(gateways) != 0 {
-		t.Fatalf("unknown host loaded gateways: %v", gateways)
+	if gateways, _, err := getGatewayIncludes(h, nil, "prod-a@unknown"); err != nil || len(gateways) != 0 {
+		t.Fatalf("unknown host loaded gateways: %v, error: %v", gateways, err)
+	}
+}
+
+func TestIncludesListPreservesGatewayLocalLocations(t *testing.T) {
+	previousAll := geneos.ALL
+	geneos.ALL = geneos.NewHost(geneos.ALLHOSTS)
+	oldGateway, oldVersion, oldInclude := includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude
+	oldFormat, oldAll := includesListCmdFormat, includesListCmdAll
+	includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude = false, false, true
+	includesListCmdFormat, includesListCmdAll = "json", true
+	t.Cleanup(func() {
+		geneos.ALL = previousAll
+		includesListCmdByGateway, includesListCmdByVersion, includesListCmdByInclude = oldGateway, oldVersion, oldInclude
+		includesListCmdFormat, includesListCmdAll = oldFormat, oldAll
+	})
+
+	h := newTestGatewayHost(t)
+	setup := `<gateway><includes><include><location>nested/./same.xml</location></include><include><location>../../includes/shared.xml</location></include>ABSOLUTE</includes></gateway>`
+	writeTestGatewaySetup(t, h, strings.ReplaceAll(setup, "ABSOLUTE", ""), "gw-a", "gw-b")
+	shared := h.PathTo("gateway", "includes", "shared.xml")
+	absolute := h.PathTo("gateway", "gateways", "gw-a", "absolute.xml")
+	for _, file := range []string{
+		shared,
+		absolute,
+		h.PathTo("gateway", "gateways", "gw-a", "nested", "same.xml"),
+		h.PathTo("gateway", "gateways", "gw-b", "nested", "same.xml"),
+	} {
+		if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte("<gateway/>"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	withAbsolute := strings.ReplaceAll(setup, "ABSOLUTE", "<include><location>"+absolute+"</location></include>")
+	if err := os.WriteFile(h.PathTo("gateway", "gateways", "gw-a", "gateway.setup.xml"), []byte(withAbsolute), 0644); err != nil {
+		t.Fatal(err)
+	}
+	gwBSetup := h.PathTo("gateway", "gateways", "gw-b", "nested", "gateway.setup.xml")
+	if err := os.Rename(h.PathTo("gateway", "gateways", "gw-b", "gateway.setup.xml"), gwBSetup); err != nil {
+		t.Fatal(err)
+	}
+	config.Set(geneos.ParseComponent("gateway").New("gw-b").Config(), "setup", gwBSetup)
+
+	for _, gatewayView := range []bool{false, true} {
+		name := "include"
+		if gatewayView {
+			name = "gateway"
+		}
+		t.Run(name, func(t *testing.T) {
+			includesListCmdByGateway, includesListCmdByInclude = gatewayView, !gatewayView
+			output, err := os.CreateTemp(t.TempDir(), "includes-*.json")
+			if err != nil {
+				t.Fatal(err)
+			}
+			previousStdout := os.Stdout
+			os.Stdout = output
+			t.Cleanup(func() {
+				os.Stdout = previousStdout
+				output.Close()
+			})
+			if err := listIncludes(h); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(output.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var rows []map[string]any
+			if err := json.Unmarshal(data, &rows); err != nil {
+				t.Fatalf("invalid JSON output %q: %v", data, err)
+			}
+			byFile := make(map[string]map[string]any)
+			for _, row := range rows {
+				if file, ok := row["file"].(string); ok {
+					key := file
+					if gatewayView {
+						key = row["gateway"].(string) + "/" + file
+					}
+					byFile[key] = row
+				}
+			}
+			want := map[string]string{
+				"same.xml # 1":          "nested/./same.xml",
+				"same.xml # 2":          "nested/./same.xml",
+				"absolute.xml":          absolute,
+				"shared.xml":            "../../includes/shared.xml",
+				"gateway.setup.xml # 1": "gateway.setup.xml",
+				"gateway.setup.xml # 2": "nested/gateway.setup.xml",
+			}
+			if gatewayView {
+				want = map[string]string{
+					"gw-a/same.xml":          "nested/./same.xml",
+					"gw-b/same.xml":          "nested/./same.xml",
+					"gw-a/absolute.xml":      absolute,
+					"gw-a/shared.xml":        "../../includes/shared.xml",
+					"gw-a/gateway.setup.xml": "gateway.setup.xml",
+					"gw-b/gateway.setup.xml": "nested/gateway.setup.xml",
+				}
+			}
+			for file, location := range want {
+				if got := byFile[file]["location"]; got != location {
+					t.Errorf("%s location = %v, want %q", file, got, location)
+				}
+			}
+			if !gatewayView {
+				if got := byFile["same.xml"]["status"]; got != "DUPLICATES" {
+					t.Errorf("same.xml summary status = %v, want DUPLICATES", got)
+				}
+			}
+		})
 	}
 }
 
@@ -184,8 +295,8 @@ func TestIncludesSkipNonGateways(t *testing.T) {
 	previous := component.New
 	component.New = func(string) geneos.Instance { return other }
 	t.Cleanup(func() { component.New = previous })
-	if gateways, _ := getGatewayIncludes(h, nil, "probe"); len(gateways) != 0 {
-		t.Fatal("list included a non-gateway instance")
+	if gateways, _, err := getGatewayIncludes(h, nil, "probe"); err != nil || len(gateways) != 0 {
+		t.Fatalf("list included a non-gateway instance: %v, error: %v", gateways, err)
 	}
 	if err := Fix(h, false, "probe"); err != nil {
 		t.Fatalf("fix attempted to process a non-gateway: %v", err)
@@ -238,11 +349,12 @@ func TestFormatIncludeResponsesEmitsMachineFlags(t *testing.T) {
 	response := responses.New[responses.General](nil)
 	response.Dataview.Table = [][]string{
 		includeFileMachineRow("readonly.xml", "1", 1, includeFile{
-			Status:   includeStatusOK,
-			Shared:   true,
-			FileInfo: info,
-			Version:  "1.2.3",
-			Size:     int64Ptr(0),
+			Status:       includeStatusOK,
+			Shared:       true,
+			GatewayLocal: true,
+			FileInfo:     info,
+			Version:      "1.2.3",
+			Size:         int64Ptr(0),
 		}, "../../includes/readonly.xml"),
 		includeSummaryMachineRow("same.xml", 2, 1),
 	}
@@ -260,12 +372,12 @@ func TestFormatIncludeResponsesEmitsMachineFlags(t *testing.T) {
 			if len(rows) != 2 {
 				t.Fatalf("JSON rows = %#v, want two rows", rows)
 			}
-			for name, want := range map[string]any{"status": "OK", "shared": "Y", "readOnly": "Y"} {
+			for name, want := range map[string]any{"status": "OK", "shared": "Y", "gatewayLocal": "Y", "readOnly": "Y"} {
 				if rows[0][name] != want {
 					t.Errorf("first row %s = %#v, want %#v", name, rows[0][name], want)
 				}
 			}
-			for _, name := range []string{"local", "remote", "disabled", "optional", "certValid"} {
+			for _, name := range []string{"remote", "disabled", "optional", "certValid"} {
 				if value, ok := rows[0][name]; ok {
 					t.Errorf("first row unexpectedly includes %s = %#v", name, value)
 				}
@@ -273,7 +385,7 @@ func TestFormatIncludeResponsesEmitsMachineFlags(t *testing.T) {
 			if rows[1]["status"] != includeStatusDuplicates {
 				t.Errorf("summary status = %#v, want %q", rows[1]["status"], includeStatusDuplicates)
 			}
-			for _, name := range []string{"shared", "local", "remote", "readOnly", "disabled", "optional", "certValid"} {
+			for _, name := range []string{"shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "certValid"} {
 				if value, ok := rows[1][name]; ok {
 					t.Errorf("summary unexpectedly includes %s = %#v", name, value)
 				}
@@ -350,7 +462,7 @@ func TestCSVIncludesMachineFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CSV output is invalid: %v", err)
 	}
-	wantHeader := "file,copies,gateways,status,shared,local,remote,readOnly,disabled,optional,version,perms,owner,lastModified,size,latency,certValid,location"
+	wantHeader := "file,copies,gateways,status,shared,gatewayLocal,remote,readOnly,disabled,optional,version,perms,owner,lastModified,size,latency,certValid,location"
 	if len(records) != 2 || strings.Join(records[0], ",") != wantHeader {
 		t.Fatalf("CSV records = %#v, want machine headings and one row", records)
 	}
@@ -367,7 +479,7 @@ func TestDelimitedIncludeNotApplicableCells(t *testing.T) {
 	response.Dataview.Table = [][]string{
 		{"-", "-", "Y", "N", "-", "-"},
 	}
-	columns := []string{"File", "status", "shared", "local", "latency", "Location"}
+	columns := []string{"File", "status", "shared", "gatewayLocal", "latency", "Location"}
 	result := responses.GeneralResponses{"row": response}
 	for _, format := range []string{"csv", "toolkit"} {
 		t.Run(format, func(t *testing.T) {
@@ -401,8 +513,8 @@ func TestIncludeListColumnHeadings(t *testing.T) {
 		columns []string
 		want    []string
 	}{
-		{"include machine", []string{"csv", "toolkit"}, includeColumnsMachine, []string{"file", "copies", "gateways", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "version", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
-		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"gateway", "file", "priority", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
+		{"include machine", []string{"csv", "toolkit"}, includeColumnsMachine, []string{"file", "copies", "gateways", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
+		{"gateway machine", []string{"csv", "toolkit"}, gatewayColumnsMachine, []string{"gateway", "file", "priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "version", "reload", "perms", "owner", "lastModified", "size", "latency", "certValid", "location"}},
 		{"version machine", []string{"csv", "toolkit"}, versionColumnsLong, []string{"version", "files", "version", "perms", "owner", "lastModified", "size", "path"}},
 		{"include display", []string{"column", "table"}, includeColumnsLong, []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
 		{"gateway display", []string{"column", "table"}, gatewayColumnsLong, []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "CertValid", "Location"}},
@@ -663,7 +775,7 @@ func TestRenderIncludeFlags(t *testing.T) {
 	}{
 		{name: "missing", file: includeFile{}, want: "X"},
 		{name: "shared read-only versioned", file: includeFile{Shared: true, FileInfo: info, Version: "1.2.3"}, want: "RSV"},
-		{name: "local shared read-only versioned", file: includeFile{Local: true, Shared: true, FileInfo: info, Version: "1.2.3"}, want: "LRSV"},
+		{name: "gateway-local shared read-only versioned", file: includeFile{GatewayLocal: true, Shared: true, FileInfo: info, Version: "1.2.3"}, want: "GRSV"},
 		{name: "remote shared", file: includeFile{Remote: true, Shared: true}, want: "SU"},
 	}
 	for _, test := range tests {

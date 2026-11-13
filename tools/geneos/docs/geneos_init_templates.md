@@ -18,7 +18,8 @@ geneos init templates [TYPE] [flags]
 
 ```text
       --allow-root[=true|false]          allow running as root (not recommended)
-  -A, --archive string                   Directory of releases for installation
+  -A, --archive string                   URL, file, or directory of releases for installation.
+                                         Local paths use local archives only
   -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)

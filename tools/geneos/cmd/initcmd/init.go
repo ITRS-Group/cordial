@@ -20,6 +20,7 @@ package initcmd
 
 import (
 	_ "embed"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -40,7 +41,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-const archiveOptionsText = "Directory of releases for installation"
+const archiveOptionsText = "URL, file, or directory of releases for installation.\nLocal paths use local archives only"
 
 type initCmdOptions struct {
 	Archive               string
@@ -59,6 +60,7 @@ type initCmdOptions struct {
 	Restore               string
 	SigningBundle         string
 	SigningBundlePassword config.Secret
+	Site                  string
 	Snapshot              bool
 	TLS                   bool
 	Version               string
@@ -87,6 +89,7 @@ func init() {
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Logs, "log", "l", false, "Follow logs after starting instance(s)")
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Force, "force", "F", false, "Ignore existing directories and files and overwrite")
 	initCmd.PersistentFlags().StringVarP(&initOptions.Name, "name", "n", "", "Use name for instances and configurations instead of the hostname")
+	initCmd.Flags().StringVarP(&initOptions.Site, "site", "s", "", "Set the initial installation site name")
 
 	initCmd.PersistentFlags().BoolVarP(&initOptions.TLS, "tls", "T", false, "Create internal certificates for TLS support")
 	initCmd.PersistentFlags().MarkDeprecated("tls", "TLS is enabled by default, use --insecure to disable")
@@ -148,9 +151,12 @@ geneos init
 	// home directory is NOT "geneos" then create a directory "geneos", else
 	//
 	// TODO: Call any registered initializer funcs from components
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, argsInput []string) (err error) {
 		log := log.With("command", "init")
 
+		if command.Flag("archive").Changed && initOptions.Archive == "" {
+			return fmt.Errorf("--archive must not be empty")
+		}
 		ct, args, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
@@ -160,6 +166,12 @@ geneos init
 		if ct != nil {
 			log.Error(ct.String(), slog.Any("error", geneos.ErrInvalidArgs))
 			return geneos.ErrInvalidArgs
+		}
+		if command.Flag("site").Changed {
+			if err := geneos.SetInitialSite(initOptions.Site); err != nil {
+				return err
+			}
+			profile.SetExpandOptions(geneos.LOCAL, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), argsInput)
 		}
 
 		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)

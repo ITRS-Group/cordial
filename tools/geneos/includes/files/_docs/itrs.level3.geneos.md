@@ -1,6 +1,7 @@
 # ITRS Level 3 Geneos Documentation
 
 `itrs.level3.geneos.xml` defines reusable Geneos instance, component, and Gateway-load types and samplers, component process/log includes, commands, alert rules, and a data export set. It contains no managed-entity hierarchy; the matching `config.level3.geneos.xml` provides an example configuration.
+For the site name `acme`, the installed configuration template is `gateway/acme/acme.level3.geneos.xml`; if the site name is unset, the directory and prefix are `local`.
 
 Treat this functional include as read-only so it can be upgraded from later releases without losing local changes. Keep managed-entity setup and site-specific overrides in the matching `config.level3.geneos.xml` or your Gateway's local configuration.
 

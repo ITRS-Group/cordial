@@ -1,6 +1,9 @@
 package cmd
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDeployLogImpliesStart(t *testing.T) {
 	previousStart, previousLogs := deployCmdStart, deployCmdLogs
@@ -61,6 +64,17 @@ func TestDeployArchiveImpliesLocal(t *testing.T) {
 			if deployCmdLocal != test.want {
 				t.Errorf("local mode = %v, want %v", deployCmdLocal, test.want)
 			}
+
 		})
+	}
+}
+
+func TestDeployRejectsEmptyArchive(t *testing.T) {
+	flag := deployCmd.Flags().Lookup("archive")
+	previousArchive, previousChanged := deployCmdArchive, flag.Changed
+	deployCmdArchive, flag.Changed = "", true
+	t.Cleanup(func() { deployCmdArchive, flag.Changed = previousArchive, previousChanged })
+	if err := deployCmd.RunE(deployCmd, nil); err == nil || !strings.Contains(err.Error(), "--archive must not be empty") {
+		t.Fatalf("deploy error = %v, want empty archive error", err)
 	}
 }

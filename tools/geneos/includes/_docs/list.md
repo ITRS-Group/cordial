@@ -1,6 +1,6 @@
 List include files found in the selected Geneos installation and include references used by its Gateways. The default view groups shared and versioned includes by file name. Use one of `--include`, `--version`, or `--gateway` to select a view.
 
-The include view reports copies, Gateway usage, status flags, modification time, size, and location. Paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files.
+The include view reports copies, Gateway usage, status flags, modification time, size, and location. Shared and versioned paths within the Geneos home are shown relative to a Gateway instance's working directory (for example, `../../includes/example.xml`), so they can be copied into the `Includes` section of the Gateway Setup Editor (GSE). Remote locations and local paths outside the Geneos home are unchanged. Files with duplicate basenames are shown as separate numbered rows beneath a summary row. `--all` also includes Gateway-local files, whose locations are shown exactly as configured in the Gateway setup. The main Gateway setup file is an exception: its local path is shown relative to that Gateway's instance directory in both the include and Gateway views.
 
 The version view lists the current include links and available semantic-version directories. Use `--all` to list each file inside those directories.
 
@@ -17,12 +17,12 @@ Use `--long` for version, permissions, owner, remote latency, and certificate-va
 
 Set `--format json` to output the selected view as a compact array of objects using the long fields regardless of `--long`. Permission values use octal strings such as `"0644"`; table output retains symbolic permissions. Fields use lower-camel-case names. Counts, priorities, and byte sizes are JSON numbers. Unknown or missing sizes are `-1`; a known empty file has size `0`. Set `--format pretty` for the same JSON output with indentation.
 
-Machine-readable formats include `status`, `shared`, `local`, `remote`, `readOnly`, `disabled`, and `optional` fields. CSV and toolkit use `"Y"` or `"N"` for boolean fields and empty cells for values that do not apply; JSON and pretty output only true flags as `"Y"`, omitting false or inapplicable flags. Status is `OK` by default, `DUPLICATES` on duplicate-basename summary rows, `NOT_FOUND` or `PERMISSION_DENIED` for local file errors, and `-` when a remote lookup is skipped (empty in CSV and toolkit). A remote HEAD request reports `OK`, `FAILED: <status-code>`, `TIMEOUT`, or `FAILED`. Long output also includes `latency` for the connection and HEAD request, rounded to whole milliseconds with an `ms` suffix, and `certValid`; certificate validity is checked only for HTTPS URLs. The same boolean output rules apply to `certValid`, so JSON does not distinguish an invalid certificate from one that was not checked.
+Machine-readable formats include `status`, `shared`, `gatewayLocal`, `remote`, `readOnly`, `disabled`, and `optional` fields. CSV and toolkit use `"Y"` or `"N"` for boolean fields and empty cells for values that do not apply; JSON and pretty output only true flags as `"Y"`, omitting false or inapplicable flags. Status is `OK` by default, `DUPLICATES` on duplicate-basename summary rows, `NOT_FOUND` or `PERMISSION_DENIED` for local file errors, and `-` when a remote lookup is skipped (empty in CSV and toolkit). A remote HEAD request reports `OK`, `FAILED: <status-code>`, `TIMEOUT`, or `FAILED`. Long output also includes `latency` for the connection and HEAD request, rounded to whole milliseconds with an `ms` suffix, and `certValid`; certificate validity is checked only for HTTPS URLs. The same boolean output rules apply to `certValid`, so JSON does not distinguish an invalid certificate from one that was not checked.
 
 Flags identify include properties:
 
 * `D` - Disabled in the Gateway setup
-* `L` - Gateway-local include
+* `G` - Gateway-local include
 * `o` - Optional include
 * `R` - Read-only file
 * `S` - Shared include

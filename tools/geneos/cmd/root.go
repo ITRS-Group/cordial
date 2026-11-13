@@ -260,6 +260,11 @@ geneos restart
 		if profilesErr != nil {
 			return fmt.Errorf("failed to initialize profiles config: %w", profilesErr)
 		}
+		if command.Parent() == nil || command.Parent().Name() != "config" {
+			if err := geneos.ValidateSite(config.Get[string](config.Global(), "site")); err != nil {
+				return err
+			}
+		}
 
 		ctx := context.WithValue(context.Background(), CmdKey, &CmdValType{})
 		command.SetContext(ctx)

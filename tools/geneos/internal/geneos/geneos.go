@@ -22,6 +22,7 @@ package geneos
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -188,11 +189,13 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			continue
 		}
 		if ct.Initialise != nil {
+			var initialiseErr error
 			ct.InitialiseOnce.Do(func() {
-				if err := ct.Initialise(h, ct, opts.override); err != nil {
-					log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
-				}
+				initialiseErr = ct.Initialise(h, ct, opts.override)
 			})
+			if initialiseErr != nil {
+				return fmt.Errorf("initialising component %s: %w", ct.Name, initialiseErr)
+			}
 		}
 	}
 

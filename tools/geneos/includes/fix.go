@@ -64,6 +64,9 @@ type includeFixSetup struct {
 }
 
 func Fix(h *geneos.Host, dryRun bool, names ...string) error {
+	if err := geneos.ValidateSite(config.Get[string](config.Global(), "site")); err != nil {
+		return err
+	}
 	var (
 		candidates = make(map[string][]string)
 		seen       = make(map[string]bool)
@@ -102,7 +105,7 @@ func Fix(h *geneos.Host, dryRun bool, names ...string) error {
 		}
 		return nil
 	}
-	for _, directory := range append([]string{"includes", "config", "gateway_config"}, includeDirs...) {
+	for _, directory := range append([]string{"includes", "config", "gateway_config", geneos.SiteName()}, includeDirs...) {
 		searchRoot := h.Join(root, directory)
 		err := h.WalkDir(searchRoot, func(name string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {

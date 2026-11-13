@@ -4,10 +4,14 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
+	"testing/fstest"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func TestInstallEmbeddedLinkModes(t *testing.T) {
@@ -125,7 +129,7 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 			t.Errorf("versioned file %q permissions = %04o, want 0444", entry.Name(), got)
 		}
 	}
-	configFiles, err := os.ReadDir(h.PathTo("gateway", "includes", "config"))
+	configFiles, err := os.ReadDir(h.PathTo("gateway", "local"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +207,7 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 		mode     os.FileMode
 	}{
 		{h.PathTo("gateway", "includes", version, "itrs.test.xml"), "managed", 0444},
-		{h.PathTo("gateway", "includes", "config", "config.test.xml"), "template", 0664},
+		{h.PathTo("gateway", "local", "local.test.xml"), "template", 0664},
 	} {
 		data, err := os.ReadFile(file.path)
 		if err != nil || string(data) != file.contents {
@@ -223,6 +227,160 @@ func TestInstallCreatesVersionedIncludesAndConfig(t *testing.T) {
 	}
 	if _, err := os.Stat(h.PathTo("gateway", "includes", "docs")); !os.IsNotExist(err) {
 		t.Fatalf("archive documentation was unexpectedly installed into the Gateway include directory: %v", err)
+	}
+}
+
+func TestInstallMigratesLegacyConfig(t *testing.T) {
+	for _, test := range []struct {
+		site   string
+		prefix string
+	}{
+		{"", "local"},
+		{"Acme Site", "Acme_Site"},
+	} {
+		t.Run(test.prefix, func(t *testing.T) {
+			previous := config.Get[string](config.Global(), "site")
+			config.Set(config.Global(), "site", test.site)
+			t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+
+			h := newTestGatewayHost(t)
+			legacy := h.PathTo("gateway", "includes", "config")
+			target := h.PathTo("gateway", test.prefix)
+			if err := os.MkdirAll(filepath.Join(legacy, "nested"), 0755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.MkdirAll(target, 0755); err != nil {
+				t.Fatal(err)
+			}
+			for name, contents := range map[string]string{
+				"config.test.xml":  "custom",
+				"config.kept.xml":  "legacy",
+				"nested/other.txt": "nested",
+			} {
+				if err := os.WriteFile(filepath.Join(legacy, name), []byte(contents), 0640); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := os.Symlink("config.test.xml", filepath.Join(legacy, "config.link.xml")); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(target, test.prefix+".kept.xml"), []byte("existing"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			archive := writeTestIncludeArchive(t,
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"},
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.test.xml", contents: "template"},
+				includeArchiveEntry{name: "geneos-includes-v1.2.3/config/config.new.xml", contents: "new template"},
+			)
+			if err := Install(h, archive, false, false); err != nil {
+				t.Fatal(err)
+			}
+			for name, want := range map[string]string{
+				test.prefix + ".test.xml": "custom",
+				test.prefix + ".link.xml": "custom",
+				test.prefix + ".kept.xml": "existing",
+				test.prefix + ".new.xml":  "new template",
+				"nested/other.txt":        "nested",
+			} {
+				filename := filepath.Join(target, name)
+				data, err := os.ReadFile(filename)
+				if err != nil || string(data) != want {
+					t.Errorf("file %q = %q, %v; want %q", filename, data, err, want)
+				}
+				info, err := os.Lstat(filename)
+				if err != nil || !info.Mode().IsRegular() {
+					t.Errorf("file %q is not regular: %v, %v", filename, info, err)
+				}
+			}
+			if data, err := os.ReadFile(filepath.Join(legacy, "config.test.xml")); err != nil || string(data) != "custom" {
+				t.Errorf("legacy config changed: %q, %v", data, err)
+			}
+			shared, err := getSharedIncludes(h, h.PathTo("gateway"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, file := range shared {
+				if file.Path == filepath.Join(target, test.prefix+".test.xml") {
+					found = true
+				}
+			}
+			if !found {
+				t.Error("site configuration include not discovered")
+			}
+		})
+	}
+}
+
+func TestInstallRejectsBrokenLegacyConfigSymlink(t *testing.T) {
+	h := newTestGatewayHost(t)
+	legacy := h.PathTo("gateway", "includes", "config")
+	if err := os.MkdirAll(legacy, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("missing.xml", filepath.Join(legacy, "config.test.xml")); err != nil {
+		t.Fatal(err)
+	}
+	source := fstest.MapFS{
+		"files/itrs.test.xml":   &fstest.MapFile{Data: []byte("include")},
+		"files/config.test.xml": &fstest.MapFile{Data: []byte("template")},
+	}
+	if err := extractIncludes(h, source, "v1.2.3", true); err == nil {
+		t.Fatal("broken legacy symlink was silently ignored")
+	}
+}
+
+func TestStandaloneInstallerMigratesLegacyConfig(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("standalone installer requires Unix shell tools")
+	}
+	root, source := t.TempDir(), t.TempDir()
+	legacy := filepath.Join(root, "gateway", "includes", "config")
+	for _, directory := range []string{
+		filepath.Join(legacy, "nested"),
+		filepath.Join(source, "v1.2.3"),
+		filepath.Join(source, "config"),
+	} {
+		if err := os.MkdirAll(directory, 0755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, contents := range map[string]string{
+		filepath.Join(legacy, "config.test.xml"):            "custom",
+		filepath.Join(legacy, "nested", "config.extra.xml"): "nested",
+		filepath.Join(source, "v1.2.3", "itrs.test.xml"):    "managed",
+		filepath.Join(source, "config", "config.test.xml"):  "template",
+	} {
+		if err := os.WriteFile(name, []byte(contents), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink("config.test.xml", filepath.Join(legacy, "config.link.xml")); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command("sh", "files/install-includes.sh", root)
+	command.Env = append(os.Environ(), "INCLUDES_SOURCE="+source)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("standalone install failed: %v\n%s", err, output)
+	}
+	for name, want := range map[string]string{
+		"local.test.xml":         "custom",
+		"local.link.xml":         "custom",
+		"nested/local.extra.xml": "nested",
+	} {
+		filename := filepath.Join(root, "gateway", "local", name)
+		data, err := os.ReadFile(filename)
+		if err != nil || string(data) != want {
+			t.Errorf("%s = %q, %v; want %q", name, data, err, want)
+		}
+		info, err := os.Lstat(filename)
+		if err != nil || !info.Mode().IsRegular() {
+			t.Errorf("%s is not regular: %v, %v", name, info, err)
+		}
+	}
+	if data, err := os.ReadFile(filepath.Join(legacy, "config.test.xml")); err != nil || string(data) != "custom" {
+		t.Errorf("legacy config changed: %q, %v", data, err)
 	}
 }
 
@@ -346,7 +504,7 @@ func TestInstallReinstallAndConfigPreservation(t *testing.T) {
 	if data, err := os.ReadFile(backups[0]); err != nil || string(data) != "first" {
 		t.Fatalf("include backup = %q, %v", data, err)
 	}
-	config := h.PathTo("gateway", "includes", "config", "config.test.xml")
+	config := h.PathTo("gateway", "local", "local.test.xml")
 	if data, err := os.ReadFile(config); err != nil || string(data) != "local" {
 		t.Fatalf("preserved config = %q, %v", data, err)
 	}

@@ -112,6 +112,8 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			if err = geneos.Install(h, pkgct, options...); err != nil {
 				if errors.Is(err, fs.ErrExist) {
 					err = nil
+				} else if opts.archive != "" {
+					return fmt.Errorf("install %s from %q: %w", pkgct, opts.archive, err)
 				} else {
 					continue
 				}
@@ -122,11 +124,13 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				continue
 			}
 			if ct.Initialise != nil {
+				var initialiseErr error
 				ct.InitialiseOnce.Do(func() {
-					if err := ct.Initialise(h, ct, false); err != nil {
-						log.Error("initialising component", slog.String("component", ct.Name), slog.Any("error", err))
-					}
+					initialiseErr = ct.Initialise(h, ct, false)
 				})
+				if initialiseErr != nil {
+					return fmt.Errorf("initialising component %s: %w", ct.Name, initialiseErr)
+				}
 			}
 			// clear any command line parameters, they should only come from the config
 			extras := opts.vals

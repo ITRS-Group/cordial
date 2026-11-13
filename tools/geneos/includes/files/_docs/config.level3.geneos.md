@@ -1,6 +1,7 @@
 # Level 3 Geneos Configuration Example
 
 `config.level3.geneos.xml` contains an example managed-entity hierarchy for the types defined by `itrs.level3.geneos.xml`. It is a configuration template, not a live monitoring definition.
+For the site name `acme`, the installed file is `gateway/acme/acme.level3.geneos.xml`; if the site name is unset, it is `gateway/local/local.level3.geneos.xml`.
 
 ## Example Hierarchy
 

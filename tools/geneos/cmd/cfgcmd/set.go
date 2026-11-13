@@ -27,6 +27,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func init() {
@@ -72,6 +73,9 @@ geneos config set geneos="/opt/geneos"
 		}
 		log.Debug("setting params", slog.Any("params", params))
 		cf.SetKeyValuePairs(params...)
+		if err := geneos.ValidateSite(config.Get[string](cf, "site")); err != nil {
+			return err
+		}
 
 		if ih, ok := config.Lookup[string](cf, "itrshome"); ok {
 			if _, ok := config.Lookup[string](cf, cordial.ExecutableName()); !ok {

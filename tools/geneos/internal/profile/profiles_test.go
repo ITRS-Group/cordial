@@ -362,6 +362,27 @@ func TestProfileRebuildPropagatesForce(t *testing.T) {
 	}
 }
 
+func TestDeployProfileReportsMissingArchive(t *testing.T) {
+	root := newProfileTestRoot(t)
+	previousProfiles := profile.Profiles
+	t.Cleanup(func() { profile.Profiles = previousProfiles })
+	pf := config.New(config.WithDefaults([]byte(`profiles:
+  missing-archive:
+    gateway:
+      name: test-gateway
+`), "yaml"))
+	profile.Profiles = pf
+	profile.SetExpandOptions(geneos.LOCAL, pf, nil, nil)
+
+	err := profile.DeployProfile(geneos.LOCAL, "missing-archive",
+		profile.WithArchive(filepath.Join(root, "packages", "downloads")),
+		profile.WithInsecure(true),
+	)
+	if !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("DeployProfile error = %v, want missing archive", err)
+	}
+}
+
 func TestAddReturnsImportFailure(t *testing.T) {
 	root := newProfileTestRoot(t)
 	_, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "missing-import-member",
@@ -387,6 +408,39 @@ func TestEmbeddedDefaultsVersion(t *testing.T) {
 	defaults[0] = '!'
 	if profile.EmbeddedDefaults()[0] == '!' {
 		t.Fatal("EmbeddedDefaults returned shared mutable bytes")
+	}
+}
+
+func TestApplyGatewayProfileExpandsSiteIncludes(t *testing.T) {
+	root := newProfileTestRoot(t)
+	previous := config.Get[string](config.Global(), "site")
+	config.Set(config.Global(), "site", "Acme Site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	if err := os.MkdirAll(filepath.Join(root, "packages", "gateway", "active_prod"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	pf := config.New(config.WithDefaults([]byte(`profiles:
+  site-test:
+    gateway:
+      name: site-test-gateway
+      includes:
+        500: ../../${site}/${site}.level1.infrastructure.xml
+`), "yaml"))
+	profile.SetExpandOptions(geneos.LOCAL, pf, nil, nil)
+	if err := profile.Apply(geneos.LOCAL, pf, "site-test", false); err != nil {
+		t.Fatal(err)
+	}
+	member, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("gateway"), "site-test-gateway")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = member.Unload() })
+	saved, err := config.Read("gateway", config.FromDir(member.Home()), config.UseDefaults(false), config.MustExist())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := config.Get[string](saved, "includes.500"); got != "../../Acme_Site/Acme_Site.level1.infrastructure.xml" {
+		t.Errorf("applied include = %q", got)
 	}
 }
 

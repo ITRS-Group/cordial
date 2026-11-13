@@ -27,6 +27,24 @@ func TestCommonLookups(t *testing.T) {
 	}
 }
 
+func TestSiteLookup(t *testing.T) {
+	previous := config.Get[string](config.Global(), "site")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+	host := geneos.NewHost("profile-lookup-test")
+	for _, test := range []struct{ site, want string }{
+		{"", "../../local/local.level1.infrastructure.xml"},
+		{"Acme Site", "../../Acme_Site/Acme_Site.level1.infrastructure.xml"},
+	} {
+		config.Set(config.Global(), "site", test.site)
+		pf := config.New()
+		SetExpandOptions(host, pf, nil, nil)
+		got := config.Expand[string](pf, "../../${site}/${site}.level1.infrastructure.xml")
+		if got != test.want {
+			t.Errorf("expanded site %q = %q, want %q", test.site, got, test.want)
+		}
+	}
+}
+
 func TestProfileLicenceOption(t *testing.T) {
 	for _, test := range []struct {
 		name string

@@ -247,6 +247,7 @@ func CommonLookups(h *geneos.Host) map[string]string {
 	return map[string]string{
 		"hostname": h.String(),
 		"execpath": cordial.ExecutablePath(),
+		"site":     geneos.SiteName(),
 	}
 }
 

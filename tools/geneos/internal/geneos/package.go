@@ -146,10 +146,26 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	}
 
 	if len(ct.PackageTypes) > 0 {
+		opts := evalOptions(options...)
+		var successes int
+		var failures error
 		for _, ct := range ct.PackageTypes {
 			if err = Install(h, ct, options...); err != nil {
 				log.Debug("error installing release", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
+				if opts.sourceExplicit && errors.Is(err, fs.ErrExist) {
+					successes++
+					continue
+				}
+				if opts.sourceExplicit && !errors.Is(err, fs.ErrNotExist) {
+					return err
+				}
+				failures = errors.Join(failures, err)
+			} else {
+				successes++
 			}
+		}
+		if opts.sourceExplicit && successes == 0 {
+			return failures
 		}
 		return nil
 	}
@@ -179,7 +195,7 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 				return
 			}
 			log.Debug("not found", slog.String("component", ct.String()), slog.String("src", opts.source), slog.Bool("isdir", IsDir(opts.source)))
-			if opts.localOnly || (!opts.downloadonly && IsDir(opts.source)) {
+			if !opts.sourceExplicit && (opts.localOnly || (!opts.downloadonly && IsDir(opts.source))) {
 				log.Debug("not found but local install only selected, skipping", slog.String("component", ct.String()), slog.String("src", opts.source))
 				return nil
 			}

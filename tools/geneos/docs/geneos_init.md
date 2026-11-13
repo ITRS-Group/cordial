@@ -8,6 +8,20 @@ The installation directory is considered empty if it exists but only contains do
 
 If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories but will not remove or change existing files. If you adopt an existing installation then see the `init templates` command for how to add default template files to the installation for use by new instances.
 
+Use `--site`/`-s` to set the initial site name, for example `geneos init --site acme`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
+
+Use `--archive`/`-A` to select a release archive or directory on the local machine, or an archive URL. A local path restricts installation to local archives; if it contains no suitable archive, the command does not fall back to downloading. An archive URL is fetched directly.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later with `geneos config set` can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
 ## TLS Support
 
 TLS is always enabled on new servers unless the `--insecure` flag is given during initial deployment. By default, new root and signing certificates and private keys are created unless you supply either a signing or a certificate bundle. This typically only makes sense during the initial set-up of Geneos and subsequent deployments should share the trust chain established by the initial deployment.
@@ -74,6 +88,7 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
   -L, --licence string                   Licence file location (default "geneos.lic")
+  -s, --site string                      Set the initial installation site name
   -l, --log[=true|false]                 Follow logs after starting instance(s)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
   -n, --name string                      Use name for instances and configurations instead of the hostname
@@ -83,7 +98,8 @@ geneos init [PROFILE] [flags] [DIRECTORY]
       --signing-bundle-password SECRET   Password for PFX/PKCS#12 certificate file.
                                          You will be prompted if required and not supplied as an argument.
       --insecure[=true|false]            Do not create internal certificates for TLS support
-  -A, --archive string                   Directory of releases for installation
+  -A, --archive string                   URL, file, or directory of releases for installation.
+                                         Local paths use local archives only
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
   -S, --snapshots[=true|false]           Download from nexus snapshots. Implies -N
   -V, --version VERSION                  Download matching VERSION, defaults to latest. Doesn't work for EL8 archives. (default "latest")

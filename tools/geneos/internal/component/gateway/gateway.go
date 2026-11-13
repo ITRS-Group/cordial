@@ -47,9 +47,10 @@ const (
 // var log = logger.Logger
 
 func initialise(h *geneos.Host, ct *geneos.Component, override bool) (err error) {
-	geneos.WriteTemplates(h, ct, override)
-	includes.Update(h, "", false)
-	return nil
+	if err := geneos.WriteTemplates(h, ct, override); err != nil {
+		return err
+	}
+	return includes.Update(h, "", false)
 }
 
 // Component TODO: Describe its purpose and intended use.

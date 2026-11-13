@@ -46,7 +46,10 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		}
 
 		vals := profile.ApplyCommonParams(pf, name, &gateway.Common, lookup)
-		vals.Includes = gateway.Includes
+		vals.Includes = make(values.Includes, len(gateway.Includes))
+		for priority, include := range gateway.Includes {
+			vals.Includes[priority] = config.Expand[string](pf, include, config.LookupTable(lookup))
+		}
 		vals.Variables = make(values.Variables, len(gateway.Variables))
 		for idx, variable := range gateway.Variables {
 			vals.Variables[idx] = values.Variable{

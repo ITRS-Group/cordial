@@ -2,7 +2,7 @@ The `install` command will, with no other options, download and unarchive the la
 
 If given directories or file paths on the command line then the install command will only use these as the sources for installation and will not try to download any release. Any values that are not directory paths have symlinks resolved before the underlying filename is checked for component type and version (see `--override` below). This allows, for example, a fixed symlink to the latest version of a local release.
 
-Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line.
+Archive files, URLs and directories can also be supplied with `--archive`/`-A`. This option can be repeated, and its values are added to any positional sources on the command line. A local file or directory implies `--local`: the command does not fall back to downloading if no matching archive is found. A URL is fetched directly. A local `--archive` cannot be combined with `--download`.
 
 If a component TYPE is given on the command line then installation is limited to that component type, otherwise all components types matching existing components are installed.
 
@@ -26,7 +26,7 @@ The `--force`/`-F` flags implies `--update`.
 
 By default the latest version found will be the one installed, either from the download site or locally. To install a specific version from the use the `--version`/`-V` option with a version in the form `MAJOR.MINOR.PATCH` where omitting `PATCH` will get the latest patch release for `MAJOR.MINOR` and omitting `MINOR.PATCH` will get the latest version in the `MAJOR` set. Versions cannot be selected for remote `el8` archives because of a restriction in indexing releases. Specifying a version with either a local only or with a directory name on the command line will apply the same rules to all matching local files. This flag is ignored if specific archive files are given on the command line.
 
-If you have downloaded a release but have changed the file name from the original then you must use the `--override`/`-O` option to inform the `install` command which component type and release version the archive contains, e.g. `-T gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version. If this option is used with either more than on file or a directory on the command line then that is an error.
+If you have downloaded a release but have changed the file name from the original then you must use the `--override`/`-O` option to inform the `install` command which component type and release version the archive contains, e.g. `-O gateway:5.12.1`. The command will not validate your option and will simply unarchive the file, if it can, in the directory that would be created for that component and version. This option requires a single file or URL, not a directory or multiple sources.
 
 For internal ITRS users there are the `--nexus`/`-N` and `--snapshot`/`-S` options to download archives from the internal nexus server. The `--snapshot`/`-S` option implies `--nexus`/`-N`. You may need to supply different credentials for these downloads.
 

@@ -20,6 +20,18 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.level1.infrastructure.xml` to `../../acme/acme.level1.infrastructure.xml`.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them, update literal legacy profile paths to use `${site}` if needed, and run `geneos includes install` to populate the new site directory.
+
 ## Use a Supplied Profile
 
 ### Inspect the Definitions
@@ -56,10 +68,10 @@ Use `init` for a new installation. You need access to suitable release archives 
 1. Initialise and deploy the profile. Replace the account and absolute directory path:
 
    ```bash
-   geneos init demo /opt/itrs/geneos --username user@example.com
+   geneos init demo /opt/itrs/geneos --site acme --username user@example.com
    ```
 
-   Enter the download password when prompted. Use `--archive /opt/itrs/releases` to use previously downloaded release archives. With `init`, `--minimal` selects the minimal Netprobe package for the supplied profiles.
+   Enter the download password when prompted. Use `--archive /opt/itrs/releases` to use previously downloaded release archives without falling back to downloads if a matching archive is unavailable. An `--archive` URL is fetched directly. With `init`, `--minimal` selects the minimal Netprobe package for the supplied profiles.
 
 2. Check the installed instances and their status:
 
@@ -200,6 +212,7 @@ Expansion replaces `${...}` text when the profile is applied. Use it in instance
 | --- | --- |
 | `${hostname}` | Host name supplied by the profile lookup table. |
 | `${execpath}` | Absolute path to the running `geneos` executable, with symlinks resolved. |
+| `${site}` | Site name with spaces replaced by underscores, or `local` when unset. |
 | `${env:NAME}` | Environment variable from the `geneos` process. An unset variable produces an empty value. |
 | `${option:EXPRESSION}` | Result of a `goval` expression using selected command options and `NAME=VALUE` arguments. |
 | `${config:KEY}` | Value from the current configuration. In a SAN `for-each` entry, this is the matched instance's configuration. |

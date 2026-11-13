@@ -53,6 +53,35 @@ func TestFixIncludeLocation(t *testing.T) {
 	}
 }
 
+func TestFixFindsSiteIncludes(t *testing.T) {
+	previous := config.Get[string](config.Global(), "site")
+	config.Set(config.Global(), "site", "acme")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+
+	h := newTestGatewayHost(t)
+	filename := h.PathTo("gateway", "acme", "acme.example.xml")
+	if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filename, []byte("<gateway/>"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	writeTestGatewaySetup(t, h, `<gateway><includes><include><location>old/acme.example.xml</location></include></includes></gateway>`, "prod-a")
+	if err := os.WriteFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"), []byte(`{"includes":{"500":"old/acme.example.xml"}}`), 0640); err != nil {
+		t.Fatal(err)
+	}
+	if err := Fix(h, false, "prod-a"); err != nil {
+		t.Fatal(err)
+	}
+	setup, err := os.ReadFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.setup.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(setup), "../../acme/acme.example.xml") {
+		t.Errorf("site include was not repaired: %s", setup)
+	}
+}
+
 func TestFixGatewayIncludes(t *testing.T) {
 	for _, test := range []struct {
 		name    string

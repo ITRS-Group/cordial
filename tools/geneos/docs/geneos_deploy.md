@@ -6,6 +6,20 @@ The difference between `deploy` and `add` or `init` commands is that `deploy` wi
 
 This allows you to create an instance without having to worry about initialising the set-up and so on. The name if the instance can be given on the command line as `NAME` but defaults to the hostname of the system.
 
+For a local installation, `--site`/`-s` sets the initial site name, for example `geneos deploy --site acme gateway`. Choose a name representing the company, customer, or client using the Geneos deployment, rather than a region or environment; for example, `acme` represents Acme Corp.
+
+Use `--archive`/`-A` to select a release archive or directory on the local machine, or an archive URL. A local path implies `--local`; if it contains no suitable archive, the command does not fall back to downloading. An archive URL is fetched directly.
+
+> [!NOTE]
+> Please note the following when choosing and using a site name:
+>
+> - The site name is currently used for Gateway configuration include directories and filename prefixes, including paths in supplied profiles, but future releases may use it for other features.
+> - Spaces become underscores in paths. The resulting name must be a safe single directory path component and cannot conflict with Gateway directories such as `config` or `includes`.
+> - If no site name is set, the directory and prefix are `local`.
+> - Only one site name is supported per installation.
+> - Use the same site name on all Geneos servers for consistent paths.
+> - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
 The stages that deploy goes through will help you choose the options you need:
@@ -76,6 +90,7 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
 ```text
   -D, --geneos GENEOS_HOME            Installation directory. Prompted if not given and not found
                                       in existing user configuration or environment ${GENEOS_HOME}
+  -s, --site string                   Set the initial installation site name
   -S, --start[=true|false]            Start new instance after creation
   -l, --log[=true|false]              Start created instance and follow logs.
                                       (Implies --start to start the instance)

@@ -71,7 +71,7 @@ func init() {
 	installCmd.Flags().BoolVarP(&installCmdSnapshot, "snapshots", "S", false, "Download from nexus snapshots (pre-releases), not releases. Requires -N")
 
 	installCmd.Flags().BoolVar(&installCmdAllTypes, "all", false, "Install all types available, not just those types already installed")
-	installCmd.Flags().StringArrayVarP(&installCmdArchives, "archive", "A", nil, "URL or file path to release archive\nor a directory to search for local release archives.\nAdded to positional sources (repeat as required)")
+	installCmd.Flags().StringArrayVarP(&installCmdArchives, "archive", "A", nil, "URL or file path to release archive\nor a directory to search for local release archives.\nLocal paths imply --local; repeat as required")
 
 	installCmd.Flags().Var(&installCmdHeaders, "header", values.HeadersOptionsText)
 
@@ -103,6 +103,11 @@ geneos package install md-gateway-asx -N -S
 			if installCmdLocal || installCmdBase != "active_prod" || installCmdUpdate || installCmdNoSave || installCmdOverride != "" {
 				return errors.New("flag --download/-D set with other incompatible options")
 			}
+			for _, archive := range installCmdArchives {
+				if !geneos.IsURL(archive) {
+					return errors.New("a local --archive cannot be combined with --download")
+				}
+			}
 			// force localhost
 			cmd.Hostname = geneos.LOCALHOST
 		} else {
@@ -122,6 +127,9 @@ geneos package install md-gateway-asx -N -S
 		params = append(args, params...)
 		params = append(params, installCmdArchives...)
 		for _, p := range params {
+			if p == "" {
+				return fmt.Errorf("archive source must not be empty")
+			}
 			if strings.HasPrefix(p, "@") {
 				return fmt.Errorf("the @HOST format is not valid here, perhaps you meant `-H HOST`?")
 			}
@@ -146,7 +154,7 @@ geneos package install md-gateway-asx -N -S
 				if geneos.IsDir(params[0]) {
 					return fmt.Errorf("%s is a directory: `--override` only valid with a single file parameter", params[0])
 				}
-				if !geneos.IsFile(params[0]) {
+				if !geneos.IsURL(params[0]) && !geneos.IsFile(params[0]) {
 					return fmt.Errorf("%w: `--override` only valid with a single file parameter", fs.ErrNotExist)
 				}
 			}
@@ -165,6 +173,7 @@ geneos package install md-gateway-asx -N -S
 			}
 
 			var installed bool
+			var missing error
 			// work through command line params and try to install each
 			// argument using the naming format of standard downloads
 			for _, source := range params {
@@ -240,12 +249,19 @@ geneos package install md-gateway-asx -N -S
 				options = append(options, geneos.Version(version))
 
 				log.Debug("installing from source", slog.String("src", source), slog.String("version", version), slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname))
-				if err = Install(h, nct, append(options, geneos.Source(source))...); err != nil {
+				if err = install(h, nct, true, append(options, geneos.Source(source))...); err != nil {
+					if errors.Is(err, fs.ErrNotExist) {
+						missing = errors.Join(missing, err)
+						continue
+					}
 					return err
 				}
 				installed = true
 			}
 			if !installed {
+				if missing != nil {
+					return fmt.Errorf("no matching archives found: %w", missing)
+				}
 				return fmt.Errorf("no matching archives found")
 			}
 			return nil
@@ -348,6 +364,10 @@ geneos package install md-gateway-asx -N -S
 // Install installs the given component type on the given host, using the
 // given options. If ct is nil, then all component types are installed.
 func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.GeneosOption) (err error) {
+	return install(h, ct, false, options...)
+}
+
+func install(h *geneos.Host, ct *geneos.Component, explicitSource bool, options ...geneos.GeneosOption) (err error) {
 	installed := 0
 	ctSet := ct != nil
 
@@ -407,7 +427,11 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.GeneosOptio
 						installed++
 						continue
 					}
-					if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" {
+					if errors.Is(err, fs.ErrNotExist) && explicitSource && !ctSet {
+						err = nil
+						continue
+					}
+					if errors.Is(err, fs.ErrNotExist) && installCmdVersion != "latest" && !explicitSource {
 						err = nil
 						installed++
 						continue
@@ -419,6 +443,9 @@ func Install(h *geneos.Host, ct *geneos.Component, options ...geneos.GeneosOptio
 		}
 	}
 	if installed == 0 {
+		if explicitSource {
+			return fmt.Errorf("no matching release installed: %w", fs.ErrNotExist)
+		}
 		return fmt.Errorf("no matching release installed")
 	}
 	return

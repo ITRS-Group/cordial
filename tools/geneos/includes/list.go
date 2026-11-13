@@ -106,17 +106,18 @@ func validateIncludesListFormat(format string) error {
 }
 
 type includeFile struct {
-	Path      string
-	Version   string
-	Status    string
-	Latency   string
-	CertValid string
-	FileInfo  os.FileInfo
-	ModTime   time.Time // for remotes, this represents the modification time of the include file on the remote location; for local files, it represents the local modification time
-	Size      *int64    // nil when size metadata is unavailable; a pointer to zero is a known empty file
-	Remote    bool      // Location is a remote URL
-	Local     bool      // Location is in or under the gateway home directory
-	Shared    bool      // Location is in a shared include directory
+	Path             string
+	OriginalLocation string
+	Version          string
+	Status           string
+	Latency          string
+	CertValid        string
+	FileInfo         os.FileInfo
+	ModTime          time.Time // for remotes, this represents the modification time of the include file on the remote location; for local files, it represents the local modification time
+	Size             *int64    // nil when size metadata is unavailable; a pointer to zero is a known empty file
+	Remote           bool      // Location is a remote URL
+	GatewayLocal     bool      // Location is in or under the gateway home directory
+	Shared           bool      // Location is in a shared include directory
 }
 
 const (
@@ -136,7 +137,7 @@ type gatewayInclude struct {
 	Priority       int             // priority of the include
 	Required       *bool
 	ReloadInterval *int   // reload interval for the include
-	Location       string // original location
+	Location       string // configured location, or setup location relative to the Gateway home
 	Disabled       bool   // list of disables associated with this include
 }
 
@@ -145,11 +146,11 @@ var versionColumnsLong = []string{"Version", "Files", "Version", "Perms", "Owner
 
 var includeColumns = []string{"File", "Copies", "Gateways", "Flags", "LastModified", "Size", "Location"}
 var includeColumnsLong = []string{"File", "Copies", "Gateways", "Flags", "Version", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
-var includeColumnsMachine = []string{"File", "Copies", "Gateways", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "Version", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
+var includeColumnsMachine = []string{"File", "Copies", "Gateways", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "Version", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
 
 var gatewayColumns = []string{"Gateway", "File", "Priority", "Flags", "Reload", "LastModified", "Size", "Location"}
 var gatewayColumnsLong = []string{"Gateway", "File", "Priority", "Flags", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "Latency", "certValid", "Location"}
-var gatewayColumnsMachine = []string{"Gateway", "File", "Priority", "status", "shared", "local", "remote", "readOnly", "disabled", "optional", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
+var gatewayColumnsMachine = []string{"Gateway", "File", "Priority", "status", "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "Version", "Reload", "Perms", "Owner", "LastModified", "Size", "latency", "certValid", "Location"}
 
 // listIncludes lists all available include files for the specified host, taking
 // into account the command-line flags for filtering and formatting. It
@@ -320,7 +321,10 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 	if includesListCmdByGateway {
 		gatewayNames = names
 	}
-	gatewayIncludes, includesByPath := getGatewayIncludes(h, versionedIncludes, gatewayNames...)
+	gatewayIncludes, includesByPath, err := getGatewayIncludes(h, versionedIncludes, gatewayNames...)
+	if err != nil {
+		return err
+	}
 
 	// update includesByPath with shared and versioned includes
 	sharedPaths := make(map[string]struct{}, len(sharedIncludes))
@@ -377,7 +381,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 
 		resps := responses.GeneralResponses{}
 		for path, inc := range includesByPath {
-			if inc.Local && !includesListCmdAll {
+			if inc.GatewayLocal && !includesListCmdAll {
 				continue
 			}
 			base := h.Base(path)
@@ -458,7 +462,7 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 		for gwname, si := range gatewayIncludes {
 			for _, p := range si {
 				var resp *responses.General
-				if p.Local && !includesListCmdAll {
+				if p.GatewayLocal && !includesListCmdAll {
 					continue
 				}
 
@@ -495,6 +499,9 @@ func listIncludes(h *geneos.Host, names ...string) (err error) {
 }
 
 func includeListLocation(h *geneos.Host, gatewayWorkingDir, geneosHome, location string, include includeFile) (string, error) {
+	if include.GatewayLocal {
+		return include.OriginalLocation, nil
+	}
 	if include.Remote || !h.IsAbs(location) {
 		return location, nil
 	}
@@ -562,7 +569,7 @@ func formatIncludeResponses(w io.Writer, result responses.GeneralResponses, colu
 					break
 				}
 				switch column {
-				case "shared", "local", "remote", "readOnly", "disabled", "optional", "certValid":
+				case "shared", "gatewayLocal", "remote", "readOnly", "disabled", "optional", "certValid":
 					if row[index] == "N" || row[index] == "-" || row[index] == "" {
 						continue
 					}
@@ -774,7 +781,7 @@ func includeFileMachineRow(name, copies string, gatewayCount int, include includ
 		fmt.Sprintf("%d", gatewayCount),
 		includeFileStatus(include),
 		includeBooleanValue(include.Shared),
-		includeBooleanValue(include.Local),
+		includeBooleanValue(include.GatewayLocal),
 		includeBooleanValue(include.Remote),
 		includeReadOnlyValue(include),
 		includeStatusNotChecked,
@@ -873,7 +880,7 @@ func gatewayIncludeMachineRow(gateway string, include gatewayInclude) []string {
 		fmt.Sprintf("%d", include.Priority),
 		includeFileStatus(include.includeFile),
 		includeBooleanValue(include.Shared),
-		includeBooleanValue(include.Local),
+		includeBooleanValue(include.GatewayLocal),
 		includeBooleanValue(include.Remote),
 		includeReadOnlyValue(include.includeFile),
 		includeBooleanValue(include.Disabled),
@@ -910,8 +917,8 @@ func renderFlags(p includeFile) (flags string) {
 	}
 
 	// gateway local include (not shared)
-	if p.Local {
-		flags += "L"
+	if p.GatewayLocal {
+		flags += "G"
 	}
 
 	// URL / remote
@@ -985,7 +992,12 @@ var includeDirs = []string{
 // predefined include directories and collects all XML files, returning
 // them as a slice of directory entries.
 func getSharedIncludes(h *geneos.Host, gwDir string) (includes []includeFile, err error) {
-	for _, dir := range includeDirs {
+	if err := geneos.ValidateSite(config.Get[string](config.Global(), "site")); err != nil {
+		return nil, err
+	}
+	dirs := slices.Clone(includeDirs)
+	dirs = append(dirs, geneos.SiteName())
+	for _, dir := range dirs {
 		root := h.Join(gwDir, dir)
 		err = h.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			var modtime time.Time
@@ -1113,7 +1125,7 @@ func getVersionedIncludes(h *geneos.Host, root string) (versions []fs.DirEntry, 
 // names and the values are slices of gatewayInclude structures
 // containing detailed information about each include, such as its
 // location, version, and file metadata.
-func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string) (includesByGateway map[string][]gatewayInclude, includesByPath map[string]includeFile) {
+func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string) (includesByGateway map[string][]gatewayInclude, includesByPath map[string]includeFile, err error) {
 	includesByGateway = make(map[string][]gatewayInclude)
 	includesByPath = make(map[string]includeFile)
 
@@ -1138,6 +1150,7 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 		// handle the main setup file for the gateway, determining if it's local or remote and gathering its metadata
 		cf := i.Config()
 		setup := config.Get[string](cf, "setup")
+		setupLocation := setup
 
 		if strings.HasPrefix(setup, "https://") || strings.HasPrefix(setup, "http://") {
 			remote = true
@@ -1146,6 +1159,11 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 			local = true
 			if h.IsAbs(setup) {
 				fullpath = setup
+				setupLocation, err = h.Rel(i.Home(), setup)
+				if err != nil {
+					return nil, nil, fmt.Errorf("make Gateway %q setup location relative to its home: %w", i.Name(), err)
+				}
+				setupLocation = h.ToSlash(setupLocation)
 			} else {
 				fullpath = h.Join(i.Home(), setup)
 			}
@@ -1168,23 +1186,25 @@ func getGatewayIncludes(h *geneos.Host, versioned []includeFile, names ...string
 			Priority:       g.Includes.Priority,
 			Required:       &[]bool{true}[0],
 			ReloadInterval: reload,
-			Location:       setup,
+			Location:       setupLocation,
 			Status:         status,
 			Latency:        latency,
 			CertValid:      certValid,
 			Path:           fullpath,
-			Local:          local,
+			GatewayLocal:   local,
 			Remote:         remote,
 			FileInfo:       fi,
 			ModTime:        modtime,
 			Size:           size,
 		}
 
+		gatewaySetup.includeFile.OriginalLocation = gatewaySetup.Location
 		includesByPath[gatewaySetup.Path] = gatewaySetup.includeFile
 
 		incByGateway := getIncludesFromSetup(h, i, g.Includes.Includes, g.Includes.IncludeGroups, []string{}, versioned)
 		for _, gwp := range incByGateway {
 			for _, inc := range gwp {
+				inc.includeFile.OriginalLocation = inc.Location
 				includesByPath[inc.Path] = inc.includeFile
 			}
 		}
@@ -1253,16 +1273,16 @@ func getIncludesFromSetup(h *geneos.Host, gw geneos.Instance, includes []geneosx
 		}
 
 		result[gw.Name()] = append(result[gw.Name()], gatewayInclude{
-			Path:      abspath,
-			FileInfo:  fi,
-			ModTime:   modtime,
-			Size:      size,
-			Status:    status,
-			Latency:   latency,
-			CertValid: certValid,
-			Version:   version,
-			Local:     local,
-			Remote:    remote,
+			Path:         abspath,
+			FileInfo:     fi,
+			ModTime:      modtime,
+			Size:         size,
+			Status:       status,
+			Latency:      latency,
+			CertValid:    certValid,
+			Version:      version,
+			GatewayLocal: local,
+			Remote:       remote,
 
 			Gateway:        gw,
 			Groups:         groupPath,
