@@ -336,7 +336,7 @@ san:
   - name: ${hostname}-application-san
     managed-entities-common:
       types:
-        - Level 2 - Basic Application
+        - Level 2 - Application Core
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Application

@@ -20,6 +20,6 @@ In the GSE, give `config.level3.geneos.xml` a numerically lower priority (theref
 
 Keep `itrs.level3.geneos.xml` read-only and upgrade it from the published version when updating the monitoring functionality. Put Gateway-specific changes in the config include so they remain separate from the upgradeable definitions.
 
-The parent group automatically applies instance monitoring to entities placed under it. Place an entity in `With Diagnostic Views` only when open-file and TCP-port diagnostics are wanted. For component monitoring, also assign `Level 2 - Basic Application` from `itrs.level2.basic-application.xml` and the relevant Level 3 component type to that entity; the component sampler includes extend the Level 2 `Logs` and `Processes` samplers. Add Gateway-load types separately where required.
+The parent group automatically applies instance monitoring to entities placed under it. Place an entity in `With Diagnostic Views` only when open-file and TCP-port diagnostics are wanted. For component monitoring, also assign `Level 2 - Application Core` from `itrs.level2.application-core.xml` and the relevant Level 3 component type to that entity; the component sampler includes extend the Level 2 `Logs` and `Processes` samplers. Add Gateway-load types separately where required.
 
 Do not enable the placeholder entity unchanged. Replace or remove it as part of adapting the example; keep the template separate from production configuration when no example hierarchy is needed.

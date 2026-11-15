@@ -2674,12 +2674,12 @@ Release archives are named `geneos-includes-v<version>.tar.gz` and have a single
 | --- | --- |
 | `itrs.level0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
 | `itrs.level1.infrastructure.xml` | Infrastructure monitoring for CPU, disk, hardware, and network. |
-| `itrs.level2.basic-application.xml` | Baseline `Logs`, `Processes`, and Windows Services samplers for applications. |
+| `itrs.level2.application-core.xml` | Baseline `Logs`, `Processes`, and Windows Services samplers for applications. |
 | `itrs.level3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
 | `config.level0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
 | `config.level0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
 | `config.level1.infrastructure.xml` | Gateway setup template for infrastructure configuration and overrides. |
-| `config.level2.basic-application.xml` | Gateway setup template for application configuration. |
+| `config.level2.application-core.xml` | Gateway setup template for application configuration. |
 | `config.level3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Level 3 Geneos. |
 | `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
 
@@ -2690,18 +2690,18 @@ gateway/
 ├── includes/
 │   ├── itrs.level0.foundation.xml -> v1.31.0/itrs.level0.foundation.xml
 │   ├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
-│   ├── itrs.level2.basic-application.xml -> v1.31.0/itrs.level2.basic-application.xml
+│   ├── itrs.level2.application-core.xml -> v1.31.0/itrs.level2.application-core.xml
 │   ├── itrs.level3.geneos.xml -> v1.31.0/itrs.level3.geneos.xml
 │   └── v1.31.0/
 │       ├── itrs.level0.foundation.xml
 │       ├── itrs.level1.infrastructure.xml
-│       ├── itrs.level2.basic-application.xml
+│       ├── itrs.level2.application-core.xml
 │       └── itrs.level3.geneos.xml
 └── acme/
     ├── acme.level0.authentication.xml
     ├── acme.level0.foundation.xml
     ├── acme.level1.infrastructure.xml
-    ├── acme.level2.basic-application.xml
+    ├── acme.level2.application-core.xml
     ├── acme.level3.geneos.xml
     └── acme.level4.analytics.xml
 ```
@@ -4399,7 +4399,7 @@ san:
   - name: ${hostname}-application-san
     managed-entities-common:
       types:
-        - Level 2 - Basic Application
+        - Level 2 - Application Core
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Application

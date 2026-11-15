@@ -1,27 +1,27 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-11 16:44:17 by PeterGalbavy on ITRSLP372-->
+<!--Edited using Gateway Setup Editor version GA7.11.1-260803 at 2026-11-15 09:17:32 by PeterGalbavy on ITRSLP372-->
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<managedEntities>
-		<managedEntityGroup name="Level 2 - Basic Application">
+		<managedEntityGroup name="Level 2 - Application Core">
 			<attribute name="CATEGORY">Application</attribute>
 			<attribute name="COMPONENT">Baseline</attribute>
 		</managedEntityGroup>
 	</managedEntities>
 	<types>
-		<typeGroup name="Level 2 - Basic Application">
-			<type name="Level 2 - Basic Application">
-				<environment ref="Level 2 - Basic Application Defaults"/>
+		<typeGroup name="Level 2 - Application Core">
+			<type name="Level 2 - Application Core">
+				<environment ref="Level 2 - Application Core Defaults"/>
 				<var name="SAMPLER_GROUP">
 					<string>Application</string>
 				</var>
 				<sampler ref="Logs"/>
 				<sampler ref="Processes"/>
-				<sampler ref="Windows Services"/>
+				<sampler ref="Services"/>
 			</type>
 		</typeGroup>
 	</types>
 	<samplers>
-		<samplerGroup name="Level 2 - Basic Application">
+		<samplerGroup name="Level 2 - Application Core">
 			<sampler name="Logs">
 				<var-group>
 					<var ref="SAMPLER_GROUP"/>
@@ -79,7 +79,7 @@
 					</activeTime>
 				</activeTimes>
 			</sampler>
-			<sampler name="Windows Services">
+			<sampler name="Services">
 				<plugin>
 					<win-services/>
 				</plugin>
@@ -87,10 +87,10 @@
 		</samplerGroup>
 	</samplers>
 	<rules>
-		<ruleGroup name="Level 2 - Basic Application"/>
+		<ruleGroup name="Level 2 - Application Core"/>
 	</rules>
 	<activeTimes>
-		<activeTimeGroup name="Level 2 - Basic Application">
+		<activeTimeGroup name="Level 2 - Application Core">
 			<activeTime name="Application - Always">
 				<scheduledPeriod>
 					<days>
@@ -107,8 +107,8 @@
 		</activeTimeGroup>
 	</activeTimes>
 	<environments>
-		<environmentGroup name="Level 2 - Basic Application">
-			<environment name="Level 2 - Basic Application Defaults">
+		<environmentGroup name="Level 2 - Application Core">
+			<environment name="Level 2 - Application Core Defaults">
 				<var name="LOGS_ACTIVE">
 					<activeTime>
 						<activeTime ref="Application - Always"/>
@@ -120,13 +120,13 @@
 					</activeTime>
 				</var>
 			</environment>
-			<environment name="Level 2 - Basic Application Overrides"/>
+			<environment name="Level 2 - Application Core Overrides"/>
 		</environmentGroup>
 	</environments>
 	<exportedData>
-		<dataSet name="Level 2 - Basic Application">
+		<dataSet name="Level 2 - Application Core">
 			<paths>
-				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 2 - Basic Application&quot;)]</path>
+				<path>/geneos/gateway/directory/probe/managedEntity/sampler[(@type=&quot;Level 2 - Application Core&quot;)]</path>
 			</paths>
 		</dataSet>
 	</exportedData>

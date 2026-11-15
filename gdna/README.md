@@ -30,12 +30,12 @@ Monitoring Coverage is determined by which plugins are running on a _**server**_
 
   * Level 0 - Geneos Self-Monitoring
   * Level 1 - Infrastructure
-  * Level 2 - Basic Application
-  * Level 3 - Advanced Application
+  * Level 2 - Application Core
+  * Level 3 - Application
   * Level 4 - End-to-End
   * Level 5 - Business Activity
 
-  GDNA uses Levels 1 to 3 and the presence of plugins from licence token data to map existing monitoring to defined Coverage Level policies. Levels 1 and 2 are largely in-line with the meanings above, with the additional of a list of "optional" level 1 plugins. Plugins that do not fall into the first two levels are classed as Level 3, Advanced Applications. In the Plugin Utilization dashboard these are grouped by Levels and technology families.
+  GDNA uses Levels 1 to 3 and the presence of plugins from licence token data to map existing monitoring to defined Coverage Level policies. Levels 1 and 2 are largely in-line with the meanings above, with the additional of a list of "optional" level 1 plugins. Plugins that do not fall into the first two levels are classed as Level 3 - Application. In the Plugin Utilization dashboard these are grouped by Levels and technology families.
 
   The plugins in the Coverage Levels are:
 
@@ -76,9 +76,9 @@ The first dashboard, Monitoring Coverage, gives an overview of all your Geneos G
 
 * Level 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
 
-* Level 2 - Basic Application monitoring, the plugin names can be seen in the middle part of the Plugin Utilization area above
+* Level 2 - Application Core. The plugin names can be seen in the middle part of the Plugin Utilization area above
 
-* Level 3 - All other technology and application specific plugins.
+* Level 3 - Application specific plugins.
 
 ### Plugin Utilization Dashboard
 

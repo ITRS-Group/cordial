@@ -86,7 +86,7 @@ func TestEmbeddedMOTMManagedEntityCommon(t *testing.T) {
 		if !contains(entity.Attributes, "APPLICATION=Geneos") || !contains(entity.Attributes, "CATEGORY=MOTM") || !contains(entity.Attributes, "${option:attribute}") {
 			t.Errorf("entity %q did not inherit common attributes: %v", entity.ForEach, entity.Attributes)
 		}
-		if !contains(entity.Types, "Level 2 - Basic Application") {
+		if !contains(entity.Types, "Level 2 - Application Core") {
 			t.Errorf("entity %q did not inherit the common type: %v", entity.ForEach, entity.Types)
 		}
 		for _, name := range []string{"instanceName", "instanceType", "instanceExecPath", "logFilePath", "consoleLogFilePath"} {

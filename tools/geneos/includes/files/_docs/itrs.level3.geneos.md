@@ -7,11 +7,11 @@ Treat this functional include as read-only so it can be upgraded from later rele
 
 ## Dependencies and Installation
 
-The instance, diagnostics, and Gateway-load types are defined here and do not depend on the Level 0 Geneos types or the Level 2 application type. The `Level 3 - Geneos Components` types do require the Level 2 `Level 2 - Basic Application` type because their sampler includes extend its `Logs` and `Processes` samplers.
+The instance, diagnostics, and Gateway-load types are defined here and do not depend on the Level 0 Geneos types or the `Level 2 - Application Core` type. The `Level 3 - Geneos Components` types do require the `Level 2 - Application Core` type because their sampler includes extend its `Logs` and `Processes` samplers.
 
-For component monitoring, include `itrs.level2.basic-application.xml` and assign both `Level 2 - Basic Application` and the relevant `Level 3 - Geneos Components` type to the managed entity. `Level 3 - Geneos Component Logs` adds the component log files to `Logs`; `Level 3 - Geneos Component Process` adds the component process descriptor to `Processes`.
+For component monitoring, include `itrs.level2.application-core.xml` and assign both `Level 2 - Application Core` and the relevant `Level 3 - Geneos Components` type to the managed entity. `Level 3 - Geneos Component Logs` adds the component log files to `Logs`; `Level 3 - Geneos Component Process` adds the component process descriptor to `Processes`.
 
-Use `config.level3.geneos.xml` as a template for a managed-entity hierarchy. Its `Level 3 - Geneos` group adds `Level 3 - Geneos Instances`; entities in the nested `With Diagnostic Views` group also receive `Level 3 - Geneos Diagnostics`. The example managed entity is disabled. Adapt the hierarchy and connect real entities to the appropriate Netprobe in your Gateway configuration. For component monitoring, add the Level 2 base type and relevant Level 3 component type to the entity; assign Gateway-load types separately where needed.
+Use `config.level3.geneos.xml` as a template for a managed-entity hierarchy. Its `Level 3 - Geneos` group adds `Level 3 - Geneos Instances`; entities in the nested `With Diagnostic Views` group also receive `Level 3 - Geneos Diagnostics`. The example managed entity is disabled. Adapt the hierarchy and connect real entities to the appropriate Netprobe in your Gateway configuration. For component monitoring, add the `Level 2 - Application Core` type and the relevant Level 3 component type to the entity; assign Gateway-load types separately where needed.
 
 ## Type Entrypoints
 

@@ -109,12 +109,12 @@ profiles:
           ../../${site}/${site}.level1.infrastructure.xml
         1010: >
           ITRS Geneos Best Practice |
-          Level 2 - Basic Application |
-          ../../includes/itrs.level2.basic-application.xml
+          Level 2 - Application Core |
+          ../../includes/itrs.level2.application-core.xml
         510: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../${site}/${site}.level2.basic-application.xml
+          ../../${site}/${site}.level2.application-core.xml
     netprobe:
       - name: ${option:minimal?"minimal:":""}localhost
         params:
@@ -187,7 +187,7 @@ profiles:
           - CATEGORY=MOTM
           - ${option:attribute}
         types:
-          - Level 2 - Basic Application
+          - Level 2 - Application Core
         variables:
           - type: string
             name: instanceName
@@ -359,20 +359,20 @@ profiles:
             Configuration |
             ../../${site}/${site}.level1.infrastructure.xml
 
-          # Level 2 - Basic application includes for the MOTM gateway
+          # Level 2 - Application Core includes for the MOTM gateway
           01010: >
             ITRS Geneos Best Practice |
-            Level 2 - Basic Application |
-            ../../includes/itrs.level2.basic-application.xml
+            Level 2 - Application Core |
+            ../../includes/itrs.level2.application-core.xml
           00510: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.level2.basic-application.xml
+            ../../${site}/${site}.level2.application-core.xml
 
-          # Level 3 - Advanced application includes for the MOTM gateway
+          # Level 3 - Application includes for the MOTM gateway
           01020: >
             ITRS Geneos Best Practice |
-            Level 3 - Advanced Application |
+            Level 3 - Application |
             ../../includes/itrs.level3.geneos.xml
           00520: >
             ITRS Geneos Best Practice |
@@ -383,7 +383,7 @@ profiles:
           - type: string
             name: logFilePath
             value: ${config:home}/${config:logfile}
-
+           
     netprobes:
       - name: ${option:minimal?"minimal:":""}${hostname}-MOTM-Probe
 
