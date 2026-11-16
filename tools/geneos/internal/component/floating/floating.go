@@ -303,12 +303,13 @@ func (i *Floating) Rebuild(initial bool) (changed bool, err error) {
 			return changed, resp.Err
 		}
 	}
-	return instance.ExecuteTemplate(i,
+	changedSetup, err := instance.ExecuteTemplate(i,
 		setup,
 		instance.FileOf(i, cf.Join("config", "template")),
 		template,
 		0664,
 	)
+	return changed || changedSetup, err
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
