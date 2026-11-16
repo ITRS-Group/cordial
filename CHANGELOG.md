@@ -11,23 +11,25 @@
 
 * `tools/geneos`
 
-  * **Breaking Change**: The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
+  * A variety of new features for the `geneos includes` subsystem for managing include files and configuration templates independently of the main `geneos` program version. This feature is still consider in a preview state and may undergo further changes before becoming fully stable.
 
-  * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
+    * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
 
-    Existing files in `gateway/includes/config` are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. Existing user profiles and Gateway setups are not rewritten. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
+      Existing files in `gateway/includes/config` are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. Existing user profiles and Gateway setups are not rewritten. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
 
-  * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
+    * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
 
-  * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
+    * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
 
-  * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.
+    * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.
 
-  * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
+    * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
 
-  * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
+    * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
 ## Version v1.31.0 Changes
+
+* Updated to use Go 1.27.4 and update dependencies
 
 * **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
 
@@ -43,11 +45,13 @@
 
 * `tools/geneos`
 
-  * **Breaking Change**: `geneos includes list` now uses long-format fields in JSON, pretty, CSV and toolkit output, with separate status and boolean flag fields instead of the compact flags column. CSV and toolkit headings use camelCase, while column and table headings use NormalCase. Gateway-local includes use `gatewayLocal` and `G` instead of `local` and `L`. Long output also reports remote HEAD latency and HTTPS certificate validity where available.
+  * **Breaking Change** (minor): The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
+
+  * **Breaking Change** (minor): `geneos includes list` now uses long-format fields in JSON, pretty, CSV and toolkit output, with separate status and boolean flag fields instead of the compact flags column. CSV and toolkit headings use camelCase, while column and table headings use NormalCase. Gateway-local includes use `gatewayLocal` and `G` instead of `local` and `L`. Long output also reports remote HEAD latency and HTTPS certificate validity where available.
 
     Include locations under the Geneos home are shown relative to a Gateway instance directory where appropriate. Gateway-local include references retain their configured paths; a local main Gateway setup file is shown relative to its instance directory.
 
-  * **Breaking Change**: `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`; explicit URLs are fetched directly.
+  * **Breaking Change** (minor): `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`; explicit URLs are fetched directly.
 
   * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
 
@@ -58,8 +62,6 @@
   * Use host-specific path operations for file handling across commands, instances, packages, includes, templates, and restore operations, including paths that previously relied on the client OS's `path` or `filepath` behavior.
 
   * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
-
-* Updated to use Go 1.27.4 and update dependencies
 
 * `pkg/host`
 
@@ -73,15 +75,13 @@
 
 ## Version v1.31.0 Fixes
 
-* Include the top-level README in Markdown as well as PDF in release documentation.
-
 * `gdna`
 
   * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
 
 * `tools/geneos`
 
-  * Make XPath serialization order Managed Entity attributes consistently, preventing spurious `adb clean`/`edit` link updates on repeated runs.
+  * Make XPath serialization order Managed Entity attributes consistent, preventing spurious `adb clean`/`edit` link updates on repeated runs.
 
   * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
 

@@ -14,13 +14,12 @@ for full details and fixes, see the [changelog](CHANGELOG.md).
 > ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain
 > in releases.
 
-* **Site names:** Set an installation-wide site name for Gateway configuration
-  include directories and filename prefixes. Supplied profiles use the site
-  name in their include paths.
-* **Includes:** Install versioned include archives independently of the
-  `geneos` binary, update links, delete unused versions and repair unambiguous
-  broken local references with `geneos includes fix`. Releases include a
-  separate versioned includes archive and standalone installer.
+* **Includes (preview):** Manage include files and configuration templates
+  independently of the main `geneos` version. Set an installation-wide site
+  name for Gateway include paths, install embedded or versioned includes,
+  update links, delete unused versions and repair unambiguous broken local
+  references with `geneos includes fix`. Releases include a separate versioned
+  includes archive and standalone installer.
 * **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can
   filter or replace URLs, and `edit` is a preserve-by-default alias.
 * **Packages:** `geneos package install` accepts repeatable `--archive`

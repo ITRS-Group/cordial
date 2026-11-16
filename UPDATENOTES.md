@@ -9,6 +9,12 @@ and fixes, and [Highlights](HIGHLIGHTS.md) for new features.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
+* **Site includes:** The default site name is `local`; configuration includes
+  are installed under `gateway/<site>/<site>.*.xml`. Existing
+  `gateway/includes/config` files are copied without overwriting existing
+  files and retained in their original location. Existing user profiles and
+  Gateway setups are not rewritten; check their paths before using the new
+  layout.
 * **Removed from releases:** The original `servicenow` integration,
   `pagerduty` and `san-config`, together with their configurations and
   documentation, are no longer shipped. Use the versions in v1.30.1 or build
@@ -17,26 +23,22 @@ and fixes, and [Highlights](HIGHLIGHTS.md) for new features.
 * **Release archive includes:** The main archive no longer contains
   `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive
   or the embedded files managed by `geneos includes` instead.
-* **Includes commands:** Remove `--force`/`-F` from scripts using `geneos
-  includes extract` or `update`. Re-extraction no longer requires it. Existing
-  top-level files and links are only replaced with `extract --update`, `install
-  --update` or `update`; existing configuration templates are not replaced.
-* **Include list output:** Update consumers of JSON, pretty, CSV and Toolkit
-  output for separate status and boolean fields instead of compact flags. CSV
-  and Toolkit headings use camelCase; column and table headings use NormalCase.
-  Gateway-local entries use `gatewayLocal` and `G`, not `local` and `L`. Paths
-  shown for some files have also changed; gateway-local references retain their
-  configured paths, except the main local setup is relative to the instance.
-* **Package installation:** `-A` now means `--archive`, not `--all`; use
-  `--all` explicitly. Local archive sources do not fall back to downloads, and
-  a local `--archive` cannot be combined with `--download`. Explicit URLs are
-  still fetched.
-* **Site includes:** The default site name is `local`; configuration includes
-  are installed under `gateway/<site>/<site>.*.xml`. Existing
-  `gateway/includes/config` files are copied without overwriting existing
-  files and retained in their original location. Existing user profiles and
-  Gateway setups are not rewritten; check their paths before using the new
-  layout.
+* **Minor breaking change — includes commands:** Remove `--force`/`-F` from
+  scripts using `geneos includes extract` or `update`; re-extraction no longer
+  requires it. Existing top-level files and links are only replaced with
+  `extract --update`, `install --update` or `update`. Existing configuration
+  templates are never replaced.
+* **Minor breaking change — include list output:** Update consumers of JSON,
+  pretty, CSV and Toolkit output for separate status and boolean fields instead
+  of compact flags. CSV and Toolkit headings use camelCase; column and table
+  headings use NormalCase. Gateway-local entries use `gatewayLocal` and `G`,
+  not `local` and `L`. Paths shown for some files have also changed;
+  gateway-local references retain their configured paths, except the main local
+  setup is relative to the instance.
+* **Minor breaking change — package installation:** `-A` now means
+  `--archive`, not `--all`; use `--all` explicitly. Local archive sources do
+  not fall back to downloads, and a local `--archive` cannot be combined with
+  `--download`. Explicit URLs are still fetched.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 
