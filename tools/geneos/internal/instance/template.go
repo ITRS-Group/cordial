@@ -329,7 +329,9 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 				m[values.MANAGED_ENTITIES] = entities
 			}
 		}
+	}
 
+	if i.Type().IsA("san", "floating") {
 		gws, ok := m[values.GATEWAYS]
 		if ok {
 			log.Debug("processing gateways", slog.String("type", fmt.Sprintf("%T", gws)), slog.Any("value", gws))
