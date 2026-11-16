@@ -1,6 +1,6 @@
 # GDNA - Geneos Dynamic Netprobe Analysis
 
-The Geneos Dynamic Netprobe Analysis ("**GDNA**") tool provides an overview of Geneos monitoring coverage within your I.T. estate. GDNA prompts action to ensure that there are no gaps in the visibility of the health of your applications and systems. It does this through analysing Geneos license usage data to present reports and visual indicators of monitoring coverage levels through the bundled dashboards.
+The Geneos Dynamic Netprobe Analysis ("**GDNA**") tool provides an overview of Geneos monitoring coverage within your I.T. estate. GDNA prompts action to ensure that there are no gaps in the visibility of the health of your applications and systems. It does this through analysing Geneos license usage data to present reports and visual indicators of monitoring coverage layers through the bundled dashboards.
 
 For many users installing GDNA this is as straight forward as creating a `docker-compose.yml` file, adding data sources and starting it up. For those without docker it can also be set-up as a standalone process.
 
@@ -12,6 +12,16 @@ For many users installing GDNA this is as straight forward as creating a `docker
 
 Please see the [INSTALL.md](INSTALL.md) file for how to install and configure GDNA.
 
+### Upgrading from level-based names
+
+Back up your configuration and database before upgrading. Existing customised configurations are not rewritten:
+
+* Rename `plugins.level1`, `plugins.level1-optional` and `plugins.level2` to `plugins.layer1`, `plugins.layer1-optional` and `plugins.layer2`, including references in custom SQL and environment variables. GDNA reports an error if the old configuration keys or environment variables are still present.
+* Rename custom references and report selectors for `coverage-by-level-and-plugin` and its `Coverage By Level And Plugin` Dataview to `coverage-by-layer-and-plugin` and `Coverage By Layer And Plugin`. Its `level # plugin` column and `level1`, `level2` and `level3` rows use `layer` instead. The Plugins report's `level` column is now `layer`, and coverage rows such as `Level 1 Coverage` are now `Layer 1 Coverage`.
+* Replace the Gateway `gdna.include.xml` and import the updated bundled dashboards. Update any customised dashboards, XPath rules, scripts and report consumers that refer to the old names.
+
+Existing SQLite databases are upgraded automatically; the old plugin tables are retained.
+
 ## How GDNA Works
 
 GDNA is a program that collects live data from one or more Geneos license daemons (`licd`), transforms the data and saves it to a self-contained SQLite database, usually on-disk but can be stored in memory only; A typical `ETL` - Extract, Transform, Load - pipeline. When GDNA produces reports it creates a number of temporary tables, both for performance but also to apply filters and grouping without changing the underlying data.
@@ -22,31 +32,31 @@ Monitoring Coverage is determined by which plugins are running on a _**server**_
 
 * Monitoring Coverage
 
-  We describe Monitoring Coverage as a measure of how effectively Geneos is deployed and configured to collect appropriate metrics from your I.T. estate. We have chosen the default policies, expressed as Coverage Levels, based on our experience and your feedback. These can be customised later on.
+  We describe Monitoring Coverage as a measure of how effectively Geneos is deployed and configured to collect appropriate metrics from your I.T. estate. We have chosen the default policies, expressed as Coverage Layers, based on our experience and your feedback. These can be customised later on.
 
-* Coverage Levels
+* Coverage Layers
 
-  GDNA uses three levels to represent policies based on ITRS' Geneos Best Practice recommendations. In the original recommendations there are 5 levels, plus a "Level 0" for Geneos self-monitoring:
+  GDNA uses three layers to represent coverage policies. They are taken from the Geneos Best Practice monitoring layers, which describe the scope and depth of monitoring. The layers run from the monitoring platform and infrastructure, through applications, to end-to-end services and business activity:
 
-  * Level 0 - Geneos Self-Monitoring
-  * Level 1 - Infrastructure
-  * Level 2 - Application Core
-  * Level 3 - Application
-  * Level 4 - End-to-End
-  * Level 5 - Business Activity
+  * Layer 0 - Foundation
+  * Layer 1 - Infrastructure
+  * Layer 2 - Core Technologies
+  * Layer 3 - Applications
+  * Layer 4 - End-to-End
+  * Layer 5 - Business Activity
 
-  GDNA uses Levels 1 to 3 and the presence of plugins from licence token data to map existing monitoring to defined Coverage Level policies. Levels 1 and 2 are largely in-line with the meanings above, with the additional of a list of "optional" level 1 plugins. Plugins that do not fall into the first two levels are classed as Level 3 - Application. In the Plugin Utilization dashboard these are grouped by Levels and technology families.
+  GDNA uses Layers 1 to 3 and the presence of plugins from licence token data to map existing monitoring to defined Coverage Layer policies. Layers 1 and 2 are largely in-line with the meanings above, with the additional of a list of "optional" layer 1 plugins. Plugins that do not fall into the first two layers are classed as Layer 3 - Applications. In the Plugin Utilization dashboard these are grouped by Layers and technology families.
 
-  The plugins in the Coverage Levels are:
+  The plugins in the Coverage Layers are:
 
-  | Level                      | Plugins                                                                                                                                                 |
+  | Layer                      | Plugins                                                                                                                                                 |
   | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | Level 1                    | `cpu`, `disk`, `hardware`, `network`                                                                                                                    |
-  | Level&nbsp;1&nbsp;Optional | `deviceio`, `ipc`, `top`, `unix-users`, `winapps`, `win-cluster`, `win-services`, `wmi`, `wts-licenses`, `wts-processes`, `wts-sessions`, `wts-summary` |
-  | Level 2                    | `fkm`, `processes`                                                                                                                                      |
-  | Level 3                    | Everything else                                                                                                                                         |
+  | Layer 1                    | `cpu`, `disk`, `hardware`, `network`                                                                                                                    |
+  | Layer&nbsp;1&nbsp;Optional | `deviceio`, `ipc`, `top`, `unix-users`, `winapps`, `win-cluster`, `win-services`, `wmi`, `wts-licenses`, `wts-processes`, `wts-sessions`, `wts-summary` |
+  | Layer 2                    | `fkm`, `processes`                                                                                                                                      |
+  | Layer 3                    | Everything else                                                                                                                                         |
 
-  These lists of plugins (except Level 3) can be changed, but will result in the default dashboards showing incorrect or incomplete data. These lists can also contain multiple instances of the same plugin, for example if you require two `processes` plugins to meet your defined coverage policy, the you can add a extra `processes` plugin to the Level 2 list. A plugin must not however appear in different lists.
+  These lists of plugins (except Layer 3) can be changed, but will result in the default dashboards showing incorrect or incomplete data. These lists can also contain multiple instances of the same plugin, for example if you require two `processes` plugins to meet your defined coverage policy, the you can add a extra `processes` plugin to the Layer 2 list. A plugin must not however appear in different lists.
 
 * Licence Token Data
 
@@ -70,15 +80,15 @@ We include three out-of-the-box dashboards to show you how effectively Geneos is
 
 ### Monitoring Coverage Dashboard
 
-The first dashboard, Monitoring Coverage, gives an overview of all your Geneos Gateways, the servers they are monitoring and the high-level plugin utilization, broken down into 3 coverage levels:
+The first dashboard, Monitoring Coverage, gives an overview of all your Geneos Gateways, the servers they are monitoring and the high-level plugin utilization, broken down into 3 coverage layers:
 
 ![Monitoring Coverage Example](screenshots/gdna-2.png)
 
-* Level 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Level 1 plugins, which can be seen in the second dashboard below)
+* Layer 1 - Core compute infrastructure monitoring; The plugin names can be seen in the left had part of the Plugin Utilization area above. (There are also optional Layer 1 plugins, which can be seen in the second dashboard below)
 
-* Level 2 - Application Core. The plugin names can be seen in the middle part of the Plugin Utilization area above
+* Layer 2 - Core Technologies. The plugin names can be seen in the middle part of the Plugin Utilization area above
 
-* Level 3 - Application specific plugins.
+* Layer 3 - Applications: application-specific plugins.
 
 ### Plugin Utilization Dashboard
 

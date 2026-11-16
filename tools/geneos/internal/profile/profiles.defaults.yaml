@@ -101,20 +101,20 @@ profiles:
       includes:
         1000: >
           ITRS Geneos Best Practice |
-          Level 1 - Infrastructure |
-          ../../includes/itrs.level1.infrastructure.xml
+          Layer 1 - Server Health |
+          ../../includes/itrs.layer1.server-health.xml
         500: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../${site}/${site}.level1.infrastructure.xml
+          ../../${site}/${site}.layer1.server-health.xml
         1010: >
           ITRS Geneos Best Practice |
-          Level 2 - Application Core |
-          ../../includes/itrs.level2.application-core.xml
+          Layer 2 - Core Technologies |
+          ../../includes/itrs.layer2.programs-and-logs.xml
         510: >
           ITRS Geneos Best Practice |
           Configuration |
-          ../../${site}/${site}.level2.application-core.xml
+          ../../${site}/${site}.layer2.programs-and-logs.xml
     netprobe:
       - name: ${option:minimal?"minimal:":""}localhost
         params:
@@ -124,35 +124,30 @@ profiles:
         params:
           - port=${option:insecure?8080:8443}
   
-  motm:
-    _short: "MOTM profile"
+  health-endpoint:
+    _short: "Monitoring Health endpoint profile"
     _description: |
-      The `motm` profile supports the creation of a Monitor Of The
-      Monitors satellite system setup. The profile installs a
-      Self-Announcing netprobe which is dynamically configured to report
-      the status or all Geneos components on the host to cental MOTM
-      gateways.
+      The `health-endpoint` profile installs a Monitoring Health
+      Self-Announcing Netprobe. It is dynamically configured to report
+      the status of Geneos components on the host to Health Gateways.
 
-      To set-up Motitoring-Of-The-Monitoring using this profile, run the
-      following command:
+      To deploy a Monitoring Health endpoint using this profile, run:
 
       ```bash
-      $ geneos deploy profile motm [OPTIONS]
+      $ geneos deploy profile health-endpoint [OPTIONS]
       ```
 
       The following command options are supported:
 
-        - `--signing-bundle`: The path to the signing bundle file. This
-        is required so that locally created certificates share a trust
-        chain with other Geneos servers.
+        - `--certs-bundle`: The path to an issued certificate bundle
+        for the endpoint.
 
         - `--certs-password`: The password for the certificate bundle,
         applicable only to PKCS#12/PFX bundles.
 
         - `--attribute`: An attribute to be applied to the managed
-        entities. Can be repeated s many times as required. Each geneos
-        component is also automatically assigned an attribute in the
-        form `GATEWAY=GatewayName`.
+        entities. Can be repeated as many times as required. Component
+        entities also receive attributes such as `GATEWAY=GatewayName`.
         
         - `--gateway`: The name and port of the gateway (HOST:PORT) to
         connect to. Can be repeated as many times as required.
@@ -166,17 +161,17 @@ profiles:
       The original options are stored in the profile configuration so
       that they are reused when the profile is rebuilt.
     san:
-      name: ${option:minimal?"minimal:":""}${hostname}-MOTM-SAN
+      name: ${option:minimal?"minimal:":""}${hostname} Health
       gateways: ${option:gateway}
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Monitoring
-        - COMPONENT=MOTM-SAN
+        - COMPONENT=SAN Health
         - ${option:attribute}
       types:
-        - Level 1 - Infrastructure
-        - Level 3 - Geneos Instances
-        - Level 3 - Geneos Diagnostics
+        - Layer 1 - Server Health
+        - Layer 3 - Geneos Instances
+        - Layer 3 - Geneos Diagnostics
       variables:
         - type: string
           name: geneosExecPath
@@ -184,10 +179,10 @@ profiles:
       managed-entities-common:
         attributes:
           - APPLICATION=Geneos
-          - CATEGORY=MOTM
+          - CATEGORY=Health
           - ${option:attribute}
         types:
-          - Level 2 - Application Core
+          - Layer 2 - Core Technologies
         variables:
           - type: string
             name: instanceName
@@ -212,8 +207,8 @@ profiles:
             - COMPONENT=Gateway
             - GATEWAY=${select:gatewayname:name:Unknown}
           types:
-            - Level 3 - Geneos Gateway
-            - Level 3 - Geneos Gateway Load
+            - Layer 3 - Geneos Gateway
+            - Layer 3 - Geneos Gateway Load
           variables:
             - type: string
               name: statsFilePath
@@ -225,7 +220,7 @@ profiles:
             - COMPONENT=Netprobe
             - NETPROBE=${config:name}
           types:
-            - Level 3 - Geneos Netprobe
+            - Layer 3 - Geneos Netprobe
           variables:
             - type: string
               name: CALogFilePath
@@ -237,7 +232,7 @@ profiles:
             - COMPONENT=Netprobe
             - NETPROBE=${config:name}
           types:
-            - Level 3 - Geneos Netprobe
+            - Layer 3 - Geneos Netprobe
 
         - for-each: licd
           name: ${config:name} Licence Daemon
@@ -245,7 +240,7 @@ profiles:
             - COMPONENT=Licence Daemon
             - LICENCE_DAEMON=${config:name}
           types:
-            - Level 3 - Geneos Licence Daemon
+            - Layer 3 - Geneos Licence Daemon
 
         - for-each: webserver
           name: ${config:name} Webserver
@@ -253,7 +248,7 @@ profiles:
             - COMPONENT=Web Dashboard Server
             - WEB_DASHBOARD_SERVER=${config:name}
           types:
-            - Level 3 - Geneos Webserver
+            - Layer 3 - Geneos Webserver
 
         - for-each: ac2
           name: ${config:name} Active Console
@@ -261,7 +256,7 @@ profiles:
             - COMPONENT=Active Console
             - ACTIVE_CONSOLE=${config:name}
           types:
-            - Level 3 - Geneos Active Console
+            - Layer 3 - Geneos Active Console
 
         - for-each: ca3
           name: ${config:name} Collection-Agent
@@ -269,7 +264,7 @@ profiles:
             - COMPONENT=Collection-Agent
             - COLLECTION_AGENT=${config:name}
           types:
-            - Level 3 - Geneos Collection-Agent
+            - Layer 3 - Geneos Collection-Agent
 
         - for-each: fa2
           name: ${config:name} FIX Analyser Netprobe
@@ -277,7 +272,7 @@ profiles:
             - COMPONENT=FIX Analyser Netprobe
             - FIX2_NETPROBE=${config:name}
           types:
-            - Level 3 - Geneos FIX Analyser Netprobe
+            - Layer 3 - Geneos FIX Analyser Netprobe
 
         - for-each: fileagent
           name: ${config:name} Fileagent
@@ -285,7 +280,7 @@ profiles:
             - COMPONENT=File Agent
             - FILE_AGENT=${config:name}
           types:
-            - Level 3 - Geneos File Agent
+            - Layer 3 - Geneos File Agent
 
         - for-each: floating
           name: ${config:name} Floating Netprobe
@@ -293,7 +288,7 @@ profiles:
             - COMPONENT=Floating Netprobe
             - FLOATING_NETPROBE=${config:name}
           types:
-            - Level 3 - Geneos Floating Netprobe
+            - Layer 3 - Geneos Floating Netprobe
 
         - for-each: md-gateway
           name: ${config:name} MD-Gateway
@@ -301,7 +296,7 @@ profiles:
             - COMPONENT=Market-Data Gateway
             - MD_GATEWAY=${config:name}
           types:
-            - Level 3 - Geneos Market-Data Gateway
+            - Layer 3 - Geneos Market-Data Gateway
 
         - for-each: netprobe-router
           name: ${config:name} Netprobe-Router
@@ -309,7 +304,7 @@ profiles:
             - COMPONENT=Netprobe-Router
             - NETPROBE_ROUTER=${config:name}
           types:
-            - Level 3 - Geneos Netprobe-Router
+            - Layer 3 - Geneos Netprobe-Router
 
         - for-each: san
           name: ${config:name} SAN
@@ -317,7 +312,7 @@ profiles:
             - COMPONENT=Self Announcing Netprobe
             - SAN=${config:name}
           types:
-            - Level 3 - Geneos Self Announcing Netprobe
+            - Layer 3 - Geneos Self Announcing Netprobe
 
         - for-each: sso-agent
           name: ${config:name} SSO-Agent
@@ -325,7 +320,7 @@ profiles:
             - COMPONENT=SSO-Agent
             - SSO_AGENT=${config:name}
           types:
-            - Level 3 - Geneos SSO-Agent
+            - Layer 3 - Geneos SSO-Agent
 
         - for-each: tr-gateway
           name: ${config:name} Trade Gateway
@@ -333,51 +328,51 @@ profiles:
             - COMPONENT=Trade Gateway
             - TR_GATEWAY=${config:name}
           types:
-            - Level 3 - Geneos Trade Gateway
+            - Layer 3 - Geneos Trade Gateway
 
-  motm-gateway:
-    _short: "MOTM gateway profile"
+  health-gateway:
+    _short: "Monitoring Health gateway profile"
     _description: |
-      Configuration for the MOTM gateway, including its parameters,
+      Configuration for the Health Gateway, including its parameters,
       includes, and variables. 
     gateways:
-      - name: ${hostname}-motm
+      - name: ${hostname} Health
         includes:
-          # Level 0 - Foundation includes for the MOTM gateway
+          # Layer 0 - Foundation includes for the Health Gateway
           10000: >
             ITRS Geneos Best Practice |
-            Level 0 - Foundation |
-            ../../includes/itrs.level0.foundation.xml
+            Layer 0 - Foundation |
+            ../../includes/itrs.layer0.foundation.xml
 
-          # Level 1 - Infrastructure includes for the MOTM gateway
+          # Layer 1 - Server Health includes for the Health Gateway
           11000: >
             ITRS Geneos Best Practice |
-            Level 1 - Infrastructure |
-            ../../includes/itrs.level1.infrastructure.xml
+            Layer 1 - Server Health |
+            ../../includes/itrs.layer1.server-health.xml
           00500: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.level1.infrastructure.xml
+            ../../${site}/${site}.layer1.server-health.xml
 
-          # Level 2 - Application Core includes for the MOTM gateway
+          # Layer 2 - Core Technologies includes for the Health Gateway
           01010: >
             ITRS Geneos Best Practice |
-            Level 2 - Application Core |
-            ../../includes/itrs.level2.application-core.xml
+            Layer 2 - Core Technologies |
+            ../../includes/itrs.layer2.programs-and-logs.xml
           00510: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.level2.application-core.xml
+            ../../${site}/${site}.layer2.programs-and-logs.xml
 
-          # Level 3 - Application includes for the MOTM gateway
+          # Layer 3 - Applications includes for the Health Gateway
           01020: >
             ITRS Geneos Best Practice |
-            Level 3 - Application |
-            ../../includes/itrs.level3.geneos.xml
+            Layer 3 - Applications |
+            ../../includes/itrs.layer3.geneos.xml
           00520: >
             ITRS Geneos Best Practice |
             Configuration |
-            ../../${site}/${site}.level3.geneos.xml
+            ../../${site}/${site}.layer3.geneos.xml
             
         variables:
           - type: string
@@ -385,5 +380,5 @@ profiles:
             value: ${config:home}/${config:logfile}
            
     netprobes:
-      - name: ${option:minimal?"minimal:":""}${hostname}-MOTM-Probe
+      - name: ${option:minimal?"minimal:":""}${hostname} Probe Health
 

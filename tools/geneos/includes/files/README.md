@@ -10,38 +10,38 @@ Release archives are named `geneos-includes-v<version>.tar.gz` and have a single
 
 | File | Purpose |
 | --- | --- |
-| `itrs.level0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
-| `itrs.level1.infrastructure.xml` | Infrastructure monitoring for CPU, disk, hardware, and network. |
-| `itrs.level2.application-core.xml` | Baseline `Logs`, `Processes`, and Windows Services samplers for applications. |
-| `itrs.level3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
-| `config.level0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
-| `config.level0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
-| `config.level1.infrastructure.xml` | Gateway setup template for infrastructure configuration and overrides. |
-| `config.level2.application-core.xml` | Gateway setup template for application configuration. |
-| `config.level3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Level 3 Geneos. |
-| `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
+| `itrs.layer0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
+| `itrs.layer1.server-health.xml` | Server health monitoring for CPU, disk, hardware, and network interfaces. |
+| `itrs.layer2.programs-and-logs.xml` | Shared `Logs`, `Processes`, and Windows Services samplers for core technologies. |
+| `itrs.layer3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
+| `config.layer0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
+| `config.layer0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
+| `config.layer1.server-health.xml` | Gateway setup template for server health configuration and overrides. |
+| `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Core Technologies configuration. |
+| `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
+| `config.layer4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.layer4.analytics.xml` functional include in this set. |
 
 Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, for Acme Corp, an installation with `geneos config set site=acme` has files organized like this:
 
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.level0.foundation.xml -> v1.31.0/itrs.level0.foundation.xml
-│   ├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
-│   ├── itrs.level2.application-core.xml -> v1.31.0/itrs.level2.application-core.xml
-│   ├── itrs.level3.geneos.xml -> v1.31.0/itrs.level3.geneos.xml
+│   ├── itrs.layer0.foundation.xml -> v1.31.0/itrs.layer0.foundation.xml
+│   ├── itrs.layer1.server-health.xml -> v1.31.0/itrs.layer1.server-health.xml
+│   ├── itrs.layer2.programs-and-logs.xml -> v1.31.0/itrs.layer2.programs-and-logs.xml
+│   ├── itrs.layer3.geneos.xml -> v1.31.0/itrs.layer3.geneos.xml
 │   └── v1.31.0/
-│       ├── itrs.level0.foundation.xml
-│       ├── itrs.level1.infrastructure.xml
-│       ├── itrs.level2.application-core.xml
-│       └── itrs.level3.geneos.xml
+│       ├── itrs.layer0.foundation.xml
+│       ├── itrs.layer1.server-health.xml
+│       ├── itrs.layer2.programs-and-logs.xml
+│       └── itrs.layer3.geneos.xml
 └── acme/
-    ├── acme.level0.authentication.xml
-    ├── acme.level0.foundation.xml
-    ├── acme.level1.infrastructure.xml
-    ├── acme.level2.application-core.xml
-    ├── acme.level3.geneos.xml
-    └── acme.level4.analytics.xml
+    ├── acme.layer0.authentication.xml
+    ├── acme.layer0.foundation.xml
+    ├── acme.layer1.server-health.xml
+    ├── acme.layer2.programs-and-logs.xml
+    ├── acme.layer3.geneos.xml
+    └── acme.layer4.analytics.xml
 ```
 
 The links let Gateway setups use a stable path while the target version changes. Configuration templates are regular files, copied only when absent and not overwritten by later installs. The archive itself always uses the `config` names listed above.
@@ -72,6 +72,9 @@ geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 
 Add `--update` to replace existing top-level include paths with links to the installed version.
 
+> [!IMPORTANT]
+> Include and site filenames have changed from `levelN` to `layerN`, and Gateway types, groups, environments and XPath targets now use `Layer N` names. The former `itrs.level1.infrastructure.xml` and `itrs.level2.application-core.xml` are now `itrs.layer1.server-health.xml` and `itrs.layer2.programs-and-logs.xml`. Back up your configuration and install without `--update`; copy or merge site overrides into the new site files without overwriting existing settings. Update Gateway setups, SANs, customised profiles and any other references before running `geneos includes update`. Existing configurations are not renamed automatically.
+
 ### Install with shell tools
 
 Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
@@ -86,7 +89,7 @@ The script installs into a fresh version directory, keeps existing config templa
 
 ## How-To
 
-Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the site template, for example `../../acme/acme.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.layer1.server-health.xml`, and the site template, for example `../../acme/acme.layer1.server-health.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 

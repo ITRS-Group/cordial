@@ -9,6 +9,18 @@ and fixes, and [Highlights](HIGHLIGHTS.md) for new features.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
+* **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are
+  now `health-endpoint` and `health-gateway`. Instance names and the
+  `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing
+  profiles, saved options and Gateway references are not migrated
+  automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+* **Monitoring layers:** Include and site filenames, Gateway types and other
+  identifiers now use `layer` rather than `level`. Existing Gateway setups,
+  SANs, profiles and site overrides must be migrated; see the
+  [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
+* **GDNA layers:** Plugin configuration keys, report identifiers, Dataviews
+  and dashboard bindings use layer names. Update customised configuration and
+  dashboards as described in the [GDNA upgrade guidance](gdna/README.md#upgrading-from-level-based-names).
 * **Removed from releases:** The original `servicenow` integration,
   `pagerduty` and `san-config`, together with their configurations and
   documentation, are no longer shipped. Use the versions in v1.30.1 or build

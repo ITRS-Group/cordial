@@ -1,6 +1,8 @@
 package profile_test
 
 import (
+	"bytes"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +17,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/pflag"
+	"golang.org/x/net/html/charset"
 
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/ac2"
@@ -22,11 +25,11 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fa2"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/fileagent"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/floating"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/mdgateway"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/minimal"
-	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/profile"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/router"
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/san"
@@ -429,7 +432,7 @@ func TestApplyGatewayProfileExpandsSiteIncludes(t *testing.T) {
     gateway:
       name: site-test-gateway
       includes:
-        500: ../../${site}/${site}.level1.infrastructure.xml
+        500: ../../${site}/${site}.layer1.server-health.xml
 `), "yaml"))
 	profile.SetExpandOptions(geneos.LOCAL, pf, nil, nil)
 	if err := profile.Apply(geneos.LOCAL, pf, "site-test", false); err != nil {
@@ -444,8 +447,234 @@ func TestApplyGatewayProfileExpandsSiteIncludes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := config.Get[string](saved, "includes.500"); got != "../../Acme_Site/Acme_Site.level1.infrastructure.xml" {
+	if got := config.Get[string](saved, "includes.500"); got != "../../Acme_Site/Acme_Site.layer1.server-health.xml" {
 		t.Errorf("applied include = %q", got)
+	}
+}
+
+func TestEmbeddedServerHealthProfiles(t *testing.T) {
+	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
+	for _, test := range []struct {
+		name string
+		key  string
+	}{
+		{"demo", "gateway"},
+		{"health-gateway", "gateways"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var gateways []gateway.GatewayProfile
+			if err := pf.UnmarshalKey(pf.Join("profiles", test.name, test.key), &gateways, config.NoExpand()); err != nil {
+				t.Fatal(err)
+			}
+			if len(gateways) != 1 {
+				t.Fatalf("got %d gateways, want 1", len(gateways))
+			}
+			var functional, site, coreFunctional, coreSite, appFunctional, appSite bool
+			for _, include := range gateways[0].Includes {
+				parts := strings.Split(include, "|")
+				if len(parts) != 3 {
+					continue
+				}
+				switch strings.TrimSpace(parts[2]) {
+				case "../../includes/itrs.layer2.programs-and-logs.xml":
+					coreFunctional = true
+					if got := strings.TrimSpace(parts[1]); got != "Layer 2 - Core Technologies" {
+						t.Errorf("include group = %q, want Layer 2 - Core Technologies", got)
+					}
+				case "../../${site}/${site}.layer2.programs-and-logs.xml":
+					coreSite = true
+				case "../../includes/itrs.layer1.server-health.xml":
+					functional = true
+					if got := strings.TrimSpace(parts[1]); got != "Layer 1 - Server Health" {
+						t.Errorf("include group = %q, want Layer 1 - Server Health", got)
+					}
+				case "../../${site}/${site}.layer1.server-health.xml":
+					site = true
+				case "../../includes/itrs.layer3.geneos.xml":
+					appFunctional = true
+					if got := strings.TrimSpace(parts[1]); got != "Layer 3 - Applications" {
+						t.Errorf("include group = %q, want Layer 3 - Applications", got)
+					}
+				case "../../${site}/${site}.layer3.geneos.xml":
+					appSite = true
+				}
+			}
+			if !functional || !site || !coreFunctional || !coreSite {
+				t.Errorf("Layer 1 or 2 include paths missing: server-health=%t/%t programs-and-logs=%t/%t", functional, site, coreFunctional, coreSite)
+			}
+			if test.name == "health-gateway" && (!appFunctional || !appSite) {
+				t.Errorf("Layer 3 include paths missing: geneos=%t/%t", appFunctional, appSite)
+			}
+		})
+	}
+
+	var sans []san.SanProfile
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san"), &sans, config.NoExpand()); err != nil {
+		t.Fatal(err)
+	}
+	if len(sans) != 1 || !slices.Contains(sans[0].Types, "Layer 1 - Server Health") ||
+		!slices.Contains(sans[0].Types, "Layer 3 - Geneos Instances") ||
+		!slices.Contains(sans[0].Types, "Layer 3 - Geneos Diagnostics") {
+		t.Fatalf("Health endpoint does not use the expected layer types: %v", sans)
+	}
+}
+
+func TestEmbeddedMonitoringHealthNames(t *testing.T) {
+	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
+	for _, name := range []string{"health-endpoint", "health-gateway"} {
+		if !pf.IsSet(pf.Join("profiles", name)) {
+			t.Errorf("missing Monitoring Health profile %q", name)
+		}
+	}
+	for _, name := range []string{"motm", "motm-gateway"} {
+		if pf.IsSet(pf.Join("profiles", name)) {
+			t.Errorf("obsolete profile %q is still included in the defaults", name)
+		}
+	}
+
+	var endpoints []san.SanProfile
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san"), &endpoints, config.NoExpand()); err != nil {
+		t.Fatal(err)
+	}
+	if len(endpoints) != 1 || !slices.Contains(endpoints[0].Attributes, "COMPONENT=SAN Health") {
+		t.Fatalf("unexpected Health endpoint configuration: %v", endpoints)
+	}
+
+	var gateways []gateway.GatewayProfile
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-gateway", "gateways"), &gateways, config.NoExpand()); err != nil {
+		t.Fatal(err)
+	}
+	var netprobes []profile.Common
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-gateway", "netprobes"), &netprobes, config.NoExpand()); err != nil {
+		t.Fatal(err)
+	}
+	if len(gateways) != 1 || len(netprobes) != 1 {
+		t.Fatalf("unexpected Health Gateway configuration: gateways=%v netprobes=%v", gateways, netprobes)
+	}
+
+	host := geneos.NewHost("health-test")
+	for _, test := range []struct {
+		minimal  bool
+		endpoint string
+		probe    string
+	}{
+		{false, "health-test Health", "health-test Probe Health"},
+		{true, "minimal:health-test Health", "minimal:health-test Probe Health"},
+	} {
+		profile.SetExpandOptions(host, pf, map[string]any{"minimal": test.minimal}, nil)
+		for _, name := range []struct {
+			value string
+			want  string
+		}{
+			{endpoints[0].Name, test.endpoint},
+			{gateways[0].Name, "health-test Health"},
+			{netprobes[0].Name, test.probe},
+		} {
+			if got := config.Expand[string](pf, name.value); got != name.want {
+				t.Errorf("minimal=%t: expanded name = %q, want %q", test.minimal, got, name.want)
+			}
+		}
+	}
+}
+
+func TestEmbeddedHealthProfilesGeneratedSetup(t *testing.T) {
+	root := newProfileTestRoot(t)
+	t.Cleanup(func() {
+		for _, member := range instance.Instances(geneos.LOCAL, nil) {
+			_ = member.Unload()
+		}
+	})
+	for _, component := range []string{"gateway", "netprobe"} {
+		if err := os.MkdirAll(filepath.Join(root, "packages", component, "active_prod"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := geneos.WriteTemplates(geneos.LOCAL, &san.Component, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := instance.Add(geneos.LOCAL, geneos.ParseComponent("licd"), "health-example", instance.Insecure(true)); err != nil {
+		t.Fatal(err)
+	}
+	hostname := profile.CommonLookups(geneos.LOCAL)["hostname"]
+	sanName := hostname + " Health"
+	member, err := instance.Add(geneos.LOCAL, &san.Component, sanName, instance.Insecure(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	gatewayMember, err := instance.Add(geneos.LOCAL, &gateway.Component, sanName, instance.Insecure(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+	probeMember, err := instance.Add(geneos.LOCAL, &netprobe.Component, hostname+" Probe Health", instance.Insecure(true))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
+	profile.SetExpandOptions(geneos.LOCAL, pf, map[string]any{"gateway": "health.example.com:7039"}, nil)
+	if err := profile.Apply(geneos.LOCAL, pf, "health-gateway", false); err != nil {
+		t.Fatal(err)
+	}
+	if err := profile.Apply(geneos.LOCAL, pf, "health-endpoint", false); err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range []struct {
+		member geneos.Instance
+		want   string
+	}{
+		{gatewayMember, "health-gateway"},
+		{probeMember, "health-gateway"},
+		{member, "health-endpoint"},
+	} {
+		saved, err := config.Read(entry.member.Type().Name, config.FromDir(entry.member.Home()), config.UseDefaults(false), config.MustExist())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := config.Get[string](saved, "config.profile"); got != entry.want {
+			t.Errorf("%s profile = %q, want %q", entry.member, got, entry.want)
+		}
+	}
+	setup, err := os.ReadFile(config.Get[string](member.Config(), "setup"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	type attribute struct {
+		Name  string `xml:"name,attr"`
+		Value string `xml:",chardata"`
+	}
+	var generated struct {
+		SelfAnnounce struct {
+			ProbeName string `xml:"probeName"`
+			Entities  []struct {
+				Name       string      `xml:"name"`
+				Attributes []attribute `xml:"attributes>attribute"`
+			} `xml:"managedEntities>managedEntity"`
+		} `xml:"selfAnnounce"`
+	}
+	decoder := xml.NewDecoder(bytes.NewReader(setup))
+	decoder.CharsetReader = charset.NewReaderLabel
+	if err := decoder.Decode(&generated); err != nil {
+		t.Fatal(err)
+	}
+	if generated.SelfAnnounce.ProbeName != sanName {
+		t.Errorf("probe name = %q, want %q", generated.SelfAnnounce.ProbeName, sanName)
+	}
+	var foundEndpoint, foundComponent bool
+	for _, entity := range generated.SelfAnnounce.Entities {
+		hasAttribute := func(name, value string) bool {
+			return slices.ContainsFunc(entity.Attributes, func(got attribute) bool {
+				return got.Name == name && got.Value == value
+			})
+		}
+		switch entity.Name {
+		case sanName:
+			foundEndpoint = hasAttribute("COMPONENT", "SAN Health")
+		case "health-example Licence Daemon":
+			foundComponent = hasAttribute("CATEGORY", "Health")
+		}
+	}
+	if !foundEndpoint || !foundComponent {
+		t.Fatalf("generated Health attributes missing: endpoint=%t component=%t", foundEndpoint, foundComponent)
 	}
 }
 
@@ -501,10 +730,10 @@ func TestComponentProfileEntryPoints(t *testing.T) {
 	}
 }
 
-func TestMOTMComponentCoverage(t *testing.T) {
+func TestHealthComponentCoverage(t *testing.T) {
 	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
 	var entities []san.ManagedEntity
-	if err := pf.UnmarshalKey(pf.Join("profiles", "motm", "san", "managed-entities"), &entities, config.NoExpand()); err != nil {
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san", "managed-entities"), &entities, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 
@@ -512,11 +741,11 @@ func TestMOTMComponentCoverage(t *testing.T) {
 	for _, entity := range entities {
 		component := geneos.ParseComponent(entity.ForEach)
 		if component == nil || component.IsA("profile") {
-			t.Errorf("unexpected MOTM component %q", entity.ForEach)
+			t.Errorf("unexpected Health component %q", entity.ForEach)
 			continue
 		}
 		if covered[component] {
-			t.Errorf("duplicate MOTM component %q", entity.ForEach)
+			t.Errorf("duplicate Health component %q", entity.ForEach)
 		}
 		covered[component] = true
 		if entity.Name == "" || !slices.ContainsFunc(entity.Attributes, func(attribute string) bool {
@@ -525,14 +754,14 @@ func TestMOTMComponentCoverage(t *testing.T) {
 			t.Errorf("component %q is missing its name or component attribute", entity.ForEach)
 		}
 		if !slices.ContainsFunc(entity.Types, func(name string) bool {
-			return strings.HasPrefix(name, "Level 3 - Geneos ")
+			return strings.HasPrefix(name, "Layer 3 - Geneos ")
 		}) {
 			t.Errorf("component %q is missing its Geneos Type", entity.ForEach)
 		}
 	}
 	for _, component := range geneos.RealComponents() {
 		if !covered[component] {
-			t.Errorf("component %q has no MOTM managed entity", component.Name)
+			t.Errorf("component %q has no Health managed entity", component.Name)
 		}
 	}
 }

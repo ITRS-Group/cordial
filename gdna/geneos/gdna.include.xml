@@ -2464,7 +2464,7 @@ ORDER BY probeVersion ASC
 				<pathAliases>
 					<pathAlias name="total">../../headlines/cell[(@name=&quot;totalServers&quot;)]</pathAlias>
 					<pathAlias name="availability">../cell[(@column=&quot;Availability&quot;)]</pathAlias>
-					<pathAlias name="level">../cell[(@column=&quot;level&quot;)]</pathAlias>
+					<pathAlias name="layer">../cell[(@column=&quot;layer&quot;)]</pathAlias>
 					<pathAlias name="require">../cell[(@column=&quot;require&quot;)]</pathAlias>
 				</pathAliases>
 				<block>
@@ -2681,29 +2681,29 @@ ORDER BY probeVersion ASC
 					</targets>
 					<priority>1</priority>
 					<pathAliases>
-						<pathAlias name="level1">../cell[(@column=&quot;l1missing&quot;)]</pathAlias>
-						<pathAlias name="level2">../cell[(@column=&quot;l2missing&quot;)]</pathAlias>
-						<pathAlias name="level3">../cell[(@column=&quot;l3covered&quot;)]</pathAlias>
+						<pathAlias name="layer1">../cell[(@column=&quot;l1missing&quot;)]</pathAlias>
+						<pathAlias name="layer2">../cell[(@column=&quot;l2missing&quot;)]</pathAlias>
+						<pathAlias name="layer3">../cell[(@column=&quot;l3covered&quot;)]</pathAlias>
 					</pathAliases>
 					<block>
 						<set>
-							<var ref="level1"/>
+							<var ref="layer1"/>
 							<dataItem>
-								<pathAlias ref="level1"/>
+								<pathAlias ref="layer1"/>
 								<property>@value</property>
 							</dataItem>
 						</set>
 						<set>
-							<var ref="level2"/>
+							<var ref="layer2"/>
 							<dataItem>
-								<pathAlias ref="level2"/>
+								<pathAlias ref="layer2"/>
 								<property>@value</property>
 							</dataItem>
 						</set>
 						<set>
-							<var ref="level3"/>
+							<var ref="layer3"/>
 							<dataItem>
-								<pathAlias ref="level3"/>
+								<pathAlias ref="layer3"/>
 								<property>@value</property>
 							</dataItem>
 						</set>
@@ -2711,16 +2711,16 @@ ORDER BY probeVersion ASC
 							<and>
 								<and>
 									<notEqual>
-										<var ref="level1"/>
+										<var ref="layer1"/>
 										<string/>
 									</notEqual>
 									<notEqual>
-										<var ref="level2"/>
+										<var ref="layer2"/>
 										<string/>
 									</notEqual>
 								</and>
 								<notEqual>
-									<var ref="level3"/>
+									<var ref="layer3"/>
 									<string>Y</string>
 								</notEqual>
 							</and>
@@ -2835,7 +2835,7 @@ ORDER BY probeVersion ASC
 						</if>
 					</block>
 				</rule>
-				<rule name="Levels">
+				<rule name="Layers">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l1missing&quot;)]</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(param(&quot;Group&quot;)=&quot;Gateways&quot;)]/rows/row[not(contains(@name,&quot;#&quot;))]/cell[(@column=&quot;l2missing&quot;)]</target>
@@ -3052,7 +3052,7 @@ ORDER BY probeVersion ASC
 				</rule>
 			</ruleGroup>
 			<ruleGroup name="Missing Coverage">
-				<rule name="Missing Coverage Levels">
+				<rule name="Missing Coverage Layers">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Missing Coverage&quot;)]/rows/row/cell[(@column=&quot;l2missing&quot;)]</target>
@@ -3169,7 +3169,7 @@ ORDER BY probeVersion ASC
 				</rule>
 			</ruleGroup>
 			<ruleGroup name="Servers">
-				<rule name="Levels">
+				<rule name="Layers">
 					<targets>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;l1missing&quot;)]</target>
 						<target>/geneos/gateway/directory/probe/managedEntity[(@name=&quot;GDNA&quot;)]/sampler[(@name=&quot;GDNA&quot;)][(@type=&quot;GDNA&quot;)]/dataview[(@name=&quot;Servers&quot;)][(param(&quot;Group&quot;)=&quot;Geneos Estate&quot;)]/rows/row/cell[(@column=&quot;l2missing&quot;)]</target>
@@ -3615,6 +3615,6 @@ ORDER BY probeVersion ASC
 		<var name="GDNA_PATH">
 			<string>gdna</string>
 		</var>
-		<insecurePasswordLevel>none</insecurePasswordLevel>
+		<insecurePasswordLayer>none</insecurePasswordLayer>
 	</operatingEnvironment>
 </gateway>

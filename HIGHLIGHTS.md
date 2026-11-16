@@ -14,6 +14,8 @@ for full details and fixes, see the [changelog](CHANGELOG.md).
 > ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain
 > in releases.
 
+* **Monitoring Health:** Deploy the renamed `health-endpoint` and
+  `health-gateway` profiles to monitor Geneos components.
 * **Site names:** Set an installation-wide site name for Gateway configuration
   include directories and filename prefixes. Supplied profiles use the site
   name in their include paths.

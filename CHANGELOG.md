@@ -29,6 +29,12 @@
 
 ## Version v1.31.0 Changes
 
+* **Breaking Change**: Monitor-Of-The-Monitors is now Monitoring Health. The supplied `motm` and `motm-gateway` profiles have been renamed `health-endpoint` and `health-gateway`; instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing configurations and saved profile options are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+
+* **Breaking Change**: Monitoring include filenames and Gateway identifiers now use `layer` rather than `level`. Migrate existing site overrides, Gateway setups, SANs and customised profiles as described in the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
+
+* **Breaking Change**: GDNA coverage configuration, reports and dashboard bindings now use layer names. Update customised configurations and dashboards as described in the [GDNA upgrade guidance](gdna/README.md#upgrading-from-level-based-names).
+
 * **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
 
   * The original `servicenow` integration

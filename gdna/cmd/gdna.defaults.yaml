@@ -599,27 +599,27 @@ db:
       check: | #sql
         SELECT version < 'v1.18' FROM ${db.gdna-version.table}
       update: | #sql
-        CREATE TABLE IF NOT EXISTS ${plugins.level1.table}_new (
+        CREATE TABLE IF NOT EXISTS ${historical-layer1-table}_new (
           plugin            TEXT NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS ${plugins.level1-optional.table}_new (
+        CREATE TABLE IF NOT EXISTS ${historical-layer1-optional-table}_new (
           plugin            TEXT NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS ${plugins.level2.table}_new (
+        CREATE TABLE IF NOT EXISTS ${historical-layer2-table}_new (
           plugin            TEXT NOT NULL
         );
 
-        INSERT INTO ${plugins.level1.table}_new SELECT * FROM ${plugins.level1.table};
-        DROP TABLE ${plugins.level1.table};
-        ALTER TABLE ${plugins.level1.table}_new RENAME TO ${plugins.level1.table};
+        INSERT INTO ${historical-layer1-table}_new SELECT * FROM ${historical-layer1-table};
+        DROP TABLE ${historical-layer1-table};
+        ALTER TABLE ${historical-layer1-table}_new RENAME TO ${historical-layer1-table};
 
-        INSERT INTO ${plugins.level1-optional.table}_new SELECT * FROM ${plugins.level1-optional.table};
-        DROP TABLE ${plugins.level1-optional.table};
-        ALTER TABLE ${plugins.level1-optional.table}_new RENAME TO ${plugins.level1-optional.table};
+        INSERT INTO ${historical-layer1-optional-table}_new SELECT * FROM ${historical-layer1-optional-table};
+        DROP TABLE ${historical-layer1-optional-table};
+        ALTER TABLE ${historical-layer1-optional-table}_new RENAME TO ${historical-layer1-optional-table};
 
-        INSERT INTO ${plugins.level2.table}_new SELECT * FROM ${plugins.level2.table};
-        DROP TABLE ${plugins.level2.table};
-        ALTER TABLE ${plugins.level2.table}_new RENAME TO ${plugins.level2.table};
+        INSERT INTO ${historical-layer2-table}_new SELECT * FROM ${historical-layer2-table};
+        DROP TABLE ${historical-layer2-table};
+        ALTER TABLE ${historical-layer2-table}_new RENAME TO ${historical-layer2-table};
     5:
       check:
         SELECT count(*) > 0 FROM pragma_table_info('${db.gateways.table}')
@@ -630,6 +630,27 @@ db:
         UPDATE ${db.ca-samplers.table} SET gateway = TRIM(gateway);
         UPDATE ${db.gw-samplers.table} SET gateway = TRIM(gateway);
         UPDATE ${db.gw-components.table} SET gateway = TRIM(gateway);
+    6:
+      check: | #sql
+        SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'level1_plugins')
+           AND NOT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '${plugins.layer1.table}');
+      update: | #sql
+        CREATE TABLE ${plugins.layer1.table} (plugin TEXT NOT NULL);
+        INSERT INTO ${plugins.layer1.table} (plugin) SELECT plugin FROM level1_plugins;
+    7:
+      check: | #sql
+        SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'level1_optional_plugins')
+           AND NOT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '${plugins.layer1-optional.table}');
+      update: | #sql
+        CREATE TABLE ${plugins.layer1-optional.table} (plugin TEXT NOT NULL);
+        INSERT INTO ${plugins.layer1-optional.table} (plugin) SELECT plugin FROM level1_optional_plugins;
+    8:
+      check: | #sql
+        SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'level2_plugins')
+           AND NOT EXISTS(SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = '${plugins.layer2.table}');
+      update: | #sql
+        CREATE TABLE ${plugins.layer2.table} (plugin TEXT NOT NULL);
+        INSERT INTO ${plugins.layer2.table} (plugin) SELECT plugin FROM level2_plugins;
   #
   # main-tables
   #
@@ -1161,7 +1182,7 @@ db:
       CREATE INDEX IF NOT EXISTS ${db.servers.table}_idx_2 ON ${db.servers.table}(gateway, server);
 
   # the `l1plugins-per-server` table is built from all active samplers
-  # that match the plugin names in the `level1` table and is then
+  # that match the plugin names in the `layer1` table and is then
   # grouped by gateway, server and plugin.
   l1plugins-per-server:
     table: l1_plugins_server
@@ -1171,7 +1192,7 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l1plugins-per-server.table} AS
         SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
-        WHERE plugin IN ${plugins.level1.table}
+        WHERE plugin IN ${plugins.layer1.table}
         GROUP BY gateway, server, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l1plugins-per-server.table}_idx_1 ON ${db.l1plugins-per-server.table}(server);
 
@@ -1182,9 +1203,9 @@ db:
       DROP TABLE IF EXISTS ${db.l1missing-plugins-per-server.table};
       CREATE ${db.temporary-table} TABLE ${db.l1missing-plugins-per-server.table} AS
         WITH baseline(server, plugin, needed) AS (
-          SELECT server, l1.plugin, (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin)
+          SELECT server, l1.plugin, (SELECT count(*) FROM ${plugins.layer1.table} WHERE plugin = l1.plugin)
             FROM ${db.servers.table}
-            RIGHT JOIN ${plugins.level1.table} l1
+            RIGHT JOIN ${plugins.layer1.table} l1
             GROUP BY server, l1.plugin
         )
         SELECT server, plugin, printf('%d', needed - total(number)) missing
@@ -1197,7 +1218,7 @@ db:
 
   # the `l1covered-*` tables are built from active probes / samplers /
   # gateways where the number of DISTINCT plugins match the number in
-  # the `level1` table. Each is grouped by gateway and then either the
+  # the `layer1` table. Each is grouped by gateway and then either the
   # probe host & port or server, as appropriate.
   l1covered-probes:
     table: l1covered_probes
@@ -1211,9 +1232,9 @@ db:
           SELECT  probeName,
                   probePort,
                   l1.plugin,
-                  (SELECT count(*) FROM ${plugins.level1.table} WHERE plugin = l1.plugin )
+                  (SELECT count(*) FROM ${plugins.layer1.table} WHERE plugin = l1.plugin )
             FROM ${db.probes.active}
-            RIGHT JOIN ${plugins.level1.table} l1
+            RIGHT JOIN ${plugins.layer1.table} l1
             GROUP BY server, l1.plugin
         )
         SELECT DISTINCT probeName, probePort
@@ -1257,7 +1278,7 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l2plugins-per-server.table} AS
         SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
-        WHERE plugin IN ${plugins.level2.table}
+        WHERE plugin IN ${plugins.layer2.table}
         GROUP BY gateway, server, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l2plugins-per-server.table}_idx_1 ON ${db.l2plugins-per-server.table}(server);
 
@@ -1268,9 +1289,9 @@ db:
       DROP TABLE IF EXISTS ${db.l2missing-plugins-per-server.table};
       CREATE ${db.temporary-table} TABLE ${db.l2missing-plugins-per-server.table} AS
         WITH baseline(server, plugin, needed) AS (
-          SELECT server, l2.plugin, (SELECT count(*) FROM ${plugins.level2.table} WHERE plugin = l2.plugin)
+          SELECT server, l2.plugin, (SELECT count(*) FROM ${plugins.layer2.table} WHERE plugin = l2.plugin)
             FROM ${db.servers.table}
-            RIGHT JOIN ${plugins.level2.table} l2
+            RIGHT JOIN ${plugins.layer2.table} l2
             GROUP BY server, l2.plugin
         )
         SELECT server, plugin, printf('%d', needed - total(number)) missing
@@ -1293,9 +1314,9 @@ db:
           SELECT  probeName,
                   probePort,
                   l2.plugin,
-                  (SELECT count(*) FROM ${plugins.level2.table} WHERE plugin = l2.plugin )
+                  (SELECT count(*) FROM ${plugins.layer2.table} WHERE plugin = l2.plugin )
             FROM ${db.probes.active}
-           RIGHT JOIN ${plugins.level2.table} l2
+           RIGHT JOIN ${plugins.layer2.table} l2
            GROUP BY server, l2.plugin
         )
         SELECT DISTINCT probeName, probePort
@@ -1339,9 +1360,9 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l3plugins-per-probe.table} AS
         SELECT ${db.samplers.columns}
           FROM ${db.samplers.active}
-        WHERE plugin NOT IN ${plugins.level1.table}
-          AND plugin NOT IN ${plugins.level1-optional.table}
-          AND plugin NOT IN ${plugins.level2.table}
+        WHERE plugin NOT IN ${plugins.layer1.table}
+          AND plugin NOT IN ${plugins.layer1-optional.table}
+          AND plugin NOT IN ${plugins.layer2.table}
         GROUP BY gateway, probeName, probePort, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l3plugins-per-probe.table}_idx_2 ON ${db.l3plugins-per-probe.table}(probeName, probePort);
 
@@ -1353,9 +1374,9 @@ db:
       CREATE ${db.temporary-table} TABLE ${db.l3plugins-per-server.table} AS
         SELECT gateway, plugin, server, hostID, sum(number) as number, source, individual, firstSeen, lastSeen
           FROM ${db.samplers.active}
-        WHERE plugin NOT IN ${plugins.level1.table}
-          AND plugin NOT IN ${plugins.level1-optional.table}
-          AND plugin NOT IN ${plugins.level2.table}
+        WHERE plugin NOT IN ${plugins.layer1.table}
+          AND plugin NOT IN ${plugins.layer1-optional.table}
+          AND plugin NOT IN ${plugins.layer2.table}
         GROUP BY gateway, server, plugin;
       CREATE INDEX IF NOT EXISTS ${db.l3plugins-per-server.table}_idx_1 ON ${db.l3plugins-per-server.table}(server);
 
@@ -1369,9 +1390,9 @@ db:
        WHERE (probeName, probePort) IN (
           SELECT DISTINCT probeName, probePort
             FROM ${db.samplers.active}
-           WHERE plugin NOT IN ${plugins.level1.table}
-             AND plugin NOT IN ${plugins.level1-optional.table}
-             AND plugin NOT IN ${plugins.level2.table}
+           WHERE plugin NOT IN ${plugins.layer1.table}
+             AND plugin NOT IN ${plugins.layer1-optional.table}
+             AND plugin NOT IN ${plugins.layer2.table}
            GROUP BY gateway, probeName, probePort, plugin
        )
        GROUP BY gateway, probeName, probePort;
@@ -1540,7 +1561,7 @@ db:
           GROUP BY grouping, COALESCE(s.plugin, c.plugin, g.plugin, "")
       ;
 
-# plugins is a list of the tables to create for levels of plugin
+# plugins is a list of the tables to create for layers of plugin
 # coverage.
 plugins:
   all:
@@ -1663,33 +1684,33 @@ plugins:
       - x-traffic
       - zookeeper-plugin
 
-  # level1 is basic hardware / infrastructure
+  # layer1 is basic hardware / infrastructure
   #
   # there are actively four mandatory plugins and a number of
   # optional plugins. the optional plugins play no part in deciding if
-  # a probe or gateway is covered for level 1 but are instead are used
-  # to remove those plugins from the level 3 tests further below.
-  level1:
-    table: level1_plugins
+  # a probe or gateway is covered for layer 1 but are instead are used
+  # to remove those plugins from the layer 3 tests further below.
+  layer1:
+    table: layer1_plugins
     create: | #sql
-      CREATE TABLE IF NOT EXISTS ${plugins.level1.table} (
+      CREATE TABLE IF NOT EXISTS ${plugins.layer1.table} (
         plugin            TEXT NOT NULL
       );
     plugins: [ cpu, disk, network, hardware ]
 
-  level1-optional:
-    table: level1_optional_plugins
+  layer1-optional:
+    table: layer1_optional_plugins
     create: | #sql
-      CREATE TABLE IF NOT EXISTS ${plugins.level1-optional.table} (
+      CREATE TABLE IF NOT EXISTS ${plugins.layer1-optional.table} (
         plugin            TEXT NOT NULL
       );
     plugins: [ deviceio, ipc, top, unix-users, winapps, win-cluster, win-services, wmi, wts-licenses, wts-processes, wts-sessions, wts-summary ]
 
-  # level 2 plugins are actively fkm (logs) and processes
-  level2:
-    table: level2_plugins
+  # layer 2 plugins are actively fkm (logs) and processes
+  layer2:
+    table: layer2_plugins
     create: | #sql
-      CREATE TABLE IF NOT EXISTS ${plugins.level2.table} (
+      CREATE TABLE IF NOT EXISTS ${plugins.layer2.table} (
         plugin            TEXT NOT NULL
       );
     plugins: [ fkm, processes ]
@@ -1759,13 +1780,13 @@ reports:
       SELECT 'Gateway Samplers', (SELECT total(number) FROM ${db.gw-samplers.active}), ''
       ;
 
-  coverage-by-level-and-plugin:
-    name: Coverage By Level And Plugin
+  coverage-by-layer-and-plugin:
+    name: Coverage By Layer And Plugin
     dataview:
       group: Monitoring Coverage
     xlsx:
       enable: false
-    columns: [ "level # plugin", instances, servers, "servers %", width400, remainingServers, "remainingServers %" ]
+    columns: [ "layer # plugin", instances, servers, "servers %", width400, remainingServers, "remainingServers %" ]
     headlines: | #sql
       SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
     query: | #sql
@@ -1783,16 +1804,16 @@ reports:
              plugin,
              (SELECT total(number) FROM ${db.l1plugins-per-server.table} WHERE plugin = l1.plugin) total,
              (SELECT count(DISTINCT server) FROM (SELECT * FROM ${db.l1plugins-per-server.table} WHERE plugin = l1.plugin)) covered
-          FROM ${plugins.level1.table} l1
+          FROM ${plugins.layer1.table} l1
       ), l2 AS (
         SELECT
              plugin,
              (SELECT total(number) FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin) total,
              (SELECT count(*) FROM ${db.l2plugins-per-server.table}) count,
              (SELECT count(*) FROM (SELECT DISTINCT server FROM ${db.l2plugins-per-server.table} WHERE plugin = l2.plugin)) covered
-          FROM ${plugins.level2.table} l2
+          FROM ${plugins.layer2.table} l2
       )
-      SELECT 'level1',
+      SELECT 'layer1',
              totals.l1count,
              totals.l1covered,
              printf('%d %%', round((totals.l1covered * 100.0 ) / totals.servers)),
@@ -1803,7 +1824,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'level1 # ' || plugin,
+      SELECT 'layer1 # ' || plugin,
              l1.total,
              l1.covered,
              printf('%d %%', round((l1.covered * 100.0 ) / totals.servers)),
@@ -1815,7 +1836,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'level2',
+      SELECT 'layer2',
              totals.l2count,
              totals.l2covered,
              printf('%d %%', round((totals.l2covered * 100.0) / totals.servers)),
@@ -1826,7 +1847,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'level2 # ' || plugin,
+      SELECT 'layer2 # ' || plugin,
              l2.total,
              l2.covered,
              printf('%d %%', round((l2.covered * 100.0) / totals.servers)),
@@ -1838,7 +1859,7 @@ reports:
 
       UNION ALL
 
-      SELECT 'level3',
+      SELECT 'layer3',
              totals.l3count,
              totals.l3covered,
              printf('%d %%', round((totals.l3covered * 100.0) / totals.servers)),
@@ -1970,9 +1991,9 @@ reports:
             SELECT DISTINCT plugin FROM ${db.gw-samplers.active}
            )
            ORDER BY (SELECT CASE
-                      WHEN plugin IN ${plugins.level1.table} THEN 1
-                      WHEN plugin IN ${plugins.level2.table} THEN 2
-                      WHEN plugin IN ${plugins.level1-optional.table} THEN 3
+                      WHEN plugin IN ${plugins.layer1.table} THEN 1
+                      WHEN plugin IN ${plugins.layer2.table} THEN 2
+                      WHEN plugin IN ${plugins.layer1-optional.table} THEN 3
                       WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.gw-samplers.active}) THEN 5
                       WHEN plugin IN (SELECT DISTINCT plugin FROM ${db.ca-samplers.active}) THEN 6
                       ELSE 4 END), plugin
@@ -2023,23 +2044,23 @@ reports:
       group: Geneos Estate
     xlsx:
       freeze-to-column: plugin 
-    columns: [ plugin, servers, instances, tokensAvailable, tokensUsed, tokensUsedPct, previousServers, previousInstances, location, required, level, license, t1 ]
+    columns: [ plugin, servers, instances, tokensAvailable, tokensUsed, tokensUsedPct, previousServers, previousInstances, location, required, layer, license, t1 ]
     headlines: | #sql
       SELECT 'totalServers', (SELECT count(DISTINCT server) FROM ${db.servers.table});
     query: | #sql
       WITH
-      levels(plugin, required, level) AS (
+      layers(plugin, required, layer) AS (
         SELECT plugin,
               CASE
-                WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level2.table} THEN 'Required'
+                WHEN plugin IN ${plugins.layer1.table} OR plugin IN ${plugins.layer2.table} THEN 'Required'
                 ELSE 'Optional'
               END,
               CASE
-                WHEN plugin IN ${plugins.level1.table} OR plugin IN ${plugins.level1-optional.table} THEN '1'
-                WHEN plugin IN ${plugins.level2.table} THEN '2'
-                WHEN plugin NOT IN ${plugins.level1.table}
-                  AND plugin NOT IN ${plugins.level1-optional.table}
-                  AND plugin NOT IN ${plugins.level2.table} THEN '3'
+                WHEN plugin IN ${plugins.layer1.table} OR plugin IN ${plugins.layer1-optional.table} THEN '1'
+                WHEN plugin IN ${plugins.layer2.table} THEN '2'
+                WHEN plugin NOT IN ${plugins.layer1.table}
+                  AND plugin NOT IN ${plugins.layer1-optional.table}
+                  AND plugin NOT IN ${plugins.layer2.table} THEN '3'
                 ELSE '0'
               END
           FROM ${plugins.all.table}
@@ -2084,11 +2105,11 @@ reports:
         (SELECT total(number) FROM previous WHERE plugin = current.plugin) previousInstances,
         COALESCE(location, ''),
         COALESCE(required, ''),
-        COALESCE(level, ''),
+        COALESCE(layer, ''),
         COALESCE(individual, '') as license,
         1
         FROM current
-        JOIN levels USING (plugin)
+        JOIN layers USING (plugin)
        GROUP BY plugin
 
       UNION
@@ -2104,11 +2125,11 @@ reports:
         total(number),
         COALESCE(location, ''),
         COALESCE(required, ''),
-        COALESCE(level, ''),
+        COALESCE(layer, ''),
         COALESCE(individual, '') as license,
         1
         FROM previous
-        JOIN levels USING (plugin)
+        JOIN layers USING (plugin)
        WHERE plugin NOT IN (SELECT DISTINCT plugin from current)
        GROUP BY plugin
 
@@ -2124,11 +2145,11 @@ reports:
         0,
         '',
         COALESCE(required, ''),
-        COALESCE(level, ''),
+        COALESCE(layer, ''),
         '',
         1
         FROM ${plugins.all.table} a
-        JOIN levels USING (plugin)
+        JOIN layers USING (plugin)
        WHERE plugin NOT IN (SELECT DISTINCT plugin FROM current)
          AND plugin NOT IN (SELECT DISTINCT plugin FROM previous)
        GROUP BY plugin
@@ -2336,12 +2357,12 @@ reports:
              IIF((total - covered - empty) * 100.0 / total > 95, 1, 0),
              IIF((total - covered - empty) * 100.0 / total = 100, 1, 0),
              COALESCE(4 * round((total - covered - empty) * 100.0 / total), 0),
-             'gateways where servers do not have all levels of coverage'
+             'gateways where servers do not have all layers of coverage'
           FROM w
         
         UNION ALL
 
-      SELECT 'Incomplete Coverage # Level 1 Covered',
+      SELECT 'Incomplete Coverage # Layer 1 Covered',
              printf('%d %%', round(l1coveredPercent)) percent,
              l1covered - covered gateways,
              total - l1covered - empty remaining,
@@ -2368,12 +2389,12 @@ reports:
              IIF(l1coveredPercent > 95, 1, 0),
              IIF(l1coveredPercent = 100, 1, 0),
              COALESCE(4 * round(l1coveredPercent), 0),
-             'gateways where servers have level 1 coverage, excluding fully covered'
+             'gateways where servers have layer 1 coverage, excluding fully covered'
         FROM w
 
       UNION ALL
 
-      SELECT 'Incomplete Coverage # Level 2 Covered',
+      SELECT 'Incomplete Coverage # Layer 2 Covered',
              printf('%d %%', round(l2coveredPercent)) percent,
              l2covered - covered gateways,
              total - l2covered - empty remaining,
@@ -2400,12 +2421,12 @@ reports:
              IIF(l2coveredPercent > 95, 1, 0),
              IIF(l2coveredPercent = 100, 1, 0),
              COALESCE(4 * round(l2coveredPercent), 0),
-             'gateways where servers have level 2 coverage, excluding fully covered'
+             'gateways where servers have layer 2 coverage, excluding fully covered'
           FROM w
 
         UNION ALL
 
-        SELECT 'Incomplete Coverage # Level 3 Covered',
+        SELECT 'Incomplete Coverage # Layer 3 Covered',
              printf('%d %%', round(l3coveredPercent)) percent,
              l3covered - covered instances,
              total - l3covered - empty remaining,
@@ -2432,7 +2453,7 @@ reports:
              IIF(l3coveredPercent > 95, 1, 0),
              IIF(l3coveredPercent = 100, 1, 0),
              COALESCE(4 * round(l3coveredPercent), 0),
-             'gateways where servers have level 2 coverage, excluding fully covered'
+             'gateways where servers have layer 2 coverage, excluding fully covered'
           FROM w
 
         UNION ALL
@@ -2464,7 +2485,7 @@ reports:
              IIF(empty * 100.0 / total > 95, 1, 0),
              IIF(empty * 100.0 / total = 100, 1, 0),
              COALESCE(4 * round(empty * 100.0 / total), 0),
-             'gateways where no servers have any level of coverage'
+             'gateways where no servers have any layer of coverage'
           FROM w
         ;
 
@@ -2549,44 +2570,44 @@ reports:
              printf('%d', IIF(covered = 0, 1, covered * 300.0 / total)) width300,
              printf('%d', IIF(covered = 0, 1, covered * 400.0 / total)) width400,
              IIF(covered * 100.0 / total > 99.0, 1, 0),
-             'servers with complete coverage of level 1, 2 and 3'
+             'servers with complete coverage of layer 1, 2 and 3'
         FROM coverage
 
       UNION ALL
 
-      SELECT 'Total Level 1 Covered',
+      SELECT 'Total Layer 1 Covered',
              printf('%.0f %%', l1covered * 100.0 / total) percent,
              l1covered servers,
              '',
              printf('%d', IIF(l1covered = 0, 1, l1covered * 300.0 / total)) width300,
              printf('%d', IIF(l1covered = 0, 1, l1covered * 400.0 / total)) width400,
              IIF(l1covered * 100.0 / total > 99.0, 1, 0),
-             'servers with level 1 coverage'
+             'servers with layer 1 coverage'
         FROM coverage, w
 
       UNION ALL
 
-      SELECT 'Total Level 2 Covered',
+      SELECT 'Total Layer 2 Covered',
              printf('%.0f %%', l2covered * 100.0 / total) percent,
              l2covered servers,
              '',
              printf('%d', IIF(l2covered = 0, 1, l2covered * 300.0 / total)) width300,
              printf('%d', IIF(l2covered = 0, 1, l2covered * 400.0 / total)) width400,
              IIF(l2covered * 100.0 / total > 99.0, 1, 0),
-             'servers with level 2 coverage'
+             'servers with layer 2 coverage'
 
         FROM coverage, w
 
       UNION ALL
 
-      SELECT 'Total Level 3 Covered',
+      SELECT 'Total Layer 3 Covered',
              printf('%.0f %%', l3covered * 100.0 / total) percent,
              l3covered servers,
              '',
              printf('%d', IIF(l3covered = 0, 1, l3covered * 300.0 / total)) width300,
              printf('%d', IIF(l3covered = 0, 1, l3covered * 400.0 / total)) width400,
              IIF(l3covered * 100.0 / total > 99.0, 1, 0),
-             'servers with level 3 coverage'
+             'servers with layer 3 coverage'
         FROM coverage, w
 
       UNION ALL
@@ -2603,38 +2624,38 @@ reports:
 
       UNION ALL
 
-      SELECT 'Incomplete Coverage # Level 1 Covered',
+      SELECT 'Incomplete Coverage # Layer 1 Covered',
              printf('%.0f %%', (l1covered - covered) * 100.0 / remaining) percent,
              l1covered - covered servers,
              total - l1covered - empty,
              printf('%d', IIF((l1covered - covered) = 0, 1, (l1covered - covered) * 300.0 / remaining)) width300,
              printf('%d', IIF((l1covered - covered) = 0, 1, (l1covered - covered) * 400.0 / remaining)) width400,
              IIF((l1covered - covered) * 100.0 / total > 99.0, 1, 0),
-             'servers with incomplete coverage, but with level 1 covered'
+             'servers with incomplete coverage, but with layer 1 covered'
         FROM coverage, w
 
       UNION ALL
 
-      SELECT 'Incomplete Coverage # Level 2 Covered',
+      SELECT 'Incomplete Coverage # Layer 2 Covered',
              printf('%.0f %%', (l2covered - covered) * 100.0 / remaining) percent,
              l2covered - covered servers,
              total - l2covered - empty,
              printf('%d', IIF((l2covered - covered) = 0, 1, (l2covered - covered) * 300.0 / remaining)) width300,
              printf('%d', IIF((l2covered - covered) = 0, 1, (l2covered - covered) * 400.0 / remaining)) width400,
              IIF((l2covered - covered) * 100.0 / total > 99.0, 1, 0),
-             'servers with incomplete coverage, but with level 2 covered'
+             'servers with incomplete coverage, but with layer 2 covered'
         FROM coverage, w
 
       UNION ALL
 
-      SELECT 'Incomplete Coverage # Level 3 Covered',
+      SELECT 'Incomplete Coverage # Layer 3 Covered',
              printf('%.0f %%', (l3covered - covered) * 100.0 / remaining) percent,
              l3covered - covered servers,
              total - l3covered - empty,
              printf('%d', IIF((l3covered - covered) = 0, 1, (l3covered - covered) * 300.0 / remaining)) width300,
              printf('%d', IIF((l3covered - covered) = 0, 1, (l3covered - covered) * 400.0 / remaining)) width400,
              IIF((l3covered - covered) * 100.0 / total > 99.0, 1, 0),
-             'servers with incomplete coverage, but with level 3 covered'
+             'servers with incomplete coverage, but with layer 3 covered'
         FROM coverage, w
 
       UNION ALL
@@ -3248,39 +3269,39 @@ reports:
 
       UNION ALL
 
-      SELECT 'Level 1 Coverage',
+      SELECT 'Layer 1 Coverage',
              printf('%d %%', round(l1coveredPercent)) percent,
              l1covered servers,
              printf('%d', IIF(l1coveredPercent = 0, 1, 3 * l1coveredPercent)) width300,
              printf('%d', IIF(l1coveredPercent = 0, 1, 4 * l1coveredPercent)) width400,
              IIF(l1coveredPercent = 100, 1, 0),
              total - l1covered remaining,
-             'servers with level 1 coverage'
+             'servers with layer 1 coverage'
         FROM coverage
 
       UNION ALL
 
-      SELECT 'Level 2 Coverage',
+      SELECT 'Layer 2 Coverage',
              printf('%d %%', round(l2coveredPercent)) percent,
              l2covered servers,
              printf('%d', IIF(l2coveredPercent = 0, 1, 3 * l2coveredPercent)) width300,
              printf('%d', IIF(l2coveredPercent = 0, 1, 4 * l2coveredPercent)) width400,
              IIF(l2coveredPercent = 100, 1, 0),
              total - l2covered remaining,
-             'servers with level 2 coverage'
+             'servers with layer 2 coverage'
 
         FROM coverage
 
       UNION ALL
 
-      SELECT 'Level 3 Coverage',
+      SELECT 'Layer 3 Coverage',
              printf('%d %%', round(l3coveredPercent)) percent,
              l3covered servers,
              printf('%d', IIF(l3coveredPercent = 0, 1, 3 * l3coveredPercent)) width300,
              printf('%d', IIF(l3coveredPercent = 0, 1, 4 * l3coveredPercent)) width400,
              IIF(l3coveredPercent = 100, 1, 0),
              total - l3covered remaining,
-             'servers with level 3 coverage'
+             'servers with layer 3 coverage'
         FROM coverage
 
       UNION ALL
@@ -3292,7 +3313,7 @@ reports:
               printf('%d', iif((total - covered - empty) = 0, 1, (total - covered - empty) * 400.0 / total)) width400,
              IIF((total - covered - empty) * 100.0 / total = 100, 1, 0),
              '',
-             'servers with some level 1, 2 or 3 coverage'
+             'servers with some layer 1, 2 or 3 coverage'
         FROM coverage
 
       UNION ALL
@@ -3304,7 +3325,7 @@ reports:
              printf('%d', IIF(empty = 0, 1, empty * 400.0 / total)) width400,
              IIF(empty * 100.0 / total = 100, 1, 0),
              '',
-             'servers with no level of coverage'
+             'servers with no layer of coverage'
         FROM coverage;
 
   licence-sources:
