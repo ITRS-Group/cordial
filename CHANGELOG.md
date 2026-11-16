@@ -11,7 +11,7 @@
 
 * `tools/geneos`
 
-  * A variety of new features for the `geneos includes` subsystem for managing include files and configuration templates independently of the main `geneos` program version. This feature is still consider in a preview state and may undergo further changes before becoming fully stable.
+  * A variety of changes and new additions for the `geneos includes` subsystem for managing include files and configuration templates independently of the main `geneos` program version. This is still considered as a feature preview and may undergo further changes before becoming fully stable.
 
     * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
 
