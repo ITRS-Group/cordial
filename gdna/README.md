@@ -174,7 +174,7 @@ This will restart the container with the new configuration in the background.
 > [!TIP]
 > On rare occasions in testing we found the `--force-recreate` flag doesn't seem to fully work. In these cases you will need to `docker compose rm` to remove the old containers and then start up the new one.
 
-For standalone installations there is a `gdna stop` command to terminate any existing background process, then you can restart it after updating the configuration. The GDNA program will not reload the configuration file while it is running.
+For standalone installations use the `gdna reload` command, or send the process the `SIGUSR1` signal, to make a background process read its updated configuration, which is checked first, and use the new schedules and settings without stopping. Changes to the database, the logging or the PID file need `gdna restart`, which stops the process and starts it again in the same way, and `gdna stop` stops it. Use `gdna status` to see if it is running. These commands find the process using its PID file, so give them the same configuration file, or `--pidfile` option, that it was started with. Reload is not available on Windows.
 
 ### Dashboard Configuration
 

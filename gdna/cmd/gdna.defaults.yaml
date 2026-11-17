@@ -20,6 +20,7 @@ gdna:
   licd-chain: ""
   licd-skip-verify: false
   licd-private-key: ""
+  pidfile: ""
   log:
     filename: ./gdna.log
     max-size: 10

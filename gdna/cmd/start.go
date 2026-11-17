@@ -21,6 +21,8 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -30,8 +32,11 @@ import (
 	"github.com/go-co-op/gocron/v2"
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/process"
+	"github.com/itrs-group/cordial/pkg/process/control"
 )
 
 var once bool
@@ -43,6 +48,7 @@ func init() {
 	Cmd.AddCommand(startCmd)
 
 	startCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the process")
+	startCmd.Flags().StringVar(&pidFile, "pidfile", "", control.FlagUsageFor(pidFileKey))
 	startCmd.Flags().BoolVarP(&once, "once", "1", false, "Run once and exit")
 	startCmd.Flags().BoolVarP(&onStart, "on-start", "O", false, "Run immediately on start-up, then follow schedule")
 	startCmd.Flags().BoolVarP(&onStartEMail, "on-start-email", "E", false, "Run immediately on start-up, send email report, then follow schedule")
@@ -58,6 +64,7 @@ func init() {
 	startCmd.Flags().BoolVarP(&resetViews, "reset", "R", false, "Reset/Delete configured Dataviews on first run")
 
 	startCmd.Flags().SortFlags = false
+	startFlags = startCmd.Flags()
 }
 
 //go:embed _docs/start.md
@@ -65,7 +72,6 @@ var startCmdDescription string
 
 var mainjob, emailjob gocron.Job
 var sched gocron.Scheduler
-var maintask, emailtask gocron.Task
 
 // startCmd represents the start command
 var startCmd = &cobra.Command{
@@ -81,12 +87,9 @@ var startCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		cf.BindPFlag("geneos.netprobe.hostname", cmd.Flags().Lookup("host"))
-		cf.BindPFlag("geneos.netprobe.port", cmd.Flags().Lookup("port"))
-		cf.BindPFlag("geneos.netprobe.secure", cmd.Flags().Lookup("secure"))
-		cf.BindPFlag("geneos.netprobe.skip-verify", cmd.Flags().Lookup("skip-verify"))
-		cf.BindPFlag("geneos.entity", cmd.Flags().Lookup("entity"))
-		cf.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
+		if err := bindNetprobeFlags(cf, cmd.Flags(), "secure"); err != nil {
+			log.Error("binding command line options", slog.Any("error", err))
+		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		c := make(chan os.Signal, 1)
@@ -95,10 +98,92 @@ var startCmd = &cobra.Command{
 	},
 }
 
+// startFlags are the flags of the start command, which a reload binds
+// to the new configuration
+var startFlags *pflag.FlagSet
+
+// bindNetprobeFlags makes the options given on the command line for the
+// connection to the Netprobe override the configuration. The options are
+// the same for the start and report commands, except for the name of the
+// flag for TLS, which is tlsFlag. It returns an error for any flag that
+// does not exist.
+func bindNetprobeFlags(cf *config.Config, flags *pflag.FlagSet, tlsFlag string) error {
+	var errs []error
+	for _, b := range []struct{ key, flag string }{
+		{"geneos.netprobe.hostname", "hostname"},
+		{"geneos.netprobe.port", "port"},
+		{"geneos.netprobe.secure", tlsFlag},
+		{"geneos.netprobe.skip-verify", "skip-verify"},
+		{"geneos.entity", "entity"},
+		{"geneos.sampler", "sampler"},
+	} {
+		if err := cf.BindPFlag(b.key, flags.Lookup(b.flag)); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", b.flag, err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// daemonize starts `gdna start` again in the background, waits until it
+// is ready, which is when its schedules are running and it holds its PID
+// file, and prints its PID. It does not return if it is successful.
+func daemonize(cmd *cobra.Command) error {
+	// load the configuration first so that a missing or invalid one is
+	// reported here and not lost in the log of the background process
+	cf, err := loadConfig(cfgFile)
+	if err != nil {
+		return fmt.Errorf("cannot start in the background: %w", err)
+	}
+	if err = validateLayerReportSelection(reportNames); err != nil {
+		return err
+	}
+	if err = checkSchedules(cf); err != nil {
+		return fmt.Errorf("cannot start in the background: %w", err)
+	}
+
+	logName := logFile
+	if f := cmd.Flag("logfile"); f != nil && !f.Changed {
+		logName = config.Get[string](cf, cf.Join("gdna", "log", "filename"))
+	}
+
+	pid, err := control.Daemonize(pidFilePath(cf))
+	if err != nil {
+		return fmt.Errorf("failed to start in the background, see the log file %q: %w", logName, err)
+	}
+	fmt.Println(pid)
+	os.Exit(0)
+	return nil // not reached
+}
+
 func start() (err error) {
-	// Handle SIGINT (CTRL+C) gracefully.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	// Handle SIGINT (CTRL+C) and SIGTERM, which is what `gdna stop`
+	// sends, gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// catch the reload signal before there is anything that can send
+	// it, as the default action is to terminate the process. It is not
+	// available on Windows.
+	var reloads chan os.Signal
+	if process.SigReload != nil && !once {
+		reloads = make(chan os.Signal, 1)
+		signal.Notify(reloads, process.SigReload)
+		defer signal.Stop(reloads)
+	}
+
+	// hold the PID file, if there is one, before anything else so that
+	// a second process fails with a clear error. It is only written
+	// once the schedules are running, which is how the process says it
+	// is ready. A single run does not use it, so that it can be run
+	// while a background process is.
+	var pf *process.PIDFile
+	if path := control.ConfiguredPIDFileKey(cf, pidFile, pidFileKey); path != "" && !once {
+		if pf, err = process.LockPIDFile(path); err != nil {
+			log.Error("cannot use pid file", slog.String("path", path), slog.Any("error", err))
+			return
+		}
+		defer pf.Release()
+	}
 
 	db, err := openDB(ctx, cf, cf.Join("db", "dsn"), false)
 	if err != nil {
@@ -118,9 +203,10 @@ func start() (err error) {
 	log.Debug("starting scheduler")
 	sched.Start()
 
-	// save these as a global for config updates
-	maintask = gocron.NewTask(do, ctx, cf, db)
-	emailtask = gocron.NewTask(doEmail, ctx, cf, db, reportNames)
+	// the tasks use the configuration they are given, so that a reload
+	// can replace them
+	maintask := gocron.NewTask(do, ctx, cf, db)
+	emailtask := gocron.NewTask(doEmail, ctx, cf, db, reportNames)
 
 	if onStartEMail || onStart {
 		sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
@@ -146,95 +232,172 @@ func start() (err error) {
 		)
 	}
 
-	mainjob, err = sched.NewJob(
-		gocron.CronJob(config.Get[string](cf, cf.Join("gdna", "schedule")), false),
-		maintask,
-		gocron.WithName("main"),
-		gocron.WithSingletonMode(gocron.LimitModeReschedule),
-		listeners,
-	)
-	if err != nil {
-		log.Error("scheduling main job", slog.Any("error", err))
+	if err = scheduleJobs(cf, maintask, emailtask); err != nil {
 		return
-	}
-
-	rjt, _ := mainjob.NextRun()
-	log.Info("next scheduled report job", slog.Time("at", rjt))
-
-	if es := config.Get[string](cf, cf.Join("gdna", "email-schedule")); es != "" {
-		emailjob, err = sched.NewJob(
-			gocron.CronJob(es, false),
-			emailtask,
-			gocron.WithName("email"),
-			gocron.WithSingletonMode(gocron.LimitModeReschedule),
-			listeners,
-		)
-		if err != nil {
-			log.Error("scheduling email job", slog.Any("error", err))
-			return err
-		} else {
-			ejt, _ := emailjob.NextRun()
-			log.Info("next scheduled email job", slog.Time("at", ejt))
-		}
 	}
 
 	defer sched.Shutdown()
 
-	<-ctx.Done()
+	// the schedules are running, so say that the process is ready
+	if pf != nil {
+		if err = writePIDFile(pf); err != nil {
+			log.Error("cannot write pid file", slog.String("path", pf.Path()), slog.Any("error", err))
+			return
+		}
+	}
 
+	// the configuration in use, which is replaced by a reload; the
+	// package level one is only for the commands
+	current := cf
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("shutting down")
+			return
+
+		case <-reloads:
+			log.Info("reloading configuration")
+			ncf, err := reload(ctx, current, db)
+			if err != nil {
+				log.Error("configuration not reloaded, continuing with the current configuration", slog.Any("error", err))
+				continue
+			}
+			current = ncf
+			log.Info("configuration reloaded")
+		}
+	}
+}
+
+// reload reads the configuration again and, if it can be used, makes
+// the schedules and all later runs of the jobs use it, returning the new
+// configuration. A job that is running completes using the one it
+// started with. Otherwise the error is returned and everything continues
+// as it was.
+//
+// Only the schedules and the settings that are read for each run can be
+// changed. The database, the logging and the PID file are not.
+func reload(ctx context.Context, current *config.Config, db *sql.DB) (*config.Config, error) {
+	ncf, err := loadConfig(runningConfigFile())
+	if err != nil {
+		return nil, fmt.Errorf("cannot load configuration: %w", err)
+	}
+
+	// keep the options given on the command line
+	bindNetprobeFlags(ncf, startFlags, "secure")
+
+	if err = checkSchedules(ncf); err != nil {
+		return nil, err
+	}
+
+	if dsn := config.Get[string](ncf, ncf.Join("db", "dsn")); dsn != config.Get[string](current, current.Join("db", "dsn")) {
+		return nil, fmt.Errorf("changes to the database (%s) need a restart", ncf.Join("db", "dsn"))
+	}
+
+	if err = scheduleJobs(ncf,
+		gocron.NewTask(do, ctx, ncf, db),
+		gocron.NewTask(doEmail, ctx, ncf, db, reportNames),
+	); err != nil {
+		return nil, err
+	}
+	return ncf, nil
+}
+
+// checkSchedules returns an error if the schedules in the configuration
+// are not valid, without changing anything
+func checkSchedules(cf *config.Config) error {
+	// a scheduler that is not started accepts jobs, and checks their
+	// schedules, but never runs them
+	s, err := gocron.NewScheduler()
+	if err != nil {
+		return err
+	}
+	defer s.Shutdown()
+
+	for _, schedule := range []struct {
+		key      string
+		optional bool
+	}{
+		{"schedule", false},
+		{"email-schedule", true},
+	} {
+		expr := config.Get[string](cf, cf.Join("gdna", schedule.key))
+		if expr == "" && schedule.optional {
+			continue
+		}
+		if _, err = s.NewJob(gocron.CronJob(expr, false), gocron.NewTask(func() {})); err != nil {
+			return fmt.Errorf("%s %q: %w", cf.Join("gdna", schedule.key), expr, err)
+		}
+	}
+	return nil
+}
+
+// scheduleJobs adds the main and, if configured, the email jobs to the
+// scheduler, using the schedules in the configuration, or updates them
+// if they already exist, which leaves them unchanged if the update
+// fails. The email job is removed if it is no longer scheduled.
+func scheduleJobs(cf *config.Config, maintask, emailtask gocron.Task) (err error) {
+	job, err := setJob(mainjob, "main", config.Get[string](cf, cf.Join("gdna", "schedule")), maintask)
+	if err != nil {
+		log.Error("scheduling main job", slog.Any("error", err))
+		return
+	}
+	mainjob = job
+
+	rjt, _ := mainjob.NextRun()
+	log.Info("next scheduled report job", slog.Time("at", rjt))
+
+	es := config.Get[string](cf, cf.Join("gdna", "email-schedule"))
+	if es == "" {
+		if emailjob != nil {
+			if err = sched.RemoveJob(emailjob.ID()); err != nil {
+				log.Error("removing email job", slog.Any("error", err))
+				return
+			}
+			emailjob = nil
+		}
+		return
+	}
+
+	job, err = setJob(emailjob, "email", es, emailtask)
+	if err != nil {
+		log.Error("scheduling email job", slog.Any("error", err))
+		return
+	}
+	emailjob = job
+
+	ejt, _ := emailjob.NextRun()
+	log.Info("next scheduled email job", slog.Time("at", ejt))
 	return
 }
 
-// TODO: Revisit unused declaration updateJobs; restore it only when needed.
-// func updateJobs() {
-// 	var err error
-// 	if once {
-// 		return
-// 	}
-// 	if mainjob != nil {
-// 		mainjob, err = sched.Update(mainjob.ID(),
-// 			gocron.CronJob(config.Get[string](cf, "gdna.schedule"), false),
-// 			maintask,
-// 			gocron.WithName("main"),
-// 			gocron.WithSingletonMode(gocron.LimitModeReschedule),
-// 			listeners,
-// 		)
-// 		if err != nil {
-// 			log.Error("updating main job", slog.Any("error", err))
-// 			return
-// 		}
-//
-// 		rjt, _ := mainjob.NextRun()
-// 		log.Info("next report job", slog.Time("at", rjt))
-// 	}
-//
-// 	if es := config.Get[string](cf, "gdna.email-schedule"); es != "" {
-// 		if emailjob != nil {
-// 			emailjob, err = sched.Update(emailjob.ID(),
-// 				gocron.CronJob(es, false),
-// 				emailtask,
-// 				gocron.WithName("email"),
-// 				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-// 				listeners,
-// 			)
-// 		} else {
-// 			emailjob, err = sched.NewJob(
-// 				gocron.CronJob(es, false),
-// 				emailtask,
-// 				gocron.WithName("email"),
-// 				gocron.WithSingletonMode(gocron.LimitModeReschedule),
-// 				listeners,
-// 			)
-// 		}
-// 		if err != nil {
-// 			log.Error("updating email job", slog.Any("error", err))
-// 			return
-// 		}
-// 		ejt, _ := emailjob.NextRun()
-// 		log.Info("next email job", slog.Time("at", ejt))
-// 	}
-//
-// }
+// setJob adds a job to the scheduler with the cron schedule or, if job
+// is not nil, updates it. The job passed is returned if there is an error.
+func setJob(job gocron.Job, name, schedule string, task gocron.Task) (gocron.Job, error) {
+	var updated gocron.Job
+	var err error
+	if job == nil {
+		updated, err = sched.NewJob(
+			gocron.CronJob(schedule, false),
+			task,
+			gocron.WithName(name),
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			listeners,
+		)
+	} else {
+		updated, err = sched.Update(job.ID(),
+			gocron.CronJob(schedule, false),
+			task,
+			gocron.WithName(name),
+			gocron.WithSingletonMode(gocron.LimitModeReschedule),
+			listeners,
+		)
+	}
+	if err != nil {
+		return job, err
+	}
+	return updated, nil
+}
 
 var listeners = gocron.WithEventListeners(
 	gocron.BeforeJobRuns(beforejob),

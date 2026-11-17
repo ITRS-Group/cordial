@@ -125,12 +125,15 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		return
 	}
 
-	if len(fetchCmdSources) == 0 {
-		fetchCmdSources = config.Get[[]string](cf, cf.Join("gdna", "licd-sources"))
+	// the sources given on the command line override the configuration,
+	// which is read each time so that a reload takes effect
+	fetchSources := []string(fetchCmdSources)
+	if len(fetchSources) == 0 {
+		fetchSources = config.Get[[]string](cf, cf.Join("gdna", "licd-sources"))
 	}
-	log.Debug("sources", slog.Any("srcs", fetchCmdSources))
+	log.Debug("sources", slog.Any("srcs", fetchSources))
 
-	for _, source := range fetchCmdSources {
+	for _, source := range fetchSources {
 		var s []string
 		log.Debug("reading from source", slog.String("src", source))
 		if after, ok := strings.CutPrefix(source, "summary:"); ok {

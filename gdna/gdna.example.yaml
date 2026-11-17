@@ -132,6 +132,20 @@ gdna:
   # environment. Set to `true` to ignore validation errors.
   licd-skip-verify: false
 
+  # `pidfile` is the file that `gdna start` holds, while it runs, to
+  # prevent a second process starting and to allow the `stop`,
+  # `restart`, `reload` and `status` commands to find it. It records how
+  # the process was started and is removed when it stops. If not set
+  # then a process started with `--daemon` uses `gdna.pid` in the
+  # `geneos` directory in the user's cache directory, and one running in
+  # the foreground does not use a file. The `--pidfile` option overrides
+  # this setting.
+  #
+  # Use a different file for each `gdna` process if you run more than
+  # one on a server, and give the commands the same `--pidfile` option
+  # or configuration file.
+  pidfile: ""
+
   # `log` controls how the `gdna` program logs it's output.
   #
   # See <https://github.com/DeRuina/timberjack/> for the meaning of the
