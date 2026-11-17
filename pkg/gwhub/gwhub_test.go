@@ -1,9 +1,30 @@
 package gwhub
 
 import (
+	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/itrs-group/cordial/pkg/rest"
 )
+
+func TestMetricsAggregationsDecodesResponse(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"avg":{"description":"average","parameters":[{"name":"x"}]}}`))
+	}))
+	defer server.Close()
+
+	response, _, err := New(rest.BaseURLString(server.URL)).MetricsAggregations(context.Background())
+	if err != nil {
+		t.Fatalf("MetricsAggregations() error = %v", err)
+	}
+	if got := response["avg"].Description; got != "average" {
+		t.Errorf("aggregation description = %q, want average (response %v)", got, response)
+	}
+}
 
 func TestParseDuration(t *testing.T) {
 	tests := []struct {

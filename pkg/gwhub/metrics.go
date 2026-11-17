@@ -73,6 +73,6 @@ type MetricsAggregation struct {
 
 // MetricsAggregations returns the aggregations supported by GW Hub.
 func (h *Hub) MetricsAggregations(ctx context.Context) (response MetricsAggregationsResponse, resp *http.Response, err error) {
-	resp, err = h.Get(ctx, MetricsAggregationsEndpoint, nil, response)
+	resp, err = h.Get(ctx, MetricsAggregationsEndpoint, nil, &response)
 	return
 }

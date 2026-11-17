@@ -125,6 +125,8 @@
 
   * `pkg/rest` clients now return a typed `HTTPError`, with the status code and body, for responses with a status above 299, so callers can tell them from a failure to get a response. The error text is unchanged.
 
+  * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
+
 ## Version v1.31.0 Fixes
 
 * `gdna`
@@ -206,6 +208,14 @@
 * `pkg/rest`
 
   * Fix decoding of `text/plain` responses into `*string` and `*[]byte`, which did not return the text.
+
+  * Fix several cases where a failed request could look like a success or cause a panic, including a body that could not be encoded, an invalid base URL, a redirected `POST` or `PUT` (now a `RedirectError`, and there is a new `NoRedirect` option), and responses with no content or with `+json` content types.
+
+  * Fix the text of a `HTTPError` growing without limit with the body of the response.
+
+* `pkg/gwhub`
+
+  * Fix `MetricsAggregations` always returning an empty result.
 
 * `pkg/host`
 
