@@ -16,7 +16,6 @@ geneos tls new gateway mygateway
 geneos tls new netprobe all --expiry 730
 ```
 
-
 ## Usage
 
 ```text

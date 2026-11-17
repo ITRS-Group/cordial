@@ -518,6 +518,7 @@ Additional limits:
 - Backup names have one-second timestamp resolution. Repeated in-place runs within one second can collide. Keep a separate backup for important dashboards.
 - Name, Type, and Attribute rewriting is not a full validation of Active Console dashboard format or behavior. Always test the output in Active Console before distribution.
 
+
 ## Commands
 
 | Command / Aliases | Description |
@@ -722,6 +723,7 @@ By default, the command reports counts for each element and value.
 `--show-xpaths`/`-X` lists unique XPaths only. `--show-urls` lists unique URL targets only. `--show-all` lists both, in separate `XPaths` and `URLs` blocks. Each list is sorted, and URL values are shown without their link wrapper or source type.
 
 Dataitem targets from modifier records and `GeneosURL` records appear in the XPath list. `wwwpage(...)` and `geneos://...` destinations are listed as URL values without wrappers. Web destinations embedded in modifier records are included too.
+
 ## Usage
 
 ```text
@@ -1459,7 +1461,6 @@ General options are loaded from the global file first, then the user file and an
 
 Import one or more instances from a `tar.gz` archive created by `geneos config export`
 
-
 ## Usage
 
 ```text
@@ -1919,6 +1920,7 @@ geneos enable [flags] [TYPE] [NAME...]
 <sub>[Up: geneos](#geneos)</sub>
 
 An `fa2` is a Fix-Analyser2 Netprobe
+
 ## Usage
 
 ```text
@@ -1974,6 +1976,7 @@ geneos fileagent
 <sub>[Up: geneos](#geneos)</sub>
 
 A Floating Netprobe used the same installation package as the normal Netprobe but uses a confirmation file to identify remote Gateway(s) to connect to. The primary differences between a Floating Netprobe and a SAN (Self-Announcing Netprobe) is that all the configuration for a Floating Netprobe is kept in the Gateway and that a Floating Netprobe has a one-to-one correspondence with it's set-up.
+
 ## Usage
 
 ```text
@@ -2112,6 +2115,7 @@ Also, you should set `setup` to either an empty value or the literal `none` to t
 * `kerberos-principal` and `kerberos-keytab`
 
   To authenticate using Kerberos, set these parameters as documented in the Gateway Installation Guide.
+
 ## Usage
 
 ```text
@@ -2905,6 +2909,7 @@ geneos includes fix gateway-a gateway-b
 ```
 
 Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+
 ## Usage
 
 ```text
@@ -3023,6 +3028,7 @@ Flags identify include properties:
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.
+
 ## Usage
 
 ```text
@@ -3066,6 +3072,7 @@ Before changing any links, a preflight checks obsolete top-level symlinks using 
 After a successful preflight, replacement links are updated and unused obsolete links are removed. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
 
 Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
+
 ## Usage
 
 ```text
@@ -3658,6 +3665,7 @@ geneos migrate [--executables|-X] | [TYPE] [NAME...]
 A `minimal` Netprobe is one without a Collection agent and associated plugins.
 
 If you will not be using the Collection Agent then this can save about 300MB per download of the release file as well as substantial disk space for the unarchives binaries.
+
 ## Usage
 
 ```text
@@ -4600,6 +4608,7 @@ geneos profile
 Extracts the embedded default profile configuration to the user's `geneos/profiles.yaml` file. If the file already matches the embedded defaults, it is left unchanged. If it differs, the existing file is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before the embedded defaults are written. A missing file is created without a backup.
 
 This command always targets the standard user configuration path, even if another profile file is selected with `--profiles`. See the [profile guide](#geneos-profile) for profile file locations and usage.
+
 ## Usage
 
 ```text
@@ -4626,6 +4635,7 @@ geneos profile extract
 <sub>[Up: geneos profile](#geneos-profile) | [Top: geneos](#geneos)</sub>
 
 List available profiles with their descriptions and the configuration file they came from. The default `column` format prints a readable table. Use `--format` (`-f`) to select `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`. `pretty` outputs indented JSON. If no profile file is selected, `From` is `internal defaults`.
+
 ## Usage
 
 ```text
@@ -4691,6 +4701,7 @@ Use `--files`/`-f` to list open files or `--network`/`-n` to list TCP sockets. T
 The default output is a table format intended for humans but this can be changed to CSV format using the `--csv`/`-c` flag or JSON with the `--json`/`-j` or `--pretty`/`-i` options, the latter option formatting the output over multiple, indented lines. Use the `--toolkit/-t` flag to report in Geneos Toolkit specific CSV format, which includes headlines and a unique first column to act as the row name.
 
 Any Netprobes that have a running Collection Agent managed process will show a `netprobe/ca` entry along with details of the Collection Agent process.
+
 ## Usage
 
 ```text
@@ -5030,7 +5041,6 @@ The parameters described below are specific to the Netprobe Router component.
 
   This parameter value is used in the default template as the value for the `pluginsDirectory` property in the Netprobe Router configuration file. It is passed as the environment variable `PLUGIN_DIR`. Note the singular for of `PLUGIN` for the environment variable, which is deliberate and based on Collection Agent configurations.
 
-
 ## Usage
 
 ```text
@@ -5355,6 +5365,7 @@ For normal output each instance's underlying configuration is in an object key `
 By default the interpolated ("expandable" values are expanded) values are shown. The see the underlying value use the `--raw`/`-r` option.
 
 No values that are encrypted are shown decrypted with or without the `--raw`/`-r` option.
+
 ## Usage
 
 ```text
@@ -5537,6 +5548,7 @@ Stop will  show how long each proceess took to stop or kill.
 Protected instances will not be restarted unless the `--force`/`-F` option is given.
 
 Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a short period before trying again until the process is no longer running. If this fails to stop the process a SIGKILL is sent to terminate the process without further action. If the `--kill`/`-K` option is used then the terminate signal is sent immediately without waiting. Beware that this can leave instance files corrupted or in an indeterminate state.
+
 ## Usage
 
 ```text
@@ -5850,6 +5862,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
 All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+
 ## Usage
 
 ```text
@@ -5993,7 +6006,6 @@ geneos tls new gateway mygateway
 geneos tls new netprobe all --expiry 730
 ```
 
-
 ## Usage
 
 ```text
@@ -6059,7 +6071,6 @@ geneos restart gateway mygateway
 # Renew the local signing certificate
 geneos tls renew --signing
 ```
-
 
 ## Usage
 

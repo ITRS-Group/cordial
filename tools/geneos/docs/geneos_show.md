@@ -18,6 +18,7 @@ For normal output each instance's underlying configuration is in an object key `
 By default the interpolated ("expandable" values are expanded) values are shown. The see the underlying value use the `--raw`/`-r` option.
 
 No values that are encrypted are shown decrypted with or without the `--raw`/`-r` option.
+
 ## Usage
 
 ```text

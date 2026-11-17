@@ -12,6 +12,7 @@ ims-gateway start [flags]
 
 ```text
   -D, --daemon[=true|false]   Daemonise the proxy process
+      --pidfile file          Use the PID file, overriding `server.pidfile` in the configuration
   -l, --logfile file          Write logs to file. Use '-' for console or /dev/null for none (default "-")
   -c, --conf string           override config file
 ```

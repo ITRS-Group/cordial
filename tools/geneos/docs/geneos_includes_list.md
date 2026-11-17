@@ -33,6 +33,7 @@ Flags identify include properties:
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.
+
 ## Usage
 
 ```text
