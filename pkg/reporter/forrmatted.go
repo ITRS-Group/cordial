@@ -175,7 +175,8 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 		var order strings.Builder
 		for _, c := range orderColumns {
 			if c < len(row) {
-				order.WriteString(row[c] + "\000")
+				order.WriteString(row[c])
+				order.WriteString("\000")
 			}
 		}
 		fr.rowsBytableOrder[order.String()] = append(fr.rowsBytableOrder[order.String()], row)

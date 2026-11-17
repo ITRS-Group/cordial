@@ -30,6 +30,10 @@ import (
 	snowCmd "github.com/itrs-group/cordial/integrations/servicenow/cmd"
 	snow2Cmd "github.com/itrs-group/cordial/integrations/servicenow2/cmd"
 
+	// subcommands of servicenow2, which add themselves to the root command
+	_ "github.com/itrs-group/cordial/integrations/servicenow2/cmd/client"
+	_ "github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
+
 	dv2email "github.com/itrs-group/cordial/tools/dv2email/cmd"
 	gatewayReporter "github.com/itrs-group/cordial/tools/gateway-reporter/cmd"
 	imsGatewayCmd "github.com/itrs-group/cordial/tools/ims-gateway/cmd"
