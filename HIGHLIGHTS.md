@@ -4,26 +4,32 @@ New features and notable capabilities, grouped by the version in which the chang
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
+> [!NOTE]
+> Built with Go 1.27.4.
+
 > [!IMPORTANT]
 > The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer included in releases. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
 
-* **Monitoring Health:** Deploy the renamed `health-endpoint` and
-  `health-gateway` profiles to monitor Geneos components.
-* **Site names:** Set an installation-wide site name for Gateway configuration
-  include directories and filename prefixes. Supplied profiles use the site
-  name in their include paths.
+* **`geneos` command**
 
-* **Includes (preview):** Manage include files and configuration templates independently of the main `geneos` version. Set an installation-wide site name for Gateway include paths, install embedded or versioned includes, update links, delete unused versions and repair unambiguous broken local references with `geneos includes fix`. Releases include a separate versioned includes archive and standalone installer. This is still considered a feature preview and may undergo further changes before becoming fully stable.
+  * **Includes (preview):** Manage include files and configuration templates independently of the main `geneos` version. Set an installation-wide site name for Gateway include paths, install embedded or versioned includes, update links, delete unused versions and repair unambiguous broken local references with `geneos includes fix`. Releases include a separate versioned includes archive and standalone installer. This is still considered a feature preview and may undergo further changes before becoming fully stable.
 
-* **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can filter or replace URLs, and `edit` is a preserve-by-default alias.
+  * **Site names:** Set an installation-wide site name for Gateway configuration include directories and filename prefixes. Supplied profiles use the site name in their include paths.
 
-* **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
+  * **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
 
-* **Background servers:** `servicenow2 proxy` and `ims-gateway` can now be controlled with `stop`, `restart`, `reload` and `status` commands. `reload`, or sending `SIGUSR1`, applies a changed and valid configuration without interrupting requests that are in progress, and `--daemon` now reports a server that fails to start.
+  * **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can filter or replace URLs, and `edit` is a preserve-by-default alias.
+
+  * **Monitoring Health:** Deploy the renamed `health-endpoint` and `health-gateway` profiles to monitor Geneos components.
+
+* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna start` can now be controlled in the same way, with `stop`, `restart`, `reload` and `status` commands. `reload`, or sending `SIGUSR1`, applies a changed and valid configuration without interrupting work in progress, which for `gdna` includes new schedules, and `--daemon` now waits until the process is running and reports one that fails to start.
 
 * **Incident integration reliability:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with an error whenever an incident could not be created, updated or queried, and the proxy and `ims-gateway` log every failure with its cause. `geneos incident query` now returns data and `geneos incident raise` correlates incidents as documented.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
+
+> [!NOTE]
+> Built with Go 1.27.3.
 
 v1.30.1 replaces v1.30.0. Monitor-Of-The-Monitors features are preview features.
 
@@ -39,6 +45,9 @@ v1.30.1 replaces v1.30.0. Monitor-Of-The-Monitors features are preview features.
 
 ## [v1.29.0](CHANGELOG.md#version-v1290)
 
+> [!NOTE]
+> Built with Go 1.27.1.
+
 This release was withdrawn; use v1.29.1 or later instead.
 
 * `geneos` supports the Netprobe Router as the `router` component.
@@ -46,6 +55,9 @@ This release was withdrawn; use v1.29.1 or later instead.
 * Early Geneos Best Practice Gateway includes were added.
 
 ## [v1.28.1](CHANGELOG.md#version-v1281)
+
+> [!NOTE]
+> Built with Go 1.26.5.
 
 `geneos init all` and `deploy` accept PFX/PKCS#12 signing bundles.
 
@@ -64,6 +76,9 @@ Configure CPU affinity for local Linux instances with `cpus`; `geneos ps --long`
 * `libemail` added Microsoft Teams webhook support.
 
 ## [v1.26.1](CHANGELOG.md#version-v1261)
+
+> [!NOTE]
+> Built with Go 1.26.2.
 
 * **TLS:** Improved certificate and trust-chain management, TLS by default for new installations, and `geneos tls migrate` for existing instances.
 
@@ -87,6 +102,9 @@ GDNA can run ad-hoc fetch and report cycles with command-line sources and produc
 
 ## [v1.23.0](CHANGELOG.md#version-v1230)
 
+> [!NOTE]
+> Built with Go 1.25.3.
+
 `geneos` accepts URLs for PEM inputs and custom HTTP headers for package downloads.
 
 ## [v1.22.1](CHANGELOG.md#version-v1221)
@@ -95,9 +113,15 @@ Initial native Windows support allows `geneos.exe` to install and manage Active 
 
 ## [v1.22.0](CHANGELOG.md#version-v1220)
 
+> [!NOTE]
+> Built with Go 1.24.5.
+
 `geneos backup` and `restore` can move or duplicate instances between servers, optionally including sensitive files and remapping instance names.
 
 ## [v1.21.0](CHANGELOG.md#version-v1210)
+
+> [!NOTE]
+> Built with Go 1.24.3.
 
 * A new ServiceNow incident integration and a `geneos` self-monitoring include.
 
@@ -112,6 +136,9 @@ GDNA introduced new Monitoring Coverage and Version dashboards; `geneos host` ad
 `geneos` can install and manage SSO Agent instances, including their keystore and truststore.
 
 ## [v1.18.0](CHANGELOG.md#version-v1180)
+
+> [!NOTE]
+> Built with Go 1.23.2.
 
 GDNA added configurable plugin lists and include, exclude and grouping filters. Its reporting code became the reusable `pkg/reporter` package.
 
@@ -137,9 +164,15 @@ Introduced GDNA (Geneos Dynamic Netprobe Analysis) for assessing monitoring cove
 
 ## [v1.14.0](CHANGELOG.md#v1140-changes)
 
+> [!NOTE]
+> Built with Go 1.22.4.
+
 `geneos tls create` gained options for destination, certificate bundles and expiry; `gateway-reporter` added an optional XLSX password.
 
 ## [v1.13.2](CHANGELOG.md#version-v1132)
+
+> [!NOTE]
+> Built with Go 1.22.3.
 
 `geneos tls export` helps share signing material between installations. Webserver instances gained automatic TLS keystore and trust-chain management.
 
