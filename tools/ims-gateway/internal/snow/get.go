@@ -1,10 +1,10 @@
 package snow
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -12,40 +12,25 @@ import (
 	"github.com/itrs-group/cordial/pkg/ims"
 )
 
-// not a complete test, but just filter characters *allowed* according
-// to the ServiceNow documentation. This is not a complete test, but it
-// should catch most of the invalid queries.
-var queryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
-
 // get a list of all records that match `query`, which is usually for a
 // user or caller_id. `format` is the output format, either json (the
 // default) or `csv`. `fields` is a comma separated list of fields to
 // return.
 func get(w http.ResponseWriter, r *http.Request) {
-	rv := r.Context().Value(ims.ContextKeyResponse)
-	response, ok := rv.(*ims.Response)
+	cf, response, ok := ims.RequestContext(w, r)
 	if !ok {
-		log.Debug("response not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
+	}
+
+	// reply sends an error response, which is also available to the
+	// request log
+	reply := func(status int, err error) {
+		response.Action = "Failed"
+		response.Error = err.Error()
+		ims.WriteJSONResponse(w, r, status)
 	}
 
 	log.Debug("handling request for", slog.String("path", r.URL.Path))
-
-	v := r.Context().Value(ims.ContextKeyConfig)
-	if v == nil {
-		log.Debug("config not found in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	cf, ok := v.(*config.Config)
-	if !ok {
-		log.Debug("config not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	c := newClient(cf.Sub("snow"))
 
 	table := r.PathValue("table")
 	if table == "" {
@@ -56,8 +41,11 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	tc, err := tableConfig(cf, table)
 	if err != nil {
-		response.Error = fmt.Sprintf("error retrieving table configuration for %q: %v", table, err)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrTableNotFound) {
+			status = http.StatusNotFound
+		}
+		reply(status, fmt.Errorf("error retrieving table configuration for %q: %w", table, err))
 		return
 	}
 
@@ -83,25 +71,28 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	// validate fields
 	if !validateFields(strings.Split(fields, ",")) {
-		response.Error = fmt.Sprintf("field names are invalid or not unique: %q", fields)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		reply(http.StatusBadRequest, fmt.Errorf("field names are invalid or not unique: %q", fields))
 		return
 	}
 
 	// real basic validation of query
 	if !queryRE.MatchString(query) {
-		response.Error = fmt.Sprintf("query %q supplied is invalid", query)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		reply(http.StatusBadRequest, fmt.Errorf("query %q supplied is invalid", query))
 		return
 	}
 
-	response, err = c.getRecords(r.Context(), cf.Sub("snow"), tc.Name, Fields(fields), Query(query), Display(fmt.Sprint(!raw)))
+	c, err := newClient(cf.Sub("snow"))
 	if err != nil {
-		response.Error = err.Error()
-		ims.WriteJSONResponse(w, r, http.StatusBadGateway)
+		reply(http.StatusInternalServerError, err)
 		return
 	}
 
+	if err = c.getRecords(r.Context(), response, tc.Name, Fields(fields), Query(query), Display(fmt.Sprint(!raw))); err != nil {
+		reply(ims.StatusFor(err, http.StatusBadGateway), err)
+		return
+	}
+
+	response.Action = "Retrieved"
 	response.Status = http.StatusText(http.StatusOK)
 	response.StatusCode = http.StatusOK
 

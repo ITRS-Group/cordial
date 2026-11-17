@@ -74,8 +74,11 @@ func (s *SDPTokenSource) Token() (*oauth2.Token, error) {
 	}
 
 	if s.expiry != token.Expiry {
+		// the refreshed token is valid, so a failure to save it should
+		// not fail the request, but must be visible as it means the
+		// next request has to refresh the token again
 		if err := saveToken(token); err != nil {
-			return nil, err
+			log.Error("failed to save refreshed ServiceDesk Plus token", slog.Any("error", err))
 		}
 		s.expiry = token.Expiry
 	}
@@ -83,16 +86,28 @@ func (s *SDPTokenSource) Token() (*oauth2.Token, error) {
 	return token, nil
 }
 
+// tokenLoader loads the saved token and can be replaced in tests
+var tokenLoader = loadToken
+
+// loadToken reads the token saved by [saveToken], which decrypts any
+// encoded values, and returns an error if there is no usable token.
 func loadToken() (token *oauth2.Token, err error) {
 	pf, err := config.Read("sdp.token",
 		config.AppName("geneos"),
 		config.Format("json"),
+		config.MustExist(),
 	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", errNoToken, err)
+	}
 
 	token = &oauth2.Token{}
+	if err = pf.UnmarshalKey("token", token); err != nil {
+		return nil, fmt.Errorf("cannot read saved ServiceDesk Plus token: %w", err)
+	}
 
-	if err := pf.UnmarshalKey("token", &token, config.NoExpand()); err != nil {
-		return nil, err
+	if token.RefreshToken == "" {
+		return nil, fmt.Errorf("%w (the saved token has no refresh token, or it could not be decrypted)", errNoToken)
 	}
 
 	return
@@ -170,6 +185,9 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 			TLSClientConfig:       tcc,
 		},
 		Timeout: timeout,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	conf := &Config{
@@ -217,10 +235,13 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 	}
 
 	tok = &oauth2.Token{}
-	json.Unmarshal(body, &tok)
+	if err = json.Unmarshal(body, tok); err != nil {
+		return nil, fmt.Errorf("failed to decode OAuth2 token response: %w", err)
+	}
 	tok.Expiry = time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second)
 
-	log.Debug("received OAuth2 token", slog.Any("token", tok))
+	// do not log the token itself
+	log.Debug("received OAuth2 token", slog.Time("expiry", tok.Expiry), slog.Bool("refresh_token", tok.RefreshToken != ""))
 
 	if tok.RefreshToken == "" {
 		return nil, fmt.Errorf("no refresh token received from OAuth2 token response")

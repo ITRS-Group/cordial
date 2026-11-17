@@ -40,6 +40,21 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// HTTPError is returned when a request completes but the server
+// responds with a status code above 299. The response body, if any, is
+// included in the error text and is available in Body. Use [errors.As]
+// to distinguish a response from the server from a failure to get one.
+type HTTPError struct {
+	StatusCode int
+	Status     string
+	Body       []byte
+}
+
+// Error returns the status followed by the response body
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("%s %s", e.Status, string(e.Body))
+}
+
 // Client sends HTTP requests to a REST service and decodes responses.
 type Client struct {
 	BaseURL    *url.URL
@@ -173,7 +188,7 @@ func (c *Client) Get(ctx context.Context, endpoint any, request any, response an
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		err = &HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: b}
 		return
 	}
 	if response == nil {
@@ -230,7 +245,7 @@ func (c *Client) Post(ctx context.Context, endpoint any, request any, response a
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		err = &HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: b}
 		return
 	}
 	if response == nil {
@@ -282,7 +297,7 @@ func (c *Client) Put(ctx context.Context, endpoint any, request any, response an
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		err = &HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: b}
 		return
 	}
 	if response == nil {
@@ -322,7 +337,7 @@ func (c *Client) Delete(ctx context.Context, endpoint string, request any) (resp
 	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
 		b, _ := io.ReadAll(resp.Body)
-		err = fmt.Errorf("%s %s", resp.Status, string(b))
+		err = &HTTPError{StatusCode: resp.StatusCode, Status: resp.Status, Body: b}
 		return
 	}
 	return
@@ -354,6 +369,12 @@ func decodeResponse(resp *http.Response, response any) (err error) {
 	switch ct {
 	case "text/plain", "text/html":
 		switch rt := response.(type) {
+		case *[]byte:
+			*rt, err = io.ReadAll(resp.Body)
+		case *string:
+			var b []byte
+			b, err = io.ReadAll(resp.Body)
+			*rt = string(b)
 		case []byte:
 			b, _ := io.ReadAll(resp.Body)
 			rt = b

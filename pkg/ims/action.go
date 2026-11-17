@@ -28,6 +28,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
+// exitFunc is called by `exit` actions and can be replaced in tests
+var exitFunc = os.Exit
+
 // ActionGroup TODO: Describe its purpose and intended use.
 type ActionGroup struct {
 	If       []string          `json:"if,omitempty"`
@@ -65,11 +68,17 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 			config.Prefix("nomatch", noMatchPrefix),
 			config.Prefix("replace", replacePrefix),
 			config.Prefix("select", selectPrefix),
-			config.Prefix("field", fieldPrefix),
+			config.Prefix("field", fieldPrefix, incident),
 		))
 
 	for _, i := range ag.If {
-		if b, err := strconv.ParseBool(config.Expand[string](agcf, i)); err != nil || !b {
+		v := config.Expand[string](agcf, i)
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			log.Warn("`if` value is not a boolean, treating as false", slog.String("if", i), slog.String("value", v))
+			return false
+		}
+		if !b {
 			return false
 		}
 	}
@@ -88,19 +97,31 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 		}
 	}
 
+	// break and exit use agcf so that the same expansion functions are
+	// available as for `if` and `set`
 	for _, i := range ag.Break {
-		if b, _ := strconv.ParseBool(config.Expand[string](cf, i)); b {
+		v := config.Expand[string](agcf, i)
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			log.Warn("`break` value is not a boolean, ignoring", slog.String("break", i), slog.String("value", v))
+			continue
+		}
+		if b {
 			return true
 		}
 	}
 
 	for _, i := range ag.Exit {
-		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
-			os.Exit(int(code))
-		} else {
-			log.Error("invalid exit code, exiting with exit code 1", slog.Any("error", err), slog.String("code", i))
-			os.Exit(1)
+		v := config.Expand[string](agcf, i)
+		code, err := strconv.ParseInt(v, 10, 0)
+		if err != nil {
+			log.Error("invalid exit code, exiting with exit code 1", slog.Any("error", err), slog.String("code", i), slog.String("value", v))
+			exitFunc(1)
+			return false
 		}
+		log.Debug("exit action", slog.Int64("code", code))
+		exitFunc(int(code))
+		return false
 	}
 
 	return false
@@ -114,6 +135,7 @@ func matchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result string
 	// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
 	env, pattern, found := strings.Cut(s, ":")
 	if !found || len(env) == 0 || len(pattern) == 0 {
+		log.Warn("invalid expansion, treating as false", slog.String("args", s))
 		return "false", fmt.Errorf("invalid args")
 	}
 
@@ -123,6 +145,7 @@ func matchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result string
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {
+		log.Warn("invalid expansion pattern, treating as false", slog.String("pattern", pattern), slog.Any("error", err))
 		return "false", err
 	}
 	return fmt.Sprintf("%v", re.MatchString(val)), nil
@@ -133,6 +156,7 @@ func noMatchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result stri
 	// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
 	env, pattern, found := strings.Cut(s, ":")
 	if !found || len(env) == 0 || len(pattern) == 0 {
+		log.Warn("invalid expansion, treating as false", slog.String("args", s))
 		return "false", fmt.Errorf("invalid args")
 	}
 
@@ -142,6 +166,7 @@ func noMatchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result stri
 	}
 	re, err := regexp.Compile(pattern)
 	if err != nil {
+		log.Warn("invalid expansion pattern, treating as false", slog.String("pattern", pattern), slog.Any("error", err))
 		return "false", err
 	}
 	return fmt.Sprintf("%v", !re.MatchString(val)), nil
@@ -160,6 +185,7 @@ func replacePrefix(_ map[string]any, s string, trim bool, _ ...any) (result stri
 	env, expr, found := strings.Cut(s, ":")
 	if !found || len(env) == 0 || len(expr) == 0 {
 		err = fmt.Errorf("invalid args")
+		log.Warn("invalid replace expansion", slog.String("args", s))
 		return
 	}
 
@@ -173,6 +199,7 @@ func replacePrefix(_ map[string]any, s string, trim bool, _ ...any) (result stri
 	if len(p) != 3 || (len(p) == 3 && p[2] != "") {
 		// there must be two more separators and nothing after the second
 		err = fmt.Errorf("invalid args")
+		log.Warn("invalid replace expansion", slog.String("args", s))
 		return
 	}
 	pattern, text := p[0], p[1]
@@ -207,7 +234,7 @@ func selectPrefix(_ map[string]any, s string, trim bool, _ ...any) (result strin
 	// const validSeparators = "+ /-"
 	var r strings.Builder
 
-	s = strings.TrimLeft(s, "select:")
+	s = strings.TrimPrefix(s, "select:")
 	envs := strings.Split(s, ":")
 	if len(envs) == 0 {
 		return
@@ -276,7 +303,10 @@ func selectPrefix(_ map[string]any, s string, trim bool, _ ...any) (result strin
 // string if no field is set use `${field:FIELD:}` noting the colon just
 // before the closing brace. In all other cases it returns an empty
 // string.
-func fieldPrefix(ci map[string]any, s string, trim bool, _ ...any) (result string, err error) {
+//
+// The incident fields are passed as the first data value when the
+// function is registered with [config.Prefix].
+func fieldPrefix(_ map[string]any, s string, trim bool, data ...any) (result string, err error) {
 	s = strings.TrimPrefix(s, "field:")
 	fields := strings.Split(s, ":")
 	if len(fields) == 0 {
@@ -285,8 +315,11 @@ func fieldPrefix(ci map[string]any, s string, trim bool, _ ...any) (result strin
 	last := len(fields) - 1
 	def := fields[last]
 	fields = fields[:last]
-	incident, ok := ci["incident_fields"].(map[string]string)
-	if !ok {
+	var incident Values
+	if len(data) > 0 {
+		incident, _ = data[0].(Values)
+	}
+	if incident == nil {
 		return def, nil
 	}
 

@@ -9,6 +9,27 @@ The client side is currently provided by the `geneos incident` commands, which c
 Currently ServiceNow and ServiceDesk Plus are supported as target IMS platforms, but the IMS Gateway is designed to be extensible and can be easily extended to support additional platforms in the future. The IMS Gateway is implemented in Go and uses a plugin architecture to allow for easy addition of new target platforms without requiring changes to the core IMS Gateway code.
 
 
+## Running In The Background
+
+Run the gateway in the foreground with `ims-gateway start`, or in the background with the `--daemon` (or `-D`) flag, and a log file:
+
+```bash
+ims-gateway start --daemon --logfile /var/log/geneos/ims-gateway.log
+```
+
+The command only returns once the gateway is listening, and prints its PID. If the gateway fails to start, for example if the configuration is invalid or the port is in use, then the command fails with a non-zero exit code and the reason is in the log file.
+
+While it runs, the gateway holds a PID file, and a second gateway cannot be started with the same one. The file is the one given with `--pidfile`, or `server.pidfile` in the gateway configuration, or if neither a file in the `geneos` directory in your user cache directory. If you run more than one gateway on a server then give each its own. The PID file also records how the gateway was started.
+
+Use these commands to control a gateway running in the background. Give them the same `--conf` or `--pidfile` options if you started the gateway with them, or if it uses a configuration file that is not in the default locations:
+
+* `ims-gateway status` - show whether the gateway is running. The exit code is zero only if it is.
+* `ims-gateway stop` - stop the gateway. It stops accepting requests and lets those in progress complete, for up to 15 seconds, before exiting. The command waits for this, and fails after `--timeout` unless `--force` is used, which kills the process.
+* `ims-gateway restart` - stop the gateway, as above, and start it again with the same arguments. Use this to run a new version of the program after an upgrade.
+* `ims-gateway reload` - make the gateway read its configuration again, without stopping.
+
+`reload` checks the configuration first, and only tells the gateway to reload if it is valid, so a mistake in the file is reported straight away. The gateway checks it again, and if it fails the gateway carries on with the configuration it has and logs the error. A reload changes everything in the configuration that the gateway uses to handle requests, such as the authentication token, the ServiceNow connection details and the tables, and a changed TLS certificate and key. If the listening address is changed then the gateway listens on the new address before it stops listening on the old one. Requests that are in progress complete using the configuration that they started with, and all new requests use the new one. Changes to the logging, and turning TLS on or off, need a `restart`. You can also reload by sending the gateway process the `SIGUSR1` signal. Reload is not available on Windows.
+
 ## ServiceDesk Plus Authentication
 
 The IMS Gateway supports authentication against ServiceDesk Plus using OAuth2 Client Credentials Grant. This allows you to securely authenticate with ServiceDesk Plus and obtain access tokens that can be used to create and update incidents in ServiceDesk Plus. The authentication process involves obtaining a `client_id` and `client_secret` from the ServiceDesk Plus admin console, generating a grant token, and then using that grant token to obtain access and refresh tokens that are stored securely in the user's configuration directory. The IMS Gateway will automatically handle token refreshes as needed, so you don't have to worry about manually refreshing tokens. For more details on how to set up and use ServiceDesk Plus authentication, please refer to the [ServiceDesk Plus OAuth2 Authentication](SDP-AUTH.md) documentation.

@@ -15,8 +15,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// package ims provides basic support for Incident Management System
-// (IMS) integration, such as ServiceDesk Plus, ServiceNow, etc.
+// Package ims provides basic support for Incident Management System
+// (IMS) integration, such as ServiceDesk Plus, ServiceNow, etc. It is
+// shared by the ServiceNow proxy (`integrations/servicenow2`), the IMS
+// gateway (`tools/ims-gateway`) and the `geneos incident` command, so
+// that behaviour, and the tests of it, are in one place:
+//
+// Client side, for programs that send incidents to a gateway or proxy:
+//
+//   - [BuildIncident] and [ProcessActionGroup] build the fields of an
+//     incident from the `defaults` and `profiles` configuration, with
+//     the `match`, `nomatch`, `replace`, `select` and `field` expansions
+//   - [Connect] and [NewClient] create clients for the configured URLs
+//   - [Try] sends a request to each URL in turn, deciding which failures
+//     are worth trying the next URL for ([Retryable], [DescribeError])
+//
+// Server side, for programs that receive incidents:
+//
+//   - [Serve] and [NewHandler] provide the HTTP server, with token
+//     authentication, request logging, panic recovery and request size
+//     limits. Handlers use [RequestContext] and report the outcome in the
+//     [Response] in the request context, which is logged
+//   - [Transformation] applies the per-state changes to an incident
+//     before it is sent on
+//   - [HTTPError], [UpstreamError] and [StatusFor] carry the status code
+//     to return for a failure
+//
+// The ServiceNow Table API client, the lookup, create and update of
+// records and the configuration of tables are in the subpackage
+// [github.com/itrs-group/cordial/pkg/ims/snow].
 package ims
 
 import (
@@ -28,6 +55,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httputil"
+	"regexp"
 	"strings"
 	"time"
 
@@ -92,8 +120,9 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 	if strings.HasPrefix(clientConfig.URL, "https:") {
 		skip := clientConfig.TLS.SkipVerify
 		roots, err := x509.SystemCertPool()
-		if err != nil {
+		if err != nil || roots == nil {
 			log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
+			roots = x509.NewCertPool()
 		}
 
 		if !skip {
@@ -123,6 +152,11 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 			TLSClientConfig:     tcc,
 		},
 		Timeout: timeout,
+		// never follow redirects, as a redirected POST is silently
+		// turned into a GET without the data
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
 
 	if clientConfig.Trace {
@@ -151,7 +185,7 @@ func NewClient(clientConfig *ClientConfig) *rest.Client {
 //
 // The configuration keys suported are:
 //
-//   - `url`: a list of URLs to connect to, e.g. `["https://ims1.example.com/api", "https://ims2.example.com/api"]`. The IMS type (e.g. `snow`) will be appended, as required by `ims-gateway`, to the URL when creating the client, so the actual URLs used will be `https://ims1.example.com/api/snow` and `https://ims2.example.com/api/snow`.
+//   - `url`: a list of URLs to connect to, e.g. `["https://ims1.example.com/api", "https://ims2.example.com/api"]`. If `imsType` is not empty it (e.g. `snow`) will be appended, as required by `ims-gateway`, to the URL when creating the client, so the actual URLs used will be `https://ims1.example.com/api/snow` and `https://ims2.example.com/api/snow`.
 //   - `authentication.token`: the token to use for authentication, e.g. `abc123`
 //   - `timeout`: the timeout for the connection, e.g. `10s`
 //   - `tls.skip-verify`: whether to skip TLS verification, e.g. `true`
@@ -170,7 +204,10 @@ func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 
 		for _, r := range urls {
 			ccf := common
-			ccf.URL = r + "/" + imsType
+			ccf.URL = strings.TrimRight(r, "/")
+			if imsType != "" {
+				ccf.URL += "/" + imsType
+			}
 
 			if !yield(NewClient(&ccf)) {
 				return
@@ -189,7 +226,26 @@ func CorrelationID(data string) string {
 	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
 }
 
+var redactions = []struct {
+	re   *regexp.Regexp
+	with string
+}{
+	{regexp.MustCompile(`(?im)^((?:Proxy-)?Authorization:).*$`), "$1 [redacted]"},
+	{regexp.MustCompile(`(?i)\b(client_secret|refresh_token|access_token|password|code)=[^&\s]*`), "$1=[redacted]"},
+	{regexp.MustCompile(`(?i)"(client_secret|refresh_token|access_token|password)"\s*:\s*"[^"]*"`), `"$1":"[redacted]"`},
+}
+
+// redact removes credentials from a dump of a request or response, so
+// that tracing can be used without leaking them to logs.
+func redact(s string) string {
+	for _, r := range redactions {
+		s = r.re.ReplaceAllString(s, r.with)
+	}
+	return s
+}
+
 // LogTransport is a transport for tracing HTTP requests and responses.
+// Credentials are redacted from the output.
 type LogTransport struct {
 	Transport http.RoundTripper
 }
@@ -201,7 +257,7 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		log.Error("Error dumping request", slog.Any("error", err))
 	} else {
-		log.Debug("REQUEST:\n%s", slog.String("request", string(reqDump)))
+		log.Debug("REQUEST", slog.String("request", redact(string(reqDump))))
 	}
 
 	// Perform the actual request
@@ -215,7 +271,7 @@ func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		log.Error("Error dumping response", slog.Any("error", err))
 	} else {
-		log.Debug("RESPONSE:\n%s", slog.String("response", string(respDump)))
+		log.Debug("RESPONSE", slog.String("response", redact(string(respDump))))
 	}
 
 	return resp, nil

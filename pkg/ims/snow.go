@@ -30,31 +30,31 @@ package ims
 
 const (
 	// ServiceNow fields
-	SNOW_CMDB_CI_FIELD     = "cmdb_ci"
+	SNOW_CMDB_CI_FIELD = "cmdb_ci"
 	// SNOW_CORRELATION_FIELD TODO: Describe its purpose and intended use.
 	SNOW_CORRELATION_FIELD = "correlation_id"
 	// SNOW_SYS_ID_FIELD TODO: Describe its purpose and intended use.
-	SNOW_SYS_ID_FIELD      = "sys_id"
+	SNOW_SYS_ID_FIELD = "sys_id"
 	// SNOW_USER_NAME_FIELD TODO: Describe its purpose and intended use.
-	SNOW_USER_NAME_FIELD   = "user_name"
+	SNOW_USER_NAME_FIELD = "user_name"
 
 	// ServiceNow tables
 	SNOW_SYS_USER_TABLE_DEFAULT = "sys_user"
 	// SNOW_INCIDENT_TABLE_DEFAULT TODO: Describe its purpose and intended use.
 	SNOW_INCIDENT_TABLE_DEFAULT = "incident"
 	// SNOW_CMDB_TABLE_DEFAULT TODO: Describe its purpose and intended use.
-	SNOW_CMDB_TABLE_DEFAULT     = "cmdb_ci"
+	SNOW_CMDB_TABLE_DEFAULT = "cmdb_ci"
 
 	// internal fields
-	SNOW_CORRELATION     = "__snow_correlation"
+	SNOW_CORRELATION = "__snow_correlation"
 	// SNOW_CMDB_CI_DEFAULT TODO: Describe its purpose and intended use.
 	SNOW_CMDB_CI_DEFAULT = "__snow_cmdb_ci_default"
 	// SNOW_CMDB_SEARCH TODO: Describe its purpose and intended use.
-	SNOW_CMDB_SEARCH     = "__snow_cmdb_search"
+	SNOW_CMDB_SEARCH = "__snow_cmdb_search"
 	// SNOW_CMDB_TABLE TODO: Describe its purpose and intended use.
-	SNOW_CMDB_TABLE      = "__snow_cmdb_table"
+	SNOW_CMDB_TABLE = "__snow_cmdb_table"
 	// SNOW_INCIDENT_TABLE TODO: Describe its purpose and intended use.
-	SNOW_INCIDENT_TABLE  = "__snow_table"
+	SNOW_INCIDENT_TABLE = "__snow_table"
 )
 
 // SnowResult is the response from ServiceNow. It contains the results

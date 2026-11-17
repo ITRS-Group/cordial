@@ -19,6 +19,8 @@ package ims
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -57,19 +59,29 @@ type Response struct {
 // writing successful responses. The caller should handle writing error
 // responses separately if needed.
 func WriteJSONResponse(w http.ResponseWriter, r *http.Request, status int) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	resp := r.Context().Value(ContextKeyResponse)
-	if resp == nil {
-		return nil // no response to write, but not an error
-	}
-	response, ok := resp.(*Response)
-	if !ok {
-		return nil // response in context is not of expected type, but not an error
+	response, ok := r.Context().Value(ContextKeyResponse).(*Response)
+	if !ok || response == nil {
+		// without a response there is nothing to send, so do not send
+		// the status the caller wanted as it would imply a result
+		err := errors.New("no response in request context")
+		log.Error("cannot write response", slog.Any("error", err), slog.Int("status", status), slog.String("path", r.URL.Path))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return err
 	}
 	response.EndTime = time.Now()
 	response.Duration = response.EndTime.Sub(response.StartTime)
-	if err := json.NewEncoder(w).Encode(response); err != nil {
+
+	b, err := json.Marshal(response)
+	if err != nil {
+		log.Error("cannot encode response", slog.Any("error", err), slog.String("path", r.URL.Path))
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return err
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if _, err = w.Write(append(b, '\n')); err != nil {
+		log.Error("cannot write response", slog.Any("error", err), slog.String("path", r.URL.Path))
 		return err
 	}
 	return nil

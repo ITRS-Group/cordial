@@ -107,3 +107,66 @@ func TestClientPostPutAndDelete(t *testing.T) {
 		t.Fatalf("DELETE Do() error = %v", err)
 	}
 }
+
+func TestClientHTTPErrorIsTyped(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "nope", http.StatusBadGateway)
+	}))
+	defer server.Close()
+	client := NewClient(BaseURLString(server.URL))
+
+	for name, call := range map[string]func() (*http.Response, error){
+		"get":    func() (*http.Response, error) { return client.Get(context.Background(), "/x", nil, nil) },
+		"post":   func() (*http.Response, error) { return client.Post(context.Background(), "/x", "{}", nil) },
+		"put":    func() (*http.Response, error) { return client.Put(context.Background(), "/x", "{}", nil) },
+		"delete": func() (*http.Response, error) { return client.Delete(context.Background(), "/x", nil) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			resp, err := call()
+			var he *HTTPError
+			if !errors.As(err, &he) {
+				t.Fatalf("error = %v, want *HTTPError", err)
+			}
+			if he.StatusCode != http.StatusBadGateway || !strings.Contains(string(he.Body), "nope") || resp == nil {
+				t.Errorf("HTTPError = %+v, resp = %v", he, resp)
+			}
+			if !strings.Contains(err.Error(), "502") || !strings.Contains(err.Error(), "nope") {
+				t.Errorf("Error() = %q", err.Error())
+			}
+		})
+	}
+}
+
+func TestClientConnectionErrorIsNotHTTPError(t *testing.T) {
+	server := httptest.NewServer(http.NotFoundHandler())
+	url := server.URL
+	server.Close()
+
+	_, err := NewClient(BaseURLString(url)).Post(context.Background(), "/x", "{}", nil)
+	var he *HTTPError
+	if err == nil || errors.As(err, &he) {
+		t.Fatalf("error = %v, want a non-HTTPError failure", err)
+	}
+}
+
+func TestClientDecodesTextResponses(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = w.Write([]byte("hello"))
+	}))
+	defer server.Close()
+	client := NewClient(BaseURLString(server.URL))
+
+	var s string
+	if _, err := client.Get(context.Background(), "/", nil, &s); err != nil || s != "hello" {
+		t.Errorf("string response = %q, %v", s, err)
+	}
+	var b []byte
+	if _, err := client.Get(context.Background(), "/", nil, &b); err != nil || string(b) != "hello" {
+		t.Errorf("[]byte response = %q, %v", b, err)
+	}
+	var m map[string]string
+	if _, err := client.Get(context.Background(), "/", nil, &m); err == nil {
+		t.Error("decoding text into a map should fail")
+	}
+}

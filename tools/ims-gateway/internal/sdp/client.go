@@ -21,15 +21,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log/slog"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
+	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
 
@@ -53,9 +53,7 @@ type client struct {
 // Therefore, if no valid token is found, this function will return an
 // error rather than prompting for the authorization code.
 func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *client, err error) {
-	var tcc *tls.Config
-
-	token, err := loadToken()
+	token, err := tokenLoader()
 	if err != nil {
 		return
 	}
@@ -68,15 +66,16 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		return
 	}
 
-	auth, err := url.Parse(config.Get[string](sdpCf, sdpCf.Join("datacentres", config.Get[string](sdpCf, "datacentre"), "auth")))
+	datacentre := config.Get[string](sdpCf, "datacentre")
+	authURL := config.Get[string](sdpCf, sdpCf.Join("datacentres", datacentre, "auth"))
+	apiURL := config.Get[string](sdpCf, sdpCf.Join("datacentres", datacentre, "api"))
+
+	auth, err := validURL("auth", authURL, datacentre)
 	if err != nil {
 		return
 	}
-
-	if auth.Scheme == "https" {
-		tcc = &tls.Config{
-			InsecureSkipVerify: config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify")),
-		}
+	if _, err = validURL("api", apiURL, datacentre); err != nil {
+		return
 	}
 
 	conf := &Config{
@@ -97,30 +96,29 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		timeout = 10 * time.Second
 	}
 
-	hc := &http.Client{
-		Transport: &http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
-			MaxIdleConnsPerHost:   10,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			TLSClientConfig:       tcc,
-		},
-		Timeout: timeout,
-	}
-
+	var rt http.RoundTripper = sharedTransport(config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify")))
 	if config.Get[bool](sdpCf, "trace") {
-		hc.Transport = &LogTransport{
-			Transport: hc.Transport.(*http.Transport),
-		}
+		rt = &ims.LogTransport{Transport: rt}
 	}
 
-	hc = oauth2.NewClient(context.WithValue(context.Background(), oauth2.HTTPClient, hc), NewSDPTokenSource(ctx, conf, token))
+	// token refreshes must use the same transport and timeout as the
+	// API requests
+	base := &http.Client{Transport: rt, Timeout: timeout}
+	ctx = context.WithValue(ctx, oauth2.HTTPClient, base)
+
+	hc := oauth2.NewClient(ctx, NewSDPTokenSource(ctx, conf, token))
+	// the OAuth client does not inherit the settings of the base client
+	hc.Timeout = timeout
+	// never follow redirects, as a redirected POST or PUT would be
+	// silently turned into a GET without the data
+	hc.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
 
 	c = &client{
 		Client: rest.NewClient(
 			rest.HTTPClient(hc),
-			rest.BaseURLString(config.Get[string](sdpCf, sdpCf.Join("datacentres", config.Get[string](sdpCf, "datacentre"), "api"))),
+			rest.BaseURLString(apiURL),
 			rest.SetupRequestFunc(func(req *http.Request, c *rest.Client, body []byte) {
 				req.Header.Set("Accept", "application/vnd.manageengine.sdp.v3+json")
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -131,36 +129,40 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	return
 }
 
-// debug transport for tracing
-
-// LogTransport TODO: Describe its purpose and intended use.
-type LogTransport struct {
-	Transport http.RoundTripper
+// validURL parses and checks a datacentre URL
+func validURL(name, value, datacentre string) (*url.URL, error) {
+	u, err := url.Parse(value)
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s url for datacentre %q: %w", name, datacentre, err)
+	}
+	if u.Scheme == "" || u.Host == "" {
+		return nil, fmt.Errorf("invalid %s url %q for datacentre %q: scheme and host are required", name, value, datacentre)
+	}
+	return u, nil
 }
 
-// RoundTrip TODO: Document its behavior, inputs, and effects.
-func (t *LogTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	// Log the request
-	reqDump, err := httputil.DumpRequestOut(req, true)
-	if err != nil {
-		log.Error("Error dumping request", slog.Any("error", err))
-	} else {
-		log.Debug("REQUEST", slog.String("dump", string(reqDump)))
+var transportMutex sync.Mutex
+var transports = make(map[bool]*http.Transport)
+
+// sharedTransport returns a transport that is shared by all clients, as
+// a new client is created for each request and each transport holds its
+// own pool of connections.
+func sharedTransport(skipVerify bool) *http.Transport {
+	transportMutex.Lock()
+	defer transportMutex.Unlock()
+
+	if t, ok := transports[skipVerify]; ok {
+		return t
 	}
 
-	// Perform the actual request
-	resp, err := t.Transport.RoundTrip(req)
-	if err != nil {
-		return nil, err
+	t := &http.Transport{
+		Proxy:                 http.ProxyFromEnvironment,
+		MaxIdleConnsPerHost:   10,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{InsecureSkipVerify: skipVerify},
 	}
-
-	// Log the response
-	respDump, err := httputil.DumpResponse(resp, true)
-	if err != nil {
-		log.Error("Error dumping response", slog.Any("error", err))
-	} else {
-		log.Debug("RESPONSE", slog.String("dump", string(respDump)))
-	}
-
-	return resp, nil
+	transports[skipVerify] = t
+	return t
 }

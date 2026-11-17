@@ -30,7 +30,7 @@ type reqOptions struct {
 	sysID   string
 }
 
-// Option TODO: Describe its purpose and intended use.
+// Option sets a parameter of a request to the ServiceNow Table API
 type Option func(*reqOptions)
 
 func evalReqOptions(options ...Option) (opts *reqOptions) {
@@ -41,28 +41,29 @@ func evalReqOptions(options ...Option) (opts *reqOptions) {
 	return
 }
 
-// Limit TODO: Document its behavior, inputs, and effects.
+// Limit sets the `sysparm_limit` parameter
 func Limit(limit int) Option {
 	return func(ro *reqOptions) {
 		ro.limit = fmt.Sprintf("%d", limit)
 	}
 }
 
-// Fields TODO: Document its behavior, inputs, and effects.
+// Fields sets the `sysparm_fields` parameter, a comma separated list of
+// field names
 func Fields(fields string) Option {
 	return func(ro *reqOptions) {
 		ro.fields = fields
 	}
 }
 
-// Offset TODO: Document its behavior, inputs, and effects.
+// Offset sets the `sysparm_offset` parameter
 func Offset(offset string) Option {
 	return func(ro *reqOptions) {
 		ro.offset = offset
 	}
 }
 
-// Query TODO: Document its behavior, inputs, and effects.
+// Query sets the `sysparm_query` parameter, an encoded query
 func Query(query string) Option {
 	return func(ro *reqOptions) {
 		ro.query = query
@@ -76,9 +77,15 @@ func Display(display string) Option {
 	}
 }
 
-// SysID TODO: Document its behavior, inputs, and effects.
+// SysID selects a single record, by appending its sys_id to the path
 func SysID(sysID string) Option {
 	return func(ro *reqOptions) {
 		ro.sysID = sysID
 	}
+}
+
+// FieldsOf returns the value of the [Fields] option in options, which is
+// empty if it is not set.
+func FieldsOf(options ...Option) string {
+	return evalReqOptions(options...).fields
 }

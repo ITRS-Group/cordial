@@ -19,6 +19,7 @@ package imscmd
 
 import (
 	_ "embed"
+	"fmt"
 	"log/slog"
 
 	"github.com/spf13/cobra"
@@ -62,9 +63,7 @@ var incidentCmd = &cobra.Command{
 // named `${HOME}/.config/geneos/ims.yaml` and contain the relevant
 // configuration for this subsystem, such as gateway types, URLs and
 // profiles.
-func imsLoadConfigFile(name string, configFile string) (cf *config.Config) {
-	var err error
-
+func imsLoadConfigFile(name string, configFile string) (cf *config.Config, err error) {
 	if name == "" {
 		name = "ims"
 	}
@@ -77,7 +76,10 @@ func imsLoadConfigFile(name string, configFile string) (cf *config.Config) {
 		config.MustExist(),
 	)
 	if err != nil {
-		log.Error("failed to load a configuration file from any expected location", slog.Any("error", err))
+		return nil, fmt.Errorf("failed to load configuration file %q from any expected location: %w", name+".yaml", err)
+	}
+	if cf == nil {
+		return nil, fmt.Errorf("failed to load configuration file %q", name+".yaml")
 	}
 	log.Debug("loaded config file",
 		slog.String("path",
@@ -90,5 +92,5 @@ func imsLoadConfigFile(name string, configFile string) (cf *config.Config) {
 		),
 	)
 
-	return
+	return cf, nil
 }

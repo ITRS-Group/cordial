@@ -1,6 +1,8 @@
 package sdp
 
 import (
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -8,35 +10,20 @@ import (
 	"github.com/itrs-group/cordial/pkg/ims"
 )
 
+// get fetches a list of requests from ServiceDesk Plus
 func get(w http.ResponseWriter, r *http.Request) {
-	rv := r.Context().Value(ims.ContextKeyResponse)
-	response, ok := rv.(*ims.Response)
+	cf, response, ok := ims.RequestContext(w, r)
 	if !ok {
-		log.Debug("response not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	log.Debug("handling request", slog.String("path", r.URL.Path))
 
-	v := r.Context().Value(ims.ContextKeyConfig)
-	if v == nil {
-		log.Debug("config not found in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	cf, ok := v.(*config.Config)
-	if !ok {
-		log.Debug("config not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
 	sdpCf := cf.Sub("sdp")
 	c, err := newClient(r.Context(), sdpCf, "SDP.requests.ALL")
 	if err != nil {
-		log.Debug("error creating SDP client", slog.Any("error", err))
-		http.Error(w, "internal server error", http.StatusInternalServerError)
+		log.Error("cannot create ServiceDesk Plus client", slog.Any("error", err))
+		ims.WriteError(w, r, response, http.StatusInternalServerError, fmt.Errorf("cannot create ServiceDesk Plus client: %w", err))
 		return
 	}
 
@@ -50,11 +37,15 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := c.getRequests(r.Context(), sdpCf, query)
 	if err != nil {
-		response.Error = err.Error()
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		ims.WriteError(w, r, response, ims.StatusFor(err, http.StatusBadGateway), err)
+		return
+	}
+	if err = checkListResponse(resp); err != nil {
+		ims.WriteError(w, r, response, ims.StatusFor(err, http.StatusBadGateway), err)
 		return
 	}
 
+	response.Action = "Retrieved"
 	response.Status = resp.ResponseStatus[0].Status
 	response.StatusCode = resp.ResponseStatus[0].StatusCode
 
@@ -62,6 +53,9 @@ func get(w http.ResponseWriter, r *http.Request) {
 	response.DataTable = append(response.DataTable, columns) // add column headers as first row
 
 	for _, r := range resp.Requests {
+		if r == nil {
+			continue
+		}
 		c := config.New(config.WithDefaults(*r, "json"))
 		row := make([]string, len(columns))
 		for j, col := range columns {
@@ -72,3 +66,34 @@ func get(w http.ResponseWriter, r *http.Request) {
 	response.RawResponse = resp.Requests
 	ims.WriteJSONResponse(w, r, http.StatusOK)
 }
+
+// checkListResponse returns an error unless resp is a successful
+// response to a request list, which must include a status
+func checkListResponse(resp *RequestGetListResponse) error {
+	if resp == nil || len(resp.ResponseStatus) == 0 {
+		return &ims.HTTPError{Code: http.StatusBadGateway, Message: "ServiceDesk Plus returned no response status"}
+	}
+	if status := resp.ResponseStatus[0]; status.StatusCode != 2000 {
+		return &ims.HTTPError{Code: http.StatusBadGateway, Message: fmt.Sprintf("ServiceDesk Plus API error: %s (%d)", status.Status, status.StatusCode)}
+	}
+	return nil
+}
+
+// checkStatus returns an error if a response from ServiceDesk Plus,
+// which should include a `response_status` object, reports anything
+// other than success. A response without a status is accepted as it
+// was not a failure.
+func checkStatus(cf *config.Config) error {
+	if cf == nil {
+		return &ims.HTTPError{Code: http.StatusBadGateway, Message: "empty response from ServiceDesk Plus"}
+	}
+	if !cf.IsSet(cf.Join("response_status", "status_code")) {
+		return nil
+	}
+	if code := config.Get[int](cf, cf.Join("response_status", "status_code")); code != 2000 {
+		return &ims.HTTPError{Code: http.StatusBadGateway, Message: fmt.Sprintf("ServiceDesk Plus API error: %s (%d)", config.Get[string](cf, cf.Join("response_status", "status")), code)}
+	}
+	return nil
+}
+
+var errNoToken = errors.New("no ServiceDesk Plus token found, run `ims-gateway sdp-auth` to authenticate")

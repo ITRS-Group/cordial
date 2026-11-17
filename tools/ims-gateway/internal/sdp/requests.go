@@ -22,9 +22,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
 )
 
 // handle request endpoints
@@ -67,13 +69,15 @@ func (c *client) getRequests(ctx context.Context, cf *config.Config, listInfo an
 		return
 	}
 
-	_, err = c.Get(ctx, endpoint, v.Encode(), &response)
+	if _, err = c.Get(ctx, endpoint, v.Encode(), &response); err != nil {
+		return nil, ims.UpstreamError("ServiceDesk Plus GET requests failed", err)
+	}
 	return
 }
 
 func (c *client) createRequest(ctx context.Context, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
 	var b bytes.Buffer
-	var resp string
+	var resp *json.RawMessage
 
 	if err = sdpCf.Write("sdp",
 		config.Writer(&b),
@@ -90,10 +94,24 @@ func (c *client) createRequest(ctx context.Context, sdpCf *config.Config, lookup
 		return
 	}
 
-	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp)
+	if _, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp); err != nil {
+		return nil, ims.UpstreamError("ServiceDesk Plus create request failed", err)
+	}
 
-	response = config.New(config.WithDefaults([]byte(resp), "json"))
-	return
+	return decodeStatus(resp)
+}
+
+// decodeStatus converts the body of a response from ServiceDesk Plus
+// to a config and checks that it does not report a failure
+func decodeStatus(resp *json.RawMessage) (response *config.Config, err error) {
+	if resp == nil {
+		return nil, &ims.HTTPError{Code: http.StatusBadGateway, Message: "empty response from ServiceDesk Plus"}
+	}
+	response = config.New(config.WithDefaults(*resp, "json"))
+	if err = checkStatus(response); err != nil {
+		return nil, err
+	}
+	return response, nil
 }
 
 func (c *client) editRequest(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
@@ -117,15 +135,11 @@ func (c *client) editRequest(ctx context.Context, id int64, sdpCf *config.Config
 		return
 	}
 
-	_, err = c.Put(ctx, endpoint, "input_data="+b.String(), &resp)
-
-	if resp == nil {
-		err = fmt.Errorf("empty response from API")
-		return
+	if _, err = c.Put(ctx, endpoint, "input_data="+b.String(), &resp); err != nil {
+		return nil, ims.UpstreamError("ServiceDesk Plus edit request failed", err)
 	}
 
-	response = config.New(config.WithDefaults(*resp, "json"))
-	return
+	return decodeStatus(resp)
 }
 
 func (c *client) addNote(ctx context.Context, id int64, sdpCf *config.Config, lookup map[string]string) (response *config.Config, err error) {
@@ -152,13 +166,9 @@ func (c *client) addNote(ctx context.Context, id int64, sdpCf *config.Config, lo
 		return
 	}
 
-	_, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp)
-
-	if resp == nil {
-		err = fmt.Errorf("empty response from API")
-		return
+	if _, err = c.Post(ctx, endpoint, "input_data="+b.String(), &resp); err != nil {
+		return nil, ims.UpstreamError("ServiceDesk Plus add note failed", err)
 	}
 
-	response = config.New(config.WithDefaults(*resp, "json"))
-	return
+	return decodeStatus(resp)
 }

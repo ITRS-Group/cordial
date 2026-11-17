@@ -18,35 +18,57 @@ limitations under the License.
 package proxy
 
 import (
-	"encoding/json"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/DeRuina/timberjack"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/ims/control"
 	"github.com/itrs-group/cordial/pkg/logger"
-	"github.com/itrs-group/cordial/pkg/process"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
-	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
+	"github.com/itrs-group/cordial/pkg/ims/snow"
 )
 
 var daemon bool
-var logFile string
+var logFile, pidFile string
+
+// background is the control of the proxy when it is running in the
+// background, with the commands `proxy stop`, `restart`, `reload` and
+// `status`
+var background = &control.Daemon{
+	Name:        "servicenow2 proxy",
+	PIDFileName: "servicenow2.proxy.pid",
+	PIDFile:     &pidFile,
+	ConfigFile:  cmd.ConfigFile,
+	Load:        func(file string) (*config.Config, error) { return cmd.LoadConfigFileFrom("proxy", file) },
+	Check:       checkConfig,
+}
 
 func init() {
 	cmd.Cmd.AddCommand(routerCmd)
 
 	routerCmd.Flags().BoolVarP(&daemon, "daemon", "D", false, "Daemonise the proxy process")
+	routerCmd.Flags().StringVar(&pidFile, "pidfile", "", control.FlagUsage)
 	routerCmd.PersistentFlags().StringVarP(&logFile, "logfile", "l", "-", "Write logs to `file`. Use '-' for console or "+os.DevNull+" for none")
 
+	routerCmd.AddCommand(background.Commands()...)
+
 	routerCmd.Flags().SortFlags = false
+}
+
+// checkConfig checks the parts of the configuration that are specific
+// to the proxy, which is that there is a usable connection to ServiceNow
+func checkConfig(cf *config.Config) error {
+	_, err := snow.New(cf.Sub("servicenow"))
+	return err
 }
 
 var log = logger.Logger
@@ -68,8 +90,17 @@ incident submission or update flow.
 
 In normal operation the proxy starts and runs in the foreground,
 logging actions and results to stdout/stderr. If started with the
-|--daemon| flag it will background itself and no logging will be
-available.
+|--daemon| flag it will background itself, writing its log to a file, and
+only return once it is listening or has failed to start. It holds a PID
+file while it runs, which is the one given with |--pidfile|, or set as
+|server.pidfile| in the configuration, or if neither a file in the
+user's cache directory when it is a background process.
+
+A proxy running in the background is controlled by the |stop|,
+|restart|, |reload| and |status| sub-commands. |reload| makes the proxy
+read its configuration again, if it is valid, without interrupting any
+requests that are in progress. This is also done by sending the process
+the |SIGUSR1| signal. Changes to the logging settings need a restart.
 
 The proxy reads it's configuration from a YAML file, which can be
 shared with the submission client function, and uses this to look-up,
@@ -78,17 +109,36 @@ map and submit incidents.
 `, "|", "`"),
 	SilenceUsage: true,
 	Run: func(command *cobra.Command, args []string) {
-		if daemon {
-			var logArgs []string
+		// load the configuration before daemonising so that a missing or
+		// invalid file is reported to the user and not lost with the
+		// background process
+		cf, err := cmd.LoadConfigFile("proxy")
+		if err != nil {
+			log.Error("cannot start proxy", slog.Any("error", err))
+			os.Exit(1)
+		}
 
-			if logFile == "-" {
-				logArgs = append(logArgs, "--logfile", "servicenow2.proxy.log")
+		pidfile := control.ConfiguredPIDFile(cf, pidFile)
+
+		if daemon {
+			if pidfile == "" {
+				pidfile = control.DefaultPIDFile(background.PIDFileName)
 			}
 
-			if err := process.Daemon(os.Stdout, logArgs, nil, "-D", "--daemon"); err != nil {
-				log.Error("failed to daemonise process", slog.Any("error", err))
+			var logArgs []string
+			logName := logFile
+			if logFile == "-" {
+				logName = "servicenow2.proxy.log"
+				logArgs = append(logArgs, "--logfile", logName)
+			}
+
+			pid, err := control.Daemonize(pidfile, logArgs...)
+			if err != nil {
+				log.Error("failed to start proxy in the background", slog.Any("error", err), slog.String("logfile", logName))
 				os.Exit(1)
 			}
+			fmt.Println(pid)
+			return
 		}
 
 		var l slog.Level = slog.LevelInfo
@@ -97,7 +147,6 @@ map and submit incidents.
 			l = slog.LevelDebug
 		}
 
-		cf := cmd.LoadConfigFile("proxy")
 		// update logging for long running proxy
 		logger.Init(cmd.Execname,
 			logger.SetLogLevel(l),
@@ -111,102 +160,55 @@ map and submit incidents.
 			}),
 			logger.RotateOnStart(config.Get[bool](cf, cf.Join("server", "log", "rotate-on-start"))),
 		)
-		proxy(cf)
+		proxy(cf, pidfile)
 	},
 }
 
-// timestamp the start of the request
-func Timestamp() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			c.Set("starttime", time.Now())
-			return next(c)
-		}
+// endpoints returns the endpoints served by the proxy, relative to the
+// configured `server.path`
+func endpoints() []ims.Endpoint {
+	return []ims.Endpoint{
+		{Method: http.MethodGet, Path: "/{table}", Handler: withConfig(getRecords)},
+		{Method: http.MethodPost, Path: "/{table}", Handler: withConfig(acceptRecord)},
 	}
 }
 
-func proxy(cf *config.Config) {
-	e := echo.New()
-	e.HideBanner = true
-	e.HidePort = true
-
-	// pass configuration into handlers
-	// as per https://echo.labstack.com/guide/context/
-	e.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
-			cc := &snow.Context{Context: c, Conf: cf}
-			return next(cc)
+// withConfig adapts a handler that needs the configuration to the
+// context set up by the shared server
+func withConfig(h func(cf *config.Config, w http.ResponseWriter, r *http.Request)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cf, _, ok := ims.RequestContext(w, r)
+		if !ok {
+			return
 		}
-	})
-	e.Use(Timestamp())
-	e.Use(middleware.BodyDump(bodyDumpLog))
-	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == config.Get[string](cf, cf.Join("server", "authentication", "token")), nil
-	}))
+		h(cf, w, r)
+	}
+}
 
-	v2route := e.Group(config.Get[string](cf, cf.Join("server", "path")))
-
-	// GET Endpoint
-	v2route.GET("/:table", getRecords)
-
-	// POST Endpoint
-	v2route.POST("/:table", acceptRecord)
-
-	listen := config.Get[string](cf, cf.Join("server", "listen"))
-
+func proxy(cf *config.Config, pidfile string) {
 	// init connection or fail early
-	snow.ServiceNow(cf.Sub("servicenow"))
-
-	if config.Get[bool](cf, cf.Join("server", "tls", "enabled")) {
-		e.Logger.Fatal(e.StartTLS(
-			listen,
-			config.Get[[]byte](cf, cf.Join("server", "tls", "certificate")),
-			config.Get[config.Secret](cf, cf.Join("server", "tls", "private-key")),
-		))
+	if _, err := snow.New(cf.Sub("servicenow")); err != nil {
+		log.Error("cannot set up connection to ServiceNow", slog.Any("error", err))
+		os.Exit(1)
 	}
 
-	e.Logger.Fatal(e.Start(listen))
-}
-
-func bodyDumpLog(c echo.Context, reqBody, resBody []byte) {
-	var reqMethod string
-	var resStatus int
-
-	cf := c.(*snow.Context).Conf
-
-	// request and response object
-	req := c.Request()
-	res := c.Response()
-	// rendering variables for response status and request method
-	resStatus = res.Status
-	reqMethod = req.Method
-
-	// print formatting the custom logger tailored for DEVELOPMENT environment
-	var result map[string]string
-	var message string
-
-	if err := json.Unmarshal(resBody, &result); err == nil {
-		message = result["result"]
+	// the configuration file is recorded in the PID file, as an absolute
+	// path as it is read from other directories by the control commands
+	configFile := cmd.ConfigFile()
+	if configFile != "" {
+		if abs, err := filepath.Abs(configFile); err == nil {
+			configFile = abs
+		}
 	}
 
-	bytes_in := req.Header.Get(echo.HeaderContentLength)
-	if bytes_in == "" {
-		bytes_in = "0"
+	err := ims.ServeWith(cf, endpoints(), ims.ServeOptions{
+		PIDFile:    pidfile,
+		ConfigFile: configFile,
+		Load:       func() (*config.Config, error) { return cmd.LoadConfigFileFrom("proxy", configFile) },
+		Check:      checkConfig,
+	})
+	if err != nil {
+		log.Error("proxy failed", slog.Any("error", err))
+		os.Exit(1)
 	}
-	starttime := c.Get("starttime").(time.Time)
-	latency := time.Since(starttime)
-
-	log.Info("request completed",
-		slog.String("url", config.Get[string](cf, "servicenow.url")), // name of server (APP) with the environment
-		slog.String("protocol", req.Proto),                           // protocol
-		slog.Int("status", resStatus),                                // response status
-		// stats here
-		slog.String("bytes_in", bytes_in),
-		slog.Int64("bytes_out", res.Size),
-		slog.Float64("latency", float64(latency.Milliseconds())/1000.0),
-		slog.String("client_ip", c.RealIP()), // client IP
-		slog.String("method", reqMethod),     // request method
-		slog.String("url", req.URL.String()), // request URI (path)
-		slog.String("message", message),
-	)
 }

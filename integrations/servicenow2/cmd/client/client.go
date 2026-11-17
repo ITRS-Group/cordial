@@ -20,38 +20,23 @@ package client
 import (
 	"context"
 	"crypto/sha1"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"net/http"
 	"os"
-	"regexp"
-	"strconv"
 	"strings"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
-	"github.com/itrs-group/cordial/integrations/servicenow2/internal/snow"
 )
-
-// ActionGroup TODO: Describe its purpose and intended use.
-type ActionGroup struct {
-	If       []string          `json:"if,omitempty"`
-	Set      map[string]string `json:"set,omitempty"`
-	Unset    []string          `json:"unset,omitempty"`
-	Subgroup []ActionGroup     `json:"subgroup,omitempty"`
-	Break    []string          `json:"break,omitempty"`
-	Exit     []string          `json:"exit,omitempty"`
-}
 
 // flags
 var clientCmdProfile, clientCmdTable string
@@ -80,423 +65,139 @@ var clientCmd = &cobra.Command{
 	and environment variables to create a submission to the proxy
 	which is responsible for sending the request to the
 	ServiceNow API.
+
+	The exit code is zero only if a proxy accepted the request and
+	reported that the incident was created, updated or deliberately
+	ignored. In all other cases an error is written to standard error
+	and the exit code is non-zero.
 	`, "|", "`"),
 	SilenceUsage: true,
 	RunE: func(command *cobra.Command, args []string) (err error) {
-		// all keys with a leading "_" are passed to the proxy but the proxy
-		// then removes them in addition to other configuration settings. The expected fields are:
-		//
-		// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
-		// _correlation_id - correlation ID, which is SHA1 checksummed before use
-		//
-		// cmdb_ci or
-		// _cmdb_search - search query for cmdb_ci sys_id - or
-		// _cmdb_ci_default
-		//
-		// _subject - short description
-		// _text - long text
-
-		var defaults []ActionGroup
-		var profileGroups []ActionGroup
-		var result map[string]string
-		var incident = make(snow.Record)
-
-		cf := cmd.LoadConfigFile("client")
-
-		// inline anonymous functions so they have access to `incidents`
-		// fields and more
-		cf.SetDefaultExpandOptions(
-			// "match" environment variable against regex and return
-			// "true" or "false" or error. If the environment variable
-			// is not set or empty, return "false"
-			config.Prefix("match", func(_ map[string]any, s string, trim bool, _ ...any) (result string, err error) {
-				s = strings.TrimPrefix(s, "match:")
-				// s has the form "match:ENV:PATTERN" and PATTERN may contain ':'
-				env, pattern, found := strings.Cut(s, ":")
-				if !found || len(env) == 0 || len(pattern) == 0 {
-					return "false", fmt.Errorf("invalid args")
-				}
-
-				val, ok := os.LookupEnv(env)
-				if !ok {
-					return "false", nil
-				}
-				re, err := regexp.Compile(pattern)
-				if err != nil {
-					return "false", err
-				}
-				return fmt.Sprintf("%v", re.MatchString(val)), nil
-			}),
-
-			config.Prefix("nomatch", func(_ map[string]any, s string, trim bool, _ ...any) (result string, err error) {
-				s = strings.TrimPrefix(s, "nomatch:")
-				// s has the form "nomatch:ENV:PATTERN" and PATTERN may contain ':'
-				env, pattern, found := strings.Cut(s, ":")
-				if !found || len(env) == 0 || len(pattern) == 0 {
-					return "false", fmt.Errorf("invalid args")
-				}
-
-				val, ok := os.LookupEnv(env)
-				if !ok {
-					return "false", nil
-				}
-				re, err := regexp.Compile(pattern)
-				if err != nil {
-					return "false", err
-				}
-				return fmt.Sprintf("%v", !re.MatchString(val)), nil
-			}),
-
-			// "replace" takes a strings with four components of the
-			// form: `${replace:ENV:/PATTERN/TEXT/}` (where the `/` can
-			// be any character, but is then solely used to separate the
-			// pattern and the replacement text and must be given at the
-			// end before the closing `}`) and runs
-			// regexp.ReplaceAllString(). If the environment variable is
-			// empty or not defined, an empty string is returned. If
-			// parsing the PATTERN fails then no substitution is done
-			config.Prefix("replace", func(_ map[string]any, s string, trim bool, _ ...any) (result string, err error) {
-				s = strings.TrimPrefix(s, "replace:")
-				env, expr, found := strings.Cut(s, ":")
-				if !found || len(env) == 0 || len(expr) == 0 {
-					err = fmt.Errorf("invalid args")
-					return
-				}
-
-				result = os.Getenv(env)
-				if result == "" {
-					return
-				}
-
-				sep := expr[0:1]
-				p := strings.SplitN(expr[1:], sep, 3)
-				if len(p) != 3 || (len(p) == 3 && p[2] != "") {
-					// there must be two more separators and nothing after the second
-					err = fmt.Errorf("invalid args")
-					return
-				}
-				pattern, text := p[0], p[1]
-
-				re, err := regexp.Compile(pattern)
-				if err != nil {
-					log.Error("failed to compile regex", slog.Any("error", err))
-					return
-				}
-
-				result = re.ReplaceAllString(result, text)
-				if trim {
-					result = strings.TrimSpace(result)
-				}
-				return
-			}),
-
-			// "select" accepts an expansion (after the enclosing `${}`
-			// is removed) in the form `select[:ENV...]:[DEFAULT]` and
-			// returns the value of the first environment variable set
-			// or the last field as a static string. If the environment
-			// variable is set but an empty string then it is treated as
-			// if it were not set. To return a blank string if no
-			// environment variable is set use `${select:ENV:}` noting the
-			// colon just before the closing brace.
-			//
-			// Extend: Each ENV can be made up of multiple environment
-			// variable names concatenated with either a plus (`+`) (as
-			// a zero-length separator), two plus symbols for a single
-			// symbol in the output (`+`) or one of a space (` `), dash
-			// (`-`) or forward slash (`/`).
-			config.Prefix("select", func(_ map[string]any, s string, trim bool, _ ...any) (result string, err error) {
-				// const validSeparators = "+ /-"
-				var r strings.Builder
-
-				s = strings.TrimLeft(s, "select:")
-				envs := strings.Split(s, ":")
-				if len(envs) == 0 {
-					return
-				}
-				last := len(envs) - 1
-				def := envs[last]
-				envs = envs[:last]
-
-				var e strings.Builder
-				for _, env := range envs {
-					var envWasSet bool
-					e.Reset()
-
-					for i := 0; i < len(env); i++ {
-						switch env[i] {
-						case '+', ' ', '-', '/':
-							if e.Len() > 0 {
-								if v, ok := os.LookupEnv(e.String()); ok {
-									if len(v) > 0 {
-										r.WriteString(v)
-										envWasSet = true
-									}
-								}
-								e.Reset()
-							}
-							// only add a '+' if it's doubles up
-							if env[i] == '+' {
-								if len(env) > i+1 && env[i+1] == '+' {
-									r.WriteByte('+')
-									i++
-								}
-							} else {
-								// add the separator
-								r.WriteByte(env[i])
-							}
-						default:
-							e.WriteByte(env[i])
-						}
-					}
-
-					if e.Len() > 0 {
-						if v, ok := os.LookupEnv(e.String()); ok {
-							if len(v) > 0 {
-								r.WriteString(v)
-								envWasSet = true
-							}
-						}
-					}
-
-					if envWasSet {
-						if trim {
-							return strings.TrimSpace(r.String()), nil
-						}
-						return r.String(), nil
-					}
-
-					r.Reset()
-				}
-
-				return def, nil
-			}),
-
-			// "field" accepts an expansion (after the `${}` is removed) in the form
-			// `field[:FIELD...]:[DEFAULT]` and returns the value of the first field
-			// that is set or the last value as a plain string. To return a blank
-			// string if no field is set use `${field:FIELD:}` noting the colon just
-			// before the closing brace. In all other cases it returns an empty
-			// string.
-			config.Prefix("field", func(ci map[string]any, s string, trim bool, _ ...any) (result string, err error) {
-				s = strings.TrimPrefix(s, "field:")
-				fields := strings.Split(s, ":")
-				if len(fields) == 0 {
-					return
-				}
-				last := len(fields) - 1
-				def := fields[last]
-				fields = fields[:last]
-
-				for _, field := range fields {
-					if r, ok := incident[field]; ok {
-						if trim {
-							return strings.TrimSpace(r), nil
-						}
-						return r, nil
-					}
-				}
-				return def, nil
-			}),
-		)
-
-		if err = cf.UnmarshalKey("defaults", &defaults, config.NoExpand()); err != nil {
-			log.Error("failed to unmarshal defaults", slog.Any("error", err))
-			os.Exit(1)
-		}
-		for _, g := range defaults {
-			if processActionGroup(cf, g, incident) {
-				break
-			}
+		cf, err := cmd.LoadConfigFile("client")
+		if err != nil {
+			return err
 		}
 
-		b, _ := json.MarshalIndent(incident, "", "    ")
-		log.Debug("incident fields after processing defaults", slog.String("fields", string(b)))
-
-		if clientCmdProfile == "" {
-			var ok bool
-			if clientCmdProfile, ok = incident[proxy.PROFILE]; !ok {
-				clientCmdProfile = "default"
-			}
-		}
-
-		if err = cf.UnmarshalKey(cf.Join("profiles", clientCmdProfile), &profileGroups, config.NoExpand()); err != nil {
-			log.Error("failed to unmarshal profile groups", slog.Any("error", err))
-			os.Exit(1)
-		}
-		for _, g := range profileGroups {
-			log.Debug("processing profile", slog.String("profile", clientCmdProfile), slog.Any("group", g))
-			if processActionGroup(cf, g, incident) {
-				break
-			}
-		}
-
-		b, _ = json.MarshalIndent(incident, "", "    ")
-		log.Debug("incident fields after processing profile", slog.String("fields", string(b)))
-
-		// command line args can replace defaults and config file settings.
-		// parse key value pairs as fields for the request, and for now ignore
-		// everything else
-		for _, arg := range args {
-			k, v, found := strings.Cut(arg, "=")
-			if !found {
-				// silently ignore
-				continue
-			}
-			if v == "" {
-				delete(incident, k)
-			} else {
-				incident[k] = v
-			}
-		}
-
-		// check correlation ID, prefer a "raw" ID
-		if _, ok := incident[proxy.SNOW_CORRELATION_ID]; !ok {
-			if id, ok := incident[proxy.RAW_CORRELATION_ID]; ok {
-				incident[proxy.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
-			}
-		}
-		// drop internal string either way
-		delete(incident, proxy.RAW_CORRELATION_ID)
-
-		// iterate through proxy urls
-		for _, r := range config.Get[[]string](cf, cf.Join("proxy", "url")) {
-			rc := newRestClient(cf, r)
-
-			if clientCmdTable == "" {
-				var ok bool
-				if clientCmdTable, ok = incident[proxy.INCIDENT_TABLE]; !ok {
-					clientCmdTable = proxy.SNOW_INCIDENT_TABLE
-				}
-			}
-			_, err = rc.Post(context.Background(), clientCmdTable, incident, &result)
-			if err != nil {
-				log.Debug("connection error, trying next proxy (if any)", slog.Any("error", err))
-				continue
-			}
-
-			if result["action"] == "Failed" {
-				log.Error("failed to create event", slog.String("action", result["action"]), slog.String("host", result["host"]))
-				os.Exit(1)
-			}
-
-			if !clientCmdQuiet {
-				fmt.Println(result["result"])
-			}
-			break
-		}
-
-		return
+		return submit(command.Context(), cf, submitOptions{
+			profile: clientCmdProfile,
+			table:   clientCmdTable,
+			quiet:   clientCmdQuiet,
+		}, args, os.Stdout)
 	},
 }
 
-// processActionGroup evaluates the SnowClientConfig structure and if
-// the caller should stop processing (break) then returns `true`. The
-// evaluation is in the following order:
-//
-//   - `if`: one or more strings that are evaluated and the results
-//     parsed as a Go boolean (using [strconv.ParseBool]).
-//     As soon as any `if` returns a false value, evaluation stops
-//     and the function returns false
-//   - `set`: an object that sets the fields, unordered, to the value
-//     passed through expansion with [config.ExpandString]
-//   - `unset`: unset the list of field names
-//   - `subgroup`: evaluate a sub-group, terminating evaluation if the
-//     group includes `break` (after evaluating any `if` actions as true)
-//   - `break`: break returns true to the caller, allow them to stop
-//     processing early. This is used to stop evaluation in a parent
-//   - `exit`: stops further processing and exits the program immediately with
-//     an exit code given. This is used to stop processing in a parent
-//     when the child group has done everything needed and no further
-//     processing is required.
-func processActionGroup(cf *config.Config, ag ActionGroup, incident snow.Record) bool {
-	for _, i := range ag.If {
-		if b, err := strconv.ParseBool(config.Expand[string](cf, i)); err != nil || !b {
-			return false
-		}
-	}
-
-	for field, value := range ag.Set {
-		incident[field] = config.Expand[string](cf, value)
-	}
-
-	for _, field := range ag.Unset {
-		delete(incident, field)
-	}
-
-	for _, t := range ag.Subgroup {
-		if processActionGroup(cf, t, incident) {
-			return false
-		}
-	}
-
-	for _, i := range ag.Break {
-		if b, _ := strconv.ParseBool(config.Expand[string](cf, i)); b {
-			return true
-		}
-	}
-
-	for _, i := range ag.Exit {
-		if code, err := strconv.ParseInt(config.Expand[string](cf, i), 10, 0); err == nil {
-			os.Exit(int(code))
-		} else {
-			log.Error("invalid exit code, exiting with exit code 1", slog.String("code", i), slog.Any("error", err))
-			os.Exit(1)
-		}
-	}
-
-	return false
+type submitOptions struct {
+	profile string
+	table   string
+	quiet   bool
 }
 
-// newRestClient creates a new rest.Client for the given URL and
-// configuration. The client is NOT cached as each execution is a single
-// request to the first remote proxy that responds.
-func newRestClient(cf *config.Config, r string) *rest.Client {
-	var tcc *tls.Config
+// submit builds an incident from the configuration, environment and
+// arguments and sends it to the first proxy that gives an answer. It
+// returns an error unless a proxy reports that the incident was
+// created, updated or deliberately ignored.
+//
+// The `defaults` and profile action groups, and the expansion functions
+// available to them, are those of [ims.ProcessActionGroup].
+//
+// All keys with a leading "_" are passed to the proxy but the proxy
+// then removes them in addition to other configuration settings. The
+// expected fields are:
+//
+// correlation_id - correlation ID, which is left unchanged before use, or if not defined,
+// _correlation_id - correlation ID, which is SHA1 checksummed before use
+//
+// cmdb_ci or
+// _cmdb_search - search query for cmdb_ci sys_id - or
+// _cmdb_ci_default
+//
+// _subject - short description
+// _text - long text
+func submit(ctx context.Context, cf *config.Config, opts submitOptions, args []string, out io.Writer) (err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
-	if strings.HasPrefix(r, "https:") {
-		skip := config.Get[bool](cf, cf.Join("proxy", "tls", "skip-verify"))
-		roots, err := x509.SystemCertPool()
-		if err != nil {
-			log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
+	incident := make(ims.Values)
+
+	if err = ims.BuildIncident(cf, incident, opts.profile, proxy.PROFILE); err != nil {
+		return err
+	}
+
+	// command line args can replace defaults and config file settings.
+	// parse key value pairs as fields for the request
+	for _, arg := range args {
+		k, v, found := strings.Cut(arg, "=")
+		if !found || k == "" {
+			log.Warn("ignoring argument that is not in the form field=value", slog.String("argument", arg))
+			continue
 		}
-
-		if !skip {
-			if chain := config.Get[[]byte](cf, cf.Join("proxy", "tls", "chain")); len(chain) != 0 {
-				if ok := roots.AppendCertsFromPEM(chain); !ok {
-					log.Warn("error reading cert chain")
-				}
-			}
-		}
-
-		tcc = &tls.Config{
-			RootCAs:            roots,
-			InsecureSkipVerify: skip,
+		if v == "" {
+			delete(incident, k)
+		} else {
+			incident[k] = v
 		}
 	}
 
-	timeout := config.Get[time.Duration](cf, cf.Join("proxy", "timeout"))
-	if timeout <= 0 {
-		timeout = 10 * time.Second
+	// check correlation ID, prefer a "raw" ID
+	if _, ok := incident[proxy.SNOW_CORRELATION_ID]; !ok {
+		if id, ok := incident[proxy.RAW_CORRELATION_ID]; ok {
+			incident[proxy.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
+		}
+	}
+	// drop internal string either way
+	delete(incident, proxy.RAW_CORRELATION_ID)
+
+	table := opts.table
+	if table == "" {
+		var ok bool
+		if table, ok = incident[proxy.INCIDENT_TABLE]; !ok {
+			table = proxy.SNOW_INCIDENT_TABLE
+		}
 	}
 
-	// use most of the default transport settings
-	hc := &http.Client{
-		Transport: &http.Transport{
-			Proxy:               http.ProxyFromEnvironment,
-			TLSHandshakeTimeout: 10 * time.Second,
-			TLSClientConfig:     tcc,
-		},
-		Timeout: timeout,
+	var result proxy.Response
+	err = ims.Try(cf.Sub("proxy"), "", func(rc *rest.Client) error {
+		result = proxy.Response{}
+		if _, err := rc.Post(ctx, table, incident, &result); err != nil {
+			return err
+		}
+		return checkResponse(result)
+	})
+	if err != nil {
+		return noProxyError(err)
 	}
 
-	return rest.NewClient(
-		rest.BaseURLString(r),
-		rest.HTTPClient(hc),
-		rest.SetupRequestFunc(func(req *http.Request, _ *rest.Client, _ []byte) {
-			req.Header.Add(
-				"Authorization",
-				fmt.Sprintf("Bearer %s", config.Get[string](cf, config.Join("proxy", "authentication", "token"))),
-			)
-		}),
-	)
+	if !opts.quiet {
+		fmt.Fprintln(out, result.Result)
+	}
+
+	return nil
+}
+
+// noProxyError adds the name of the configuration key to the error if
+// there are no proxies configured
+func noProxyError(err error) error {
+	if errors.Is(err, ims.ErrNoURL) {
+		return fmt.Errorf("no proxy URL configured (%s)", config.Join("proxy", "url"))
+	}
+	return err
+}
+
+// checkResponse validates a response, with a successful HTTP status,
+// from the proxy. Anything other than a clear indication that the
+// request was handled is an error.
+func checkResponse(r proxy.Response) error {
+	switch r.Action {
+	case proxy.Created, proxy.Updated, proxy.Ignored:
+		return nil
+	case proxy.Failed:
+		msg := r.Error
+		if msg == "" {
+			msg = r.Result
+		}
+		return fmt.Errorf("proxy reported failure: %s", msg)
+	default:
+		return fmt.Errorf("unexpected response from proxy (action %q)", r.Action)
+	}
 }
