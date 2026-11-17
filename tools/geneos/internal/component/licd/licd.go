@@ -225,7 +225,7 @@ func (i *Licd) Add(options ...any) (err error) {
 		return os.ErrInvalid
 	}
 
-	opts := instance.EvalAddOptions(options)
+	opts := instance.EvalAddOptions(options...)
 	if opts.Port == 0 {
 		opts.Port = instance.NextFreePort(i.InstanceHost, &Component)
 	}

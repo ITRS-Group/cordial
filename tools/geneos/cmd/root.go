@@ -218,6 +218,16 @@ type CmdValType struct {
 
 // cmddata is a helper to get the command data struct from the command
 // context. It returns nil if not found or of the wrong type.
+// profileExpandHost returns the host used for profile expansion
+// lookups such as `${hostname}`. Commands without a host flag (e.g.
+// `init`) have no host, which would otherwise expand to an empty name.
+func profileExpandHost(name string) *geneos.Host {
+	if h := geneos.GetHost(name); h != nil && h != geneos.ALL {
+		return h
+	}
+	return geneos.LOCAL
+}
+
 func cmddata(command *cobra.Command) *CmdValType {
 	ctx := command.Context()
 	if ctx == nil {
@@ -272,7 +282,7 @@ geneos restart
 		// boot-strap profile function map, no that flags are parsed
 		// set defaults for all profile expansion
 
-		profile.SetExpandOptions(geneos.GetHost(Hostname), Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
+		profile.SetExpandOptions(profileExpandHost(Hostname), Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 
 		// check if user is root, and only proceed if conditions are met:
 		// * the command has the `allow-root` annotation set to "true", or

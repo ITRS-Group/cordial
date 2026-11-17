@@ -169,8 +169,10 @@ var deployCmd = &cobra.Command{
 			if err := geneos.SetInitialSite(deployCmdSite); err != nil {
 				return err
 			}
-			profile.SetExpandOptions(h, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 		}
+
+		// expand profile settings for the target host, after any site change
+		profile.SetExpandOptions(h, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 
 		// check profile requirements
 		if ct.IsA("profile") {
