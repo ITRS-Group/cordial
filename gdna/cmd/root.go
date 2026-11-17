@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	dbg "runtime/debug"
+	"strings"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
@@ -30,7 +31,6 @@ import (
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
-	"github.com/itrs-group/cordial/pkg/process"
 )
 
 var cfgFile string
@@ -91,10 +91,14 @@ var Cmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		if daemon {
-			return process.Daemon(nil, nil, process.RemoveArgs, "-D", "--daemon")
+			return daemonize(cmd)
 		}
 
 		initConfig(cmd)
+
+		if err = validateLayerReportSelection(reportNames); err != nil {
+			return err
+		}
 
 		if v, ok := config.Lookup[string](cf, cf.Join("gdna", "version")); !ok || v == "" {
 			config.Set(cf, cf.Join("gdna", "version"), cordial.VERSION)
@@ -115,55 +119,108 @@ func Execute() {
 	}
 }
 
+func validateLayerConfig(cf *config.Config) error {
+	for _, rename := range []struct {
+		old string
+		new string
+	}{
+		{"plugins.level1-optional", "plugins.layer1-optional"},
+		{"plugins.level1", "plugins.layer1"},
+		{"plugins.level2", "plugins.layer2"},
+		{"reports." + legacyCoverageReportName, "reports." + coverageReportName},
+	} {
+		if cf.IsSet(rename.old) {
+			return fmt.Errorf("configuration key %q was renamed to %q; update your GDNA configuration", rename.old, rename.new)
+		}
+		prefix := "GDNA_" + strings.ToUpper(strings.NewReplacer(".", "_", "-", "_").Replace(rename.old))
+		for _, env := range os.Environ() {
+			name, value, _ := strings.Cut(env, "=")
+			if value != "" && (name == prefix || strings.HasPrefix(name, prefix+"_")) {
+				return fmt.Errorf("environment variable %q uses configuration key %q, renamed to %q", name, rename.old, rename.new)
+			}
+		}
+	}
+	if err := validateLayerReportSelection(config.Get[string](cf, "email.body-reports")); err != nil {
+		return fmt.Errorf("email.body-reports: %w", err)
+	}
+	return nil
+}
+
+// configOptions returns the options to read the configuration from the
+// file, or the default locations if empty
+func configOptions(file string) []config.FileOption {
+	return []config.FileOption{
+		config.AppName("geneos"),
+		config.FilePath(file),
+		config.Format("yaml"),
+		config.WithDefaults(defaults, "yaml"),
+		config.StopOnInternalDefaultsErrors(),
+		// config.WatchConfig(configReloaded),
+		// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
+		config.WithEnvs("GDNA", "_"),
+	}
+}
+
+// checkConfigFile returns an error if a configuration file was given, on
+// the command line, but cannot be read, as otherwise it would be silently
+// ignored and the defaults used instead
+func checkConfigFile(file string) error {
+	if file == "" {
+		return nil
+	}
+	f, err := os.Open(file)
+	if err != nil {
+		return fmt.Errorf("configuration file: %w", err)
+	}
+	return f.Close()
+}
+
+// loadConfig reads and checks the configuration from file, or the
+// default locations if empty, without changing any global state, so
+// that it can be used to check a configuration and to reload it
+func loadConfig(file string) (*config.Config, error) {
+	if err := checkConfigFile(file); err != nil {
+		return nil, err
+	}
+	cf, err := config.Read(execname, configOptions(file)...)
+	if err != nil {
+		return nil, err
+	}
+	if err = validateLayerConfig(cf); err != nil {
+		return nil, err
+	}
+	return cf, nil
+}
+
 func initConfig(cmd *cobra.Command) {
 	var err error
 	var deferredlog string
 	var loglevel slog.Level
 
 	if cf == nil {
-		cf, err = config.Read(execname,
-			config.AppName("geneos"),
-			config.FilePath(cfgFile),
-			config.Format("yaml"),
-			config.WithDefaults(defaults, "yaml"),
-			config.StopOnInternalDefaultsErrors(),
-			// config.WatchConfig(configReloaded),
-			// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
-			config.WithEnvs("GDNA", "_"),
-		)
+		if err = checkConfigFile(cfgFile); err != nil {
+			log.Error("loading config", slog.Any("error", err))
+			os.Exit(1)
+		}
+
+		cf, err = config.Read(execname, configOptions(cfgFile)...)
 		if err != nil {
 			log.Error("loading config",
 				slog.Any("error", err),
-				slog.String("path",
-					config.Path(execname,
-						config.AppName("geneos"),
-						config.FilePath(cfgFile),
-						config.Format("yaml"),
-						config.WithDefaults(defaults, "yaml"),
-						config.StopOnInternalDefaultsErrors(),
-						// config.WatchConfig(configReloaded),
-						// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
-						config.WithEnvs("GDNA", "_"),
-					),
-				),
+				slog.String("path", config.Path(execname, configOptions(cfgFile)...)),
 			)
 			os.Exit(1)
 		}
 
 		// save log for after log setup
 		deferredlog = fmt.Sprintf("configuration loaded from %s",
-			config.Path(execname,
-				config.AppName("geneos"),
-				config.FilePath(cfgFile),
-				config.Format("yaml"),
-				config.WithDefaults(defaults, "yaml"),
-				config.StopOnInternalDefaultsErrors(),
-				// config.WatchConfig(configReloaded),
-				// config.MergeSettings(), // this allows "defaults" slices to be merged with configs, which should not happen
-				config.WithEnvs("GDNA", "_"),
-				config.MustExist(),
-			),
+			config.Path(execname, append(configOptions(cfgFile), config.MustExist())...),
 		)
+	}
+
+	if err = validateLayerConfig(cf); err != nil {
+		log.Error("loading config", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// check if logfile is set on the command line, which overrides config

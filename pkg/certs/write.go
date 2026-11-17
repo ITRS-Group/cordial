@@ -345,7 +345,9 @@ func CertificateComments(cert *x509.Certificate, titles ...string) []byte {
 
 	if len(titles) > 0 {
 		for _, title := range titles {
-			output.WriteString("# " + title + "\n")
+			output.WriteString("# ")
+			output.WriteString(title)
+			output.WriteString("\n")
 		}
 	} else {
 		output.WriteString("# Certificate\n")

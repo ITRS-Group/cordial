@@ -22,7 +22,7 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
-Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.level1.infrastructure.xml` to `../../acme/acme.level1.infrastructure.xml`.
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.layer1.server-health.xml` to `../../acme/acme.layer1.server-health.xml`.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
@@ -49,7 +49,7 @@ Supplied Gateway profiles use `${site}` for configuration include paths. Choose 
 2. Read the help for a named profile:
 
    ```bash
-   geneos profile --help motm
+   geneos help profile health-endpoint
    ```
 
 3. Check its definition in your profile file. In particular, check ports, include paths, Gateway Types, and certificate requirements before deployment.
@@ -58,10 +58,15 @@ Supplied Gateway profiles use `${site}` for configuration include paths. Choose 
 | --- | --- |
 | `all` | A Gateway and Webserver named for the host, a Netprobe named `localhost`, and a License Daemon named `perm`. The License Daemon uses port `7041`. |
 | `demo` | A Gateway named `Demo Gateway` with `options=-demo`, a Netprobe, and a Webserver named `Demo Webserver`. The Gateway has best-practice includes. The Webserver port is `8443`, or `8080` when `--insecure` is selected. |
-| `motm` | A SAN for Monitor-Of-The-Monitors (MOTM). It requests host monitoring and creates managed entities for installed Gateways, Netprobes, minimal Netprobes, File Agents, License Daemons, and Webservers. |
-| `motm-gateway` | A host-named MOTM Gateway with best-practice includes, and a Netprobe. It is the receiving side of an MOTM installation. |
+| `health-endpoint` | A Monitoring Health SAN named `<hostname> Health`. It requests host monitoring and creates managed entities for installed Geneos components. |
+| `health-gateway` | A Health Gateway named `<hostname> Health`, with best-practice includes and a Netprobe named `<hostname> Probe Health`. It is the receiving side of a Monitoring Health installation. |
 
 `all` is a starting example, not an inherited base profile. Profiles do not inherit settings from one another.
+
+Monitoring Health was previously known as Monitor-Of-The-Monitors (MOTM); the supplied `motm` and `motm-gateway` profiles are now `health-endpoint` and `health-gateway`.
+
+> [!IMPORTANT]
+> Existing profile files, installed instances, saved options and Gateway references are not renamed automatically. Back up customised definitions and instance configurations, then update scripts, filters and references using the old names, `CATEGORY=MOTM` or `COMPONENT=MOTM-SAN`. Deploying the new profiles can create additional instances with new names; preserve the necessary options and validate the new setup before retiring the old one. `geneos profile extract` backs up an existing user file but replaces it with the embedded defaults, so merge any customisations back afterwards.
 
 ### Initialise a Demo Installation
 
@@ -86,19 +91,19 @@ Use `init` for a new installation. You need access to suitable release archives 
 
 `init` requests start-up for the profile instance. Do not assume that its monitoring processes are running: check `geneos ps` and use `geneos start profile demo` if required. For an existing installation, use `geneos deploy profile NAME` to deploy a profile, then use `geneos start profile NAME` to start its instances. See the [init command reference](../../../docs/geneos_init.md) and [deploy command reference](../../../docs/geneos_deploy.md) for installation and download options.
 
-### Deploy the MOTM SAN
+### Deploy a Monitoring Health endpoint
 
 Use this procedure on an existing Geneos host. The receiving Gateway must have the Types requested by the profile. For TLS, both sides must trust the certificate chain.
 
-1. Check the Gateway address and the Types in the `motm` definition.
+1. Check the Gateway address and the Types in the `health-endpoint` definition.
 2. Deploy the profile with an issued certificate bundle. The bundle must contain the SAN's certificate, private key, and certificate chain:
 
    ```bash
-   geneos deploy profile motm \
-     --gateway motm-a.example.com:7038 \
-     --gateway motm-b.example.com:7038 \
+   geneos deploy profile health-endpoint \
+     --gateway health-a.example.com:7038 \
+     --gateway health-b.example.com:7038 \
      --attribute ENVIRONMENT=Production \
-    --certs-bundle /opt/itrs/certs/motm-san.pem
+     --certs-bundle /opt/itrs/certs/health-san.pem
    ```
 
    Repeat `--gateway` and `--attribute` as required. For a password-protected PKCS#12 bundle, supply the password as described in the [deploy command reference](../../../docs/geneos_deploy.md). Do not put clear-text passwords in the profile file.
@@ -106,7 +111,7 @@ Use this procedure on an existing Geneos host. The receiving Gateway must have t
 3. Start the instances in the profile:
 
    ```bash
-   geneos start profile motm
+   geneos start profile health-endpoint
    ```
 
 4. Confirm that its managed entities appear on the receiving Gateway.
@@ -119,7 +124,7 @@ The top-level `profiles` key maps unique profile names to definitions. Each defi
 
 Use canonical component names where possible. The profile application handlers support `gateway`, `licd`, `netprobe`, `minimal`, `webserver`, `san`, and `floating`. Registered aliases, such as `gateways` and `netprobes`, are also accepted. Do not assume that every component supported by `geneos` has a profile application handler.
 
-Use a YAML list for component instances. A single mapping is also accepted, as shown by the supplied `demo` and `motm` profiles. The list form makes it easier to add another instance.
+Use a YAML list for component instances. A single mapping is also accepted, as shown by the supplied `demo` and `health-endpoint` profiles. The list form makes it easier to add another instance.
 
 1. Add this definition to the `profiles` mapping in your selected file. Do not add a second top-level `profiles` key:
 
@@ -336,7 +341,7 @@ san:
   - name: ${hostname}-application-san
     managed-entities-common:
       types:
-        - Level 2 - Application Core
+        - Layer 2 - Core Technologies
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Application
@@ -347,7 +352,7 @@ san:
     managed-entities:
       - for-each: gateway
         types:
-          - Level 3 - Geneos Gateway
+          - Layer 3 - Geneos Gateway
         attributes:
           - COMPONENT=Gateway
 ```
@@ -372,7 +377,7 @@ san:
     gateways:
       - ${option:gateway}
     types:
-      - Level 1 - Infrastructure
+      - Layer 1 - Server Health
     attributes:
       - ${option:attribute}
     managed-entities:
@@ -383,7 +388,7 @@ san:
           - prod-test*
         name: ${config:name} Gateway
         types:
-          - Level 2 - Geneos Gateway
+          - Layer 2 - Geneos Gateway
         attributes:
           - ${option:attribute}
           - COMPONENT=Gateway
@@ -456,11 +461,11 @@ The component's `config.rebuild` setting controls generated files. The normal Ga
 To change a saved option, set it on the profile instance before rebuilding. For example:
 
 ```bash
-geneos set profile motm config.options.gateway=motm-c.example.com:7038
-geneos rebuild profile motm
+geneos set profile health-endpoint config.options.gateway=health-c.example.com:7038
+geneos rebuild profile health-endpoint
 ```
 
-Use `geneos show profile motm` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.
+Use `geneos show profile health-endpoint` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.
 
 Profile application updates the first matching instance of each component and name, or creates it if absent. On existing instances, it clears selected settings before it applies the new values:
 
@@ -481,7 +486,7 @@ Thus, an omitted list can remove existing settings. Conversely, removing an arbi
 | Expanded value is empty | Check the option name, process environment, or matched instance parameter. Option-expression errors can produce empty strings. |
 | Include file is not found | Check the path from the Gateway runtime setup context. An `includes` entry does not copy a file. |
 | SAN entity is absent | Check that it has Types. For generated entities, also check installed instance names, `match`, and `ignore`. |
-| A newly installed component is absent from MOTM | Rebuild the `motm` profile, then use `geneos restart profile motm` if required. |
+| A newly installed component is absent from Monitoring Health | Rebuild the `health-endpoint` profile, then use `geneos restart profile health-endpoint` if required. |
 | Gateway setup file does not change | Check `config.rebuild`; explicitly rebuild the Gateway with `--force` if its setting is `initial`. |
 | TLS connection fails | Check the trust chain and TLS settings at both ends. Use an instance certificate bundle from the intended trust chain. |
 

@@ -4,37 +4,67 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
-* **Site names:** You can set an site name with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. The default site name is `local`. You should use the same site name for all Geneos deployments.
+> [!NOTE]
+> Built with Go 1.27.4.
 
-  At this time the only function of the site name is to determine the location where configuration includes are installed, which is under `gateway/<site>/<site>.*.xml`, instead of the previous `gateway/includes/config/config.*.xml` locations. This will likely expand in the future to offer further customization and control over site-specific configurations.
+* **`geneos` sites, includes and packages**
 
-  Existing files in `gateway/includes/config` are copied and renamed appropriately without overwriting existing files and retained in their original location. Existing user profiles and Gateway setups are not rewritten; check their paths before using the new layout.
+  * **Site names:** You can set an site name with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. The default site name is `local`. You should use the same site name for all Geneos deployments.
 
-* **Removed from releases:** The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer shipped. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
+    At this time the only function of the site name is to determine the location where configuration includes are installed, which is under `gateway/<site>/<site>.*.xml`, instead of the previous `gateway/includes/config/config.*.xml` locations. This will likely expand in the future to offer further customization and control over site-specific configurations.
 
-* **Release archive includes:** The main archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded files managed by `geneos includes` instead.
+    Existing files in `gateway/includes/config` are copied and renamed appropriately without overwriting existing files and retained in their original location. Existing user profiles and Gateway setups are not rewritten; check their paths before using the new layout.
 
-* **Minor breaking change — includes commands:** Remove `--force`/`-F` from scripts using `geneos includes extract` or `update`; re-extraction no longer requires it. Existing top-level files and links are only replaced with `extract --update`, `install --update` or `update`. Existing configuration templates are never replaced.
+  * **Minor breaking change — package installation:** `-A` now means `--archive`, not `--all`; use `--all` explicitly. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`. Explicit URLs are still fetched.
 
-* **Minor breaking change — include list output:** Update consumers of JSON, pretty, CSV and Toolkit output for separate status and boolean fields instead of compact flags. CSV and Toolkit headings use camelCase; column and table headings use NormalCase. Gateway-local entries use `gatewayLocal` and `G`, not `local` and `L`. Paths shown for some files have also changed; gateway-local references retain their configured paths, except the main local setup is relative to the instance.
+  * **Minor breaking change — includes commands:** Remove `--force`/`-F` from scripts using `geneos includes extract` or `update`; re-extraction no longer requires it. Existing top-level files and links are only replaced with `extract --update`, `install --update` or `update`. Existing configuration templates are never replaced.
 
-* **Minor breaking change — package installation:** `-A` now means `--archive`, not `--all`; use `--all` explicitly. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`. Explicit URLs are still fetched.
+  * **Minor breaking change — include list output:** Update consumers of JSON, pretty, CSV and Toolkit output for separate status and boolean fields instead of compact flags. CSV and Toolkit headings use camelCase; column and table headings use NormalCase. Gateway-local entries use `gatewayLocal` and `G`, not `local` and `L`. Paths shown for some files have also changed; gateway-local references retain their configured paths, except the main local setup is relative to the instance.
 
-* **Incident correlation:** The `servicenow2` proxy and `ims-gateway` now reject a request with no `correlation_id` (a `400` error), because the lookup for an existing incident would otherwise match any active incident for the configuration item. `geneos incident raise` now sets `correlation_id` from `__incident_correlation`, as documented, as well as the older `__snow_correlation`; if your `ims.yaml` sets `__incident_correlation`, incidents raised by earlier versions have no correlation ID and will not be updated by newer ones. For `servicenow2` set `correlation_id` or `_correlation_id` in the client configuration.
+* **Monitoring Health and layer renaming**
 
-* **Failures now fail:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with a non-zero code, and an error message, in cases that previously exited with zero, such as a missing or invalid configuration file, no proxy or gateway URL, or a response that does not report success. Review Geneos actions and scripts that depend on the exit code. Only a proxy or gateway that cannot be reached, or reports `502`, `503` or `504`, results in the next configured URL being tried, and `geneos incident raise` now sends to only the first that accepts the incident.
+  * **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are now `health-endpoint` and `health-gateway`. Instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing profiles, saved options and Gateway references are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
 
-* **Authentication token required:** The `servicenow2` proxy and `ims-gateway` refuse to start without `server.authentication.token`. The gateway previously accepted requests with no `Authorization` header if the token was empty.
+  * **Monitoring layers:** Include and site filenames, Gateway types and other identifiers now use `layer` rather than `level`. Existing Gateway setups, SANs, profiles and site overrides must be migrated; see the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
 
-* **Proxy responses, logs and timeout:** The `servicenow2` proxy returns `502`, or `504` on a timeout, when ServiceNow cannot be reached or reports an error. Its request log now uses the `ims-gateway` field names and records every request, and a response to a rejected token or a panic is now in the gateway's JSON format. Set the ServiceNow timeout with `servicenow.timeout`, as `proxy.timeout`, previously read from the wrong section, is only used if it is not set. Update anything that depends on these.
+  * **GDNA layers:** Plugin configuration keys, report identifiers, Dataviews and dashboard bindings use layer names. Update customised configuration and dashboards as described in the [GDNA upgrade guidance](gdna/README.md#upgrading-from-level-based-names).
 
-* **ServiceNow Basic Auth restriction:** Instances where ServiceNow's Basic Auth restriction is enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy and gateway with `401 User is not authenticated` unless their ServiceNow user has the `snc_basic_auth_api_access` role, even though the same user and password work in the web interface. Grant the role or use OAuth.
+* **`gdna` options**
 
-* **Running in the background:** `--daemon` now waits for the server to be listening and holds a PID file, in the user's cache directory unless set with `--pidfile` or `server.pidfile`, which prevents a second instance starting with the same file. If you run more than one on a server, give each its own PID file. `reload` and the `SIGUSR1` signal are not available on Windows; use `restart`.
+  * **Minor breaking change — GDNA configuration file:** `gdna` now exits with an error if the file given with `--config`/`-f` cannot be read, instead of silently using the defaults. Check scripts and container commands that pass a file that may not exist.
 
-* **Example gateway configuration:** If you copied the response messages from an earlier `ims-gateway.example.yaml`, replace `${_number}`, `${_error}` and similar with the `__` prefixed names, such as `${__number}`, which are the only ones the gateway supplies; the others expand to nothing.
+  * **GDNA Netprobe options:** The `--hostname`/`-H` option of `gdna start` and `gdna report`, and the `--tls`/`-T` option of `gdna report`, were ignored in favour of the configuration and now take effect. Check scripts that pass them with values that differ from your configuration.
+
+* **Running in the background**
+
+  * **`--daemon` and PID files:** For `servicenow2 proxy`, `ims-gateway` and `gdna start`, `--daemon` now waits for the server to be listening, or `gdna` to be running its schedules, exits with a non-zero code if it fails to start, and holds a PID file, in the user's cache directory unless set with `--pidfile` or `server.pidfile` (`gdna.pidfile` for `gdna`), which prevents a second instance starting with the same file. If you run more than one on a server, give each its own PID file. The `stop`, `restart`, `reload` and `status` commands find the process using this file, so give them the same configuration file or `--pidfile` option that the process uses. `reload` and the `SIGUSR1` signal are not available on Windows; use `restart`.
+
+  * **GDNA background process:** `gdna` previously found its background process by name, so a process started by an earlier version has no PID file and `gdna stop` will not find it: stop it, for example with `kill`, before starting the new version. A foreground `gdna start` only holds a PID file if one is configured, and `--once` never does. `gdna restart`, which previously did nothing, now works, and `gdna stop` and CTRL+C cancel a fetch or report that is running.
+
+* **Incident integrations (`servicenow2`, `ims-gateway` and `geneos incident`)**
+
+  * **Authentication token required:** The `servicenow2` proxy and `ims-gateway` refuse to start without `server.authentication.token`. The gateway previously accepted requests with no `Authorization` header if the token was empty.
+
+  * **Example gateway configuration:** If you copied the response messages from an earlier `ims-gateway.example.yaml`, replace `${_number}`, `${_error}` and similar with the `__` prefixed names, such as `${__number}`, which are the only ones the gateway supplies; the others expand to nothing.
+
+  * **Proxy responses, logs and timeout:** The `servicenow2` proxy returns `502`, or `504` on a timeout, when ServiceNow cannot be reached or reports an error. Its request log now uses the `ims-gateway` field names and records every request, and a response to a rejected token or a panic is now in the gateway's JSON format. Set the ServiceNow timeout with `servicenow.timeout`, as `proxy.timeout`, previously read from the wrong section, is only used if it is not set. Update anything that depends on these.
+
+  * **Failures now fail:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with a non-zero code, and an error message, in cases that previously exited with zero, such as a missing or invalid configuration file, no proxy or gateway URL, or a response that does not report success. Review Geneos actions and scripts that depend on the exit code. Only a proxy or gateway that cannot be reached, or reports `502`, `503` or `504`, results in the next configured URL being tried, and `geneos incident raise` now sends to only the first that accepts the incident.
+
+  * **Incident correlation:** The `servicenow2` proxy and `ims-gateway` now reject a request with no `correlation_id` (a `400` error), because the lookup for an existing incident would otherwise match any active incident for the configuration item. `geneos incident raise` now sets `correlation_id` from `__incident_correlation`, as documented, as well as the older `__snow_correlation`; if your `ims.yaml` sets `__incident_correlation`, incidents raised by earlier versions have no correlation ID and will not be updated by newer ones. For `servicenow2` set `correlation_id` or `_correlation_id` in the client configuration.
+
+  * **ServiceNow Basic Auth restriction:** Instances where ServiceNow's Basic Auth restriction is enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy and gateway with `401 User is not authenticated` unless their ServiceNow user has the `snc_basic_auth_api_access` role, even though the same user and password work in the web interface. Grant the role or use OAuth.
+
+* **Release contents**
+
+  * **Removed from releases:** The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer shipped. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
+
+  * **Release archive includes:** The main archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded files managed by `geneos includes` instead.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
+
+> [!NOTE]
+> Built with Go 1.27.3.
 
 v1.30.1 replaces v1.30.0.
 
@@ -50,6 +80,9 @@ v1.30.1 replaces v1.30.0.
 
 ## [v1.29.0](CHANGELOG.md#version-v1290)
 
+> [!NOTE]
+> Built with Go 1.27.1.
+
 This release was withdrawn; use v1.29.1 or later instead. `gateway-reporter` was retired from builds in favour of the Gateway's built-in reporting features.
 
 ## [v1.27.0](CHANGELOG.md#version-v1270)
@@ -59,6 +92,9 @@ This release was withdrawn; use v1.29.1 or later instead. `gateway-reporter` was
 * `geneos tls info` columns, names and ordering changed; update output consumers. Remote process checks now only see processes owned by the configured user, which can affect detection by `ps`, `start` and `stop`.
 
 ## [v1.26.1](CHANGELOG.md#version-v1261)
+
+> [!NOTE]
+> Built with Go 1.26.2.
 
 v1.26.0 was withdrawn. The v1.26 series contains significant TLS changes:
 
@@ -80,9 +116,15 @@ GDNA's `csv` format is now standard CSV, separate from `toolkit` output. Plugin 
 
 ## [v1.22.0](CHANGELOG.md#version-v1220)
 
+> [!NOTE]
+> Built with Go 1.24.5.
+
 The `cordial-geneos.xml` include was renamed to `itrs.level0.geneos-cordial.xml`; check references and diagnostics consumers. Previously deprecated command flags were removed. The reported local hostname changed from `localhost` to the real hostname, although both remain aliases.
 
 ## [v1.21.0](CHANGELOG.md#version-v1210)
+
+> [!NOTE]
+> Built with Go 1.24.3.
 
 * `geneos ps` no longer has `--nolookup`/`-n`; `-n` now means `--network`. Port-list separators and table formatting also changed.
 
@@ -93,6 +135,9 @@ The `cordial-geneos.xml` include was renamed to `itrs.level0.geneos-cordial.xml`
 Upgrade the GDNA binary before using the new Monitoring Coverage and Version dashboards. The old dashboard works with the new binary.
 
 ## [v1.18.0](CHANGELOG.md#version-v1180)
+
+> [!NOTE]
+> Built with Go 1.23.2.
 
 * GDNA deprecated the original external filtering files; import their data using the new filter commands. Some YAML report options moved, including `enable-for-dataview` and `enable-for-xlsx`; update affected configurations. `gdna list` now uses subcommands such as `gdna list reports`.
 
@@ -112,9 +157,15 @@ Saved global configuration defaults may need to be removed manually to pick up n
 
 ## [v1.14.0](CHANGELOG.md#v1140-changes)
 
+> [!NOTE]
+> Built with Go 1.22.4.
+
 The `geneos deploy` shorthand `-n` was repurposed for `--nosave`; review scripts using it for `--name`.
 
 ## [v1.13.2](CHANGELOG.md#version-v1132)
+
+> [!NOTE]
+> Built with Go 1.22.3.
 
 v1.13.2 replaces v1.13.0 and v1.13.1. Review the [full breaking changes](CHANGELOG.md#v1132-breaking-changes):
 

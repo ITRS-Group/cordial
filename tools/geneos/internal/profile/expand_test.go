@@ -32,13 +32,13 @@ func TestSiteLookup(t *testing.T) {
 	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
 	host := geneos.NewHost("profile-lookup-test")
 	for _, test := range []struct{ site, want string }{
-		{"", "../../local/local.level1.infrastructure.xml"},
-		{"Acme Site", "../../Acme_Site/Acme_Site.level1.infrastructure.xml"},
+		{"", "../../local/local.layer1.server-health.xml"},
+		{"Acme Site", "../../Acme_Site/Acme_Site.layer1.server-health.xml"},
 	} {
 		config.Set(config.Global(), "site", test.site)
 		pf := config.New()
 		SetExpandOptions(host, pf, nil, nil)
-		got := config.Expand[string](pf, "../../${site}/${site}.level1.infrastructure.xml")
+		got := config.Expand[string](pf, "../../${site}/${site}.layer1.server-health.xml")
 		if got != test.want {
 			t.Errorf("expanded site %q = %q, want %q", test.site, got, test.want)
 		}

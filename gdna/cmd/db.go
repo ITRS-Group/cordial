@@ -126,8 +126,15 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 			break
 		}
 		log.Debug("found update", slog.Int64("version", i))
+		var lookup map[string]string
+		if i == 4 {
+			lookup, err = historicalPluginTables(ctx, db, cf)
+			if err != nil {
+				return
+			}
+		}
 		checkQuery := config.Get[string](cf, config.Join(updateBase, "check"))
-		updateQuery := config.Get[string](cf, config.Join(updateBase, "update"))
+		updateQuery := config.Get[string](cf, config.Join(updateBase, "update"), config.LookupTable(lookup))
 
 		if updateQuery == "" {
 			err = fmt.Errorf("no update query for version %d", i)
@@ -174,6 +181,33 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 	}
 
 	return
+}
+
+func historicalPluginTables(ctx context.Context, db *sql.DB, cf *config.Config) (map[string]string, error) {
+	// Schema update 4 used the configured table names before the layer rename.
+	tables := make(map[string]string)
+	for _, plugin := range []struct {
+		name   string
+		legacy string
+	}{
+		{"layer1", "level1_plugins"},
+		{"layer1-optional", "level1_optional_plugins"},
+		{"layer2", "level2_plugins"},
+	} {
+		current := config.Get[string](cf, config.Join("plugins", plugin.name, "table"))
+		var exists bool
+		if err := db.QueryRowContext(ctx, `SELECT EXISTS(
+			SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? COLLATE NOCASE
+		)`, current).Scan(&exists); err != nil {
+			return nil, fmt.Errorf("checking historical plugin table %q: %w", current, err)
+		}
+		if exists {
+			tables["historical-"+plugin.name+"-table"] = current
+		} else {
+			tables["historical-"+plugin.name+"-table"] = plugin.legacy
+		}
+	}
+	return tables, nil
 }
 
 // queryToTable returns the result of running the given query inside the

@@ -28,8 +28,9 @@ import (
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/ims/control"
+	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/itrs-group/cordial/pkg/process/control"
 
 	_ "github.com/itrs-group/cordial/tools/ims-gateway/internal/sdp"
 	_ "github.com/itrs-group/cordial/tools/ims-gateway/internal/snow"
@@ -46,6 +47,7 @@ var background = &control.Daemon{
 	PIDFile:     &pidFile,
 	ConfigFile:  ConfigFile,
 	Load:        LoadConfigFileFrom,
+	Check:       ims.CheckServer,
 }
 
 func init() {

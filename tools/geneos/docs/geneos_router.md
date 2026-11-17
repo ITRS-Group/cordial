@@ -60,7 +60,6 @@ The parameters described below are specific to the Netprobe Router component.
 
   This parameter value is used in the default template as the value for the `pluginsDirectory` property in the Netprobe Router configuration file. It is passed as the environment variable `PLUGIN_DIR`. Note the singular for of `PLUGIN` for the environment variable, which is deliberate and based on Collection Agent configurations.
 
-
 ## Usage
 
 ```text

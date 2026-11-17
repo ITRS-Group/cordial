@@ -18,6 +18,7 @@ geneos includes fix gateway-a gateway-b
 ```
 
 Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+
 ## Usage
 
 ```text

@@ -9,8 +9,6 @@ and environment variables to create a submission to the router
 instance which is responsible for sending the request to the
 ServiceNow API.
 
-
-
 ## Usage
 
 ```text

@@ -7,8 +7,6 @@
 
 ## Version v1.31.0 New Features
 
-* Add versioned update notes and feature highlights, in Markdown and PDF, to release documentation.
-
 * `tools/geneos`
 
   * A variety of changes and new additions for the `geneos includes` subsystem for managing include files and configuration templates independently of the main `geneos` program version. This is still considered as a feature preview and may undergo further changes before becoming fully stable.
@@ -17,59 +15,67 @@
 
       Existing files in `gateway/includes/config` are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. Existing user profiles and Gateway setups are not rewritten. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
 
-    * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
-
     * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
 
     * `geneos includes install` now installs the embedded include files and configuration templates when no archive is supplied. `geneos includes extract` is an alias for `install`, accepting the same optional archive and `--update`/`-U` option. Existing top-level paths are preserved unless `--update` is given.
 
     * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
 
+    * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
+
     * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
-* `integrations/servicenow2` and `tools/ims-gateway`
+* `integrations/servicenow2`, `tools/ims-gateway` and `gdna`
 
-  * Add `stop`, `restart`, `reload` and `status` commands for a proxy or gateway running in the background: `servicenow2 proxy stop|restart|reload|status` and `ims-gateway stop|restart|reload|status`.
+  * Add `stop`, `restart`, `reload` and `status` commands for a proxy, gateway or `gdna` process running in the background: `servicenow2 proxy stop|restart|reload|status`, `ims-gateway stop|restart|reload|status` and `gdna stop|restart|reload|status`. In `gdna` the `restart` command previously did nothing and `stop` looked for a process named `gdna`.
 
-    A server running with `--daemon` (`-D`) now holds a locked PID file, given with the new `--pidfile` option or `server.pidfile` in the configuration, or if neither a file in the `geneos` directory in the user's cache directory. A second instance cannot be started with the same file, and the file is never mistaken for a running process after a crash. The file also records how the server was started, so `restart` can start it again in the same way, using a new version of the program after an upgrade.
+    * `--daemon` (`-D`) now waits for the server to be listening, or for `gdna` to be running its schedules, and prints its PID, instead of returning immediately. If the process fails to start, for example because of an invalid configuration or a port that is in use, the command now exits with a non-zero code and refers to the log file; for `gdna` an invalid configuration or schedule, and an existing process holding the PID file, are reported directly.
 
-    `stop` lets requests in progress complete before the process exits and fails if it does not stop within `--timeout`, unless `--force` is used. `status` exits with a non-zero code unless the server is running.
+    * A process running with `--daemon` (`-D`) now holds a locked PID file, given with the new `--pidfile` option or `server.pidfile` in the configuration (`gdna.pidfile` for `gdna`), or if neither a file in the `geneos` directory in the user's cache directory. A second instance cannot be started with the same file, and the file is never mistaken for a running process after a crash. The file also records how the process was started, so `restart` can start it again in the same way, using a new version of the program after an upgrade. A `gdna start` process running in the foreground only uses a PID file if one is configured, and a `--once` run never does.
 
-  * Add `reload`, also triggered by sending the process `SIGUSR1`, to read the configuration again without stopping. The configuration is checked first and is only used if it is valid; otherwise the error is logged and the server carries on as before. Requests that are in progress complete using the configuration they started with and all new requests use the new one, including a new authentication token, path, tables, ServiceNow connection details and TLS certificate. A changed listening address is bound before the old one is closed, which then drains. Changes to the logging, and turning TLS on or off, need a `restart`. Reload is not available on Windows.
+    * `stop` lets requests in progress complete before the process exits and fails if it does not stop within `--timeout`, unless `--force` is used. For `gdna`, which does not serve requests, `stop` and CTRL+C instead cancel any fetch or report that is running before it shuts down cleanly. `status` exits with a non-zero code unless the process is running.
 
-  * `--daemon` (`-D`) now waits for the server to be listening, and prints its PID, instead of returning immediately. If the server fails to start, for example because of an invalid configuration or a port that is in use, the command now exits with a non-zero code and refers to the log file.
+    * Add `reload`, also triggered by sending the process `SIGUSR1`, to read the configuration again without stopping. The configuration is checked first and is only used if it is valid; otherwise the error is logged and the process carries on as before. Requests that are in progress complete using the configuration they started with and all new requests use the new one, including a new authentication token, path, tables, ServiceNow connection details and TLS certificate. A changed listening address is bound before the old one is closed, which then drains. Changes to the logging, and turning TLS on or off, need a `restart`. Reload is not available on Windows.
+
+      For `gdna`, the new schedules are used, including adding or removing the email job, and all later runs use the new configuration, while a fetch or report that is running completes using the one it started with. Changes to the database, the logging and the PID file need a `restart`.
+
+* Add versioned update notes and feature highlights, in Markdown and PDF, to release documentation.
 
 ## Version v1.31.0 Changes
 
-* Updated to use Go 1.27.4 and update dependencies
+* Monitor-Of-The-Monitors, monitoring layers and GDNA renaming
 
-* **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
+  * **Breaking Change**: Monitor-Of-The-Monitors is now Monitoring Health. The supplied `motm` and `motm-gateway` profiles have been renamed `health-endpoint` and `health-gateway`; instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing configurations and saved profile options are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
 
-  * The original `servicenow` integration
-  * `pagerduty`
-  * `san-config`
+  * **Breaking Change**: Monitoring include filenames and Gateway identifiers now use `layer` rather than `level`. Migrate existing site overrides, Gateway setups, SANs and customised profiles as described in the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
 
-  Use the versions shipped in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
-
-* **Breaking Change**: The main Cordial release archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded includes managed by `geneos includes` instead.
-
-* The release archive now includes a `dv2email.example.yaml` configuration reference alongside the other example configurations.
+  * **Breaking Change**: GDNA coverage configuration, reports and dashboard bindings now use layer names. Update customised configurations and dashboards as described in the [GDNA upgrade guidance](gdna/README.md#upgrading-from-level-based-names).
 
 * `tools/geneos`
 
-  * **Breaking Change** (minor): The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
+  * `geneos includes`
 
-  * **Breaking Change** (minor): `geneos includes list` now uses long-format fields in JSON, pretty, CSV and toolkit output, with separate status and boolean flag fields instead of the compact flags column. CSV and toolkit headings use camelCase, while column and table headings use NormalCase. Gateway-local includes use `gatewayLocal` and `G` instead of `local` and `L`. Long output also reports remote HEAD latency and HTTPS certificate validity where available.
+    * **Breaking Change** (minor): The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
 
-    Include locations under the Geneos home are shown relative to a Gateway instance directory where appropriate. Gateway-local include references retain their configured paths; a local main Gateway setup file is shown relative to its instance directory.
+    * **Breaking Change** (minor): `geneos includes list` now uses long-format fields in JSON, pretty, CSV and toolkit output, with separate status and boolean flag fields instead of the compact flags column. CSV and toolkit headings use camelCase, while column and table headings use NormalCase. Gateway-local includes use `gatewayLocal` and `G` instead of `local` and `L`. Long output also reports remote HEAD latency and HTTPS certificate validity where available.
+
+      Include locations under the Geneos home are shown relative to a Gateway instance directory where appropriate. Gateway-local include references retain their configured paths; a local main Gateway setup file is shown relative to its instance directory.
+
+    * `geneos includes list --gateway` now accepts instance names and glob patterns to show includes for matching gateways only.
+
+    * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
 
   * **Breaking Change** (minor): `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`; explicit URLs are fetched directly.
 
   * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
 
-  * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
+  * `geneos incident`
 
-  * `geneos includes list --gateway` now accepts instance names and glob patterns to show includes for matching gateways only.
+    * `geneos incident raise` now uses the `__incident_correlation` field, which is documented and used in the example configuration, to create the `correlation_id` for ServiceNow, as well as the older `__snow_correlation`. Previously incidents were created without a correlation ID.
+
+    * `geneos incident raise` now prints the result detail returned by the gateway and sends the incident to the first gateway that accepts it, instead of every configured gateway. Gateways are only tried in turn when one cannot be reached or reports `502`, `503` or `504`.
+
+    * `geneos incident raise` and `query` now exit with a non-zero code, and an error, if there is no configuration file, no gateway URL or IMS type, or the gateway response is not a clear success. See Fixes.
 
   * Use host-specific path operations for file handling across commands, instances, packages, includes, templates, and restore operations, including paths that previously relied on the client OS's `path` or `filepath` behavior.
 
@@ -77,17 +83,19 @@
 
 * `integrations/servicenow2`
 
-  * **Breaking Change** (minor): The proxy now rejects a request that has no `correlation_id` with a `400` error. Previously the lookup for an existing incident matched any active incident for the configuration item, so an unrelated incident could be updated.
-
-  * **Breaking Change** (minor): The proxy now returns `502` (or `504` if ServiceNow does not respond in time) when ServiceNow cannot be reached or reports an error, instead of `404` or `500`, and reports an incident that ServiceNow accepted but did not return as a failure. The client moves on to the next configured proxy only if a proxy cannot be reached or reports `502`, `503` or `504`, and no longer tries another proxy after a proxy rejects a request.
-
   * **Breaking Change** (minor): The proxy now refuses to start without a `server.authentication.token` and a `server.listen` address.
 
   * The ServiceNow timeout is now set with `servicenow.timeout` (default 10 seconds). The previous `proxy.timeout` key, which was read from the wrong section, is still used if `timeout` is not set. HTTP redirects are no longer followed for requests to ServiceNow or to the proxy.
 
-  * The proxy now logs every request, including those rejected before reaching a handler, at error level for failures of ServiceNow or the proxy, warn for rejected requests and info otherwise, with the `action` and `error` for each. The log field names are now the same as the `ims-gateway`.
+  * Requests and responses
 
-  * Failure responses can now refer to all of the incident fields, including those with a leading underscore, in the `response.failed` template.
+    * **Breaking Change** (minor): The proxy now rejects a request that has no `correlation_id` with a `400` error. Previously the lookup for an existing incident matched any active incident for the configuration item, so an unrelated incident could be updated.
+
+    * **Breaking Change** (minor): The proxy now returns `502` (or `504` if ServiceNow does not respond in time) when ServiceNow cannot be reached or reports an error, instead of `404` or `500`, and reports an incident that ServiceNow accepted but did not return as a failure. The client moves on to the next configured proxy only if a proxy cannot be reached or reports `502`, `503` or `504`, and no longer tries another proxy after a proxy rejects a request.
+
+    * Failure responses can now refer to all of the incident fields, including those with a leading underscore, in the `response.failed` template.
+
+  * The proxy now logs every request, including those rejected before reaching a handler, at error level for failures of ServiceNow or the proxy, warn for rejected requests and info otherwise, with the `action` and `error` for each. The log field names are now the same as the `ims-gateway`.
 
   * Document that ServiceNow instances with the Basic Auth restriction enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy, with `401 User is not authenticated`, unless its user has the `snc_basic_auth_api_access` role.
 
@@ -95,23 +103,43 @@
 
   * **Breaking Change** (minor): The gateway now refuses to start without a `server.authentication.token`. Previously an empty token allowed requests that had no `Authorization` header.
 
-  * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.
+  * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
 
   * The ServiceNow connection is now cached between requests, instead of a new client being created for each one, and uses `snow.timeout`. HTTP redirects are no longer followed.
 
-  * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
+  * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.
 
-* `tools/geneos`
+* `gdna`
 
-  * `geneos incident raise` now uses the `__incident_correlation` field, which is documented and used in the example configuration, to create the `correlation_id` for ServiceNow, as well as the older `__snow_correlation`. Previously incidents were created without a correlation ID.
+  * **Breaking Change** (minor): `gdna` now exits with an error if the configuration file given with `--config`/`-f` cannot be read, instead of silently using the defaults. This applies to every command, including `start --daemon`, which no longer starts a background process in this case.
 
-  * `geneos incident raise` now prints the result detail returned by the gateway and sends the incident to the first gateway that accepts it, instead of every configured gateway. Gateways are only tried in turn when one cannot be reached or reports `502`, `503` or `504`.
+* Release contents
 
-  * `geneos incident raise` and `query` now exit with a non-zero code, and an error, if there is no configuration file, no gateway URL or IMS type, or the gateway response is not a clear success. See Fixes.
+  * **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
 
-* `pkg/host`
+    * The original `servicenow` integration
 
-  * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
+    * `pagerduty`
+
+    * `san-config`
+
+    Use the versions shipped in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
+
+  * **Breaking Change**: The main Cordial release archive no longer contains `/etc/geneos/includes`. Use the separate versioned `geneos-includes` archive or the embedded includes managed by `geneos includes` instead.
+
+  * The release archive now includes a `dv2email.example.yaml` configuration reference alongside the other example configurations.
+
+* Updated to use Go 1.27.4 and update dependencies
+
+* `pkg/ims`, `pkg/ims/snow`, `pkg/process` and `pkg/rest`
+
+  * The new `pkg/process/control` package provides the `stop`, `restart`, `reload` and `status` commands, and starting in the background, that are shared by `servicenow2 proxy`, `ims-gateway` and `gdna`. It does not depend on `pkg/ims`, so can be used by any program that runs in the background, which means `reload` no longer checks the server settings itself: programs that run `ims.ServeWith` should set `Check` to `ims.CheckServer`, as `servicenow2 proxy` and `ims-gateway` now do. A program can also use a different configuration key for the PID file and its own text for the `stop` and `reload` help.
+
+  * `pkg/rest` clients now return a typed `HTTPError`, with the status code and body, for responses with a status above 299, so callers can tell them from a failure to get a response. The error text is unchanged.
+
+  * The code shared by the ServiceNow proxy, the `ims-gateway` and `geneos incident`, such as the HTTP server, ServiceNow client, retrying of gateways, action groups and the reloading server, is now in `pkg/ims` and the new `pkg/ims/snow`, so that behaviour and tests are in one place. `pkg/process` adds locked PID files and detached starts that can wait for a process to be ready.
+
+  * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
 
 * `pkg/geneos`
 
@@ -119,69 +147,81 @@
 
   * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
 
-* `pkg/ims`, `pkg/ims/snow`, `pkg/process` and `pkg/rest`
+* `pkg/host`
 
-  * The code shared by the ServiceNow proxy, the `ims-gateway` and `geneos incident`, such as the HTTP server, ServiceNow client, retrying of gateways, action groups and the reloading server and its control commands, is now in `pkg/ims` and the new `pkg/ims/snow` and `pkg/ims/control`, so that behaviour and tests are in one place. `pkg/process` adds locked PID files and detached starts that can wait for a process to be ready.
-
-  * `pkg/rest` clients now return a typed `HTTPError`, with the status code and body, for responses with a status above 299, so callers can tell them from a failure to get a response. The error text is unchanged.
-
-  * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
+  * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
 ## Version v1.31.0 Fixes
 
 * `gdna`
 
+  * Fix the `--hostname`/`-H` option of `gdna start` and `gdna report`, and the `--tls`/`-T` option of `gdna report`, being ignored in favour of the configuration. The other Netprobe options already worked.
+
+  * Fix the sources in `gdna.licd-sources` being remembered after the first fetch of a `gdna start` process, so that a reloaded configuration takes effect. Sources given with `--source` still take precedence.
+
   * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
 
 * `tools/geneos`
 
-  * Make XPath serialization order Managed Entity attributes consistent, preventing spurious `adb clean`/`edit` link updates on repeated runs.
+  * `geneos deploy`, `geneos init` and `geneos add`
 
-  * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
+    * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
 
-  * Fix local archive handling in `geneos deploy` and `geneos init` to avoid download credential prompts or download fallback when `--archive` specifies a local path. Missing matching archives are reported; explicit archive URLs are still fetched directly.
+    * Fix `geneos add --log` to return creation or startup errors instead of attempting to follow logs for a failed instance.
 
-  * Preserve archive file errors rather than reporting misleading directory errors when a file cannot be opened.
+    * Fix local archive handling in `geneos deploy` and `geneos init` to avoid download credential prompts or download fallback when `--archive` specifies a local path. Missing matching archives are reported; explicit archive URLs are still fetched directly.
 
-  * Fix `geneos add --log` to return creation or startup errors instead of attempting to follow logs for a failed instance.
+    * Preserve archive file errors rather than reporting misleading directory errors when a file cannot be opened.
 
-  * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
+  * Profiles
 
-  * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
+    * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.
 
-  * Fix `geneos rebuild profile` to rebuild members through the profile only, rather than rebuilding each member directly and then applying the profile again. The `--force` option is also passed through to member rebuilds correctly.
+    * Fix `geneos deploy profile` (and `geneos add`) leaving partly created instances behind when creation fails, for example when a package download fails. Previously a retry treated the leftover profile as already existing and did not apply it, so members such as a Gateway were created without profile parameters like `options=-demo`. Failed creations are now rolled back, and redeploying an existing profile reapplies it to its members.
 
-  * Fix `geneos set profile` and `geneos unset profile` to update profile members without immediately reapplying the original profile settings and repeating its imports.
+    * Fix `geneos rebuild profile` to rebuild members through the profile only, rather than rebuilding each member directly and then applying the profile again. The `--force` option is also passed through to member rebuilds correctly.
 
-  * Fix file and directory imports to leave unchanged files alone, without rewriting them or creating backups. Backup file names now remain unique when multiple imports take place within the same second, and imports to the same destination are protected against concurrent writes.
+    * Fix `geneos set profile` and `geneos unset profile` to update profile members without immediately reapplying the original profile settings and repeating its imports.
 
-  * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
+    * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
 
-  * Fix `geneos deploy profile` (and `geneos add`) leaving partly created instances behind when creation fails, for example when a package download fails. Previously a retry treated the leftover profile as already existing and did not apply it, so members such as a Gateway were created without profile parameters like `options=-demo`. Failed creations are now rolled back, and redeploying an existing profile reapplies it to its members.
+  * Packages
 
-  * Fix package installs leaving a partial release directory after a failed or interrupted unpack, which later appeared to be a valid installed version. Archives are now unpacked into a hidden staging directory and only renamed into place when complete; leftover staging directories are ignored and replaced on retry.
+    * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
 
-  * Fix archive downloads leaving a truncated archive in the download directory after a failure, which a later install could reuse. Downloads are now written to a hidden temporary file and renamed only when complete. HTTP response bodies are now always closed.
+    * Fix package installs leaving a partial release directory after a failed or interrupted unpack, which later appeared to be a valid installed version. Archives are now unpacked into a hidden staging directory and only renamed into place when complete; leftover staging directories are ignored and replaced on retry.
+
+    * Fix archive downloads leaving a truncated archive in the download directory after a failure, which a later install could reuse. Downloads are now written to a hidden temporary file and renamed only when complete. HTTP response bodies are now always closed.
 
   * Fix `geneos copy` and `geneos move` to refuse a destination whose instance directory already exists, rather than copying into it and then deleting it if the operation failed. Partially copied directories are now removed on failure, and the check is made before stopping the source instance for a move.
 
   * Fix `geneos restore` leaving partially restored instances when the archive cannot be read to completion. Instance directories created by the failed restore are now removed; existing instances and shared directories are not touched.
 
-  * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
+  * Fix `geneos incident raise` exiting with a zero exit code, and printing an empty line, if the configuration file could not be loaded, and when the gateway did not report the incident as created or updated, and fix `geneos incident query` doing the same for an unsupported IMS type, a missing configuration or an unexpected response.
+
+  * Make XPath serialization order Managed Entity attributes consistent, preventing spurious `adb clean`/`edit` link updates on repeated runs.
+
+  * Fix file and directory imports to leave unchanged files alone, without rewriting them or creating backups. Backup file names now remain unique when multiple imports take place within the same second, and imports to the same destination are protected against concurrent writes.
+
+  * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
 
 * `integrations/servicenow2`
 
-  * Fix the client exiting with a zero exit code when nothing was sent, for example if the configuration file could not be read or has no proxy URL, and when the proxy reported a failure. The client now checks that the proxy reports an incident as created, updated or deliberately ignored, and fails for any other response, including one from something other than a proxy such as a web server or an HTTP redirect, which is no longer followed. Errors from the proxy are now shown instead of only being logged at debug level.
+  * Client
 
-  * Fix `field`, `match`, `nomatch` and `replace` expansion errors, and values of `if` and `break` that are not booleans, being ignored silently; they are now logged. An invalid `exit` code, and an argument that is not `field=value`, are also logged.
+    * Fix the client exiting with a zero exit code when nothing was sent, for example if the configuration file could not be read or has no proxy URL, and when the proxy reported a failure. The client now checks that the proxy reports an incident as created, updated or deliberately ignored, and fails for any other response, including one from something other than a proxy such as a web server or an HTTP redirect, which is no longer followed. Errors from the proxy are now shown instead of only being logged at debug level.
 
-  * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select" (such as in `setup_value`).
+    * Fix a possible crash of the client if the system certificate pool cannot be read for HTTPS connections to a proxy.
+
+  * Configuration expansions and filters
+
+    * Fix `field`, `match`, `nomatch` and `replace` expansion errors, and values of `if` and `break` that are not booleans, being ignored silently; they are now logged. An invalid `exit` code, and an argument that is not `field=value`, are also logged.
+
+    * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select" (such as in `setup_value`).
+
+    * Fix incident fields being deleted if the state `filter` contains an invalid regular expression. The request now fails with the error.
 
   * Fix the proxy not logging the error for most failed requests, a panic in a request leaving no log and no response, and failing to start without any log if the ServiceNow URL, a TLS certificate or the listening address were not valid.
-
-  * Fix incident fields being deleted if the state `filter` contains an invalid regular expression. The request now fails with the error.
-
-  * Fix a possible crash of the client if the system certificate pool cannot be read for HTTPS connections to a proxy.
 
 * `tools/ims-gateway`
 
@@ -191,17 +231,15 @@
 
   * Fix rejected requests, panics and errors not being logged, and the log not including the result of a request.
 
-* `tools/geneos`
-
-  * Fix `geneos incident raise` exiting with a zero exit code, and printing an empty line, if the configuration file could not be loaded, and when the gateway did not report the incident as created or updated, and fix `geneos incident query` doing the same for an unsupported IMS type, a missing configuration or an unexpected response.
-
 * `pkg/ims`
 
-  * Fix the `field` expansion in action groups not having access to the incident fields, and `break` and `exit` expressions not supporting the `match`, `nomatch`, `replace`, `select` and `field` expansions.
+  * Action groups and transformations
 
-  * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select".
+    * Fix the `field` expansion in action groups not having access to the incident fields, and `break` and `exit` expressions not supporting the `match`, `nomatch`, `replace`, `select` and `field` expansions.
 
-  * Fix invalid `include` and `exclude` patterns in transformations being ignored, which could remove all fields from an incident. They are now errors.
+    * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select".
+
+    * Fix invalid `include` and `exclude` patterns in transformations being ignored, which could remove all fields from an incident. They are now errors.
 
   * Fix HTTP trace logging including credentials, and responses being written with a successful status and no body if the response was missing.
 
@@ -225,22 +263,22 @@
 
 ## Version v1.30.1
 
->[!IMPORTANT]
->This patch release replaces v1.30.0 as some issues were reported by users and identified during post-release testing, addressing bugs and improving overall stability. Please use this version instead of v1.30.0 if you have already downloaded that.
+> [!IMPORTANT]
+> This patch release replaces v1.30.0 as some issues were reported by users and identified during post-release testing, addressing bugs and improving overall stability. Please use this version instead of v1.30.0 if you have already downloaded that.
 
->[!NOTE]
->**Released 2026-11-05** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
+> [!NOTE]
+> **Released 2026-11-05** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ## Version v1.30.1 Highlights
 
 This release introduces significant new features for the `geneos` command, along with a number of minor breaking changes. Please read this changelog carefully before upgrading.
 
->[!IMPORTANT]
->**Breaking Changes**
+> [!IMPORTANT]
+> **Breaking Changes**
 >
->1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more common single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
+> 1. The configuration delimiter for nested keys (previously `::`) has been reverted to the more common single dot (`.`) except for some special cases, like domain name and IP keys in `geneos` command remote host configurations. Please take note this change when updating existing configuration files and scripts that reference nested keys. For example, any previous reference to `tls::verify` should now be updated to `tls.verify`.
 >
->1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
+> 1. For Self-Announcing and Floating Netprobes, the underlying `gateways` parameter has been converted from a JSON object to an array, requiring updates to any existing SAN instance configurations that specify multiple gateways. It was felt that adding auto-migration for this change could introduce unintended side effects, so manual updates are required. This also addresses a long-standing limitation in the configuration format for specifying multiple gateways on the same host, which is common in test and lab environments.
 
 A number of the new features have been introduced as part of a larger Monitor-Of-The-Monitors (MOTM) effort. For now, all of these should be considered preview features and may be subject to change in future releases, and we welcome feedback and suggestions on how to make them better.
 
@@ -252,7 +290,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
   * **Includes**: The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of new _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios.
 
-  * **Gateway Dataview Snapshots**: The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
+  * **Gateway Dataview Snapshots**: The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing.
 
 * **Auditing**: Support for auditing events within the `geneos` command. Audit logs are now created for global and per-instance events. As part of this, most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
@@ -267,18 +305,18 @@ A number of the new features have been introduced as part of a larger Monitor-Of
   * **Breaking Change**: For Self-Announcing Netprobes, the `gateways` parameter has been converted from an object (Go "map") to an array (Go "slice") so that you can now specify multiple gateways on the same host. In general this will be transparent to you unless you add or remove a gateway from a SAN instance using `geneos set/unset NAME -g host:port` - in which case you MUST update all the gateways as the original list will be deleted on change.
 
   * The `geneos` command now supports pre-defined configurations with _profiles_. A profile is a pseudo-component type that uses an configuration file to control the creation and management of other components with various contextual settings to help automate common deployment scenarios. As part of this new feature, the the `geneos init demo` and `geneos init all` commands are now implemented as profiles and the `geneos init` and `geneos deploy` commands are the principle ways of creating configurations based on profiles. Many other commands treat profiles as groups of components, such as `geneos start profile demo`, for example. The new command subsystem `geneos profiles` has been introduced to manage profiles (with an alias of `geneos profile` for convenience).
-  
+
     The `geneos` command extracts the embedded profile configuration automatically when no user profile file exists. Run `geneos profile extract` to explicitly write the embedded defaults; an existing profile file is backed up before replacement, and no changes are made when it already matches the embedded defaults. The default file contains the `demo` and `all` profiles, as well as `motm` and `motm-gateway` profiles for Monitor-Of-The-Monitors setups. You can add your own custom profiles to support your deployment scenarios. See the [profile documentation](tools/geneos/internal/component/profile/profile.md) for details.
 
   * The `geneos includes` subsystem has been introduced (with an alias of `geneos include` for convenience). A number of _Geneos Best Practice_ includes files are now embedded in the `geneos` command and the distribution and can be managed using the new `geneos includes` sub-system. These work with the profiles features to allow out-of-the-box confiugurations for common deployment scenarios. For existing deployments use the `geneos includes extract` command to write-out the embedded include files to the local filesystem.
 
   * The `geneos adb` subsystem has been introduced for working with Active Dashboard files (with aliases of `geneos dashboard` and `geneos dashboards` for convenience). The initial commands are `geneos adb info` and `geneos adb clean`, which allow you to inspect and clean Active Dashboard files, respectively.
-  
+
     The default `geneos adb clean` action is to remove common, unwanted element names for `gateway`, `probe` and `managedEntity` and also remove `type` elements with empty names from all modifiers and links, while retaining managed entity attributes and the names of other elements. Fine grained behaviour can be controlled using the command line options.
 
   * Support for auditing events within the `geneos` command. Audit logs are now created for global and per-instance events. As part of this feature, most user-facing outputs are now passed through redaction filters to prevent sensitive information from being exposed on the console and in audit logs.
 
-  * The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing. 
+  * The `snapshot` command can now output the captured data in Geneos Toolkit format, allowing the import of data from a Gateway without the need to configure Gateway Sharing. It can support both traditional single-dataview and the newer multi-dataview formats. This feature is especially useful when only a Netprobe can be co-located with a source gateway (that may not allow remote connections from where the data is needed) rather than using Gateway Sharing.
 
   * For RHEL8/UBI8 `geneos package install` will now fetch releases 7.12 and later without the `-el8` suffix. If you specify a version below 7.12 on the command line then the previous restrcition will still return an error as the download site URLs cannot handle a mix of version and platform. For 7.12+ and "latest" the platform identifier is not used and so will work as expected.
 
@@ -408,13 +446,13 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
 ---
 
->[!WARNING]
->Release v1.26 and later - **BREAKING CHANGES**
->* `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
+> [!WARNING]
+> Release v1.26 and later - **BREAKING CHANGES**
+> * `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
->   To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
+> To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
 >
->   The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
+> The release version has also skipped v1.25.x to emphasise these breaking changes. While this release should perhaps been tagged as v2.0.0 the decision was made to keep it as v1.26.0 to reflect the fact that while there are breaking changes, the overall functionality and user experience of the `geneos` command should remain consistent with previous versions.
 
 ## Version v1.29.0
 
@@ -453,7 +491,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 ## Version v1.28.2
 
 > [!NOTE]
-> **Released 2026-07-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+> **Released 2026-07-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.28.2 Fixes
 
@@ -467,9 +505,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
 * GDNA images use latest Geneos releases (7.10.x)
 
-## Version v1.28.1
-> [!NOTE]
-> **Released 2026-07-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+## Version v1.28.1 > [!NOTE] > **Released 2026-07-14** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.28.1 Fixes
 
@@ -489,9 +525,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
 ---
 
-## Version v1.28.0
-> [!NOTE]
-> **Released 2026-06-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/) 
+## Version v1.28.0 > [!NOTE] > **Released 2026-06-30** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
 ### Version v1.28.0 Fixes
 
@@ -679,8 +713,8 @@ After this release, planned work includes:
 > [!NOTE]
 > **Released 2026-04-24** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
->[!NOTE]
->**Please also note v1.26.0 was withdrawn due to a last minute issue.**
+> [!NOTE]
+> **Please also note v1.26.0 was withdrawn due to a last minute issue.**
 
 ### Version v1.26.1 Highlights
 
@@ -838,7 +872,7 @@ After this release, planned work includes:
 * `gdna`
 
   * `gdna.exe` has been broken for some time on Windows due to the use of the `github.com/mattn/go-sqlite3` package, which requires CGO. Replace this with the pure Go `modernc.org/sqlite` package to restore functionality.
-  
+
   * If the command line `--scramble`/`-S` is given to various commands then also opaque the username and hostname in the `gdna-summary` report.
 
   * Update default maximum column width for XLSX reports to 50 characters to avoid excessive column widths for long lists of plugins etc.
@@ -887,6 +921,7 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix directory path passed to `geneos init` commands. Previously the path argument was ignored.
+
   * Fix support for `sso-agent` by removing requirement that the download archive have an OS component
 
 ### Version v.1.23.0 Changes
@@ -896,7 +931,9 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Add URL support for arguments that accept PEM file input, like signing and instance bundles. The remote host must have a valid certificate if using `https`, and this cannot be disabled.
+
   * Add support for `--header` args to `geneos package install`, `geneos init` and `geneos deploy` to allow custom headers for any remote downloads.
+
   * The base URL for nexus downloads can be configured using `geneos config set download::nexus::url=https://...` but the query parameters are hardcoded for the moment. This will be addressed in a future release.
 
 ---
@@ -911,13 +948,17 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix `ps -f` output format
+
   * Restore ability to install packages from a URL
+
   * Fix progressbar to not show on unknown file sizes and pin units to use IEC (powers of 1,024)
+
   * Always set a `HOME` environment variable in the start-up environments, which allws instances to run external processes which depend on knowing the home directory
 
 * `integrations/servicenow2`
 
   * Fix logging to a file when run as a daemon process
+
   * Fix `_update_only` functionality
 
 ---
@@ -957,7 +998,7 @@ After this release, planned work includes:
 * `integrations/servicenow2`
 
   * Fix various bugs and irritations based on feedback from beta testing.
-  
+
   * The `query` command has new flags and can accept a full Service Now style query for incidents rather than just a username.
 
 ### Version v1.22.2 Changes
@@ -1011,7 +1052,7 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Changes to the earlier `cordial-geneos.xml` include file
-  
+
     * Renaming to `itrs.level0.geneos-cordial.xml` to better align with upcoming projects
 
     * Adding more information in the diagnostics views as well as using more conventional row names for the socket view
@@ -1060,7 +1101,7 @@ After this release, planned work includes:
   * Enhance the `ps` command to support listing of open files (`--files/-f`) and TCP connections (`--network/-n`) for matching instances.
 
   * Additional changes to `ps` command:
-  
+
     * Removal of the `--nolookup/-n` flag as we now cache user/group name lookups and also re-use the `-n` flags as the short form for the new `--network` output format.
 
     * Change separator character for port lists in CSV / Toolkit output from colon to space
@@ -1076,6 +1117,7 @@ After this release, planned work includes:
 * `libraries/libemail.so`
 
   * Support variable substitution in `_SUBJECT` and other subject settings
+
   * For Teams support, make the validation of URLs a list of regexes and add an `azure.com` pattern
 
 * `pkg/config`
@@ -1118,15 +1160,21 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix handling of older package directories that have `GA` or `RA` prefixes and sort packages by the numeric part only using semantic versioning rules.
+
   * Don't stop if there is no private key in a TLS bundle, it may be supplied in a separate argument
+
   * Do not overwrite existing root and signing certs and keys if they exist when running `geneos tls init`
+
   * Report if public key is missing or changes in user's `known_hosts` file
+
   * Always try to create the user config directory when writing configurations
 
 * `gdna`
 
   * Remove dependency on license token when listing unused plugins
+
   * Use timestamp of detailed report when updating summary report
+
   * Update include file with additional configuration
 
 ---
@@ -1147,6 +1195,7 @@ After this release, planned work includes:
 * `gdna`
 
   * Thanks to all the valuable feedback, we have a completely new Monitoring Coverage and Version dashboards. These new dashboards depends on the changes to some reports, so you **must** also upgrade the `gdna` binary before you can use it. The old dashboard will continue to work with the new binary but we may remove some of the data driving it from reports in future releases.
+
   * Add a new report `multiple-os-versions-per-hostid` which shows all servers that have more than one OS version for associated probes. This is an indication of invalid (duplicated) host IDs.
 
 * `pkg/host`
@@ -1156,12 +1205,15 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Added support for SSH private key files to the `geneos host` subsystem
+
   * Added a `geneos host unset` command to work with the changes require for private key files and more
 
 * `integrations/servicenow`
 
   * Expose `incident-query` configuration to allow custom lookups
+
   * Some code clean-up and refactoring
+
   * Add example of using an encrypted API key between client and router
 
 ## Version v1.20.0 Fixes
@@ -1169,12 +1221,15 @@ After this release, planned work includes:
 * `gdna`
 
   * Fix `server-groups` report performance by joining on gateways as well as servers in the SQL query
+
   * Trim spaces from Gateway names and also update any existing entries to remove leading/trailing spaces. This can happen because even though we trim each incoming CSV field the Gateway name is prefixed `gateway:` and can hide a leading space
 
 * `tools/geneos`
 
   * Support Webserver > 7.1.1 byt removing unsupported Java command line option
+
   * More updates to support OS and ARCH in downloads
+
   * Always set `HOSTNAME` environment variable in Netprobe so that Collection Agent self-monitoring works without further updates (this was already the case for `ca3` components)
 
 ---
@@ -1201,8 +1256,8 @@ After this release, planned work includes:
 ### Version v1.19.0 Highlights
 
 * Added `sso-agent` to `tools/geneos` so you can now deploy and manage those easier
-* Updated `ca3` unmanaged/standalone Collection Agent component to work with new releases
 
+* Updated `ca3` unmanaged/standalone Collection Agent component to work with new releases
 
 > [!NOTE]
 > **Released 2024-11-11**
@@ -1214,9 +1269,13 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Added `sso-agent` as a component. You can now install and manage SSO Agent instances using `geneos`. When adding a new instance `geneos` also creates an `ssokey` in a keystore file based on the `conf/sso-agent.conf` settings. If the instance is created with a TLS certificate and key then these are also stored in the truststore/keystore alongside any certificate validation chain. At the moment the configuration file is treated as read-only, but in time we will add capabilities to make changes using the command line.
+
   * As part of the work to add ZIP file support for SSO Agent component releases, we've improved how all releases are unarchived and now files and directories have their modification times set based on the archive file data. Symbolic links only have their modification times set when unarchiving locally.
+
   * Support the import of truststore/keystore files as JCEKS if loading as a JKS fails. Note that all truststore/keystore files are still written as JKS.
+
   * Fixed `ca3` starting environment
+
   * Changed output of versions in the `geneos ps` command to be easier to read
 
 ## Version v1.19.0 Fixes
@@ -1224,8 +1283,11 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * A recent change meant that the user's AES keyfile would not be created when running `geneos login` for the first time, this is fixed
+
   * Explicitly disable file descriptor inheritance in started processes
+
   * Show a version for Java bases components based on installed version
+
   * Fix `deploy` commands to create the correct Geneos home directory, instead of always a `geneos/` directory in the working directory
 
 * `gdna`
@@ -1248,6 +1310,7 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix webserver starting command for releases after 7.0.4 to account for valid host header configuration, defaults to `.*`
+
   * Fix webserver command line option ordering
 
 * `tools/dv2email`
@@ -1257,8 +1320,11 @@ After this release, planned work includes:
 * `gdna`
 
   * Restore the `OTHER` row to Gateway and server group reports
+
   * Add `dynamicEntities` column to `gateway-groups` report
+
   * Update Gateway include to publish a schema for the `GDNA Process` sampler
+
   * Allow for unauthenticated SMTP (when username is empty)
 
 * `pkg/email`
@@ -1279,11 +1345,13 @@ After this release, planned work includes:
 * `gdna` - This is the third public release of GDNA and we've added new features and made changes based on your feedback. The full details are in the documentation, but the highlights are:
 
   * Customise Level 1, Level 1 Optional and Level 2 plugin lists, including being able to require multiple instances of a plugin.
+
   * Added a new filtering feature to **include**, **exclude** and **group** by categories such as Gateways, Servers etc. See [FILTERS.md](gdna/FILTERS.md) for more.
 
 * [`pkg/reporter`](pkg/reporter)
 
   * The reporting code from `gdna` has been pulled out into it's own package so that we can reuse this for other projects later. The API is not yet final and there are missing features (such as severity colouring for HTML tables, like `dv2email` can do) but it should settle in the next couple of releases.
+
   * The XLSX reporter can include headlines in each sheet, their inclusion and direction can be controlled by an option
 
 ## Version v1.18.0 Changes
@@ -1292,19 +1360,32 @@ After this release, planned work includes:
 
 * `gdna`
 
-  * Lists of plugins, such as in *missing* columns and lists per server and probe, now show how many instances after the plugin name, if there is more than one 
+  * Lists of plugins, such as in *missing* columns and lists per server and probe, now show how many instances after the plugin name, if there is more than one
+
   * Command line sub-commands added to manage the filters and a growing set of right-click Commands added to the shipped include file
+
   * The original support for external files for more limited filtering has been deprecated, so if you use these you will have to import the data using the new command line sub-commands
+
   * When running "split" reports (the Gateway Overview and Details) the program now removes Dataviews that are no longer in the set of splits
+
   * New reports have been added to list more actionable information about your estate and some existing reports have been enhanced
+
   * Dataview Groups have been reworked from the ground up to offer a more logical view of `gdna` data
+
   * Every report now have a `reportName` headline to allow for better right-click command automation
+
   * Some YAML options have moved to allow for more logical grouping, so if you use `enable-for-dataview` or `enable-for-xlsx` to control which reports are autogenerated then you will have to change these to the new layout, see the docs for more
+
   * Split the growing [README.md](gdna/README.md) file into a number of parts
+
   * Added sub-commands to `gdna list` so now `gdna list reports` is needed to see what you can run. Also added the Dataview Group to the output
+
   * Other "under the hood" changes
+
     * In the docker image the `gdna.yaml` file is now located in the `geneos` user's home are and not root directory
+
     * Allow `~/` as a prefix for the `db.file` config parameter, which is in turn pulled into `db.dsn`
+
     * Update default `db.dsn` to include `?cache=shared` to avoid common locking issues
 
 * `tools/geneos`
@@ -1316,9 +1397,13 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Set the default local directory for downloaded packages when using `geneos package install -L` without a file or directory path
+
   * Restore installs from Nexus for internal users
+
   * Fix `geneos package delete` to stop it removing the latest of each component package. Other fixes to `geneos package delete` include not removing packages which are only used by instances as the `pkgtype` (e.g. `minimal/netprobe`) and the command now also ignores text prefixes on version directories like `GA`
+
   * Fix handling of wildcards that match nothing in ParseArgs()
+
   * Fix regexp pattern that extracts release information to allow for old releases that used a `.` instead of `-` between version and architecture
 
 ---
@@ -1335,29 +1420,41 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Add an `insecureport` parameter in Gateway instance template to support explicit insecure port when secure port is enabled by certificates. To use this you must update the `gateway-instance.setup.xml.gotmpl` either manually or by using `geneos init templates`
+
   * Related to the above, swap the main and alias names for `geneos init template(s)` - both will work.
 
 * `gdna`
 
   * Changed the text value in the `l3missing` column of various view from `yes` to `missing` to avoid ambiguity after user feedback.
+
   * Changed Dataview group name for optional gateway reports from `Coverage by Gateway` to simply `Gateways`
+
   * Add a new `logic` field to conditional-format tests to control how multiple column tests are handled; Default to the previous behaviour of "AND" but can be "OR" (or "all" / "any" respectively)
+
   * Add a `geneos.dataview-create-delay` duration to allow smoothing of dataview creation when creating many hundreds of dataviews like for split reports. Only applies when a dataview is created, not during updates to existing ones
+
   * Add a "Version Summary" dashboard using new Geneos 7 data
+
   * Revisit headline names and some column names for consistency and clarity
+
   * Add a dashboard slide show to the docker image web server configuration
 
 * `tools/san-config`
 
   * Add support for number of gateway sets to push to each probe, default 1 to maintain existing behaviour
+
   * Treat gateway pairs as a single gateway in logging and counting
+
   * Connection files can be served without a standby gateway port
+
   * Use default ports when gateways in the configuration do not supply them
 
 * `integrations/servicenow`
 
   * Add extra control over user name field with `incident-user` router parameters
+
   * Add a `trace` parameters to output all HTTP request and response data to stderr, for diagnostics
+
   * Clean-up some old code
 
 ## Version v1.17.1 Fixes
@@ -1369,9 +1466,13 @@ After this release, planned work includes:
 * `gdna`
 
   * Fix filtering of plugins, samplers and dynamic entities for multi-gateway reports, now numbers add up.
+
   * Fix table used for building `servers` reporting tables
+
   * Fix spelling of `latest` columns in the `sources` report
+
   * Fixes to some edge cases in probe and sampler counting
+
   * When an OS or Version is an empty string, convert it to NULL for later reporting as Unknown
 
 ---
@@ -1388,21 +1489,28 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Add a `minimal` Netprobe flavour that can be added either as it's own component type or, more commonly, as a flavour of a normal Netprobe, e.g. `geneos add netprobe minimal:probeName` - this extends the way you install a Fix Analyser probe as a SAN, e.g. `geneos add san fa2:myFixSAN`
+
   * Add a `use-chain` parameter for all instances which defaults to `true`. Set this to `false` using `geneos set ... use-chain=false` to disable certificate validation using a configure chain file.
 
 * `gdna`
 
   * Add support for GA7.0.0 updates to `licd` reports and additional details from corresponding Gateways. This includes OS and component version information as well as enriched data for dynamic entities.
+
   * Add schema updates for the new table columns. Rollback should work - untested at time of writing - as no existing columns have changes, just new ones added.
+
   * Add extra reports using the above data to a `Monitored Estate` groups, moving `Sources` to the same group.
+
   * Add new headlines for Gateway summary and detail Dataview and reports to show host, port and version - when available.
+
   * Add new columns to `Missing Coverage` and Gateway summary and details to expose new data when available and rename existing columns (not used in dashboards) to better align with each other.
+
   * Update `Sources` Dataview and report to report a status of `STALE` when a file is invalid. A remote source is always either up-to-date or inaccessible, which is a different status.
 
 * `tools/san-config`
 
   * Initial commit of a SAN remote configuration file server that allows dynamic building of SAN XML files using an YAML based inventory as well as autodetection of live Gateways from a preconfigured list.
-  * This tool is not yet in the main build as further changes and documentation are required for it to be more useful.  
+
+  * This tool is not yet in the main build as further changes and documentation are required for it to be more useful.
 
 ### v1.17.0 Fixes
 
@@ -1411,14 +1519,18 @@ After this release, planned work includes:
   * `geneos package` subsystem gets a wide review and a number of changes and fixes:
 
     * `uninstall` - change `-f` to `-F` for short form `--force` for consistency
+
     * `update` no longer supports the `--install` flag
+
     * `install` - local files now ignore the `--version` flag for file (non-directory) paths. For systems with a platform type (el8/el9) only install that platform type of non-platform specific archives. This allows components like web dashboard servers, which have no platform specific releases, to be installed.
+
     * `install` - many other changes around the handling of local files to improve what gets installed
-    * Fix instance iteration so that only affected instances are updated and so on. 
+
+    * Fix instance iteration so that only affected instances are updated and so on.
 
   * Fix `migrate` and `set` and `config set` to actually work with changes to parseargs() function.
 
-  * When adding components with key file support use the `${config:home}` value to pin key-file to working directories. Also, when saving a component configuration, such as during `move` or `copy` update the key-file and previous key-file paths to use `${config:home}` when source path matches the instance home directory. 
+  * When adding components with key file support use the `${config:home}` value to pin key-file to working directories. Also, when saving a component configuration, such as during `move` or `copy` update the key-file and previous key-file paths to use `${config:home}` when source path matches the instance home directory.
 
 * `gdna`
 
@@ -1461,8 +1573,11 @@ After this release, planned work includes:
 * `gdna`
 
   * Updates to Dashboards to present more focused information to users
+
   * Improve documentation, add block diagrams and update screenshots
+
   * Added a `gdna version` command, when combined with `--debug` will report dependencies used during build
+
   * Move to using `github.com/mattn/go-sqlite3` instead of pure Go `modernc.org/sqlite`
 
 * Build
@@ -1474,6 +1589,7 @@ After this release, planned work includes:
 * `gdna`
 
   * Fix some SQL queries used in temporary table construction to give more accurate numbers for servers with multiple probes
+
   * Fix dashboard XPaths to remove unnecessary Gateway and Managed Entity names
 
 * `tools/geneos`
@@ -1498,13 +1614,15 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix matching of names, which because we didn't use the return value of `slices.Compact()` meant an extra "all" was effectively added to all commands
+
   * Remove non-numeric prefixes of directory version naming to all "ra6.9.0" etc
 
 * `gdna`
 
   * Fix counts for plugins over servers with multiple probes
+
   * Update docs to fix references to `geneos` which are meant to be `gdna`
-  
+
 ---
 
 ## Version v1.15.5
@@ -1519,6 +1637,7 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Restore validity check regexp to allow dashes and underscored in remote host names
+
   * Merge parsed params back into args to fix `geneos host add` with an ssh URL
 
 ---
@@ -1535,9 +1654,13 @@ After this release, planned work includes:
 * `gdna`
 
   * Fix `sources` HTTP schema name, instead of using HTTPS
+
   * Remove `sources` entries when configuration changes or files are removed
+
   * Remove unused plugins from `expectRows` in include file
+
   * Fix plugin grouping for CA and GW samplers and resolve numeric inconsistencies in queries
+
   * Update bundled dashboards to include `Unused Gateways` and to add missing plugins
 
 ---
@@ -1554,11 +1677,13 @@ After this release, planned work includes:
 * `tools/geneos`
 
   * Fix handling of `-el8` and `-el9` package installs that were broken when updating for new Netprobe package file names
+
   * Fix matching of instances to properly account for wildcards and non existing hosts
 
 * `gdna`
 
   * Keep `gateways_all` table, not as a potential temporary one. Fixes sources report when sources go stale amongst other things
+
   * Fix logic in `sources` report to evaluate and update status correctly when `valid` changes
 
 ### v1.15.3 Changes
@@ -1566,6 +1691,7 @@ After this release, planned work includes:
 * `gdna`
 
   * Add an `unused-gateways` report
+
   * Add headlines to `gateway-coverage` to make clear how many unused gateways exist
 
 ---
@@ -1585,15 +1711,21 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * `tools/geneos`
 
   * add support for a `minimal` component type, which is a Netprobe without Collection Agent
+
   * `geneos init demo` now supports the `--minimal`/`-M` flag to use the minimal Netprobe in the deployment
+
   * the global configuration file (typically `${HOME}/.config/geneos/geneos.json`) now only saves chasnges to defaults. This allows defaults to be updated in the code without needing manual changes. Note that you may need to edit the file to clear out saved parameters that were the default but have the defaults have now changed.
+
   * changes `geneos set x+="y"` behaviour such that a space is only prefixed to the new option if it starts with a dash (`-`). This allows paths and other parameters that are not space separated to work
+
   * the `geneos init san` and `geneos init floating` commands have been deprecated in favour of `geneos deploy san` and `geneos deploy floating`, respectively
+
   * add the start of a `geneos config export` command that archives instances either as a back-up or for re-import later, once the matching `geneos config import` command is added. This is work-in-progress.
 
 * `gdna`
 
   * Update to Geneos 6.9.0 and use the `minimal` Netprobe to reduce image size
+
   * Add a `gdna stop` comma\nd, to stop background GDNA processes. An initially empty `gdna restart` command has been added for later completion.
 
 * General
@@ -1615,12 +1747,15 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * General / Miscellaneous
 
   * Move to Apache 2 license, from MIT, for clarity and conforming to ITRS company guidance
+
   * Move cron Centos 8/9 test images to UBI 8/9 respectively
+
   * Change all warning triangles in docs and comments ("⚠️") to to more friendly bulb ("💡")
 
 * `tools/geneos`
 
   * Refactor internal routines to iterate over instances. Reduces the number of similar functions and inter-dependencies.
+
   * Refactor other function names for clarity
 
 * `pkg/config`
@@ -1632,12 +1767,15 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * `gdna`
 
   * Fix broken modifiers that result in no data visibility with updated sampler name
+
   * While fixing above also fix references to old `t1` column to use `100` to indicate complete coverage
+
   * Fix logfile selection from command line
 
 * `tools/geneos`
 
   * Fix the incorrect selection of archive directories in `package install` when using the `-L` option
+
   * Fix the `--nosave` option by resetting error in return to nil, as it was a "valid" failure
 
 * `pkg/config`
@@ -1647,6 +1785,7 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * Documentation
 
   * Fix emoji in generated PDF files in Dockerfile by adding an appropriate font
+
   * Fix missing screenshots in markdown files exported to releases by merging all screenshots directories and shipping that too. PDFs not affected.
 
 ---
@@ -1658,12 +1797,15 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * `tools/geneos`
 
   * Add options to `tls create` to specify destination directory, outputting certificate bundles and setting the expiry period in days. Also, do not initialise the TLS subsystem if it's not found unless the `--force` flag is used.
+
   * Hide `--name` option in `deploy`, repurpose short-form `-n` for new `--nosave` option
+
   * Rename `logs` option `--nostandard` to `--no-stdout` (with alias) for consistency
 
 * `cordial` package
 
   * Only log file and function if logging at `Debug` level or greater
+
   * Split logging methods into their own file, add options to `LogInit()` to specify filename and/or [`lunberjack`](https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2) settings. Log filenames can also include `~/` prefix for home directory.
 
 * `tools/gateway-reporter`
@@ -1675,7 +1817,9 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 * `tools/geneos`
 
   * Fix download base name for Netprobes to new value.
+
   * Fix `deploy` importing of keyfiles (only import if given on command line)
+
   * `package install` and `package update` - Fix the handling of package metadata (e.g. `+el8`) suffixes to that they are treated the same as a package without a metadata suffix - and the right one is selected for the system being installed
 
 * `pkg/config`
@@ -1703,9 +1847,11 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
   * `tls` Subsystem
 
     After reviewing the usability of the TLS subsystem commands to manage secure connections with users, we've re-worked some of the functionality and added a new `tls export` command. The command line flags for the `tls import`, `deploy` and `init` command have been revisited and an attempt been made to align them more closely. Now, the following flags have common meanings:
-    
+
       * `--tls`/`-T` - enable TLS secured connections. This applies to all the `init` commands and the the `deploy` command. Was previously `--secure`/`-C` in `deploy` and `--makecerts`/`-C` in `init` commands. Both long forms are aliased to the new flag.
+
       * `--signing-bundle`/`-C` - specifies the source of signing certificate and private key and optional verification chain. This is new to `deploy` and replaces some of the functionality of `--importcert` for `init` commands where the short form has changed case for consistency.
+
       * `--instance-bundle`/`-c` - specifies the source of an instance certificate and private key and optional verification chain. This is new to `deploy` and replaces the rest of the functionality of `--importcert` for `init` commands.
 
     Other flags have been deprecated, such as `--importkey`/`-k`, whose functionality has been merged with the above.
@@ -1749,7 +1895,7 @@ Replaced by v1.15.3 to fix a one character typo in a regexp.
 
 * `pkg/config`
 
-  The `config` package 
+  The `config` package
 
 ## v1.13.2 Changes
 
@@ -1782,6 +1928,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `tools/geneos`
 
   * Fix support for legacy `.rc` files, which was broken in a previous release.
+
   * Fix `tls ls -a` to show root and signing certificates even without instance certificates created.
 
   * Fix the handling of file paths on Windows with the `geneos.exe` binary.
@@ -1809,6 +1956,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `tools/geneos`
 
   * Add support for Collection Agent logs to `log` command
+
   * [#195](https://github.com/ITRS-Group/cordial/issues/195) - Add append capability to set command
 
 * `pkg/rest`
@@ -1818,12 +1966,15 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `pkg/config`
 
   * Fix a deadlock in `UnmarshalKey` wrapper
+
   * Add a `Bytes` method for encryption
+
   * Add `StopOnInternalDefaultsErrors()` option to bail when loading bad internal defaults
 
 * `libraries/libemail`
 
   * Add a (deliberately undocumented) `_SMTP_TLS_INSECURE` environment variable to allow for edge cases in TLS testing
+
   * Build using Go DNS resolver and user lookup packages
 
 ## v1.12.1 Fixes
@@ -1831,12 +1982,15 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `tools/geneos`
 
   * Fix `tls import` command and update docs
+
   * Deal with missing key files as errors in `aes` sub-system
 
 * `pkg/host`
 
   * Allow no username for SSH config, which then defaults to the user running the command
+
   * Return an error from IsAvailable() on failure, and use this to send Dial() errors up the stack
+
   * Log a debug level message if Dial fails
 
 * `cordial` (top level package)
@@ -1902,6 +2056,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `tools/dv2email`
 
   - use dataview ordering (above) to render dataviews as seen from the Gateway, matching the normal Active Console
+
   - add support to differentiate between unset and empty `--type` on command line
 
 ## v1.11.2 Changes
@@ -1990,7 +2145,6 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 
   * Update `aes` commands to be less error prone, change `import` to not automatically update key files in instances, but require a new `--update` flag. Update docs.
 
-
 ## Version v1.10.3
 
 > **Released 2023-11-02**
@@ -2018,6 +2172,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `tools/geneos`
 
   * The recently introduced wildcarding for instance names was causing non-matching instance names to be evaluated all "all", so `geneos stop test` would stop all instances. Fix this by checking the list of names returned from the pattern match and if empty assume the input is not a pattern and leave it alone.
+
   * The fix to `pkg/host` below tries to ensure that running multiple sessions to remote hosts works more reliably, especially those where commands take some time to return, like for `start`
 
 * `pkg/process` - Fix Daemon() for Windows by adding a `DETACHED_PROCESS` flag to new proc attributes.
@@ -2025,6 +2180,7 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 * `pkg/config`
 
   * Protect global map access with a mutex in `expandoptions.go`
+
   * Make the viper mutex a plain one, not RWLock. Reorder calls to Unlock to cover decode()
 
 * `pkh/host` - Allow for remote SSH session limits, retry NewSession() up to 10 times with a 250ms delay. This limit is in the remote server, so cannot be overridden.
@@ -2088,15 +2244,21 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 ## v1.9.2 Fixes
 
 * `tools/dv2email`
+
   - Fix environment handling, which was broken in an earlier update to the `config` package
+
   - Add command line args for use from a Geneos Command
+
   - Update Dataview Row handling
+
   - Fix HTML template for multiple Dataviews
+
   - Update docs
 
 ## v1.9.2 Changes
 
 * `pkg/config`
+
   - Add a `SetConfigReader()` option to Load to be able to load configuration from an io.Reader. Untested, work in progress for a project.
 
 ---
@@ -2110,17 +2272,25 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 ## v1.9.1 Fixes
 
 * The release build process has been reworked to use Debian Bullseye images to maximise compatibility for shared libraries and also to build static binaries cleanly. A change in the Go toolchain at some point has made the build of the dynamically linked _centos7_ binary of `geneos` not work. This has now been removed while investigations into how to do this properly continue. This means that for users who have network directories for users there will be errors looking up users for `ls` and `ps` commands, at minimum.
+
 * [`tools/geneos`](tools/geneos/README.md)
+
   - Use `path.IsAbs()` and not `filepath.IsAbs()` so that constructing paths on a Windows host works for remote Linux systems. Fixes process start from Windows to Linux.
+
   - Allow deletion of protected instances with the `--force`/`-F` flags, as intended originally
+
   - When creating instances check all listening ports, not just those reserved in instance configurations
+
   - More fixes to package handling around component types with parent types
+
   - Change TLS cert verification to validation and document better
+
   - Add chain file path to `geneos tls ls -l` output
 
 ## v1.9.1 Changes
 
 * `pkg/geneos`
+
   - Move Netprobe XML structs to their own package `pkg/geneos/netprobe`
 
 ---
@@ -2134,8 +2304,11 @@ Many of the changes above were prompted while tracking down and fixing issues ar
 ## v1.8.1 Fixes
 
 * [`tools/geneos`](tools/geneos/README.md)
+
   - `unset` should not present a warning if special parameters are passed but no actions performed, e.g. removing a non-existing environment variable
+
   - [#181](https://github.com/ITRS-Group/cordial/issues/181) - now build on MacOS, primarily for remote admin. Not fully tested
+
   - [#182](https://github.com/ITRS-Group/cordial/issues/182) - a slew of issues around the order of actions during package install, uninstall and update fixed
 
 ---
@@ -2155,6 +2328,7 @@ Key files are now enabled for use by default for all new Gateway instances. Key 
 ## v1.8.0 Changes
 
 * [`tools/geneos`](tools/geneos/README.md)
+
   - `tls import` has changed to support the import of instance certificate, signing certs and chains in a more organised way. It is unlikely anyone was using the previous incarnation which was highly limited but just in case, this is a **breaking change** to the syntax and functionality of `tls import`.
 
   - Enable the use of external key-files for all *new* Gateways running on version GA5.14 and above. Existing Gateways will not be affected as the default is `usekeyfile=false`. If you do not want to use an external key-file set `usekeyfile=false` before starting for the first time. If a Gateway has been started with or without a keyfile and created a cache directory then you must follow the instructions in the documentation, <https://docs.itrsgroup.com/docs/geneos/current/Gateway_Reference_Guide/gateway_secure_passwords.htm#How_to_change_the_key_file_of_your_Gateway>, otherwise your Gateway will not start-up.
@@ -2164,14 +2338,17 @@ Key files are now enabled for use by default for all new Gateway instances. Key 
   - Extensive rework to the internal handling of loops-over-instances to pass-back an `instance.Response` struct and handle output at the caller. This is preparation for work on non-CLI interfaces (think: REST API and web). This may break some output formatting, please report via github issues.
 
 * [`pkg/geneos/api`](pkg/geneos/api/README.md)
+
   - A new API for inbound data to Geneos. This package is not yet ready for real-world use.
 
 ## v1.8.0 Fixes
 
 * [`pkg/config`](pkg/config/README.md)
+
   - [#176](https://github.com/ITRS-Group/cordial/issues/176) fix support for Windows paths in `${enc:...}` expansion formats
 
 * [`tools/geneos`](tools/geneos/README.md)
+
   - A fix for a long time bug in an internal routine that checked reserved names. This was found during the refactoring of code above. Oddly this doesn't appear to have been noticed, not sure why.
 
   - Fix closing of open file descriptors when starting a local instance. This needed cmd.Extrafiles slice having empty nils added through the the largest FD.
@@ -2324,7 +2501,7 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
 * `tools/geneos` - Add an initial `hidden` flag to hosts, so they don't participate in wildcarded operations.
 
-* `tools/geneos` - Add new `--validate` option to `geneos show` to run a validation and output results as JSON. 
+* `tools/geneos` - Add new `--validate` option to `geneos show` to run a validation and output results as JSON.
 
 * `pkg/geneos` - Updates for further parsing of config files, fix the treatment of `geneos.Value` type.
 
@@ -2402,100 +2579,51 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
 * [#116](https://github.com/ITRS-Group/cordial/issues/116)
 
-  Added a new [`geneos deploy`](tools/geneos/docs/geneos_deploy.md)
-  command that combines `geneos init` and `geneos add` but takes more
-  care over existing installations and/or creating new directories.
+  Added a new [`geneos deploy`](tools/geneos/docs/geneos_deploy.md) command that combines `geneos init` and `geneos add` but takes more care over existing installations and/or creating new directories.
 
-  As part of this work all the `geneos init` command will prompt the
-  user for a directory if none is given on the command line. If the
-  command is run from a non-interactive parent (e.g. a pipe from the
-  shell) then the prompt is skipped and the default directory is used.
-  
-  The `geneos deploy` command uses the same initialisation rules but
-  reduces the number of options. The intended audience is around
-  automation where the deployment scripts may not have the knowledge or
-  logic to check for existing installations.
+  As part of this work all the `geneos init` command will prompt the user for a directory if none is given on the command line. If the command is run from a non-interactive parent (e.g. a pipe from the shell) then the prompt is skipped and the default directory is used.
+
+  The `geneos deploy` command uses the same initialisation rules but reduces the number of options. The intended audience is around automation where the deployment scripts may not have the knowledge or logic to check for existing installations.
 
 * [#114](https://github.com/ITRS-Group/cordial/issues/114)
 
-  For `geneos` instances that have both the default `libpaths` and an
-  environment variable `LD_LIBRARY_PATH` configured these are now
-  concatenated with `libpaths` always first.
+  For `geneos` instances that have both the default `libpaths` and an environment variable `LD_LIBRARY_PATH` configured these are now concatenated with `libpaths` always first.
 
 * [#117](https://github.com/ITRS-Group/cordial/issues/117)
 
-  Based on user feedback all the Netprobe types have been merged under
-  the `netprobe/` directory in their respective plural names, e.g.
-  `netprobe/sans`. Existing installations should continue to work
-  unchanged but you can use the `geneos migrate` command to
-  automatically merge the instance directories under `netprobe/`
-  including the update of configuration files.
+  Based on user feedback all the Netprobe types have been merged under the `netprobe/` directory in their respective plural names, e.g. `netprobe/sans`. Existing installations should continue to work unchanged but you can use the `geneos migrate` command to automatically merge the instance directories under `netprobe/` including the update of configuration files.
 
 * [#97](https://github.com/ITRS-Group/cordial/issues/97)
 
-  The Linux Active Console is now treated like any other component and
-  instance. At the moment, if you issue a `geneos start` command then
-  all instances including Active Console(s) will be run. In a future
-  release we may add an `autostart` like flag that can prevent this and
-  require a manual start using the full `geneos start ac2 abcde` syntax.
+  The Linux Active Console is now treated like any other component and instance. At the moment, if you issue a `geneos start` command then all instances including Active Console(s) will be run. In a future release we may add an `autostart` like flag that can prevent this and require a manual start using the full `geneos start ac2 abcde` syntax.
 
 * [`pkg/process`](pkg/process/) - New features
 
-  New functions have been added to support the running of single
-  processes and batches based on a Program struct. This is for running
-  tasks loaded from a config file (typically YAML) for an ongoing
-  project. The reason for not using existing external packages was the
-  integration with other `cordial` tooling. This functionality is
-  currently maturing and is very sparsely documented and subject to
-  major changes.
+  New functions have been added to support the running of single processes and batches based on a Program struct. This is for running tasks loaded from a config file (typically YAML) for an ongoing project. The reason for not using existing external packages was the integration with other `cordial` tooling. This functionality is currently maturing and is very sparsely documented and subject to major changes.
 
 * [`pkg/icp`](pkg/icp) and [`pkg/gwhub`](pkg/gwhub) - New APIs
 
-  These two packages are the start of Go APIs for ITRS Capacity Planner
-  and Gateway Hub, respectively. These should not yet be used and have
-  been included to track progress over the next few releases.
+  These two packages are the start of Go APIs for ITRS Capacity Planner and Gateway Hub, respectively. These should not yet be used and have been included to track progress over the next few releases.
 
 ## v1.6.0 Fixes
 
 * [#126](https://github.com/ITRS-Group/cordial/issues/126)
 
-  In the [config package](pkg/config/) the Load() function would fail if
-  used with a file format set bu other defaults and run in the same
-  directory as the binary it ran in because viper would also try to load
-  the bare-named program binary as a config file of the type given. The
-  package now does it's own file name construction to avoid this.
+  In the [config package](pkg/config/) the Load() function would fail if used with a file format set bu other defaults and run in the same directory as the binary it ran in because viper would also try to load the bare-named program binary as a config file of the type given. The package now does it's own file name construction to avoid this.
 
-  As a consequence of the work done around this fix to make the usage of
-  options to Load() and Save() clearer some have changed names. Existing
-  code that wants to use v1.6.0 will experience minor API breakage. The
-  fixes are simple refactors, so no backward compatibility has been
-  retained.
+  As a consequence of the work done around this fix to make the usage of options to Load() and Save() clearer some have changed names. Existing code that wants to use v1.6.0 will experience minor API breakage. The fixes are simple refactors, so no backward compatibility has been retained.
 
 * [#124](https://github.com/ITRS-Group/cordial/issues/124)
 
-  The work done for
-  [#117](https://github.com/ITRS-Group/cordial/issues/117) above meant
-  that all templates are now located under `netprobe/templates` and both
-  `san` and `floating` templates had the same name. The default
-  templates now have updated root names, e.g. `san.setup.xml.gotmpl`,
-  but existing configuration may need updating if the existing templates
-  clash.
+  The work done for [#117](https://github.com/ITRS-Group/cordial/issues/117) above meant that all templates are now located under `netprobe/templates` and both `san` and `floating` templates had the same name. The default templates now have updated root names, e.g. `san.setup.xml.gotmpl`, but existing configuration may need updating if the existing templates clash.
 
-  To help users control which configuration files are created from
-  templates, and which to use for instance start-up, a new instance
-  parameter `setup` has been introduced for this. The defaults are
-  `netprobe.setup.xml` and `gateway.setup.xml` for the two affected
-  component types which means no change for existing users.
+  To help users control which configuration files are created from templates, and which to use for instance start-up, a new instance parameter `setup` has been introduced for this. The defaults are `netprobe.setup.xml` and `gateway.setup.xml` for the two affected component types which means no change for existing users.
 
-  So even though the new SAN template is `san.setup.xml.gotmpl`, for
-  example, running `geneos rebuild san` will still result in a
-  `netprobe.setup.xml` in the instance directory.
+  So even though the new SAN template is `san.setup.xml.gotmpl`, for example, running `geneos rebuild san` will still result in a `netprobe.setup.xml` in the instance directory.
 
 * [#120](https://github.com/ITRS-Group/cordial/issues/120)
 
-  While this report was a misunderstanding of the way to use Daemon()
-  the comments have been updated to give better direction on how to use
-  the pidfile io.Writer parameters.
+  While this report was a misunderstanding of the way to use Daemon() the comments have been updated to give better direction on how to use the pidfile io.Writer parameters.
 
 ---
 
@@ -2507,33 +2635,24 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
 ## v1.5.2 Changes
 
-  * [#102](https://github.com/ITRS-Group/cordial/issues/102) - `process`
-    package additions
+  * [#102](https://github.com/ITRS-Group/cordial/issues/102) - `process` package additions
 
-  * [#109](https://github.com/ITRS-Group/cordial/issues/109) - New `tls
-    create` command
+  * [#109](https://github.com/ITRS-Group/cordial/issues/109) - New `tls create` command
 
     Move the functions of `--name` etc from `tls new` to `tls create` to
     remove dependency on the Geneos home directory.
 
-  * [#106](https://github.com/ITRS-Group/cordial/issues/106) - Change
-    directory for TLS root and signing certs and keys
+  * [#106](https://github.com/ITRS-Group/cordial/issues/106) - Change directory for TLS root and signing certs and keys
 
-  * [#97](https://github.com/ITRS-Group/cordial/issues/97) - Start of
-    Linux AC2 support. Not yet fully functional.
+  * [#97](https://github.com/ITRS-Group/cordial/issues/97) - Start of Linux AC2 support. Not yet fully functional.
 
-  * [#98](https://github.com/ITRS-Group/cordial/issues/98) - Work done
-    and then superceeded by
-    [#109](https://github.com/ITRS-Group/cordial/issues/109) above.
-
+  * [#98](https://github.com/ITRS-Group/cordial/issues/98) - Work done and then superceeded by [#109](https://github.com/ITRS-Group/cordial/issues/109) above.
 
 ## v1.5.2 Fixes
 
-  * [#111](https://github.com/ITRS-Group/cordial/issues/111) - Fix
-    gateway instance template ports
+  * [#111](https://github.com/ITRS-Group/cordial/issues/111) - Fix gateway instance template ports
 
-  * [#103](https://github.com/ITRS-Group/cordial/issues/103) - Fix
-    default web server log file name
+  * [#103](https://github.com/ITRS-Group/cordial/issues/103) - Fix default web server log file name
 
 ## Version v1.5.1
 
@@ -2552,8 +2671,7 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
     Added an option to recreate root and signing certs from `tls init`.
 
-  * [#86](https://github.com/ITRS-Group/cordial/issues/86) - New log
-    option for stderr logs blocked main logs
+  * [#86](https://github.com/ITRS-Group/cordial/issues/86) - New log option for stderr logs blocked main logs
 
     Reworked the way that logs are followed to allow both normal and
     stderr logs to be followed. This fixes `start -l`, `restart -l` and
@@ -2561,21 +2679,18 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
     to `logs` to allow normal log to be surpressed when you only want
     the error logs.
 
-  * [#88](https://github.com/ITRS-Group/cordial/issues/88) - Floating
-    probe configuration template output malformed
+  * [#88](https://github.com/ITRS-Group/cordial/issues/88) - Floating probe configuration template output malformed
 
     The defaults for new floating probes used `sanname` instead of
     `floatingname` as the parameter for the template rendering.
 
-  * [#90](https://github.com/ITRS-Group/cordial/issues/90) - Variables
-    in SANs
+  * [#90](https://github.com/ITRS-Group/cordial/issues/90) - Variables in SANs
 
     The san template was not corrected updated for the new variable
     structure.
 
-  * [#43](https://github.com/ITRS-Group/cordial/issues/43) - Minor error
-    in `disable`
-   
+  * [#43](https://github.com/ITRS-Group/cordial/issues/43) - Minor error in `disable`
+
     In `disable` check if stopped and print error if not `--force`
 
 ---
@@ -2588,30 +2703,18 @@ Note: v1.6.3 was removed, and v.1.6.4 releases to address some last minute issue
 
 ### v1.5.0 - Highlights
 
-This release brings numerous changes to the `cordial` tools, especially
-the `geneos` utility. We have tried to improve the reliability and
-usability of the utility through updated and improved documentation and
-subsequent fixes and changes that arose from writing and checking that
-documentation.
+This release brings numerous changes to the `cordial` tools, especially the `geneos` utility. We have tried to improve the reliability and usability of the utility through updated and improved documentation and subsequent fixes and changes that arose from writing and checking that documentation.
 
 ### v1.5.0 - **BREAKING CHANGES**
 
   * `pkg/logger`:
 
-    * **REMOVED**. This simplistic internal logging package has been
-      deprecated in favour of more mature solutions, such as
-      [zerolog](https://pkg.go.dev/github.com/rs/zerolog).
+    * **REMOVED**. This simplistic internal logging package has been deprecated in favour of more mature solutions, such as [zerolog](https://pkg.go.dev/github.com/rs/zerolog).
 
   * `tools/geneos`:
 
-    * The way SAN instances handle gateway connections has been fixed to
-      allow gateway represented as FDQNs or IP addresses. The old way
-      resulted in a mess - viper defaults to dots ('.') as configuration
-      item hierarchy delimiters and this caused issues. Most users with
-      SANs should not notice any change, but if you see problems please
-      check the san XML file and correct the `gateways` section as
-      necessary. One way is to remove and re-set them using:
-      
+    * The way SAN instances handle gateway connections has been fixed to allow gateway represented as FDQNs or IP addresses. The old way resulted in a mess - viper defaults to dots ('.') as configuration item hierarchy delimiters and this caused issues. Most users with SANs should not notice any change, but if you see problems please check the san XML file and correct the `gateways` section as necessary. One way is to remove and re-set them using:
+
       > `geneos set san mySan -g gateway.example.com ...`
 
       Running `set` will rewrite the configuration in the new format bu
@@ -2619,21 +2722,9 @@ documentation.
       occupy settings. You may need to manually edit the instance
       configuration file `san.json` anyway.
 
-    * Like the above any variables defined for either SAN or Gateway
-      instances used to generate XML from templates will have not worked
-      in a case sensitive manner to mirror how Geneos treats variable
-      names. To fix this the internal format of the `variables` section
-      has been updated to move the variable name from the configuration
-      key to a separate structure as it's own value. Code has been added
-      to automatically convert from the old format to the new when the
-      configuration file is updated however there is no fix for the
-      correction of variable case name being incorrect from previous
-      configurations. Please review and adjust as necessary.
+    * Like the above any variables defined for either SAN or Gateway instances used to generate XML from templates will have not worked in a case sensitive manner to mirror how Geneos treats variable names. To fix this the internal format of the `variables` section has been updated to move the variable name from the configuration key to a separate structure as it's own value. Code has been added to automatically convert from the old format to the new when the configuration file is updated however there is no fix for the correction of variable case name being incorrect from previous configurations. Please review and adjust as necessary.
 
-    * Support for running instances as other user accounts or under
-      `sudo` has been deprecated. Security is _hard_, and the support
-      for these was poorly implemented. A better way should be coming in
-      a future release.
+    * Support for running instances as other user accounts or under `sudo` has been deprecated. Security is _hard_, and the support for these was poorly implemented. A better way should be coming in a future release.
 
       This may mean that where users has configured netprobes to run as
       different users and have previously run `sudo geneos start` to let
@@ -2645,21 +2736,12 @@ documentation.
 
 ### v1.5.0 - Other Changes
 
-  * There has been a significant amount of refactoring and moving around
-    of the code-base. Most of this should not be user visible, but some
-    public APIs have changed. As with all major changes there may be
-    problems that have not been caught in testing. Please report
-    anything you see as either a [github
-    issue](https://github.com/ITRS-Group/cordial/issues) or via the
-    [ITRS Community Forum](https://community.itrsgroup.com/).
+  * There has been a significant amount of refactoring and moving around of the code-base. Most of this should not be user visible, but some public APIs have changed. As with all major changes there may be problems that have not been caught in testing. Please report anything you see as either a [github issue](https://github.com/ITRS-Group/cordial/issues) or via the [ITRS Community Forum](https://community.itrsgroup.com/).
 
     There are too many changed to list them all in detail but specific
     ones worth mentioning include:
 
-    * [`memguard`](https://pkg.go.dev/github.com/awnumar/memguard)
-      support for protected memory. Credentials (passwords, TLS keys and
-      so on) should now be handled as Enclaves (for plaintext or private
-      keys) or as LockedBuffers (for ciphertexts of sensitive data).
+    * [`memguard`](https://pkg.go.dev/github.com/awnumar/memguard) support for protected memory. Credentials (passwords, TLS keys and so on) should now be handled as Enclaves (for plaintext or private keys) or as LockedBuffers (for ciphertexts of sensitive data).
 
       The [`config`](pkg/config/README.md) package includes new methods
       for handling configuration file data as Enclaves and LockedBuffers
@@ -2672,26 +2754,9 @@ documentation.
       them as a [github
       issue](https://github.com/ITRS-Group/cordial/issues)
 
-    * A number of the previous package APIs have undergone review and
-      changed as needed. In particular the
-      [`config`](pkg/config/README.md) API has been through the wringer
-      and if you have any code that relies on it from v1.4 or earlier
-      then it will require changes. There are new functions, which is to
-      be expected, but also some existing ones have been renamed or had
-      their argument signatures changed. Please review the documentation
-      to see what the methods and functions have become.
+    * A number of the previous package APIs have undergone review and changed as needed. In particular the [`config`](pkg/config/README.md) API has been through the wringer and if you have any code that relies on it from v1.4 or earlier then it will require changes. There are new functions, which is to be expected, but also some existing ones have been renamed or had their argument signatures changed. Please review the documentation to see what the methods and functions have become.
 
-    * Credentials support. There is both general purpose and
-      [`geneos`](tools/geneos/README.md) specific support for the local
-      storage of credentials. Passwords and other secrets "at rest" are
-      stored in Geneos AES256 format using a key file that is initial
-      auto-generated. To decode these passwords you must have both the
-      key file (which is by default only user readable) and the
-      credentials file. There should be support for other credentials
-      types, such as OAuth style client secrets and tokens, in future
-      releases. The _username_ and the _domain_ that the credentials
-      apply to are not encrypted, by design. This is however subject to
-      change in a future release.
+    * Credentials support. There is both general purpose and [`geneos`](tools/geneos/README.md) specific support for the local storage of credentials. Passwords and other secrets "at rest" are stored in Geneos AES256 format using a key file that is initial auto-generated. To decode these passwords you must have both the key file (which is by default only user readable) and the credentials file. There should be support for other credentials types, such as OAuth style client secrets and tokens, in future releases. The _username_ and the _domain_ that the credentials apply to are not encrypted, by design. This is however subject to change in a future release.
 
       Credentials currently works with a free-text domain that matches a
       destination using a "longest match wins" search, e.g. for a URL
@@ -2701,11 +2766,7 @@ documentation.
       including TLS certificates and keys as well as SSH password and
       private keys.
 
-    * Releases now include selected binaries with a semantic version
-      suffix. The programs in `cordial` use the base name of the binary
-      as a key to select which configuration files to load, so that
-      renaming the binary will result in a different set of
-      configuration file being used, automatically.
+    * Releases now include selected binaries with a semantic version suffix. The programs in `cordial` use the base name of the binary as a key to select which configuration files to load, so that renaming the binary will result in a different set of configuration file being used, automatically.
 
       To make life simpler, any version suffix is automatically stripped
       if, and only if, it matches the one used to build the binary. This
@@ -2714,63 +2775,49 @@ documentation.
 
   * [`tools/geneos`](tools/geneos/README.md):
 
-    * Extensive documentation restructuring and rewriting. This is still
-      work in progress but largely complet. Built-in help text (shown
-      with the `help` command or the `--help`/`-h` option) should now
-      align much more closely with real functionality and the online
-      documentation is now almost completely built from the same source.
+    * Extensive documentation restructuring and rewriting. This is still work in progress but largely complet. Built-in help text (shown with the `help` command or the `--help`/`-h` option) should now align much more closely with real functionality and the online documentation is now almost completely built from the same source.
 
     * Addition of _subsystems_ to group commands.
 
     * Move `aes` and `tls` command sources to their subsystems.
 
-    * Add `host` and `package` subsystems and create aliases for the
-      original commands, e.g.
+    * Add `host` and `package` subsystems and create aliases for the original commands, e.g.
+
       * `add host` becomes `host add`
+
       * `install` becomes `package install`
+
       * etc.
 
-    * The `set user`, `show user` etc. commands are now under single
-      `config` subystem, e.g. `geneos config set mykey=value`
+    * The `set user`, `show user` etc. commands are now under single `config` subystem, e.g. `geneos config set mykey=value`
 
     * The `set global` and related commands have been deprecated.
 
-    * The new `package` subsystem command pulls all Geneos release
-      management into one place
+    * The new `package` subsystem command pulls all Geneos release management into one place
 
     * New `login` and `logout` commands to manage credentials.
 
-    * New `ca3` and `floating` components for Collection Agent 3 and Floating
-      Netprobes
+    * New `ca3` and `floating` components for Collection Agent 3 and Floating Netprobes
 
   * [`tools/dv2email`](tools/dv2email/README.md):
 
-    * This new utility can be run as a Geneos Action or Effect to
-      capture one or more Dataviews and send as an email. The
-      configuration is extensive and the layout and contents are
-      completely configurable through the use of Go templates.
+    * This new utility can be run as a Geneos Action or Effect to capture one or more Dataviews and send as an email. The configuration is extensive and the layout and contents are completely configurable through the use of Go templates.
 
 ### v1.5.0 - Bug Fixes
 
   * [`tools/geneos`](tools/geneos/README.md):
 
-    * Version checking of local release archives was broken because of
-      overloading of a common function. This is now split and checking
-      should work once again.
+    * Version checking of local release archives was broken because of overloading of a common function. This is now split and checking should work once again.
 
     * Most reported issues on github have been fixed.
 
 ### v1.5.0 - To Do
 
-  * Documentation needs more work and refinement. The built-in help for
-    almost all commands is now up-to-date but the `init` and `tls`
-    subsystems need to be reviewed further and completed. This should be
-    in a patch release soon.
+  * Documentation needs more work and refinement. The built-in help for almost all commands is now up-to-date but the `init` and `tls` subsystems need to be reviewed further and completed. This should be in a patch release soon.
 
   * [`tools/geneos`](tools/geneos/README.md):
 
-    * Local storage of encrypted passwords for remote SSH access needs
-      documenting
+    * Local storage of encrypted passwords for remote SSH access needs documenting
 
 ---
 
@@ -2787,19 +2834,29 @@ documentation.
 * Fixes
 
   * tools/geneos: fix `ps` not showing open ports on systems with IPv6 enabled
+
   * tools/geneos: make `ls` and `ps` command flags more consistent
+
   * tools/geneos: add an -el8 runtime to docker images when built
+
   * tools/geneos: fix RHEL8/Centos8 download support for localhost using new SetStringMapString() method
+
   * pkg/config: add SetStringMapString() methods to support settings maps (which viper doesn't support until you write a file out and read it back)
+
   * tools/geneos: adjust the way we choose package version, convert "-el8" to "+el8" to satisfy semver ordering
+
   * tools/geneos: package version number are now prefixes only
 
 * Changes
 
   * tools/geneos: add `-f` flag to `ps` command to show open files. formatting subject to change for now.
+
   * tools/geneos: add a `update ls` command to show available package versions
+
   * pkg/config: added more ExpandOptions and support more Get* functions such as GetInt
+
   * pkg/geneos: added more Geneos XML config support, specifically Sampler Schemas and Standardised Formatting
+
   * libraries/libemail: added initial msTeams notification function
 
 ---
@@ -2809,10 +2866,15 @@ documentation.
 * Fixes
 
   * tools/geneos: fix `update` to only optional restart (`-R`) the component type given
+
   * tools/geneos: check RHEL8 download in a case independent way - fixes remotes
+
   * tools/geneos: create user config directory for remote hosts in case of old location for main config
+
   * tools/geneos: `install` should error out is passed `@host` instead of `-H host`
+
   * tools/geneos: ssh known hosts handling improved (for mixed IP / hostnames)
+
   * tools/geneos: remote hosts with IP names are now renamed `A-B-C-D` to avoid issues with viper names
 
 ---
@@ -2822,35 +2884,57 @@ documentation.
 * Fixes
 
   * tools/geneos: check return from user.Current() as it can fail (but shouldn't)
+
   * tools/geneos: numerous fixes for logic around handling of remote hosts
+
   * tools/geneos: fix remote host naming to be work with capitalisations
+
   * tools/geneos: actually load SSH private key files, if available
+
   * tools/geneos: re-order SSH HostKeyAlgorithms so that, bizarrely, IP based remotes work
+
   * tools/geneos: better handling of instance config aliases when writing config files
+
   * tools/geneos: fixes to unset to ignore values that may be passed in with keys to unset
+
   * tools/geneos: refactor CopyInstance() to preserve ports, other details
+
   * build: create static executables, using alpine, and a centos 7 compatible libemail.so
+
   * tools/geneos: add the beginnings of support for YAML instance config files. not enabled yet.
+
   * tools/geneos: fix crash when importing to common directories of components without the component name
+
   * tools/geneos: fix fileagent support by adding implicit imports with side-effects for all component packages
+
   * tools/geneos: skip failed permissions on /proc/*/fd - let 'ps' work for restricted processes
+
   * tools/geneos: fix update-during-install support, add --force flag for this too
+
   * tools/geneos: fix logic to match latest packages when major number changes
 
 * Changes
 
   * tools/geneos: clean-up various comments, refactor methods, add license/copyright notices to many files
+
   * pkg/config: Add an options `expr` prefix to expansion items which supports <https://pkg.go.dev/github.com/maja42/goval> syntax
+
   * pkg/config: API change: Add options to the config expansion functions rather than just lookup maps
+
   * tools/geneos: add SSH password support for remote hosts
+
   * tools/geneos: support embedded SSH passwords in hosts config, using new 'set host' sub-command
+
   * tools/geneos: support additional SSH private key files per host via 'set host sshkeys=X,Y' sub-command
+
   * tools/geneos: begin implementation of support for YAML config files via 'configtype' user setting
+
   * pkg/geneos: add EnvironmentRef and fix periodStartTime attribute
 
 * Other
 
   * tools/geneos: ongoing documentation and command help usage updates
+
   * tools/geneos: update README.md with more information about instance configuration files and their values (@gvastel)
 
 ---
@@ -2860,6 +2944,7 @@ documentation.
 * Fixes
 
   * tools/geneos: fix running as root (or via sudo) and creation of config directories and file ownerships
+
   * tools/geneos: fix creation of full user config directories when running 'set user'
 
 ---
@@ -2869,6 +2954,7 @@ documentation.
 * Fixes
 
   * tools/geneos: chown files and directories creates when run as root
+
   * tools/geneos: ensure plain 'init' creates all components dirs
 
 ---
@@ -2878,26 +2964,43 @@ documentation.
 * Changes
 
   * PagerDuty integration
+
   * Merged ServiceNow integration, single binary build
+
   * tools/geneos: add instance protection against stop (and related) or delete commands
+
   * tools/geneos: support legacy command through emulating `*ctl` named commands
+
   * tools/geneos: allow remote operations without local directories
 
 * Fixes
 
   * tools/geneos: fix logic around creating user default AES keyfiles and directory permissions
+
   * tools/geneos: round certificate expiry to midnight
+
   * tools/geneos: round tls remaining column to seconds correctly
+
   * tools/geneos: fix webserver command build typo. now webserver starts correctly
+
   * libemail: fix default _SUBJECT handling
+
   * tools/geneos: split over complex 'init' command into sub-commands
+
   * updated command usage information and reordered various internal function calls
+
   * tools/geneos: add password verify to aes encode and a --once flag to override
+
   * tools/geneos: add local JoinSlash and Dir to use Linux paths on Windows builds
+
   * tools/geneos: fix ssh-agent support on windows
+
   * tools/geneos: build on windows
+
   * integrations: Add PagerDuty integration
+
   * Integrations: Merge ServiceNow binaries into one
+
   * tools/geneos: change internal remote Stat() API
 
 ---
@@ -2913,27 +3016,33 @@ Final release after numerous small fixes.
 * Fixes
 
   * `geneos` command fixes:
+
     * Fixed `init` download credential handling
+
     * Fixes JSON output format from `ls` commands
+
     * Local-only installs now work again (including default "latest" support)
 
   * Security
-    * Updated Labstack Echo to 4.9.0 to address security advisory
-      [CVE-2022-40083](https://nvd.nist.gov/vuln/detail/CVE-2022-40083).
-      To best of our knowledge this particular set of features was never
-      used in this package.
+
+    * Updated Labstack Echo to 4.9.0 to address security advisory [CVE-2022-40083](https://nvd.nist.gov/vuln/detail/CVE-2022-40083). To best of our knowledge this particular set of features was never used in this package.
 
 * Additional features and improvements
 
   * `geneos` command improvements:
+
     * Added `--raw` to `show` to not output expanded configuration values
+
     * Many improvements and changes to the new `aes` sub-commands. Please see [documentation](tools/geneos/README.md) for details
+
     * Removed built-in opaquing of credentials in output in favour of new `${enc:...}` support
 
   * `libemail.so` gets direct passwords back, with ExpandString support. See [documentation](libraries/libemail/README.md) for details
 
   * General package improvements
+
     * Enhanced `OpenLocalFileOrURL` to support `~/` paths
+
     * Enhanced `ExpandString` to support direct file paths and updates package docs further
 
 ---
@@ -2942,13 +3051,7 @@ Final release after numerous small fixes.
 
 * Fixes
 
-  * `geneos` instance configuration files now have expansion applied to
-    string-like values. This means, for example, that changing the
-    `version` of an instance from `active_prod` will correctly be
-    reflected in the executable path and library paths. Previously these
-    needed to be manually changed. Please note that existing instance
-    configuration files will NOT be updated and will require editing.
-    You can go from:
+  * `geneos` instance configuration files now have expansion applied to string-like values. This means, for example, that changing the `version` of an instance from `active_prod` will correctly be reflected in the executable path and library paths. Previously these needed to be manually changed. Please note that existing instance configuration files will NOT be updated and will require editing. You can go from:
 
         "program": ".../packages/gateway/active_prod/gateway2.linux_64",
 
@@ -2960,15 +3063,11 @@ Final release after numerous small fixes.
 
 * Additional features and improvements
 
-  * `ExpandString()` was enhanced to add a `config:` prefix so that
-    configurations with a flat structure, i.e. no "." in names, could be
-    referenced.
-  * To support the changes above in instance configurations a new method
-    was added - `ExpandAllSettings()` - and the `geneos show` command
-    enhanced to display both expanded and raw configurations via the new
-    `--raw` flag.
-  * Additional configuration item support in the
-    [`geneos`](pkg/geneos/README.md) package
+  * `ExpandString()` was enhanced to add a `config:` prefix so that configurations with a flat structure, i.e. no "." in names, could be referenced.
+
+  * To support the changes above in instance configurations a new method was added - `ExpandAllSettings()` - and the `geneos show` command enhanced to display both expanded and raw configurations via the new `--raw` flag.
+
+  * Additional configuration item support in the [`geneos`](pkg/geneos/README.md) package
 
 ---
 
@@ -2976,16 +3075,16 @@ Final release after numerous small fixes.
 
 * Fixes found during testing
 
-  * Removed support for `$var` format expansion, now it's `${var}` only.
-    This prevents configuration issues when, for example, plain text
-    passwords contain dollar signs. The documented workaround if you
-    need to include literal `${` in a configuration value still applies.
+  * Removed support for `$var` format expansion, now it's `${var}` only. This prevents configuration issues when, for example, plain text passwords contain dollar signs. The documented workaround if you need to include literal `${` in a configuration value still applies.
 
 * Additional features and improvements
 
   * Added command `geneos aes update`. This may still be renamed before final release to `geneos aes import` depending on feedback.
+
   * Improvements to `geneos aes new`
+
   * Improvements, clarification to package and function documentation
+
   * Code clean-up and refactor to make some internals more understandable and to remove code duplication
 
 ---
@@ -2994,29 +3093,40 @@ Final release after numerous small fixes.
 
 * Breaking Changes
 
-  There are quite a lot of changes to the various components and
-  packages since the original v1.0.0. Given that almost no-one outside
-  the components contained in the repo itself is using the public
-  package APIs I have broken the rules around semantic versioning and
-  changed parts of the API.
+  There are quite a lot of changes to the various components and packages since the original v1.0.0. Given that almost no-one outside the components contained in the repo itself is using the public package APIs I have broken the rules around semantic versioning and changed parts of the API.
 
 * Highlights
 
   * Package changes
+
     * **Breaking changes**: Geneos `api` and `api-streams` XML-RPC supporting packages have had a big clean-up to make them easier to use
+
     * New `config` package to overlay `viper` with support for value expansion and crypto convenience functions
+
     * New `geneos` package to aid in the construction of XML configurations for Gateway and Netprobe. This is work in progress.
+
     * New `commands` package to provide the start of support for REST API Commands to the Gateway. This is work in progress.
+
     * New `xpath` package to work with the above and also the base for the `snapshot` command below. This is also work in progress.
+
     * New `cordial` package that initially carries a version constant.
+
     * New `process` package, providing a way to Daemon()ise callers on both Linux and Windows.
+
     * **Deprecation Notice**: The `logger` package will probably be removed as it was a stop-gap and is slowly being replaced with `zerolog`
+
   * Addition of the following commands to `tools/geneos`:
+
     * `aes` - Manage Geneos key-files and encoding/decoding of values
+
     * `snapshot` - Take dataview snapshots directly from the command line (requires GA5.14+)
+
   * ServiceNow integration updates
+
     * Configuration support is now direct with `config` above, allowing full value expansions support, including encoded credentials.
+
   * Logging changes
+
     * The logging in `tools/geneos` has been migrated to `zerolog` from the internal `logger` for a more flexible package. This will be further rolled-out to other parts of the repo in time.
 
 ---

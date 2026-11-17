@@ -23,6 +23,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -69,6 +70,11 @@ type Report struct {
 }
 
 const reportNamesDescription = "Run only the matching reports, for multiple reports use a\ncomma-separated list. Report names can include shell-style wildcards.\nSplit reports can be suffixed with ':value' to limit the report\nto the value given."
+
+const (
+	legacyCoverageReportName = "coverage-by-level-and-plugin"
+	coverageReportName       = "coverage-by-layer-and-plugin"
+)
 
 func init() {
 	Cmd.AddCommand(reportCmd)
@@ -122,12 +128,9 @@ var reportCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	PreRun: func(cmd *cobra.Command, args []string) {
-		cf.BindPFlag("geneos.netprobe.hostname", cmd.Flags().Lookup("host"))
-		cf.BindPFlag("geneos.netprobe.port", cmd.Flags().Lookup("port"))
-		cf.BindPFlag("geneos.netprobe.secure", cmd.Flags().Lookup("secure"))
-		cf.BindPFlag("geneos.netprobe.skip-verify", cmd.Flags().Lookup("skip-verify"))
-		cf.BindPFlag("geneos.entity", cmd.Flags().Lookup("entity"))
-		cf.BindPFlag("geneos.sampler", cmd.Flags().Lookup("sampler"))
+		if err := bindNetprobeFlags(cf, cmd.Flags(), "tls"); err != nil {
+			log.Error("binding command line options", slog.Any("error", err))
+		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		var db *sql.DB
@@ -311,6 +314,18 @@ func matchReport(name, pattern string) (match bool, subreport string) {
 		}
 	}
 	return
+}
+
+func validateLayerReportSelection(selection string) error {
+	for pattern := range strings.SplitSeq(selection, ",") {
+		if match, _ := matchReport(legacyCoverageReportName, pattern); !match {
+			continue
+		}
+		if match, _ := matchReport(coverageReportName, pattern); !match {
+			return fmt.Errorf("report selector %q matches %q, which was renamed to %q", pattern, legacyCoverageReportName, coverageReportName)
+		}
+	}
+	return nil
 }
 
 func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, reportNames string, maxreports int) (err error) {

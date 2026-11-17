@@ -518,6 +518,7 @@ Additional limits:
 - Backup names have one-second timestamp resolution. Repeated in-place runs within one second can collide. Keep a separate backup for important dashboards.
 - Name, Type, and Attribute rewriting is not a full validation of Active Console dashboard format or behavior. Always test the output in Active Console before distribution.
 
+
 ## Commands
 
 | Command / Aliases | Description |
@@ -722,6 +723,7 @@ By default, the command reports counts for each element and value.
 `--show-xpaths`/`-X` lists unique XPaths only. `--show-urls` lists unique URL targets only. `--show-all` lists both, in separate `XPaths` and `URLs` blocks. Each list is sorted, and URL values are shown without their link wrapper or source type.
 
 Dataitem targets from modifier records and `GeneosURL` records appear in the XPath list. `wwwpage(...)` and `geneos://...` destinations are listed as URL values without wrappers. Web destinations embedded in modifier records are included too.
+
 ## Usage
 
 ```text
@@ -1459,7 +1461,6 @@ General options are loaded from the global file first, then the user file and an
 
 Import one or more instances from a `tar.gz` archive created by `geneos config export`
 
-
 ## Usage
 
 ```text
@@ -1919,6 +1920,7 @@ geneos enable [flags] [TYPE] [NAME...]
 <sub>[Up: geneos](#geneos)</sub>
 
 An `fa2` is a Fix-Analyser2 Netprobe
+
 ## Usage
 
 ```text
@@ -1974,6 +1976,7 @@ geneos fileagent
 <sub>[Up: geneos](#geneos)</sub>
 
 A Floating Netprobe used the same installation package as the normal Netprobe but uses a confirmation file to identify remote Gateway(s) to connect to. The primary differences between a Floating Netprobe and a SAN (Self-Announcing Netprobe) is that all the configuration for a Floating Netprobe is kept in the Gateway and that a Floating Netprobe has a one-to-one correspondence with it's set-up.
+
 ## Usage
 
 ```text
@@ -2112,6 +2115,7 @@ Also, you should set `setup` to either an empty value or the literal `none` to t
 * `kerberos-principal` and `kerberos-keytab`
 
   To authenticate using Kerberos, set these parameters as documented in the Gateway Installation Guide.
+
 ## Usage
 
 ```text
@@ -2672,38 +2676,38 @@ Release archives are named `geneos-includes-v<version>.tar.gz` and have a single
 
 | File | Purpose |
 | --- | --- |
-| `itrs.level0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
-| `itrs.level1.infrastructure.xml` | Infrastructure monitoring for CPU, disk, hardware, and network. |
-| `itrs.level2.application-core.xml` | Baseline `Logs`, `Processes`, and Windows Services samplers for applications. |
-| `itrs.level3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
-| `config.level0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
-| `config.level0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
-| `config.level1.infrastructure.xml` | Gateway setup template for infrastructure configuration and overrides. |
-| `config.level2.application-core.xml` | Gateway setup template for application configuration. |
-| `config.level3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Level 3 Geneos. |
-| `config.level4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.level4.analytics.xml` functional include in this set. |
+| `itrs.layer0.foundation.xml` | Gateway information, license/severity views, and configuration validation tools. |
+| `itrs.layer1.server-health.xml` | Server health monitoring for CPU, disk, hardware, and network interfaces. |
+| `itrs.layer2.programs-and-logs.xml` | Shared `Logs`, `Processes`, and Windows Services samplers for core technologies. |
+| `itrs.layer3.geneos.xml` | Geneos instance, component, and Gateway-load monitoring types, samplers, rules, and commands. |
+| `config.layer0.authentication.xml` | Authentication roles and policies plus example local users/groups; review and replace example identities before use. |
+| `config.layer0.foundation.xml` | Empty Gateway setup template for local foundation settings. |
+| `config.layer1.server-health.xml` | Gateway setup template for server health configuration and overrides. |
+| `config.layer2.programs-and-logs.xml` | Gateway setup template for Layer 2 Core Technologies configuration. |
+| `config.layer3.geneos.xml` | Example managed-entity hierarchy, per-entity component variables, and sampling override environments for Layer 3 Geneos. |
+| `config.layer4.analytics.xml` | Standalone Obcerv connection example; replace its endpoints and credentials and review TLS settings before use. There is no matching `itrs.layer4.analytics.xml` functional include in this set. |
 
 Choose a site name representing the company, customer, or client using the Geneos deployment, rather than a region or environment. For example, for Acme Corp, an installation with `geneos config set site=acme` has files organized like this:
 
 ```text
 gateway/
 ├── includes/
-│   ├── itrs.level0.foundation.xml -> v1.31.0/itrs.level0.foundation.xml
-│   ├── itrs.level1.infrastructure.xml -> v1.31.0/itrs.level1.infrastructure.xml
-│   ├── itrs.level2.application-core.xml -> v1.31.0/itrs.level2.application-core.xml
-│   ├── itrs.level3.geneos.xml -> v1.31.0/itrs.level3.geneos.xml
+│   ├── itrs.layer0.foundation.xml -> v1.31.0/itrs.layer0.foundation.xml
+│   ├── itrs.layer1.server-health.xml -> v1.31.0/itrs.layer1.server-health.xml
+│   ├── itrs.layer2.programs-and-logs.xml -> v1.31.0/itrs.layer2.programs-and-logs.xml
+│   ├── itrs.layer3.geneos.xml -> v1.31.0/itrs.layer3.geneos.xml
 │   └── v1.31.0/
-│       ├── itrs.level0.foundation.xml
-│       ├── itrs.level1.infrastructure.xml
-│       ├── itrs.level2.application-core.xml
-│       └── itrs.level3.geneos.xml
+│       ├── itrs.layer0.foundation.xml
+│       ├── itrs.layer1.server-health.xml
+│       ├── itrs.layer2.programs-and-logs.xml
+│       └── itrs.layer3.geneos.xml
 └── acme/
-    ├── acme.level0.authentication.xml
-    ├── acme.level0.foundation.xml
-    ├── acme.level1.infrastructure.xml
-    ├── acme.level2.application-core.xml
-    ├── acme.level3.geneos.xml
-    └── acme.level4.analytics.xml
+    ├── acme.layer0.authentication.xml
+    ├── acme.layer0.foundation.xml
+    ├── acme.layer1.server-health.xml
+    ├── acme.layer2.programs-and-logs.xml
+    ├── acme.layer3.geneos.xml
+    └── acme.layer4.analytics.xml
 ```
 
 The links let Gateway setups use a stable path while the target version changes. Configuration templates are regular files, copied only when absent and not overwritten by later installs. The archive itself always uses the `config` names listed above.
@@ -2734,6 +2738,9 @@ geneos includes install /path/to/geneos-includes-v1.31.0.tar.gz
 
 Add `--update` to replace existing top-level include paths with links to the installed version.
 
+> [!IMPORTANT]
+> Include and site filenames have changed from `levelN` to `layerN`, and Gateway types, groups, environments and XPath targets now use `Layer N` names. The former `itrs.level1.infrastructure.xml` and `itrs.level2.application-core.xml` are now `itrs.layer1.server-health.xml` and `itrs.layer2.programs-and-logs.xml`. Back up your configuration and install without `--update`; copy or merge site overrides into the new site files without overwriting existing settings. Update Gateway setups, SANs, customised profiles and any other references before running `geneos includes update`. Existing configurations are not renamed automatically.
+
 ### Install with shell tools
 
 Use the external installer included in the release archive - `scripts/install-includes.sh`. Extract the archive, change into its versioned top-level directory, and run the script with the Geneos installation home as its only positional argument. The script uses the current directory as its source; set `INCLUDES_SOURCE` to use another extracted source directory.
@@ -2748,7 +2755,7 @@ The script installs into a fresh version directory, keeps existing config templa
 
 ## How-To
 
-Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.level1.infrastructure.xml`, and the site template, for example `../../acme/acme.level1.infrastructure.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
+Installing include files only makes them available on disk. Use the Gateway Setup Editor (GSE) to add the include files to each Gateway setup and attach the provided types to the appropriate managed entities. Reference the stable top-level link for functional includes, for example `../../includes/itrs.layer1.server-health.xml`, and the site template, for example `../../acme/acme.layer1.server-health.xml`; adjust relative paths for the Gateway setup location and your site name. Do not reference the version directory directly. Include priorities must be unique. For a functional include and its local config, give the config include a numerically lower priority so its settings take precedence. Review each template before enabling it.
 
 ### Manage with the `geneos` command
 
@@ -2902,6 +2909,7 @@ geneos includes fix gateway-a gateway-b
 ```
 
 Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+
 ## Usage
 
 ```text
@@ -3020,6 +3028,7 @@ Flags identify include properties:
 * `X` - Local file is missing
 
 Remote locations are queried with HTTP HEAD requests for modification time and size unless `--no-remote` is set. Failures to retrieve remote metadata do not prevent listing the configured location.
+
 ## Usage
 
 ```text
@@ -3063,6 +3072,7 @@ Before changing any links, a preflight checks obsolete top-level symlinks using 
 After a successful preflight, replacement links are updated and unused obsolete links are removed. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
 
 Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
+
 ## Usage
 
 ```text
@@ -3655,6 +3665,7 @@ geneos migrate [--executables|-X] | [TYPE] [NAME...]
 A `minimal` Netprobe is one without a Collection agent and associated plugins.
 
 If you will not be using the Collection Agent then this can save about 300MB per download of the release file as well as substantial disk space for the unarchives binaries.
+
 ## Usage
 
 ```text
@@ -4085,7 +4096,7 @@ Use the same option when you deploy or rebuild that profile. The installed profi
 
 The supplied configuration is [internal/profile/profiles.defaults.yaml](../../profile/profiles.defaults.yaml). Use it as an example. Put installation-specific changes in your selected profile file, not in the source file.
 
-Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.level1.infrastructure.xml` to `../../acme/acme.level1.infrastructure.xml`.
+Supplied Gateway profiles use `${site}` for configuration include paths. Choose a site name representing the company, customer, or client using the deployment, rather than a region or environment. For example, for Acme Corp, `geneos config set site=acme` resolves `../../${site}/${site}.layer1.server-health.xml` to `../../acme/acme.layer1.server-health.xml`.
 
 > [!NOTE]
 > Please note the following when choosing and using a site name:
@@ -4112,7 +4123,7 @@ Supplied Gateway profiles use `${site}` for configuration include paths. Choose 
 2. Read the help for a named profile:
 
    ```bash
-   geneos profile --help motm
+   geneos help profile health-endpoint
    ```
 
 3. Check its definition in your profile file. In particular, check ports, include paths, Gateway Types, and certificate requirements before deployment.
@@ -4121,10 +4132,15 @@ Supplied Gateway profiles use `${site}` for configuration include paths. Choose 
 | --- | --- |
 | `all` | A Gateway and Webserver named for the host, a Netprobe named `localhost`, and a License Daemon named `perm`. The License Daemon uses port `7041`. |
 | `demo` | A Gateway named `Demo Gateway` with `options=-demo`, a Netprobe, and a Webserver named `Demo Webserver`. The Gateway has best-practice includes. The Webserver port is `8443`, or `8080` when `--insecure` is selected. |
-| `motm` | A SAN for Monitor-Of-The-Monitors (MOTM). It requests host monitoring and creates managed entities for installed Gateways, Netprobes, minimal Netprobes, File Agents, License Daemons, and Webservers. |
-| `motm-gateway` | A host-named MOTM Gateway with best-practice includes, and a Netprobe. It is the receiving side of an MOTM installation. |
+| `health-endpoint` | A Monitoring Health SAN named `<hostname> Health`. It requests host monitoring and creates managed entities for installed Geneos components. |
+| `health-gateway` | A Health Gateway named `<hostname> Health`, with best-practice includes and a Netprobe named `<hostname> Probe Health`. It is the receiving side of a Monitoring Health installation. |
 
 `all` is a starting example, not an inherited base profile. Profiles do not inherit settings from one another.
+
+Monitoring Health was previously known as Monitor-Of-The-Monitors (MOTM); the supplied `motm` and `motm-gateway` profiles are now `health-endpoint` and `health-gateway`.
+
+> [!IMPORTANT]
+> Existing profile files, installed instances, saved options and Gateway references are not renamed automatically. Back up customised definitions and instance configurations, then update scripts, filters and references using the old names, `CATEGORY=MOTM` or `COMPONENT=MOTM-SAN`. Deploying the new profiles can create additional instances with new names; preserve the necessary options and validate the new setup before retiring the old one. `geneos profile extract` backs up an existing user file but replaces it with the embedded defaults, so merge any customisations back afterwards.
 
 ### Initialise a Demo Installation
 
@@ -4149,19 +4165,19 @@ Use `init` for a new installation. You need access to suitable release archives 
 
 `init` requests start-up for the profile instance. Do not assume that its monitoring processes are running: check `geneos ps` and use `geneos start profile demo` if required. For an existing installation, use `geneos deploy profile NAME` to deploy a profile, then use `geneos start profile NAME` to start its instances. See the [init command reference](#geneos-init) and [deploy command reference](#geneos-deploy) for installation and download options.
 
-### Deploy the MOTM SAN
+### Deploy a Monitoring Health endpoint
 
 Use this procedure on an existing Geneos host. The receiving Gateway must have the Types requested by the profile. For TLS, both sides must trust the certificate chain.
 
-1. Check the Gateway address and the Types in the `motm` definition.
+1. Check the Gateway address and the Types in the `health-endpoint` definition.
 2. Deploy the profile with an issued certificate bundle. The bundle must contain the SAN's certificate, private key, and certificate chain:
 
    ```bash
-   geneos deploy profile motm \
-     --gateway motm-a.example.com:7038 \
-     --gateway motm-b.example.com:7038 \
+   geneos deploy profile health-endpoint \
+     --gateway health-a.example.com:7038 \
+     --gateway health-b.example.com:7038 \
      --attribute ENVIRONMENT=Production \
-    --certs-bundle /opt/itrs/certs/motm-san.pem
+     --certs-bundle /opt/itrs/certs/health-san.pem
    ```
 
    Repeat `--gateway` and `--attribute` as required. For a password-protected PKCS#12 bundle, supply the password as described in the [deploy command reference](#geneos-deploy). Do not put clear-text passwords in the profile file.
@@ -4169,7 +4185,7 @@ Use this procedure on an existing Geneos host. The receiving Gateway must have t
 3. Start the instances in the profile:
 
    ```bash
-   geneos start profile motm
+   geneos start profile health-endpoint
    ```
 
 4. Confirm that its managed entities appear on the receiving Gateway.
@@ -4182,7 +4198,7 @@ The top-level `profiles` key maps unique profile names to definitions. Each defi
 
 Use canonical component names where possible. The profile application handlers support `gateway`, `licd`, `netprobe`, `minimal`, `webserver`, `san`, and `floating`. Registered aliases, such as `gateways` and `netprobes`, are also accepted. Do not assume that every component supported by `geneos` has a profile application handler.
 
-Use a YAML list for component instances. A single mapping is also accepted, as shown by the supplied `demo` and `motm` profiles. The list form makes it easier to add another instance.
+Use a YAML list for component instances. A single mapping is also accepted, as shown by the supplied `demo` and `health-endpoint` profiles. The list form makes it easier to add another instance.
 
 1. Add this definition to the `profiles` mapping in your selected file. Do not add a second top-level `profiles` key:
 
@@ -4399,7 +4415,7 @@ san:
   - name: ${hostname}-application-san
     managed-entities-common:
       types:
-        - Level 2 - Application Core
+        - Layer 2 - Core Technologies
       attributes:
         - APPLICATION=Geneos
         - CATEGORY=Application
@@ -4410,7 +4426,7 @@ san:
     managed-entities:
       - for-each: gateway
         types:
-          - Level 3 - Geneos Gateway
+          - Layer 3 - Geneos Gateway
         attributes:
           - COMPONENT=Gateway
 ```
@@ -4435,7 +4451,7 @@ san:
     gateways:
       - ${option:gateway}
     types:
-      - Level 1 - Infrastructure
+      - Layer 1 - Server Health
     attributes:
       - ${option:attribute}
     managed-entities:
@@ -4446,7 +4462,7 @@ san:
           - prod-test*
         name: ${config:name} Gateway
         types:
-          - Level 2 - Geneos Gateway
+          - Layer 2 - Geneos Gateway
         attributes:
           - ${option:attribute}
           - COMPONENT=Gateway
@@ -4519,11 +4535,11 @@ The component's `config.rebuild` setting controls generated files. The normal Ga
 To change a saved option, set it on the profile instance before rebuilding. For example:
 
 ```bash
-geneos set profile motm config.options.gateway=motm-c.example.com:7038
-geneos rebuild profile motm
+geneos set profile health-endpoint config.options.gateway=health-c.example.com:7038
+geneos rebuild profile health-endpoint
 ```
 
-Use `geneos show profile motm` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.
+Use `geneos show profile health-endpoint` to inspect the saved options. Passing new SAN flags to `rebuild` is not a substitute for changing those saved values.
 
 Profile application updates the first matching instance of each component and name, or creates it if absent. On existing instances, it clears selected settings before it applies the new values:
 
@@ -4544,7 +4560,7 @@ Thus, an omitted list can remove existing settings. Conversely, removing an arbi
 | Expanded value is empty | Check the option name, process environment, or matched instance parameter. Option-expression errors can produce empty strings. |
 | Include file is not found | Check the path from the Gateway runtime setup context. An `includes` entry does not copy a file. |
 | SAN entity is absent | Check that it has Types. For generated entities, also check installed instance names, `match`, and `ignore`. |
-| A newly installed component is absent from MOTM | Rebuild the `motm` profile, then use `geneos restart profile motm` if required. |
+| A newly installed component is absent from Monitoring Health | Rebuild the `health-endpoint` profile, then use `geneos restart profile health-endpoint` if required. |
 | Gateway setup file does not change | Check `config.rebuild`; explicitly rebuild the Gateway with `--force` if its setting is `initial`. |
 | TLS connection fails | Check the trust chain and TLS settings at both ends. Use an instance certificate bundle from the intended trust chain. |
 
@@ -4592,6 +4608,7 @@ geneos profile
 Extracts the embedded default profile configuration to the user's `geneos/profiles.yaml` file. If the file already matches the embedded defaults, it is left unchanged. If it differs, the existing file is backed up as `profiles-YYYYMMDDHHMMSS.yaml` before the embedded defaults are written. A missing file is created without a backup.
 
 This command always targets the standard user configuration path, even if another profile file is selected with `--profiles`. See the [profile guide](#geneos-profile) for profile file locations and usage.
+
 ## Usage
 
 ```text
@@ -4618,6 +4635,7 @@ geneos profile extract
 <sub>[Up: geneos profile](#geneos-profile) | [Top: geneos](#geneos)</sub>
 
 List available profiles with their descriptions and the configuration file they came from. The default `column` format prints a readable table. Use `--format` (`-f`) to select `column`, `table`, `csv`, `json`, `pretty`, or `toolkit`. `pretty` outputs indented JSON. If no profile file is selected, `From` is `internal defaults`.
+
 ## Usage
 
 ```text
@@ -4683,6 +4701,7 @@ Use `--files`/`-f` to list open files or `--network`/`-n` to list TCP sockets. T
 The default output is a table format intended for humans but this can be changed to CSV format using the `--csv`/`-c` flag or JSON with the `--json`/`-j` or `--pretty`/`-i` options, the latter option formatting the output over multiple, indented lines. Use the `--toolkit/-t` flag to report in Geneos Toolkit specific CSV format, which includes headlines and a unique first column to act as the row name.
 
 Any Netprobes that have a running Collection Agent managed process will show a `netprobe/ca` entry along with details of the Collection Agent process.
+
 ## Usage
 
 ```text
@@ -5022,7 +5041,6 @@ The parameters described below are specific to the Netprobe Router component.
 
   This parameter value is used in the default template as the value for the `pluginsDirectory` property in the Netprobe Router configuration file. It is passed as the environment variable `PLUGIN_DIR`. Note the singular for of `PLUGIN` for the environment variable, which is deliberate and based on Collection Agent configurations.
 
-
 ## Usage
 
 ```text
@@ -5347,6 +5365,7 @@ For normal output each instance's underlying configuration is in an object key `
 By default the interpolated ("expandable" values are expanded) values are shown. The see the underlying value use the `--raw`/`-r` option.
 
 No values that are encrypted are shown decrypted with or without the `--raw`/`-r` option.
+
 ## Usage
 
 ```text
@@ -5452,6 +5471,8 @@ To deploy a new `sso-agent` instance, use the same command but leave out the `--
 
 The sso-agent trust store and key store files (normally the same file) are initialised during deployment and if you have configured TLS then the instance certificate and private key are added to the files as well as a freshly created `ssokey` for the process to sign the authentication tokens.
 
+With `--insecure`, no TLS certificate is created or required during rebuilds. The `ssokey` used to sign authentication tokens is still maintained.
+
 If you change the `ssl_alias` or any of the passwords for the keystore or truststore, then any command that rebuilds the instance configuration will also rebuild the keystore and truststore files.
 
 As documented in the official SSO Agent documentation, you can use environment variables instead of clear-text passwords in the `conf/sso-agent.conf` file. The `geneos` program will use the `ITRS_SSO_KEYSTORE_PW` and `ITRS_SSO_TRUSTSTORE_PW` environment variables if they are set in the instance configuration when building the keystore and truststore files, respectively. You can set AES256 encoded values in the instance configuration using `geneos set sso-agent NAME --secureenv ITRS_SSO_KEYSTORE_PW` (or `ITRS_SSO_TRUSTSTORE_PW`) and be prompted for the password. In this case you must comment out the `password` fields in the `conf/sso-agent.conf` file. Other supported variables are passed to the sso-agent in it's starting environment, but are not specially interrpreted by `geneos`.
@@ -5527,6 +5548,7 @@ Stop will  show how long each proceess took to stop or kill.
 Protected instances will not be restarted unless the `--force`/`-F` option is given.
 
 Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a short period before trying again until the process is no longer running. If this fails to stop the process a SIGKILL is sent to terminate the process without further action. If the `--kill`/`-K` option is used then the terminate signal is sent immediately without waiting. Beware that this can leave instance files corrupted or in an indeterminate state.
+
 ## Usage
 
 ```text
@@ -5840,6 +5862,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
 All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+
 ## Usage
 
 ```text
@@ -5983,7 +6006,6 @@ geneos tls new gateway mygateway
 geneos tls new netprobe all --expiry 730
 ```
 
-
 ## Usage
 
 ```text
@@ -6049,7 +6071,6 @@ geneos restart gateway mygateway
 # Renew the local signing certificate
 geneos tls renew --signing
 ```
-
 
 ## Usage
 
@@ -6331,6 +6352,8 @@ A new `webserver` instance is created using local package configuration files, t
 `geneos` will manage TLS certificates for the webserver instance. When you create a new instance, assuming your Geneos installation has TLS initialised, a new certificate and private key will be created as for other component types but these will also then be added to the Java keystore referenced in the `config/security.properties` file. If you replace or renew the instance certificate or private key you should then use the `geneos rebuild webserver NAME` command to rebuild the keystore file. If you change the `security.properties` file you may need to manually delete the (old) keystore file before running `rebuild`.
 
 If you use `geneos deploy webserver` you can also provide an externally generated certificate bundle without having to initialise TLS for other components.
+
+With `--insecure`, certificate creation is skipped. When no instance certificate is configured, rebuilds skip TLS keystore and truststore updates, and the webserver can start over HTTP without a keystore.
 
 ## Usage
 

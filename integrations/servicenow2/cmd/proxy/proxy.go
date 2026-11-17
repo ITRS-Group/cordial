@@ -30,8 +30,8 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
-	"github.com/itrs-group/cordial/pkg/ims/control"
 	"github.com/itrs-group/cordial/pkg/logger"
+	"github.com/itrs-group/cordial/pkg/process/control"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
 	"github.com/itrs-group/cordial/pkg/ims/snow"
@@ -64,9 +64,13 @@ func init() {
 	routerCmd.Flags().SortFlags = false
 }
 
-// checkConfig checks the parts of the configuration that are specific
-// to the proxy, which is that there is a usable connection to ServiceNow
+// checkConfig checks that the configuration can be used to run the
+// proxy, which is the server settings and a usable connection to
+// ServiceNow
 func checkConfig(cf *config.Config) error {
+	if err := ims.CheckServer(cf); err != nil {
+		return err
+	}
 	_, err := snow.New(cf.Sub("servicenow"))
 	return err
 }

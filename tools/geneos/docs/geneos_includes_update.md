@@ -11,6 +11,7 @@ Before changing any links, a preflight checks obsolete top-level symlinks using 
 After a successful preflight, replacement links are updated and unused obsolete links are removed. References directly into older version directories do not block link cleanup, since those directories and regular files are not removed. Link changes are sequential, not atomic; completed changes are not rolled back if a later filesystem operation fails.
 
 Version values must be valid semantic versions. This prevents a version argument from selecting a path outside the includes directory.
+
 ## Usage
 
 ```text

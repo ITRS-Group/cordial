@@ -21,7 +21,6 @@ The router reads it's configuration from a YAML file, which can be
 shared with the submission client function, and uses this to look-up,
 map and submit incidents.
 
-
 ## Usage
 
 ```text

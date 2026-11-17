@@ -62,15 +62,15 @@ func TestApplyManagedEntityCommon(t *testing.T) {
 	}
 }
 
-func TestEmbeddedMOTMManagedEntityCommon(t *testing.T) {
+func TestEmbeddedHealthManagedEntityCommon(t *testing.T) {
 	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
 	var common ManagedEntityCommon
-	commonKey := pf.Join("profiles", "motm", "san", "managed-entities-common")
+	commonKey := pf.Join("profiles", "health-endpoint", "san", "managed-entities-common")
 	if err := pf.UnmarshalKey(commonKey, &common, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 	var entities []ManagedEntity
-	key := pf.Join("profiles", "motm", "san", "managed-entities")
+	key := pf.Join("profiles", "health-endpoint", "san", "managed-entities")
 	if err := pf.UnmarshalKey(key, &entities, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
@@ -83,10 +83,10 @@ func TestEmbeddedMOTMManagedEntityCommon(t *testing.T) {
 		if entity.ForEach == "" {
 			t.Errorf("missing for-each on entity %q", entity.Name)
 		}
-		if !contains(entity.Attributes, "APPLICATION=Geneos") || !contains(entity.Attributes, "CATEGORY=MOTM") || !contains(entity.Attributes, "${option:attribute}") {
+		if !contains(entity.Attributes, "APPLICATION=Geneos") || !contains(entity.Attributes, "CATEGORY=Health") || !contains(entity.Attributes, "${option:attribute}") {
 			t.Errorf("entity %q did not inherit common attributes: %v", entity.ForEach, entity.Attributes)
 		}
-		if !contains(entity.Types, "Level 2 - Application Core") {
+		if !contains(entity.Types, "Layer 2 - Core Technologies") {
 			t.Errorf("entity %q did not inherit the common type: %v", entity.ForEach, entity.Types)
 		}
 		for _, name := range []string{"instanceName", "instanceType", "instanceExecPath", "logFilePath", "consoleLogFilePath"} {

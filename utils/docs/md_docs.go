@@ -52,11 +52,13 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	buf := new(bytes.Buffer)
 	name := cmd.CommandPath()
 
-	buf.WriteString("# `" + name + "`\n\n")
+	fmt.Fprintf(buf, "# `%s`\n\n", name)
+	// always leave exactly one blank line before the next heading, however
+	// the description ends
 	if len(cmd.Long) > 0 {
-		buf.WriteString(cmd.Long + "\n")
+		fmt.Fprintf(buf, "%s\n\n", strings.TrimRight(cmd.Long, "\n"))
 	} else {
-		buf.WriteString(cmd.Short + "\n\n")
+		fmt.Fprintf(buf, "%s\n\n", cmd.Short)
 	}
 	if cmd.Runnable() {
 		fmt.Fprintf(buf, "## Usage\n\n```text\n%s\n```\n", cmd.UseLine())
@@ -84,7 +86,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 						continue
 					}
 					if !cmdHeader {
-						buf.WriteString("## " + group.Title + "\n\n")
+						fmt.Fprintf(buf, "## %s\n\n", group.Title)
 						if hasAliases {
 							buf.WriteString("| Command / Aliases | Description |\n")
 						} else {
@@ -244,9 +246,11 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 type byName []*cobra.Command
 
 // Len TODO: Document its behavior, inputs, and effects.
-func (s byName) Len() int           { return len(s) }
+func (s byName) Len() int { return len(s) }
+
 // Swap TODO: Document its behavior, inputs, and effects.
-func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s byName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
+
 // Less TODO: Document its behavior, inputs, and effects.
 func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 

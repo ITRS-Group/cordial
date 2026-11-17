@@ -113,6 +113,7 @@ Also, you should set `setup` to either an empty value or the literal `none` to t
 * `kerberos-principal` and `kerberos-keytab`
 
   To authenticate using Kerberos, set these parameters as documented in the Gateway Installation Guide.
+
 ## Usage
 
 ```text

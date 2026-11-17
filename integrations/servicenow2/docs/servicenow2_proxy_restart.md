@@ -1,0 +1,29 @@
+# `servicenow2 proxy restart`
+
+Stop the servicenow2 proxy that is running in the background, as the stop command
+does, and start it again in the background, with the same arguments as it
+was started with, which are recorded in its PID file. This also uses a new
+version of the program if it has been upgraded.
+
+To pick up a changed configuration without stopping, use the reload
+command instead.
+
+## Usage
+
+```text
+servicenow2 proxy restart [flags]
+```
+
+### Options
+
+```text
+  -c, --conf string          override config file
+      --force[=true|false]   Kill the process if it has not stopped within the timeout
+  -l, --logfile file         Write logs to file. Use '-' for console or /dev/null for none (default "-")
+      --pidfile file         Use the PID file, overriding `server.pidfile` in the configuration
+      --timeout duration     Wait this long for the process to stop (default 30s)
+```
+
+## SEE ALSO
+
+* [servicenow2 proxy](servicenow2_proxy.md)	 - Run a ServiceNow integration proxy

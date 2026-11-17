@@ -40,7 +40,6 @@ geneos restart gateway mygateway
 geneos tls renew --signing
 ```
 
-
 ## Usage
 
 ```text

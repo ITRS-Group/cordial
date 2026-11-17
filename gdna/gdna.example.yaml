@@ -132,6 +132,20 @@ gdna:
   # environment. Set to `true` to ignore validation errors.
   licd-skip-verify: false
 
+  # `pidfile` is the file that `gdna start` holds, while it runs, to
+  # prevent a second process starting and to allow the `stop`,
+  # `restart`, `reload` and `status` commands to find it. It records how
+  # the process was started and is removed when it stops. If not set
+  # then a process started with `--daemon` uses `gdna.pid` in the
+  # `geneos` directory in the user's cache directory, and one running in
+  # the foreground does not use a file. The `--pidfile` option overrides
+  # this setting.
+  #
+  # Use a different file for each `gdna` process if you run more than
+  # one on a server, and give the commands the same `--pidfile` option
+  # or configuration file.
+  pidfile: ""
+
   # `log` controls how the `gdna` program logs it's output.
   #
   # See <https://github.com/DeRuina/timberjack/> for the meaning of the
@@ -553,8 +567,8 @@ email:
 # There are other configuration sections in the built-in defaults and
 # you must not change any settings in the below:
 
-# `plugins` define which Geneos plugins are classified as level 1, 2 or
-# 3 (or level 1 optional). You will probably not need to ever change
+# `plugins` define which Geneos plugins are classified as layer 1, 2 or
+# 3 (or layer 1 optional). You will probably not need to ever change
 # these, but if you do then you will be given more details by an ITRS
 # staff member.
 plugins:
@@ -566,13 +580,13 @@ plugins:
     # plugins: |
     #   - altering
     #   - ...
-  # `level1` is a list of all the required plugins to achieve Level 1
+  # `layer1` is a list of all the required plugins to achieve Layer 1
   # Coverage per server. You should not need to change this list.
-  level1:
+  layer1:
     # plugins: [ cpu, disk, network, hardware ]
-  level1-optional:
+  layer1-optional:
     # plugins: [ deviceio, ipc, top, unix-users, winapps, win-cluster, win-services, wmi, wts-licenses, wts-processes, wts-sessions, wts-summary ]
-  level2:
+  layer2:
     # plugins: [ fkm, processes ]
 
 

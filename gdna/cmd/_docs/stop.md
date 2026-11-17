@@ -1,1 +1,0 @@
-Stop the running background `gdna` process.

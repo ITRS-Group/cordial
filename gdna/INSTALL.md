@@ -637,7 +637,9 @@ cd .../suitable/working/directory
 gdna start --daemon --on-start
 ```
 
-This will run the process in the background, detached from your console session. Logs will be written to the file you have configured and the SQLite database will be written to the file(s) in the directory you have selected. The `--on-start` flag tells the program to immediately run a fetch/report cycle on start-up, otherwise it would wait for the next session. This is most useful when initialising a system or after a restart of the entire environment, else the GDNA Managed Entity would remain mostly empty until the next scheduled run.
+This will run the process in the background, detached from your console session, and the command returns, printing the PID of the process, once it is running or has failed to start. Logs will be written to the file you have configured and the SQLite database will be written to the file(s) in the directory you have selected. The `--on-start` flag tells the program to immediately run a fetch/report cycle on start-up, otherwise it would wait for the next session. This is most useful when initialising a system or after a restart of the entire environment, else the GDNA Managed Entity would remain mostly empty until the next scheduled run.
+
+A background process holds a PID file, `gdna.pid` in the `geneos` directory in your user cache directory unless you set `gdna.pidfile` in the configuration or use the `--pidfile` option, which stops a second process starting and is how the other commands find it. Use `gdna status` to see if it is running, `gdna reload` to make it use an updated configuration without stopping, `gdna restart` to stop and start it again in the same way and `gdna stop` to stop it. If you run more than one process on a server, give each a different PID file.
 
 To ensure GDNA runs when the system is restarted, you can create a `systemd` unit file or add a `cron` entry like this:
 

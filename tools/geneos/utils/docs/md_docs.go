@@ -144,11 +144,13 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	buf := new(bytes.Buffer)
 	name := cmd.CommandPath()
 
-	buf.WriteString("# `" + name + "`\n\n")
+	fmt.Fprintf(buf, "# `%s`\n\n", name)
+	// always leave exactly one blank line before the next heading, however
+	// the description ends
 	if len(cmd.Long) > 0 {
-		buf.WriteString(cmd.Long + "\n")
+		fmt.Fprintf(buf, "%s\n\n", strings.TrimRight(cmd.Long, "\n"))
 	} else {
-		buf.WriteString(cmd.Short + "\n\n")
+		fmt.Fprintf(buf, "%s\n\n", cmd.Short)
 	}
 	if cmd.Runnable() {
 		fmt.Fprintf(buf, "## Usage\n\n```text\n%s\n```\n", cmd.UseLine())
@@ -176,7 +178,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 						continue
 					}
 					if !cmdHeader {
-						buf.WriteString("## " + group.Title + "\n\n")
+						fmt.Fprintf(buf, "## %s\n\n", group.Title)
 						if hasAliases {
 							buf.WriteString("| Command / Aliases | Description |\n")
 						} else {
