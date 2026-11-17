@@ -2,19 +2,21 @@ package sdp
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
 )
 
-// send accepts a record from the request body and creates
-// or updates an SDP request based on the correlation ID.
+// send accepts a record from the request body and creates or updates
+// an SDP request based on the correlation ID.
 //
 // depending on the value of some fields, different actions are taken:
 //
@@ -27,55 +29,51 @@ import (
 // if `__sdp_add_note` field is present in the request, a note is added
 // to the existing request instead of updating the request
 func send(w http.ResponseWriter, r *http.Request) {
-	rv := r.Context().Value(ims.ContextKeyResponse)
-	response, ok := rv.(*ims.Response)
+	var ok bool
+
+	cf, response, ok := ims.RequestContext(w, r)
 	if !ok {
-		log.Debug("response not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	response.Action = "Failed" // default action, will be updated if processing is successful
 
 	log.Debug("handling request", slog.String("path", r.URL.Path))
 
-	v := r.Context().Value(ims.ContextKeyConfig)
-	if v == nil {
-		log.Debug("config not found in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	cf, ok := v.(*config.Config)
-	if !ok {
-		log.Debug("config not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
 	sdpCf := cf.Sub("sdp")
-
-	// TODO: move scope into config
-	c, err := newClient(r.Context(), sdpCf, "SDPOnDemand.requests.ALL")
-	if err != nil {
-		return
-	}
+	timestamp := response.StartTime.Format(time.RFC3339)
 
 	request := make(ims.Values)
 	requestIn := make(ims.Values)
 
-	if err = json.NewDecoder(r.Body).Decode(&requestIn); err != nil {
-		response.Error = fmt.Sprintf("error decoding request body: %v", err)
+	// fail sends an error response, with the configured failure
+	// response as the result detail
+	fail := func(status int, err error, lookup ...map[string]string) {
+		response.Error = err.Error()
 		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "failed"),
-			config.LookupTable(
-				requestIn,
-				map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				},
-			),
+			config.LookupTable(append([]map[string]string{{
+				"__error":     response.Error,
+				"__timestamp": timestamp,
+			}}, lookup...)...),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		ims.WriteJSONResponse(w, r, status)
+	}
+
+	// TODO: move scope into config
+	c, err := newClient(r.Context(), sdpCf, "SDPOnDemand.requests.ALL")
+	if err != nil {
+		log.Error("cannot create ServiceDesk Plus client", slog.Any("error", err))
+		fail(http.StatusInternalServerError, fmt.Errorf("cannot create ServiceDesk Plus client: %w", err))
+		return
+	}
+
+	if err = json.NewDecoder(r.Body).Decode(&requestIn); err != nil {
+		status := http.StatusBadRequest
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			status = http.StatusRequestEntityTooLarge
+		}
+		fail(status, fmt.Errorf("error decoding request body: %v", err), requestIn)
 		return
 	}
 
@@ -83,25 +81,14 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(request))) {
-		response.Error = "field names are invalid or not unique"
-		response.ResultDetail = config.Get[string](cf,
-			cf.Join("sdp", "response", "failed"),
-			config.LookupTable(request,
-				map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				}),
-			config.TrimSpace(false),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		fail(http.StatusBadRequest, errors.New("field names are invalid or not unique"), request)
 		return
 	}
 
 	// TODO: `correlation_id` may only be Snow specific
 	if _, ok = requestIn["correlation_id"]; !ok {
 		if len(requestIn[ims.INCIDENT_CORRELATION]) == 0 {
-			response.Error = ims.INCIDENT_CORRELATION + " or correlation_id is required"
-			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+			fail(http.StatusBadRequest, errors.New(ims.INCIDENT_CORRELATION+" or correlation_id is required"), request)
 			return
 		}
 		requestIn["correlation_id"] = ims.CorrelationID(requestIn[ims.INCIDENT_CORRELATION])
@@ -111,14 +98,11 @@ func send(w http.ResponseWriter, r *http.Request) {
 	log.Debug("searching for existing request", slog.Any("query", config.Get[any](sdpCf, sdpCf.Join("requests", "search"))))
 	resp, err := c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "search")), config.LookupTable(requestIn))
 	if err != nil {
-		response.Error = fmt.Sprintf("%v", err)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		fail(ims.StatusFor(err, http.StatusBadGateway), fmt.Errorf("error looking up request: %w", err), request)
 		return
 	}
-
-	if resp.ResponseStatus[0].StatusCode != 2000 {
-		response.Error = fmt.Sprintf("API error: %s", resp.ResponseStatus[0].Status)
-		ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
+	if err = checkListResponse(resp); err != nil {
+		fail(ims.StatusFor(err, http.StatusBadGateway), fmt.Errorf("error looking up request: %w", err), request)
 		return
 	}
 
@@ -128,53 +112,44 @@ func send(w http.ResponseWriter, r *http.Request) {
 	if transform, ok := config.Lookup[ims.Transformation](cf, cf.Join("sdp", "requests", "transform")); ok {
 		requestTransformed, err = transform.Transform(cf, "sdp", request)
 		if err != nil {
-			response.Error = fmt.Sprintf("error applying transform: %v", err)
-			response.ResultDetail = config.Expand[string](cf,
-				cf.Join("sdp", "response", "failed"),
-				config.LookupTable(requestTransformed, map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				}),
-				config.TrimSpace(false),
-			)
-			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+			fail(http.StatusBadRequest, fmt.Errorf("error applying transform: %v", err), requestTransformed)
 			return
 		}
 	}
 
+	updateOnly, _ := strconv.ParseBool(requestIn[ims.INCIDENT_UPDATE_ONLY])
+
 	// create new request if no existing request found with the same
 	// correlation ID and __incident_update_only is not set to true
-	if resp.ListInfo.RowCount == 0 {
-		if requestIn["__incident_update_only"] == "true" {
-			response.Error = "no existing request found with the same correlation ID and __incident_update_only is set to true"
-			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+	if resp.ListInfo.RowCount == 0 || len(resp.Requests) == 0 {
+		if updateOnly {
+			fail(http.StatusBadRequest, errors.New("no existing request found with the same correlation ID and "+ims.INCIDENT_UPDATE_ONLY+" is set to true"), request)
 			return
 		}
-
-		// if _, ok := request["__sdp_add_note"]; ok {
-		// 	response.Error = "cannot add note to non existing request"
-		// 	ims.WriteJSONResponse(w, r, http.StatusBadRequest)
-		// 	return
-		// }
 
 		log.Info("no existing request found, creating new request")
 
 		createResponse, err := c.createRequest(r.Context(), cf.Sub(cf.Join("sdp", "requests", "create")), requestTransformed)
 		if err != nil {
-			response.Error = fmt.Sprintf("%v", err)
-			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+			fail(ims.StatusFor(err, http.StatusBadGateway), fmt.Errorf("error creating request: %w", err), requestTransformed)
 			return
 		}
 		log.Debug("create response", slog.Any("response", createResponse))
 
+		requestID := config.Get[string](createResponse, "request_id")
+		if requestID == "" {
+			requestID = config.Get[string](createResponse, "request.id")
+		}
+
 		response.StatusCode = http.StatusOK
 		response.Status = http.StatusText(http.StatusOK)
+		response.ID = requestID
 		response.ResultDetail = config.Get[string](cf,
 			cf.Join("sdp", "response", "created"),
 			config.LookupTable(requestTransformed,
 				map[string]string{
-					"__request_id": config.Get[string](createResponse, "request_id"),
-					"__timestamp":  response.StartTime.Format(time.RFC3339),
+					"__request_id": requestID,
+					"__timestamp":  timestamp,
 				}),
 			config.TrimSpace(false),
 		)
@@ -189,14 +164,20 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	// update existing request if found with the same correlation ID
 
+	if resp.Requests[0] == nil {
+		fail(http.StatusBadGateway, errors.New("ServiceDesk Plus returned an empty request"), request)
+		return
+	}
 	reqCf := config.New(config.WithDefaults(*resp.Requests[0], "json"))
 	requestID := config.Get[int64](reqCf, "id")
+	if requestID == 0 {
+		fail(http.StatusBadGateway, errors.New("ServiceDesk Plus returned a request without an id"), request)
+		return
+	}
 
 	log.Debug("existing request ID", slog.Int64("id", requestID))
 
 	// we add a note first, then the edit the request with other changes
-
-	// if _, ok := request["__sdp_add_note"]; ok {
 
 	log.Info("adding note to existing request")
 
@@ -204,8 +185,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	noteResponse, err := c.addNote(r.Context(), requestID, sdpUpdateCf, requestIn)
 	if err != nil {
-		response.Error = fmt.Sprintf("%v", err)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		fail(ims.StatusFor(err, http.StatusBadGateway), fmt.Errorf("error adding note to request %d: %w", requestID, err), requestTransformed)
 		return
 	}
 	log.Debug("add note response", slog.Any("response", noteResponse))
@@ -214,20 +194,25 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	updateResponse, err := c.editRequest(r.Context(), requestID, sdpUpdateCf, requestTransformed)
 	if err != nil {
-		response.Error = fmt.Sprintf("%v", err)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		fail(ims.StatusFor(err, http.StatusBadGateway), fmt.Errorf("error updating request %d (note was added): %w", requestID, err), requestTransformed)
 		return
 	}
 	log.Debug("update response", slog.Any("response", updateResponse))
 
+	updatedID := config.Get[string](updateResponse, "request_id")
+	if updatedID == "" {
+		updatedID = strconv.FormatInt(requestID, 10)
+	}
+
 	response.StatusCode = http.StatusOK
 	response.Status = http.StatusText(http.StatusOK)
+	response.ID = updatedID
 	response.ResultDetail = config.Get[string](cf,
 		cf.Join("sdp", "response", "updated"),
 		config.LookupTable(requestTransformed,
 			map[string]string{
-				"__request_id": config.Get[string](updateResponse, "request_id"),
-				"__timestamp":  response.StartTime.Format(time.RFC3339),
+				"__request_id": updatedID,
+				"__timestamp":  timestamp,
 			}),
 		config.TrimSpace(false),
 	)

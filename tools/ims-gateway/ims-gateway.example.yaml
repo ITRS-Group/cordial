@@ -13,6 +13,13 @@ server:
   # section below
   listen: localhost:3000
   path: /ims-gateway/api/v1
+
+  # the PID file held while running in the background. If not set here,
+  # or with the `--pidfile` flag, a file in the user's cache directory
+  # is used for a process started with `--daemon`. It also records how
+  # the process was started, for the `restart` command. If you run more
+  # than one on a server, give each its own file.
+  # pidfile: /var/run/geneos/PROGRAM.pid
   tls:
     enabled: false
     # PEM formatted certificate, either a multiline string or an
@@ -279,13 +286,13 @@ snow:
       search: "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}^ORDERBYDESCnumber"
 
       response:
-        created: "${_timestamp} Incident ${_number} Created - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
-        updated: "${_timestamp} Incident ${_number} Updated - State ${state} Impact ${impact} Urgency ${urgency} - '${_subject}' from ${_gateway}"
-        failed: "${_timestamp} Failed to create or update incident from ${_gateway} - ${_error}"
+        created: "${__timestamp} Incident ${__number} Created - State ${state} Impact ${impact} Urgency ${urgency} - '${__incident_subject}' from ${__itrs_gateway}"
+        updated: "${__timestamp} Incident ${__number} Updated - State ${state} Impact ${impact} Urgency ${urgency} - '${__incident_subject}' from ${__itrs_gateway}"
+        failed: "${__timestamp} Failed to create or update incident from ${__itrs_gateway} - ${__error}"
         query: "${_timestamp} Query `${_query}` for table ${_table} returned ${_count} results"
 
       defaults:
-        _cmdb_ci_default: 03a9e40d3790200044e0bfc8bcbe5d6c
+        __snow_cmdb_ci_default: 03a9e40d3790200044e0bfc8bcbe5d6c
         assignment_group: group1
         incident_type: event
         impact: 3

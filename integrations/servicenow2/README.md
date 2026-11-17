@@ -63,6 +63,27 @@ Where `EXAMPLE` should be replaced by your token, in plaintext. You should see o
 
 Any other results means you need to review the configuration, the ServiceNow user details and the connectivity to your ServiceNow instance.
 
+### Running The Proxy In The Background
+
+Once the proxy is working, run it in the background with the `--daemon` (or `-D`) flag, and a log file:
+
+```bash
+servicenow2 proxy --daemon --logfile /var/log/geneos/servicenow2.proxy.log
+```
+
+The command only returns once the proxy is listening, and prints its PID. If the proxy fails to start, for example if the configuration is invalid or the port is in use, then the command fails with a non-zero exit code and the reason is in the log file.
+
+While it runs, the proxy holds a PID file, and a second proxy cannot be started with the same one. The file is the one given with `--pidfile`, or `server.pidfile` in the proxy configuration, or if neither a file in the `geneos` directory in your user cache directory. If you run more than one proxy on a server then give each its own. The PID file also records how the proxy was started.
+
+Use these sub-commands to control a proxy running in the background. Give them the same `--conf` or `--pidfile` options if you started the proxy with them, or if it uses a configuration file that is not in the default locations:
+
+* `servicenow2 proxy status` - show whether the proxy is running. The exit code is zero only if it is.
+* `servicenow2 proxy stop` - stop the proxy. It stops accepting requests and lets those in progress complete, for up to 15 seconds, before exiting. The command waits for this, and fails after `--timeout` unless `--force` is used, which kills the process.
+* `servicenow2 proxy restart` - stop the proxy, as above, and start it again with the same arguments. Use this to run a new version of the program after an upgrade.
+* `servicenow2 proxy reload` - make the proxy read its configuration again, without stopping.
+
+`reload` checks the configuration first, and only tells the proxy to reload if it is valid, so a mistake in the file is reported straight away. The proxy checks it again, and if it fails the proxy carries on with the configuration it has and logs the error. A reload changes everything in the configuration that the proxy uses to handle requests, such as the authentication token, the ServiceNow connection details and the tables, and a changed TLS certificate and key. If the listening address is changed then the proxy listens on the new address before it stops listening on the old one. Requests that are in progress complete using the configuration that they started with, and all new requests use the new one. Changes to the logging, and turning TLS on or off, need a `restart`. You can also reload by sending the proxy process the `SIGUSR1` signal. Reload is not available on Windows.
+
 ### Getting Started - Configure The Client
 
 Now that the proxy is running you can build the client configuration file and the Gateway Actions/Effects you want to use it.
@@ -125,6 +146,21 @@ sequenceDiagram
 There is also a `query` command that will fetch the incidents for the given user. If no user is specified on the command line then the user the proxy uses to connect to the ServiceNow instance will be used. The table to query, which defaults to `incident`, can also be set on the command line. Finally, the output format can be in JSON or a CSV table, suitable for Geneos Toolkit samplers.
 
 The `query` command uses the `servicenow2.client.yaml` configuration file for proxy connection information. The fields that are returned, and the query sent to ServiceNow, are both defined in the proxy configuration and cannot be controlled by the `query` command.
+
+### Exit Codes And Errors
+
+The `client` and `query` commands only exit with a zero exit code if a proxy answered and reported success: the incident was created, updated or deliberately ignored (`_update_only`), or the query returned results. In all other cases an error is written to standard error and the exit code is non-zero. This includes:
+
+* the client configuration file cannot be read or has no `proxy.url`
+* no proxy can be reached, or the proxy rejects the request (for example, an invalid token)
+* the proxy reports that ServiceNow failed the request, even if the HTTP status is successful
+* the response is not one the proxy would send, for example from a web server or captive portal in the way
+
+The one exception is the `exit` client action, which exits with the code given, without sending a request, when its conditions match.
+
+If more than one `proxy.url` is configured then the next proxy is only tried if the previous one could not be reached (connection, TLS or timeout errors) or reported that it, or something in front of it, is unavailable (HTTP status 502, 503 or 504). A proxy that rejects the request is not retried. HTTP redirects are never followed.
+
+The proxy logs every request, including rejected ones, at `info` for successful requests, `warn` for client errors and `error` for server and ServiceNow errors, with the error message in the `error` field. The proxy returns 502 if ServiceNow reports an error or cannot be reached and 504 if it does not respond within the `servicenow.timeout`.
 
 ## Client Configuration
 
@@ -447,6 +483,14 @@ See `break` below as a way of exiting a list of groups based on a test.
   * `client-id`
 
   * `client-secret`
+
+  The proxy authenticates to ServiceNow with HTTP Basic Auth using `username` and `password`, or, if `client-id` and `client-secret` are also set, with an OAuth password grant.
+
+  Newer ServiceNow releases restrict Basic Auth for API access (the `glide.authenticate.basic_auth.restriction.enforce` system property). If it is enabled, the proxy's user must have the `snc_basic_auth_api_access` role (or be listed in `glide.authenticate.basic_auth.allowed_users`), otherwise every request is rejected with `401 User is not authenticated` even though the same user and password work in the web interface. The proxy reports this as a `502` and logs the ServiceNow error. The alternative is to use OAuth.
+
+  * `timeout`
+
+    The maximum time to wait for a response from ServiceNow, defaulting to `10s`.
 
 * `tables`
 

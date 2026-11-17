@@ -20,6 +20,20 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
 * **Minor breaking change — package installation:** `-A` now means `--archive`, not `--all`; use `--all` explicitly. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`. Explicit URLs are still fetched.
 
+* **Incident correlation:** The `servicenow2` proxy and `ims-gateway` now reject a request with no `correlation_id` (a `400` error), because the lookup for an existing incident would otherwise match any active incident for the configuration item. `geneos incident raise` now sets `correlation_id` from `__incident_correlation`, as documented, as well as the older `__snow_correlation`; if your `ims.yaml` sets `__incident_correlation`, incidents raised by earlier versions have no correlation ID and will not be updated by newer ones. For `servicenow2` set `correlation_id` or `_correlation_id` in the client configuration.
+
+* **Failures now fail:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with a non-zero code, and an error message, in cases that previously exited with zero, such as a missing or invalid configuration file, no proxy or gateway URL, or a response that does not report success. Review Geneos actions and scripts that depend on the exit code. Only a proxy or gateway that cannot be reached, or reports `502`, `503` or `504`, results in the next configured URL being tried, and `geneos incident raise` now sends to only the first that accepts the incident.
+
+* **Authentication token required:** The `servicenow2` proxy and `ims-gateway` refuse to start without `server.authentication.token`. The gateway previously accepted requests with no `Authorization` header if the token was empty.
+
+* **Proxy responses, logs and timeout:** The `servicenow2` proxy returns `502`, or `504` on a timeout, when ServiceNow cannot be reached or reports an error. Its request log now uses the `ims-gateway` field names and records every request, and a response to a rejected token or a panic is now in the gateway's JSON format. Set the ServiceNow timeout with `servicenow.timeout`, as `proxy.timeout`, previously read from the wrong section, is only used if it is not set. Update anything that depends on these.
+
+* **ServiceNow Basic Auth restriction:** Instances where ServiceNow's Basic Auth restriction is enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy and gateway with `401 User is not authenticated` unless their ServiceNow user has the `snc_basic_auth_api_access` role, even though the same user and password work in the web interface. Grant the role or use OAuth.
+
+* **Running in the background:** `--daemon` now waits for the server to be listening and holds a PID file, in the user's cache directory unless set with `--pidfile` or `server.pidfile`, which prevents a second instance starting with the same file. If you run more than one on a server, give each its own PID file. `reload` and the `SIGUSR1` signal are not available on Windows; use `restart`.
+
+* **Example gateway configuration:** If you copied the response messages from an earlier `ims-gateway.example.yaml`, replace `${_number}`, `${_error}` and similar with the `__` prefixed names, such as `${__number}`, which are the only ones the gateway supplies; the others expand to nothing.
+
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 
 v1.30.1 replaces v1.30.0.

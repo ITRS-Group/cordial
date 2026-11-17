@@ -27,6 +27,18 @@
 
     * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
+* `integrations/servicenow2` and `tools/ims-gateway`
+
+  * Add `stop`, `restart`, `reload` and `status` commands for a proxy or gateway running in the background: `servicenow2 proxy stop|restart|reload|status` and `ims-gateway stop|restart|reload|status`.
+
+    A server running with `--daemon` (`-D`) now holds a locked PID file, given with the new `--pidfile` option or `server.pidfile` in the configuration, or if neither a file in the `geneos` directory in the user's cache directory. A second instance cannot be started with the same file, and the file is never mistaken for a running process after a crash. The file also records how the server was started, so `restart` can start it again in the same way, using a new version of the program after an upgrade.
+
+    `stop` lets requests in progress complete before the process exits and fails if it does not stop within `--timeout`, unless `--force` is used. `status` exits with a non-zero code unless the server is running.
+
+  * Add `reload`, also triggered by sending the process `SIGUSR1`, to read the configuration again without stopping. The configuration is checked first and is only used if it is valid; otherwise the error is logged and the server carries on as before. Requests that are in progress complete using the configuration they started with and all new requests use the new one, including a new authentication token, path, tables, ServiceNow connection details and TLS certificate. A changed listening address is bound before the old one is closed, which then drains. Changes to the logging, and turning TLS on or off, need a `restart`. Reload is not available on Windows.
+
+  * `--daemon` (`-D`) now waits for the server to be listening, and prints its PID, instead of returning immediately. If the server fails to start, for example because of an invalid configuration or a port that is in use, the command now exits with a non-zero code and refers to the log file.
+
 ## Version v1.31.0 Changes
 
 * Updated to use Go 1.27.4 and update dependencies
@@ -63,6 +75,40 @@
 
   * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
 
+* `integrations/servicenow2`
+
+  * **Breaking Change** (minor): The proxy now rejects a request that has no `correlation_id` with a `400` error. Previously the lookup for an existing incident matched any active incident for the configuration item, so an unrelated incident could be updated.
+
+  * **Breaking Change** (minor): The proxy now returns `502` (or `504` if ServiceNow does not respond in time) when ServiceNow cannot be reached or reports an error, instead of `404` or `500`, and reports an incident that ServiceNow accepted but did not return as a failure. The client moves on to the next configured proxy only if a proxy cannot be reached or reports `502`, `503` or `504`, and no longer tries another proxy after a proxy rejects a request.
+
+  * **Breaking Change** (minor): The proxy now refuses to start without a `server.authentication.token` and a `server.listen` address.
+
+  * The ServiceNow timeout is now set with `servicenow.timeout` (default 10 seconds). The previous `proxy.timeout` key, which was read from the wrong section, is still used if `timeout` is not set. HTTP redirects are no longer followed for requests to ServiceNow or to the proxy.
+
+  * The proxy now logs every request, including those rejected before reaching a handler, at error level for failures of ServiceNow or the proxy, warn for rejected requests and info otherwise, with the `action` and `error` for each. The log field names are now the same as the `ims-gateway`.
+
+  * Failure responses can now refer to all of the incident fields, including those with a leading underscore, in the `response.failed` template.
+
+  * Document that ServiceNow instances with the Basic Auth restriction enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy, with `401 User is not authenticated`, unless its user has the `snc_basic_auth_api_access` role.
+
+* `tools/ims-gateway`
+
+  * **Breaking Change** (minor): The gateway now refuses to start without a `server.authentication.token`. Previously an empty token allowed requests that had no `Authorization` header.
+
+  * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.
+
+  * The ServiceNow connection is now cached between requests, instead of a new client being created for each one, and uses `snow.timeout`. HTTP redirects are no longer followed.
+
+  * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
+
+* `tools/geneos`
+
+  * `geneos incident raise` now uses the `__incident_correlation` field, which is documented and used in the example configuration, to create the `correlation_id` for ServiceNow, as well as the older `__snow_correlation`. Previously incidents were created without a correlation ID.
+
+  * `geneos incident raise` now prints the result detail returned by the gateway and sends the incident to the first gateway that accepts it, instead of every configured gateway. Gateways are only tried in turn when one cannot be reached or reports `502`, `503` or `504`.
+
+  * `geneos incident raise` and `query` now exit with a non-zero code, and an error, if there is no configuration file, no gateway URL or IMS type, or the gateway response is not a clear success. See Fixes.
+
 * `pkg/host`
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
@@ -72,6 +118,12 @@
   * Gateway configuration support has been expanded with safer read and write operations, making it easier for applications to inspect and update Gateway setups reliably.
 
   * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
+
+* `pkg/ims`, `pkg/ims/snow`, `pkg/process` and `pkg/rest`
+
+  * The code shared by the ServiceNow proxy, the `ims-gateway` and `geneos incident`, such as the HTTP server, ServiceNow client, retrying of gateways, action groups and the reloading server and its control commands, is now in `pkg/ims` and the new `pkg/ims/snow` and `pkg/ims/control`, so that behaviour and tests are in one place. `pkg/process` adds locked PID files and detached starts that can wait for a process to be ready.
+
+  * `pkg/rest` clients now return a typed `HTTPError`, with the status code and body, for responses with a status above 299, so callers can tell them from a failure to get a response. The error text is unchanged.
 
 ## Version v1.31.0 Fixes
 
@@ -114,6 +166,46 @@
   * Fix `geneos restore` leaving partially restored instances when the archive cannot be read to completion. Instance directories created by the failed restore are now removed; existing instances and shared directories are not touched.
 
   * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
+
+* `integrations/servicenow2`
+
+  * Fix the client exiting with a zero exit code when nothing was sent, for example if the configuration file could not be read or has no proxy URL, and when the proxy reported a failure. The client now checks that the proxy reports an incident as created, updated or deliberately ignored, and fails for any other response, including one from something other than a proxy such as a web server or an HTTP redirect, which is no longer followed. Errors from the proxy are now shown instead of only being logged at debug level.
+
+  * Fix `field`, `match`, `nomatch` and `replace` expansion errors, and values of `if` and `break` that are not booleans, being ignored silently; they are now logged. An invalid `exit` code, and an argument that is not `field=value`, are also logged.
+
+  * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select" (such as in `setup_value`).
+
+  * Fix the proxy not logging the error for most failed requests, a panic in a request leaving no log and no response, and failing to start without any log if the ServiceNow URL, a TLS certificate or the listening address were not valid.
+
+  * Fix incident fields being deleted if the state `filter` contains an invalid regular expression. The request now fails with the error.
+
+  * Fix a possible crash of the client if the system certificate pool cannot be read for HTTPS connections to a proxy.
+
+* `tools/ims-gateway`
+
+  * Fix `GET` requests for ServiceNow records returning no data, or no error message, so that `geneos incident query` showed no incidents without an error.
+
+  * Fix ServiceDesk Plus requests failing because the saved access and refresh tokens were not decrypted when read, and failing with an empty successful response if a client could not be created. Failures are now returned to the caller with a status code, and the access token is no longer written to the debug log.
+
+  * Fix rejected requests, panics and errors not being logged, and the log not including the result of a request.
+
+* `tools/geneos`
+
+  * Fix `geneos incident raise` exiting with a zero exit code, and printing an empty line, if the configuration file could not be loaded, and when the gateway did not report the incident as created or updated, and fix `geneos incident query` doing the same for an unsupported IMS type, a missing configuration or an unexpected response.
+
+* `pkg/ims`
+
+  * Fix the `field` expansion in action groups not having access to the incident fields, and `break` and `exit` expressions not supporting the `match`, `nomatch`, `replace`, `select` and `field` expansions.
+
+  * Fix the `select` expansion removing leading characters of the first environment variable name that are in the word "select".
+
+  * Fix invalid `include` and `exclude` patterns in transformations being ignored, which could remove all fields from an incident. They are now errors.
+
+  * Fix HTTP trace logging including credentials, and responses being written with a successful status and no body if the response was missing.
+
+* `pkg/rest`
+
+  * Fix decoding of `text/plain` responses into `*string` and `*[]byte`, which did not return the text.
 
 * `pkg/host`
 

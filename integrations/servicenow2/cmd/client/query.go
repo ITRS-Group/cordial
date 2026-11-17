@@ -20,14 +20,17 @@ package client
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"log/slog"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/rest"
 
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd"
 	"github.com/itrs-group/cordial/integrations/servicenow2/cmd/proxy"
@@ -53,74 +56,82 @@ var queryCmd = &cobra.Command{
 
 `, "|", "`"),
 	SilenceUsage: true,
-	Run: func(command *cobra.Command, args []string) {
-		cf := cmd.LoadConfigFile("client")
-
-		var err error
-		var result proxy.ResultsResponse
-
-		for _, r := range config.Get[[]string](cf, cf.Join("proxy", "url")) {
-			rc := newRestClient(cf, r)
-
-			if queryCmdTable == "" {
-				queryCmdTable = proxy.SNOW_INCIDENT_TABLE
-			}
-
-			if queryCmdQuery == "" {
-				queryCmdQuery = config.Get[string](cf, config.Join("proxy", "default-query"))
-			}
-
-			query := struct {
-				Query string `url:"query,omitempty"`
-				Raw   bool   `url:"raw,omitempty"`
-			}{
-				Query: queryCmdQuery,
-				Raw:   queryCmdRaw,
-			}
-
-			if _, err = rc.Get(context.Background(), queryCmdTable, query, &result); err == nil {
-				// all OK ?
-				break
-			}
-
-			log.Debug("connection error, trying next proxy (if any)", slog.Any("error", err))
-		}
-
+	RunE: func(command *cobra.Command, args []string) error {
+		cf, err := cmd.LoadConfigFile("client")
 		if err != nil {
-			log.Error("failed to query ServiceNow", slog.Any("error", err))
-			os.Exit(1)
+			return err
 		}
 
-		if !strings.EqualFold(queryCmdFormat, "csv") {
-			b, err := json.MarshalIndent(result.Results, "", "    ")
-			if err != nil {
-				log.Error("failed to marshal results", slog.Any("error", err))
-				os.Exit(1)
-			}
-			fmt.Println(string(b))
-			return
-		}
-
-		columns := result.Fields
-
-		fmt.Println(strings.Join(columns, ","))
-
-		for _, line := range result.Results {
-			var fields []string
-			for _, col := range columns {
-				f := line[col]
-				// escape commas for Toolkit input
-				f = strings.ReplaceAll(f, ",", "\\,")
-				// escape newlines for Toolkit input
-				f = strings.ReplaceAll(f, "\n", "\\n")
-				fields = append(fields, f)
-			}
-			fmt.Println(strings.Join(fields, ","))
-		}
-
-		// write headlines for toolkit consumers
-		fmt.Printf("<!>table,%s\n", queryCmdTable)
-		fmt.Printf("<!>results,%d\n", len(result.Results))
-		fmt.Printf("<!>query,%s\n", queryCmdQuery)
+		return runQuery(command.Context(), cf, queryCmdTable, queryCmdQuery, queryCmdFormat, queryCmdRaw, os.Stdout)
 	},
+}
+
+// runQuery sends the query to the first proxy that answers and writes
+// the results to out in the given format. Any failure to get results is
+// returned as an error.
+func runQuery(ctx context.Context, cf *config.Config, table, query, format string, raw bool, out io.Writer) error {
+	var result proxy.ResultsResponse
+
+	if table == "" {
+		table = proxy.SNOW_INCIDENT_TABLE
+	}
+
+	if query == "" {
+		query = config.Get[string](cf, config.Join("proxy", "default-query"))
+	}
+
+	params := struct {
+		Query string `url:"query,omitempty"`
+		Raw   bool   `url:"raw,omitempty"`
+	}{
+		Query: query,
+		Raw:   raw,
+	}
+
+	err := ims.Try(cf.Sub("proxy"), "", func(rc *rest.Client) error {
+		result = proxy.ResultsResponse{}
+		if _, err := rc.Get(ctx, table, params, &result); err != nil {
+			return err
+		}
+		if len(result.Fields) == 0 {
+			return errors.New("unexpected response from proxy (no fields)")
+		}
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("failed to query ServiceNow: %w", noProxyError(err))
+	}
+
+	if !strings.EqualFold(format, "csv") {
+		b, err := json.MarshalIndent(result.Results, "", "    ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal results: %w", err)
+		}
+		fmt.Fprintln(out, string(b))
+		return nil
+	}
+
+	columns := result.Fields
+
+	fmt.Fprintln(out, strings.Join(columns, ","))
+
+	for _, line := range result.Results {
+		var fields []string
+		for _, col := range columns {
+			f := line[col]
+			// escape commas for Toolkit input
+			f = strings.ReplaceAll(f, ",", "\\,")
+			// escape newlines for Toolkit input
+			f = strings.ReplaceAll(f, "\n", "\\n")
+			fields = append(fields, f)
+		}
+		fmt.Fprintln(out, strings.Join(fields, ","))
+	}
+
+	// write headlines for toolkit consumers
+	fmt.Fprintf(out, "<!>table,%s\n", table)
+	fmt.Fprintf(out, "<!>results,%d\n", len(result.Results))
+	fmt.Fprintf(out, "<!>query,%s\n", query)
+
+	return nil
 }

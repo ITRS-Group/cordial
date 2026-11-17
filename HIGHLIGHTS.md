@@ -13,6 +13,10 @@ New features and notable capabilities, grouped by the version in which the chang
 
 * **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
 
+* **Background servers:** `servicenow2 proxy` and `ims-gateway` can now be controlled with `stop`, `restart`, `reload` and `status` commands. `reload`, or sending `SIGUSR1`, applies a changed and valid configuration without interrupting requests that are in progress, and `--daemon` now reports a server that fails to start.
+
+* **Incident integration reliability:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with an error whenever an incident could not be created, updated or queried, and the proxy and `ims-gateway` log every failure with its cause. `geneos incident query` now returns data and `geneos incident raise` correlates incidents as documented.
+
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 
 v1.30.1 replaces v1.30.0. Monitor-Of-The-Monitors features are preview features.

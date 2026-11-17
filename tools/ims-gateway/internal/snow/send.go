@@ -2,6 +2,7 @@ package snow
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 // correlation_id fields, and if it exists, it will update it.
 func send(w http.ResponseWriter, r *http.Request) {
 	var ok bool
+	var err error
 
 	// check table first so we don't waste time processing the body if
 	// the table is not found
@@ -28,74 +30,62 @@ func send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rv := r.Context().Value(ims.ContextKeyResponse)
-	response, ok := rv.(*ims.Response)
+	cf, response, ok := ims.RequestContext(w, r)
 	if !ok {
-		log.Debug("response not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	v := r.Context().Value(ims.ContextKeyConfig)
-	if v == nil {
-		log.Debug("config not found in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	cf, ok := v.(*config.Config)
-	if !ok {
-		log.Debug("config not correct type in request context")
-		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	// default response to failed in case of early return due to error
 	response.Action = "Failed"
 
-	// close any request body after we are done
-	if r.Body != nil {
-		defer r.Body.Close()
-	}
+	timestamp := response.StartTime.Format(time.RFC3339)
 
 	table, err := tableConfig(cf, tableName)
 	if err != nil {
-		response.ResultDetail = fmt.Sprintf("%s Error retrieving table configuration for %q",
-			response.StartTime.Format(time.RFC3339),
-			tableName,
-		)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrTableNotFound) {
+			status = http.StatusBadRequest
+		}
+		response.Error = fmt.Sprintf("error retrieving table configuration for %q: %v", tableName, err)
+		response.ResultDetail = fmt.Sprintf("%s Error retrieving table configuration for %q", timestamp, tableName)
+		ims.WriteJSONResponse(w, r, status)
 		return
 	}
 
-	c := newClient(cf.Sub("snow"))
-	if c.Client == nil {
-		response.ResultDetail = fmt.Sprintf("%s Error creating ServiceNow client",
-			response.StartTime.Format(time.RFC3339),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
-		return
-	}
+	// incident holds the fields the failure response can refer to, and
+	// is updated as processing proceeds
+	var incident, incidentIn ims.Values = make(ims.Values), make(ims.Values)
+	fields := incident
 
-	// set up ims-gateway defaults for the table selected. The transform
-	// defaults will be applied in the Apply() function
-
-	var incident ims.Values = make(ims.Values)
-	var incidentIn ims.Values = make(ims.Values)
-
-	if err = json.NewDecoder(r.Body).Decode(&incidentIn); err != nil {
-		response.Error = fmt.Sprintf("error decoding request body: %v", err)
+	// fail sets the error and expands the configured failure response
+	fail := func(status int, msg string) {
+		response.Error = msg
 		response.ResultDetail = config.Expand[string](cf,
 			table.Response.Failed,
 			config.LookupTable(
-				incidentIn,
 				map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
+					"__error":     msg,
+					"__timestamp": timestamp,
 				},
+				fields,
 			),
 			config.TrimSpace(false),
 		)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		ims.WriteJSONResponse(w, r, status)
+	}
+
+	c, err := newClient(cf.Sub("snow"))
+	if err != nil {
+		fail(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if err = json.NewDecoder(r.Body).Decode(&incidentIn); err != nil {
+		status := http.StatusBadRequest
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			status = http.StatusRequestEntityTooLarge
+		}
+		fail(status, fmt.Sprintf("error decoding request body: %v", err))
 		return
 	}
 
@@ -105,19 +95,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	// validate incident field names
 	if !validateFields(slices.Collect(maps.Keys(incident))) {
-		response.Error = "field names are invalid or not unique"
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(
-				incident,
-				map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				},
-			),
-			config.TrimSpace(false),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+		fail(http.StatusBadRequest, "field names are invalid or not unique")
 		return
 	}
 
@@ -125,19 +103,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 	if _, ok = incident[ims.SNOW_CMDB_CI_FIELD]; !ok {
 		if query, ok := incident[ims.SNOW_CMDB_SEARCH]; !ok {
 			if incident[ims.SNOW_CMDB_CI_FIELD], ok = incident[ims.SNOW_CMDB_CI_DEFAULT]; !ok {
-				response.Error = "must supply either a " + ims.SNOW_CMDB_CI_DEFAULT + " or a " + ims.SNOW_CMDB_SEARCH + " parameter"
-				response.ResultDetail = config.Expand[string](cf,
-					table.Response.Failed,
-					config.LookupTable(
-						incident,
-						map[string]string{
-							"__error":     response.Error,
-							"__timestamp": response.StartTime.Format(time.RFC3339),
-						},
-					),
-					config.TrimSpace(false),
-				)
-				ims.WriteJSONResponse(w, r, http.StatusNotFound)
+				fail(http.StatusNotFound, "must supply either a "+ims.SNOW_CMDB_CI_DEFAULT+" or a "+ims.SNOW_CMDB_SEARCH+" parameter")
 				return
 			}
 		} else {
@@ -145,38 +111,21 @@ func send(w http.ResponseWriter, r *http.Request) {
 				incident[ims.SNOW_CMDB_CI_DEFAULT] = table.Defaults[ims.SNOW_CMDB_CI_DEFAULT]
 			}
 			if incident[ims.SNOW_CMDB_CI_FIELD], err = c.lookupCmdbCI(r.Context(), cf, incident[ims.SNOW_CMDB_TABLE], query, incident[ims.SNOW_CMDB_CI_DEFAULT]); err != nil {
-				response.Error = "failed to look up cmdb_ci: " + err.Error()
-				response.ResultDetail = config.Expand[string](cf,
-					table.Response.Failed,
-					config.LookupTable(
-						incident,
-						map[string]string{
-							"__error":     response.Error,
-							"__timestamp": response.StartTime.Format(time.RFC3339),
-						},
-					),
-					config.TrimSpace(false),
-				)
-				ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+				fail(ims.StatusFor(err, http.StatusBadRequest), "failed to look up cmdb_ci: "+err.Error())
 				return
 			}
 		}
 	}
 
 	if cmdb_ci, ok := incident[ims.SNOW_CMDB_CI_FIELD]; !ok || cmdb_ci == "" {
-		response.Error = "cmdb_ci is empty or search resulted in no matches"
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(
-				incident,
-				map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				},
-			),
-			config.TrimSpace(false),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusNotFound)
+		fail(http.StatusNotFound, "cmdb_ci is empty or search resulted in no matches")
+		return
+	}
+
+	// without a correlation ID the search matches any active incident
+	// for the CI, so an unrelated incident would be updated
+	if incident[ims.SNOW_CORRELATION_FIELD] == "" {
+		fail(http.StatusBadRequest, "correlation_id is required (set correlation_id or "+ims.INCIDENT_CORRELATION+")")
 		return
 	}
 
@@ -196,20 +145,9 @@ func send(w http.ResponseWriter, r *http.Request) {
 		)),
 	)
 	if err != nil {
-		response.Error = "error looking up incident: " + err.Error()
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(incident, map[string]string{
-				"__error":     response.Error,
-				"__timestamp": response.StartTime.Format(time.RFC3339),
-			}),
-			config.TrimSpace(false),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusNotFound)
+		fail(ims.StatusFor(err, http.StatusInternalServerError), "error looking up incident: "+err.Error())
 		return
 	}
-
-	// incidentUnchanged := maps.Clone(incident)
 
 	transform, ok := table.CurrentStates[state]
 	if !ok {
@@ -219,36 +157,18 @@ func send(w http.ResponseWriter, r *http.Request) {
 	incidentTransformed := maps.Clone(incident)
 
 	if ok {
-		var err error
 		incidentTransformed, err = transform.Transform(cf, "snow", incident)
 		if err != nil {
-			response.Error = fmt.Sprintf("error applying transform for state %d: %v", state, err)
-			response.ResultDetail = config.Expand[string](cf,
-				table.Response.Failed,
-				config.LookupTable(incidentTransformed, map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				}),
-				config.TrimSpace(false),
-			)
-			ims.WriteJSONResponse(w, r, http.StatusBadRequest)
+			fail(http.StatusBadRequest, fmt.Sprintf("error applying transform for state %d: %v", state, err))
 			return
 		}
+		fields = incidentTransformed
 	}
 
 	if incidentID != "" {
 		number, err := c.updateRecord(r.Context(), cf, incidentTransformed, table.Name, incidentID)
 		if err != nil {
-			response.Error = fmt.Sprintf("error updating incident: %v", err)
-			response.ResultDetail = config.Expand[string](cf,
-				table.Response.Failed,
-				config.LookupTable(incidentTransformed, map[string]string{
-					"__error":     response.Error,
-					"__timestamp": response.StartTime.Format(time.RFC3339),
-				}),
-				config.TrimSpace(false),
-			)
-			ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
+			fail(ims.StatusFor(err, http.StatusInternalServerError), fmt.Sprintf("error updating incident: %v", err))
 			return
 		}
 		response.Action = "Updated"
@@ -257,7 +177,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 			table.Response.Updated,
 			config.LookupTable(incident, map[string]string{
 				"__number":    number,
-				"__timestamp": response.StartTime.Format(time.RFC3339),
+				"__timestamp": timestamp,
 			}),
 			config.TrimSpace(false),
 		)
@@ -274,16 +194,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 
 	number, err := c.createRecord(r.Context(), cf, incidentTransformed, table.Name)
 	if err != nil {
-		response.Error = fmt.Sprintf("error creating incident: %v", err)
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(incidentTransformed, map[string]string{
-				"__error":     response.Error,
-				"__timestamp": response.StartTime.Format(time.RFC3339),
-			}),
-			config.TrimSpace(false),
-		)
-		ims.WriteJSONResponse(w, r, http.StatusInternalServerError)
+		fail(ims.StatusFor(err, http.StatusInternalServerError), fmt.Sprintf("error creating incident: %v", err))
 		return
 	}
 	response.Action = "Created"
@@ -292,7 +203,7 @@ func send(w http.ResponseWriter, r *http.Request) {
 		table.Response.Created,
 		config.LookupTable(incident, map[string]string{
 			"__number":    number,
-			"__timestamp": response.StartTime.Format(time.RFC3339),
+			"__timestamp": timestamp,
 		}),
 		config.TrimSpace(false),
 	)

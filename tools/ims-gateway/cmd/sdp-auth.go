@@ -46,7 +46,10 @@ var sdpAuthCmd = &cobra.Command{
 	Long:  sdpAuthDescription,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		// load user config
-		cf := LoadConfigFile()
+		cf, err := LoadConfigFile()
+		if err != nil {
+			return err
+		}
 
 		if len(sdpAuthCmdCode) == 0 {
 			sdpAuthCmdCode, err = config.ReadPasswordInput(false, 0, "Grant Code")

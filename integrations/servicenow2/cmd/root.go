@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -89,32 +90,46 @@ func Execute() {
 	}
 }
 
-// LoadConfigFile reads in config file and ENV variables if set.
-func LoadConfigFile(cmdName string) (cf *config.Config) {
-	var err error
+// ConfigFile returns the configuration file given on the command line,
+// which is empty if there was not one
+func ConfigFile() string { return configFile }
 
+// LoadConfigFile reads in the configuration file for the command, using
+// the one given on the command line, if any, and ENV variables if set.
+// An error is returned if the configuration cannot be read, in which case
+// callers must not carry on with the (empty) configuration.
+func LoadConfigFile(cmdName string) (cf *config.Config, err error) {
+	return LoadConfigFileFrom(cmdName, configFile)
+}
+
+// LoadConfigFileFrom is like [LoadConfigFile] but for the file given, or
+// if that is empty the default location. A new configuration is returned
+// each time, so it can be used to reload a configuration without
+// changing the one in use.
+func LoadConfigFileFrom(cmdName, file string) (cf *config.Config, err error) {
 	configBasename := strings.Join([]string{Execname, cmdName}, ".")
 
 	cf, err = config.Read(configBasename,
 		config.AppName("geneos"),
-		config.UseGlobal(),
 		config.Format("yaml"),
-		config.FilePath(configFile),
+		config.FilePath(file),
 		config.MustExist(),
 	)
 	if err != nil {
-		log.Error("failed to load configuration", slog.Any("error", err))
+		return nil, fmt.Errorf("failed to load %s configuration: %w", cmdName, err)
+	}
+	if cf == nil {
+		return nil, fmt.Errorf("failed to load %s configuration", cmdName)
 	}
 	log.Debug("loaded config file",
 		slog.String("path",
 			config.Path(configBasename,
 				config.AppName("geneos"),
-				config.UseGlobal(),
 				config.Format("yaml"),
-				config.FilePath(configFile),
+				config.FilePath(file),
 			),
 		),
 	)
 
-	return
+	return cf, nil
 }

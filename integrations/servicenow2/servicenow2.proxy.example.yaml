@@ -13,6 +13,13 @@ server:
   # section below
   listen: localhost:3000
   path: /snow/api/v2
+
+  # the PID file held while running in the background. If not set here,
+  # or with the `--pidfile` flag, a file in the user's cache directory
+  # is used for a process started with `--daemon`. It also records how
+  # the process was started, for the `restart` command. If you run more
+  # than one on a server, give each its own file.
+  # pidfile: /var/run/geneos/PROGRAM.pid
   tls:
     enabled: false
     # PEM formatted certificate, either a multiline string or an
@@ -51,6 +58,10 @@ servicenow:
   # debugging issues with the API, but should be disabled in production
   # environments to avoid logging sensitive information.
   trace: false
+
+  # `timeout` is the maximum time to wait for a response from the
+  # ServiceNow instance, defaulting to 10 seconds
+  # timeout: 10s
 
   tables:
     # multiple tables are supported through the client side `--table`

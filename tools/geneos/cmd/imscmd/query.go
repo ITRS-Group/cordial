@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 ITRS Group
+Copyright © 2026 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
-	"net/url"
 	"os"
 	"strings"
 
@@ -33,6 +33,7 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	"github.com/itrs-group/cordial/pkg/rest"
 )
 
 var queryCmdSource, queryCmdQuery, queryCmdFormat string
@@ -83,121 +84,152 @@ var queryCmd = &cobra.Command{
 	Short:        "Query IMS",
 	Long:         queryCmdDoc,
 	SilenceUsage: true,
-	Run: func(command *cobra.Command, args []string) {
-		cf := imsLoadConfigFile("ims", queryCmdConfigFile)
-
-		var err error
-		var response ims.Response
-
-		if queryCmdIMSType == "" {
-			queryCmdIMSType = config.Get[string](cf, config.Join("ims-gateway", "type"))
-		}
-
-		log.Debug("querying IMS type", slog.String("type", queryCmdIMSType))
-
-		query := queryParameters{}
-
-		switch queryCmdIMSType {
-		case "snow":
-			log.Debug("using ServiceNow-specific query parameters", slog.String("table", queryCmdSource), slog.Bool("raw", queryCmdRaw))
-			if queryCmdSource == "" {
-				queryCmdSource = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-table"))
-			}
-
-			if queryCmdQuery == "" {
-				queryCmdQuery = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-query"))
-			}
-
-			query = queryParameters{
-				Query: queryCmdQuery,
-				Raw:   queryCmdRaw,
-			}
-		case "sdp":
-			log.Debug("using ServiceDesk Plus-specific query parameters", slog.String("query", queryCmdQuery))
-			if queryCmdQuery == "" {
-				var b bytes.Buffer
-				sdpQuery := cf.Sub(config.Join("ims-gateway", "sdp", "default-query"))
-				if err = sdpQuery.Write("sdp", config.Writer(&b), config.Format("json")); err != nil {
-					log.Error("error saving SDP query parameters to buffer", slog.Any("error", err))
-					return
-				}
-				log.Debug("SDP query parameters", slog.String("parameters", b.String()))
-				queryCmdQuery = b.String()
-			}
-
-			query = queryParameters{
-				Query: queryCmdQuery,
-			}
-		default:
-			log.Error("unsupported IMS type", slog.String("type", queryCmdIMSType))
-			return
-		}
-
-		for r := range ims.Connect(cf.Sub("ims-gateway"), queryCmdIMSType) {
-			log.Debug("querying IMS", slog.Any("url", r.BaseURL), slog.String("src", queryCmdSource))
-			if _, err = r.Get(context.Background(), queryCmdSource, query, &response); err == nil {
-				break
-			}
-
-			if err != nil {
-				if ue, ok := errors.AsType[*url.Error](err); ok {
-					log.Warn("connection error to IMS, trying next endpoint (if any)", slog.Any("error", ue.Unwrap()), slog.Any("url", r.BaseURL))
-				} else {
-					log.Warn("error querying IMS", slog.Any("error", err), slog.Any("url", r.BaseURL))
-				}
-			}
-		}
-
+	RunE: func(command *cobra.Command, args []string) error {
+		cf, err := imsLoadConfigFile("ims", queryCmdConfigFile)
 		if err != nil {
-			if ue, ok := errors.AsType[*url.Error](err); ok {
-				log.Error("connection error to all endpoints", slog.Any("error", ue.Unwrap()))
-				os.Exit(1)
-			} else if err != nil {
-				log.Error("error querying IMS at all endpoints", slog.Any("error", err))
-				os.Exit(1)
-			}
+			return err
 		}
 
-		if !strings.EqualFold(queryCmdFormat, "csv") {
-			b, err := json.MarshalIndent(response.DataTable, "", "    ")
-			if err != nil {
-				log.Error("error marshalling JSON", slog.Any("error", err))
-				return
-			}
-			fmt.Println(string(b))
-			return
-		}
-
-		if len(response.DataTable) == 0 {
-			log.Info("no results")
-			return
-		}
-
-		columns := response.DataTable[0]
-		for i, col := range columns {
-			columns[i] = strings.ReplaceAll(col, ".", "_")
-		}
-
-		fmt.Println(strings.Join(columns, ","))
-
-		for _, line := range response.DataTable[1:] {
-			var fields []string
-			for col := range columns {
-				f := line[col]
-				// escape commas for Toolkit input
-				f = strings.ReplaceAll(f, ",", "\\,")
-				// escape newlines for Toolkit input
-				f = strings.ReplaceAll(f, "\n", "\\n")
-				fields = append(fields, f)
-			}
-			fmt.Println(strings.Join(fields, ","))
-		}
-
-		// write headlines for toolkit consumers
-		if queryCmdIMSType == "sdp" {
-			queryCmdSource = "requests"
-		}
-		fmt.Printf("<!>source,%s\n", queryCmdSource)
-		fmt.Printf("<!>incidents,%d\n", len(response.DataTable)-1)
+		return runQuery(command.Context(), cf, queryOptions{
+			imsType: queryCmdIMSType,
+			source:  queryCmdSource,
+			query:   queryCmdQuery,
+			format:  queryCmdFormat,
+			raw:     queryCmdRaw,
+		}, os.Stdout)
 	},
+}
+
+type queryOptions struct {
+	imsType string
+	source  string
+	query   string
+	format  string
+	raw     bool
+}
+
+// runQuery queries the first IMS gateway that answers and writes the
+// results to out in the requested format. Any failure to get results
+// is returned as an error, and nothing is written.
+func runQuery(ctx context.Context, cf *config.Config, opts queryOptions, out io.Writer) (err error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	imsType, source, queryString := opts.imsType, opts.source, opts.query
+
+	if imsType == "" {
+		imsType = config.Get[string](cf, config.Join("ims-gateway", "type"))
+	}
+	if imsType == "" {
+		return fmt.Errorf("no IMS type given and none configured (%s)", config.Join("ims-gateway", "type"))
+	}
+
+	log.Debug("querying IMS type", slog.String("type", imsType))
+
+	query := queryParameters{}
+
+	switch imsType {
+	case "snow":
+		log.Debug("using ServiceNow-specific query parameters", slog.String("table", source), slog.Bool("raw", opts.raw))
+		if source == "" {
+			source = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-table"))
+		}
+		if source == "" {
+			source = ims.SNOW_INCIDENT_TABLE_DEFAULT
+		}
+
+		if queryString == "" {
+			queryString = config.Get[string](cf, config.Join("ims-gateway", "snow", "default-query"))
+		}
+
+		query = queryParameters{
+			Query: queryString,
+			Raw:   opts.raw,
+		}
+	case "sdp":
+		log.Debug("using ServiceDesk Plus-specific query parameters", slog.String("query", queryString))
+		if queryString == "" {
+			var b bytes.Buffer
+			sdpQuery := cf.Sub(config.Join("ims-gateway", "sdp", "default-query"))
+			if err = sdpQuery.Write("sdp", config.Writer(&b), config.Format("json")); err != nil {
+				return fmt.Errorf("error saving SDP query parameters to buffer: %w", err)
+			}
+			log.Debug("SDP query parameters", slog.String("parameters", b.String()))
+			queryString = b.String()
+		}
+
+		query = queryParameters{
+			Query: queryString,
+		}
+	default:
+		return fmt.Errorf("unsupported IMS type %q", imsType)
+	}
+
+	var response ims.Response
+	err = tryGateways(cf, imsType, func(rc *rest.Client) error {
+		log.Debug("querying IMS", slog.Any("url", rc.BaseURL), slog.String("src", source))
+		response = ims.Response{}
+		if _, err := rc.Get(ctx, source, query, &response); err != nil {
+			return err
+		}
+		return checkQueryResponse(response)
+	})
+	if err != nil {
+		return fmt.Errorf("error querying IMS: %w", err)
+	}
+
+	if !strings.EqualFold(opts.format, "csv") {
+		b, err := json.MarshalIndent(response.DataTable, "", "    ")
+		if err != nil {
+			return fmt.Errorf("error marshalling JSON: %w", err)
+		}
+		fmt.Fprintln(out, string(b))
+		return nil
+	}
+
+	columns := make([]string, len(response.DataTable[0]))
+	for i, col := range response.DataTable[0] {
+		columns[i] = strings.ReplaceAll(col, ".", "_")
+	}
+
+	fmt.Fprintln(out, strings.Join(columns, ","))
+
+	for _, line := range response.DataTable[1:] {
+		var fields []string
+		for col := range columns {
+			var f string
+			if col < len(line) {
+				f = line[col]
+			}
+			// escape commas for Toolkit input
+			f = strings.ReplaceAll(f, ",", "\\,")
+			// escape newlines for Toolkit input
+			f = strings.ReplaceAll(f, "\n", "\\n")
+			fields = append(fields, f)
+		}
+		fmt.Fprintln(out, strings.Join(fields, ","))
+	}
+
+	// write headlines for toolkit consumers
+	if imsType == "sdp" {
+		source = "requests"
+	}
+	fmt.Fprintf(out, "<!>source,%s\n", source)
+	fmt.Fprintf(out, "<!>incidents,%d\n", len(response.DataTable)-1)
+
+	return nil
+}
+
+// checkQueryResponse validates a response, with a successful HTTP
+// status, from the gateway. A query response always has at least a row
+// of column names, so anything else is not a response from a gateway.
+func checkQueryResponse(r ims.Response) error {
+	if r.Error != "" {
+		return fmt.Errorf("gateway reported an error: %s", r.Error)
+	}
+	if len(r.DataTable) == 0 {
+		return errors.New("unexpected response from gateway (no data table)")
+	}
+	return nil
 }

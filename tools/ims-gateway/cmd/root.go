@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -31,6 +32,7 @@ import (
 
 // Execname TODO: Describe its purpose and intended use.
 var configFile, Execname, logFile string
+
 // Debug TODO: Describe its purpose and intended use.
 var Debug bool
 
@@ -84,29 +86,42 @@ func Execute() {
 	}
 }
 
-// LoadConfigFile reads in config file and ENV variables if set.
-func LoadConfigFile() (cf *config.Config) {
-	var err error
+// ConfigFile returns the configuration file given on the command line,
+// which is empty if there was not one
+func ConfigFile() string { return configFile }
 
+// LoadConfigFile reads in the configuration file, using the one given on
+// the command line, if any, and ENV variables if set. An error is
+// returned if the configuration cannot be read, in which case callers
+// must not carry on with the (empty) configuration.
+func LoadConfigFile() (cf *config.Config, err error) {
+	return LoadConfigFileFrom(configFile)
+}
+
+// LoadConfigFileFrom is like [LoadConfigFile] but for the file given, or
+// if that is empty the default location. A new configuration is returned
+// each time, so it can be used to reload a configuration without
+// changing the one in use.
+func LoadConfigFileFrom(file string) (cf *config.Config, err error) {
 	cf, err = config.Read(cordial.ExecutableName(),
 		config.AppName("geneos"),
-		config.UseGlobal(),
 		config.Format("yaml"),
-		config.FilePath(configFile),
+		config.FilePath(file),
 		config.MustExist(),
 	)
 	if err != nil {
-		log.Error("failed to load a configuration file", slog.String("file", cordial.ExecutableName()+".yaml"))
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to load configuration file %s.yaml: %w", cordial.ExecutableName(), err)
+	}
+	if cf == nil {
+		return nil, fmt.Errorf("failed to load configuration file %s.yaml", cordial.ExecutableName())
 	}
 	log.Debug("loaded config file",
 		slog.String("file", config.Path(cordial.ExecutableName(),
 			config.AppName("geneos"),
-			config.UseGlobal(),
 			config.Format("yaml"),
-			config.FilePath(configFile)),
+			config.FilePath(file)),
 		),
 	)
 
-	return
+	return cf, nil
 }
