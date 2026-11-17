@@ -33,6 +33,8 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
   * **Minor breaking change — GDNA configuration file:** `gdna` now exits with an error if the file given with `--config`/`-f` cannot be read, instead of silently using the defaults. Check scripts and container commands that pass a file that may not exist.
 
+  * **GDNA log destination:** `gdna start` writes its log to the file set by `--logfile`/`-l` or `gdna.log.filename` (default `./gdna.log`), not to the console, and the `stop`, `restart`, `reload` and `status` commands no longer write to that file at all. Anything that relied on `gdna` logging to STDOUT/STDERR without options, such as a container, must now pass `-l -`. The supplied GDNA Docker image already does this in its entrypoint, so `docker logs` shows the logs; if you have your own image or entrypoint, or override the entrypoint in your compose file, add `-l -` to the `gdna start` command.
+
   * **GDNA Netprobe options:** The `--hostname`/`-H` option of `gdna start` and `gdna report`, and the `--tls`/`-T` option of `gdna report`, were ignored in favour of the configuration and now take effect. Check scripts that pass them with values that differ from your configuration.
 
 * **Running in the background**

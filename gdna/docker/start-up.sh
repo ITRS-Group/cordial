@@ -10,4 +10,6 @@ if [ -f "$KEYPATH" ]; then
     gdna pubkey
     echo
 fi
+# containers must log to STDOUT (`-l -`) and not to a file, which would be
+# lost with the container and is not visible to `docker logs`
 gdna start --on-start -l -
