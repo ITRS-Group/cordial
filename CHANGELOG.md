@@ -183,6 +183,10 @@
 
     * Preserve archive file errors rather than reporting misleading directory errors when a file cannot be opened.
 
+    * Fix `geneos init` and `geneos deploy profile` expanding `${hostname}` in profiles to an empty name when no `--host` was in effect. Instances were first created with the wrong name and then again, correctly named, when the profile was applied, so the second set missed the default ports and, for example, a Gateway was given port 7100 instead of 7038.
+
+    * Fix adding a `licd` instance ignoring an explicitly requested port.
+
   * Profiles
 
     * Fix profile creation through `geneos init` and `geneos deploy profile` to apply the profile only once. Previously, files defined in profile imports, such as licence files, could be imported twice, creating unnecessary backup files.

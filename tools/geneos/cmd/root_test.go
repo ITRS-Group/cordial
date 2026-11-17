@@ -1,6 +1,22 @@
 package cmd
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+)
+
+func TestProfileExpandHost(t *testing.T) {
+	previous := geneos.LOCAL
+	t.Cleanup(func() { geneos.LOCAL = previous })
+	geneos.LOCAL = geneos.NewHost("localhost")
+
+	for _, name := range []string{"", geneos.ALLHOSTS, "localhost"} {
+		if got := profileExpandHost(name); got != geneos.LOCAL {
+			t.Errorf("profileExpandHost(%q) = %v, want local host", name, got)
+		}
+	}
+}
 
 func TestCommandFlagNormalization(t *testing.T) {
 	tests := []struct {
