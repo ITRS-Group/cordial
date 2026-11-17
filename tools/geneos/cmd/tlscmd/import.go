@@ -23,9 +23,12 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -38,18 +41,43 @@ import (
 
 var importCmdPrivateKey string
 var importCmdPassword config.Secret
+var importCmdRootsOnly bool
+var importCmdFiles []string
 
 func init() {
 	tlsCmd.AddCommand(importCmd)
+
+	importCmd.Flags().StringArrayVarP(&importCmdFiles, "file", "f", nil,
+		`Certificate or bundle file name or glob pattern to import.
+Can be repeated, and is combined with any file names given as
+arguments. Use this to avoid file names being mistaken for
+instance names. Multiple files are only accepted with --roots-only`,
+	)
 
 	importCmd.Flags().VarP(&importCmdPassword, "password", "p",
 		`Plaintext password for PFX/PKCS#12 file decryption.
 You will be prompted if not supplied as an argument.
 PFX/PKCS#12 files are identified by the .pfx or .p12
-file extension and only supported for instance bundles`,
+file extension`,
 	)
 
 	importCmd.Flags().StringVarP(&importCmdPrivateKey, "key", "k", "", "Private key `file` for certificate, PEM format only")
+
+	importCmd.Flags().BoolVar(&importCmdRootsOnly, "roots-only", false,
+		`Only import root CA certificates, to the ca-bundle files, and
+ignore all other certificates and keys in the input.
+The local root CA and signing certificate are not changed.
+Also accepted as --root-only`,
+	)
+
+	importCmd.MarkFlagsMutuallyExclusive("roots-only", "key")
+
+	importCmd.Flags().SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		if name == "root-only" {
+			name = "roots-only"
+		}
+		return pflag.NormalizedName(name)
+	})
 
 	importCmd.Flags().SortFlags = false
 }
@@ -65,9 +93,11 @@ var importCmd = &cobra.Command{
 	DisableFlagsInUseLine: true,
 	Example: `
 # Import a certificate bundle for the netprobe instance on localhost from a PEM file
-geneos tls import netprobe localhost /path/to/file.pem
+geneos tls import netprobe localhost --file /path/to/file.pem
 # Import a signer bundle from a PEM file
-geneos tls import /path/to/file.pem
+geneos tls import --file /path/to/file.pem
+# Add only the root CA certificate(s) in one or more files to the ca-bundle files
+geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.crt'
 `,
 	Annotations: map[string]string{
 		cmd.CmdGlobal:                "false",
@@ -91,21 +121,44 @@ geneos tls import /path/to/file.pem
 			names = slices.DeleteFunc(names, func(s string) bool { return s == "-" })
 		}
 
-		if len(params) > 1 {
-			return fmt.Errorf("no more than one file path must be specified when importing a TLS certificate bundle")
+		files, err := importFiles(importCmdFiles, params)
+		if err != nil {
+			return err
 		}
 
 		// default to STDIN if no file is specified, which is consistent
 		// with other import commands and allows for piping and
 		// redirection without needing to explicitly specify "-"
-		file := "-"
-		if len(params) > 0 {
-			file = params[0]
+		if len(files) == 0 {
+			files = []string{"-"}
 		}
 
 		if ct == nil && len(names) == 0 {
-			return geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput)
+			if len(files) > 1 && !importCmdRootsOnly {
+				return fmt.Errorf("more than one file specified (%s), but only one file can be imported at a time unless --roots-only is used", strings.Join(files, ", "))
+			}
+			for i, file := range files {
+				if i > 0 {
+					fmt.Println()
+				}
+				if err = geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput, importCmdRootsOnly); err != nil {
+					if len(files) > 1 {
+						err = fmt.Errorf("%s: %w", file, err)
+					}
+					return err
+				}
+			}
+			return nil
 		}
+
+		if importCmdRootsOnly {
+			return fmt.Errorf("--roots-only cannot be used when importing an instance bundle, remove the TYPE and NAME arguments")
+		}
+
+		if len(files) > 1 {
+			return fmt.Errorf("no more than one file can be specified when importing an instance bundle, got: %s", strings.Join(files, ", "))
+		}
+		file := files[0]
 
 		if geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
 			command.SetUsageTemplate(" ")
@@ -150,6 +203,48 @@ geneos tls import /path/to/file.pem
 		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 		return nil
 	},
+}
+
+// importFiles returns the list of files to import, made up of the
+// values of the --file flag followed by any other non-instance
+// arguments in params, with duplicates removed. Values from the flag
+// are expanded as glob patterns, and it is an error if a pattern
+// matches nothing or only directories. Anything that is not a local
+// path (standard input, "pem:" strings and URLs) and values without
+// pattern characters are used as they are.
+func importFiles(flagFiles, params []string) (files []string, err error) {
+	add := func(f string) {
+		if !slices.Contains(files, f) {
+			files = append(files, f)
+		}
+	}
+
+	for _, f := range flagFiles {
+		if f == "-" || strings.HasPrefix(f, "pem:") || strings.HasPrefix(f, "http://") || strings.HasPrefix(f, "https://") || !strings.ContainsAny(f, "*?[") {
+			add(f)
+			continue
+		}
+		matches, err := filepath.Glob(config.ResolveHome(f))
+		if err != nil {
+			return nil, fmt.Errorf("invalid file pattern %q: %w", f, err)
+		}
+		found := false
+		for _, m := range matches {
+			if fi, err := os.Stat(m); err != nil || fi.IsDir() {
+				continue
+			}
+			found = true
+			add(m)
+		}
+		if !found {
+			return nil, fmt.Errorf("no files match %q", f)
+		}
+	}
+
+	for _, p := range params {
+		add(p)
+	}
+	return
 }
 
 // tlsWriteInstance writes the certificate, key and chain to the instance.

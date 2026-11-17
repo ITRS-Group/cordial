@@ -1,30 +1,26 @@
 # Highlights
 
-New features and notable capabilities, grouped by the version in which the changelog describes them, newest first. Versions without selected highlights are omitted. For upgrade-sensitive changes, see [Update Notes](UPDATENOTES.md); for full details and fixes, see the [changelog](CHANGELOG.md).
+New features and notable capabilities, grouped by version, newest first. Versions without selected highlights are omitted. For upgrade-sensitive changes, see [UPDATENOTES](UPDATENOTES.md).
+
+> [!NOTE]
+> This is a short list of the most significant changes only. The [CHANGELOG](CHANGELOG.md) is the primary source and has the full details of every new feature, change and fix in each version.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
 > [!NOTE]
 > Built with Go 1.27.4.
 
-> [!IMPORTANT]
-> The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer included in releases. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
+* **Includes (preview):** Manage include files and configuration templates independently of the `geneos` program version, with a separate versioned includes archive in releases. Existing Gateway setups that use the old `config` includes can be moved to the new layout with `geneos includes fix`. This is still considered a feature preview and may undergo further changes before becoming fully stable.
 
-* **`geneos` command**
+* **Site names:** Set an installation-wide site name, with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or `geneos deploy`, which is used for the Gateway include directory and file names. The supplied profiles use it in their include paths.
 
-  * **Includes (preview):** Manage include files and configuration templates independently of the main `geneos` version. Set an installation-wide site name for Gateway include paths, install embedded or versioned includes, update links, delete unused versions and repair unambiguous broken local references with `geneos includes fix`. Releases include a separate versioned includes archive and standalone installer. This is still considered a feature preview and may undergo further changes before becoming fully stable.
+* **TLS commands:** `geneos tls import` has `--file`/`-f` to name files without confusing them with instances, and `--roots-only` to add only root CA certificates to the `ca-bundle` from PEM, PFX/PKCS#12 or Java trust store files. `geneos tls info` accepts newline or NUL separated lists of paths, and glob patterns, as passed by a Toolkit sampler.
 
-  * **Site names:** Set an installation-wide site name for Gateway configuration include directories and filename prefixes. Supplied profiles use the site name in their include paths.
+* **Dashboard files:** `geneos adb info` can list the XPaths and URLs in an Active Dashboard file, and `geneos adb clean` can filter or replace URLs.
 
-  * **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
+* **Packages:** `geneos package install` accepts repeatable `--archive` options as well as positional archives, directories and URLs.
 
-  * **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can filter or replace URLs, and `edit` is a preserve-by-default alias.
-
-  * **Monitoring Health:** Deploy the renamed `health-agent` and `health-gateway` profiles to monitor Geneos components.
-
-* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna start` can now be controlled in the same way, with `stop`, `restart`, `reload` and `status` commands. `reload`, or sending `SIGUSR1`, applies a changed and valid configuration without interrupting work in progress, which for `gdna` includes new schedules, and `--daemon` now waits until the process is running and reports one that fails to start.
-
-* **Incident integration reliability:** `servicenow2 client`, `geneos incident raise` and `geneos incident query` now exit with an error whenever an incident could not be created, updated or queried, and the proxy and `ims-gateway` log every failure with its cause. `geneos incident query` now returns data and `geneos incident raise` correlates incidents as documented.
+* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna start` can now be controlled with `stop`, `restart`, `reload` and `status` commands, and `reload` applies a changed configuration without interrupting work in progress.
 
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 

@@ -21,9 +21,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/certs"
@@ -205,17 +207,20 @@ func readSigningPrivateKey() (key certs.PrivateKey, err error) {
 // or an embedded string with either an included private key and chain
 // or separately specified in the same way.
 //
+// If rootsOnly is true then only the root certificates in the bundle
+// are added to the ca-bundle and all other certificates and keys are
+// ignored. It is an error if there are no valid root certificates.
+//
 // If the bundle contains only root certificates then these are added to
-// the ca-bundle only. In this case any privateKeySource parameter is
-// ignored. If the bundle contains a signing certificate and private key
-// then these are written to the user's app config directory along with
-// the root certificate. The ca-bundle is updated with the root
-// certificate.
-func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundlePassword config.Secret, signingBundlePrompt func(bool, int, ...string) (config.Secret, error)) (err error) {
+// the ca-bundle only, as if rootsOnly was true. In this case any
+// privateKeySource parameter is ignored. If the bundle contains a
+// signing certificate and private key then these are written to the
+// user's app config directory along with the root certificate. The
+// ca-bundle is updated with the root certificate.
+func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundlePassword config.Secret, signingBundlePrompt func(bool, int, ...string) (config.Secret, error), rootsOnly bool) (err error) {
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
-		// ignored.
 	}
 
 	var certBundle *certs.CertificateBundle
@@ -231,6 +236,14 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 		if len(signingBundlePassword) == 0 {
 			return errors.New("password required for P12/PFX signing bundle")
 		}
+		roots, others, keys, err := certs.P12ToRootCerts(signingBundleSource, signingBundlePassword)
+		if err != nil {
+			return err
+		}
+		if rootsOnly || (others == 0 && len(roots) > 0) {
+			return importRootsOnly(os.Stdout, LOCAL, signingBundleSource, roots, others, keys, rootsOnly)
+		}
+
 		certBundle, err = certs.P12ToCertBundle(signingBundleSource, signingBundlePassword)
 		if err != nil {
 			return err
@@ -241,18 +254,16 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 			return err
 		}
 
-		leaf, intermediates, roots, _, err := certs.DecodePEM(signingBundle)
-		if leaf == nil && len(intermediates) == 0 && len(roots) > 0 {
-			// import roots to ca-bundle only
-			updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), roots...)
-			if err != nil {
-				return err
-			} else if updated {
-				fmt.Printf("ca-bundle updated with root certificate(s)\n")
-			} else {
-				fmt.Printf("ca-bundle is already up to date\n")
+		leaf, intermediates, roots, keys, err := certs.DecodePEM(signingBundle)
+		if err != nil {
+			return err
+		}
+		if rootsOnly || (leaf == nil && len(intermediates) == 0 && len(roots) > 0) {
+			ignored := len(intermediates)
+			if leaf != nil {
+				ignored++
 			}
-			return nil
+			return importRootsOnly(os.Stdout, LOCAL, signingBundleSource, roots, ignored, len(keys), rootsOnly)
 		}
 
 		privateKey, err := config.ReadPEM(privateKeySource, "signing key")
@@ -310,10 +321,51 @@ func TLSImportBundle(signingBundleSource, privateKeySource string, signingBundle
 	if updated, err := certs.UpdateCACertsFiles(LOCAL, PathToCABundle(LOCAL), certBundle.Root); err != nil {
 		return err
 	} else if updated {
-		fmt.Printf("ca-bundle updated with root certificate\n")
+		fmt.Printf("ca-bundle %s updated with root certificate\n", PathToCABundle(LOCAL, certs.PEMExtension))
+	} else {
+		fmt.Printf("ca-bundle %s already contains root certificate, no changes made\n", PathToCABundle(LOCAL, certs.PEMExtension))
 	}
 
 	return
+}
+
+// importRootsOnly adds roots to the ca-bundle on host h and reports
+// what was done to w. The local root CA and signing certificate are
+// never changed. ignoredCerts and ignoredKeys are the number of
+// non-root certificates and private keys found in source that are not
+// being imported, and explicit is true if the user asked for
+// roots-only behaviour, as opposed to the source only containing roots.
+func importRootsOnly(w io.Writer, h *Host, source string, roots []*x509.Certificate, ignoredCerts, ignoredKeys int, explicit bool) error {
+	if len(roots) == 0 {
+		return fmt.Errorf("no valid root CA certificates found in %q (a root CA certificate must be self-signed, a CA and within its validity period)", source)
+	}
+
+	if explicit {
+		fmt.Fprintf(w, "Importing root certificate(s) from %q into the ca-bundle only\n", source)
+	} else {
+		fmt.Fprintf(w, "%q contains only root certificate(s), importing into the ca-bundle only\n", source)
+	}
+	fmt.Fprintf(w, "The local root CA and signing certificate are not changed\n")
+	for _, r := range roots {
+		fmt.Fprintf(w, "  root certificate %q, expires %s\n", r.Subject.CommonName, r.NotAfter.Format(time.DateOnly))
+	}
+	if ignoredCerts > 0 {
+		fmt.Fprintf(w, "Ignoring %d non-root certificate(s)\n", ignoredCerts)
+	}
+	if ignoredKeys > 0 {
+		fmt.Fprintf(w, "Ignoring %d private key(s)\n", ignoredKeys)
+	}
+
+	updated, err := certs.UpdateCACertsFiles(h, PathToCABundle(h), roots...)
+	if err != nil {
+		return err
+	}
+	if updated {
+		fmt.Fprintf(w, "ca-bundle %s updated\n", PathToCABundle(h, certs.PEMExtension))
+	} else {
+		fmt.Fprintf(w, "ca-bundle %s already contains all the root certificate(s), no changes made\n", PathToCABundle(h, certs.PEMExtension))
+	}
+	return nil
 }
 
 // create the tls/ directory in Geneos and a CA / DCA as required

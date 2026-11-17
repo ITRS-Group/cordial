@@ -464,6 +464,48 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	return
 }
 
+// P12ToRootCerts reads a PKCS#12 (PFX) file and returns the valid root
+// CA certificates it contains. It accepts both a normal bundle (a
+// private key with its certificate chain) and a certificate-only trust
+// store. others is the number of certificates that are not valid root
+// CAs (including expired ones) and keys is the number of private keys
+// found, neither of which are returned. Certificate-only files must be
+// PKCS#12 trust stores in the form written by Java keytool, as other
+// certificate-only files are not supported by the PKCS#12 library.
+func P12ToRootCerts(pfxPath string, password config.Secret) (roots []*x509.Certificate, others, keys int, err error) {
+	pfxData, err := os.ReadFile(config.ResolveHome(pfxPath))
+	if err != nil {
+		err = fmt.Errorf("failed to read PFX file: %w", err)
+		return
+	}
+
+	var all []*x509.Certificate
+	_, c, caCerts, chainErr := pkcs12.DecodeChain(pfxData, string(password))
+	if chainErr == nil {
+		keys = 1
+		all = append([]*x509.Certificate{c}, caCerts...)
+	} else if errors.Is(chainErr, pkcs12.ErrIncorrectPassword) {
+		err = fmt.Errorf("failed to decode PFX file: %w", chainErr)
+		return
+	} else {
+		var storeErr error
+		all, storeErr = pkcs12.DecodeTrustStore(pfxData, string(password))
+		if storeErr != nil {
+			err = fmt.Errorf("failed to decode PFX file as a key and certificate bundle (%v) or as a trust store (%v)", chainErr, storeErr)
+			return
+		}
+	}
+
+	for _, cert := range all {
+		if IsValidRootCA(cert) {
+			roots = append(roots, cert)
+		} else {
+			others++
+		}
+	}
+	return
+}
+
 // P12ToCertBundle converts a PKCS#12 (PFX) file to a CertificateBundle.
 // It reads the PFX file, extracts the private key and certificate
 // chain, and constructs a CertificateBundle with the leaf certificate,

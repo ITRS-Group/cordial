@@ -13,7 +13,7 @@
 
     * Add an installation-wide site name, set with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or local `geneos deploy`. Gateway configuration includes are installed as `gateway/<site>/<site>.*.xml`, and supplied profiles use `${site}` for their include paths. Spaces become underscores; if no site name is set, `local` is used.
 
-      Existing files in `gateway/includes/config` are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. Existing user profiles and Gateway setups are not rewritten. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
+      Existing files in `gateway/includes/config` that are used by a Gateway, as shown by `geneos includes list --gateway`, are copied to the new site directory without overwriting existing files, and the original directory is retained for older Gateway setups. The standalone installer in the includes archive cannot check Gateway setups and copies all the files. Existing user profiles and Gateway setups are not rewritten, but `geneos includes fix` can update references to unchanged files. Use one site name per installation and the same name across Geneos servers; changing it later can have unforeseen effects.
 
     * The `geneos includes` subsystem now supports installing versioned include files independently of the `geneos` program version. Use `geneos includes install` with a `.tar.gz` archive containing a `v`-prefixed semantic-version directory and corresponding configuration templates. Existing configuration files are never overwritten. Missing top-level links are created automatically; use `--update`/`-U` to update existing links to the installed version.
 
@@ -21,7 +21,7 @@
 
     * Add `geneos includes delete`, with an alias of `geneos includes remove`, to remove unused include versions. Specific versions can be selected using shell-style patterns, either as positional arguments or with `--version`/`-V`. Positional patterns are processed in order, with errors reported after processing the list. Gateway references protect the entire version and all its links from deletion.
 
-    * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
+    * Add `geneos includes fix [NAMES...]` to repair broken local include references when exactly one same-basename file exists, updating gateway XML and matching instance configuration through host-aware instance APIs. References to files in the legacy `gateway/includes/config` directory are also updated to the site-named files when their contents are identical. Supports JSON/YAML configurations, gateway name patterns, and `--dry-run`/`-n` previews.
 
     * Release distributions now include a separate `geneos-includes-<version>.tar.gz` archive containing the current include files, configuration templates, a standalone installer, and Markdown and PDF documentation. The archive retains the `config` names for its templates; `geneos includes install` applies the configured site name when installing them.
 
@@ -66,6 +66,16 @@
     * `geneos includes update`, `delete` and `install --update` check gateway setups as for `list --gateway` before removing obsolete symlinks. Updates preflight all links before making changes: same-basename replacements are valid, but a referenced obsolete link without a replacement blocks the entire update.
 
   * **Breaking Change** (minor): `geneos package install` now accepts repeatable `--archive`/`-A` options alongside positional archive files, URLs and directories. The `-A` shorthand now selects `--archive`, matching `deploy` and `init`; use `--all` without a shorthand to install all component types. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`; explicit URLs are fetched directly.
+
+  * `geneos tls`
+
+    * `geneos tls import` accepts the file names to import with repeatable `--file`/`-f` options, which also take glob patterns and are combined with any other arguments that are not instance names. Using the option avoids a file name, such as `bundle.pem`, being mistaken for an instance name; a `./bundle.pem` style path still works.
+
+    * Add `--roots-only` (also accepted as `--root-only`) to `geneos tls import` to only add the root CA certificates in PEM or PFX/PKCS#12 files, which can also be Java-style trust stores, to the `ca-bundle` files and ignore all other certificates and keys. The local root CA and signing certificate are never changed, and more than one file, or pattern, can be given. As before, a file that contains only root certificates is imported this way without the option, and this now also applies to PFX/PKCS#12 files.
+
+    * `geneos tls import` now reports what it has done more clearly when adding root certificates: the certificates found, any non-root certificates and keys that were ignored, and whether the `ca-bundle` was updated or already contained them.
+
+    * `geneos tls info` now accepts each file argument as a list of paths separated by newlines or NUL characters, with surrounding whitespace ignored, as passed by a Geneos Toolkit sampler for a `stringList` variable. Each path can also be a glob pattern.
 
   * ADB commands now list sorted, distinct XPaths and URL destinations with `info --show-xpaths`, `info --show-urls`, and `info --show-all`. `clean` supports regexp filtering and replacement of `wwwpage(...)` URLs while preserving other mixed targets; `edit` is a preserve-by-default alias for `clean`.
 

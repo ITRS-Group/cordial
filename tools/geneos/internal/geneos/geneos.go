@@ -170,7 +170,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 	// 4. import or initialise certs
 	if !opts.insecure {
 		if opts.signingBundle != "" {
-			err = TLSImportBundle(opts.signingBundle, "", opts.signingBundlePassword, opts.signingBundlePrompt)
+			err = TLSImportBundle(opts.signingBundle, "", opts.signingBundlePassword, opts.signingBundlePrompt, false)
 			if err != nil {
 				return err
 			}

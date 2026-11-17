@@ -143,6 +143,10 @@ var infoCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
 		log := log.With("command", "tls info")
+		// each argument may be a list of paths, as passed from a Geneos
+		// stringList variable, and each path may be a glob pattern
+		paths = expandInfoPaths(paths)
+
 		// gather cert info
 		certInfos := make([]certInfo, len(paths))
 
@@ -493,6 +497,53 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	return
 }
 
+// expandInfoPaths returns the list of file paths to examine from the
+// command arguments. Each argument is split into elements on newline
+// or NUL characters, which is how a Geneos stringList variable is
+// passed to a toolkit script, and whitespace around each element is
+// removed and empty elements ignored. Each element is then expanded as
+// a glob pattern, ignoring any directories matched. An element that
+// exists as a file, or that matches nothing, is kept as it is so that
+// a missing file is reported by the caller. Duplicates are removed,
+// keeping the first occurrence.
+func expandInfoPaths(args []string) (paths []string) {
+	add := func(p string) {
+		if !slices.Contains(paths, p) {
+			paths = append(paths, p)
+		}
+	}
+
+	for _, arg := range args {
+		for _, element := range strings.FieldsFunc(arg, func(r rune) bool { return r == '\n' || r == 0 }) {
+			element = config.ResolveHome(strings.TrimSpace(element))
+			if element == "" {
+				continue
+			}
+			if _, err := os.Stat(element); err == nil || !strings.ContainsAny(element, "*?[") {
+				add(element)
+				continue
+			}
+			matches, err := filepath.Glob(element)
+			if err != nil {
+				add(element)
+				continue
+			}
+			found := false
+			for _, m := range matches {
+				if fi, err := os.Stat(m); err != nil || fi.IsDir() {
+					continue
+				}
+				found = true
+				add(m)
+			}
+			if !found {
+				add(element)
+			}
+		}
+	}
+	return
+}
+
 // readFiles reads the specified files and extracts certificate
 // information, returning a slice of certInfo. Errors are stored in
 // ci.Error for each file, and processing continues for all files even
@@ -501,8 +552,8 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo) {
 	ci = make([]certInfo, len(paths))
 
-	// paths is a list of files to examine, pre-resolved by the
-	// shell so we don't do any wildcard processing
+	// paths is a list of files to examine, already expanded by
+	// expandInfoPaths
 	//
 	// extensions are only checked for .db/.pfx/.p12 files, others are
 	// assumed to be PEM and may contain certificates, private keys

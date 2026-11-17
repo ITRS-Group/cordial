@@ -1,6 +1,6 @@
 # Update Notes
 
-This is a summary of breaking and other upgrade-sensitive changes in Cordial. When updating across multiple versions, review every relevant section between your installed version and the version you are installing. Versions without selected update notes are omitted; their omission does not guarantee that an update needs no attention. See the [changelog](CHANGELOG.md) for full details and fixes, and [Highlights](HIGHLIGHTS.md) for new features.
+This is a summary of breaking and other upgrade-sensitive changes in Cordial. When updating across multiple versions, review every relevant section between your installed version and the version you are installing. Versions without selected update notes are omitted; their omission does not guarantee that an update needs no attention. See the [CHANGELOG](CHANGELOG.md) for full details and fixes, and [HIGHLIGHTS](HIGHLIGHTS.md) for new features.
 
 ## [v1.31.0](CHANGELOG.md#version-v1310) (in development)
 
@@ -13,7 +13,7 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
     At this time the only function of the site name is to determine the location where configuration includes are installed, which is under `gateway/<site>/<site>.*.xml`, instead of the previous `gateway/includes/config/config.*.xml` locations. This will likely expand in the future to offer further customization and control over site-specific configurations.
 
-    Existing files in `gateway/includes/config` are copied and renamed appropriately without overwriting existing files and retained in their original location. Existing user profiles and Gateway setups are not rewritten; check their paths before using the new layout.
+    Existing files in `gateway/includes/config` that are used by a Gateway, as shown by `geneos includes list --gateway`, are copied and renamed appropriately without overwriting existing files and retained in their original location. The standalone installer cannot check Gateway setups and copies all the files. Existing user profiles and Gateway setups are not rewritten; check their paths before using the new layout, or use `geneos includes fix` to update references to files that are unchanged.
 
   * **Minor breaking change — package installation:** `-A` now means `--archive`, not `--all`; use `--all` explicitly. Local archive sources do not fall back to downloads, and a local `--archive` cannot be combined with `--download`. Explicit URLs are still fetched.
 
@@ -87,7 +87,7 @@ This release was withdrawn; use v1.29.1 or later instead. `gateway-reporter` was
 
 ## [v1.27.0](CHANGELOG.md#version-v1270)
 
-* Back up customised templates and compare them with the updated Gateway and Netprobe templates. For existing installations, run `geneos init template` after upgrading. The changelog also recommends `geneos backup --shared --aes --tls` for a rollback option.
+* Back up customised templates and compare them with the updated Gateway and Netprobe templates. For existing installations, run `geneos init template` after upgrading. The CHANGELOG also recommends `geneos backup --shared --aes --tls` for a rollback option.
 
 * `geneos tls info` columns, names and ordering changed; update output consumers. Remote process checks now only see processes owned by the configured user, which can affect detection by `ps`, `start` and `stop`.
 
@@ -195,7 +195,7 @@ Go consumers of `pkg/config` should review the changed `LookupTable()` options; 
 
 ## [v1.7.0](CHANGELOG.md#version-v170)
 
-`help` now shows the long description and usage; `--help`/`-h` shows the short description and usage. `pkg/config` also had API changes; Go consumers should review the changelog.
+`help` now shows the long description and usage; `--help`/`-h` shows the short description and usage. `pkg/config` also had API changes; Go consumers should review the CHANGELOG.
 
 ## [v1.6.4](CHANGELOG.md#version-v164)
 
