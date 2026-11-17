@@ -7,6 +7,12 @@ New features and notable capabilities, grouped by the version in which the chang
 > [!IMPORTANT]
 > The original `servicenow` integration, `pagerduty` and `san-config`, together with their configurations and documentation, are no longer included in releases. Use the versions in v1.30.1 or build them from source. For ServiceNow, consider moving to `servicenow2` or `ims-gateway`; both remain in releases.
 
+* **Monitoring Health:** Deploy the renamed `health-endpoint` and
+  `health-gateway` profiles to monitor Geneos components.
+* **Site names:** Set an installation-wide site name for Gateway configuration
+  include directories and filename prefixes. Supplied profiles use the site
+  name in their include paths.
+
 * **Includes (preview):** Manage include files and configuration templates independently of the main `geneos` version. Set an installation-wide site name for Gateway include paths, install embedded or versioned includes, update links, delete unused versions and repair unambiguous broken local references with `geneos includes fix`. Releases include a separate versioned includes archive and standalone installer. This is still considered a feature preview and may undergo further changes before becoming fully stable.
 
 * **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can filter or replace URLs, and `edit` is a preserve-by-default alias.

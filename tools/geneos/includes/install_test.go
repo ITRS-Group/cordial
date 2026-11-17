@@ -26,16 +26,16 @@ func TestInstallEmbeddedLinkModes(t *testing.T) {
 			if err := os.MkdirAll(includesDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			link := filepath.Join(includesDir, "itrs.level0.foundation.xml")
-			if err := os.Symlink("previous/itrs.level0.foundation.xml", link); err != nil {
+			link := filepath.Join(includesDir, "itrs.layer0.foundation.xml")
+			if err := os.Symlink("previous/itrs.layer0.foundation.xml", link); err != nil {
 				t.Fatal(err)
 			}
 			if err := Install(h, "", true, update); err != nil {
 				t.Fatal(err)
 			}
-			want := "previous/itrs.level0.foundation.xml"
+			want := "previous/itrs.layer0.foundation.xml"
 			if update {
-				want = filepath.Join(cordial.VERSION, "itrs.level0.foundation.xml")
+				want = filepath.Join(cordial.VERSION, "itrs.layer0.foundation.xml")
 			}
 			if target, err := os.Readlink(link); err != nil || target != want {
 				t.Fatalf("include link = %q, %v; want %q", target, err, want)
@@ -85,12 +85,12 @@ func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.
 			if err := os.MkdirAll(includesDir, 0755); err != nil {
 				t.Fatal(err)
 			}
-			existing := filepath.Join(includesDir, "itrs.level0.foundation.xml")
+			existing := filepath.Join(includesDir, "itrs.layer0.foundation.xml")
 			if existingFile {
 				if err := os.WriteFile(existing, []byte("local"), 0644); err != nil {
 					t.Fatal(err)
 				}
-			} else if err := os.Symlink("previous/itrs.level0.foundation.xml", existing); err != nil {
+			} else if err := os.Symlink("previous/itrs.layer0.foundation.xml", existing); err != nil {
 				t.Fatal(err)
 			}
 			if err := Install(h, "", true, false); err != nil {
@@ -100,7 +100,7 @@ func TestInstallEmbeddedCreatesMissingLinksAndPreservesExistingPaths(t *testing.
 				if data, err := os.ReadFile(existing); err != nil || string(data) != "local" {
 					t.Fatalf("existing file = %q, %v", data, err)
 				}
-			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.level0.foundation.xml" {
+			} else if target, err := os.Readlink(existing); err != nil || target != "previous/itrs.layer0.foundation.xml" {
 				t.Fatalf("existing link = %q, %v", target, err)
 			}
 		})
@@ -135,6 +135,33 @@ func TestInstallEmbeddedCreatesVersionedAndConfigFiles(t *testing.T) {
 	}
 	if len(configFiles) == 0 {
 		t.Fatal("Install() created no config template files")
+	}
+	for _, path := range []string{
+		h.PathTo("gateway", "includes", "itrs.layer0.foundation.xml"),
+		h.PathTo("gateway", "local", "local.layer0.authentication.xml"),
+		h.PathTo("gateway", "local", "local.layer0.foundation.xml"),
+		h.PathTo("gateway", "includes", "itrs.layer1.server-health.xml"),
+		h.PathTo("gateway", "local", "local.layer1.server-health.xml"),
+		h.PathTo("gateway", "includes", "itrs.layer2.programs-and-logs.xml"),
+		h.PathTo("gateway", "local", "local.layer2.programs-and-logs.xml"),
+		h.PathTo("gateway", "includes", "itrs.layer3.geneos.xml"),
+		h.PathTo("gateway", "local", "local.layer3.geneos.xml"),
+		h.PathTo("gateway", "local", "local.layer4.analytics.xml"),
+	} {
+		if _, err := os.Stat(path); err != nil {
+			t.Errorf("installed layer file %q: %v", path, err)
+		}
+	}
+	for _, path := range []string{
+		h.PathTo("gateway", "includes", "itrs.level0.foundation.xml"),
+		h.PathTo("gateway", "includes", "itrs.level1.server-health.xml"),
+		h.PathTo("gateway", "includes", "itrs.level2.programs-and-logs.xml"),
+		h.PathTo("gateway", "includes", "itrs.level3.geneos.xml"),
+		h.PathTo("gateway", "local", "local.level3.geneos.xml"),
+	} {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
+			t.Errorf("obsolete file %q was installed: %v", path, err)
+		}
 	}
 }
 

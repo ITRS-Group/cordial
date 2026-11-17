@@ -553,8 +553,8 @@ email:
 # There are other configuration sections in the built-in defaults and
 # you must not change any settings in the below:
 
-# `plugins` define which Geneos plugins are classified as level 1, 2 or
-# 3 (or level 1 optional). You will probably not need to ever change
+# `plugins` define which Geneos plugins are classified as layer 1, 2 or
+# 3 (or layer 1 optional). You will probably not need to ever change
 # these, but if you do then you will be given more details by an ITRS
 # staff member.
 plugins:
@@ -566,13 +566,13 @@ plugins:
     # plugins: |
     #   - altering
     #   - ...
-  # `level1` is a list of all the required plugins to achieve Level 1
+  # `layer1` is a list of all the required plugins to achieve Layer 1
   # Coverage per server. You should not need to change this list.
-  level1:
+  layer1:
     # plugins: [ cpu, disk, network, hardware ]
-  level1-optional:
+  layer1-optional:
     # plugins: [ deviceio, ipc, top, unix-users, winapps, win-cluster, win-services, wmi, wts-licenses, wts-processes, wts-sessions, wts-summary ]
-  level2:
+  layer2:
     # plugins: [ fkm, processes ]
 
 

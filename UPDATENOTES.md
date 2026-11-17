@@ -34,6 +34,19 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
 * **Example gateway configuration:** If you copied the response messages from an earlier `ims-gateway.example.yaml`, replace `${_number}`, `${_error}` and similar with the `__` prefixed names, such as `${__number}`, which are the only ones the gateway supplies; the others expand to nothing.
 
+* **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are
+  now `health-endpoint` and `health-gateway`. Instance names and the
+  `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing
+  profiles, saved options and Gateway references are not migrated
+  automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+* **Monitoring layers:** Include and site filenames, Gateway types and other
+  identifiers now use `layer` rather than `level`. Existing Gateway setups,
+  SANs, profiles and site overrides must be migrated; see the
+  [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
+* **GDNA layers:** Plugin configuration keys, report identifiers, Dataviews
+  and dashboard bindings use layer names. Update customised configuration and
+  dashboards as described in the [GDNA upgrade guidance](gdna/README.md#upgrading-from-level-based-names).
+
 ## [v1.30.1](CHANGELOG.md#version-v1301)
 
 v1.30.1 replaces v1.30.0.

@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	dbg "runtime/debug"
+	"strings"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/spf13/cobra"
@@ -96,6 +97,10 @@ var Cmd = &cobra.Command{
 
 		initConfig(cmd)
 
+		if err = validateLayerReportSelection(reportNames); err != nil {
+			return err
+		}
+
 		if v, ok := config.Lookup[string](cf, cf.Join("gdna", "version")); !ok || v == "" {
 			config.Set(cf, cf.Join("gdna", "version"), cordial.VERSION)
 		}
@@ -113,6 +118,33 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func validateLayerConfig(cf *config.Config) error {
+	for _, rename := range []struct {
+		old string
+		new string
+	}{
+		{"plugins.level1-optional", "plugins.layer1-optional"},
+		{"plugins.level1", "plugins.layer1"},
+		{"plugins.level2", "plugins.layer2"},
+		{"reports." + legacyCoverageReportName, "reports." + coverageReportName},
+	} {
+		if cf.IsSet(rename.old) {
+			return fmt.Errorf("configuration key %q was renamed to %q; update your GDNA configuration", rename.old, rename.new)
+		}
+		prefix := "GDNA_" + strings.ToUpper(strings.NewReplacer(".", "_", "-", "_").Replace(rename.old))
+		for _, env := range os.Environ() {
+			name, value, _ := strings.Cut(env, "=")
+			if value != "" && (name == prefix || strings.HasPrefix(name, prefix+"_")) {
+				return fmt.Errorf("environment variable %q uses configuration key %q, renamed to %q", name, rename.old, rename.new)
+			}
+		}
+	}
+	if err := validateLayerReportSelection(config.Get[string](cf, "email.body-reports")); err != nil {
+		return fmt.Errorf("email.body-reports: %w", err)
+	}
+	return nil
 }
 
 func initConfig(cmd *cobra.Command) {
@@ -164,6 +196,11 @@ func initConfig(cmd *cobra.Command) {
 				config.MustExist(),
 			),
 		)
+	}
+
+	if err = validateLayerConfig(cf); err != nil {
+		log.Error("loading config", slog.Any("error", err))
+		os.Exit(1)
 	}
 
 	// check if logfile is set on the command line, which overrides config

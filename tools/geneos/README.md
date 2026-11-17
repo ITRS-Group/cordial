@@ -316,10 +316,10 @@ flowchart LR
       gateway ----> gateway/gateways[gateways]
       gateway ---> gateway/shared[shared] & gateway/config[config] & gateway/templates[templates]
       gateway ---> gatewayIncludes[includes]
-      gatewayIncludes --> gatewayIncludeLink[itrs.level1.infrastructure.xml symlink]
+      gatewayIncludes --> gatewayIncludeLink[itrs.layer1.server-health.xml symlink]
       gatewayIncludes --> gatewayIncludeVersion[v1.30.0]
       gatewayIncludes --> gatewayIncludeConfig[config templates]
-      gatewayIncludeVersion --> gatewayIncludeFile[itrs.level1.infrastructure.xml]
+      gatewayIncludeVersion --> gatewayIncludeFile[itrs.layer1.server-health.xml]
       gatewayIncludeLink -.->|points to| gatewayIncludeFile
         gateway/gateways ---> gateway/gateways/example1[example1]
         gateway/gateways ---> gateway/gateways/example2[example2]
