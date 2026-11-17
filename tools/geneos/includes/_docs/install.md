@@ -16,7 +16,9 @@ Configuration templates are installed under `gateway/<site>/<site>.*.xml`, next 
 > - Use the same site name on all Geneos servers for consistent paths.
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
-Before installing templates, existing files under `gateway/includes/config` are copied to the new site directory without replacing existing destinations. `config.*` file prefixes become the site name; other files and subdirectories are copied as well. The original directory is left intact for older Gateway setups. Existing symlinks in the old directory are copied as regular files containing their targets' contents; broken links cause an error. Templates are installed only when no destination exists.
+Before installing templates, files under `gateway/includes/config` that are in active use by a Gateway setup on the selected host, as shown by `geneos includes list --gateway`, are copied to the new site directory without replacing existing destinations. Unused files and remote includes are not copied. `config.*` file prefixes become the site name, and subdirectories are created as needed. The original directory is left intact for older Gateway setups. Existing symlinks in the old directory are copied as regular files containing their targets' contents; broken links cause an error. Templates are installed only when no destination exists.
+
+The standalone `scripts/install-includes.sh` cannot make this check without the `geneos` command and so still copies every file from the old directory.
 
 Missing top-level include links are created automatically. Existing files and links are left alone unless `--update` (`-U`) is given, which replaces them with links to the installed version. When an archive is supplied, updates target the version in the archive; otherwise they target the version embedded in the executable.
 

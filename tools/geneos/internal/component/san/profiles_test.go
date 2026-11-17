@@ -65,12 +65,12 @@ func TestApplyManagedEntityCommon(t *testing.T) {
 func TestEmbeddedHealthManagedEntityCommon(t *testing.T) {
 	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
 	var common ManagedEntityCommon
-	commonKey := pf.Join("profiles", "health-endpoint", "san", "managed-entities-common")
+	commonKey := pf.Join("profiles", "health-agent", "san", "managed-entities-common")
 	if err := pf.UnmarshalKey(commonKey, &common, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 	var entities []ManagedEntity
-	key := pf.Join("profiles", "health-endpoint", "san", "managed-entities")
+	key := pf.Join("profiles", "health-agent", "san", "managed-entities")
 	if err := pf.UnmarshalKey(key, &entities, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}

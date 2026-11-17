@@ -45,7 +45,7 @@
 
 * Monitor-Of-The-Monitors, monitoring layers and GDNA renaming
 
-  * **Breaking Change**: Monitor-Of-The-Monitors is now Monitoring Health. The supplied `motm` and `motm-gateway` profiles have been renamed `health-endpoint` and `health-gateway`; instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing configurations and saved profile options are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+  * **Breaking Change**: Monitor-Of-The-Monitors is now Monitoring Health. The supplied `motm` and `motm-gateway` profiles have been renamed `health-agent` and `health-gateway`; instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing configurations and saved profile options are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
 
   * **Breaking Change**: Monitoring include filenames and Gateway identifiers now use `layer` rather than `level`. Migrate existing site overrides, Gateway setups, SANs and customised profiles as described in the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
 

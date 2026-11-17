@@ -671,7 +671,7 @@ func TestEmbeddedServerHealthProfiles(t *testing.T) {
 	}
 
 	var sans []san.SanProfile
-	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san"), &sans, config.NoExpand()); err != nil {
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-agent", "san"), &sans, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 	if len(sans) != 1 || !slices.Contains(sans[0].Types, "Layer 1 - Server Health") ||
@@ -683,7 +683,7 @@ func TestEmbeddedServerHealthProfiles(t *testing.T) {
 
 func TestEmbeddedMonitoringHealthNames(t *testing.T) {
 	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
-	for _, name := range []string{"health-endpoint", "health-gateway"} {
+	for _, name := range []string{"health-agent", "health-gateway"} {
 		if !pf.IsSet(pf.Join("profiles", name)) {
 			t.Errorf("missing Monitoring Health profile %q", name)
 		}
@@ -695,7 +695,7 @@ func TestEmbeddedMonitoringHealthNames(t *testing.T) {
 	}
 
 	var endpoints []san.SanProfile
-	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san"), &endpoints, config.NoExpand()); err != nil {
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-agent", "san"), &endpoints, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 	if len(endpoints) != 1 || !slices.Contains(endpoints[0].Attributes, "COMPONENT=SAN Health") {
@@ -777,7 +777,7 @@ func TestEmbeddedHealthProfilesGeneratedSetup(t *testing.T) {
 	if err := profile.Apply(geneos.LOCAL, pf, "health-gateway", false); err != nil {
 		t.Fatal(err)
 	}
-	if err := profile.Apply(geneos.LOCAL, pf, "health-endpoint", false); err != nil {
+	if err := profile.Apply(geneos.LOCAL, pf, "health-agent", false); err != nil {
 		t.Fatal(err)
 	}
 	for _, entry := range []struct {
@@ -786,7 +786,7 @@ func TestEmbeddedHealthProfilesGeneratedSetup(t *testing.T) {
 	}{
 		{gatewayMember, "health-gateway"},
 		{probeMember, "health-gateway"},
-		{member, "health-endpoint"},
+		{member, "health-agent"},
 	} {
 		saved, err := config.Read(entry.member.Type().Name, config.FromDir(entry.member.Home()), config.UseDefaults(false), config.MustExist())
 		if err != nil {
@@ -895,7 +895,7 @@ func TestComponentProfileEntryPoints(t *testing.T) {
 func TestHealthComponentCoverage(t *testing.T) {
 	pf := config.New(config.WithDefaults(profile.EmbeddedDefaults(), "yaml"))
 	var entities []san.ManagedEntity
-	if err := pf.UnmarshalKey(pf.Join("profiles", "health-endpoint", "san", "managed-entities"), &entities, config.NoExpand()); err != nil {
+	if err := pf.UnmarshalKey(pf.Join("profiles", "health-agent", "san", "managed-entities"), &entities, config.NoExpand()); err != nil {
 		t.Fatal(err)
 	}
 

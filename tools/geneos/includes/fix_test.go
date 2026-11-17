@@ -384,3 +384,70 @@ func TestFixNoChangesOutput(t *testing.T) {
 		}
 	}
 }
+
+func TestFixMigratesUnchangedLegacyConfig(t *testing.T) {
+	previous := config.Get[string](config.Global(), "site")
+	config.Set(config.Global(), "site", "acme")
+	t.Cleanup(func() { config.Set(config.Global(), "site", previous) })
+
+	h := newTestGatewayHost(t)
+	files := map[string]string{
+		"includes/config/config.same.xml":    "same",
+		"includes/config/config.changed.xml": "old",
+		"includes/config/config.nosite.xml":  "nosite",
+		"includes/config/nested/other.xml":   "nested",
+		"acme/acme.same.xml":                 "same",
+		"acme/acme.changed.xml":              "new",
+		"acme/nested/other.xml":              "nested",
+	}
+	for name, contents := range files {
+		filename := h.PathTo("gateway", filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(filename), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filename, []byte(contents), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var locations strings.Builder
+	for _, name := range []string{"config.same.xml", "config.changed.xml", "config.nosite.xml", "nested/other.xml"} {
+		locations.WriteString("<include><location>../../includes/config/" + name + "</location></include>")
+	}
+	writeTestGatewaySetup(t, h, "<gateway><includes>"+locations.String()+"</includes></gateway>", "prod-a")
+	if err := os.WriteFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"), []byte(`{"includes":{"500":"../../includes/config/config.same.xml"}}`), 0640); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Fix(h, true, "prod-a"); err != nil {
+		t.Fatal(err)
+	}
+	setupFile := h.PathTo("gateway", "gateways", "prod-a", "gateway.setup.xml")
+	if data, _ := os.ReadFile(setupFile); strings.Contains(string(data), "acme") {
+		t.Fatalf("dry run changed setup: %s", data)
+	}
+
+	if err := Fix(h, false, "prod-a"); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(setupFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"../../acme/acme.same.xml",
+		"../../acme/nested/other.xml",
+		"../../includes/config/config.changed.xml",
+		"../../includes/config/config.nosite.xml",
+	} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("setup lacks %q:\n%s", want, data)
+		}
+	}
+	if strings.Contains(string(data), "includes/config/config.same.xml") {
+		t.Errorf("unchanged legacy reference not migrated:\n%s", data)
+	}
+	conf, err := os.ReadFile(h.PathTo("gateway", "gateways", "prod-a", "gateway.json"))
+	if err != nil || !strings.Contains(string(conf), "../../acme/acme.same.xml") {
+		t.Errorf("instance config = %s, %v", conf, err)
+	}
+}

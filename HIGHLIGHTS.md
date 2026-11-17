@@ -20,7 +20,7 @@ New features and notable capabilities, grouped by the version in which the chang
 
   * **Dashboard files:** `geneos adb info` lists XPaths and URLs; `clean` can filter or replace URLs, and `edit` is a preserve-by-default alias.
 
-  * **Monitoring Health:** Deploy the renamed `health-endpoint` and `health-gateway` profiles to monitor Geneos components.
+  * **Monitoring Health:** Deploy the renamed `health-agent` and `health-gateway` profiles to monitor Geneos components.
 
 * **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna start` can now be controlled in the same way, with `stop`, `restart`, `reload` and `status` commands. `reload`, or sending `SIGUSR1`, applies a changed and valid configuration without interrupting work in progress, which for `gdna` includes new schedules, and `--daemon` now waits until the process is running and reports one that fails to start.
 

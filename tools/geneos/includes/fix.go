@@ -309,7 +309,6 @@ func fixIncludeLocation(h *geneos.Host, home, location string, candidates map[st
 		info        fs.FileInfo
 		matches     = candidates[h.Base(location)]
 		replacement string
-		root        string
 		err         error
 	)
 
@@ -321,6 +320,12 @@ func fixIncludeLocation(h *geneos.Host, home, location string, candidates map[st
 	}
 	info, err = h.Stat(filename)
 	if err == nil && info.Mode().IsRegular() {
+		if replacement, err = siteConfigReplacement(h, filename); err != nil {
+			return "", err
+		}
+		if replacement != "" {
+			return includeReplacementLocation(h, home, replacement)
+		}
 		return location, nil
 	}
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -333,7 +338,88 @@ func fixIncludeLocation(h *geneos.Host, home, location string, candidates map[st
 	if err != nil {
 		return "", err
 	}
-	root, err = h.Abs(h.PathTo("gateway"))
+	return includeReplacementLocation(h, home, replacement)
+}
+
+// siteConfigReplacement returns the site configuration file that
+// replaces filename, a file in the old `gateway/includes/config`
+// directory, or an empty string if there is no replacement. A
+// replacement is the file `gateway/<site>/<name>` with any `config.`
+// prefix replaced by the site name, and only if it exists with exactly
+// the same content as filename.
+func siteConfigReplacement(h *geneos.Host, filename string) (string, error) {
+	legacy, err := h.Abs(h.PathTo("gateway", "includes", "config"))
+	if err != nil {
+		return "", err
+	}
+	abs, err := h.Abs(filename)
+	if err != nil {
+		return "", err
+	}
+	relative, err := h.Rel(legacy, abs)
+	if err != nil {
+		return "", nil
+	}
+	relative = h.ToSlash(relative)
+	if relative == ".." || strings.HasPrefix(relative, "../") {
+		return "", nil
+	}
+	site := geneos.SiteName()
+	base := h.Base(relative)
+	if strings.HasPrefix(base, "config.") {
+		base = site + strings.TrimPrefix(base, "config")
+	}
+	replacement, err := h.Abs(h.Join(h.PathTo("gateway", site), h.Dir(relative), base))
+	if err != nil {
+		return "", err
+	}
+	if replacement == abs {
+		return "", nil
+	}
+	info, err := h.Stat(replacement)
+	if errors.Is(err, fs.ErrNotExist) || err == nil && !info.Mode().IsRegular() {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("inspect site config %q: %w", replacement, err)
+	}
+	same, err := sameFileContents(h, abs, replacement)
+	if err != nil || !same {
+		return "", err
+	}
+	return replacement, nil
+}
+
+func sameFileContents(h *geneos.Host, a, b string) (bool, error) {
+	ia, err := h.Stat(a)
+	if err != nil {
+		return false, err
+	}
+	ib, err := h.Stat(b)
+	if err != nil {
+		return false, err
+	}
+	if ia.Size() != ib.Size() {
+		return false, nil
+	}
+	fa, err := h.Open(a)
+	if err != nil {
+		return false, err
+	}
+	defer fa.Close()
+	fb, err := h.Open(b)
+	if err != nil {
+		return false, err
+	}
+	defer fb.Close()
+	return compareContents(fa, fb), nil
+}
+
+// includeReplacementLocation returns the location to use for the
+// absolute path replacement in a gateway setup: relative to the gateway
+// home if under the top-level `gateway` directory, otherwise absolute.
+func includeReplacementLocation(h *geneos.Host, home, replacement string) (string, error) {
+	root, err := h.Abs(h.PathTo("gateway"))
 	if err != nil {
 		return "", err
 	}

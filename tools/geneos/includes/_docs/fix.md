@@ -1,6 +1,8 @@
-Repair broken local include references in gateway setup files on the selected host. With no names, all gateways are checked. Optional instance names and shell-style glob patterns select gateways just as for `includes list --gateway`; quote patterns to prevent shell expansion. Only matching gateways are changed, but valid include references from all gateways remain available as repair candidates.
+Repair broken local include references, and update references to the old `config` directory to site files, in gateway setup files on the selected host. With no names, all gateways are checked. Optional instance names and shell-style glob patterns select gateways just as for `includes list --gateway`; quote patterns to prevent shell expansion. Only matching gateways are changed, but valid include references from all gateways remain available as repair candidates.
 
 Only references with exactly one valid same-basename replacement are changed. HTTP and HTTPS locations, valid files, unmatched names, and ambiguous matches are left unchanged. Candidates are installed shared and versioned includes and valid include references from gateway setups. Symlinks and paths resolving to the same file count as one candidate. Multiple distinct versions of a file make the match ambiguous.
+
+References to files under `gateway/includes/config` are also changed to the corresponding site file `gateway/<site>/<site>.*` (a `config.` prefix becomes the site name; other names and subdirectories are unchanged) but only if that file exists with exactly the same content as the old one. Changed or missing site files leave the reference as it is.
 
 Each matching gateway reports its repairs or `no changes made`. Broken references without a unique replacement are reported with the number of matching files and left unchanged; these skips are not command errors.
 

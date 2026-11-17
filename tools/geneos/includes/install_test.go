@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -280,9 +281,11 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 				t.Fatal(err)
 			}
 			for name, contents := range map[string]string{
-				"config.test.xml":  "custom",
-				"config.kept.xml":  "legacy",
-				"nested/other.txt": "nested",
+				"config.test.xml":   "custom",
+				"config.kept.xml":   "legacy",
+				"config.unused.xml": "unused",
+				"nested/other.txt":  "nested",
+				"nested/unused.txt": "unused",
 			} {
 				if err := os.WriteFile(filepath.Join(legacy, name), []byte(contents), 0640); err != nil {
 					t.Fatal(err)
@@ -294,6 +297,11 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 			if err := os.WriteFile(filepath.Join(target, test.prefix+".kept.xml"), []byte("existing"), 0644); err != nil {
 				t.Fatal(err)
 			}
+			var locations strings.Builder
+			for _, name := range []string{"config.test.xml", "config.kept.xml", "config.link.xml", "nested/other.txt"} {
+				locations.WriteString("<include><location>../../includes/config/" + name + "</location></include>")
+			}
+			writeTestGatewaySetup(t, h, "<gateway><includes>"+locations.String()+"</includes></gateway>")
 			archive := writeTestIncludeArchive(t,
 				includeArchiveEntry{name: "geneos-includes-v1.2.3/", kind: tar.TypeDir},
 				includeArchiveEntry{name: "geneos-includes-v1.2.3/v1.2.3/itrs.test.xml", contents: "managed"},
@@ -318,6 +326,11 @@ func TestInstallMigratesLegacyConfig(t *testing.T) {
 				info, err := os.Lstat(filename)
 				if err != nil || !info.Mode().IsRegular() {
 					t.Errorf("file %q is not regular: %v, %v", filename, info, err)
+				}
+			}
+			for _, name := range []string{test.prefix + ".unused.xml", "nested/unused.txt"} {
+				if _, err := os.Lstat(filepath.Join(target, name)); !os.IsNotExist(err) {
+					t.Errorf("unused legacy file %q was copied: %v", name, err)
 				}
 			}
 			if data, err := os.ReadFile(filepath.Join(legacy, "config.test.xml")); err != nil || string(data) != "custom" {
@@ -349,6 +362,7 @@ func TestInstallRejectsBrokenLegacyConfigSymlink(t *testing.T) {
 	if err := os.Symlink("missing.xml", filepath.Join(legacy, "config.test.xml")); err != nil {
 		t.Fatal(err)
 	}
+	writeTestGatewaySetup(t, h, "<gateway><includes><include><location>../../includes/config/config.test.xml</location></include></includes></gateway>")
 	source := fstest.MapFS{
 		"files/itrs.test.xml":   &fstest.MapFile{Data: []byte("include")},
 		"files/config.test.xml": &fstest.MapFile{Data: []byte("template")},

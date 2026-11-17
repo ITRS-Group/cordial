@@ -23,7 +23,7 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
 * **Monitoring Health and layer renaming**
 
-  * **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are now `health-endpoint` and `health-gateway`. Instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing profiles, saved options and Gateway references are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
+  * **Monitoring Health:** The supplied `motm` and `motm-gateway` profiles are now `health-agent` and `health-gateway`. Instance names and the `CATEGORY=MOTM` and `COMPONENT=MOTM-SAN` attributes also change. Existing profiles, saved options and Gateway references are not migrated automatically; see the [profile migration guidance](tools/geneos/internal/component/profile/profile.md#use-a-supplied-profile).
 
   * **Monitoring layers:** Include and site filenames, Gateway types and other identifiers now use `layer` rather than `level`. Existing Gateway setups, SANs, profiles and site overrides must be migrated; see the [include upgrade guidance](tools/geneos/includes/files/README.md#install-with-the-geneos-command).
 

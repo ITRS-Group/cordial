@@ -124,17 +124,17 @@ profiles:
         params:
           - port=${option:insecure?8080:8443}
   
-  health-endpoint:
+  health-agent:
     _short: "Monitoring Health endpoint profile"
     _description: |
-      The `health-endpoint` profile installs a Monitoring Health
-      Self-Announcing Netprobe. It is dynamically configured to report
-      the status of Geneos components on the host to Health Gateways.
+      The `health-agent` profile installs a Monitoring Health
+      Self-Announcing Netprobe agent. It is dynamically configured to report
+      the status of Geneos components on the host to Health Gateways in real-time.
 
-      To deploy a Monitoring Health endpoint using this profile, run:
+      To deploy a Monitoring Health agent using this profile, run:
 
       ```bash
-      $ geneos deploy profile health-endpoint [OPTIONS]
+      $ geneos deploy profile health-agent [OPTIONS]
       ```
 
       The following command options are supported:
@@ -152,7 +152,7 @@ profiles:
         - `--gateway`: The name and port of the gateway (HOST:PORT) to
         connect to. Can be repeated as many times as required.
 
-      When deployed the profile installs one Self-Announcing Netprobe
+      When deployed the profile installs one Self-Announcing Netprobe agent
       with a configuration built based on other Geneos components
       installed on the server. If the Geneos installation changes, for
       example by adding a new Gateway, then you should rebuild the

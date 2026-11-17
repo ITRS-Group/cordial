@@ -107,8 +107,15 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	if err = h.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
-	if err = copyLegacyConfig(h, h.PathTo(ct, "includes", "config"), dir, site); err != nil {
-		return err
+	legacyDir := h.PathTo(ct, "includes", "config")
+	if _, statErr := h.Lstat(legacyDir); statErr == nil {
+		used, err := gatewayIncludePaths(h)
+		if err != nil {
+			return fmt.Errorf("find include files in use by gateways: %w", err)
+		}
+		if err = copyLegacyConfig(h, legacyDir, dir, site, used); err != nil {
+			return err
+		}
 	}
 	confs, err := fs.Glob(sourceFS, ConfigPattern)
 	if err != nil {
@@ -133,7 +140,31 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	return nil
 }
 
-func copyLegacyConfig(h *geneos.Host, source, destination, site string) error {
+// gatewayIncludePaths returns the set of cleaned local include file
+// paths referenced by the gateway setups on the host, as reported by
+// `geneos includes list --gateway`.
+func gatewayIncludePaths(h *geneos.Host) (used map[string]struct{}, err error) {
+	byGateway, _, err := getGatewayIncludes(h, nil)
+	if err != nil {
+		return nil, err
+	}
+	used = make(map[string]struct{})
+	for _, includes := range byGateway {
+		for _, inc := range includes {
+			if inc.Remote || inc.Path == "" {
+				continue
+			}
+			used[h.Join(inc.Path)] = struct{}{}
+		}
+	}
+	return used, nil
+}
+
+// copyLegacyConfig copies only those regular files from the old config
+// directory that are in the used set of include paths, renaming
+// `config.*` files to use the site prefix. Parent directories are
+// created as needed.
+func copyLegacyConfig(h *geneos.Host, source, destination, site string, used map[string]struct{}) error {
 	info, err := h.Lstat(source)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil
@@ -148,32 +179,26 @@ func copyLegacyConfig(h *geneos.Host, source, destination, site string) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if name == "." {
+		if name == "." || entry.IsDir() {
+			return nil
+		}
+		sourcePath := h.Join(source, name)
+		if _, ok := used[sourcePath]; !ok {
 			return nil
 		}
 		targetName := h.Base(name)
-		if !entry.IsDir() && strings.HasPrefix(targetName, "config.") {
+		if strings.HasPrefix(targetName, "config.") {
 			targetName = site + strings.TrimPrefix(targetName, "config")
 		}
 		target := h.Join(destination, h.Dir(name), targetName)
-		existing, err := h.Lstat(target)
-		if err == nil {
-			if entry.IsDir() && !existing.IsDir() {
-				return fmt.Errorf("config destination %q is not a directory", target)
-			}
+		if _, err := h.Lstat(target); err == nil {
 			return nil
-		}
-		if !errors.Is(err, fs.ErrNotExist) {
+		} else if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		if entry.IsDir() {
-			info, err := entry.Info()
-			if err != nil {
-				return err
-			}
-			return h.MkdirAll(target, info.Mode().Perm())
+		if err := h.MkdirAll(h.Dir(target), 0755); err != nil {
+			return err
 		}
-		sourcePath := h.Join(source, name)
 		info, err := h.Stat(sourcePath)
 		if err != nil {
 			return err

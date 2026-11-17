@@ -16,7 +16,7 @@ By default a short format is used, which includes only the most important inform
 
 For certificate verification you can specify additional root certificate files using `--roots`/`-r`. These should be in PEM format. The system's default root certificates and the geneos `ca-bundle.pem` files will also be used for verification, and these cannot be disabled, if they exist.
 
-A certificate is considered verified if it can be chained to a trusted root certificate and is not expired. The hostname is *NOT* used for verifiation. The output includes a "Verified" column which indicates whether the certificate is verified. If a private key is present in a file and it matches a certificate then the PrivateKeyMatched colum will show `true`. In general this will only apply to local files.
+A certificate is considered verified if it can be chained to a trusted root certificate and is not expired. The hostname is *NOT* used for verification. The output includes a "Verified" column which indicates whether the certificate is verified. If a private key is present in a file and it matches a certificate then the PrivateKeyMatched column<!--  --> will show `true`. In general this will only apply to local files.
 
 The total number of certificates processed, the number of verified certificates, the number of expired certificates, and the number of certificates expiring within 30 days are included in the output headlines when using the `toolkit` format.
 
