@@ -53,6 +53,8 @@ This is a summary of breaking and other upgrade-sensitive changes in Cordial. Wh
 
   * **Incident correlation:** The `servicenow2` proxy and `ims-gateway` now reject a request with no `correlation_id` (a `400` error), because the lookup for an existing incident would otherwise match any active incident for the configuration item. `geneos incident raise` now sets `correlation_id` from `__incident_correlation`, as documented, as well as the older `__snow_correlation`; if your `ims.yaml` sets `__incident_correlation`, incidents raised by earlier versions have no correlation ID and will not be updated by newer ones. For `servicenow2` set `correlation_id` or `_correlation_id` in the client configuration.
 
+  * **Older `servicenow2` clients:** An earlier `servicenow2 client` still works with the new proxy, as the requests and responses are unchanged, and a client that sets `correlation_id` or `_correlation_id` is unaffected by the correlation check. However, it does not have the new error handling: it ignores any `4xx`, `5xx` or other failure response from the proxy, including the new `400`, `502` and `504` errors, and exits with a zero code and no message, as it did before. Upgrade the clients, as well as the proxy, to be told when an incident could not be created or updated.
+
   * **ServiceNow Basic Auth restriction:** Instances where ServiceNow's Basic Auth restriction is enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy and gateway with `401 User is not authenticated` unless their ServiceNow user has the `snc_basic_auth_api_access` role, even though the same user and password work in the web interface. Grant the role or use OAuth.
 
 * **Release contents**
