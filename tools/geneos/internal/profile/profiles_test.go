@@ -1,6 +1,7 @@
 package profile_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
