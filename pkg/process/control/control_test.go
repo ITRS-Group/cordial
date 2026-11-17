@@ -95,6 +95,7 @@ func newEnv(t *testing.T) *env {
 		PIDFile:     &e.pidArg,
 		ConfigFile:  func() string { return e.confArg },
 		Load:        loadConfig,
+		Check:       ims.CheckServer,
 	}
 	t.Cleanup(func() {
 		// make sure nothing is left running

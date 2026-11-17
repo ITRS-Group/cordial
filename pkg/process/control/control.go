@@ -16,16 +16,18 @@ limitations under the License.
 */
 
 // Package control provides the `stop`, `restart`, `reload` and `status`
-// commands for programs that run a server in the background using
-// [ims.ServeWith], and the support for starting them in the background.
+// commands for programs that run in the background, such as a server
+// using `ims.ServeWith`, and the support for starting them in the
+// background.
 //
-// The commands find the server using the PID file that it holds while
-// running. The PID file also records how the server was started, so that
+// The commands find the process using the PID file that it holds while
+// running. The PID file also records how the process was started, so that
 // it can be restarted in the same way, and which configuration file it
 // uses, so that the configuration can be checked before a reload.
 package control
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io"
@@ -38,7 +40,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/pkg/process"
 )
 
@@ -66,6 +67,10 @@ type Daemon struct {
 	// which the commands also add
 	PIDFile *string
 
+	// PIDFileKey is the configuration key that sets the PID file, which
+	// is `server.pidfile` if empty
+	PIDFileKey string
+
 	// ConfigFile returns the configuration file given on the command
 	// line, which is empty if it was not
 	ConfigFile func() string
@@ -74,14 +79,35 @@ type Daemon struct {
 	// empty to use the default location
 	Load func(file string) (*config.Config, error)
 
-	// Check does any checks of a configuration that are specific to the
-	// program, in addition to those of the server, and is optional
+	// Check checks that a configuration can be used by the program,
+	// before the process is told to reload it, and is optional
 	Check func(cf *config.Config) error
+
+	// StopHelp, if set, replaces the first paragraph of the help for
+	// the stop command, which describes what happens to the work in
+	// progress when the process is asked to stop
+	StopHelp string
+
+	// ReloadHelp, if set, replaces the paragraph of the help for the
+	// reload command that describes what happens to the work in
+	// progress, and which changes need a restart
+	ReloadHelp string
 }
 
+// defaultPIDFileKey is the configuration key for the PID file unless
+// the program says otherwise
+const defaultPIDFileKey = "server.pidfile"
+
 // FlagUsage is the help text for the `--pidfile` flag, for the program to
-// use on its own start command
-const FlagUsage = "Use the PID `file`, overriding `server.pidfile` in the configuration"
+// use on its own start command, if the PID file is set by
+// `server.pidfile` in the configuration
+const FlagUsage = "Use the PID `file`, overriding `" + defaultPIDFileKey + "` in the configuration"
+
+// FlagUsageFor is the help text for the `--pidfile` flag, for programs
+// where the PID file is set by the configuration key
+func FlagUsageFor(key string) string {
+	return "Use the PID `file`, overriding `" + key + "` in the configuration"
+}
 
 // DefaultPIDFile returns the path of the PID file in the default
 // directory, which is `geneos` in the user cache directory
@@ -97,11 +123,17 @@ func DefaultPIDFile(name string) string {
 // if not given, the `server.pidfile` setting in the configuration. It
 // is empty if neither is set.
 func ConfiguredPIDFile(cf *config.Config, flag string) string {
+	return ConfiguredPIDFileKey(cf, flag, defaultPIDFileKey)
+}
+
+// ConfiguredPIDFileKey is like [ConfiguredPIDFile] but for programs
+// that set the PID file with a different configuration key
+func ConfiguredPIDFileKey(cf *config.Config, flag, key string) string {
 	if flag != "" {
 		return flag
 	}
 	if cf != nil {
-		return config.Get[string](cf, cf.Join("server", "pidfile"))
+		return config.Get[string](cf, key)
 	}
 	return ""
 }
@@ -154,7 +186,7 @@ func (d *Daemon) pidFile() string {
 			file = d.ConfigFile()
 		}
 		if cf, err := d.Load(file); err == nil {
-			if p := ConfiguredPIDFile(cf, ""); p != "" {
+			if p := ConfiguredPIDFileKey(cf, "", d.pidFileKey()); p != "" {
 				return p
 			}
 		}
@@ -162,9 +194,16 @@ func (d *Daemon) pidFile() string {
 	return DefaultPIDFile(d.PIDFileName)
 }
 
+func (d *Daemon) pidFileKey() string {
+	if d.PIDFileKey != "" {
+		return d.PIDFileKey
+	}
+	return defaultPIDFileKey
+}
+
 func (d *Daemon) addFlags(c *cobra.Command) {
 	if d.PIDFile != nil {
-		c.Flags().StringVar(d.PIDFile, "pidfile", "", FlagUsage)
+		c.Flags().StringVar(d.PIDFile, "pidfile", "", FlagUsageFor(d.pidFileKey()))
 	}
 }
 
@@ -246,10 +285,10 @@ func (d *Daemon) stopCmd() *cobra.Command {
 		Short: "Stop the background " + d.Name,
 		Long: `Stop the ` + d.Name + ` that is running in the background.
 
-The process is asked to stop, and it then stops accepting requests and
-waits for any that are in progress to complete before it exits. If it has
-not stopped within the timeout then this command fails, unless --force is
-used, which kills it.
+` + cmp.Or(d.StopHelp, `The process is asked to stop, and it then stops accepting requests and
+waits for any that are in progress to complete before it exits.`) + `
+If it has not stopped within the timeout then this command fails, unless
+--force is used, which kills it.
 
 The process is found using its PID file.`,
 		Args:         cobra.NoArgs,
@@ -324,13 +363,16 @@ func (d *Daemon) reloadCmd() *cobra.Command {
 		Long: `Make the ` + d.Name + ` that is running in the background read its configuration
 again, without stopping it.
 
-The configuration is first checked by this command, using the file given by
-the --conf flag or, if there is not one, the file that the process was
+The configuration is first checked by this command, using the file given
+on the command line or, if there is not one, the file that the process was
 started with, and the process is only told to reload if it is usable.
 The process checks it again and, if it is not usable, continues with the
-configuration it has. Requests that are in progress complete using the
-configuration they started with and all others use the new one. The log
-of the process shows the result.
+configuration it has.
+
+` + cmp.Or(d.ReloadHelp, `Requests that are in progress complete using the configuration they
+started with and all others use the new one.`) + `
+
+The log of the process shows the result.
 
 Reload is not available on Windows, use restart.`,
 		Args:         cobra.NoArgs,
@@ -357,9 +399,6 @@ Reload is not available on Windows, use restart.`,
 			cf, err := d.Load(file)
 			if err != nil {
 				return fmt.Errorf("configuration cannot be loaded, not reloading: %w", err)
-			}
-			if err = ims.CheckServer(cf); err != nil {
-				return fmt.Errorf("configuration is not usable, not reloading: %w", err)
 			}
 			if d.Check != nil {
 				if err = d.Check(cf); err != nil {
