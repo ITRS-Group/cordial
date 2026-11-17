@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/pflag"
@@ -184,6 +185,167 @@ func TestDeployProfileImportsOnce(t *testing.T) {
 				if err != nil || string(contents) != want {
 					t.Fatalf("rebuilt licence = %q, err = %v, want %q", contents, err, want)
 				}
+			}
+		})
+	}
+}
+
+func TestDeployProfileInsecureJavaComponents(t *testing.T) {
+	for _, component := range []string{"webserver", "sso-agent"} {
+		t.Run(component, func(t *testing.T) {
+			root := newProfileTestRoot(t)
+			ct := geneos.ParseComponent(component)
+			profileName := "insecure-java-" + component
+			previousProfiles, previousCmdProfiles := profile.Profiles, cmd.Profiles
+			t.Cleanup(func() {
+				for _, member := range instance.Instances(geneos.LOCAL, nil) {
+					_ = member.Unload()
+				}
+				profile.Profiles, cmd.Profiles = previousProfiles, previousCmdProfiles
+			})
+
+			base := filepath.Join(root, "packages", ct.Name, "active_prod")
+			files := map[string]string{
+				"config/security.properties": "port=8443\nkeyStore=config/keystore.db\nkeyStorePassword=changeit\n",
+				"config/security.xml":        "",
+				"config/config.xml.min.tmpl": "",
+				"config/log4j2.properties":   "",
+				"config/sso.properties":      "",
+			}
+			if component == "sso-agent" {
+				files = map[string]string{
+					"conf/sso-agent.conf": `server {
+  key_store {
+    location = "conf/keystore.db"
+    password = "changeit"
+  }
+  trust_store {
+    location = "conf/keystore.db"
+    password = "changeit"
+  }
+}`,
+				}
+			}
+			for name, contents := range files {
+				filename := filepath.Join(base, name)
+				if err := os.MkdirAll(filepath.Dir(filename), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filename, []byte(contents), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			pf := config.New(config.WithDefaults(fmt.Appendf(nil, `profiles:
+  %s:
+    %s:
+      - name: insecure-java-member
+        params:
+          - port=${option:insecure?8080:8443}
+`, profileName, component), "yaml"))
+			profile.Profiles, cmd.Profiles = pf, pf
+			profile.SetExpandOptions(geneos.LOCAL, pf, nil, nil)
+
+			var logs bytes.Buffer
+			logger.LogHandler = slog.NewTextHandler(&logs, &slog.HandlerOptions{Level: slog.LevelWarn})
+			stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+			if err != nil {
+				t.Fatal(err)
+			}
+			previousStderr := os.Stderr
+			os.Stderr = stderr
+			t.Cleanup(func() {
+				os.Stderr = previousStderr
+				_ = stderr.Close()
+			})
+
+			if err := profile.DeployProfile(geneos.LOCAL, profileName,
+				profile.WithInsecure(true),
+				profile.WithFlags(pflag.NewFlagSet("test", pflag.ContinueOnError)),
+			); err != nil {
+				t.Fatal(err)
+			}
+			member, err := instance.GetWithHost(geneos.LOCAL, ct, "insecure-java-member")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := config.Get[uint16](member.Config(), "port"); got != 8080 {
+				t.Errorf("port = %d, want insecure port 8080", got)
+			}
+			deployed, err := instance.GetWithHost(geneos.LOCAL, geneos.ParseComponent("profile"), profileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = deployed.Unload() })
+			if _, err := deployed.Rebuild(true); err != nil {
+				t.Fatalf("rebuilding insecure profile: %v", err)
+			}
+			if component == "webserver" {
+				args, _, _, err := member.Command(false)
+				if err != nil {
+					t.Fatalf("HTTP startup checks: %v", err)
+				}
+				if slices.Contains(args, "-ssl") {
+					t.Fatalf("insecure webserver enables SSL: %v", args)
+				}
+				if _, err := os.Stat(filepath.Join(member.Home(), "config/keystore.db")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("unexpected TLS keystore: %v", err)
+				}
+			} else {
+				ks, err := certs.ReadKeystore(geneos.LOCAL, filepath.Join(member.Home(), "conf/keystore.db"), config.Secret("changeit"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := ks.GetPrivateKeyEntry("ssokey", []byte("changeit")); err != nil {
+					t.Fatalf("missing SSO signing key: %v", err)
+				}
+			}
+			displayed, err := os.ReadFile(stderr.Name())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if logs.Len() != 0 || len(displayed) != 0 {
+				t.Fatalf("insecure deployment reported errors:\n%s%s", &logs, displayed)
+			}
+
+			config.Set(member.Config(), member.Config().Join(instance.TLSBASE, instance.CERTIFICATE), filepath.Join(root, "missing.pem"))
+			if _, err := member.Rebuild(true); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("configured missing certificate error = %v, want file-not-found", err)
+			}
+
+			caPath := filepath.Join(root, "test-ca")
+			ca, err := certs.WriteNewRootCert(caPath, "test-ca", certs.ECDSA)
+			if err != nil {
+				t.Fatal(err)
+			}
+			caKey, err := certs.ReadPrivateKey(geneos.LOCAL, caPath+certs.KEYExtension)
+			if err != nil {
+				t.Fatal(err)
+			}
+			certificate, key, err := certs.CreateCertificate(certs.Template("test-member"), ca, caKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := instance.WriteCertificateAndKey(member, key, certificate, ca); err != nil {
+				t.Fatal(err)
+			}
+			if changed, err := member.Rebuild(true); err != nil || !changed {
+				t.Fatalf("TLS rebuild = %t, %v, want true, nil", changed, err)
+			}
+			keystorePath := "conf/keystore.db"
+			if component == "webserver" {
+				keystorePath = "config/keystore.db"
+				args, _, _, err := member.Command(false)
+				if err != nil || !slices.Contains(args, "-ssl") {
+					t.Fatalf("TLS startup checks: args=%v, error=%v", args, err)
+				}
+			}
+			ks, err := certs.ReadKeystore(geneos.LOCAL, filepath.Join(member.Home(), keystorePath), config.Secret("changeit"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := ks.GetPrivateKeyEntry(geneos.ALL.Hostname(), []byte("changeit")); err != nil {
+				t.Fatalf("missing TLS key: %v", err)
 			}
 		})
 	}

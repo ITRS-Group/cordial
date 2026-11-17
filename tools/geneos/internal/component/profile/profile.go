@@ -190,6 +190,7 @@ func (i *Profile) Add(options ...any) (err error) {
 
 	// update flags from saved set ?
 	confOpts := profile.PflagSetToMap(opts.Flags, profile.IncludeFlags...)
+	confOpts["insecure"] = opts.Insecure
 	for _, v := range opts.Values.Params {
 		name, value, found := strings.Cut(v, "=")
 		if found {
@@ -197,6 +198,7 @@ func (i *Profile) Add(options ...any) (err error) {
 		}
 	}
 	config.Set(cf, cf.Join("config", "options"), confOpts)
+	profile.SetExpandOptions(i.Host(), pf, confOpts, nil)
 
 	if err = profile.Apply(i.Host(), pf, i.Name(), true); err != nil {
 		return err

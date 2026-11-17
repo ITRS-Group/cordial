@@ -8,6 +8,8 @@ A new `webserver` instance is created using local package configuration files, t
 
 If you use `geneos deploy webserver` you can also provide an externally generated certificate bundle without having to initialise TLS for other components.
 
+With `--insecure`, certificate creation is skipped. When no instance certificate is configured, rebuilds skip TLS keystore and truststore updates, and the webserver can start over HTTP without a keystore.
+
 ## Usage
 
 ```text

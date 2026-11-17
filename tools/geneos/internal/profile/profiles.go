@@ -295,6 +295,7 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			instance.WithValues(vals),
 			instance.WithCertBundle(common.CertBundle),
 			instance.WithCertBundlePassword(common.CertBundlePassword),
+			instance.Insecure(config.Get[bool](pf, pf.Join("config", "options", "insecure"))),
 			instance.WithPort(port),
 			instance.WithProfiles(pf),
 			instance.WithImports(common.Imports),

@@ -311,6 +311,10 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	}
 	changed = true
 
+	if !cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) && !cf.IsSet(instance.CERTIFICATE) {
+		return changed, nil
+	}
+
 	// create truststore from ca-bundle
 	truststorePath := sp["trustStore"]
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
@@ -444,8 +448,12 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 		keystorePath = instance.HomeRel(i, keystorePath)
 		if _, err = i.Host().Stat(keystorePath); err == nil {
 			args = append(args, "-ssl", "true")
+			checks = append(checks, keystorePath)
+		} else if !os.IsNotExist(err) || cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
+			return
+		} else {
+			err = nil
 		}
-		checks = append(checks, keystorePath)
 	}
 
 	if skipFileCheck {

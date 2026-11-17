@@ -413,35 +413,38 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 
 	// next, add instance certs and private keys for TLS
 
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
-		return false, err
-	}
-	if len(certChain) == 0 {
-		return false, err
-	}
+	tlsConfigured := cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE)
+	if tlsConfigured {
+		certChain, err := instance.ReadCertificates(i)
+		if err != nil {
+			return false, err
+		}
+		if len(certChain) == 0 {
+			return false, fmt.Errorf("no certificates found for %s", i)
+		}
 
-	key, err := instance.ReadPrivateKey(i)
-	if err != nil {
-		return false, err
-	}
+		key, err := instance.ReadPrivateKey(i)
+		if err != nil {
+			return false, err
+		}
 
-	var ch []keystore.Certificate
-	for _, cert := range certChain {
-		ch = append(ch, keystore.Certificate{
-			Type:    "X509",
-			Content: cert.Raw,
-		})
+		var ch []keystore.Certificate
+		for _, cert := range certChain {
+			ch = append(ch, keystore.Certificate{
+				Type:    "X509",
+				Content: cert.Raw,
+			})
+		}
+		ks.SetPrivateKeyEntry(
+			config.Get[string](sf, sf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname())),
+			keystore.PrivateKeyEntry{
+				CreationTime:     time.Now(),
+				PrivateKey:       []byte(key),
+				CertificateChain: ch,
+			},
+			keystorePassword,
+		)
 	}
-	ks.SetPrivateKeyEntry(
-		config.Get[string](sf, sf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname())),
-		keystore.PrivateKeyEntry{
-			CreationTime:     time.Now(),
-			PrivateKey:       []byte(key),
-			CertificateChain: ch,
-		},
-		keystorePassword,
-	)
 
 	// write the keystore here as the truststore *may* be different from the keystore
 	err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
@@ -449,7 +452,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	// only add root CAs to the truststore if it is different from the
 	// default CA bundle, which could be a `cacerts` without an
 	// extension as well as `ca-bundle.db`
-	if strings.TrimSuffix(truststorePath, i.Host().Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
+	if tlsConfigured && strings.TrimSuffix(truststorePath, i.Host().Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
 		roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
 		for _, cert := range roots {
 			if !certs.IsValidRootCA(cert) {

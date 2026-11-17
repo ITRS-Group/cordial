@@ -20,6 +20,8 @@ To deploy a new `sso-agent` instance, use the same command but leave out the `--
 
 The sso-agent trust store and key store files (normally the same file) are initialised during deployment and if you have configured TLS then the instance certificate and private key are added to the files as well as a freshly created `ssokey` for the process to sign the authentication tokens.
 
+With `--insecure`, no TLS certificate is created or required during rebuilds. The `ssokey` used to sign authentication tokens is still maintained.
+
 If you change the `ssl_alias` or any of the passwords for the keystore or truststore, then any command that rebuilds the instance configuration will also rebuild the keystore and truststore files.
 
 As documented in the official SSO Agent documentation, you can use environment variables instead of clear-text passwords in the `conf/sso-agent.conf` file. The `geneos` program will use the `ITRS_SSO_KEYSTORE_PW` and `ITRS_SSO_TRUSTSTORE_PW` environment variables if they are set in the instance configuration when building the keystore and truststore files, respectively. You can set AES256 encoded values in the instance configuration using `geneos set sso-agent NAME --secureenv ITRS_SSO_KEYSTORE_PW` (or `ITRS_SSO_TRUSTSTORE_PW`) and be prompted for the password. In this case you must comment out the `password` fields in the `conf/sso-agent.conf` file. Other supported variables are passed to the sso-agent in it's starting environment, but are not specially interrpreted by `geneos`.
