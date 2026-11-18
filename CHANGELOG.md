@@ -11,17 +11,29 @@
 >This release has a substantial number of changes, including new features, reliability improvements, and updates to monitoring and incident management workflows. The detailed changelog is therefore very long and the short summary here highlights only the most significant changes.
 
 * **Automation:** `geneos` now returns a non-zero exit status if any requested item fails, while still processing the rest.
+
 * **Monitoring Health:** Replaces Monitor-Of-The-Monitors; migrate affected profiles, and update `level` names to `layer` in monitoring configurations and GDNA dashboards.
+
 * **Release contents:** The original `servicenow`, `pagerduty` and `san-config` are no longer shipped; use v1.30.1 or build them from source.
+
 * **Incident integrations:** The ServiceNow proxy and IMS Gateway require a configured token and a correlation ID on requests; clients now report failures.
+
 * **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna` support `stop`, `restart`, `reload` and `status`, with PID files and startup checks.
+
 * **Gateway includes (preview):** Includes ship separately, support site-specific configuration, and can be installed, repaired or pruned with `geneos includes`.
+
 * **Package installation:** `-A` now means `--archive`, not `--all`; local archives no longer fall back to downloads.
+
 * **Backup and restore:** `geneos init --restore` and `--no-install` work again, and backup and restore handle more archive edge cases correctly.
+
 * **TLS and profiles:** Rebuilds preserve unreadable keystores and truststores, custom ports are kept, and redeploying a profile applies its saved TLS settings.
+
 * **GDNA reports:** Failed fetches no longer leave partial source data, and email reports are withheld if any report fails.
+
 * **GDNA configuration and logs:** Unreadable explicit configuration files now fail; use `gdna start -l -` to log to the console.
+
 * **Gateway configuration editing:** XML updates better preserve existing content, comments and element order.
+
 * **Reliability:** An in-depth code review fixed numerous regressions, inconsistent behaviours and cases where errors went unreported.
 
 See the [full details below](#version-v1310-new-features) and the [update notes](UPDATENOTES.md#v1310-in-development) for changes that may affect your upgrade.
@@ -339,6 +351,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * `WriteNewRootCert` now accepts an empty key type and uses the default. `CreateCertificate` accepts a `nil` signing key for a self-signed certificate.
 
   * Truststore aliases are now unique: a root certificate with the same common name as a different certificate already in the truststore is added with the serial number added to the alias, and a root certificate without a common name uses its SHA-1 fingerprint, rather than replacing the other certificate or failing. Existing entries are no longer replaced by a different certificate with the same common name.
+
   * `streams.RESTStream` now verifies the server certificate for HTTPS, which it previously never did, so streams to a Netprobe with a self-signed certificate must now pass the new `streams.SkipVerify(true)` option to `streams.NewRESTStream`. It also now has a 30 second timeout for each request (`streams.RESTTimeout`) and a `Close` method.
 
   * `api.NewXMLRPCClient` now limits the wait for each response to `api.DefaultTimeout` (60 seconds), changed with the new `api.Timeout` option, and `xmlrpc.NewClient` has a new `xmlrpc.Timeout` option (default no limit).
@@ -366,6 +379,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * **Behaviour change**: Credentials files, and the directories created for them, are now written with permissions `0600` and `0700` and keyfile directories with `0700`. The new `FileMode` and `DirMode` options set these for `Write`, which otherwise still uses `0644` and `0775`. A `Config` written by `Write` still contains all of its settings, including defaults and values from the environment.
 
   * `ReadOrCreate` for a keyfile now returns an error for a keyfile that exists but cannot be read, rather than success with no checksum.
+
   * Commands run on a remote host over SSH, by `Start` and `Run`, now pass arguments, environment values and the working directory to the program exactly as given, using POSIX single-quote quoting, instead of Go-style quoting that the remote shell still expanded. Arguments containing `$`, backticks or `\` are no longer expanded by the remote shell, and environment values with spaces now work. Remote `Start` appends the output to the error file, as documented, and uses `/dev/null` if there is none.
 
   * `NewSSHRemote` now uses the name as the hostname if no `Hostname` option is given, as documented, and accepts options as a slice (`[]SSHOption`) as well as individually. Options of any other type are no longer silently ignored but are reported by `LastError` and when connecting.
@@ -381,6 +395,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * `Start` now keeps any `HOME`, `SHELL`, `USER`, `LOGNAME` and `PATH` in `Env`, adding the defaults only for the ones that are missing, and returns the PID of a program started in the background (`0` for a program run in the foreground). It no longer starts a reaper of child processes for each program with `Restart` set, `Batch` does that, and returns the channel that stops it.
 
   * `SignalProcess` returns an error for a PID that is zero or negative, rather than signalling a group of processes. `Daemonize` now also removes `-D=true`, `--daemon=true` and `-D` in a group of short flags, such as `-vD`, from the arguments of the new process.
+
 * `tools/dv2email`, `tools/files2dv`, `tools/gateway-reporter` and `tools/san-config`
 
   * `tools/dv2email`: the `headline-filter`, `column-filter` and `row-filter` settings, and the `__HEADLINES`, `__COLUMNS` and `__ROWS` environment variables, now keep an item that matches **any** of the patterns, as documented, instead of only those that matched all of them. Filtered rows are also removed from the row order, the first (row name) column is never filtered, and the `--inline-css`/`-i` option, which never inlined anything, is deprecated, hidden and ignored. Output file names given explicitly are no longer suffixed with a timestamp, only `auto` names are. The text and XLSX `serial` value now starts from 1, as documented, and the sheet name, attachment and email order for `split: entity` is now by entity name.
@@ -388,6 +403,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * `tools/gateway-reporter`: as the built-in defaults are now valid, reports are written to the default output directory (`/tmp/gateway-reporter`) in all the default formats, instead of silently not being written. The `--out`/`-o` option now sets the directory for all the formats, and a validation hook now also creates the Toolkit include file. A SQL Toolkit sampler with no valid queries now shows the configured `empty` message, which is no longer able to replace the valid queries of a sampler that has some.
 
   * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, having previously been ignored. The `geneos.sans.reverse-connections` setting is now read under its documented name, as well as the older key names that the program used to read, with the default unchanged (`false`). A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
+
 * `Build and release`
 
   * Release builds now use `-trimpath`, so executables and libraries no longer contain the build machine's source paths. The only visible difference is that the source locations in `debug` level log messages are shown as module paths.
@@ -435,6 +451,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * Fix the `gdna pubkey` command ignoring the default private key file when `gdna.licd-private-key` is not set, and the Excel column widths of a report being set to zero if `xlsx.formats.min-width` and `max-width` are not set.
 
   * Fix the database not being limited to a single connection, as the temporary tables and an in-memory database for `gdna report --adhoc` require, and the `filters` expansion prefix in queries being bound to whichever configuration was loaded last instead of the one in use.
+
 * `tools/dv2email`
 
   * Fix filters that used `!match` for any pattern in a list, removing everything when there was more than one, and fix `column-filter` and `column-order` treating the row name column as data, which could panic or lose the first column.
@@ -634,6 +651,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
     * Fix a data race in commands that process several instances at once, such as `geneos set`, `protect` and `unset`, on the loaded time and the configuration of the instances, which are shared between the goroutines, and which could cause a crash or a configuration to be read or written incorrectly.
 
     * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
+
   * Commands
 
     * Fix legacy commands such as `geneos add remote`, `delete host`, `show host` and `set user` losing their arguments, panicking or doing nothing.
@@ -827,6 +845,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * Fix `ChangePassword` not using the default password for private keys and silently leaving keys unchanged when they could not be decrypted, resulting in a keystore that could not be used. It is now an error, and the existing file permissions are kept.
 
   * Fix `WriteKeystore` truncating the existing file while writing. The keystore is now written to a temporary file and renamed over the original.
+
   * Fix `ParseDuration` losing precision (it used 32-bit floats) and `EntityMetricsData` always sending `limit=0`.
 
 * `pkg/host`
@@ -858,6 +877,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * Fix `MergeHOCONConfig` failing to load values containing a backslash.
 
   * `ReadPasswordInput` now writes prompts to STDERR and clears all passwords not returned. `ReadPEM` prompts are also written to STDERR.
+
   * Fix `pkg/host` not building for macOS, FreeBSD and 32-bit Linux, by moving the Linux-only CPU affinity, resource limit and `Lchtimes` code into Linux files, with stubs for other platforms where CPU affinity is ignored.
 
   * Fix `CopyAll` doing nothing, with no error, when the source host was not a `*SSHRemote` or `*Local` itself, such as the wrapper in the `geneos` command, and `CopyFile` truncating a file that was copied onto itself.
@@ -883,6 +903,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * Fix two processes being able to hold the same PID file when one opens the file as another removes it on exit, and `LockPIDFile` failing while the status of the file was being checked.
 
   * Fix `Start` failing for any user that was not root, never finding the PID of the process, panicking for a user that is not in the user database, and returning no done channel from `Batch`. `RemoveArgs` and `Daemon` no longer change `os.Args`.
+
 * `Build and release`
 
   * Fix the generated command documentation being named after the documentation program: `san-config` pages were `docs.md` and `docs_server.md`, and the `geneos`, `gdna` and `gateway-reporter` pages referred to files such as `docs.json` and `docs.log`. The documentation is regenerated.
@@ -894,6 +915,7 @@ See the [full details below](#version-v1310-new-features) and the [update notes]
   * Add a `.dockerignore` so local binaries, archives, release directories and `.git` are not sent to the Docker builds; remove the release `Makefile` steps for `servicenow`, `pagerduty` and `san-config`, which are not built, and the `clean` step that matched a label that was never set. Remove stale `.gitignore` entries, and stop tracking the generated `libalert.h`, which `make clean` deleted.
 
   * Update `go-pretty` to v6.9.2, `echo` to v4.16.5 and `golang.org/x/net` to v0.63.0.
+
 * `pkg/geneos`
 
   * Gateway setup files
@@ -1123,6 +1145,7 @@ A number of the new features have been introduced as part of a larger Monitor-Of
 
 > [!WARNING]
 > Release v1.26 and later - **BREAKING CHANGES**
+>
 > * `tools/geneos` has significant and breaking changes to how TLS certificates are managed.
 >
 > To improve support for secure connections between Geneos components using TLS (and also for external connections to and from other systems) the way certificate files are built and PKI trust chains are supported has changed. Existing configurations will continue to work without changes, but to take advantage of the improvements you will need to update your instance configurations. The new `geneos tls migrate` command will allow you to do this, but it is not reversible so please back up your instance configurations before running this command. Other TLS subsystem commands have also changed to support the new features.
