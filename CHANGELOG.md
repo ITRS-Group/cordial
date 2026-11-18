@@ -161,6 +161,16 @@
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
+* `tools/dv2email`, `tools/files2dv`, `tools/gateway-reporter`, `tools/san-config` and `tools/sso-diag`
+
+  * `tools/dv2email`: the `headline-filter`, `column-filter` and `row-filter` settings, and the `__HEADLINES`, `__COLUMNS` and `__ROWS` environment variables, now keep an item that matches **any** of the patterns, as documented, instead of only those that matched all of them. Filtered rows are also removed from the row order, the first (row name) column is never filtered, and the `--inline-css`/`-i` option, which never inlined anything, is deprecated, hidden and ignored. Output file names given explicitly are no longer suffixed with a timestamp, only `auto` names are. The text and XLSX `serial` value now starts from 1, as documented, and the sheet name, attachment and email order for `split: entity` is now by entity name.
+
+  * `tools/gateway-reporter`: as the built-in defaults are now valid, reports are written to the default output directory (`/tmp/gateway-reporter`) in all the default formats, instead of silently not being written. The `--out`/`-o` option now sets the directory for all the formats, and a validation hook now also creates the Toolkit include file. A SQL Toolkit sampler with no valid queries now shows the configured `empty` message, which is no longer able to replace the valid queries of a sampler that has some.
+
+  * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, and `geneos.sans.reverse-connections` (default `true`) now sets `requireReverseConnection` in the generated XML; both were previously ignored. Older key names that the program used to read are still accepted. A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
+
+  * `tools/sso-diag`: the LDAP server certificate is now verified. Use the new `--ldap-insecure` option or `ldap-insecure: true` in `sso-diag.yaml` to restore the previous behaviour.
+
 ## Version v1.31.0 Fixes
 
 * `gdna`
@@ -170,6 +180,42 @@
   * Fix the sources in `gdna.licd-sources` being remembered after the first fetch of a `gdna start` process, so that a reloaded configuration takes effect. Sources given with `--source` still take precedence.
 
   * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
+
+* `tools/dv2email`
+
+  * Fix filters that used `!match` for any pattern in a list, removing everything when there was more than one, and fix `column-filter` and `column-order` treating the row name column as data, which could panic or lose the first column.
+
+  * Fix the Information table showing the sampler type and name the wrong way round in the text output, the heading style covering one column too many in XLSX output, and XLSX sheet names that could split a UTF-8 character, clash after truncation or contain invalid characters.
+
+  * Fix `images` entries whose names contain a dot, such as `logo.png`, being ignored because the configuration split them into nested keys, and remove the message-wide `X-Attachment-Id` header that was set for each image.
+
+  * Fix template errors being ignored, which sent an empty body, errors that exited the program from inside the code, environment variables named `GATEWAY`, `EMAIL`, `FILES`, `TEXT` or `HTML` replacing whole configuration sections, `export` using the main command description, and a typo in the `_VARIABLEPATH` help text. Output is no longer ordered randomly when splitting by entity, and file write errors from `export` are reported.
+
+* `tools/files2dv`
+
+  * Fix columns with a `match` only being found in the first file, because the match counter was never reset, and `skip` (for example `types` and `ignore-file-errors`) still outputting a row. Fix `row-limit` stopping before the headlines were output, values in the `columns` and `values` form being expanded when the configuration was loaded, a panic for regular expression groups that did not take part in a match, and lines longer than 64KB silently ending the scan.
+
+  * Add the `${owner}` variable on Linux and `${path}` and `${user}` on Windows, as used by the sample configuration, check the errors from the Windows APIs, and correct the help text. The `push` command, which did nothing, now returns an error until it is implemented.
+
+* `tools/gateway-reporter`
+
+  * Fix the built-in defaults containing repeated keys (`toolkit-include` and `csvdir`), which caused all the defaults to be discarded without an error, so that no reports were written but the program exited with success. Internal defaults errors are now fatal.
+
+  * Fix the first error being lost or a random one returned when writing several formats, a `csvdir` or toolkit include failure being reported as success, and an input parsing error with `--prefix` writing empty reports. Fix a panic when a merged Gateway produced no XML, and an invalid setup that exited without a validation response in a hook.
+
+  * Fix CSV and ZIP errors being ignored, CSV headers having an extra `rowname` column or a different number of columns to the rows, XLSX column widths and merged heading cells, and the SQL Toolkit empty message replacing valid queries. Add a timeout to fetching remote setup files, close the response, and use a path for the hook log file that works on Windows.
+
+* `tools/san-config`
+
+  * Fix panics for a malformed inventory, an invalid inventory URL, a `grouping` expression without a capture group, a component alias loop and non-list `entities`, and recover from panics in the background refresh instead of stopping the server. Do not exit the process from a request handler.
+
+  * Fix `server --logfile`/`-L` being ignored, the misspelt `inventory.timeeout` default, the `user` and `pass` authentication examples (`username` and `password` are used, with the old names accepted), host names with upper case letters not being found, entities sharing and overwriting each other's variables, variables of the wrong numeric type being empty and unsupported ones being output, and the check-modified state for file inventories never matching.
+
+  * Fix `HTTP_PROXY` being ignored for plain HTTP inventories and idle connections being leaked on every reload, unbounded response bodies, the shared gateway list being sorted without a lock, gateways with no name or primary being checked, and `inventory.cache` never being used.
+
+* `tools/sso-diag`
+
+  * Fix LDAP connections never being closed, the user name not being escaped in the LDAP filter, a missing return after an authentication failure, a panic for a non-RSA key, and key version numbers above 255 being truncated. Handlers no longer exit the process, and the `--conf` file is now read.
 
 * `tools/geneos`
 
