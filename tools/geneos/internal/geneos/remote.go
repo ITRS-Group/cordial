@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -43,6 +42,11 @@ func openRemoteArchive(ct *Component, options ...GeneosOption) (filename string,
 		}
 	}
 
+	if resp == nil {
+		err = fmt.Errorf("no download source available for %s: %w", ct, ErrInvalidArgs)
+		return
+	}
+
 	// process both nexus and resources status codes below
 	if resp.StatusCode > 299 {
 		resp.Body.Close()
@@ -58,7 +62,8 @@ func openRemoteArchive(ct *Component, options ...GeneosOption) (filename string,
 
 	filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
 	if err != nil {
-		return
+		resp.Body.Close()
+		return "", nil, err
 	}
 
 	log.Debug("download check for versions", slog.String("component", ct.String()), slog.String("version", opts.version), slog.String("filename", filename), slog.Int64("contentLength", resp.ContentLength))
@@ -72,15 +77,18 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 	cf := config.Global()
 
 	baseurl := config.Get[string](cf, cf.Join("download", "url"))
-	downloadURL, _ := url.Parse(baseurl)
+	downloadURL, err := url.Parse(baseurl)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid download URL %q: %w", baseurl, err)
+	}
 
-	os := config.Get[string](opts.host.Config, "os")
+	osname := config.Get[string](opts.host.Config, "os")
 	arch := osMap[config.Get[string](opts.host.Config, "arch")]
 
 	v := url.Values{}
 
 	if ct.DownloadParams == nil {
-		v.Set("os", os)
+		v.Set("os", osname)
 
 		// special handling for el8 platform and versions less than 7.12, for everything else just don't use el8 platform ID
 		if platform == "el8" {
@@ -90,7 +98,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 				return
 			}
 			if opts.version == "latest" {
-				v.Set("title", os+"-"+arch)
+				v.Set("title", osname+"-"+arch)
 			} else {
 				v.Set("title", opts.version)
 			}
@@ -102,9 +110,9 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 			}
 			v.Set("title", opts.version)
 		} else if platform != "" {
-			v.Set("title", "-"+platform+"-"+os+"-"+arch)
+			v.Set("title", "-"+platform+"-"+osname+"-"+arch)
 		} else {
-			v.Set("title", os+"-"+arch)
+			v.Set("title", osname+"-"+arch)
 		}
 	} else {
 		for _, param := range *ct.DownloadParams {
@@ -117,20 +125,26 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 		}
 	}
 
-	timeout := config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second))
-	client := &http.Client{
-		Timeout: timeout,
-	}
+	client := newDownloadClient(config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second)))
 
 	for bp := range strings.FieldsFuncSeq(ct.DownloadBase.Default, func(r rune) bool {
 		return unicode.IsSpace(r) || r == ','
 	}) {
+		// close any unsuccessful response from the previous source
+		if resp != nil {
+			resp.Body.Close()
+			resp = nil
+		}
 
-		var authReader io.Reader
 		var authBody []byte
 
 		// first try plain unauthenticated GET
-		basepath, _ := url.Parse(bp)
+		basepath, perr := url.Parse(bp)
+		if perr != nil {
+			log.Error("invalid download path, trying next if configured", slog.Any("error", perr), slog.String("path", bp))
+			err = perr
+			continue
+		}
 		basepath.RawQuery = v.Encode()
 		source = downloadURL.ResolveReference(basepath).String()
 
@@ -170,7 +184,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 		if resp.StatusCode == 404 && platform != "" {
 			resp.Body.Close()
 			if ct.DownloadParams == nil {
-				v.Set("title", os+"-"+arch)
+				v.Set("title", osname+"-"+arch)
 			} else {
 				v.Del("title")
 			}
@@ -211,19 +225,16 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 				log.Error("cannot marshal auth body, trying next if configured", slog.Any("error", err))
 				continue
 			}
-			// make a copy as bytes.NewBuffer() takes ownership
-			ba := bytes.Clone(authBody)
-			authReader = bytes.NewBuffer(ba)
 		}
 
-		if authReader == nil {
+		if authBody == nil {
 			log.Error("source requires authentication but no credentials found, trying next if configured", slog.String("url", source))
 			continue
 		}
 		log.Debug("retrying source with auth", slog.String("url", source), slog.String("username", opts.username))
 
 		if resp.StatusCode == 401 || resp.StatusCode == 403 {
-			req, err = http.NewRequest("POST", source, authReader)
+			req, err = http.NewRequest("POST", source, bytes.NewReader(authBody))
 			if err != nil {
 				log.Error("cannot create request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
@@ -252,7 +263,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 
 		if resp.StatusCode == 404 && platform != "" {
 			if ct.DownloadParams == nil {
-				v.Set("title", os+"-"+arch)
+				v.Set("title", osname+"-"+arch)
 			} else {
 				v.Del("title")
 			}
@@ -260,7 +271,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 			source = downloadURL.ResolveReference(basepath).String()
 
 			log.Debug("trying source with auth", slog.String("url", source))
-			req, err = http.NewRequest("POST", source, authReader)
+			req, err = http.NewRequest("POST", source, bytes.NewReader(authBody))
 			if err != nil {
 				log.Error("cannot create request, trying next if configured", slog.Any("error", err), slog.String("url", source))
 				continue
@@ -284,27 +295,27 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 
 		log.Debug("source not found, trying next if configured", slog.Int("status", resp.StatusCode), slog.String("url", source))
 	}
+	if resp == nil && err == nil {
+		err = fmt.Errorf("no download source configured for %s: %w", ct, ErrInvalidArgs)
+	}
 	return
 }
 
 func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, resp *http.Response, err error) {
-	os := config.Get[string](opts.host.Config, "os")
+	osname := config.Get[string](opts.host.Config, "os")
 	arch := osMap[config.Get[string](opts.host.Config, "arch")]
 
-	platform := ""
-	if opts.platformId != "" {
-		s := strings.Split(opts.platformId, ":")
-		if len(s) > 1 {
-			platform = s[1]
-		}
-	}
+	platform := getPlatformId(opts.platformId)
 
 	baseurl := config.Get[string](
 		config.Global(),
 		config.Join("download", "nexus", "url"),
 		config.DefaultValue("https://nexus.itrsgroup.com/service/rest/v1/search/assets/download"),
 	)
-	downloadURL, _ := url.Parse(baseurl)
+	downloadURL, err := url.Parse(baseurl)
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid nexus URL %q: %w", baseurl, err)
+	}
 
 	v := url.Values{}
 	v.Set("sort", "version")
@@ -314,9 +325,9 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 		v.Set("maven.groupId", "com.itrsgroup.geneos")
 		v.Set("maven.extension", "tar.gz")
 		if platform != "" && opts.version != "latest" && CompareVersion(opts.version, "7.12") < 0 {
-			v.Set("maven.classifier", platform+"-"+os+"-"+arch)
+			v.Set("maven.classifier", platform+"-"+osname+"-"+arch)
 		} else {
-			v.Set("maven.classifier", os+"-"+arch)
+			v.Set("maven.classifier", osname+"-"+arch)
 		}
 	} else {
 		for _, param := range *ct.DownloadParamsNexus {
@@ -339,14 +350,16 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 		}
 	}
 
-	timeout := config.Get[time.Duration](config.Global(), config.Join("download", "timeout"), config.DefaultValue(60*time.Second))
-	client := &http.Client{
-		Timeout: timeout,
-	}
+	client := newDownloadClient(config.Get[time.Duration](config.Global(), config.Join("download", "timeout"), config.DefaultValue(60*time.Second)))
 
 	var req *http.Request
 
 	for _, artifactId := range nexusArtifactIDs(ct, opts.variant) {
+		// close any unsuccessful response from the previous artifact
+		if resp != nil {
+			resp.Body.Close()
+			resp = nil
+		}
 		v.Set("maven.artifactId", artifactId)
 		downloadURL.RawQuery = v.Encode()
 		source = downloadURL.String()

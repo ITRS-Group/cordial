@@ -22,6 +22,7 @@ import (
 	"io"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +30,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -36,10 +38,23 @@ import (
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
+// newDownloadClient returns an HTTP client for downloads that limits
+// the time to connect and to receive the response headers to timeout,
+// but not the time to read the response body so that large archives can
+// be downloaded on slow connections.
+func newDownloadClient(timeout time.Duration) *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DialContext = (&net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}).DialContext
+	t.TLSHandshakeTimeout = timeout
+	t.ResponseHeaderTimeout = timeout
+	return &http.Client{Transport: t}
+}
+
 // FilenameFromHTTPResp decodes and returns the filename from the
 // HTTP(S) request. It tried to extract the filename from the
 // COntent-Disposition header and if that fails returns the basename of
-// the URL Path.
+// the URL Path. The filename from the server is untrusted and only the
+// final element of any path is used.
 func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err error) {
 	cd, ok := resp.Header[http.CanonicalHeaderKey("content-disposition")]
 	if !ok && resp.Request.Response != nil {
@@ -49,18 +64,30 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 		_, params, err := mime.ParseMediaType(cd[0])
 		if err == nil {
 			if f, ok := params["filename"]; ok {
-				filename = f
+				filename = safeFilename(f)
 			}
 		}
 	}
 
-	// if no content-disposition, then grab the path from the response URL
+	// if no content-disposition, or it is not usable, then grab the
+	// path from the response URL
 	if filename == "" {
 		if filename, err = CleanRelativePath(path.Base(u.Path)); err != nil {
 			return
 		}
 	}
 	return
+}
+
+// safeFilename returns the final element of name, treating both '/' and
+// '\' as separators, or an empty string if that is not a plain,
+// local file name.
+func safeFilename(name string) string {
+	name = name[strings.LastIndexAny(name, `/\`)+1:]
+	if name == "" || name == "." || name == ".." || !filepath.IsLocal(name) {
+		return ""
+	}
+	return name
 }
 
 // ReadAll opens and, if successful, reads the contents of the source
@@ -137,6 +164,7 @@ func openSource(source string, options ...GeneosOption) (from io.ReadCloser, fil
 			// only use auth if required
 			if resp.StatusCode == 401 || resp.StatusCode == 403 {
 				if opts.username != "" {
+					resp.Body.Close()
 					req2 := req.Clone(req.Context())
 					pw := opts.password
 					req2.SetBasicAuth(opts.username, string(pw))
@@ -147,11 +175,16 @@ func openSource(source string, options ...GeneosOption) (from io.ReadCloser, fil
 			}
 
 			if resp.StatusCode > 299 {
+				resp.Body.Close()
 				return nil, "", -1, fmt.Errorf("server returned %s for %q", resp.Status, source)
 			}
 
-			from = resp.Body
 			filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
+			if err != nil {
+				resp.Body.Close()
+				return nil, "", -1, err
+			}
+			from = resp.Body
 			filesize = resp.ContentLength
 		case "sftp":
 			// use the SSHRemote implementation to open the source. If

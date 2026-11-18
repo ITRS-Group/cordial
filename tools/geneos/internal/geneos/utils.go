@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -34,7 +35,7 @@ import (
 // TODO: look at os.Root instead
 func CleanRelativePath(p string) (clean string, err error) {
 	clean = path.Clean(p)
-	if path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../") {
+	if path.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, "../") || !filepath.IsLocal(filepath.FromSlash(clean)) {
 		log.Debug("path must be relative and descending only", slog.String("path", clean))
 		return "", host.ErrInvalidArgs
 	}
@@ -157,9 +158,7 @@ func OverrideToComponentVersion(override string) (ct *Component, version string,
 }
 
 func getPlatformId(value string) (id string) {
-	s := strings.Split(value, ":")
-	if len(s) > 1 {
-		id = s[1]
-	}
+	_, rest, _ := strings.Cut(value, ":")
+	id, _, _ = strings.Cut(rest, ":")
 	return
 }

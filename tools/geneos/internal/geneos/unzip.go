@@ -110,8 +110,10 @@ func unzip(h *Host, basedir string, archive io.Reader, filesize int64, stripPref
 		if n != int64(f.UncompressedSize64) {
 			log.Error("lengths different", slog.Int64("expected", int64(f.UncompressedSize64)), slog.Int64("actual", n))
 		}
-		out.Close()
 		c.Close()
+		if err = out.Close(); err != nil {
+			return
+		}
 
 		if err := h.Chtimes(fullpath, time.Time{}, f.Modified); err != nil {
 			log.Debug("cannot update mtime (symlink?)", slog.Any("error", err))

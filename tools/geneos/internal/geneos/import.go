@@ -169,8 +169,9 @@ func ImportSource(h *Host, dir, item string) (filename, source string, err error
 	dst = h.Join(dir, dst)
 	filename = h.Base(dst)
 
-	// test for same source and dest, return err. only on localhost.
-	if h.IsLocalhost() && !strings.Contains(item, "://") {
+	// test for same source and dest, return err. only on localhost, and
+	// not for STDIN.
+	if h.IsLocalhost() && item != "-" && !strings.Contains(item, "://") {
 		item = config.ResolveHome(item)
 		sfi, err := h.Stat(item)
 		if err != nil {
@@ -354,7 +355,7 @@ func ImportCommons(h *Host, ct *Component, common string, params []string) (file
 	dir := h.PathTo(ct, common)
 	for _, source := range params {
 		var filename string
-		if filename, _, err = ImportSource(h, dir, source); err != nil && err != ErrExists {
+		if filename, _, err = ImportSource(h, dir, source); err != nil && !errors.Is(err, ErrExists) {
 			return
 		}
 		filenames = append(filenames, filename)

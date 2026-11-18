@@ -28,9 +28,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
-
-	"github.com/hashicorp/go-version"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -116,17 +113,23 @@ func GetReleases(h *Host, ct *Component) (releases []*ReleaseDetails, err error)
 		}
 	}
 
-	// TODO: fix for non valid directories, prevent panics
+	// sort by version, with any directories that are not versions
+	// last, in name order
 	slices.SortFunc(releases, func(a, b *ReleaseDetails) int {
-		va, err := version.NewVersion(strings.TrimLeftFunc(a.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-		if err != nil {
-			log.Debug("invalid version", slog.Any("error", err), slog.String("version", a.Version))
+		_, va := parseReleaseVersion(a.Version)
+		_, vb := parseReleaseVersion(b.Version)
+		switch {
+		case va == nil && vb == nil:
+			return strings.Compare(a.Version, b.Version)
+		case va == nil:
+			return 1
+		case vb == nil:
+			return -1
 		}
-		vb, err := version.NewVersion(strings.TrimLeftFunc(b.Version, func(r rune) bool { return !unicode.IsNumber(r) }))
-		if err != nil {
-			log.Debug("invalid version", slog.Any("error", err), slog.String("version", b.Version))
+		if c := CompareVersion(a.Version, b.Version); c != 0 {
+			return c
 		}
-		return va.Compare(vb)
+		return strings.Compare(a.Version, b.Version)
 	})
 
 	return releases, nil
@@ -156,7 +159,7 @@ func Install(h *Host, ct *Component, options ...GeneosOption) (err error) {
 					successes++
 					continue
 				}
-				if opts.sourceExplicit && !errors.Is(err, fs.ErrNotExist) {
+				if opts.sourceExplicit && !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, errArchiveMismatch) {
 					return err
 				}
 				failures = errors.Join(failures, err)
@@ -288,23 +291,26 @@ func CheckBasename(h *Host, ct *Component, options ...GeneosOption) (exists bool
 // the base link exists then the force option must be used to update it,
 // otherwise it is created as expected. When called from unarchive()
 // this allows new installs to work without explicitly calling update.
+//
+// If h or ct are wildcards (ALL or nil) then hosts and components that
+// have no matching release are skipped without error, otherwise a
+// missing release is an error. All other errors are joined and returned
+// after all the hosts and components have been processed.
 func Update(h *Host, ct *Component, options ...GeneosOption) (err error) {
-	// before updating a specific type on a specific host, loop
-	// through related types, hosts and components. continue to
-	// other items if a single update fails?
-	//
+	wildcard := h == nil || h == ALL || ct == nil
 
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
-			if err = update(h, ct, options...); err != nil {
-				if !errors.Is(err, os.ErrNotExist) {
-					fmt.Println(err)
+			if uerr := update(h, ct, options...); uerr != nil {
+				if wildcard && errors.Is(uerr, os.ErrNotExist) {
+					continue
 				}
+				err = errors.Join(err, uerr)
 			}
 		}
 	}
 
-	return nil
+	return
 }
 
 // update is the core function and must be called with non-wild ct and
@@ -314,12 +320,21 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 		return ErrInvalidArgs
 	}
 
-	// update each associated package type for a parent component
+	// update each associated package type for a parent component. It is
+	// only an error if none of the package types could be updated.
 	if len(ct.PackageTypes) > 0 {
+		var updated int
+		var errs error
 		for _, ct := range ct.PackageTypes {
-			if err := Update(h, ct, options...); err != nil && !errors.Is(err, os.ErrNotExist) {
-				log.Error("error updating package", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
+			if err := Update(h, ct, options...); err != nil {
+				log.Debug("error updating package", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
+				errs = errors.Join(errs, err)
+				continue
 			}
+			updated++
+		}
+		if updated == 0 {
+			return errs
 		}
 		return nil
 	}
