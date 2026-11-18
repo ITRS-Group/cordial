@@ -48,8 +48,8 @@ var Component = geneos.Component{
 	DownloadInfix: name,
 
 	GlobalSettings: map[string]string{
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
+		config.Join(name, "purge"): "",
 	},
 	CleanList: config.Join(name, "clean"),
 	PurgeList: config.Join(name, "purge"),
@@ -60,7 +60,7 @@ var Component = geneos.Component{
 
 	LegacyParameters: map[string]string{},
 	Defaults: []string{
-		`binary="/bin/true"`,
+		`binary=/bin/true`,
 		`home={{join .root "profile" "profiles" .name}}`,
 		`autostart=false`,
 	},
@@ -241,7 +241,13 @@ func (i *Profile) Reload() (err error) {
 func (i *Profile) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
 	pf := cmd.Profiles
+	if pf == nil {
+		log.Error("no profiles configuration provided")
+		return false, os.ErrInvalid
+	}
 
+	// the saved options are coerced, so that those saved as strings by
+	// earlier versions are booleans again where required
 	flags := config.Get[map[string]any](cf, cf.Join("config", "options"))
 	profile.SetExpandOptions(i.Host(), pf, flags, nil)
 	if err = profile.Apply(i.Host(), pf, i.Name(), initial); err != nil {

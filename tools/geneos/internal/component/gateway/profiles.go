@@ -32,6 +32,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 
 	// build param key delete list
 	clearKeys := []string{
+		"licdhost",
 		"licdsecure",
 		"licdport",
 		values.INCLUDES,
@@ -46,18 +47,40 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		}
 
 		vals := profile.ApplyCommonParams(pf, name, &gateway.Common, lookup)
+
+		// the gateway name and licence daemon settings are applied as
+		// parameters, like those from the `params` list
+		if gatewayName := config.Expand[string](pf, gateway.GatewayName, config.LookupTable(lookup)); gatewayName != "" {
+			vals.Params = append(vals.Params, "gatewayname="+gatewayName)
+		}
+		if licdHost := config.Expand[string](pf, gateway.LicdHost, config.LookupTable(lookup)); licdHost != "" {
+			vals.Params = append(vals.Params, "licdhost="+licdHost)
+		}
+		if gateway.LicdPort != 0 {
+			vals.Params = append(vals.Params, fmt.Sprintf("licdport=%d", gateway.LicdPort))
+		}
+		if gateway.LicdSecure != nil {
+			vals.Params = append(vals.Params, fmt.Sprintf("licdsecure=%t", *gateway.LicdSecure))
+		}
+
 		vals.Includes = make(values.Includes, len(gateway.Includes))
 		for priority, include := range gateway.Includes {
 			vals.Includes[priority] = config.Expand[string](pf, include, config.LookupTable(lookup))
 		}
+
+		// variable values can refer to the configuration of the gateway
+		// instance, e.g. `${config:home}`, which is not part of the
+		// profile configuration
+		expand, release := profile.InstanceExpander(h, ct, pf, instanceName)
 		vals.Variables = make(values.Variables, len(gateway.Variables))
 		for idx, variable := range gateway.Variables {
 			vals.Variables[idx] = values.Variable{
 				Type:  variable.Type,
 				Name:  variable.Name,
-				Value: config.Expand[string](pf, variable.Value),
+				Value: expand(variable.Value),
 			}
 		}
+		release()
 
 		if err := profile.ApplyInstance(h, pf, ct, instanceName, gateway.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err

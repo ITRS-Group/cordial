@@ -42,10 +42,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		vals := profile.ApplyCommonParams(pf, name, &floating.Common, lookup)
 
 		// expand all elements of gateways, join with commas and split again to catch already expanded values
-		for _, gw := range profile.ExpandCommaList(pf, floating.Gateways) {
-			// floating.Gateways expands to a map of host:port
-			vals.Gateways = append(vals.Gateways, gw)
-		}
+		vals.Gateways = append(vals.Gateways, profile.ExpandCommaList(pf, floating.Gateways)...)
 
 		if err := profile.ApplyInstance(h, pf, ct, instanceName, floating.Common, vals, clearKeys, forceRebuild); err != nil {
 			return err

@@ -349,27 +349,27 @@ profiles:
             ITRS Geneos Best Practice |
             Layer 1 - Server Health |
             ../../includes/itrs.layer1.server-health.xml
-          00500: >
+          500: >
             ITRS Geneos Best Practice |
             Configuration |
             ../../${site}/${site}.layer1.server-health.xml
 
           # Layer 2 - Core Technologies includes for the Health Gateway
-          01010: >
+          1010: >
             ITRS Geneos Best Practice |
             Layer 2 - Core Technologies |
             ../../includes/itrs.layer2.programs-and-logs.xml
-          00510: >
+          510: >
             ITRS Geneos Best Practice |
             Configuration |
             ../../${site}/${site}.layer2.programs-and-logs.xml
 
           # Layer 3 - Applications includes for the Health Gateway
-          01020: >
+          1020: >
             ITRS Geneos Best Practice |
             Layer 3 - Applications |
             ../../includes/itrs.layer3.geneos.xml
-          00520: >
+          520: >
             ITRS Geneos Best Practice |
             Configuration |
             ../../${site}/${site}.layer3.geneos.xml
