@@ -36,6 +36,7 @@ import (
 
 	"github.com/itrs-group/cordial/integrations/servicenow/snow"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
 )
 
 // requestTimeout is the longest the router can take to respond, which
@@ -178,6 +179,7 @@ func incident(args []string) {
 	req.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{Timeout: requestTimeout}
+	ims.SameOriginRedirects(client, u)
 
 	resp, err := client.Do(req)
 	if err != nil {

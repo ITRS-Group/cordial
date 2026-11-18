@@ -289,6 +289,8 @@
 
   * Fix the ServiceNow client not being replaced when the `password` or `client-secret` of the configuration is changed by a reload.
 
+  * The ServiceDesk Plus access token is now only sent to the origin (scheme, host and port) of the API and never to another that a redirect points to, even if redirects were followed. Refreshes still use the token URL, which can be on another host.
+
 * `pkg/ims`
 
   * Fix a `^` in a value from a request, such as the correlation ID or the configuration item, ending the condition in the ServiceNow encoded query that finds the existing incident, so that the rest of the value was read as further conditions or operators (`^OR`, `^NQ`). Values are now escaped with the new `snow.EscapeQuery`, which doubles the `^` as ServiceNow requires, in the proxy, the IMS Gateway and the `servicenow` client. This was checked against a live instance, and `CORDIAL_SNOW_LIVE` can be set to the path of a configuration file to run that test.
@@ -309,6 +311,8 @@
 
   * Fix a transformation `rename` of a field to its own name deleting the field, and the result of renames that depend on each other depending on a random order.
 
+  * Add `ims.OriginOnly` and `ims.SameOriginRedirects` to keep OAuth tokens and credentials with the origin (scheme, host and port) they are for when a client is redirected, which the `snow` client now uses for its OAuth token. A redirect from `https` to `http` is refused for clients that use them.
+
 * `integrations/servicenow`
 
   * Fix the router never authenticating to ServiceNow with a username and password, since the client was changed to have a timeout, and requests with a body having no `Content-Type`.
@@ -317,9 +321,13 @@
 
   * Fix the `incident` command waiting for ever for the router, the key of the router being compared in a way that could be timed, the `--debug` flag doing nothing, a table from a search such as `../sys_user:name=x` changing the path of a request, `incident-query` expanding the values of the request, and the trace including the `Authorization` header.
 
+  * Fix the OAuth token, username and password, and the router's API key, being sent to another origin that ServiceNow, or the router, redirected the request to, including the same host on another port. This also applies to the `incident` command. A redirect from `https` to `http` is now refused for these clients, which is a change of behaviour.
+
 * `integrations/pagerduty`
 
   * Fix `payload.component` and `event.images` in the default configuration never being used, the routing key, and the environment if `send-env` is set, being written to the log when an event failed, a crash if `send-env` is set with no `details`, and the `timestamp` of an alert, which is in local time, being read as UTC. There is now a `timeout`, default 30 seconds, for requests to Pagerduty.
+
+  * Fix a redirect from the events API being followed and the event, which includes the routing key, being sent to wherever it pointed. Redirects are no longer followed and are reported as an error.
 
 * `libraries/libalert`
 

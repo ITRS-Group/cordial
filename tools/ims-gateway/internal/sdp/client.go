@@ -70,7 +70,8 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	if err != nil {
 		return
 	}
-	if _, err = validURL("api", apiURL, datacentre); err != nil {
+	api, err := validURL("api", apiURL, datacentre)
+	if err != nil {
 		return
 	}
 
@@ -116,6 +117,9 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	hc := oauth2.NewClient(context.WithValue(ctx, oauth2.HTTPClient, base), ts)
 	// the OAuth client does not inherit the settings of the base client
 	hc.Timeout = timeout
+	// the token is only for the API, whatever the client is redirected
+	// to, but refreshes use base and so go to the token URL
+	hc.Transport = ims.OriginOnly(api, hc.Transport, rt)
 	// never follow redirects, as a redirected POST or PUT would be
 	// silently turned into a GET without the data
 	hc.CheckRedirect = func(*http.Request, []*http.Request) error {

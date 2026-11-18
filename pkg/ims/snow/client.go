@@ -38,6 +38,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
 	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/itrs-group/cordial/pkg/rest"
 )
@@ -161,6 +162,9 @@ func New(cf *config.Config) (c *Client, err error) {
 		hc = conf.Client(context.WithValue(context.Background(), oauth2.HTTPClient, base))
 		hc.Timeout = base.Timeout
 		hc.CheckRedirect = base.CheckRedirect
+		// the token is only for the instance, whatever the client is
+		// redirected to
+		hc.Transport = ims.OriginOnly(sn, hc.Transport, base.Transport)
 
 		c.Client = rest.NewClient(
 			rest.BaseURL(p),

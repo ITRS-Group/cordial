@@ -21,6 +21,7 @@ import (
 	"context"
 	_ "embed"
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -230,6 +231,14 @@ func manageEvent(cf *config.Config, event *pagerduty.V2Event) error {
 	defer cancel()
 
 	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"), clientOptions...)
+	// the routing key is in the body, which a redirect would send on
+	// to wherever it points, so never follow one
+	client.HTTPClient = &http.Client{
+		Transport: http.DefaultTransport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	_, err := client.ManageEventWithContext(ctx, event)
 	return err
 }

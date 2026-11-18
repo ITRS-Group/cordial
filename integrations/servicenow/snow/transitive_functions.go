@@ -30,6 +30,8 @@ import (
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 )
 
@@ -87,8 +89,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 			TokenURL:       "https://" + instance + ".service-now.com/oauth_token.do",
 		}
 
-		client := conf.Client(context.Background())
-		client.Timeout = requestTimeout
+		client := oauthClient(context.Background(), conf, instanceURL(instance))
 
 		snowMutex.Lock()
 		// with OAuth we don't need to store the username and password
@@ -104,7 +105,7 @@ func InitializeConnection(vc *config.Config) *Connection {
 
 	snowMutex.Lock()
 	snowConnection = &Connection{
-		Client:    &http.Client{Timeout: requestTimeout},
+		Client:    basicClient(instanceURL(instance)),
 		Instance:  instance,
 		Path:      path,
 		Username:  username,
@@ -116,16 +117,49 @@ func InitializeConnection(vc *config.Config) *Connection {
 	return snowConnection
 }
 
+// instanceHost returns the host name of a ServiceNow instance, which is
+// either the name of a service-now.com instance or a host name
+func instanceHost(instance string) string {
+	if !strings.Contains(instance, ".") {
+		return instance + ".service-now.com"
+	}
+	return instance
+}
+
+// instanceURL returns the base URL of a ServiceNow instance
+func instanceURL(instance string) *url.URL {
+	return &url.URL{Scheme: "https", Host: instanceHost(instance)}
+}
+
+// oauthClient returns a client that sends the OAuth token to the
+// instance only, and not to any other origin that it is redirected to.
+// The token is requested using the HTTP client in ctx, if any.
+func oauthClient(ctx context.Context, conf *clientcredentials.Config, instance *url.URL) *http.Client {
+	client := conf.Client(ctx)
+	plain := http.DefaultTransport
+	if hc, ok := ctx.Value(oauth2.HTTPClient).(*http.Client); ok && hc.Transport != nil {
+		plain = hc.Transport
+	}
+	client.Transport = ims.OriginOnly(instance, client.Transport, plain)
+	ims.SameOriginRedirects(client, instance)
+	client.Timeout = requestTimeout
+	return client
+}
+
+// basicClient returns a client for requests that have a username and
+// password, which are not sent to another origin than the instance
+func basicClient(instance *url.URL) *http.Client {
+	client := &http.Client{Timeout: requestTimeout}
+	ims.SameOriginRedirects(client, instance)
+	return client
+}
+
 // AssembleRequest TODO: Document its behavior, inputs, and effects.
 func AssembleRequest(snow TransitiveConnection, table string) (req *http.Request, err error) {
 	snowMutex.RLock()
 	defer snowMutex.RUnlock()
 
-	host := snow.Instance
-	if !strings.Contains(host, ".") {
-		host += ".service-now.com"
-	}
-	u, err := url.Parse("https://" + host)
+	u, err := url.Parse("https://" + instanceHost(snow.Instance))
 	if err != nil {
 		return
 	}

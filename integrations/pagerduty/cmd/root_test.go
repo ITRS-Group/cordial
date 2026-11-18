@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -152,6 +153,31 @@ func TestManageEvent(t *testing.T) {
 	}
 	if err := json.Unmarshal(body, &sent); err != nil || sent.Payload.Component != "netprobe-host" || len(sent.Images) != 1 || sent.Images[0].Src != "https://example.com/i.png" {
 		t.Errorf("sent %s (%v)", body, err)
+	}
+}
+
+// the routing key is in the body and must not be sent on by a redirect
+func TestManageEventDoesNotFollowRedirects(t *testing.T) {
+	var other atomic.Int32
+	b := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		other.Add(1)
+	}))
+	defer b.Close()
+	a := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, b.URL, http.StatusPermanentRedirect)
+	}))
+	defer a.Close()
+	origOptions := clientOptions
+	defer func() { clientOptions = origOptions }()
+	clientOptions = []pagerduty.ClientOptions{pagerduty.WithV2EventsAPIEndpoint(a.URL)}
+
+	cf := defaultsConfig()
+	event := buildEvent(cf, Trigger)
+	if err := manageEvent(cf, &event); err == nil {
+		t.Error("manageEvent succeeded, want an error for the redirect")
+	}
+	if n := other.Load(); n != 0 {
+		t.Errorf("redirect target received %d requests, want none", n)
 	}
 }
 
