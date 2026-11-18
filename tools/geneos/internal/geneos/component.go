@@ -201,10 +201,9 @@ type Component struct {
 	// the caller otherwise there is a reference loop.
 	Initialise func(h *Host, ct *Component, override bool) error
 
-	// InitialiseOnce ensures that the Initialise function is only
-	// called once per component, even if multiple initialisation
-	// attempts are made.
-	InitialiseOnce sync.Once
+	// initialised records the hosts on which Initialise has succeeded,
+	// see [Component.InitialiseOnce]
+	initialised sync.Map
 
 	// New is the factory method for the component. It has to be added
 	// during registration to avoid loops
@@ -297,6 +296,37 @@ func (ct *Component) GlobalSetting(key string) string {
 		}
 	}
 	return value
+}
+
+// initState is the state of the initialisation of a component on one
+// host. The mutex serialises attempts, so that concurrent callers wait
+// for the first to finish.
+type initState struct {
+	mutex sync.Mutex
+	done  bool
+}
+
+// InitialiseOnce calls the Initialise function of the component for the
+// host h, unless there is none or it has already succeeded for that
+// host. Each host is initialised separately, so that, for example,
+// templates are also written on a second host. If Initialise fails then
+// the error is returned and the next call tries again.
+func (ct *Component) InitialiseOnce(h *Host, override bool) error {
+	if ct == nil || ct.Initialise == nil {
+		return nil
+	}
+	v, _ := ct.initialised.LoadOrStore(h.String(), &initState{})
+	state := v.(*initState)
+	state.mutex.Lock()
+	defer state.mutex.Unlock()
+	if state.done {
+		return nil
+	}
+	if err := ct.Initialise(h, ct, override); err != nil {
+		return err
+	}
+	state.done = true
+	return nil
 }
 
 // InstancesDir return the parent directory for the instances of a

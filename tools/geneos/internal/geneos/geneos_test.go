@@ -262,3 +262,49 @@ func TestSaveGlobalConfigIsLossless(t *testing.T) {
 		t.Errorf("nested audit values with number and boolean types were lost: %v", got["audit"])
 	}
 }
+
+// TestInitialiseAuditRedactsCommandLine checks that secrets given on
+// the command line do not reach the audit log
+func TestInitialiseAuditRedactsCommandLine(t *testing.T) {
+	useTestConfigDir(t)
+	useTestComponents(t)
+	root := filepath.Join(t.TempDir(), "geneos")
+	setTestHosts(t, filepath.Join(t.TempDir(), "not-the-root"))
+
+	t.Cleanup(func() {
+		globalAuditMutex.Lock()
+		defer globalAuditMutex.Unlock()
+		if globalAuditWriter != nil {
+			globalAuditWriter.Close()
+			globalAuditWriter = nil
+		}
+		logger.NewGlobalAuditLogger(io.Discard)
+		config.Delete(config.Global(), cordial.ExecutableName())
+	})
+
+	previousArgs := os.Args
+	t.Cleanup(func() { os.Args = previousArgs })
+	os.Args = []string{"geneos", "init", "--signing-bundle-password", "hunter2",
+		"--password=s3cret", "--api-token", "tok3n", "-e", "DB_PASSWORD=pa55word", "--keyfile", "+encs+0123456789ABCDEF"}
+
+	if err := Initialise("init", LOCAL, UseRoot(root), Insecure(true)); err != nil {
+		t.Fatalf("Initialise() error = %v", err)
+	}
+	globalAuditMutex.Lock()
+	globalAuditWriter.Close()
+	globalAuditMutex.Unlock()
+
+	data, err := os.ReadFile(filepath.Join(root, "audit", "audit.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := string(data)
+	if !strings.Contains(log, "geneos init") {
+		t.Fatalf("the command line was not audited: %q", log)
+	}
+	for _, secret := range []string{"hunter2", "s3cret", "tok3n", "pa55word", "0123456789ABCDEF"} {
+		if strings.Contains(log, secret) {
+			t.Errorf("audit log contains %q: %s", secret, log)
+		}
+	}
+}

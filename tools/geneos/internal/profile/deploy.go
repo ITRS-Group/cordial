@@ -124,14 +124,8 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			if err := ct.MakeDirs(h); err != nil {
 				continue
 			}
-			if ct.Initialise != nil {
-				var initialiseErr error
-				ct.InitialiseOnce.Do(func() {
-					initialiseErr = ct.Initialise(h, ct, false)
-				})
-				if initialiseErr != nil {
-					return fmt.Errorf("initialising component %s: %w", ct.Name, initialiseErr)
-				}
+			if err := ct.InitialiseOnce(h, false); err != nil {
+				return fmt.Errorf("initialising component %s: %w", ct.Name, err)
 			}
 			// clear any command line parameters, they should only come from the config
 			extras := opts.vals
