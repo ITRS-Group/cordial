@@ -18,7 +18,9 @@ limitations under the License.
 package values
 
 import (
+	"fmt"
 	"log/slog"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -75,7 +77,10 @@ func (v *Variables) Set(value string) error {
 		*v = Variables{}
 	}
 
-	val := getVarValue(value)
+	val, err := getVarValue(value)
+	if err != nil {
+		return err
+	}
 	n := slices.IndexFunc(*v, func(item Variable) bool {
 		return item.Name == val.Name
 	})
@@ -92,7 +97,12 @@ func (v *Variables) Type() string {
 	return "[TYPE:]NAME=VALUE"
 }
 
-func getVarValue(in string) (variable Variable) {
+// validVariableTypes are the types accepted for variables. `secret` is
+// a custom type to indicate the value should be encrypted with a
+// keyfile and stored as a string type
+var validVariableTypes = []string{"string", "integer", "double", "boolean", "activeTime", "externalConfigFile", "secret"}
+
+func getVarValue(in string) (variable Variable, err error) {
 	var t, name, value string
 
 	// check for managed entity prefix and save to move to name later
@@ -122,18 +132,8 @@ func getVarValue(in string) (variable Variable) {
 		name = entity + "/" + name
 	}
 
-	// XXX check types here - e[0] options type, default string
-	var validtypes map[string]string = map[string]string{
-		"string":             "",
-		"integer":            "",
-		"double":             "",
-		"boolean":            "",
-		"activeTime":         "",
-		"externalConfigFile": "",
-		"secret":             "", // custom type to indicate value should be encrypted with keyfile, stored as string type
-	}
-	if _, ok := validtypes[t]; !ok {
-		log.Error("invalid type for variable", slog.String("type", t), slog.String("validTypes", "string, integer, double, boolean, activeTime, externalConfigFile, secret"))
+	if !slices.Contains(validVariableTypes, t) {
+		err = fmt.Errorf("invalid type %q for variable %q, valid types are %s", t, in, strings.Join(validVariableTypes, ", "))
 		return
 	}
 	variable = Variable{
@@ -144,33 +144,59 @@ func getVarValue(in string) (variable Variable) {
 	return
 }
 
-// NormaliseVars updates old style "variables" items.
+// stringField returns the string value for key in m and true if it is a
+// string, or an empty string and true if the key is missing or nil.
+// Other types are not accepted.
+func stringField(m map[string]any, key string) (string, bool) {
+	switch v := m[key].(type) {
+	case nil:
+		return "", true
+	case string:
+		return v, true
+	default:
+		return "", false
+	}
+}
+
+// variableFromMap converts a legacy variable map to a Variable, ok is
+// false if any field is not a string.
+func variableFromMap(item map[string]any) (variable Variable, ok bool) {
+	var okType, okName, okValue bool
+	variable.Type, okType = stringField(item, VARMAP_KEY_TYPE)
+	variable.Name, okName = stringField(item, MAPKEY_NAME)
+	variable.Value, okValue = stringField(item, VARMAP_KEY_VALUE)
+	return variable, okType && okName && okValue
+}
+
+// NormaliseVars updates old style "variables" items. Items that cannot
+// be converted, for example hand-edited entries with fields that are
+// not strings, are skipped.
 func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 	if vars == nil {
 		return nil, false
 	}
 
 	// short circuit if already in the desired format(s)
-	if _, ok := vars.([]Variable); ok {
-		return vars.([]Variable), false
-	}
-	if _, ok := vars.(Variables); ok {
-		return vars.(Variables), false
+	switch v := vars.(type) {
+	case []Variable:
+		return v, false
+	case Variables:
+		return v, false
 	}
 
-	ft := reflect.TypeOf(vars)
-	switch ft.Kind() {
+	rv := reflect.ValueOf(vars)
+	switch rv.Kind() {
 	case reflect.Slice:
-		for _, item := range vars.([]any) {
-			item, ok := item.(map[string]any)
+		for idx := range rv.Len() {
+			item, ok := rv.Index(idx).Interface().(map[string]any)
 			if !ok {
-				log.Debug("item is not a map[string]any, skipping", slog.Any("item", item))
+				log.Debug("item is not a map[string]any, skipping", slog.Any("item", rv.Index(idx).Interface()))
 				continue
 			}
-			variable := Variable{
-				Type:  item[VARMAP_KEY_TYPE].(string),
-				Name:  item[MAPKEY_NAME].(string),
-				Value: item[VARMAP_KEY_VALUE].(string),
+			variable, ok := variableFromMap(item)
+			if !ok {
+				log.Debug("item has non-string fields, skipping", slog.Any("item", item))
+				continue
 			}
 			if variable.Name == "" {
 				continue
@@ -183,13 +209,14 @@ func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 
 		return newVars, true
 	case reflect.Map:
-		if ft.Elem().Kind() == reflect.String && ft.Key().Kind() == reflect.String {
+		switch m := vars.(type) {
+		case map[string]string:
 			// very old format, key was `NAME`, value was `TYPE:VALUE`
-			for name, value := range vars.(map[string]string) {
-				t, v, found := strings.Cut(value, ":")
+			for _, name := range slices.Sorted(maps.Keys(m)) {
+				t, v, found := strings.Cut(m[name], ":")
 				if !found {
 					t = "string"
-					v = value
+					v = m[name]
 				}
 				newVars = append(newVars, Variable{
 					Type:  t,
@@ -198,21 +225,34 @@ func NormaliseVars(vars any) (newVars []Variable, changed bool) {
 				})
 			}
 			return newVars, true
-		} else if ft.Elem().Kind() == reflect.Interface && ft.Key().Kind() == reflect.String {
-			// previous format, just convert map to slice, drop keys
-			for _, item := range vars.(map[string]any) {
-				item := item.(map[string]any)
-				variable := Variable{
-					Type:  item[VARMAP_KEY_TYPE].(string),
-					Name:  item[MAPKEY_NAME].(string),
-					Value: item[VARMAP_KEY_VALUE].(string),
+		case map[string]any:
+			// previous format, just convert map to slice, drop keys. a
+			// map of strings, e.g. from a map[string]string that has
+			// been merged into a configuration, is the very old format
+			for _, key := range slices.Sorted(maps.Keys(m)) {
+				if s, ok := m[key].(string); ok {
+					t, v, found := strings.Cut(s, ":")
+					if !found {
+						t, v = "string", s
+					}
+					newVars = append(newVars, Variable{Type: t, Name: key, Value: v})
+					continue
+				}
+				item, ok := m[key].(map[string]any)
+				if !ok {
+					continue
+				}
+				variable, ok := variableFromMap(item)
+				if !ok || variable.Name == "" {
+					continue
+				}
+				if variable.Type == "" {
+					variable.Type = "string"
 				}
 				newVars = append(newVars, variable)
 			}
 			return newVars, true
 		}
-	default:
-		// nothing
 	}
 
 	return newVars, false
