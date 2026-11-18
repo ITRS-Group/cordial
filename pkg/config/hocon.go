@@ -27,7 +27,6 @@ import (
 )
 
 var discardRE = regexp.MustCompile(`(?m)^\s*#.*$`)
-var shrinkBackSlashRE = regexp.MustCompile(`(?m)\\\\`)
 
 // MergeHOCONConfig parses the HOCON configuration in conf and merges the
 // results into the cf *config.Config object
@@ -45,7 +44,7 @@ func (c *Config) MergeHOCONConfig(conf string) (err error) {
 	if err != nil {
 		return
 	}
-	cs := bytes.NewReader(shrinkBackSlashRE.ReplaceAll(j, []byte{'\\'}))
+	cs := bytes.NewReader(j)
 	if err := vc.readConfig(cs); err != nil {
 		return err
 	}

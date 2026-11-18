@@ -128,7 +128,6 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 		config.FilePath(profilesFile),
 		config.Format("yaml"),
 		config.SkipWorkingDir(),
-		config.UseDefaults(false),
 		config.WithDefaults(profilesDefault, "yaml"),
 	}
 	if profilesFile != "" {

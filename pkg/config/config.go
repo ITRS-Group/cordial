@@ -22,6 +22,7 @@ package config
 import (
 	"bytes"
 	"errors"
+	"slices"
 	"strings"
 	"sync"
 
@@ -42,19 +43,36 @@ type Config struct {
 // global is the default configuration container for non-method callers
 var global *Config
 
-// globalMutex protects the global configuration object for concurrent access
-var globalMutex sync.Mutex
+// globalMutex protects the global variable, not the contents of the
+// Config it points to, which has its own lock.
+var globalMutex sync.RWMutex
 
 func init() {
 	global = New()
+}
+
+// getGlobal returns the current global Config
+func getGlobal() *Config {
+	globalMutex.RLock()
+	defer globalMutex.RUnlock()
+	return global
 }
 
 // New returns a Config instance initialised with a new viper instance.
 // Can be called with config.DefaultExpandOptions(...) to set defaults for
 // future calls that use Expand.
 func New(options ...FileOption) *Config {
+	return newFromFileOptions(evalFileOptions(options...))
+}
+
+// newFromFileOptions returns a new Config from opts. The embedded
+// defaults, if any, are the base of the configuration and anything read
+// later is merged over them. Settings from DefaultsFrom are set in the
+// defaults layer, which is only consulted for settings that are not set
+// by any other source. If the UseDefaults option is false then none of
+// the defaults are used.
+func newFromFileOptions(opts *fileOptions) *Config {
 	var appUserConfDir string
-	opts := evalFileOptions(options...)
 
 	// on error path remains empty, which is okay
 	appUserConfDir, _ = UserConfigPath(opts.appName)
@@ -64,11 +82,15 @@ func New(options ...FileOption) *Config {
 		rwmutex:              &sync.RWMutex{},
 		delimiter:            opts.delimiter,
 		appUserConfDir:       appUserConfDir,
-		defaultExpandOptions: opts.expandOptions,
+		defaultExpandOptions: slices.Clone(opts.expandOptions),
 	}
 	if opts.envPrefix != "" {
 		cf.SetEnvPrefix(opts.envPrefix)
 		cf.automaticEnv()
+	}
+
+	if !opts.useDefaults {
+		return cf
 	}
 
 	if len(opts.internalDefaults) > 0 {
@@ -91,21 +113,43 @@ func New(options ...FileOption) *Config {
 	return cf
 }
 
+// newScratch returns a new Config to read a single source into, which
+// is then merged into the final Config. It has the same key delimiter
+// but none of the defaults or environment bindings, so that these do
+// not get merged in as if they were part of the source.
+func newScratch(options ...FileOption) *Config {
+	opts := evalFileOptions(options...)
+	opts.useDefaults = false
+	opts.envPrefix = ""
+	return newFromFileOptions(opts)
+}
+
 // Global returns the global Config instance
 func Global() *Config {
-	return global
+	return getGlobal()
 }
 
 // ResetConfig reinitialises the global configuration object. Existing
 // settings will be copied over. This is primarily to be able to change
 // the default delimiter after start-up.
 func ResetConfig(options ...FileOption) {
+	resetGlobal(evalFileOptions(options...), "")
+}
+
+// resetGlobal replaces the global Config with a new one made from
+// opts, copying over the existing settings, and returns it. If
+// appUserConfDir is not empty it overrides the default value.
+func resetGlobal(opts *fileOptions, appUserConfDir string) *Config {
 	globalMutex.Lock()
 	defer globalMutex.Unlock()
 
 	tmp := global.AllSettings()
-	global = New(options...)
+	global = newFromFileOptions(opts)
+	if appUserConfDir != "" {
+		global.appUserConfDir = appUserConfDir
+	}
 	global.MergeConfigMap(tmp)
+	return global
 }
 
 // ErrNoUserConfigDir is returned when the operating system cannot determine
@@ -115,19 +159,19 @@ var ErrNoUserConfigDir = errors.New("cannot resolve user config directory, check
 // AppConfigDir returns the application configuration directory for the
 // global configuration
 func AppConfigDir() string {
-	return global.appUserConfDir
+	return getGlobal().appUserConfDir
 }
 
 // Join returns a configuration key made up of parts joined with the
 // default delimiter for the global configuration object.
 func Join(parts ...string) string {
-	return strings.Join(append([]string{}, parts...), global.delimiter)
+	return strings.Join(parts, getGlobal().delimiter)
 }
 
 // Join returns a configuration settings key joined with the delimiter
 // for the c config object.
 func (c *Config) Join(parts ...string) string {
-	return strings.Join(append([]string{}, parts...), c.delimiter)
+	return strings.Join(parts, c.delimiter)
 }
 
 // ConfigType returns the configuration type recorded for c.
@@ -203,6 +247,10 @@ func Set[T any](c *Config, key string, value T, options ...ExpandOption) {
 // T. If it is not, then the default value is the zero value for the
 // type T.
 func Get[T any](c *Config, key string, options ...ExpandOption) (value T) {
+	// any PromoteFrom option changes the config and so needs the write
+	// lock, which is only taken if there is something to promote
+	c.promote(key, options...)
+
 	c.rwmutex.RLock()
 	defer c.rwmutex.RUnlock()
 	return get[T](c, key, options...)
@@ -245,8 +293,10 @@ func (c *Config) UnmarshalKey(key string, rawVal any, options ...ExpandOption) e
 	return c.unmarshalKey(key, rawVal, options...)
 }
 
-// SetKeyValuePairs takes a list of `key=value` pairs as strings and applies
-// them to the config object. Any item without an `=` is skipped.
+// SetKeyValuePairs takes a list of `key=value` pairs as strings and
+// applies them to the config object. An item that is not of the form
+// `key=value`, `key+=value` or `key+value` causes an error to be
+// returned.
 //
 // If the separator is either `+=` or `+` then the given value is
 // appended to any existing setting. If the value is starts with a dash

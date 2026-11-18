@@ -19,6 +19,7 @@ package config
 
 import (
 	"io"
+	"os"
 	"path"
 	"strings"
 
@@ -30,20 +31,26 @@ import (
 var (
 	defaultKeyDelimiter = "."
 	defaultFileFormat   = "json"
+
+	// userConfigPath is replaceable for testing
+	userConfigPath = UserConfigPath
 )
 
 type fileOptions struct {
 	appName                     string
 	configDirs                  []string
 	configFile                  string
+	dirMode                     os.FileMode
 	reader                      io.Reader
 	writer                      io.Writer
+	fileMode                    os.FileMode
 	format                      string // extension without "."
 	delimiter                   string
 	defaultConfig               *Config
 	envPrefix                   string
 	envDelimiter                string
 	expandOnSave                bool
+	expandOnSaveOptions         []ExpandOption
 	expandOptions               []ExpandOption
 	ignoreEmptyValues           bool
 	ignoreKeys                  []string
@@ -71,6 +78,7 @@ func evalFileOptions(options ...FileOption) (c *fileOptions) {
 		delimiter:              defaultKeyDelimiter,
 		envDelimiter:           "_",
 		internalDefaultsFormat: "yaml",
+		useDefaults:            true,
 	}
 	for _, opt := range options {
 		opt(c)
@@ -108,10 +116,11 @@ func evalLoadOptions(module string, options ...FileOption) (c *fileOptions) {
 	// if not cleared by options...
 	if c.userConfDir == "placeholder" {
 		var err error
-		if c.userConfDir, err = UserConfigPath(); err != nil {
+		if c.userConfDir, err = userConfigPath(); err != nil {
 			// if lookup fails, for example a domain account, and we are
-			// built without CGO for static linking, then set none.
-			return
+			// built without CGO for static linking, then set none and
+			// carry on to set the rest of the defaults.
+			c.userConfDir = ""
 		}
 	}
 
@@ -137,6 +146,7 @@ func evalSaveOptions(module string, options ...FileOption) (c *fileOptions) {
 		format:     defaultFileFormat,
 		remote:     host.Localhost,
 		configDirs: []string{},
+		delimiter:  defaultKeyDelimiter,
 	}
 
 	// TODO: check this logic and the below if len()
@@ -178,11 +188,23 @@ func UseGlobal() FileOption {
 }
 
 // UseDefaults tells [Read] whether to load defaults or not. The
-// default is true. Defaults are loaded from a file with the same name
-// as the main on but with an extra `.defaults` suffix before the
-// extension, i.e. for `config.yaml` the defaults file would be
-// `config.defaults.yaml` but it is searched in all the directories and
-// may be located elsewhere to the main configuration.
+// default is true. If false then no defaults of any kind are used,
+// i.e. neither those from [WithDefaults] or [DefaultsFrom] nor from
+// files. Defaults are loaded from a file with the same name as the main
+// on but with an extra `.defaults` suffix before the extension, i.e.
+// for `config.yaml` the defaults file would be `config.defaults.yaml`
+// but it is searched in all the directories and may be located
+// elsewhere to the main configuration.
+//
+// The order of precedence, highest first, of the settings in a
+// configuration returned by [Read] is:
+//
+//  1. values explicitly set with [Set], and environment variables
+//     if enabled with [WithEnvs]
+//  2. the main configuration file, or reader
+//  3. defaults files
+//  4. the embedded defaults from [WithDefaults]
+//  5. the settings of the configuration passed to [DefaultsFrom]
 func UseDefaults(b bool) FileOption {
 	return func(c *fileOptions) {
 		c.useDefaults = b
@@ -205,7 +227,11 @@ func WithDefaults(defaults []byte, format string) FileOption {
 	}
 }
 
-// DefaultsFrom uses the settings in cf as defaults when loading a configuration.
+// DefaultsFrom uses the settings in cf as defaults when loading a
+// configuration. These are the lowest priority and are only used for
+// settings that are not set by any other source, including embedded
+// defaults and defaults files. They are not copied into the
+// configuration as if they were read from a file.
 func DefaultsFrom(cf *Config) FileOption {
 	return func(c *fileOptions) {
 		c.defaultConfig = cf
@@ -366,18 +392,22 @@ func KeyDelimiter(delimiter string) FileOption {
 }
 
 // WithEnvs enables the use of environment variables using viper's
-// AutomaticEnv() functionality. If empty delimiter defaults to an
-// underscore.
+// AutomaticEnv() functionality. If delimiter is empty then it defaults
+// to an underscore.
 func WithEnvs(prefix string, delimiter string) FileOption {
 	return func(fo *fileOptions) {
+		if delimiter == "" {
+			delimiter = "_"
+		}
 		fo.envPrefix = prefix
 		fo.envDelimiter = delimiter
 	}
 }
 
 // WatchConfig enables the underlying viper instance to watch the
-// finally loaded config file. Is disabled if MergeSettings() is used.
-// Using this option is not concurrency safe on future calls to config
+// finally loaded config file, including one set with [FilePath]. It
+// has no effect when the configuration is read using [Reader]. Using
+// this option is not concurrency safe on future calls to config
 // methods, use carefully.
 //
 // If a notify function is specified then this is passed to
@@ -401,25 +431,33 @@ func StopOnInternalDefaultsErrors() FileOption {
 	}
 }
 
-// ExpandOnSave tells Save to pass the configuration through
+// ExpandOnSave tells Write to pass the configuration through
 // config.Expand before writing it to the file. This allows for dynamic
 // values in the configuration to be expanded on save, for example to
 // include values from the environment or from other configuration
 // items. This is off by default, and the configuration is saved as-is.
+// Only string values, and strings in lists and maps, are expanded; all
+// other values are written with their original type.
 //
-// Typically used with SaveTo() to write to an io.Writer such as
+// The options given are used for the expansion, in addition to the
+// default expansion options of the configuration being written. They
+// are separate from, and do not affect, any set with
+// [SetDefaultExpandOptions].
+//
+// Typically used with config.Writer() to write to an io.Writer such as
 // os.Stdout or a remote host, where the configuration is not being read
 // back in and so does not need to be expanded on load.
 func ExpandOnSave(options ...ExpandOption) FileOption {
 	return func(fo *fileOptions) {
 		fo.expandOnSave = true
-		fo.expandOptions = options
+		fo.expandOnSaveOptions = options
 	}
 }
 
 // SetDefaultExpandOptions sets defaults to all subsequent calls to
-// functions that perform configuration expansion. These defaults can be
-// reset by calling SetDefaultExpandOptions with no arguments.
+// functions that perform configuration expansion on the configuration
+// created. These defaults can be reset by calling SetDefaultExpandOptions
+// with no arguments.
 func SetDefaultExpandOptions(options ...ExpandOption) FileOption {
 	return func(fo *fileOptions) {
 		fo.expandOptions = options
@@ -438,10 +476,33 @@ func OmitEmptyValues() FileOption {
 }
 
 // IgnoreKeys tells config.Write() to ignore the specified keys when
-// writing the configuration. This is empty by default, and all keys are
-// written regardless of their name.
+// writing the configuration. A key can be a complete key, in which case
+// any keys below it are also ignored, i.e. `a.b` ignores `a.b` and
+// `a.b.c`. Keys are not case sensitive. This is empty by default, and
+// all keys are written regardless of their name.
 func IgnoreKeys(keys ...string) FileOption {
 	return func(fo *fileOptions) {
 		fo.ignoreKeys = append(fo.ignoreKeys, keys...)
+	}
+}
+
+// FileMode sets the permissions for a configuration file created by
+// config.Write(), before the process umask is applied. The default for
+// a new file is 0644, or the existing permissions if the file already
+// exists and this option is not used. Use this to restrict access to
+// files that contain credentials or other sensitive data, e.g.
+// FileMode(0600).
+func FileMode(mode os.FileMode) FileOption {
+	return func(fo *fileOptions) {
+		fo.fileMode = mode.Perm()
+	}
+}
+
+// DirMode sets the permissions for any directories created by
+// config.Write(), before the process umask is applied. The default is
+// 0775. Use DirMode(0700) with [FileMode] for sensitive files.
+func DirMode(mode os.FileMode) FileOption {
+	return func(fo *fileOptions) {
+		fo.dirMode = mode.Perm()
 	}
 }

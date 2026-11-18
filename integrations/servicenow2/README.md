@@ -243,7 +243,7 @@ Internal fields with special meanings are:
 
 ### Value Expansion
 
-Almost all the right-hand side values in the YAML configuration file support a custom expansion syntax. Expansion is not recursive, unless a customer function mentions it, but multiple expansion functions can be given in one entry and are concatenated as if they were all one string value, e.g.:
+Almost all the right-hand side values in the YAML configuration file support a custom expansion syntax. Expansion is nested, so that the value of a configuration item or the result of a function that itself contains an expansion is expanded in turn (to a depth of 10), but the values taken from the incident fields and from the environment are always used exactly as they are and are never expanded. Multiple expansion functions can be given in one entry and are concatenated as if they were all one string value, e.g.:
 
 ```yaml
     _subject: Geneos Alert on ${select:_NETPROBE_HOST:Unknown} | ${select:_DATAVIEW:None} | ${_ROWNAME} ${_COLUMN}

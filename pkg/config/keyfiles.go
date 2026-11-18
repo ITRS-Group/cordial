@@ -68,6 +68,10 @@ func (k *KeyFile) CreateWithBackup(h host.Host, backup string) (crc uint32, err 
 		if err = h.Rename(kp, bkp); err != nil {
 			return 0, err
 		}
+	} else if err = h.Remove(k.String()); err != nil {
+		// remove the existing file or ReadOrCreate would just return
+		// its checksum
+		return 0, err
 	}
 	crc, _, err = k.ReadOrCreate(h)
 	return
@@ -129,34 +133,43 @@ func (k *KeyFile) Write(h host.Host, kv *KeyValues) (err error) {
 // error the checksum is undefined and err will indicate why. If create
 // is true then directories and a file may have been created even on
 // error.
+//
+// An existing file that cannot be read or is not a valid keyfile is an
+// error and is never replaced. Any directories created have
+// permissions 0700 and a new keyfile 0600.
 func (k *KeyFile) ReadOrCreate(h host.Host) (crc32 uint32, created bool, err error) {
-	if kv, err2 := k.Read(h); err2 == nil { // ok?
+	kv, readErr := k.Read(h)
+	if readErr == nil { // ok?
 		crc32, err = kv.Checksum()
 		return
 	}
 
 	// only try to create if the file error is a not exists
-	if _, err = h.Stat(k.String()); err != nil && errors.Is(err, fs.ErrNotExist) {
-		if err = h.MkdirAll(k.Dir(), 0775); err != nil {
-			err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
-			return
-		}
-		kv := NewKeyValues()
-		defer kv.Destroy()
-		w, err := h.Create(k.String(), 0600)
-		if err != nil {
-			err = fmt.Errorf("failed to create keyfile %q: %w", k, err)
-			return 0, false, err
-		}
-		defer w.Close()
-		if err = kv.Write(w); err != nil {
-			err = fmt.Errorf("failed to write keyfile to %q: %w", k, err)
-			return 0, false, err
-		}
-
-		created = true
-		crc32, err = kv.Checksum()
+	if !errors.Is(readErr, fs.ErrNotExist) {
+		return 0, false, fmt.Errorf("keyfile %q: %w", k.String(), readErr)
 	}
+
+	if err = h.MkdirAll(k.Dir(), 0700); err != nil {
+		err = fmt.Errorf("failed to create keyfile directory %q: %w", k.Dir(), err)
+		return
+	}
+
+	newkv := NewKeyValues()
+	defer newkv.Destroy()
+	w, err := h.Create(k.String(), 0600)
+	if err != nil {
+		return 0, false, fmt.Errorf("failed to create keyfile %q: %w", k.String(), err)
+	}
+	if err = newkv.Write(w); err != nil {
+		w.Close()
+		return 0, false, fmt.Errorf("failed to write keyfile to %q: %w", k.String(), err)
+	}
+	if err = w.Close(); err != nil {
+		return 0, false, fmt.Errorf("failed to write keyfile to %q: %w", k.String(), err)
+	}
+
+	created = true
+	crc32, err = newkv.Checksum()
 	return
 }
 
