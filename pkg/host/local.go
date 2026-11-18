@@ -18,7 +18,7 @@ limitations under the License.
 package host
 
 import (
-	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
@@ -26,6 +26,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"sync"
 	"syscall"
 	"time"
@@ -267,13 +268,18 @@ func (h *Local) TempDir() string {
 	return os.TempDir()
 }
 
-// Signal sends signal to the local process identified by pid.
+// Signal sends signal to the local process identified by pid, which
+// must be greater than zero. If the process does not exist then an error
+// matching [os.ErrProcessDone] is returned.
 func (h *Local) Signal(pid int, signal syscall.Signal) (err error) {
-	proc, _ := os.FindProcess(pid)
-	if err := proc.Signal(signal); err != nil && !errors.Is(err, syscall.EEXIST) {
+	if pid <= 0 {
+		return fmt.Errorf("%w: invalid pid %d", ErrInvalidArgs, pid)
+	}
+	proc, err := os.FindProcess(pid)
+	if err != nil {
 		return err
 	}
-	return nil
+	return proc.Signal(signal)
 }
 
 var startMutex sync.Mutex
@@ -302,12 +308,23 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err err
 	defer out.Close()
 
 	// TODO: check the logic for hardwiring detach
-	if err = procSetupOS(cmd, out, append(options, ProcessDetach())...); err != nil {
+	if err = procSetupOS(cmd, out, slices.Concat(options, []ProcessOption{ProcessDetach()})...); err != nil {
 		return
 	}
 
 	cmd.Stdout = out
 	cmd.Stderr = out
+
+	// pin the thread for the child to inherit, always put back
+	restore, err := setCPUAffinity(po.cpuAffinity)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if rerr := restore(); rerr != nil && err == nil {
+			err = rerr
+		}
+	}()
 
 	if err = cmd.Start(); err != nil {
 		return
@@ -330,7 +347,9 @@ func (h *Local) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err err
 }
 
 // Run starts a program, waits for completion and returns the output
-// and/or any error. errfile is either absolute or relative to home.
+// and/or any error. errfile is either absolute or relative to the
+// working directory of the command and has stderr appended to it, as
+// with [Local.Start].
 func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err error) {
 	po := evalProcessOptions(options...)
 	errfile := po.errfile
@@ -340,7 +359,7 @@ func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err
 		errfile = filepath.Join(cmd.Dir, errfile)
 	}
 
-	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_WRONLY, 0644)
+	out, err := os.OpenFile(errfile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return
 	}
@@ -351,6 +370,16 @@ func (h *Local) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err
 	}
 
 	cmd.Stderr = out
+
+	restore, err := setCPUAffinity(po.cpuAffinity)
+	if err != nil {
+		return
+	}
+	defer func() {
+		if rerr := restore(); rerr != nil && err == nil {
+			err = rerr
+		}
+	}()
 
 	return cmd.Output()
 }
