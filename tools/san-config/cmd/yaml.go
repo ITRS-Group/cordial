@@ -19,13 +19,16 @@ package cmd
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/tls"
+	"fmt"
 	"io"
 	"log/slog"
 	"maps"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial"
@@ -53,7 +56,7 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 	)
 	if err != nil {
 		log.Error("loading inventory", slog.Any("error", err))
-		return
+		return nil, nil, err
 	}
 	contents = buf.Bytes()
 
@@ -68,10 +71,36 @@ func ParseInventoryYAML(cf *config.Config, cacheFile string, in io.Reader) (inv 
 	return
 }
 
+// inventoryTransport returns the shared transport for remote inventories
+// with TLS verification as requested. The transports are shared so that
+// idle connections are reused and not leaked on each reload.
+func inventoryTransport(insecure bool) *http.Transport {
+	if insecure {
+		return insecureInventoryTransport()
+	}
+	return verifiedInventoryTransport()
+}
+
+var (
+	insecureInventoryTransport = sync.OnceValue(func() *http.Transport { return newInventoryTransport(true) })
+	verifiedInventoryTransport = sync.OnceValue(func() *http.Transport { return newInventoryTransport(false) })
+)
+
+func newInventoryTransport(insecure bool) *http.Transport {
+	t := defaultInventoryTransport().Clone()
+	t.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecure}
+	return t
+}
+
 // ReadHostsYAML read all the inventories referenced in the YAML
 // configuration and returns a consolidated map of hostname to mappings.
 // If the slice "loop" exists it runs for each value, setting the
 // mapping "index" to the loop value.
+//
+// If there are inventories configured and none of them could be read
+// then an error is returned, so that callers can keep any existing
+// hosts. Failures of only some inventories are logged and the hosts
+// from the others are returned.
 func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error) {
 	hosts = make(map[string]HostMappings)
 
@@ -81,16 +110,12 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 	}
 
 	httpClient := &http.Client{
-		Timeout: timeout,
+		Transport: defaultInventoryTransport(),
+		Timeout:   timeout,
 	}
 	httpsClient := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: config.Get[bool](cf, "inventory.insecure"),
-			},
-		},
-		Timeout: timeout,
+		Transport: inventoryTransport(config.Get[bool](cf, "inventory.insecure")),
+		Timeout:   timeout,
 	}
 
 	lookup := config.Get[map[string]string](cf, "inventory.mappings")
@@ -104,25 +129,36 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 				config.Get[[]string](cf, "inventory.authentication.value"),
 			))
 	case "basic":
-		defFetchopts = append(defFetchopts,
-			BasicAuth(config.Get[string](cf, "inventory.authentication.username"),
-				config.Get[config.Secret](cf, "inventory.authentication.password"),
-			))
+		// `user` and `pass` were used in the example configuration
+		username := cmp.Or(config.Get[string](cf, "inventory.authentication.username"), config.Get[string](cf, "inventory.authentication.user"))
+		password := config.Get[config.Secret](cf, "inventory.authentication.password")
+		if len(password) == 0 {
+			password = config.Get[config.Secret](cf, "inventory.authentication.pass")
+		}
+		defFetchopts = append(defFetchopts, BasicAuth(username, password))
 	}
 
-	for _, index := range config.Get[[]string](cf, "inventory.indices") {
+	checkModified := config.Get[bool](cf, "inventory.check-modified")
+	indices := config.Get[[]string](cf, "inventory.indices")
+	var loaded, failed int
+
+	for _, index := range indices {
 		var inv *Inventory
 		var err error
 
-		source := config.Get[string](cf, "inventory.source",
+		expand := []config.ExpandOption{
 			config.LookupTable(lookup),
 			config.LookupTable(map[string]string{"index": index}),
-		)
+		}
+		source := config.Get[string](cf, "inventory.source", expand...)
+
+		// the same key is used to find and to store the previous state
+		stateKey := source
 
 		fetchopts := slices.Clone(defFetchopts)
 
-		if config.Get[bool](cf, "inventory.check-modified") {
-			if pi, ok := Inventories.Load(source); ok {
+		if checkModified {
+			if pi, ok := Inventories.Load(stateKey); ok {
 				if pinv, ok := pi.(*Inventory); ok {
 					log.Debug("checking inventory", slog.String("src", source), slog.Int64("size", pinv.size), slog.Time("last_modified", pinv.lastModified))
 					fetchopts = append(fetchopts, IfModified(pinv))
@@ -133,35 +169,56 @@ func ReadHostsYAML(cf *config.Config) (hosts map[string]HostMappings, err error)
 		switch {
 		case strings.HasPrefix(source, "http:"):
 			fetchopts = append(fetchopts, Client(httpClient))
-			inv, err = FetchInventory(cf, source, "", fetchopts...)
+			inv, err = FetchInventory(cf, source, inventoryCache(cf, expand), fetchopts...)
 		case strings.HasPrefix(source, "https:"):
 			fetchopts = append(fetchopts, Client(httpsClient))
-			inv, err = FetchInventory(cf, source, "", fetchopts...)
-		case strings.HasPrefix(source, "file"):
-			// remove file: scheme and drop through
-			source = strings.TrimPrefix(source, "file:")
-			fallthrough
+			inv, err = FetchInventory(cf, source, inventoryCache(cf, expand), fetchopts...)
 		default:
+			// remove file: scheme, if any
+			if rest, ok := strings.CutPrefix(source, "file://"); ok {
+				source = rest
+			} else {
+				source = strings.TrimPrefix(source, "file:")
+			}
 			source = config.ResolveHome(source)
-			inv, err = ReadInventory(cf, source)
+			inv, err = ReadInventory(cf, source, fetchopts...)
 		}
 
 		if err != nil {
+			failed++
 			log.Error("failed to read inventory", slog.String("src", source), slog.Any("error", err))
 			continue
 		}
+		loaded++
 
-		if config.Get[bool](cf, "inventory.check-modified") {
+		if checkModified {
 			log.Debug("storing inventory", slog.String("src", source), slog.Int64("size", inv.size), slog.Time("last_modified", inv.lastModified))
-			Inventories.Store(source, inv)
+			Inventories.Store(stateKey, inv)
 		}
 
 		for h, t := range inv.hosts {
 			hosts[h] = maps.Clone(lookup)
+			if hosts[h] == nil {
+				hosts[h] = HostMappings{}
+			}
 			hosts[h]["hostname"] = h
 			hosts[h]["hosttype"] = t
 		}
 	}
 
+	if loaded == 0 && failed > 0 {
+		return nil, fmt.Errorf("none of the %d configured inventories could be read", failed)
+	}
+
 	return
+}
+
+// inventoryCache returns the expanded path to save a copy of a remote
+// inventory to, if configured
+func inventoryCache(cf *config.Config, expand []config.ExpandOption) string {
+	cache := config.Get[string](cf, "inventory.cache", expand...)
+	if cache == "" {
+		return ""
+	}
+	return config.ResolveHome(cache)
 }

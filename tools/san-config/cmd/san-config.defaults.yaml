@@ -229,7 +229,7 @@ inventory:
   # cache: ./cache-files/${site}-${environment}-${index}.json
 
   # the timeout for fetching a remote inventory
-  timeeout: 10s
+  timeout: 10s
 
   # For https:// URLs should the server certificates be verified or
   # ignored. Change to true if remote server doesn't have publicly
@@ -245,8 +245,8 @@ inventory:
     # value: ${enc:~/.config/geneos/keyfile.aes:+encs+8F8F1FCACB5EBED9FE99E76291F88F38349120EC94EA9AA8077F0D0D1B11791B}
 
     # type: basic
-    # user: xyz
-    # pass: abc
+    # username: xyz
+    # password: abc
 
 # component type definitions
 #

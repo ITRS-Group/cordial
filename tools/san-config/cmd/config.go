@@ -18,14 +18,16 @@ limitations under the License.
 package cmd
 
 import (
+	"cmp"
+	"fmt"
 	"log/slog"
 	"maps"
-	"os"
-	"reflect"
+	"math"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,21 +54,26 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 	cs.RUnlock()
 
 	// build `unknown` mappings table as default, use inventory.mappings
-	mappings := config.Get[map[string]string](conf, "inventory.mappings")
+	mappings := maps.Clone(config.Get[map[string]string](conf, "inventory.mappings"))
+	if mappings == nil {
+		mappings = map[string]string{}
+	}
 	mappings["hostname"] = hostname
 	mappings["hosttype"] = "unknown"
 
-	_, hostmapOK := hostmap[hostname]
+	// inventory keys are lower-cased by the configuration package, so
+	// look hosts up the same way
+	hostmapping, hostmapOK := hostmap[strings.ToLower(hostname)]
 
 	if componentOverride != "" {
 		if conf.IsSet(conf.Join("components", componentOverride)) {
 			if hostmapOK {
-				mappings = maps.Clone(hostmap[hostname])
+				mappings = maps.Clone(hostmapping)
 			}
 			mappings["hosttype"] = componentOverride
 		}
 	} else if hostmapOK {
-		mappings = maps.Clone(hostmap[hostname])
+		mappings = maps.Clone(hostmapping)
 	}
 
 	initialComponentType := mappings["hosttype"]
@@ -82,8 +89,8 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 		component = conf.Sub("components." + mappings["hosttype"])
 	}
 	if i == 10 {
-		log.Warn("component alias loop for %s, skipping", slog.String("component", initialComponentType))
-		return
+		log.Warn("component alias loop, skipping", slog.String("component", initialComponentType))
+		return nil, ""
 	}
 	finalComponentType = mappings["hosttype"]
 
@@ -103,7 +110,7 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 		SelfAnnounce: &netprobe.SelfAnnounce{
 			Enabled:                  true,
 			RetryInterval:            int(config.Get[time.Duration](conf, "geneos.sans.retry-interval").Seconds()),
-			RequireReverseConnection: config.Get[bool](conf, "geneos.sans.reverse-connection"),
+			RequireReverseConnection: reverseConnections(conf),
 			ProbeName:                config.Get[string](component, "probe-name", config.LookupTable(mappings)),
 			Gateways:                 cs.Gateways(hostname),
 		},
@@ -114,10 +121,10 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 		log.Error("no entities defined for component, skipping", slog.String("hostname", hostname), slog.String("component", mappings["hosttype"]))
 		return
 	}
-	t := reflect.TypeOf(entities)
-	if t.Kind() != reflect.Slice {
-		log.Error("entities is not a slice", slog.String("hostname", hostname), slog.String("component", mappings["hosttype"]), slog.Any("entities", entities))
-		os.Exit(1)
+	entityList, ok := entities.([]any)
+	if !ok {
+		log.Error("entities is not a list", slog.String("hostname", hostname), slog.String("component", mappings["hosttype"]), slog.Any("entities", entities))
+		return nil, ""
 	}
 
 	// extract defaults for this component, if they exist
@@ -125,11 +132,11 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 	for _, a := range config.Get[[]map[string]string](component, "attributes", config.LookupTable(mappings)) {
 		defAttrs[a["name"]] = a["value"]
 	}
-	defTypes := append(globalTypes, config.Get[[]string](component, "types", config.LookupTable(mappings))...)
-	defVars := append(globalVars, getVars(component, "variables", config.LookupTable(mappings))...)
+	defTypes := slices.Concat(globalTypes, config.Get[[]string](component, "types", config.LookupTable(mappings)))
+	defVars := slices.Concat(globalVars, getVars(component, "variables", config.LookupTable(mappings)))
 
 	// iterate over Entities, filling in defaults as defined
-	for i, em := range entities.([]any) {
+	for i, em := range entityList {
 		_, ok := em.(map[string]any)
 		if !ok {
 			continue
@@ -169,16 +176,13 @@ func (cs *ConfigServer) NetprobeConfig(hostname string, componentOverride string
 			}
 		}
 
-		types := append(defTypes, config.Get[[]string](entity, "types", config.LookupTable(mappings))...)
+		types := slices.Concat(defTypes, config.Get[[]string](entity, "types", config.LookupTable(mappings)))
 
 		if len(types) > 0 {
-			ent.Types = &netprobe.Types{}
-			for _, t := range types {
-				ent.Types.Types = append(ent.Types.Types, t)
-			}
+			ent.Types = &netprobe.Types{Types: types}
 		}
 
-		vars := append(defVars, getVars(entity, "variables", config.LookupTable(mappings))...)
+		vars := slices.Concat(defVars, getVars(entity, "variables", config.LookupTable(mappings)))
 		if len(vars) > 0 {
 			ent.Vars = &netprobe.Vars{
 				Vars: vars,
@@ -215,16 +219,17 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 			gateways = append(gateways, GatewayDetails(g, allGatewayDetails))
 		}
 	} else {
-		gatewayNames = []string{config.Get[string](conf, "geneos.fallback-gateway.name", config.DefaultValue(config.Get[string](conf, "geneos.fallback-gateway.primary")))}
-		if len(gatewayNames) == 0 {
+		fallback := config.Get[map[string]string](conf, "geneos.fallback-gateway")
+		name := cmp.Or(fallback["name"], fallback["primary"])
+		if name == "" {
 			log.Error("fallback gateway not configured correctly")
 			return
 		}
 
-		gateways = append(gateways, GatewayDetails(gatewayNames[0], []map[string]string{config.Get[map[string]string](conf, "geneos.fallback-gateway")}))
+		gateways = append(gateways, GatewayDetails(name, []map[string]string{fallback}))
 	}
 
-	maxGateways := config.Get[int](cf, "geneos.sans.gateways", config.DefaultValue(1))
+	maxGateways := config.Get[int](conf, "geneos.sans.gateways", config.DefaultValue(1))
 	log.Debug("selecting gateways for host with prefix", slog.Int("maxGateways", maxGateways), slog.String("hostname", hostname), slog.String("netprobeID", netprobeID))
 
 	i := 0
@@ -251,12 +256,77 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 	return
 }
 
+// reverseConnections returns the `geneos.sans.reverse-connections`
+// setting. The singular `reverse-connection`, which is what the code
+// used to read, is still accepted if it is set.
+func reverseConnections(conf *config.Config) bool {
+	if conf.IsSet(conf.Join("geneos", "sans", "reverse-connection")) {
+		return config.Get[bool](conf, "geneos.sans.reverse-connection")
+	}
+	return config.Get[bool](conf, "geneos.sans.reverse-connections")
+}
+
 type varConf struct {
 	Name  string
 	Type  string
 	Value any
 }
 
+// toInt64 converts a numeric configuration value to an int64, if it is
+// an integer value
+func toInt64(v any) (i int64, ok bool) {
+	switch v := v.(type) {
+	case int:
+		return int64(v), true
+	case int8:
+		return int64(v), true
+	case int16:
+		return int64(v), true
+	case int32:
+		return int64(v), true
+	case int64:
+		return v, true
+	case uint:
+		return int64(v), v <= math.MaxInt64
+	case uint8:
+		return int64(v), true
+	case uint16:
+		return int64(v), true
+	case uint32:
+		return int64(v), true
+	case uint64:
+		return int64(v), v <= math.MaxInt64
+	case float32:
+		return toInt64(float64(v))
+	case float64:
+		return int64(v), v == math.Trunc(v) && v >= math.MinInt64 && v <= math.MaxInt64
+	case string:
+		i, err := strconv.ParseInt(strings.TrimSpace(v), 10, 64)
+		return i, err == nil
+	}
+	return
+}
+
+// toFloat64 converts a numeric configuration value to a float64
+func toFloat64(v any) (f float64, ok bool) {
+	switch v := v.(type) {
+	case float32:
+		return float64(v), true
+	case float64:
+		return v, true
+	case string:
+		f, err := strconv.ParseFloat(strings.TrimSpace(v), 64)
+		return f, err == nil
+	}
+	if i, ok := toInt64(v); ok {
+		return float64(i), true
+	}
+	return
+}
+
+// getVars returns the Geneos variables defined in the configuration
+// list at key. Variables with an unsupported type or a value that cannot
+// be converted to the type are logged and skipped.
 func getVars(conf *config.Config, key string, options ...config.ExpandOption) (vars []geneos.Vars) {
 	var vs []varConf
 	if err := conf.UnmarshalKey(key, &vs, config.NoExpand()); err != nil {
@@ -268,6 +338,7 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOption) (v
 		vr := geneos.Vars{
 			Name: v.Name,
 		}
+		valid := true
 		switch strings.ToLower(v.Type) {
 		case "bool", "boolean":
 			// Boolean       *bool          `xml:"boolean,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -275,35 +346,31 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOption) (v
 			case bool:
 				vr.Boolean = &val
 			case string:
-				valbool, _ := strconv.ParseBool(val)
+				valbool, err := strconv.ParseBool(strings.TrimSpace(val))
 				vr.Boolean = &valbool
+				valid = err == nil
+			default:
+				valid = false
 			}
 		case "float", "double":
 			// Double        *float64       `xml:"double,omitempty" json:",omitempty" yaml:",omitempty"`
-			switch val := v.Value.(type) {
-			case float64:
-				vr.Double = &val
-			case string:
-				var val64 float64
-				val64, _ = strconv.ParseFloat(val, 64)
-				vr.Double = &val64
-			}
+			var val float64
+			val, valid = toFloat64(v.Value)
+			vr.Double = &val
 		case "int", "integer":
 			// Integer       *int64         `xml:"integer,omitempty" json:",omitempty" yaml:",omitempty"`
-			switch val := v.Value.(type) {
-			case int:
-				var val64 int64
-				val64 = int64(val)
-				vr.Integer = &val64
-			case string:
-				var val64 int64
-				val64, _ = strconv.ParseInt(val, 10, 64)
-				vr.Integer = &val64
-			}
+			var val int64
+			val, valid = toInt64(v.Value)
+			vr.Integer = &val
 		case "string":
 			// String        string         `xml:"string,omitempty" json:",omitempty" yaml:",omitempty"`
-			if val, ok := v.Value.(string); ok {
+			switch val := v.Value.(type) {
+			case string:
 				vr.String = config.Expand[string](conf, val, options...)
+			case bool, int, int64, uint64, float64:
+				vr.String = fmt.Sprint(val)
+			default:
+				valid = false
 			}
 		case "stringlist":
 			// StringList    *StringList    `xml:"stringList,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -316,6 +383,12 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOption) (v
 						vr.StringList.Strings = append(vr.StringList.Strings, config.Expand[string](conf, s, options...))
 					}
 				}
+			case []string:
+				for _, s := range val {
+					vr.StringList.Strings = append(vr.StringList.Strings, config.Expand[string](conf, s, options...))
+				}
+			default:
+				valid = false
 			}
 		case "regex", "regexp":
 			// Regex         *Regex         `xml:"regex,omitempty" json:",omitempty" yaml:",omitempty"`
@@ -328,38 +401,68 @@ func getVars(conf *config.Config, key string, options ...config.ExpandOption) (v
 					if len(r) == 3 {
 						vr.Regex.Flags = &geneos.RegexFlags{}
 						if strings.Contains(r[2], "i") {
-							i := true
-							vr.Regex.Flags.CaseInsensitive = &i
+							vr.Regex.Flags.CaseInsensitive = new(true)
 						}
 						if strings.Contains(r[2], "s") {
-							s := true
-							vr.Regex.Flags.DotMatchesAll = &s
+							vr.Regex.Flags.DotMatchesAll = new(true)
 						}
 					}
 				} else {
 					vr.Regex.Regex = val
 				}
+			} else {
+				valid = false
 			}
 		default:
-			log.Warn("variable type not supported, skipping", slog.String("type", v.Type))
+			log.Warn("variable type not supported, skipping", slog.String("name", v.Name), slog.String("type", v.Type))
+			continue
+		}
+		if !valid {
+			log.Warn("variable value is not valid for the type, skipping", slog.String("name", v.Name), slog.String("type", v.Type), slog.Any("value", v.Value))
+			continue
 		}
 		vars = append(vars, vr)
 	}
 	return
 }
 
+// groupingRegexp is a compiled `geneos.sans.grouping` expression, or
+// the error from compiling it
+type groupingRegexp struct {
+	re  *regexp.Regexp
+	err error
+}
+
+// groupingRegexps caches compiled grouping expressions, by pattern, so
+// they are only compiled once and not for every request
+var groupingRegexps sync.Map
+
+func compileGrouping(pattern string) groupingRegexp {
+	if g, ok := groupingRegexps.Load(pattern); ok {
+		return g.(groupingRegexp)
+	}
+	g := groupingRegexp{}
+	g.re, g.err = regexp.Compile(pattern)
+	if g.err == nil && g.re.NumSubexp() < 1 {
+		g.re, g.err = nil, fmt.Errorf("grouping expression %q has no capture group", pattern)
+	}
+	groupingRegexps.Store(pattern, g)
+	return g
+}
+
 func netprobeID(conf *config.Config, hostname string) (id string) {
 	// extract the part of the hostname used for netprobeID, default to hostname
 	id = hostname
 	if g := config.Get[string](conf, "geneos.sans.grouping"); g != "" {
-		if r, err := regexp.Compile(g); err != nil {
-			log.Error("ignoring grouping", slog.Any("error", err))
+		grouping := compileGrouping(g)
+		if grouping.err != nil {
+			log.Error("ignoring grouping", slog.Any("error", grouping.err))
+			return
+		}
+		if m := grouping.re.FindStringSubmatch(hostname); len(m) > 1 {
+			id = m[1]
 		} else {
-			if m := r.FindStringSubmatch(hostname); len(m) > 0 {
-				id = m[1]
-			} else {
-				log.Warn("grouping did not match, using full hostname", slog.String("hostname", hostname))
-			}
+			log.Warn("grouping did not match, using full hostname", slog.String("hostname", hostname))
 		}
 	}
 	return

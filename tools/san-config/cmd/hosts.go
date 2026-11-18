@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -32,9 +33,11 @@ var Inventories sync.Map
 // LoadHosts reads the inventories and extracts the hosts and their
 // types, returning them as a map of HostMappings
 func LoadHosts(cf *config.Config) (hosts map[string]HostMappings, err error) {
-	switch config.Get[string](cf, "inventory.type") {
+	switch t := config.Get[string](cf, "inventory.type"); t {
 	case "yaml":
 		hosts, err = ReadHostsYAML(cf)
+	default:
+		err = fmt.Errorf("unsupported inventory.type %q", t)
 	}
 	return
 }
