@@ -139,13 +139,13 @@ geneos backup all
 
 		// if no host is given, make it local only
 		h := geneos.GetHost(Hostname)
-		if h == geneos.ALL {
+		if h == nil || h == geneos.ALL {
 			h = geneos.LOCAL
 		}
 
 		suffix, ok := compression[backupCmdCompression]
 		if !ok {
-			return fmt.Errorf("invalid compression type, select one of: %s", strings.Join(slices.Collect(maps.Keys(compression)), ", "))
+			return fmt.Errorf("invalid compression type, select one of: %s", strings.Join(slices.Sorted(maps.Keys(compression)), ", "))
 		}
 
 		if !backupCmdIncludeAll {
@@ -159,7 +159,9 @@ geneos backup all
 			if strings.HasSuffix(backupCmdOutput, "/") {
 				// user has asked for a directory, so try to create it as well
 				archive = backupCmdOutput
-				os.MkdirAll(archive, 0664)
+				if err = os.MkdirAll(archive, 0775); err != nil {
+					return err
+				}
 			} else {
 				// check for existing file, else try to create the directories above it
 				st, err := os.Stat(backupCmdOutput)
@@ -173,7 +175,11 @@ geneos backup all
 				} else {
 					if errors.Is(err, os.ErrNotExist) {
 						archive = backupCmdOutput
-						os.MkdirAll(filepath.Dir(archive), 0775)
+						if archive != "-" {
+							if err = os.MkdirAll(filepath.Dir(archive), 0775); err != nil {
+								return err
+							}
+						}
 					} else {
 						return err
 					}
@@ -224,83 +230,29 @@ geneos backup all
 		}
 
 		// contents is a list of files so that instances do not duplicate shared contents
-		var contents []string
+		var contents []backupEntry
 		resp := instance.Do(command.CommandPath(), h, ct, names, getInstanceFilePaths, &contents)
 
-		out2 := os.Stderr
-		if archive != "-" {
-			out2 = os.Stdout
+		// messages must not be mixed with an archive written to stdout
+		out2 := os.Stdout
+		if archive == "-" {
+			out2 = os.Stderr
 		}
 		resp.Report(out2)
 		if backupCmdIncludeShared {
-			fmt.Println("matching shared directories also included")
+			fmt.Fprintln(out2, "matching shared directories also included")
 		}
 
-		slices.Sort(contents)
-		contents = slices.Compact(contents)
+		slices.SortFunc(contents, func(a, b backupEntry) int { return strings.Compare(a.name, b.name) })
+		contents = slices.CompactFunc(contents, func(a, b backupEntry) bool { return a.name == b.name })
 
-		var out *os.File
 		if archive == "-" {
-			out = os.Stdout
-		} else {
-			out, err = os.Create(archive)
-			if err != nil {
-				return
-			}
-			defer out.Close()
-		}
-
-		var w io.WriteCloser
-
-		switch backupCmdCompression {
-		case "gzip":
-			w, err = gzip.NewWriterLevel(out, gzip.BestCompression)
-			if err != nil {
-				return
-			}
-			defer w.Close()
-		case "bzip2":
-			w, err = bzip2.NewWriter(out, &bzip2.WriterConfig{Level: 9})
-			if err != nil {
-				return
-			}
-			defer w.Close()
-		case "none":
-			w = out
-		}
-
-		tw := tar.NewWriter(w)
-		defer tw.Close()
-
-		root := h.PathTo()
-		for _, f := range contents {
-			p := h.Join(root, f)
-			fi, err := h.Stat(p)
-			if err != nil {
+			if err = writeBackup(h, contents, os.Stdout, backupCmdCompression); err != nil {
 				return err
 			}
-			if !fi.Mode().IsRegular() && !fi.IsDir() {
-				return fmt.Errorf("%s is not a regular file or directory", p)
-			}
-			uid, gid := host.GetFileOwner(h, fi)
-			th := &tar.Header{
-				Format:  tar.FormatUnknown,
-				Name:    f,
-				Size:    fi.Size(),
-				Mode:    int64(fi.Mode()),
-				ModTime: fi.ModTime(),
-				Uid:     uid,
-				Gid:     gid,
-			}
-			tw.WriteHeader(th)
-			if !fi.IsDir() {
-				b, err := h.ReadFile(p)
-				if err != nil {
-					return err
-				}
-				if _, err = tw.Write(b); err != nil {
-					return err
-				}
+		} else {
+			if err = createBackup(h, contents, archive, backupCmdCompression); err != nil {
+				return err
 			}
 		}
 
@@ -309,8 +261,103 @@ geneos backup all
 	},
 }
 
+// createBackup writes the archive to the file named archive, removing
+// it if it cannot be completed.
+func createBackup(h *geneos.Host, contents []backupEntry, archive, compression string) (err error) {
+	out, err := os.Create(archive)
+	if err != nil {
+		return err
+	}
+	err = writeBackup(h, contents, out, compression)
+	if cerr := out.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		os.Remove(archive)
+	}
+	return
+}
+
+// writeBackup writes a tar archive of contents, relative to the Geneos
+// directory on host h, to out using the given compression. All write
+// and close errors are returned.
+func writeBackup(h *geneos.Host, contents []backupEntry, out io.Writer, compression string) (err error) {
+	var w io.Writer
+
+	switch compression {
+	case "gzip":
+		var zw *gzip.Writer
+		if zw, err = gzip.NewWriterLevel(out, gzip.BestCompression); err != nil {
+			return
+		}
+		defer func() { err = errors.Join(err, zw.Close()) }()
+		w = zw
+	case "bzip2":
+		var zw io.WriteCloser
+		if zw, err = bzip2.NewWriter(out, &bzip2.WriterConfig{Level: 9}); err != nil {
+			return
+		}
+		defer func() { err = errors.Join(err, zw.Close()) }()
+		w = zw
+	default:
+		w = out
+	}
+
+	tw := tar.NewWriter(w)
+	defer func() { err = errors.Join(err, tw.Close()) }()
+
+	root := h.PathTo()
+	for _, e := range contents {
+		p := h.Join(root, e.name)
+		fi := e.info
+		if !fi.Mode().IsRegular() && !fi.IsDir() {
+			return fmt.Errorf("%s is not a regular file or directory", p)
+		}
+		th, err := tar.FileInfoHeader(fi, "")
+		if err != nil {
+			return err
+		}
+		th.Name = e.name
+		th.Format = tar.FormatUnknown
+		th.Uid, th.Gid = host.GetFileOwner(h, fi)
+		if err = tw.WriteHeader(th); err != nil {
+			return err
+		}
+		if fi.IsDir() {
+			continue
+		}
+		if err = copyFile(h, p, tw, fi.Size()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copyFile streams exactly size bytes of the file p on host h to w. The
+// size is that written to the tar header, so the file is rejected if it
+// shrank since it was found and any additional data is ignored.
+func copyFile(h *geneos.Host, p string, w io.Writer, size int64) error {
+	f, err := h.Open(p)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	if _, err = io.CopyN(w, f, size); err != nil {
+		return fmt.Errorf("%s: %w", p, err)
+	}
+	return nil
+}
+
+// backupEntry is a file or directory to be included in a backup, with
+// the name relative to the Geneos directory and the file information
+// found when walking the directory
+type backupEntry struct {
+	name string
+	info fs.FileInfo
+}
+
 // getInstanceFilePaths returns a list of paths to backup for the
-// instance and returns the results in the string slice pointer in
+// instance and returns the results in the backupEntry slice pointer in
 // params[0].
 func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.General) {
 	var ignoreDirs, ignoreFiles []string
@@ -324,9 +371,9 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
-	contents, ok := params[0].(*[]string)
+	contents, ok := params[0].(*[]backupEntry)
 	if !ok {
-		i.Log().Debug("invalid contents parameter", slog.Any("contents", contents))
+		i.Log().Debug("invalid contents parameter", slog.Any("contents", params[0]))
 		resp.Err = geneos.ErrInvalidArgs
 		return
 	}
@@ -427,7 +474,7 @@ var contentsMutex sync.Mutex
 // walkDir walks the given directory on host h, adding files and directories
 // to contents slice, using relative as the base path. ignoreDirs and ignoreFiles
 // are patterns to skip. walkDir is concurrency safe for the contents slice.
-func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDirs, ignoreFiles []string) error {
+func walkDir(h *geneos.Host, dir, relative string, contents *[]backupEntry, ignoreDirs, ignoreFiles []string) error {
 	return h.WalkDir(dir, func(file string, di fs.DirEntry, err error) error {
 		if err != nil {
 			log.Debug("error walking directory", slog.Any("error", err), slog.String("dir", dir))
@@ -448,10 +495,12 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 			}
 			contentsMutex.Lock()
 			defer contentsMutex.Unlock()
-			*contents = append(*contents, filepath.Join(relative, file)+"/")
+			*contents = append(*contents, backupEntry{name: filepath.Join(relative, file) + "/", info: fi})
 			return nil
 		case fi.Mode()&fs.ModeSymlink != 0:
 			log.Debug("ignoring symlink", slog.String("file", file))
+		case !fi.Mode().IsRegular():
+			log.Debug("ignoring special file", slog.String("file", file))
 		default:
 			if !backupCmdIncludeAll {
 				for _, ig := range ignoreFiles {
@@ -466,7 +515,7 @@ func walkDir(h *geneos.Host, dir, relative string, contents *[]string, ignoreDir
 			}
 			contentsMutex.Lock()
 			defer contentsMutex.Unlock()
-			*contents = append(*contents, filepath.Join(relative, file))
+			*contents = append(*contents, backupEntry{name: filepath.Join(relative, file), info: fi})
 			return nil
 		}
 		return nil
