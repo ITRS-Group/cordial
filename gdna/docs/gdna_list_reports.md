@@ -21,7 +21,7 @@ gdna list reports
                         to the value given.
   -F, --format string   format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown' (default "table")
   -f, --config FILE     Use configuration FILE
-  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO

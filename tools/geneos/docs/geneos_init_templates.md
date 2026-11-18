@@ -20,7 +20,7 @@ geneos init templates [TYPE] [flags]
       --allow-root[=true|false]          allow running as root (not recommended)
   -A, --archive string                   URL, file, or directory of releases for installation.
                                          Local paths use local archives only
-  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                    config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
@@ -31,7 +31,7 @@ geneos init templates [TYPE] [flags]
   -l, --log[=true|false]                 Follow logs after starting instance(s)
   -n, --name string                      Use name for instances and configurations instead of the hostname
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string                  profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension

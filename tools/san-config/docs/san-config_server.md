@@ -1,11 +1,11 @@
-# `docs server`
+# `san-config server`
 
 Run server for config request
 
 ## Usage
 
 ```text
-docs server [flags]
+san-config server [flags]
 ```
 
 ### Options
@@ -19,4 +19,4 @@ docs server [flags]
 
 ## SEE ALSO
 
-* [docs](docs.md)	 - Generate SAN configurations
+* [san-config](san-config.md)	 - Generate SAN configurations

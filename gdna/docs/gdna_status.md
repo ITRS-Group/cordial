@@ -13,7 +13,7 @@ gdna status
 
 ```text
   -f, --config FILE    Use configuration FILE
-  -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
       --pidfile file   Use the PID file, overriding `gdna.pidfile` in the configuration
 ```
 

@@ -13,7 +13,7 @@ gdna list excludes [CATEGORY]
 ```text
   -f, --config FILE     Use configuration FILE
   -F, --format string   output format
-  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO
