@@ -27,7 +27,11 @@ When a column specifier does not contain a `match` entry then the column value i
 
 When no column contains a `match` option then the file contents are not accessed and only file metadata is used to construct the columns.
 
+Files that are excluded by the `types` option, or by the `ignore-file-errors` option, are left out of the output completely. If `row-limit` is set then no more than that number of rows are output (the headlines are still output).
+
 However, if any column specifier contains a `match` clause then the file is opened for reading and scanned, line at a time, and the first matching line in the file is used to fill in the `value` for that column, using regular expression groups to capture specific text that can be interpolated into `value`. Once the value of a column is set, it is no longer checked against further lines in the file. If all columns containing a `match` clause have had values set then the scanning of the file is considered complete and the program moves on to the next row/file.
+
+Lines of up to 16MiB are supported. If a file cannot be read to the end, for example because of a longer line or an I/O error, then an error is logged and the values found up to that point are used.
 
 If you specify an `ignore-lines` list of regular expressions then any lines that match any of these will be immediately skipped and the program moves on to the next line. If, after processing all the lines in the file (up to `max-lines`, if given), any columns that have not matched the given regexp then the `fail` option is used to fill in the column value.
 
@@ -59,12 +63,15 @@ The variables below only have values when files are found:
 | `${mode}` | The file mode in POSIX/UNIX format |
 | `${device}` | The filesystem ID based on the local OS value. On Linux this is a decimal value while on Windows this is in hexadeciaml, to align with local conventions |
 
+Variables that are specific to one operating system are empty when the program is run on another one.
+
 The variables below only have values when files are found on a Linux system:
 
 | Variable      | Description |
 |---------------|-------------|
 |  `${uid}` / `${gid}` | The numeric values for the UID and GID of the file |
 | `${user}` / `${group}` | The human-readable user and group owners of the file. If these cannot be found then these are set to the UID and GID, as above |
+| `${owner}` | The same as `${user}`, so that configurations can use a name that is common to both Linux and Windows |
 | `${inode}` | The inode of the file, in decimal format |
 
 The variables below only have values when files are found on a Windows system:
@@ -73,6 +80,7 @@ The variables below only have values when files are found on a Windows system:
 |---------------|-------------|
 | `${sid}` | The SID of the file owner |
 | `${owner}` | The account name for the owner of the file in `DOMAIN\USERNAME` format. If the account name cannot be found then the SID is used. |
+| `${user}` | The same as `${owner}` |
 | `${index}` | The 64-bit Windows File Index ID in hexadecimal format |
 
 

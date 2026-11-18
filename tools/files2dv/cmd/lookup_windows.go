@@ -42,6 +42,7 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	}
 	lookup = map[string]string{
 		"fullpath": fullpath,
+		"path":     path,
 		"pattern":  pattern,
 		"filename": filepath.Base(path),
 		"status":   "OK",
@@ -128,7 +129,9 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 		nil,
 		&secDesc,
 	)
-	if err == nil {
+	if err != nil {
+		log.Error("failed to get file owner", slog.Any("error", err), slog.String("path", path))
+	} else {
 		defer windows.LocalFree(secDesc)
 		lookup["sid"] = owner.String()
 		lookup["owner"] = owner.String()
@@ -136,9 +139,14 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 			log.Debug("account/domain/accType", slog.String("account", account), slog.String("domain", domain), slog.Any("type", accType))
 			lookup["owner"] = domain + "\\" + account
 		}
+		lookup["user"] = lookup["owner"]
 	}
 
 	info, err := fileinfoWindows(path)
+	if err != nil {
+		log.Error("failed to get file information", slog.Any("error", err), slog.String("path", path))
+		return
+	}
 	log.Debug("file info", slog.Any("info", info))
 	lookup["device"] = fmt.Sprintf("0x%08X", info.VolumeSerialNumber)
 	lookup["index"] = fmt.Sprintf("0x%08X%08X", info.FileIndexHigh, info.FileIndexLow)
