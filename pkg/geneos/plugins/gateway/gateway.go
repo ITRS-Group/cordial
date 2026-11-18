@@ -10,58 +10,83 @@ import (
 
 type GatewayBreachPredictorPlugin struct {
 	XMLName xml.Name `xml:"Gateway-breachPredictor" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayBreachPredictorPlugin) String() string { return p.XMLName.Local }
 
 type GatewayClientConnectionDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-clientConnectionData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayClientConnectionDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayDatabaseLoggingPlugin struct {
 	XMLName xml.Name `xml:"Gateway-databaseLogging" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayDatabaseLoggingPlugin) String() string { return p.XMLName.Local }
 
 type GatewayExportedDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-exportedData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayExportedDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-gatewayData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayHubDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-gatewayHubData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayHubDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayImportedDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-importedData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayImportedDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayIncludesDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-includesData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayIncludesDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayLicenceUsagePlugin struct {
-	XMLName     xml.Name                     `xml:"Gateway-licenceUsage" json:"-" yaml:"-"`
-	Groups      []common.SingleLineStringVar `xml:"groups>group,omitempty"`
-	ShowOverall *bool                        `xml:"showOverall,omitempty"`
-	ShowOther   *bool                        `xml:"showOther,omitempty"`
-	Other       []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name                     `xml:"Gateway-licenceUsage" json:"-" yaml:"-"`
+	Groups          []common.SingleLineStringVar `xml:"groups>group,omitempty"`
+	ShowOverall     *bool                        `xml:"showOverall,omitempty"`
+	ShowOther       *bool                        `xml:"showOther,omitempty"`
+	Other           []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                   `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the GatewayLicenceUsagePlugin without the empty wrapper elements encoding/xml
@@ -76,38 +101,52 @@ type GatewayLoadPlugin struct {
 	XMLName             xml.Name               `xml:"Gateway-gatewayLoad" json:"-" yaml:"-"`
 	MaximumNumberOfRows *common.Value          `xml:"maximumNumberOfRows,omitempty"`
 	Other               []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes     []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayLoadPlugin) String() string { return p.XMLName.Local }
 
 type GatewayManagedEntityDataPlugin struct {
-	XMLName xml.Name               `xml:"Gateway-managedEntitiesData" json:"-" yaml:"-"`
-	Mode    *string                `xml:"mode,omitempty"`
-	Other   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name               `xml:"Gateway-managedEntitiesData" json:"-" yaml:"-"`
+	Mode            *string                `xml:"mode,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayManagedEntityDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayObcervConnectionPlugin struct {
 	XMLName xml.Name `xml:"Gateway-obcervConnection" json:"-" yaml:"-" geneos:"deprecated"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayObcervConnectionPlugin) String() string { return p.XMLName.Local }
 
 type GatewayProbeDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-probeData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayProbeDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayScheduledCommandsHistoryDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-scheduledCommandsHistoryData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayScheduledCommandsHistoryDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewayScheduledCommandDataPlugin struct {
 	XMLName xml.Name `xml:"Gateway-scheduledCommandData" json:"-" yaml:"-"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayScheduledCommandDataPlugin) String() string { return p.XMLName.Local }
@@ -121,6 +160,7 @@ type GatewaySeverityCountPlugin struct {
 	AppendManagedEntity *bool                  `xml:"appendManagedEntity,omitempty"`
 	FilterByAttribute   []FilterByAttribute    `xml:"filterByAttribute>attribute,omitempty"`
 	Other               []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes     []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the GatewaySeverityCountPlugin without the empty wrapper elements encoding/xml
@@ -132,16 +172,18 @@ func (v GatewaySeverityCountPlugin) MarshalXML(e *xml.Encoder, start xml.StartEl
 func (p *GatewaySeverityCountPlugin) String() string { return p.XMLName.Local }
 
 type FilterByAttribute struct {
-	XMLName xml.Name               `xml:"attribute" json:"-" yaml:"-"`
-	Include *FilterAttribute       `xml:"include,omitempty"`
-	Exclude *FilterAttribute       `xml:"exclude,omitempty"`
-	Other   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name               `xml:"attribute" json:"-" yaml:"-"`
+	Include         *FilterAttribute       `xml:"include,omitempty"`
+	Exclude         *FilterAttribute       `xml:"exclude,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type FilterAttribute struct {
-	Name   string                 `xml:"name"`
-	Values []string               `xml:"values>value"`
-	Other  []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            string                 `xml:"name"`
+	Values          []string               `xml:"values>value"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GatewaySeverityDataPlugin struct {
@@ -153,6 +195,7 @@ type GatewaySeverityDataPlugin struct {
 	ExcludeSelfGenerated *bool                  `xml:"excludeSelfGenerated,omitempty"`
 	MaximumNumberOfRows  *common.Value          `xml:"maximumNumberOfRows,omitempty"`
 	Other                []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes      []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewaySeverityDataPlugin) String() string { return p.XMLName.Local }
@@ -161,17 +204,19 @@ type GatewaySnoozeDataPlugin struct {
 	XMLName              xml.Name               `xml:"Gateway-snoozeData" json:"-" yaml:"-"`
 	ExcludeSelfGenerated *bool                  `xml:"excludeSelfGenerated,omitempty"`
 	Other                []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes      []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewaySnoozeDataPlugin) String() string { return p.XMLName.Local }
 
 type GatewaySQLPlugin struct {
-	XMLName xml.Name                    `xml:"Gateway-sql" json:"-" yaml:"-"`
-	Setup   *common.SingleLineStringVar `xml:"setupSql>sql"`
-	Tables  *GatewaySQLTables           `xml:"tables"`
-	Sample  *common.SingleLineStringVar `xml:"sampleSql>sql"`
-	Views   []GWSQLView                 `xml:"views>view"`
-	Other   []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name                    `xml:"Gateway-sql" json:"-" yaml:"-"`
+	Setup           *common.SingleLineStringVar `xml:"setupSql>sql"`
+	Tables          *GatewaySQLTables           `xml:"tables"`
+	Sample          *common.SingleLineStringVar `xml:"sampleSql>sql"`
+	Views           []GWSQLView                 `xml:"views>view"`
+	Other           []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewaySQLPlugin) String() string { return p.XMLName.Local }
@@ -258,12 +303,18 @@ type GatewaySQLTableDataview struct {
 	Name    *common.SingleLineStringVar `xml:"tableName"`
 	XPath   string                      `xml:"xpath"`
 	Columns *[]GWSQLColumn              `xml:"columns>column,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GatewaySQLTableHeadline struct {
 	XMLName xml.Name                    `xml:"headlines" json:"-" yaml:"-"`
 	Name    *common.SingleLineStringVar `xml:"tableName"`
 	XPath   string                      `xml:"xpath"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GatewaySQLTableXPath struct {
@@ -271,25 +322,33 @@ type GatewaySQLTableXPath struct {
 	Name    *common.SingleLineStringVar `xml:"tableName"`
 	XPaths  []string                    `xml:"xpaths>xpath"`
 	Columns []GWSQLColumn               `xml:"columns>column"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GWSQLColumn struct {
 	Name  *common.SingleLineStringVar `xml:"name"`
 	XPath string                      `xml:"xpath,omitempty"`
 	Type  string                      `xml:"type,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GWSQLView struct {
-	XMLName  xml.Name                    `xml:"view" json:"-" yaml:"-"`
-	ViewName *common.SingleLineStringVar `xml:"name"`
-	SQL      *common.SingleLineStringVar `xml:"sql"`
-	Other    []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name                    `xml:"view" json:"-" yaml:"-"`
+	ViewName        *common.SingleLineStringVar `xml:"name"`
+	SQL             *common.SingleLineStringVar `xml:"sql"`
+	Other           []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type GatewayUserAssignmentDataPlugin struct {
 	XMLName              xml.Name               `xml:"Gateway-userAssignmentData" json:"-" yaml:"-"`
 	ExcludeSelfGenerated *bool                  `xml:"excludeSelfGenerated,omitempty"`
 	Other                []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes      []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *GatewayUserAssignmentDataPlugin) String() string { return p.XMLName.Local }

@@ -12,11 +12,13 @@ type Plugin struct {
 	ShowQueryDuration *bool                  `xml:"showQueryDuration,omitempty"`
 	Context           *Context               `xml:"context,omitempty"`
 	Other             []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes   []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Context struct {
 	ProviderArchitecture *string                `xml:"providerArchitecture,omitempty"`
 	Other                []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes      []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (*Plugin) String() string { return "wmi" }

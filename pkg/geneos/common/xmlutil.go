@@ -40,7 +40,8 @@ func isEmptyXMLValue(v reflect.Value) bool {
 // to, as encoding/xml would but without the empty parent elements that
 // encoding/xml writes for a field tagged `xml:"parent>child,omitempty"`
 // when the field is empty and so omitted. These are not wanted, and may
-// not be valid, in Geneos configuration.
+// not be valid, in Geneos configuration. A field that is a struct, not
+// a pointer to one, with the omitempty option is omitted if it is zero.
 //
 // It is for use in the MarshalXML method of a struct that has such
 // fields, as it encodes a copy of the struct that has no methods and so
@@ -77,8 +78,12 @@ func MarshalOmitEmptyParents(e *xml.Encoder, start xml.StartElement, v any) (err
 			continue
 		}
 		name, opts, _ := strings.Cut(f.Tag.Get("xml"), ",")
-		if strings.Contains(name, ">") && strings.Contains(","+opts+",", ",omitempty,") && isEmptyXMLValue(rv.Field(i)) {
-			f.Tag = `xml:"-"`
+		if strings.Contains(","+opts+",", ",omitempty,") {
+			// encoding/xml does not omit an empty struct, which is not
+			// wanted for the elements that are only there if they have content
+			if strings.Contains(name, ">") && isEmptyXMLValue(rv.Field(i)) || f.Type.Kind() == reflect.Struct && f.Type != reflect.TypeFor[xml.Name]() && f.Name != "XMLName" && rv.Field(i).IsZero() {
+				f.Tag = `xml:"-"`
+			}
 		}
 		fields = append(fields, f)
 		index = append(index, i)

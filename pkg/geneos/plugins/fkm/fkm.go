@@ -41,19 +41,22 @@ type Plugin struct {
 	ExtendedNTEventLogOutput     *common.Value               `xml:"extendedNTEventLogOutput,omitempty"`
 	PersistentData               *PersistentData             `xml:"persistentData,omitempty"`
 	Other                        []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes              []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (*Plugin) String() string { return "fkm" }
 
 type Display struct {
-	TriggerMode *string                `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
-	Other       []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	TriggerMode     *string                `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Tags struct {
-	StartTag *common.SingleLineStringVar `xml:"startTag,omitempty"`
-	EndTag   *common.SingleLineStringVar `xml:"endTag,omitempty"`
-	Other    []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	StartTag        *common.SingleLineStringVar `xml:"startTag,omitempty"`
+	EndTag          *common.SingleLineStringVar `xml:"endTag,omitempty"`
+	Other           []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type PersistentData struct {
@@ -61,12 +64,14 @@ type PersistentData struct {
 	ExpireTimeInMinutes *common.Value               `xml:"expireTimeInMinutes,omitempty"`
 	SaveLocation        *common.SingleLineStringVar `xml:"saveLocation,omitempty"`
 	Other               []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes     []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Files struct {
-	XMLName xml.Name               `xml:"files" json:"-" yaml:"-"`
-	Files   []File                 `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
-	Other   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name               `xml:"files" json:"-" yaml:"-"`
+	Files           []File                 `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type File struct {
@@ -78,6 +83,7 @@ type File struct {
 	Rewind              *common.Value               `xml:"rewind,omitempty" json:",omitempty" yaml:",omitempty"`
 	Alias               *common.SingleLineStringVar `xml:"alias,omitempty" json:",omitempty" yaml:",omitempty"`
 	Other               []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes     []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the File without the empty wrapper elements encoding/xml
@@ -92,13 +98,15 @@ type FileSource struct {
 	NTEventLog        string                      `xml:"ntEventLog,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"ntEventLog"`
 	ProcessDescriptor *common.Reference           `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"processDescriptor"`
 	Other             []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes   []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Table struct {
-	XMLName  xml.Name               `xml:"table" json:"-" yaml:"-"`
-	Severity string                 `xml:"severity"`
-	KeyTable *common.Value          `xml:"keyTable"`
-	Other    []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name               `xml:"table" json:"-" yaml:"-"`
+	Severity        string                 `xml:"severity"`
+	KeyTable        *common.Value          `xml:"keyTable"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type KeyTable struct {
@@ -188,6 +196,9 @@ func (out *Keys) appendKey(key string) {
 type IgnoreKey struct {
 	XMLName xml.Name `xml:"ignoreKey" json:"-" yaml:"-"`
 	Match   Match    `xml:"match"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Key struct {
@@ -196,12 +207,18 @@ type Key struct {
 	ClearKey *Match        `xml:"clearKey,omitempty"`
 	Message  *common.Value `xml:"message,omitempty"`
 	Severity string        `xml:"severity,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type SetKey struct {
 	Match        *Match        `xml:"match,omitempty"`
 	NotUpdatedIn *common.Value `xml:"notUpdatedIn>timePeriodInSeconds,omitempty"`
 	Updated      string        `xml:"updated,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type MatchRules string
@@ -215,4 +232,7 @@ const (
 type Match struct {
 	SearchString *common.SingleLineStringVar `xml:"searchString"`
 	Rules        MatchRules                  `xml:"rules,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }

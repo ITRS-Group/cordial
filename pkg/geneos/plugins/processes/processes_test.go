@@ -9,7 +9,7 @@ import (
 
 func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 	plugin := Plugin{
-		ProcessParameters:           &Parameters{Data: &ParametersData{Parameters: []Parameter{{Name: "filter", Value: "worker"}}}},
+		ProcessParameters:           &Parameters{Data: &ParametersData{Parameters: []Parameter{{Name: "pid"}, {Name: "args"}}}},
 		AdjustForLogicalCPUs:        common.NewValue(false),
 		AdjustForLogicalCPUsSummary: common.NewValue(true),
 		ShowProcessDetails:          common.NewValue(false),
@@ -28,7 +28,7 @@ func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 	}
 	data := testhelpers.Marshal(t, &plugin)
 	for _, element := range []string{
-		"<processParameters><data><parameter><name>filter</name><value>worker</value></parameter></data></processParameters>",
+		"<processParameters><data><parameter>pid</parameter><parameter>args</parameter></data></processParameters>",
 		"<adjustForLogicalCPUs><data>false</data></adjustForLogicalCPUs>",
 		"<showProcessDetails><data>false</data></showProcessDetails>",
 		"<processDescriptor ref=\"worker\"></processDescriptor>",

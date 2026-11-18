@@ -15,6 +15,7 @@ type Plugin struct {
 	MaxRows              *int                   `xml:"maxRows,omitempty"`
 	AdjustForLogicalCPUs *common.Value          `xml:"adjustForLogicalCPUs,omitempty"`
 	Other                []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes      []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Threshold struct {
@@ -23,6 +24,7 @@ type Threshold struct {
 	GreaterThanOrEqualTo  *float64               `xml:"greaterThanOrEqualTo,omitempty"`
 	LessThanOrEqualTo     *float64               `xml:"lessThanOrEqualTo,omitempty"`
 	Other                 []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes       []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }

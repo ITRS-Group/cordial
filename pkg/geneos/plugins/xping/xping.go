@@ -28,6 +28,7 @@ type Plugin struct {
 	CheckTargetHostHasChangedIPVar *common.Value          `xml:"var-checkTargetHostHasChangedIp,omitempty" json:"checkTargetHostHasChangedIpVar,omitempty" yaml:"checkTargetHostHasChangedIpVar,omitempty"`
 	CheckTargetHostHasChangedIP    *bool                  `xml:"checkTargetHostHasChangedIp,omitempty" json:"checkTargetHostHasChangedIp,omitempty" yaml:"checkTargetHostHasChangedIp,omitempty" geneos:"deprecated"`
 	Other                          []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes                []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Plugin without the empty wrapper elements encoding/xml
@@ -37,29 +38,33 @@ func (v Plugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 }
 
 type Protocol struct {
-	ICMP  *common.EmptyStruct    `xml:"ICMP,omitempty"`
-	TCP   *TCPMode               `xml:"TCP,omitempty"`
-	Other []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	ICMP            *common.EmptyStruct    `xml:"ICMP,omitempty"`
+	TCP             *TCPMode               `xml:"TCP,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type TCPMode struct {
-	Service *Service               `xml:"service,omitempty"`
-	Other   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Service         *Service               `xml:"service,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Service struct {
-	VarName *common.SingleLineStringVar `xml:"var-name,omitempty"`
-	Name    *string                     `xml:"name,omitempty" geneos:"deprecated"`
-	VarPort *common.Value               `xml:"var-port,omitempty"`
-	Port    *int                        `xml:"port,omitempty" geneos:"deprecated"`
-	Other   []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	VarName         *common.SingleLineStringVar `xml:"var-name,omitempty"`
+	Name            *string                     `xml:"name,omitempty" geneos:"deprecated"`
+	VarPort         *common.Value               `xml:"var-port,omitempty"`
+	Port            *int                        `xml:"port,omitempty" geneos:"deprecated"`
+	Other           []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Private struct {
-	Debug    *bool                  `xml:"debug,omitempty"`
-	PCEDebug *bool                  `xml:"pceDebug,omitempty"`
-	PSDebug  *bool                  `xml:"psDebug,omitempty"`
-	Other    []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Debug           *bool                  `xml:"debug,omitempty"`
+	PCEDebug        *bool                  `xml:"pceDebug,omitempty"`
+	PSDebug         *bool                  `xml:"psDebug,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }

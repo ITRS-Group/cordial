@@ -33,6 +33,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"slices"
 	"strconv"
 
 	"github.com/itrs-group/cordial/pkg/geneos/common"
@@ -87,6 +88,10 @@ type Gateway struct {
 	// source is the order of the elements of the document that was read,
 	// used to write the elements in the same order. It is never changed.
 	source *xmlOrder
+
+	// noCompatibility is set if the document that was read has no
+	// compatibility attribute, which is then not written if it is zero
+	noCompatibility bool
 }
 
 type gatewayXML Gateway
@@ -102,7 +107,10 @@ const xsiNamespace = "http://www.w3.org/2001/XMLSchema-instance"
 // and is written without them if there are none.
 func (g Gateway) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	start.Name = xml.Name{Local: "gateway"}
-	start.Attr = []xml.Attr{{Name: xml.Name{Local: "compatibility"}, Value: strconv.Itoa(g.Compatibility)}}
+	start.Attr = nil
+	if g.Compatibility != 0 || !g.noCompatibility {
+		start.Attr = []xml.Attr{{Name: xml.Name{Local: "compatibility"}, Value: strconv.Itoa(g.Compatibility)}}
+	}
 	xmlns := g.XMLNs
 	if xmlns == "" && g.XSI != "" {
 		xmlns = xsiNamespace
@@ -169,6 +177,7 @@ func (g *Gateway) decodeAttributes(attrs []xml.Attr) error {
 		}
 	}
 	g.Attributes = nil
+	g.noCompatibility = !slices.ContainsFunc(attrs, func(a xml.Attr) bool { return a.Name.Space == "" && a.Name.Local == "compatibility" })
 	for _, a := range attrs {
 		switch {
 		case a.Name.Space == "" && a.Name.Local == "compatibility":
@@ -219,10 +228,11 @@ func (v OperatingEnvironment) MarshalXML(e *xml.Encoder, start xml.StartElement)
 
 // Dataview describes a named dataview and any static additions to it.
 type Dataview struct {
-	Name      string            `xml:"name,attr"`
-	Comment   string            `xml:",comment"`
-	Additions DataviewAdditions `xml:"additions,omitempty" yaml:",omitempty"`
-	Other     []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            string            `xml:"name,attr"`
+	Comment         string            `xml:",comment"`
+	Additions       DataviewAdditions `xml:"additions,omitempty" yaml:",omitempty"`
+	Other           []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr        `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Dataview, leaving out the additions element
@@ -357,10 +367,11 @@ type DataviewAddition struct {
 
 // DataviewAdditionHeadlines contains headline values and an optional source variable.
 type DataviewAdditionHeadlines struct {
-	Var       *Var                  `xml:"var,omitempty"`
-	Headlines []SingleLineStringVar `xml:"data>headline,omitempty"`
-	Other     []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                `xml:",comment"`
+	Var             *Var                  `xml:"var,omitempty"`
+	Headlines       []SingleLineStringVar `xml:"data>headline,omitempty"`
+	Other           []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr            `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                `xml:",comment"`
 }
 
 // MarshalXML encodes the DataviewAdditionHeadlines without the empty wrapper elements encoding/xml
@@ -371,10 +382,11 @@ func (v DataviewAdditionHeadlines) MarshalXML(e *xml.Encoder, start xml.StartEle
 
 // DataviewAdditionColumns contains column values and an optional source variable.
 type DataviewAdditionColumns struct {
-	Var       *Var                  `xml:"var,omitempty"`
-	Headlines []SingleLineStringVar `xml:"data>column,omitempty"`
-	Other     []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                `xml:",comment"`
+	Var             *Var                  `xml:"var,omitempty"`
+	Headlines       []SingleLineStringVar `xml:"data>column,omitempty"`
+	Other           []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr            `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                `xml:",comment"`
 }
 
 // MarshalXML encodes the DataviewAdditionColumns without the empty wrapper elements encoding/xml
@@ -387,10 +399,11 @@ func (v DataviewAdditionColumns) MarshalXML(e *xml.Encoder, start xml.StartEleme
 // The row names are in Headlines, which is named for the element type
 // it was copied from.
 type DataviewAdditionRows struct {
-	Var       *Var                  `xml:"var,omitempty"`
-	Headlines []SingleLineStringVar `xml:"data>row,omitempty"`
-	Other     []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                `xml:",comment"`
+	Var             *Var                  `xml:"var,omitempty"`
+	Headlines       []SingleLineStringVar `xml:"data>row,omitempty"`
+	Other           []RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr            `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                `xml:",comment"`
 }
 
 // MarshalXML encodes the DataviewAdditionRows without the empty wrapper elements encoding/xml
@@ -401,9 +414,10 @@ func (v DataviewAdditionRows) MarshalXML(e *xml.Encoder, start xml.StartElement)
 
 // Schemas contains the dataview schemas declared in a Gateway configuration.
 type Schemas struct {
-	Dataviews *[]DataviewSchema `xml:"dataviews>dataviewSchema,omitempty"`
-	Other     []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string            `xml:",comment"`
+	Dataviews       *[]DataviewSchema `xml:"dataviews>dataviewSchema,omitempty"`
+	Other           []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr        `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string            `xml:",comment"`
 }
 
 // MarshalXML encodes the Schemas without the empty wrapper elements encoding/xml
@@ -414,20 +428,22 @@ func (v Schemas) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 
 // DataviewSchema associates a dataview name with its schema.
 type DataviewSchema struct {
-	Dataview string          `xml:"dataview,omitempty"`
-	Schema   Schema          `xml:"schema>data"`
-	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment  string          `xml:",comment"`
+	Dataview        string          `xml:"dataview,omitempty"`
+	Schema          Schema          `xml:"schema>data"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string          `xml:",comment"`
 }
 
 // Schema describes the headlines, columns, and publishing behavior of a dataview.
 type Schema struct {
-	Headlines *[]SchemaTypedItem `xml:"headlines>headline,omitempty"`
-	Columns   *[]SchemaTypedItem `xml:"columns>column,omitempty"`
-	Pivot     bool               `xml:"pivot,omitempty"`
-	Publish   bool               `xml:"publish"`
-	Other     []RawXMLElement    `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string             `xml:",comment"`
+	Headlines       *[]SchemaTypedItem `xml:"headlines>headline,omitempty"`
+	Columns         *[]SchemaTypedItem `xml:"columns>column,omitempty"`
+	Pivot           bool               `xml:"pivot,omitempty"`
+	Publish         bool               `xml:"publish"`
+	Other           []RawXMLElement    `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr         `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string             `xml:",comment"`
 }
 
 // MarshalXML encodes the Schema without the empty wrapper elements encoding/xml
@@ -438,17 +454,18 @@ func (v Schema) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 
 // SchemaTypedItem describes one typed headline or column in a dataview schema.
 type SchemaTypedItem struct {
-	Name     string          `xml:"name"`
-	String   *EmptyStruct    `xml:"string,omitempty"`
-	Boolean  *EmptyStruct    `xml:"boolean,omitempty"`
-	Float32  *UnitOfMeasure  `xml:"float32,omitempty"`
-	Float64  *UnitOfMeasure  `xml:"float64,omitempty"`
-	Int32    *UnitOfMeasure  `xml:"int32,omitempty"`
-	Int64    *UnitOfMeasure  `xml:"int64,omitempty"`
-	Date     *EmptyStruct    `xml:"date,omitempty"`
-	DateTime *EmptyStruct    `xml:"dateTime,omitempty"`
-	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment  string          `xml:",comment"`
+	Name            string          `xml:"name"`
+	String          *EmptyStruct    `xml:"string,omitempty"`
+	Boolean         *EmptyStruct    `xml:"boolean,omitempty"`
+	Float32         *UnitOfMeasure  `xml:"float32,omitempty"`
+	Float64         *UnitOfMeasure  `xml:"float64,omitempty"`
+	Int32           *UnitOfMeasure  `xml:"int32,omitempty"`
+	Int64           *UnitOfMeasure  `xml:"int64,omitempty"`
+	Date            *EmptyStruct    `xml:"date,omitempty"`
+	DateTime        *EmptyStruct    `xml:"dateTime,omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string          `xml:",comment"`
 }
 
 // UOM identifies a unit of measure used by typed Geneos schema values.
@@ -476,16 +493,18 @@ const (
 
 // UnitOfMeasure attaches a unit to a typed schema value.
 type UnitOfMeasure struct {
-	Unit    UOM             `xml:"unitOfMeasure"`
-	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment string          `xml:",comment"`
+	Unit            UOM             `xml:"unitOfMeasure"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string          `xml:",comment"`
 }
 
 // StandardisedFormatting contains formatting rules shared by Gateway dataviews.
 type StandardisedFormatting struct {
-	Dataviews []StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
-	Other     []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                           `xml:",comment"`
+	Dataviews       []StandardisedFormattingDataview `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other           []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                       `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                           `xml:",comment"`
 }
 
 // MarshalXML encodes the StandardisedFormatting without the empty wrapper elements encoding/xml
@@ -496,25 +515,28 @@ func (v StandardisedFormatting) MarshalXML(e *xml.Encoder, start xml.StartElemen
 
 // StandardisedFormattingDataview applies shared formatting to a named dataview.
 type StandardisedFormattingDataview struct {
-	Name      string                           `xml:"name"` // do not omitempty
-	Variables []StandardisedFormattingVariable `xml:"variables>variable"`
-	Other     []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                           `xml:",comment"`
+	Name            string                           `xml:"name"` // do not omitempty
+	Variables       []StandardisedFormattingVariable `xml:"variables>variable"`
+	Other           []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                       `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                           `xml:",comment"`
 }
 
 // StandardisedFormattingVariable groups a value type with its applicability rules.
 type StandardisedFormattingVariable struct {
-	Type          *StandardisedFormattingType          `xml:"type"`
-	Applicability *StandardisedFormattingApplicability `xml:"applicability"`
-	Other         []RawXMLElement                      `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment       string                               `xml:",comment"`
+	Type            *StandardisedFormattingType          `xml:"type"`
+	Applicability   *StandardisedFormattingApplicability `xml:"applicability"`
+	Other           []RawXMLElement                      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                           `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                               `xml:",comment"`
 }
 
 // StandardisedFormattingType selects the formatting rules for a value type.
 type StandardisedFormattingType struct {
-	DateTime *StandardisedFormattingDateTime `xml:"dateTime"`
-	Other    []RawXMLElement                 `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment  string                          `xml:",comment"`
+	DateTime        *StandardisedFormattingDateTime `xml:"dateTime"`
+	Other           []RawXMLElement                 `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                          `xml:",comment"`
 }
 
 // StandardisedFormattingDateTime defines accepted and overridden datetime formats.
@@ -524,6 +546,7 @@ type StandardisedFormattingDateTime struct {
 	IgnoreErrorsIfFormatFails bool            `xml:"ignoreErrorsIfFormatsFail,omitempty"`
 	OverrideTimezone          string          `xml:"overrideTimezone,omitempty"`
 	Other                     []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes           []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 	Comment                   string          `xml:",comment"`
 }
 
@@ -535,11 +558,12 @@ func (v StandardisedFormattingDateTime) MarshalXML(e *xml.Encoder, start xml.Sta
 
 // StandardisedFormattingApplicability limits formatting rules to matching schema items.
 type StandardisedFormattingApplicability struct {
-	Headlines []Regex                      `xml:"headlines>pattern,omitempty"`
-	Columns   []Regex                      `xml:"columns>pattern,omitempty"`
-	Cells     []StandardisedFormattingCell `xml:"cells>cell,omitempty"`
-	Other     []RawXMLElement              `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment   string                       `xml:",comment"`
+	Headlines       []Regex                      `xml:"headlines>pattern,omitempty"`
+	Columns         []Regex                      `xml:"columns>pattern,omitempty"`
+	Cells           []StandardisedFormattingCell `xml:"cells>cell,omitempty"`
+	Other           []RawXMLElement              `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                   `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string                       `xml:",comment"`
 }
 
 // MarshalXML encodes the StandardisedFormattingApplicability without the empty wrapper elements encoding/xml
@@ -550,19 +574,21 @@ func (v StandardisedFormattingApplicability) MarshalXML(e *xml.Encoder, start xm
 
 // StandardisedFormattingCell selects an individual row and column for formatting.
 type StandardisedFormattingCell struct {
-	Row     string          `xml:"row"`
-	Column  string          `xml:"column"`
-	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment string          `xml:",comment"`
+	Row             string          `xml:"row"`
+	Column          string          `xml:"column"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string          `xml:",comment"`
 }
 
 // ActiveTimeRef refers to an active-time definition by name or variable.
 type ActiveTimeRef struct {
-	XMLName    xml.Name          `xml:"activeTime"`
-	Comment    string            `xml:",comment"`
-	ActiveTime *ActiveTimeByName `xml:"activeTime,omitempty"`
-	Var        *Var              `xml:"var,omitempty"`
-	Other      []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name          `xml:"activeTime"`
+	Comment         string            `xml:",comment"`
+	ActiveTime      *ActiveTimeByName `xml:"activeTime,omitempty"`
+	Var             *Var              `xml:"var,omitempty"`
+	Other           []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr        `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // ActiveTimeByName stores the name of a referenced active-time definition.
@@ -570,4 +596,7 @@ type ActiveTimeByName struct {
 	XMLName    xml.Name `xml:"activeTime"`
 	Comment    string   `xml:",comment"`
 	ActiveTime string   `xml:"ref,attr"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }

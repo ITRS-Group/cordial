@@ -13,7 +13,7 @@ import (
 
 // Reference is an XML reference attribute.
 type Reference struct {
-	Name string `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
+	Name string `xml:"ref,attr,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
 type EmptyStruct struct{}
@@ -29,14 +29,15 @@ type RawXMLElement struct {
 }
 
 type Weekdays struct {
-	Monday    bool            `xml:"monday"`
-	Tuesday   bool            `xml:"tuesday"`
-	Wednesday bool            `xml:"wednesday"`
-	Thursday  bool            `xml:"thursday"`
-	Friday    bool            `xml:"friday"`
-	Saturday  bool            `xml:"saturday"`
-	Sunday    bool            `xml:"sunday"`
-	Other     []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Monday          bool            `xml:"monday"`
+	Tuesday         bool            `xml:"tuesday"`
+	Wednesday       bool            `xml:"wednesday"`
+	Thursday        bool            `xml:"thursday"`
+	Friday          bool            `xml:"friday"`
+	Saturday        bool            `xml:"saturday"`
+	Sunday          bool            `xml:"sunday"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // SingleLineStringVar represents a string that may contain Geneos variables.
@@ -208,13 +209,22 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	if v == nil {
 		v = &Value{}
 	}
+	var text strings.Builder
 	for {
 		tok, err := d.Token()
 		if err != nil {
 			if err == io.EOF {
+				// text without an element is the same as a data element
+				if t := strings.TrimSpace(text.String()); t != "" && v.Data == nil {
+					v.Data = &Data{Data: t}
+				}
 				return nil
 			}
 			return err
+		}
+		if chardata, ok := tok.(xml.CharData); ok {
+			text.Write(chardata)
+			continue
 		}
 		element, ok := tok.(xml.StartElement)
 		if !ok {
@@ -222,11 +232,16 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 		}
 		switch element.Name.Local {
 		case "data":
-			data := Data{}
-			if err := d.DecodeElement(&data, &element); err != nil {
+			// data that has elements in it is kept as it is
+			var raw RawXMLElement
+			if err := d.DecodeElement(&raw, &element); err != nil {
 				return err
 			}
-			v.Data = &data
+			if content, hasElements := dataContent(raw.Content); hasElements || len(raw.Attributes) > 0 {
+				v.Other = append(v.Other, raw)
+			} else {
+				v.Data = &Data{Data: content}
+			}
 		case "var":
 			ref := &Var{}
 			if err := d.DecodeElement(ref, &element); err != nil {
@@ -249,6 +264,33 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			v.Other = append(v.Other, other)
 		}
 	}
+}
+
+// dataContent returns the text in the inner XML of an element, with entities
+// and CDATA decoded and comments removed, and true if there are any child
+// elements
+func dataContent(inner string) (text string, hasElements bool) {
+	d := xml.NewDecoder(strings.NewReader("<x>" + inner + "</x>"))
+	var b strings.Builder
+	depth := 0
+	for {
+		tok, err := d.Token()
+		if err != nil {
+			break
+		}
+		switch t := tok.(type) {
+		case xml.StartElement:
+			depth++
+			if depth > 1 {
+				hasElements = true
+			}
+		case xml.EndElement:
+			depth--
+		case xml.CharData:
+			b.Write(t)
+		}
+	}
+	return b.String(), hasElements
 }
 
 var _ fmt.Stringer = (*Value)(nil)
@@ -275,10 +317,11 @@ func (s *Value) String() string {
 
 // Host identifies a host by name, address, or variable.
 type Host struct {
-	Name      string          `xml:"name,omitempty"`
-	IPAddress *IPAddress      `xml:"ipAddress,omitempty"`
-	Var       *Reference      `xml:"var,omitempty"`
-	Other     []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            string          `xml:"name,omitempty"`
+	IPAddress       *IPAddress      `xml:"ipAddress,omitempty"`
+	Var             *Reference      `xml:"var,omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (t *Host) String() string {
@@ -296,8 +339,9 @@ func (t *Host) String() string {
 
 // IPAddress stores four address octets.
 type IPAddress struct {
-	Octets []int           `xml:"value"`
-	Other  []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Octets          []int           `xml:"value"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (ip *IPAddress) String() string {
@@ -311,15 +355,17 @@ func (ip *IPAddress) String() string {
 }
 
 type Regex struct {
-	Regex string          `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
-	Flags *RegexFlags     `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
-	Other []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Regex           string          `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
+	Flags           *RegexFlags     `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type RegexFlags struct {
 	CaseInsensitive *bool           `xml:"i,omitempty" json:"i,omitempty" yaml:"i,omitempty"`
 	DotMatchesAll   *bool           `xml:"s,omitempty" json:"s,omitempty" yaml:"s,omitempty"`
 	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (r *Regex) String() (s string) {

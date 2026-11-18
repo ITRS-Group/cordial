@@ -7,14 +7,15 @@ import (
 )
 
 type Plugin struct {
-	XMLName       xml.Name                     `xml:"tcp-links" json:"-" yaml:"-"`
-	LocalPorts    []common.SingleLineStringVar `xml:"localPorts>port,omitempty" json:"localPorts,omitempty" yaml:"localPorts,omitempty"`
-	RemotePorts   []common.SingleLineStringVar `xml:"remotePorts>port,omitempty" json:"remotePorts,omitempty" yaml:"remotePorts,omitempty"`
-	Command       *common.SingleLineStringVar  `xml:"command,omitempty" json:"command,omitempty"`
-	NameContents  *NameContents                `xml:"nameContents,omitempty" json:"nameContents,omitempty" yaml:"nameContents,omitempty"`
-	ServiceTokens []common.SingleLineStringVar `xml:"serviceTokens>serviceToken,omitempty" json:"serviceTokens,omitempty" yaml:"serviceTokens,omitempty"`
-	ShowAllStates *common.Value                `xml:"showAllStates,omitempty" json:"showAllStates,omitempty" yaml:"showAllStates,omitempty"`
-	Other         []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name                     `xml:"tcp-links" json:"-" yaml:"-"`
+	LocalPorts      []common.SingleLineStringVar `xml:"localPorts>port,omitempty" json:"localPorts,omitempty" yaml:"localPorts,omitempty"`
+	RemotePorts     []common.SingleLineStringVar `xml:"remotePorts>port,omitempty" json:"remotePorts,omitempty" yaml:"remotePorts,omitempty"`
+	Command         *common.SingleLineStringVar  `xml:"command,omitempty" json:"command,omitempty"`
+	NameContents    *NameContents                `xml:"nameContents,omitempty" json:"nameContents,omitempty" yaml:"nameContents,omitempty"`
+	ServiceTokens   []common.SingleLineStringVar `xml:"serviceTokens>serviceToken,omitempty" json:"serviceTokens,omitempty" yaml:"serviceTokens,omitempty"`
+	ShowAllStates   *common.Value                `xml:"showAllStates,omitempty" json:"showAllStates,omitempty" yaml:"showAllStates,omitempty"`
+	Other           []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                   `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Plugin without the empty wrapper elements encoding/xml
@@ -31,4 +32,5 @@ type NameContents struct {
 	ShowRemoteAddress *common.Value          `xml:"showRemoteAddress,omitempty" json:"showRemoteAddress,omitempty" yaml:"showRemoteAddress,omitempty"`
 	ShowRemotePort    *common.Value          `xml:"showRemotePort,omitempty" json:"showRemotePort,omitempty" yaml:"showRemotePort,omitempty"`
 	Other             []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes   []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }

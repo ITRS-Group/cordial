@@ -25,22 +25,24 @@ import (
 
 // Samplers TODO: Describe its purpose and intended use.
 type Samplers struct {
-	XMLName       xml.Name        `xml:"samplers" json:"-" yaml:"-"`
-	Comment       string          `xml:",comment"`
-	Samplers      []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
-	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name        `xml:"samplers" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Samplers        []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups   []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerGroup TODO: Describe its purpose and intended use.
 type SamplerGroup struct {
-	XMLName       xml.Name        `xml:"samplerGroup" json:"-" yaml:"-"`
-	Comment       string          `xml:",comment"`
-	Name          string          `xml:"name,attr"`
-	Disabled      *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Samplers      []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
-	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name        `xml:"samplerGroup" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Name            string          `xml:"name,attr"`
+	Disabled        *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Samplers        []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups   []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
@@ -65,6 +67,7 @@ type Sampler struct {
 	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
 	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty" json:",omitempty" yaml:",omitempty"`
 	Other                  []RawXMLElement         `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes        []xml.Attr              `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Sampler without the empty wrapper elements encoding/xml
@@ -171,8 +174,9 @@ type Plugin struct {
 	XPing *XPingPlugin `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
 
 	// unsupported - put config in 'Other'
-	Other   *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment string             `xml:",comment"`
+	Other           *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr         `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string             `xml:",comment"`
 }
 
 // UnsupportedPlugin records any unsupported Plugin, capturing the

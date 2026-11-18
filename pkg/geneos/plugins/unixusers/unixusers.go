@@ -12,6 +12,7 @@ type Plugin struct {
 	AuthorisedUsers  []string                    `xml:"authorisedUsers>user,omitempty"`
 	AuthorisedGroups []string                    `xml:"authorisedGroups>group,omitempty"`
 	Other            []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes  []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Plugin without the empty wrapper elements encoding/xml

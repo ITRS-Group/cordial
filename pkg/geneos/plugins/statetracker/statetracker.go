@@ -14,6 +14,7 @@ type Plugin struct {
 	Behavioural     *Behavioural           `xml:"behavioural,omitempty"`
 	TrackerGroup    []Group                `xml:"trackerGroup,omitempty"`
 	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
@@ -22,11 +23,13 @@ type Columns struct {
 	RenameTrackerColumn *common.SingleLineStringVar   `xml:"renameTrackerColumn"`
 	Columns             []*common.SingleLineStringVar `xml:"column"`
 	Other               []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes     []xml.Attr                    `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type TemplateOptions struct {
-	HideTrackerIDs *common.Value          `xml:"hideTrackerIDs"`
-	Other          []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	HideTrackerIDs  *common.Value          `xml:"hideTrackerIDs"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Performance struct {
@@ -34,19 +37,22 @@ type Performance struct {
 	MaxMessagesPerSample   *common.Value          `xml:"maxMessagesPerSample,omitempty"`
 	MinimumReservedRowpace *common.Value          `xml:"minimumReservedRowspace,omitempty"`
 	Other                  []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes        []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Behavioural struct {
 	FileTruncateResetsTrackers *common.Value          `xml:"fileTruncateResetsTrackers,omitempty"`
 	Other                      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes            []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Group struct {
-	Name        string                 `xml:"name,attr"`
-	Columns     *Columns               `xml:"columns,omitempty"`
-	Performance *Performance           `xml:"performance,omitempty"`
-	Trackers    []*Tracker             `xml:"trackers>tracker,omitempty"`
-	Other       []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            string                 `xml:"name,attr"`
+	Columns         *Columns               `xml:"columns,omitempty"`
+	Performance     *Performance           `xml:"performance,omitempty"`
+	Trackers        []*Tracker             `xml:"trackers>tracker,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Group without the empty wrapper elements encoding/xml
@@ -65,6 +71,7 @@ type Tracker struct {
 	MessageTimestamp *common.Value                `xml:"messageTimestamp,omitempty"`
 	Template         *common.Value                `xml:"template"`
 	Other            []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes  []xml.Attr                   `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Tracker without the empty wrapper elements encoding/xml

@@ -12,18 +12,26 @@ type SingleLineStringVar = common.SingleLineStringVar
 type Value = common.Value
 
 type Plugin struct {
-	XMLName    xml.Name               `xml:"sql-toolkit" json:"-" yaml:"-"`
-	Queries    []Query                `xml:"queries>query"`
-	Connection DBConnection           `xml:"connection"`
-	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name               `xml:"sql-toolkit" json:"-" yaml:"-"`
+	Queries         []Query                `xml:"queries>query,omitempty"`
+	Connection      DBConnection           `xml:"connection,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Plugin without the empty elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Plugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
 
 type Query struct {
-	Name  *SingleLineStringVar   `xml:"name"`
-	SQL   *SingleLineStringVar   `xml:"sql"`
-	Other []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            *SingleLineStringVar   `xml:"name"`
+	SQL             *SingleLineStringVar   `xml:"sql"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type DBConnection struct {
@@ -35,6 +43,7 @@ type DBConnection struct {
 	Password                  *Value                 `xml:"password"`
 	CloseConnectionAfterQuery *Value                 `xml:"closeConnectionAfterQuery,omitempty"`
 	Other                     []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes           []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (d *DBConnection) String() string {

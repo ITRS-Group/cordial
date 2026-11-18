@@ -24,6 +24,7 @@ type Plugin struct {
 	ArgsMaxLength               *common.Value               `xml:"argsMaxLength,omitempty" json:",omitempty" yaml:",omitempty"`
 	UserCacheMaxAge             *common.Value               `xml:"userCacheMaxAge,omitempty" json:",omitempty" yaml:",omitempty"`
 	Other                       []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes             []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Plugin without the empty wrapper elements encoding/xml
@@ -35,27 +36,32 @@ func (v Plugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 func (p *Plugin) String() string { return p.XMLName.Local }
 
 type Parameters struct {
-	Var   *common.Reference      `xml:"var,omitempty"`
-	Data  *ParametersData        `xml:"data,omitempty"`
-	Other []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Var             *common.Reference      `xml:"var,omitempty"`
+	Data            *ParametersData        `xml:"data,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type ParametersData struct {
-	Parameters []Parameter            `xml:"parameter,omitempty"`
-	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Parameters      []Parameter            `xml:"parameter,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
+// Parameter is the name of a process parameter, as the text of the
+// parameter element.
 type Parameter struct {
-	Name  string                 `xml:"name"`
-	Value string                 `xml:"value"`
-	Other []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Name            string                 `xml:",chardata"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Filter struct {
-	ParentProcess *common.SingleLineStringVar  `xml:"parentProcess,omitempty"`
-	UserNames     []common.SingleLineStringVar `xml:"userNames>userName,omitempty"`
-	UserIDs       []common.Value               `xml:"userIDs>userID,omitempty"`
-	Other         []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	ParentProcess   *common.SingleLineStringVar  `xml:"parentProcess,omitempty"`
+	UserNames       []common.SingleLineStringVar `xml:"userNames>userName,omitempty"`
+	UserIDs         []common.Value               `xml:"userIDs>userID,omitempty"`
+	Other           []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                   `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // MarshalXML encodes the Filter without the empty wrapper elements encoding/xml
@@ -69,8 +75,11 @@ type Process struct {
 	Data              *common.ProcessDescriptor `xml:"data,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProcessDescriptor *ProcessDescriptorRef     `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty"`
 	Other             []common.RawXMLElement    `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes   []xml.Attr                `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type ProcessDescriptorRef struct {
 	Name string `xml:"ref,attr" json:"name" yaml:"name"`
+
+	OtherAttributes []xml.Attr `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }

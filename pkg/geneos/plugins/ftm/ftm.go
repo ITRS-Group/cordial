@@ -23,6 +23,7 @@ type Plugin struct {
 	UseChangedTime             *common.Value          `xml:"useChangedTime,omitempty"`
 	Debug                      *common.Value          `xml:"debug,omitempty"`
 	Other                      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes            []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
@@ -39,35 +40,46 @@ type File struct {
 	MonitoringPeriod *MonitoringPeriod           `xml:"monitoringPeriod,omitempty"`
 	Alias            *common.SingleLineStringVar `xml:"alias"`
 	Other            []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes  []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type MonitoringPeriodAlias struct {
 	Alias string `xml:"periodAlias"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type MonitoringPeriodStart struct {
 	PeriodStart *common.Value `xml:"periodStartTime,omitempty"`
+
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type MonitoringPeriod struct {
-	PeriodAlias *string                `xml:"periodAlias,omitempty"`
-	PeriodStart *common.Value          `xml:"periodStartTime,omitempty"`
-	Other       []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	PeriodAlias     *string                `xml:"periodAlias,omitempty"`
+	PeriodStart     *common.Value          `xml:"periodStartTime,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Holidays struct {
-	Holidays []string               `xml:"holiday,omitempty"`
-	Other    []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Holidays        []string               `xml:"holiday,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type AdditionalPaths struct {
-	Paths []*common.SingleLineStringVar `xml:"additionalPath"`
-	Other []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Paths           []*common.SingleLineStringVar `xml:"additionalPath"`
+	Other           []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                    `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type HolidaysVars struct {
-	XMLName xml.Name                      `xml:"holidaysVar" json:"-" yaml:"-"`
-	Holiday []*common.SingleLineStringVar `xml:"holiday,omitempty"`
-	Day     *common.Weekdays              `xml:"day,omitempty"`
-	Other   []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name                      `xml:"holidaysVar" json:"-" yaml:"-"`
+	Holiday         []*common.SingleLineStringVar `xml:"holiday,omitempty"`
+	Day             *common.Weekdays              `xml:"day,omitempty"`
+	Other           []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr                    `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
