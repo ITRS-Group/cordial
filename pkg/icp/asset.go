@@ -240,6 +240,5 @@ func (i *ICP) AssetGroupingsDynamic(ctx context.Context, request *AssetGroupings
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-asset
 func (i *ICP) Asset(ctx context.Context, request *AssetRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, AssetEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }

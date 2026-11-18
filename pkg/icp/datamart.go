@@ -19,7 +19,6 @@ type DataMartEntityPerformanceRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityPerformance
 func (i *ICP) DataMartEntityPerformance(ctx context.Context, request *DataMartEntityPerformanceRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartEntityPerformanceEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -36,7 +35,6 @@ type DataMartEntityRelationRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityRelation
 func (i *ICP) DataMartEntityRelation(ctx context.Context, request *DataMartEntityRelationRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartEntityRelationEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -53,7 +51,6 @@ type DataMartPropertiesEntityRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-PropertiesEntity
 func (i *ICP) DataMartPropertiesEntity(ctx context.Context, request *DataMartPropertiesEntityRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartPropertiesEntityEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -76,7 +73,6 @@ type DataMartMetricsRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-Metrics
 func (i *ICP) DataMartMetrics(ctx context.Context, request *DataMartMetricsRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartMetricsEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -100,7 +96,6 @@ type DataMartMetricTimeSeriesRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-MetricTimeseries
 func (i *ICP) DataMartMetricTimeseries(ctx context.Context, request *DataMartMetricTimeSeriesRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartMetricTimeseriesEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -123,7 +118,6 @@ type DataMartEntityPropertiesRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-EntityProperties
 func (i *ICP) DataMartEntityProperties(ctx context.Context, request *DataMartEntityPropertiesRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartEntityPropertiesEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -147,7 +141,6 @@ type DataMartMetricCapacitiesRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-MetricCapacities
 func (i *ICP) DataMartMetricCapacities(ctx context.Context, request *DataMartMetricCapacitiesRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartMetricCapacitiesEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -177,7 +170,6 @@ type DataMartGetEntitiesItem struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-GetEntities
 func (i *ICP) DataMartGetEntities(ctx context.Context, request *DataMartGetEntitiesRequest) (response DataMartGetEntitiesResponse, resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartGetEntitiesEndpoint, request, &response)
-	resp.Body.Close()
 	return
 }
 
@@ -201,6 +193,5 @@ type DataMartStartProcessingResponse struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-Api-DataMart-StartProcessing
 func (i *ICP) DataMartStartProcessing(ctx context.Context, request *DataMartStartProcessingRequest) (response DataMartStartProcessingResponse, resp *http.Response, err error) {
 	resp, err = i.Post(ctx, DataMartStartProcessingEndpoint, request, &response)
-	resp.Body.Close()
 	return
 }

@@ -286,12 +286,42 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 	if hasBody {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	return c.send(req, body, hasBody, response)
+}
 
+// Send sends a request that was built by the caller, for the cases
+// where the request body cannot be encoded by the other methods, such
+// as a stream. The caller must set the URL, normally using BaseURL, and
+// any headers, but not the client's authentication header, which is
+// added. The client's SetupRequest function, logging, redirect and
+// status handling and response decoding are applied as for the other
+// methods, and as with them resp.Body is closed on return.
+func (c *Client) Send(req *http.Request, response any) (resp *http.Response, err error) {
+	if c.err != nil {
+		closeRequestBody(req)
+		return nil, c.err
+	}
+	if c.authHeader != "" {
+		req.Header.Set(c.authHeader, c.authValue)
+	}
+	return c.send(req, nil, req.Body != nil, response)
+}
+
+func closeRequestBody(req *http.Request) {
+	if req.Body != nil {
+		_ = req.Body.Close()
+	}
+}
+
+// send is the common part of do and Send. body is the encoded request
+// body, if known, and hasBody is true if there is one.
+func (c *Client) send(req *http.Request, body []byte, hasBody bool, response any) (resp *http.Response, err error) {
+	method := req.Method
 	if c.logger != nil {
 		// request bodies and query values may contain credentials, so
 		// only their size and names are logged
 		if hasBody {
-			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "body_bytes", len(body))
+			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "body_bytes", req.ContentLength)
 		} else {
 			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "query_keys", queryKeys(req.URL.RawQuery))
 		}

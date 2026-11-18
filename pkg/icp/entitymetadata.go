@@ -2,9 +2,9 @@ package icp
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 )
 
 // EntityMetaDataRequest type
@@ -27,7 +27,6 @@ type EntityMetaDataItem struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-entitymetadata
 func (i *ICP) EntityMetaData(ctx context.Context, request EntityMetaDataRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, EntityMetaDataEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 
@@ -48,8 +47,11 @@ type EntityMetaDataExportResponse []string
 //
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/GET-api-metadataexport-projectId_onlyInclude
 func (i *ICP) EntityMetaDataExport(ctx context.Context, request *EntityMeteDataExportRequest) (response EntityMetaDataExportResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntityMetaDataExportEndpoint, fmt.Sprint(request.ProjectID))
-	request.ProjectID = 0
-	resp, err = i.Get(ctx, endpoint, request, &response)
+	endpoint, _ := url.JoinPath(EntityMetaDataExportEndpoint, strconv.Itoa(request.ProjectID))
+	// the project ID is in the path, so do not send it in the query, but
+	// do not modify the caller's request to do so
+	query := *request
+	query.ProjectID = 0
+	resp, err = i.Get(ctx, endpoint, &query, &response)
 	return
 }
