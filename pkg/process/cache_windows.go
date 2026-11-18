@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -13,35 +12,13 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// procCache is a map of host to procCache, which is used to cache
-// process entries for each host. It is used to avoid repeated calls to
-// the host to get the process entries, which can be expensive.
-//
-// The cache is marked stale after 5 seconds, or when the cache is
-// empty.
+// procCacheTTL is how long the cached process entries are used for
 var procCacheTTL = 5 * time.Second
-var procCacheMutex sync.Mutex
-var procCacheLastUpdate = make(map[host.Host]time.Time)
 
-// var procCacheMap = make(map[host.Host]any)
-var procCacheMap = make(map[host.Host]map[string]any) // host / type / cache
-
-func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok bool) {
-	procCacheMutex.Lock()
-	defer procCacheMutex.Unlock()
-
-	tn := fmt.Sprintf("%T", (*T)(nil))
-
-	opts := evalProcessOptions(options...)
-	refreshCache := opts.refreshCache
-	if !refreshCache {
-		if c, ok = procCacheMap[h][tn].(map[int]T); ok {
-			if time.Since(procCacheLastUpdate[h]) < procCacheTTL {
-				return
-			}
-		}
-	}
-
+// scanProcesses builds a map of PID to process status information from a
+// snapshot of the processes, and if the type T has PID, PPID and Children
+// fields, it also builds child lists based on linked PID and PPID fields.
+func scanProcesses[T any](h host.Host) (c map[int]T, ok bool) {
 	handle, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err != nil {
 		err = fmt.Errorf("failed to create toolhelp32 snapshot: %w", err)
@@ -75,7 +52,7 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 		}
 	}
 
-	st := reflect.TypeOf((*T)(nil)).Elem()
+	st := reflect.TypeFor[T]()
 	if st.Kind() == reflect.Pointer {
 		st = st.Elem()
 	}
@@ -110,34 +87,5 @@ func getProcesses[T any](h host.Host, options ...ProcessOption) (c map[int]T, ok
 		}
 	}
 
-	procCacheLastUpdate[h] = time.Now()
-	if procCacheMap[h] == nil {
-		procCacheMap[h] = make(map[string]any)
-	}
-	procCacheMap[h][tn] = c
-
 	return c, true
-}
-
-func clearCache() {
-	procCacheMap = make(map[host.Host]map[string]any)
-	procCacheLastUpdate = make(map[host.Host]time.Time)
-}
-
-func checkAndFillCache[T any](h host.Host, pid int, pc T) {
-	// check if OpenFiles is empty, if so fill it
-	sv := reflect.ValueOf(pc).Elem()
-	if sv.FieldByName("OpenFiles").IsValid() && sv.FieldByName("OpenFiles").IsZero() {
-		ProcessStatusOpenFiles(h, pid, sv.FieldByName("OpenFiles"))
-	}
-
-	// check if OpenSockets is zero, if so fill it
-	if sv.FieldByName("OpenSockets").IsValid() && sv.FieldByName("OpenSockets").IsZero() {
-		ProcessStatusOpenSockets(h, pid, sv.FieldByName("OpenSockets"))
-	}
-
-	// check if ListeningPorts is empty, if so fill it
-	if sv.FieldByName("ListeningPorts").IsValid() && sv.FieldByName("ListeningPorts").IsZero() {
-		ProcessStatusListeningPorts(h, pid, sv.FieldByName("ListeningPorts"))
-	}
 }
