@@ -35,7 +35,7 @@ The [`servicenow2` integration](integrations/servicenow2/README.md) maps Geneos 
 
 ## Low-overhead deployment
 
-The pre-built Linux command-line programs are statically linked for compatible 64-bit x86 Linux systems. You do not need to install a separate language runtime, interpreter, or helper utility to run them. The exception is `libemail.so`: it is a shared library that uses the host's standard C runtime and must be loaded by a compatible Geneos Gateway. Each program still needs the configuration, network access, and external services required for its work.
+The pre-built Linux command-line programs are statically linked for compatible 64-bit x86 Linux systems. You do not need to install a separate language runtime, interpreter, or helper utility to run them. The exceptions are `libemail.so` and `libalert.so`: they are shared libraries that use the host's standard C runtime and must be loaded by a compatible Geneos Gateway. Each program still needs the configuration, network access, and external services required for its work.
 
 The `geneos` command also includes tools for many tasks that might otherwise need separate scripts or diagnostic utilities. For example, `geneos package install` can download and unpack releases; `geneos ps` can inspect running instances, open files, and sockets; `geneos logs` can read, filter, and follow local or remote logs; and `geneos snapshot` can fetch Gateway Dataviews. These built-in tools can reduce software setup and maintenance on your Geneos hosts.
 

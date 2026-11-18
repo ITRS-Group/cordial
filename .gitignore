@@ -27,12 +27,12 @@ cordial.code-workspace
 
 # Dependency directories (remove the comment below to include it)
 vendor/
-release*/
+/release-*/
 
-examples/api/api
-examples/commands
-examples/xpath
-examples/dockerlogs/dockerlogs
+_examples/api/api
+_examples/api2/api2
+_examples/cliauth/cliauth
+_examples/dockerlogs/dockerlogs
 
 gdna/docker-compose.yml
 gdna/docs/docs
@@ -47,23 +47,17 @@ integrations/servicenow2/servicenow2
 integrations/servicenow2/servicenow2.client.yaml
 integrations/servicenow2/servicenow2.router.yaml
 integrations/servicenow2/servicenow2.proxy.yaml
-integrations/servicenow/snow_client/snow_client
-integrations/servicenow/snow_client/snow_client.yaml
-integrations/servicenow/snow_router/snow_router
-integrations/servicenow/snow_router/snow_router.yaml
-integrations/sdp/sdp
-integrations/sdp/sdp.yaml
 tools/ims-gateway/ims-gateway.yaml
 
+libraries/libalert/libalert
+libraries/libalert/libalert.h
 libraries/libemail/libemail
 libraries/libemail/libemail.h
 
-tools/decode-aes256/decode-aes256
 tools/dv2email/dv2email
 tools/files2dv/files2dv
 tools/files2dv/samples/file.txt
 tools/gateway-reporter/gateway-reporter
-tools/gateway-reporter/validate-setup
 tools/geneos/geneos
 tools/geneos/utils/docs/docs
 tools/sso-diag/sso-diag
