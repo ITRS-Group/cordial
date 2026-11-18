@@ -103,7 +103,11 @@
 
     * A host name that is not known, such as with `-H`, or as `name@host`, is now never the same as all hosts, and instances of an unknown host are never found. An instance created that already exists is now an error and does not report success.
 
-    * Download timeouts (`download.timeout` or `ITRS_DOWNLOAD_TIMEOUT`) now apply to connecting and waiting for the server, but no longer stop a download that is progressing but takes longer.
+    * Download timeouts (`download.timeout` or `ITRS_DOWNLOAD_TIMEOUT`) now apply to connecting and waiting for the server, and to waiting for more data while downloading (the transfer fails with a "download stalled" error if no data arrives for that long, 60 seconds by default), but no longer stop a download that is progressing but takes longer. This also applies to archives given as a URL with `--archive`, which previously had no timeouts.
+
+    * `geneos stop` now waits up to 5 seconds after `SIGKILL` and returns an error, with the PID, if the process is still running, where before it returned success. The error is also what is recorded in the audit log.
+
+    * A zip archive that is not already a file, such as one downloaded or read from STDIN, is now copied to a temporary file, next to the destination on the local host, to unpack it, and is no longer held in memory. The size of an archive that is copied is limited to 8 GiB, which can be changed with `download.max-archive-size` or `ITRS_DOWNLOAD_MAX_ARCHIVE_SIZE` (in bytes, with zero for no limit). Symbolic links in zip archives are no longer written out as plain files; one that points outside of the destination is an error and the others are skipped.
 
     * The file name suggested by a download server is now reduced to a plain file name, so it can no longer contain a path.
 
@@ -294,6 +298,14 @@
     * Fix `geneos import` of `-` (STDIN) to the local host.
 
     * Fix `geneos snapshot` clearing a password shared by other instances, and returning only the last of the errors for invalid paths.
+
+    * Fix the cost of looking for an instance directory on every use of its path, which is a round trip to the host for each one on a remote host. The directory is now remembered for each instance until it is loaded, unloaded, written, moved, copied or its `home` setting is changed.
+
+    * Fix `geneos` commands that match many instance names listing the instance directories of each host again for every name. They are now listed once, in name order, and an instance that is in both a legacy and the current directory is only listed once.
+
+    * Fix the templates and directories of a component only being initialised for the first host when more than one host is initialised in a single run, such as with `geneos deploy` to several hosts.
+
+    * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
 
 * `integrations/servicenow2`
 
