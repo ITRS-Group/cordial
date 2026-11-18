@@ -23,7 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -157,7 +157,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
-		sort.Sort(byName(children))
+		slices.SortFunc(children, func(a, b *cobra.Command) int { return strings.Compare(a.Name(), b.Name()) })
 
 		groups := cmd.Groups()
 
@@ -334,17 +334,6 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 // 	}
 // 	return s
 // }
-
-type byName []*cobra.Command
-
-// Len TODO: Document its behavior, inputs, and effects.
-func (s byName) Len() int { return len(s) }
-
-// Swap TODO: Document its behavior, inputs, and effects.
-func (s byName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-// Less TODO: Document its behavior, inputs, and effects.
-func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 
 // TODO: Revisit unused declaration subsystemsThenNames; restore it only when needed.
 // type subsystemsThenNames []*cobra.Command
