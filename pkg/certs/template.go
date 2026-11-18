@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
+	"fmt"
 	"net"
 	"net/url"
 	"time"
@@ -13,34 +15,60 @@ import (
 // parameters. The caller can modify the template as needed before using
 // it to create a certificate. If duration is zero, a default of 365
 // days is used.
+//
+// If the options are invalid, for example an IP address or URI that
+// cannot be parsed, or a serial number cannot be generated, then Template
+// returns nil and [CreateCertificate] will reject it. Use [NewTemplate]
+// to get the error.
 func Template(cn string, options ...TemplateOption) (template *x509.Certificate) {
+	template, _ = NewTemplate(cn, options...)
+	return
+}
+
+// NewTemplate is like [Template] but returns an error if the options
+// are invalid, including any IP addresses or URIs that cannot be
+// parsed, or if a serial number cannot be generated.
+//
+// A template with the [IsCA] option always has valid basic constraints,
+// and unless [KeyUsage] is also given is limited to signing certificates
+// and CRLs (in addition to DigitalSignature).
+func NewTemplate(cn string, options ...TemplateOption) (template *x509.Certificate, err error) {
 	opts := evalTemplateOptions(options...)
+	if opts.err != nil {
+		return nil, opts.err
+	}
 
 	serial, err := rand.Prime(rand.Reader, 64)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("generating certificate serial number: %w", err)
 	}
 
 	if opts.duration == 0 {
 		opts.duration = 365 * 24 * time.Hour
 	}
 	if opts.keyUsage == -1 {
-		opts.keyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+		if opts.isCA {
+			opts.keyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+		} else {
+			opts.keyUsage = x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+		}
 	}
 	if len(opts.extKeyUsage) == 1 && opts.extKeyUsage[0] == -1 {
 		opts.extKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}
 	}
 
-	expires := time.Now().Add(opts.duration)
+	now := time.Now()
 	template = &x509.Certificate{
 		SerialNumber: serial,
 		Subject: pkix.Name{
 			CommonName: cn,
 		},
-		NotBefore:             time.Now().Add(-60 * time.Second),
-		NotAfter:              expires,
-		IsCA:                  opts.isCA,
-		BasicConstraintsValid: opts.basicConstraintsValid,
+		NotBefore: now.Add(-60 * time.Second),
+		NotAfter:  now.Add(opts.duration),
+		IsCA:      opts.isCA,
+		// basic constraints are only written to a certificate if
+		// valid, so a CA must always have them
+		BasicConstraintsValid: opts.basicConstraintsValid || opts.isCA,
 		KeyUsage:              opts.keyUsage,
 		ExtKeyUsage:           opts.extKeyUsage,
 		MaxPathLen:            opts.maxPathLen,
@@ -65,6 +93,7 @@ type templateOptions struct {
 	ipAddresses           []net.IP
 	emailAddresses        []string
 	uris                  []*url.URL
+	err                   error
 }
 
 func evalTemplateOptions(options ...TemplateOption) (opts *templateOptions) {
@@ -105,7 +134,8 @@ func ExtKeyUsage(eku ...x509.ExtKeyUsage) TemplateOption {
 	}
 }
 
-// IsCA TODO: Document its behavior, inputs, and effects.
+// IsCA marks the certificate as a CA. Valid basic constraints are always
+// set for a CA.
 func IsCA() TemplateOption {
 	return func(opts *templateOptions) {
 		opts.isCA = true
@@ -166,6 +196,7 @@ func IPAddresses(ips ...string) TemplateOption {
 		for _, ip := range ips {
 			parsed := net.ParseIP(ip)
 			if parsed == nil {
+				opts.err = errors.Join(opts.err, fmt.Errorf("invalid IP address %q", ip))
 				continue
 			}
 			opts.ipAddresses = append(opts.ipAddresses, parsed)
@@ -187,6 +218,7 @@ func URIs(uris ...string) TemplateOption {
 		for _, u := range uris {
 			parsed, err := url.Parse(u)
 			if err != nil {
+				opts.err = errors.Join(opts.err, fmt.Errorf("invalid URI %q: %w", u, err))
 				continue
 			}
 			opts.uris = append(opts.uris, parsed)

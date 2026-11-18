@@ -52,8 +52,9 @@ import (
 // The caller is responsible for locking access to the root cert file if
 // concurrent access is possible.
 func UpdateCACertsFiles(h host.Host, basePath string, roots ...*x509.Certificate) (updated bool, err error) {
-	// remove nil, non-root CA or expired certificates from certs
-	roots = slices.DeleteFunc(roots, func(c *x509.Certificate) bool {
+	// remove nil, non-root CA or expired certificates from certs, on a
+	// copy so that the caller's slice is not modified
+	roots = slices.DeleteFunc(slices.Clone(roots), func(c *x509.Certificate) bool {
 		return c == nil || !IsValidRootCA(c)
 	})
 
@@ -145,7 +146,9 @@ func WriteCertificatesTo(w io.Writer, certs ...*x509.Certificate) (n int, err er
 			continue
 		}
 
-		if n, err = w.Write(CertificateComments(cert)); err != nil {
+		m, err = w.Write(CertificateComments(cert))
+		n += m
+		if err != nil {
 			return
 		}
 
@@ -153,10 +156,11 @@ func WriteCertificatesTo(w io.Writer, certs ...*x509.Certificate) (n int, err er
 			Type:  "CERTIFICATE",
 			Bytes: cert.Raw,
 		})
-		if m, err = w.Write(p); err != nil {
+		m, err = w.Write(p)
+		n += m
+		if err != nil {
 			return
 		}
-		n += m
 	}
 	return
 }
@@ -183,8 +187,8 @@ func WriteCertificatesAndKeyTo(w io.Writer, key PrivateKey, certChain ...*x509.C
 
 // WriteNewRootCert creates a new root certificate and private key and
 // writes it locally with dir and file basefilepath with .pem and .key
-// extensions. If overwrite is true then any existing certificate and
-// key is overwritten.
+// extensions. Any existing certificate and key are overwritten. If
+// keytype is empty then the default key type is used.
 func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x509.Certificate, err error) {
 	template := Template(cn,
 		Days(10*365),
@@ -195,13 +199,8 @@ func WriteNewRootCert(basefilepath string, cn string, keytype KeyType) (root *x5
 		MaxPathLen(1),
 	)
 
-	privateKey, _, err := GenerateKey(keytype)
-	if err != nil {
-		return
-	}
-	defer clear(privateKey)
-
-	root, key, err := CreateCertificate(template, template, privateKey)
+	// the root is self-signed with the new key, so there is no signing key
+	root, key, err := CreateCertificate(template, template, nil, WithKeyType(keytype))
 	if err != nil {
 		return
 	}
@@ -292,21 +291,25 @@ func WritePrivateKey(h host.Host, keypath string, key PrivateKey) (err error) {
 }
 
 // WritePrivateKeyTo writes the given private key in PEM format to
-// the provided io.Writer. The total number of bytes written and any
-// error encountered are returned.
+// the provided io.Writer. The key is always written as PKCS#8, and is
+// converted if it is PKCS#1 (RSA) or SEC1 (EC). The total number of
+// bytes written and any error encountered are returned. An error is
+// returned, and nothing is written, if the key cannot be parsed.
 func WritePrivateKeyTo(w io.Writer, key PrivateKey) (n int, err error) {
 	var m int
 
-	if n, err = w.Write(PrivateKeyComments(key)); err != nil {
+	der, err := toPKCS8(key)
+	if err != nil {
+		return 0, fmt.Errorf("invalid private key: %w", err)
+	}
+
+	if n, err = w.Write(PrivateKeyComments(der)); err != nil {
 		return
 	}
 
-	// l, _ := key.Open()
-	// defer l.Destroy()
-
 	p := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
-		Bytes: key,
+		Bytes: der,
 	})
 	if m, err = w.Write(p); err != nil {
 		return

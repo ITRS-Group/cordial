@@ -4,7 +4,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
-All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25519" and "rsa". As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key. Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
 
 ## Usage
 
@@ -15,7 +15,8 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -K, --keytype KeyType           Key type for root. One of ecdh (an ECDSA P-256 key), ecdsa,
+                                  ed25519 or rsa
   -F, --force[=true|false]        Overwrite any existing root and signing certificates
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)

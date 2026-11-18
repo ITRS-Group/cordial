@@ -33,7 +33,7 @@ var initCmdKeyType certs.KeyType
 func init() {
 	tlsCmd.AddCommand(initCmd)
 
-	initCmd.Flags().VarP(&initCmdKeyType, "keytype", "K", "Key type for root. One of ecdh, ecdsa, ed25519 or rsa")
+	initCmd.Flags().VarP(&initCmdKeyType, "keytype", "K", "Key type for root. One of ecdh (an ECDSA P-256 key), ecdsa,\ned25519 or rsa")
 	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing root and signing certificates")
 
 	initCmd.Flags().SortFlags = false

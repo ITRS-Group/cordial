@@ -5641,7 +5641,7 @@ Creates a new TLS certificate bundle including a private key and trust chain. Th
 
 The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
 
-In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases.
+In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases. As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key.
 
 By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
@@ -5678,7 +5678,7 @@ geneos tls create [flags]
                                    and overwrite any existing file in the 'out' directory
   -K, --private-key[=true|false]   Create a private key without a certificate. Ignored for --signing.
   -k, --key-type KeyType           Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
-                                   or ecdh). Ignored for --signing. Defaults to the same type as
+                                   or ecdh, which is an ECDSA P-256 key). Ignored for --signing. Defaults to the same type as
                                    the signing certificate key or a default type if that cannot be determined.
   -s, --san-dns VALUE              Subject-Alternative-Name DNS Name (repeat as required).
                                    Ignored for --signing.
@@ -5883,7 +5883,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
-All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25519" and "rsa". As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key. Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
 
 ## Usage
 
@@ -5894,7 +5894,8 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -K, --keytype KeyType           Key type for root. One of ecdh (an ECDSA P-256 key), ecdsa,
+                                  ed25519 or rsa
   -F, --force[=true|false]        Overwrite any existing root and signing certificates
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
