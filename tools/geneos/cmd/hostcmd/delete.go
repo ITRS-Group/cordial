@@ -73,7 +73,7 @@ var deleteCmd = &cobra.Command{
 			h := geneos.GetHost(hostname)
 			if !h.Exists() {
 				log.Error("not a known host", slog.String("hostname", hostname))
-				return
+				return fmt.Errorf("unknown host %q", hostname)
 			}
 			hosts = append(hosts, h)
 		}
@@ -108,8 +108,7 @@ var deleteCmd = &cobra.Command{
 			h.Delete()
 			fmt.Printf("%q deleted\n", h)
 		}
-		geneos.SaveHostConfig()
 
-		return nil
+		return geneos.SaveHostConfig()
 	},
 }

@@ -72,11 +72,15 @@ geneos host unset rem2 -i /path/to/id_rsa
 			return
 		}
 
-		hosts = geneos.RemoteHosts(false)
-		for _, a := range args {
-			h := geneos.GetHost(a)
-			if h.Exists() {
-				hosts = append(hosts, h)
+		// only the named hosts, if any, otherwise all remote hosts
+		if len(args) == 0 {
+			hosts = geneos.RemoteHosts(false)
+		} else {
+			for _, a := range args {
+				h := geneos.GetHost(a)
+				if h.Exists() {
+					hosts = append(hosts, h)
+				}
 			}
 		}
 		if len(hosts) == 0 {
@@ -102,10 +106,7 @@ geneos host unset rem2 -i /path/to/id_rsa
 					continue
 				}
 				keys = slices.DeleteFunc(keys, func(key string) bool {
-					if slices.Contains(unsetCmdPrivateKeyfiles, key) {
-						return true
-					}
-					return false
+					return slices.Contains(unsetCmdPrivateKeyfiles, key)
 				})
 				config.Set(h.Config, "privatekeys", keys)
 			}

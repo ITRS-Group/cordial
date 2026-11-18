@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
@@ -72,11 +73,11 @@ var listCmd = &cobra.Command{
 		cmd.CmdAuditCommand: "never",
 		cmd.CmdAuditActions: "never",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		switch {
 		case listCmdJSON, listCmdIndent:
 			listCmdEntries = []listCmdType{}
-			err = loopHosts(hostListInstanceJSONHosts, os.Stdout, listCmdShowHidden)
+			err = loopHosts(hostListInstanceJSONHosts, os.Stdout, listCmdShowHidden, args)
 			var b []byte
 			if listCmdIndent {
 				b, _ = json.MarshalIndent(listCmdEntries, "", "    ")
@@ -87,29 +88,33 @@ var listCmd = &cobra.Command{
 		case listCmdToolkit:
 			w := csv.NewWriter(os.Stdout)
 			w.Write([]string{"name", "username", "hostname", "flags", "port", "directory"})
-			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden)
+			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden, args)
 			w.Flush()
 		case listCmdCSV:
 			w := csv.NewWriter(os.Stdout)
 			w.Write([]string{"Name", "Username", "Hostname", "Flags", "Port", "Directory"})
-			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden)
+			err = loopHosts(hostListInstanceCSVHosts, w, listCmdShowHidden, args)
 			w.Flush()
 		default:
 			w := tabwriter.NewWriter(os.Stdout, 3, 8, 2, ' ', 0)
 			fmt.Fprintf(w, "Name\tUsername\tHostname\tFlags\tPort\tDirectory\n")
-			err = loopHosts(hostListInstancePlainHosts, w, listCmdShowHidden)
+			err = loopHosts(hostListInstancePlainHosts, w, listCmdShowHidden, args)
 			w.Flush()
-		}
-		if err == os.ErrNotExist {
-			err = nil
 		}
 		return
 	},
 }
 
-func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool) error {
+// loopHosts calls fn for each remote host, limited to those in names
+// if any are given
+func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool, names []string) error {
 	for _, h := range geneos.RemoteHosts(showHidden) {
-		fn(h, w)
+		if len(names) > 0 && !slices.Contains(names, h.String()) {
+			continue
+		}
+		if err := fn(h, w); err != nil {
+			return err
+		}
 	}
 	return nil
 }

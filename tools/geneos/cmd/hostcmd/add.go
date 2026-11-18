@@ -89,7 +89,7 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "false",
 	},
-	RunE: func(command *cobra.Command, _ []string) (err error) {
+	RunE: func(command *cobra.Command, args []string) (err error) {
 		var sshurl *url.URL
 		var name string
 		var password string
@@ -97,12 +97,9 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 
 		cf := config.New()
 
-		_, args, params, err := cmd.FetchArgs(command)
-		if err != nil {
-			return
-		}
-		args = append(args, params...)
-
+		// use the raw arguments, as a host name may look like a component
+		// type or a non-instance name and would otherwise be treated
+		// differently by ParseArgs
 		switch len(args) {
 		case 1:
 			if sshurl, err = url.Parse(args[0]); err != nil || sshurl.Scheme == "" {
@@ -120,7 +117,12 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 				return
 			}
 		default:
-			log.Error("wrong number of args", slog.Int64("args", int64(len(args))))
+			log.Error("wrong number of args", slog.Int("args", len(args)))
+			return geneos.ErrInvalidArgs
+		}
+
+		if sshurl == nil {
+			return geneos.ErrInvalidArgs
 		}
 
 		// validate name - almost anything but no double colons, which
@@ -130,7 +132,13 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			return geneos.ErrInvalidArgs
 		}
 
-		cf.Default("hostname", sshurl.Hostname())
+		// a URL without a host, e.g. `ssh:///path`, uses the name as the
+		// hostname
+		hostname := sshurl.Hostname()
+		if hostname == "" {
+			hostname = name
+		}
+		cf.Default("hostname", hostname)
 		cf.Default("port", 22)
 		// default to remote user's home dir, not local, but that can't
 		// be done until after a successful connection
@@ -166,19 +174,11 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 			}
 		}
 
-		if sshurl == nil {
-			return geneos.ErrInvalidArgs
-		}
-
 		if sshurl.Scheme != "ssh" {
 			return fmt.Errorf("unsupported scheme %q (ssh only at the moment)", sshurl.Scheme)
 		}
 
 		// now disassemble URL
-		if sshurl.Hostname() == "" {
-			config.Set(cf, "hostname", config.Get[string](cf, "name"))
-		}
-
 		if sshurl.Port() != "" {
 			config.Set(cf, "port", sshurl.Port())
 		}
@@ -208,6 +208,9 @@ geneos host add remote1 ssh://server.example.com/opt/geneos
 		var ok bool
 		if ok, err = h.IsAvailable(); !ok {
 			log.Debug("cannot connect to remote host", slog.Any("error", err), slog.String("hostname", config.Get[string](cf, "hostname")), slog.Any("port", config.Get[uint16](cf, "port")), slog.String("username", config.Get[string](cf, "username")))
+			if err == nil {
+				err = fmt.Errorf("cannot connect to host %q", name)
+			}
 			return
 		}
 

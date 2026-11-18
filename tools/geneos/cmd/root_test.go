@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -40,5 +42,42 @@ func TestCommandFlagNormalization(t *testing.T) {
 	}
 	if Cmd.PersistentFlags().Lookup("profiles") == nil {
 		t.Error("global --profiles flag is not registered")
+	}
+}
+
+func TestUnknownHostFlagIsRejected(t *testing.T) {
+	cmdtest.Env(t)
+
+	for _, args := range [][]string{
+		{"start", "-H", "typo"},
+		{"start", "gateway", "-H", "typo"},
+		{"add", "gateway", "x", "-H", "typo"},
+		{"backup", "gateway", "-H", "typo"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			res := cmdtest.Run(t, Cmd, args...)
+			if res.Err == nil || !strings.Contains(res.Err.Error(), `unknown host "typo"`) {
+				t.Fatalf("error = %v, want unknown host error (stdout %q, stderr %q)", res.Err, res.Stdout, res.Stderr)
+			}
+		})
+	}
+}
+
+func TestValidateHostFlag(t *testing.T) {
+	cmdtest.Env(t)
+	geneos.InitHosts("geneos")
+
+	for _, test := range []struct {
+		name    string
+		wantErr bool
+	}{
+		{name: ""},
+		{name: geneos.ALLHOSTS},
+		{name: geneos.LOCALHOST},
+		{name: "typo", wantErr: true},
+	} {
+		if err := validateHostFlag(test.name); (err != nil) != test.wantErr {
+			t.Errorf("validateHostFlag(%q) = %v, want error %v", test.name, err, test.wantErr)
+		}
 	}
 }
