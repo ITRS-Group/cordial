@@ -149,7 +149,13 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	default:
 		// check instance for existing cert, and do nothing if none
 		cert, err := instance.ReadLeafCertificate(i)
-		if cert == nil && errors.Is(err, os.ErrNotExist) {
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				resp.Err = err
+			}
+			return
+		}
+		if cert == nil {
 			return
 		}
 
@@ -178,10 +184,12 @@ func renewInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 		if renewCmdPrepare {
 			// write new files but do not update instance config
 			if err = certs.WriteCertificates(i.Host(), instance.ComponentFilepath(i, "pem", newFileSuffix), cert, signingCert); err != nil {
+				resp.Err = err
 				return
 			}
 
 			if err = certs.WritePrivateKey(i.Host(), instance.ComponentFilepath(i, "key", newFileSuffix), key); err != nil {
+				resp.Err = err
 				return
 			}
 

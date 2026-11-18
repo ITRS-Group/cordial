@@ -81,6 +81,10 @@ geneos tls export gateway mygateway
 		}
 
 		if len(names) > 0 || ct != nil {
+			// all instances would write to the same file
+			if exportCmdOutput != "" && len(instance.Instances(geneos.GetHost(cmd.Hostname), ct, instance.MatchNames(names...))) > 1 {
+				return fmt.Errorf("%w: --output can only be used with a single instance", geneos.ErrInvalidArgs)
+			}
 			instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
 			return
 		}
@@ -169,6 +173,11 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 		}
 	}
 
+	if len(instanceCertChain) == 0 {
+		resp.Err = fmt.Errorf("no certificates found for %s %q", i.Type(), i.Name())
+		return
+	}
+
 	intermediatePool := x509.NewCertPool()
 	for _, cert := range instanceCertChain[1:] {
 		intermediatePool.AddCert(cert)
@@ -189,6 +198,7 @@ func exportInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	output := fmt.Appendf(nil, "# Certificate and Private Key for %s %q\n#\n", i.Type(), i.Name())
 
 	if _, err = certs.WriteCertificatesAndKeyTo(&b, key, validatedCertChain[0]...); err != nil {
+		resp.Err = err
 		return
 	}
 	output = append(output, b.Bytes()...)

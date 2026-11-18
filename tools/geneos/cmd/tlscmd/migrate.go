@@ -123,6 +123,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	case i.Type().IsA("sso-agent"):
 		ssoConf := config.New()
 		if err := ssoConf.MergeHOCONFile(instance.HomeRel(i, "conf/sso-agent.conf")); err != nil {
+			resp.Err = fmt.Errorf("reading sso-agent configuration: %w", err)
 			return
 		}
 
@@ -138,7 +139,8 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 		// load the security.properties file, update the port and use the keystore values later
 		sp, err := instance.ReadKVConfig(h, spPath)
 		if err != nil {
-			return nil
+			resp.Err = fmt.Errorf("reading %s: %w", spPath, err)
+			return
 		}
 
 		truststorePath = sp["trustStore"]
@@ -159,7 +161,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if truststorePath != "" {
 		updated, err := certs.UpdateCACertsFileFromTrustStore(h, instance.HomeRel(i, truststorePath), truststorePassword, geneos.PathToCABundle(h))
 		if err != nil {
-			resp.Err = fmt.Errorf("updating ca-bundle from truststore: %w", err)
+			resp.Completed = append(resp.Completed, fmt.Sprintf("warning: cannot update ca-bundle from truststore: %s", err))
 		} else if updated {
 			resp.Completed = append(resp.Completed, "updated ca-bundle from truststore")
 		}
@@ -172,8 +174,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	if keystorePath != "" {
 		k, err := certs.ReadKeystore(h, instance.HomeRel(i, keystorePath), keystorePassword)
 		if err != nil {
-			resp.Err = fmt.Errorf("reading keystore: %w", err)
-			return
+			resp.Completed = append(resp.Completed, fmt.Sprintf("warning: cannot read keystore: %s", err))
 		} else {
 			for _, alias := range k.Aliases() {
 				var certChain []*x509.Certificate
@@ -202,7 +203,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 				if err = instance.WriteCertificateAndKey(i, key.PrivateKey, certChain...); err != nil {
 					resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
-					break
+					return
 				}
 
 				resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")

@@ -20,6 +20,7 @@ package tlscmd
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/tls"
@@ -58,6 +59,9 @@ type infoCmdRootsType []string
 var infoCmdFormat string
 var infoCmdLong, infoCmdLeafOnly bool
 var infoCmdPassword config.Secret
+
+// infoCmdPasswordSet is true if the password flag was used, including with an empty password
+var infoCmdPasswordSet bool
 var infoCmdConnects infoCmdConnectsType
 var infoCmdConnectsFile string
 var infoCmdRoots infoCmdRootsType
@@ -143,12 +147,10 @@ var infoCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, paths []string) (err error) {
 		log := log.With("command", "tls info")
+		infoCmdPasswordSet = command.Flags().Changed("password")
 		// each argument may be a list of paths, as passed from a Geneos
 		// stringList variable, and each path may be a glob pattern
 		paths = expandInfoPaths(paths)
-
-		// gather cert info
-		certInfos := make([]certInfo, len(paths))
 
 		roots, err := x509.SystemCertPool()
 		if err != nil {
@@ -178,25 +180,11 @@ var infoCmd = &cobra.Command{
 			}
 		}
 
-		certInfos = readFiles(paths, roots)
+		// gather cert info
+		certInfos := readFiles(paths, roots)
 
 		if len(infoCmdConnects) > 0 {
-			var wg sync.WaitGroup
-			ch := make(chan certInfo, len(infoCmdConnects))
-			for _, addr := range infoCmdConnects {
-				wg.Add(1)
-				go func(ch chan certInfo, addr string) {
-					defer wg.Done()
-					ci := getCertificatesFromConnection(addr, roots)
-					ch <- ci
-				}(ch, addr)
-			}
-			wg.Wait()
-			close(ch)
-
-			for ci := range ch {
-				certInfos = append(certInfos, ci)
-			}
+			certInfos = append(certInfos, getCertificatesFromConnections(infoCmdConnects, roots)...)
 		}
 
 		if infoCmdConnectsFile != "" {
@@ -212,8 +200,6 @@ var infoCmd = &cobra.Command{
 				defer r.Close()
 			}
 
-			// first count the number of lines, so we can create a
-			// channel of the right capacty
 			var lines []string
 			scanner := bufio.NewScanner(r)
 			for scanner.Scan() {
@@ -223,34 +209,12 @@ var infoCmd = &cobra.Command{
 				}
 				lines = append(lines, addr)
 			}
-
-			var wg sync.WaitGroup
-			ch := make(chan certInfo, len(lines))
-
-			for _, addr := range lines {
-				wg.Add(1)
-				if len(ch) == cap(ch) {
-					log.Warn("channel buffer full, waiting for some connections to finish before starting new ones")
-				}
-				go func(ch chan certInfo, addr string) {
-					defer wg.Done()
-					ci := getCertificatesFromConnection(addr, roots)
-					ch <- ci
-				}(ch, addr)
-
-				// ci := getCertificatesFromConnection(addr, roots)
-				// certInfos = append(certInfos, ci)
-			}
-			wg.Wait()
-			close(ch)
-
-			for ci := range ch {
-				certInfos = append(certInfos, ci)
-			}
 			if err := scanner.Err(); err != nil {
 				log.Error("error reading connects file", slog.Any("error", err), slog.String("file", infoCmdConnectsFile))
 				return err
 			}
+
+			certInfos = append(certInfos, getCertificatesFromConnections(lines, roots)...)
 		}
 
 		// prepare reporter
@@ -269,12 +233,20 @@ var infoCmd = &cobra.Command{
 
 		var totalVerified, totalCerts, totalExpired, totalExpiring30days int64
 
+		// all the private keys found in any file, for matching with
+		// certificates in any file
+		var allKeys []certs.PrivateKey
+		for _, ci := range certInfos {
+			allKeys = append(allKeys, ci.PrivateKeys...)
+		}
+		now := time.Now()
+
 		// sort output by path, allow lop below to order by index
 		slices.SortFunc(certInfos, func(a, b certInfo) int {
 			return strings.Compare(a.Path, b.Path)
 		})
 
-		for i, ci := range certInfos {
+		for _, ci := range certInfos {
 			if ci.Error != nil {
 				lines = append(lines, []string{
 					strings.TrimSuffix(filepath.Base(ci.Path), ":443"),
@@ -287,25 +259,18 @@ var infoCmd = &cobra.Command{
 				var fileandindex string
 				status := "OK"
 
-				privateKeyPresent := slices.ContainsFunc(certInfos, func(ci certInfo) bool {
-					for _, pk := range ci.PrivateKeys {
-						if certs.CheckKeyMatch(pk, c) {
-							return true
-						}
-					}
-					return false
-				})
+				privateKeyPresent := certs.IndexPrivateKey(allKeys, c) >= 0
 
 				if infoCmdLeafOnly {
 					// skip if it's a CA cert or if it doesn't have a matching private key in any file
-					if c.IsCA {
+					if c.IsCA || !privateKeyPresent {
 						continue
 					}
-					fileandindex = strings.TrimSuffix(filepath.Base(certInfos[i].Path), ":443")
+					fileandindex = strings.TrimSuffix(filepath.Base(ci.Path), ":443")
 				} else {
-					name := strings.TrimSuffix(filepath.Base(certInfos[i].Path), ":443")
-					if len(certInfos[i].Alias) > n && certInfos[i].Alias[n] != "" {
-						fileandindex = fmt.Sprintf("%s/%s", name, certInfos[i].Alias[n])
+					name := strings.TrimSuffix(filepath.Base(ci.Path), ":443")
+					if len(ci.Alias) > n && ci.Alias[n] != "" {
+						fileandindex = fmt.Sprintf("%s/%s", name, ci.Alias[n])
 					} else {
 						fileandindex = fmt.Sprintf("%s/%d", name, n+1)
 					}
@@ -321,11 +286,11 @@ var infoCmd = &cobra.Command{
 				}
 
 				totalCerts++
-				if c.NotAfter.Before(time.Now()) {
+				if c.NotAfter.Before(now) {
 					status = "Expired"
 					totalExpired++
 				}
-				if c.NotAfter.Before(time.Now().Add(30 * 24 * time.Hour)) {
+				if c.NotAfter.Before(now.Add(30 * 24 * time.Hour)) {
 					totalExpiring30days++
 				}
 
@@ -397,6 +362,43 @@ var infoCmd = &cobra.Command{
 	},
 }
 
+// limits for connections made to get certificates
+var infoDialTimeout = 10 * time.Second
+
+const infoMaxConnections = 16
+
+// dialTLS connects to addr, completing the TLS handshake, within the
+// dial timeout
+func dialTLS(addr string, config *tls.Config) (*tls.Conn, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), infoDialTimeout)
+	defer cancel()
+
+	d := tls.Dialer{NetDialer: &net.Dialer{Timeout: infoDialTimeout}, Config: config}
+	conn, err := d.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	return conn.(*tls.Conn), nil
+}
+
+// getCertificatesFromConnections returns the certificates from each of
+// addrs, in order, connecting to a limited number at a time
+func getCertificatesFromConnections(addrs []string, roots *x509.CertPool) []certInfo {
+	results := make([]certInfo, len(addrs))
+	limit := make(chan struct{}, infoMaxConnections)
+
+	var wg sync.WaitGroup
+	for i, addr := range addrs {
+		limit <- struct{}{}
+		wg.Go(func() {
+			defer func() { <-limit }()
+			results[i] = getCertificatesFromConnection(addr, roots)
+		})
+	}
+	wg.Wait()
+	return results
+}
+
 func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certInfo) {
 	u, err := url.Parse(addr)
 	if err != nil || u.Scheme == "" || u.Host == "" {
@@ -422,7 +424,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 	start := time.Now()
 
 	var verifiedChains [][]*x509.Certificate
-	conn, err := tls.Dial("tcp", u.Host, &tls.Config{
+	conn, err := dialTLS(u.Host, &tls.Config{
 		// RootCAs: roots,
 		InsecureSkipVerify: true,
 		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) (err error) {
@@ -464,7 +466,7 @@ func getCertificatesFromConnection(addr string, roots *x509.CertPool) (ci certIn
 			start = time.Now() // reset start time to exclude time taken by failed verification attempt
 			log.Debug("TLS certificate verification failed, retrying with InsecureSkipVerify to get certificates anyway", slog.Any("error", err), slog.String("address", addr))
 			// try again with skip verify
-			conn, err = tls.Dial("tcp", u.Host, &tls.Config{
+			conn, err = dialTLS(u.Host, &tls.Config{
 				InsecureSkipVerify: true,
 			})
 			if err != nil {
@@ -600,16 +602,23 @@ func readFiles(paths []string, roots *x509.CertPool) (ci []certInfo) {
 // want to report the verification status of each certificate
 // separately.
 func readFile(p string, ci *certInfo) (err error) {
+	if err = readFileInto(p, ci); err != nil {
+		ci.Error = err
+	}
+	return
+}
+
+func readFileInto(p string, ci *certInfo) (err error) {
 	ci.Path, err = filepath.Abs(p)
 	if err != nil {
 		log.Error("unable to get absolute path", slog.Any("error", err), slog.String("file", p))
+		ci.Path = p
 		return
 	}
-	// ci.Contents = certContents{}
 
-	contents, err2 := os.ReadFile(p)
-	if err2 != nil {
-		log.Error("unable to read file", slog.Any("error", err2), slog.String("file", p))
+	contents, err := os.ReadFile(p)
+	if err != nil {
+		log.Error("unable to read file", slog.Any("error", err), slog.String("file", p))
 		return
 	}
 
@@ -638,32 +647,20 @@ func readFile(p string, ci *certInfo) (err error) {
 		return nil
 	}
 
-	r, err2 := os.Open(p)
-	if err2 != nil {
-		log.Error("unable to open file", slog.Any("error", err2), slog.String("file", p))
-		return err2
-	}
-
-	magic := make([]byte, 4)
-	_, err2 = r.Read(magic)
-	r.Close() // close regardless of read success
-	if err2 != nil && err2 != io.EOF {
-		log.Error("unable to read file", slog.Any("error", err2), slog.String("file", p))
-		return err2
-	}
+	// a Java keystore starts with a magic number, anything shorter
+	// cannot be one
+	magic := contents[:min(len(contents), 4)]
 
 	if bytes.Equal(magic, []byte{0xFE, 0xED, 0xFE, 0xED}) {
 		log.Debug("Java keystore magic number found", slog.String("file", p))
-		if len(infoCmdPassword) == 0 {
-			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password for keystore file "+p)
-			if err != nil {
-				log.Error("Failed to read password", slog.Any("error", err))
-				os.Exit(1)
-				// return err
-			}
-			defer clear(infoCmdPassword)
+		password, err := infoPassword("Password for keystore file " + p)
+		if err != nil {
+			log.Error("Failed to read password", slog.Any("error", err))
+			return err
 		}
-		k, err := certs.ReadKeystore(geneos.LOCAL, p, infoCmdPassword)
+		defer clear(password)
+
+		k, err := certs.ReadKeystore(geneos.LOCAL, p, password)
 		if err != nil {
 			log.Error("unable to read Java keystore", slog.Any("error", err), slog.String("file", p))
 			return err
@@ -671,7 +668,7 @@ func readFile(p string, ci *certInfo) (err error) {
 		for _, alias := range k.Aliases() {
 			switch {
 			case k.IsPrivateKeyEntry(alias):
-				pke, err := k.GetPrivateKeyEntry(alias, infoCmdPassword)
+				pke, err := k.GetPrivateKeyEntry(alias, password)
 				if err != nil {
 					log.Error("unable to get private key entry from Java keystore", slog.Any("error", err), slog.String("alias", alias))
 					return err
@@ -713,15 +710,13 @@ func readFile(p string, ci *certInfo) (err error) {
 
 	ext := strings.ToLower(filepath.Ext(p))
 	if ext == ".pfx" || ext == ".p12" {
-		if len(infoCmdPassword) == 0 {
-			infoCmdPassword, err = config.ReadPasswordInput(false, 0, "Password (for file "+p+")")
-			if err != nil {
-				return
-			}
-			defer clear(infoCmdPassword)
+		password, err := infoPassword("Password (for file " + p + ")")
+		if err != nil {
+			return err
 		}
+		defer clear(password)
 
-		key, c, chain, err := pkcs12.DecodeChain(contents, string(infoCmdPassword))
+		key, c, chain, err := pkcs12.DecodeChain(contents, string(password))
 		if err != nil {
 			log.Error("unable to decode PKCS#12 file - is the password correct?", slog.Any("error", err), slog.String("file", p))
 			return err
@@ -761,12 +756,23 @@ func readFile(p string, ci *certInfo) (err error) {
 			// save all private keys for later matching
 			ci.PrivateKeys = append(ci.PrivateKeys, block.Bytes)
 		default:
-			err = fmt.Errorf("unsupported PEM type found: %s", block.Type)
+			// other blocks, such as EC parameters, are not needed
+			log.Debug("ignoring unsupported PEM type", slog.String("type", block.Type), slog.String("file", p))
 		}
 		contents = rest
 	}
 
 	return
+}
+
+// infoPassword returns the password to use for a file. It is a copy of
+// the password given on the command line, or prompted for each time,
+// so that the caller can clear it without affecting other files.
+func infoPassword(prompt string) (password config.Secret, err error) {
+	if len(infoCmdPassword) > 0 || infoCmdPasswordSet {
+		return slices.Clone(infoCmdPassword), nil
+	}
+	return config.ReadPasswordInput(false, 0, prompt)
 }
 
 func infoMapString[T, V any](ts []T, fn func(T) V) string {

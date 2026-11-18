@@ -87,7 +87,7 @@ var createCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if createCmdForce {
-			if err = geneos.TLSInit(geneos.LOCALHOST, false, initCmdKeyType); err != nil {
+			if err = geneos.TLSInit(geneos.LOCALHOST, false, keyTypeOrDefault(createCmdKeyType)); err != nil {
 				return
 			}
 		}
@@ -227,7 +227,9 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		return
 	}
 
-	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	if err = geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600); err != nil {
+		return
+	}
 
 	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	fmt.Print(string(certs.CertificateComments(cert)))
@@ -271,7 +273,9 @@ func CreateSigningCert(destination string, overwrite bool, hostname string) (err
 		fmt.Print(b.String())
 		return
 	}
-	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	if err = geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600); err != nil {
+		return
+	}
 	fmt.Printf("Signing certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	return
 }
