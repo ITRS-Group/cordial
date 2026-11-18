@@ -18,6 +18,7 @@ limitations under the License.
 package includes
 
 import (
+	"encoding/xml"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -290,7 +291,17 @@ func TestFixEditsSetupExactly(t *testing.T) {
 						*location = "../../includes/ent&.xml"
 					}
 				})
-				if !reflect.DeepEqual(expected, fixedModel) {
+				// compare what the models contain and not the state that a
+				// read model keeps about the document that it was read from
+				wantXML, err := xml.Marshal(expected)
+				if err != nil {
+					t.Fatal(err)
+				}
+				gotXML, err := xml.Marshal(fixedModel)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(wantXML) != string(gotXML) {
 					t.Errorf("%s: the edited setup does not parse to the parsed original with the same locations replaced", name)
 				}
 			}
