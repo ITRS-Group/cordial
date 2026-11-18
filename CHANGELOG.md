@@ -157,6 +157,20 @@
 
   * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
 
+* `pkg/certs`
+
+  * `GenerateKey` and `WithKeyType` now always produce a key that can sign certificates. As an ECDH key cannot sign, the `ecdh` key type (still the default, so stored configurations and flags are unchanged) is generated as an ECDSA P-256 key, which has the same curve and PKCS#8 encoding, and so parses as `ecdsa`. Previously `WithKeyType(ECDH)`, and so `geneos tls create --key-type ecdh`, failed with `unsupported public key type: <nil>`.
+
+  * `IsValidLeafCert` now accepts any certificate that is not a CA, is usable for TLS (no key usage extension, or one that includes digital signature, key encipherment or key agreement) and is within its validity dates; extended key usages are no longer required. `IsValidRootCA` now compares the raw subject and issuer, rather than only the common names, and requires the certificate signing key usage if there is a key usage extension.
+
+  * `DecodePEM`, `ReadPrivateKey`, `ReadPrivateKeyFromPEM` and `WritePrivateKeyTo` now always return or write PKCS#8 private keys, converting PKCS#1 and SEC1 keys. Malformed private keys and encrypted private keys (`ENCRYPTED PRIVATE KEY` or legacy encrypted PEM) are now errors, or skipped by `DecodePEM`, rather than returned as unusable data.
+
+  * `Template` with the `IsCA` option now also sets valid basic constraints and, unless a key usage is given, the certificate signing key usages, so that the result is a working CA. A new `NewTemplate` function returns an error for invalid IP address and URI options and for a failure to generate a serial number; `Template` now returns `nil` for these instead of silently dropping the invalid values, and `CreateCertificate` returns an error for a `nil` template.
+
+  * `WriteNewRootCert` now accepts an empty key type and uses the default. `CreateCertificate` accepts a `nil` signing key for a self-signed certificate.
+
+  * Truststore aliases are now unique: a root certificate with the same common name as a different certificate already in the truststore is added with the serial number added to the alias, and a root certificate without a common name uses its SHA-1 fingerprint, rather than replacing the other certificate or failing. Existing entries are no longer replaced by a different certificate with the same common name.
+
 * `pkg/host`
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
@@ -268,6 +282,26 @@
 * `pkg/gwhub`
 
   * Fix `MetricsAggregations` always returning an empty result.
+
+* `pkg/certs`
+
+  * Fix certificates created by `CreateCertificate` all having the same `SubjectKeyId` (the hash of no data), and the caller's template being modified.
+
+  * Fix self-signed root certificates, as created by `WriteNewRootCert`, being signed with a different key to the one they contain, so that `root.CheckSignatureFrom(root)` and OpenSSL `-check_ss_sig` failed. Existing roots are still accepted.
+
+  * Fix `Verify`, `ParseCertChain` and `ParsePEM` only accepting certificates valid for server authentication, rejecting for example client-only certificates, and a panic in `ParsePEM` when there is no system certificate pool. `Verify` and `ParseCertChain` also no longer panic on `nil` certificates.
+
+  * Fix `DecodePEM` and `ParsePEM` silently ignoring expired and invalid certificates; `ParsePEM` now says which certificates were skipped, rather than only "no certificates found".
+
+  * Fix `UpdateCACertsFiles` modifying the slice of certificates passed to it, and `WriteCertificatesTo` returning only the number of bytes written for the last certificate.
+
+  * Fix `ReadCertPool` returning an empty pool, rather than `nil`, if the file cannot be read.
+
+  * Fix `AddCertChainToKeyStore` and `AddRootsToTrustStore` replacing an existing keystore that could not be read, for example because of a wrong password, with an empty one. Only a missing or empty file is now created, other errors are returned. `AddCertChainToKeyStore` also no longer ignores a failure to add the key.
+
+  * Fix `ChangePassword` not using the default password for private keys and silently leaving keys unchanged when they could not be decrypted, resulting in a keystore that could not be used. It is now an error, and the existing file permissions are kept.
+
+  * Fix `WriteKeystore` truncating the existing file while writing. The keystore is now written to a temporary file and renamed over the original.
 
 * `pkg/host`
 

@@ -63,7 +63,7 @@ func init() {
 	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signing)\nand overwrite any existing file in the 'out' directory")
 
 	createCmd.Flags().BoolVarP(&createCmdPrivateKey, "private-key", "K", false, "Create a private key without a certificate. Ignored for --signing.")
-	createCmd.Flags().VarP(&createCmdKeyType, "key-type", "k", "Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519\nor ecdh). Ignored for --signing. Defaults to the same type as\nthe signing certificate key or a default type if that cannot be determined.")
+	createCmd.Flags().VarP(&createCmdKeyType, "key-type", "k", "Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519\nor ecdh, which is an ECDSA P-256 key). Ignored for --signing. Defaults to the same type as\nthe signing certificate key or a default type if that cannot be determined.")
 
 	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signing.")
 	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signing.")
