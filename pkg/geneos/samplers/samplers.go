@@ -56,8 +56,8 @@ type Columns map[string]columndetails
 // columndetails has to be it's own type so that it can be used as values in maps
 type columndetails struct {
 	tags   string // copy of tags for now
-	name   string // display name of column. name="OMIT" mean not rendered
-	number int    // column index - convenience for now
+	name   string // display name of column. name="OMIT" (or "-") means not rendered
+	number int    // index of the column in rendered rows (OMIT columns are not rendered), -1 if not rendered
 	format string // alterative Printf format, default is %v
 	// TODO: Revisit unused field convfunc; restore it only when needed.
 	// 	convfunc func(any) string // this may happen - not yet used
@@ -70,6 +70,11 @@ const (
 	// format is a fmt.Printf format string for the data and defaults to %v
 	format = "format"
 )
+
+// omitted returns true if a column name marks it as not rendered
+func omitted(name string) bool {
+	return name == "OMIT" || name == "-"
+}
 
 type sortType int
 
@@ -158,7 +163,12 @@ func (s *Samplers) initDataviews(p *plugins.Connection) (err error) {
 
 // Start TODO: Document its behavior, inputs, and effects.
 func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
-	if !p.Exists() {
+	// a zero interval would panic when creating the ticker
+	if p.Interval() <= 0 {
+		err = fmt.Errorf("Start(): sample interval must be greater than zero (%s)", p.Interval())
+		return
+	}
+	if p.Dataview == nil || !p.Exists() {
 		err = fmt.Errorf("Start(): Dataview not defined")
 		return
 	}
@@ -181,7 +191,7 @@ func (p *Samplers) Start(wg *sync.WaitGroup) (err error) {
 
 // Close TODO: Document its behavior, inputs, and effects.
 func (s *Samplers) Close() error {
-	if !s.Exists() {
+	if s.Dataview == nil || !s.Exists() {
 		return nil
 	}
 	return s.Dataview.Close()
@@ -217,7 +227,7 @@ func (s Samplers) ColumnInfo(rowdata any) (cols Columns,
 	cols = make(Columns, rt.NumField())
 	sorting = rt.Field(0).Name
 
-	for i := 0; i < rt.NumField(); i++ {
+	for i := range rt.NumField() {
 		column := columndetails{}
 		fieldname := rt.Field(i).Name
 		if tags, ok := rt.Field(i).Tag.Lookup("column"); ok {
@@ -229,15 +239,16 @@ func (s Samplers) ColumnInfo(rowdata any) (cols Columns,
 			if column.sort != sortNone {
 				sorting = fieldname
 			}
-			column.number = i
 		} else {
 			column.name = fieldname
-			column.number = i
 			column.format = "%v"
 		}
 		// A column marked "OMIT" is still useable but is not included
-		// in the column names
-		if column.name != "OMIT" {
+		// in the column names or the rendered rows, so its index is
+		// that of the rendered cells and not of the struct field
+		column.number = -1
+		if !omitted(column.name) {
+			column.number = len(columnnames)
 			columnnames = append(columnnames, column.name)
 		}
 		cols[fieldname] = column
@@ -255,7 +266,10 @@ Sorting the data is only to define the "natural sort order" of the data
 as it appears in a Geneos Dataview without further client-side sorting.
 */
 func (s *Samplers) UpdateTableFromMap(data any) error {
-	table, _ := s.RowsFromMap(data)
+	table, err := s.RowsFromMap(data)
+	if err != nil {
+		return err
+	}
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
@@ -281,12 +295,15 @@ func (s Samplers) RowsFromMap(rowdata any) (rows [][]string, err error) {
 
 	for _, k := range r.MapKeys() {
 		var cells []string
-		rawcells, _ := rowFromStruct(c, r.MapIndex(k))
+		rawcells, err := rowFromStruct(c, r.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
 		t := reflect.Indirect(r.MapIndex(k)).Type()
 		for i := range rawcells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "OMIT" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 			cells = append(cells, fmt.Sprintf(format, rawcells[i]))
@@ -305,7 +322,10 @@ method renders a simple table of data as defined in the Columns
 part of Samplers
 */
 func (s Samplers) UpdateTableFromSlice(rowdata any) error {
-	table, _ := s.RowsFromSlice(rowdata)
+	table, err := s.RowsFromSlice(rowdata)
+	if err != nil {
+		return err
+	}
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
@@ -323,16 +343,19 @@ func (s Samplers) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 		return
 	}
 
-	for i := 0; i < rd.Len(); i++ {
-		v := rd.Index(i)
+	for i := range rd.Len() {
+		v := reflect.Indirect(rd.Index(i))
 		t := v.Type()
 
-		rawcells, _ := rowFromStruct(c, v)
+		rawcells, err := rowFromStruct(c, v)
+		if err != nil {
+			return nil, err
+		}
 		var cells []string
 		for i := range rawcells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "OMIT" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 			cells = append(cells, fmt.Sprintf(format, rawcells[i]))
@@ -347,7 +370,10 @@ func (s Samplers) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 UpdateTableFromMapDelta
 */
 func (s *Samplers) UpdateTableFromMapDelta(newdata, olddata any, interval time.Duration) error {
-	table, _ := s.RowsFromMapDelta(newdata, olddata, interval)
+	table, err := s.RowsFromMapDelta(newdata, olddata, interval)
+	if err != nil {
+		return err
+	}
 	return s.UpdateTable(s.ColumnNames(), table...)
 }
 
@@ -386,22 +412,30 @@ func (s Samplers) RowsFromMapDelta(newrowdata, oldrowdata any,
 	}
 
 	for _, k := range rNew.MapKeys() {
-		rawOld, _ := rowFromStruct(c, rOld.MapIndex(k))
-		rawCells, _ := rowFromStruct(c, rNew.MapIndex(k))
+		if !rOld.MapIndex(k).IsValid() {
+			return nil, fmt.Errorf("key %v missing from old data", k)
+		}
+		rawOld, err := rowFromStruct(c, rOld.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
+		rawCells, err := rowFromStruct(c, rNew.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
 		var cells []string
 		t := reflect.Indirect(rNew.MapIndex(k)).Type()
 		for i := range rawCells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "OMIT" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 
 			// calc diff here
 			oldCell, newCell := rawOld[i], rawCells[i]
 			if reflect.TypeOf(oldCell) != reflect.TypeOf(newCell) {
-				err = fmt.Errorf("non-matching types in data")
-				return
+				return nil, fmt.Errorf("non-matching types in data")
 			}
 			// can these fields be converted to float (the concrete value)
 			// this is not the same as parsing a string as float, but the
@@ -436,32 +470,45 @@ func toFloat(f any) (float64, error) {
 
 func (c Columns) sortRows(rows [][]string, sortcol string) [][]string {
 	sorttype, sortby := c[sortcol].sort, c[sortcol].number
+	if sortby < 0 {
+		// the sort column is not rendered, leave the rows as they are
+		return rows
+	}
+
+	// cells shorter than expected sort as empty rather than panic
+	cell := func(row []string) string {
+		if sortby < len(row) {
+			return row[sortby]
+		}
+		return ""
+	}
 
 	slices.SortFunc(rows, func(a, b []string) int {
+		as, bs := cell(a), cell(b)
 		switch sorttype {
 		case sortDesc:
-			return cmp.Compare(b[sortby], a[sortby])
+			return cmp.Compare(bs, as)
 		case sortAscNum:
 			// err is ignored, zero is a valid answer if the
 			// contents are not a float
-			an, _ := strconv.ParseFloat(a[sortby], 64)
-			bn, _ := strconv.ParseFloat(b[sortby], 64)
+			an, _ := strconv.ParseFloat(as, 64)
+			bn, _ := strconv.ParseFloat(bs, 64)
 			if an == bn {
-				return strings.Compare(a[sortby], b[sortby])
+				return strings.Compare(as, bs)
 			}
 			return cmp.Compare(an, bn)
 		case sortDescNum:
 			// err is ignored, zero is a valid answer if the
 			// contents are not a float
-			an, _ := strconv.ParseFloat(a[sortby], 64)
-			bn, _ := strconv.ParseFloat(b[sortby], 64)
+			an, _ := strconv.ParseFloat(as, 64)
+			bn, _ := strconv.ParseFloat(bs, 64)
 			if an == bn {
-				return strings.Compare(b[sortby], a[sortby])
+				return strings.Compare(bs, as)
 			}
 			return cmp.Compare(bn, an)
 		// case sortNone, sortAsc: - the default
 		default:
-			return strings.Compare(a[sortby], b[sortby])
+			return strings.Compare(as, bs)
 		}
 	})
 	return rows
@@ -478,7 +525,7 @@ func rowFromStruct(c Columns, rv reflect.Value) (row []any, err error) {
 
 	rt := rv.Type()
 
-	for i := 0; i < rt.NumField(); i++ {
+	for i := range rt.NumField() {
 		row = append(row, rv.Field(i).Interface())
 	}
 
@@ -491,27 +538,30 @@ func parseTags(fieldname string, tag string) (cols columndetails, err error) {
 	cols.name = fieldname
 	cols.format = "%v"
 
-	tags := strings.SplitSeq(tag, ",")
-	for t := range tags {
-		i := strings.IndexByte(t, '=')
-		if i == -1 {
-			if cols.name != fieldname {
+	var nameSet bool
+	for t := range strings.SplitSeq(tag, ",") {
+		prefix, value, found := strings.Cut(t, "=")
+		if !found {
+			if t == "" {
+				continue
+			}
+			if nameSet {
 				// err, already defined
 				err = fmt.Errorf("column name %q redefined more than once", cols.name)
 				return
 			}
 			cols.name = t
+			nameSet = true
 			continue
 		}
-		prefix := t[:i]
 
 		switch prefix {
 		case sorting:
 			cols.sort = sortAsc
-			if t[i+1] == '-' {
+			if strings.HasPrefix(value, "-") {
 				cols.sort = sortDesc
 			}
-			if strings.HasSuffix(t[i+1:], "num") {
+			if strings.HasSuffix(value, "num") {
 				if cols.sort == sortAsc {
 					cols.sort = sortAscNum
 				} else {
@@ -521,7 +571,7 @@ func parseTags(fieldname string, tag string) (cols columndetails, err error) {
 
 		case format:
 			// no validation
-			cols.format = t[i+1:]
+			cols.format = value
 		}
 	}
 	return
