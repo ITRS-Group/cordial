@@ -36,6 +36,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
 )
 
@@ -238,6 +239,26 @@ func validateHostFlag(name string) error {
 	}
 	if h := geneos.GetHost(name); h == nil || h == geneos.UNKNOWN {
 		return fmt.Errorf("unknown host %q", name)
+	}
+	return nil
+}
+
+// defaultHost returns the host selected by the `-H` flag for commands
+// that work on a single host, which is the local host if none or all
+// hosts are selected.
+func defaultHost() *geneos.Host {
+	if h := geneos.GetHost(Hostname); h != nil && h != geneos.ALL {
+		return h
+	}
+	return geneos.LOCAL
+}
+
+// checkNameHost returns an error if the host part of an instance name
+// in the format [TYPE:]NAME[@HOST], or the default host if there is
+// none, is not a known host.
+func checkNameHost(name string, h *geneos.Host) error {
+	if eh, _, _ := instance.ParseName(name, h); eh == nil || eh == geneos.UNKNOWN {
+		return fmt.Errorf("unknown host in %q", name)
 	}
 	return nil
 }

@@ -99,8 +99,19 @@ geneos add netprobe infraprobe12 --start --log
 		if len(names) == 0 {
 			return fmt.Errorf("%w: no instance name given", geneos.ErrInvalidArgs)
 		}
+		h := defaultHost()
+		if err = checkNameHost(names[0], h); err != nil {
+			return err
+		}
+		// instance.Add does not fail for an existing instance, but the
+		// command must not report success when nothing was added
+		if ct != nil {
+			if _, merr := instance.Match(h, ct, false, true, names[0]); merr == nil {
+				return fmt.Errorf("%w: %s already exists", geneos.ErrExists, names[0])
+			}
+		}
 		addCmdExtras.Params = params
-		i, err := instance.Add(geneos.GetHost(Hostname), ct, names[0],
+		i, err := instance.Add(h, ct, names[0],
 			instance.WithPort(addCmdPort),
 			instance.WithValues(addCmdExtras),
 			instance.WithTemplate(addCmdTemplate),

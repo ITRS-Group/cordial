@@ -8,10 +8,15 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func TestAddReturnsErrorBeforeFollowingLogs(t *testing.T) {
+	cmdtest.Env(t)
+	geneos.InitHosts(cordial.ExecutableName())
 	previousLogs, previousParams := addCmdLogs, addCmdExtras.Params
 	t.Cleanup(func() {
 		addCmdLogs, addCmdExtras.Params = previousLogs, previousParams

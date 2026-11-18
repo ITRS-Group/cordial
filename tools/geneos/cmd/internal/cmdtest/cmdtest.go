@@ -19,6 +19,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
 // Result is the outcome of running a command.
@@ -51,6 +52,12 @@ func Env(t *testing.T) (root string) {
 	previousLocal, previousAll, previousUnknown, previousHostname := geneos.LOCAL, geneos.ALL, geneos.UNKNOWN, geneos.LOCALHOST
 	previousHandler := logger.LogHandler
 	t.Cleanup(func() {
+		// instances are cached by name, so forget those from this root
+		if geneos.LOCAL != nil {
+			for _, i := range instance.Instances(geneos.LOCAL, nil) {
+				_ = i.Unload()
+			}
+		}
 		config.Set(config.Global(), key, previousRoot)
 		geneos.LOCAL, geneos.ALL, geneos.UNKNOWN, geneos.LOCALHOST = previousLocal, previousAll, previousUnknown, previousHostname
 		logger.LogHandler = previousHandler
