@@ -196,7 +196,9 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 			i.Log().Error("failed to check base version", slog.Any("error", err))
 		} else if !exists {
 			i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basename))
-			geneos.Update(h, ct, geneos.Basename(basename))
+			if err := geneos.Update(h, ct, geneos.Basename(basename)); err != nil {
+				i.Log().Warn("failed to create base version link", slog.String("base", basename), slog.Any("error", err))
+			}
 		}
 	}
 

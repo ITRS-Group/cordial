@@ -60,8 +60,9 @@ const DisableExtension = "disabled"
 // structure and then it calls the initialisation functions for each
 // component type registered.
 //
-// If the directory is not empty and the Force() option is not passed
-// then nothing is changed
+// If the directory is not empty and the Override() option is not passed
+// then nothing is changed and an error is returned. All failures are
+// returned as errors, the process is never ended from here.
 //
 // The options supported are:
 //
@@ -100,7 +101,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			}
 
 			if dir, err := opts.promptRootDir("Geneos Directory (default %q): ", opts.geneosdir); err != nil {
-				os.Exit(1)
+				return err
 			} else {
 				log.Debug("prompted for geneos directory", slog.String("directory", dir))
 				if dir != "" {
@@ -109,8 +110,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			}
 		}
 		if opts.geneosdir == "" {
-			log.Error("homedir not set")
-			os.Exit(1)
+			return fmt.Errorf("%w: home directory not set", ErrRootNotSet)
 		}
 	}
 
@@ -123,25 +123,18 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 		// create and fail hard if it cannot be created. Permissions are
 		// fixed as 0755 plus umask
 		if err = h.MkdirAll(opts.geneosdir, 0775); err != nil {
-			log.Error("cannot create directory", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("cannot create directory: %w", err)
 		}
 	} else if !opts.override {
 		// if the directory exists and is not empty, handle according to
 		// override option
 		dirs, err := h.ReadDir(opts.geneosdir)
 		if err != nil {
-			log.Error("cannot read root directory", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("cannot read root directory: %w", err)
 		}
 		for _, entry := range dirs {
 			if !(strings.HasPrefix(entry.Name(), ".") || entry.Name() == "bin") {
-				if !h.IsLocalhost() {
-					log.Debug("remote directories exist, exiting init")
-					os.Exit(1)
-				}
-				log.Error("target directory exists and is not empty (ignoring .* and bin)", slog.String("directory", opts.geneosdir))
-				os.Exit(1)
+				return fmt.Errorf("%w: directory %q is not empty (ignoring .* and bin), use --force to use it anyway", ErrExists, opts.geneosdir)
 			}
 		}
 	}
@@ -175,9 +168,21 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 				return err
 			}
 		} else {
-			err = TLSInit(LOCALHOST, true, certs.DefaultKeyType)
-			if err != nil {
+			// existing root and signing certificates are never replaced,
+			// so that the trust chain of an adopted installation is kept
+			_, _, rootErr := ReadRootCertificateAndKey()
+			_, signingErr := readSigningCertificate()
+			existing := rootErr == nil || signingErr == nil
+
+			if err = TLSInit(LOCALHOST, false, certs.DefaultKeyType); err != nil {
 				return err
+			}
+			// new certificates are synced by TLSInit, but this
+			// installation still needs the existing root certificate
+			if existing {
+				if err = TLSSync(); err != nil {
+					return err
+				}
 			}
 		}
 	}

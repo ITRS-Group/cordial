@@ -95,36 +95,41 @@ func TailInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	opts := evalLogWatcherOptions(options...)
 
 	if opts.audit {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, AuditFilepath(i), "audit", opts)...)
+		logTailInstanceFile(resp, i, AuditFilepath(i), "audit", opts)
 		return
 	}
 
 	if opts.stderr {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, ComponentFilepath(i, "txt"), "console", opts)...)
+		logTailInstanceFile(resp, i, ComponentFilepath(i, "txt"), "console", opts)
 	}
 
 	if !opts.noNormal {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, LogFilePath(i), "instance", opts)...)
+		logTailInstanceFile(resp, i, LogFilePath(i), "instance", opts)
 	}
 
 	if opts.caLog && i.Type().IsA("netprobe") {
-		resp.ResultText = append(resp.ResultText, logTailInstanceFile(i, PathTo(i, "calogfile"), "CA", opts)...)
+		logTailInstanceFile(resp, i, PathTo(i, "calogfile"), "CA", opts)
 	}
 
 	return
 }
 
-func logTailInstanceFile(i geneos.Instance, logfile string, kind string, opts logWatcherOptions) (lines []string) {
+// logTailInstanceFile adds the last lines of the log file to resp. A
+// log file that does not exist is not an error, as it is normal for an
+// instance that has not been run, and a message is added instead.
+func logTailInstanceFile(resp *responses.General, i geneos.Instance, logfile string, kind string, opts logWatcherOptions) {
 	_, err := i.Host().Stat(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
+			resp.ResultText = append(resp.ResultText, boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind))
 			return
 		}
+		resp.Err = errors.Join(resp.Err, err)
 		return
 	}
 	f, err := i.Host().Open(logfile)
 	if err != nil {
+		resp.Err = errors.Join(resp.Err, err)
 		return
 	}
 	defer f.Close()
@@ -132,10 +137,9 @@ func logTailInstanceFile(i geneos.Instance, logfile string, kind string, opts lo
 	text, err := tailLines(i, f, opts.lines)
 	if err != nil && !errors.Is(err, io.EOF) {
 		i.Log().Error("error reading log file", slog.Any("error", err), slog.String("file", logfile))
+		resp.Err = errors.Join(resp.Err, fmt.Errorf("reading %s log file: %w", kind, err))
 	}
-	lines = filterOutputStrings(i, logfile, strings.NewReader(text+"\n"), opts)
-
-	return
+	resp.ResultText = append(resp.ResultText, filterOutputStrings(i, logfile, strings.NewReader(text+"\n"), opts)...)
 }
 
 // CatInstance TODO: Document its behavior, inputs, and effects.
@@ -154,35 +158,37 @@ func CatInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 	opts := evalLogWatcherOptions(options...)
 
 	if opts.audit {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, AuditFilepath(i), "audit", opts)...)
+		logCatInstanceFile(resp, i, AuditFilepath(i), "audit", opts)
 		return
 	}
 
 	if opts.stderr {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, ComponentFilepath(i, "txt"), "console", opts)...)
+		logCatInstanceFile(resp, i, ComponentFilepath(i, "txt"), "console", opts)
 	}
 	if !opts.noNormal {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, LogFilePath(i), "instance", opts)...)
+		logCatInstanceFile(resp, i, LogFilePath(i), "instance", opts)
 	}
 	if opts.caLog && i.Type().IsA("netprobe") {
-		resp.ResultText = append(resp.ResultText, logCatInstanceFile(i, PathTo(i, "calogfile"), "CA", opts)...)
+		logCatInstanceFile(resp, i, PathTo(i, "calogfile"), "CA", opts)
 	}
 	return
 }
 
-func logCatInstanceFile(i geneos.Instance, logfile string, kind string, opts logWatcherOptions) (lines []string) {
+// logCatInstanceFile adds the lines of the log file to resp. A log file
+// that does not exist is not an error, as it is normal for an instance
+// that has not been run, and a message is added instead.
+func logCatInstanceFile(resp *responses.General, i geneos.Instance, logfile string, kind string, opts logWatcherOptions) {
 	r, err := i.Host().Open(logfile)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			lines = []string{boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind)}
+			resp.ResultText = append(resp.ResultText, boldWhite.Sprintf("===> %s %s %s log file not found <===\n", i, logfile, kind))
 			return
 		}
+		resp.Err = errors.Join(resp.Err, err)
 		return
 	}
 	defer r.Close()
-	lines = filterOutputStrings(i, logfile, r, opts)
-
-	return
+	resp.ResultText = append(resp.ResultText, filterOutputStrings(i, logfile, r, opts)...)
 }
 
 // FollowInstance follows the logs for a given instance. It sets up

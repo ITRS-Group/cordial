@@ -291,13 +291,25 @@ func profileTargets(values []any) (ProfileTargets, []any) {
 // in values selects profile objects, their members, or both, and is not
 // passed to fn. Other values are passed unchanged. Actions are audited
 // when enabled by the command annotations.
+//
+// Every name that does not match an instance, or matches one that
+// cannot be loaded, has a response with an error and without an
+// instance, using the name as the key, so that it is reported and fails
+// the command. The remaining instances are still processed.
 func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	targets, values := profileTargets(values)
 	if ct.IsA("profile") {
 		rs = make(responses.GeneralResponses)
 
 		for _, n := range names {
-			// action instances first, stop on error
+			p, err := Get(ct, n)
+			if err != nil {
+				log.Debug("failed to get profile", slog.String("profile", n), slog.Any("error", err))
+				rs[n] = responses.NewFailed(profileError(err))
+				continue
+			}
+
+			// action instances first, skip the profile itself on error
 			var instances []geneos.Instance
 			if targets != ProfileOnly {
 				instances = Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
@@ -305,23 +317,14 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 			respmap := DoInstances(action, instances, fn, values...)
 			maps.Copy(rs, respmap)
 
-			// quit early if any instance returned an error
-			for _, resp := range respmap {
-				if resp.Err != nil {
-					return
-				}
-			}
-
-			if targets == ProfileMembersOnly {
+			// do not apply the profile itself if any instance returned an error
+			if targets == ProfileMembersOnly || slices.ContainsFunc(slices.Collect(maps.Values(respmap)), func(r *responses.General) bool {
+				return r.Err != nil
+			}) {
 				continue
 			}
 
 			// do profile after instances
-			p, err := Get(ct, n)
-			if err != nil {
-				log.Debug("failed to get profile %s: %v", n, err)
-				return
-			}
 			resp := fn(p, values...)
 			finishResponse(action, p, resp)
 			rs["_"+p.String()] = resp
@@ -329,7 +332,10 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 		return
 	}
 
-	return DoInstances(action, Instances(h, ct, MatchNames(names...)), fn, values...)
+	instances := Instances(h, ct, MatchNames(names...))
+	rs = DoInstances(action, instances, fn, values...)
+	addMissing(rs, h, ct, names, instances)
+	return
 }
 
 // DoSerial is a variant of Do that executes the function calls
@@ -344,6 +350,12 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 
 	if ct.IsA("profile") {
 		for _, n := range names {
+			p, err := Get(ct, n)
+			if err != nil {
+				log.Debug("failed to get profile", slog.String("profile", n), slog.Any("error", err))
+				rs[n] = responses.NewFailed(profileError(err))
+				continue
+			}
 
 			// the instances
 			var instances []geneos.Instance
@@ -361,18 +373,9 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 			}
 
 			// do profile after instances
-			p, err := Get(ct, n)
-			if err != nil {
-				log.Debug("failed to get profile %s: %v", n, err)
-				continue
-			}
 			resp := fn(p, values...)
 			finishResponse(action, p, resp)
 			rs["_"+p.String()] = resp
-			if resp.Err != nil {
-				return
-			}
-
 		}
 		return
 	}
@@ -385,7 +388,72 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 		rs[c.String()] = resp
 	}
 
+	addMissing(rs, h, ct, names, instances)
 	return
+}
+
+// DoTypes is like Do but for all of the component types given by ct, or
+// by types if ct is nil, which should not include profiles. Each name
+// must match an instance of at least one of the types, instead of all of
+// them as it would if Do was called for each type.
+func DoTypes(action string, h *geneos.Host, ct *geneos.Component, types []*geneos.Component, names []string, fn func(i geneos.Instance, values ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
+	var instances []geneos.Instance
+	for ct := range ct.OrList(types...) {
+		instances = append(instances, Instances(h, ct, MatchNames(names...))...)
+	}
+	rs = DoInstances(action, instances, fn, values...)
+	addMissing(rs, h, ct, names, instances)
+	return
+}
+
+// profileError returns the error for a profile that could not be
+// loaded.
+func profileError(err error) error {
+	if errors.Is(err, geneos.ErrNotExist) || errors.Is(err, os.ErrNotExist) {
+		return geneos.ErrNotExist
+	}
+	return err
+}
+
+// addMissing adds a response with an error to rs, using the name as the
+// key, for each of names that is not the name of one of instances, the
+// result of looking up names on host h and of type ct. The special names
+// "all" and those that are only a host, which can match any number of
+// instances including none, are not checked.
+func addMissing(rs responses.GeneralResponses, h *geneos.Host, ct *geneos.Component, names []string, instances []geneos.Instance) {
+	for _, name := range names {
+		if name == "all" || strings.HasPrefix(name, "@") {
+			continue
+		}
+		nh, _, n := ParseName(name, h)
+		found := slices.ContainsFunc(instances, func(i geneos.Instance) bool {
+			return i.Name() == n && (nh == geneos.ALL || nh == i.Host())
+		})
+		if found {
+			continue
+		}
+		rs[name] = responses.NewFailed(notFound(nh, ct, n))
+	}
+}
+
+// notFound returns the error for the instance called name, without any
+// host, that was not returned by [Instances]. This is geneos.ErrNotExist
+// unless the instance directory is found but the instance could not be
+// loaded, in which case it is the error from loading it.
+func notFound(h *geneos.Host, ct *geneos.Component, name string) error {
+	for h := range h.OrList() {
+		for ct := range ct.OrList() {
+			for _, existing := range AllInstanceNames(h, ct) {
+				if _, _, n := ParseName(existing, h); n != name {
+					continue
+				}
+				if _, err := GetWithHost(h, ct, name); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return geneos.ErrNotExist
 }
 
 // DoInstances is a variant of Do that takes a slice of instances

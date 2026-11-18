@@ -22,8 +22,15 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	// discover which components are in the profile
 	pf := Profiles
 
+	// the failures of the individual components are returned together
+	// after all of them have been tried
+	var errs []error
+
 	instances := ListComponents(h, pf, name)
 	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
+	if len(instances) == 0 {
+		return fmt.Errorf("%w: profile %q is not defined or has no components", geneos.ErrNotExist, name)
+	}
 
 	for _, pi := range instances {
 		ct := geneos.ParseComponent(pi.Component)
@@ -61,10 +68,12 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				}
 				if t, ok := config.Lookup[string](pi.Config, "template"); ok {
 					if tmpl, err = geneos.ReadAll(t); err != nil {
+						errs = append(errs, fmt.Errorf("%s template %q: %w", ct, t, err))
 						continue
 					}
 				}
 				if err = h.WriteFile(output, tmpl, 0664); err != nil {
+					errs = append(errs, fmt.Errorf("%s template %q: %w", ct, t.Filename, err))
 					continue
 				}
 				fmt.Printf("%s template %q written to %s\n", ct, t.Filename, templateDir)
@@ -79,7 +88,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 			if !opts.local && opts.username != "" && opts.password == nil {
 				opts.password, err = config.ReadPasswordInput(false, 0)
 				if err == config.ErrNotInteractive {
-					err = fmt.Errorf("%w and password required", err)
+					errs = append(errs, fmt.Errorf("%s: %w and password required", ct, err))
 					continue
 				}
 				// ok to defer clear here as the options are used before returning to caller
@@ -116,12 +125,14 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				} else if opts.archive != "" {
 					return fmt.Errorf("install %s from %q: %w", pkgct, opts.archive, err)
 				} else {
+					errs = append(errs, fmt.Errorf("install %s: %w", pkgct, err))
 					continue
 				}
 			}
 
 			// TODO: pull in values from profiles per instance
 			if err := ct.MakeDirs(h); err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", ct, err))
 				continue
 			}
 			if ct.Initialise != nil {
@@ -152,8 +163,9 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				instance.WithFlags(opts.flags),
 				instance.WithProfiles(pf),
 			)
-			if err != nil {
-				return err
+			// an existing member is updated, not an error
+			if err != nil && !errors.Is(err, geneos.ErrExists) {
+				errs = append(errs, fmt.Errorf("%s %s: %w", ct, pi.Name, err))
 			}
 		}
 	}
@@ -186,7 +198,11 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 
 	if err != nil {
 		log.Error("failed to add profile instance", slog.Any("error", err))
-		return err
+		return errors.Join(append(errs, err)...)
+	}
+
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	if opts.followLogs {
