@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -146,7 +147,11 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 			return err
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		// instances that do not use key files, or cannot decode the
+		// ciphertext, are skipped as the key is not known, but it is an
+		// error if none of them could decode it
+		var decoded atomic.Int32
+		err = instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {
@@ -181,8 +186,12 @@ geneos aes decode gateway 'Demo Gateway' -p +encs+hexencodedciphertext
 				return
 			}
 			resp.Completed = append(resp.Completed, fmt.Sprintf("decoded as %q", e))
+			decoded.Add(1)
 			return
 		}, ciphertext).Report(os.Stdout)
+		if err == nil && decoded.Load() == 0 {
+			return fmt.Errorf("unable to decode with the key file of any instance")
+		}
 		return
 	},
 }

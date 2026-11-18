@@ -51,13 +51,29 @@ func releaseVersions(release *geneos.ReleaseDetails) []string {
 	return append(slices.Clone(release.Links), release.Version)
 }
 
-func releaseInstances(h *geneos.Host, ct *geneos.Component, release *geneos.ReleaseDetails) []geneos.Instance {
+// releaseInstanceIndex holds the instances by their configured version,
+// loaded once for each host and component type
+type releaseInstanceIndex map[string]map[string][]geneos.Instance
+
+func (x releaseInstanceIndex) byVersion(h *geneos.Host, ct *geneos.Component) map[string][]geneos.Instance {
+	key := h.String() + "/" + ct.String()
+	if m, ok := x[key]; ok {
+		return m
+	}
+	m := map[string][]geneos.Instance{}
+	for _, i := range instance.Instances(h, ct, instance.MatchParentPackage()) {
+		version := config.Get[string](i.Config(), "version")
+		m[version] = append(m[version], i)
+	}
+	x[key] = m
+	return m
+}
+
+func (x releaseInstanceIndex) instances(h *geneos.Host, ct *geneos.Component, release *geneos.ReleaseDetails) []geneos.Instance {
 	var instances []geneos.Instance
+	byVersion := x.byVersion(h, ct)
 	for _, version := range releaseVersions(release) {
-		instances = append(instances, instance.Instances(h, ct,
-			instance.MatchParameters("version="+version),
-			instance.MatchParentPackage(),
-		)...)
+		instances = append(instances, byVersion[version]...)
 	}
 	return instances
 }
@@ -70,12 +86,10 @@ func countReleaseInstances(release *geneos.ReleaseDetails, countVersion func(str
 	return count
 }
 
-func releaseInstanceCount(h *geneos.Host, ct *geneos.Component, release *geneos.ReleaseDetails) int {
+func (x releaseInstanceIndex) count(h *geneos.Host, ct *geneos.Component, release *geneos.ReleaseDetails) int {
+	byVersion := x.byVersion(h, ct)
 	return countReleaseInstances(release, func(version string) int {
-		return len(instance.Instances(h, ct,
-			instance.MatchParameters("version="+version),
-			instance.MatchParentPackage(),
-		))
+		return len(byVersion[version])
 	})
 }
 
@@ -103,6 +117,7 @@ var listCmd = &cobra.Command{
 		}
 		h := geneos.GetHost(cmd.Hostname)
 		versions := []*geneos.ReleaseDetails{}
+		index := releaseInstanceIndex{}
 
 		for h := range h.OrList() {
 			for ct := range ct.OrList() {
@@ -129,7 +144,7 @@ var listCmd = &cobra.Command{
 		case listCmdJSON, listCmdIndent:
 			var b []byte
 			for _, v := range versions {
-				v.Instances = releaseInstanceCount(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), v)
+				v.Instances = index.count(geneos.GetHost(v.Host), geneos.ParseComponent(v.Component), v)
 			}
 			if listCmdIndent {
 				b, err = json.MarshalIndent(versions, "", "    ")
@@ -159,7 +174,7 @@ var listCmd = &cobra.Command{
 				if d.Host != geneos.LOCALHOST {
 					id += "@" + d.Host
 				}
-				numInstances := releaseInstanceCount(h, ct, d)
+				numInstances := index.count(h, ct, d)
 				w.Write([]string{
 					id,
 					d.Component,
@@ -172,7 +187,7 @@ var listCmd = &cobra.Command{
 					d.Path,
 				})
 				if listCmdShowInstances {
-					for _, i := range releaseInstances(h, ct, d) {
+					for _, i := range index.instances(h, ct, d) {
 						w.Write([]string{
 							id + " # " + i.Name(),
 							d.Component,
@@ -203,7 +218,7 @@ var listCmd = &cobra.Command{
 			for _, d := range versions {
 				ct := geneos.ParseComponent(d.Component)
 				h := geneos.GetHost(d.Host)
-				instances := releaseInstanceCount(h, ct, d)
+				instances := index.count(h, ct, d)
 				w.Write([]string{
 					d.Component,
 					d.Host,
@@ -222,7 +237,7 @@ var listCmd = &cobra.Command{
 			for _, d := range versions {
 				ct := geneos.ParseComponent(d.Component)
 				h := geneos.GetHost(d.Host)
-				instances := releaseInstanceCount(h, ct, d)
+				instances := index.count(h, ct, d)
 				name := d.Version
 				if d.Latest {
 					name = fmt.Sprintf("%s (latest)", d.Version)
@@ -238,10 +253,6 @@ var listCmd = &cobra.Command{
 
 			}
 			w.Flush()
-		}
-
-		if err == os.ErrNotExist {
-			err = nil
 		}
 
 		return

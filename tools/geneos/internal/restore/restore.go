@@ -136,6 +136,10 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	// wildcards are only allowed when no renaming is taking place
 	mapping := map[string]string{}
 
+	// matched records the names, or patterns, that matched an instance
+	// in the archive
+	matched := map[string]bool{}
+
 	restoreAll := false
 	if len(names) == 1 && names[0] == "all" {
 		restoreAll = true
@@ -259,7 +263,8 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		if len(mapping) > 0 {
 			for dest, src := range mapping {
 				if dest == src {
-					if matched, _ := filepath.Match(dest, instanceName); matched {
+					if ok, _ := filepath.Match(dest, instanceName); ok {
+						matched[dest] = true
 						// save
 						if err = processFile(instanceName, instRelfilePath, tr, hdr, stats, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
@@ -268,6 +273,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 					}
 				} else {
 					if src == instanceName {
+						matched[dest] = true
 						// rename and save
 						if err = processFile(dest, instRelfilePath, tr, hdr, stats, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
@@ -290,6 +296,16 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 	extracted = true
 
+	// the names that were asked for but are not in the archive are an
+	// error, but the instances that are in the archive are still
+	// restored
+	var errs []error
+	for _, dest := range slices.Sorted(maps.Keys(mapping)) {
+		if !matched[dest] {
+			errs = append(errs, fmt.Errorf("%s: not found in archive %s", mapping[dest], archive))
+		}
+	}
+
 	if opts.list {
 		fmt.Fprintf(opts.progress, "Contents of archive %s:\n", archive)
 	} else {
@@ -307,9 +323,11 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			i, gerr := instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
 			if gerr != nil {
 				log.Debug("getting instance for final rebuild", slog.Any("error", gerr), slog.String("ctName", ctName), slog.String("name", name))
+				errs = append(errs, fmt.Errorf("%s %s: %w", ctName, name, gerr))
 			} else if _, rerr := i.Rebuild(false); rerr != nil {
 				if !errors.Is(rerr, geneos.ErrNotSupported) {
 					i.Log().Debug("rebuild of instance failed", slog.Any("error", rerr), slog.String("ctName", ctName), slog.String("name", name))
+					errs = append(errs, fmt.Errorf("%s %s: rebuild failed: %w", ctName, name, rerr))
 				}
 			} else {
 				fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
@@ -332,7 +350,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 			fmt.Fprintf(opts.progress, "%s %s already exists, skipping\n", ctName, name)
 		}
 	}
-	return
+	return errors.Join(errs...)
 }
 
 // restoreShared writes the entry in a shared directory, by calling

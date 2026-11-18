@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/logger"
@@ -184,7 +186,7 @@ func ParseArgs(c *cobra.Command, args []string) (err error) {
 	// this fails for environments that are being initialised, and there
 	// is a matching call in the `init` and `deploy` commands
 	if geneos.AuditCommands() {
-		logger.Audit().Event(c.CommandPath(), logger.CommandLine(os.Args))
+		logger.Audit().Event(c.CommandPath(), logger.CommandLine(redactArgs(c, os.Args)))
 	}
 
 	// set audit configuration for commands based on annotations.
@@ -326,4 +328,72 @@ func FetchVariant(command *cobra.Command) (variant string) {
 	d.Lock()
 	defer d.Unlock()
 	return d.variant
+}
+
+// redactArgs returns a copy of args, a command line for the command c,
+// with the values of options that carry secrets redacted: the secret
+// part of NAME=VALUE for `--secure`, `--secureenv` and variables of
+// type `secret`, and the whole value for the password options. This is
+// in addition to the pattern based redaction done by the logger, which
+// cannot know that the VALUE of `-E NAME=VALUE` is a secret.
+func redactArgs(c *cobra.Command, args []string) []string {
+	const placeholder = "[REDACTED]"
+
+	out := slices.Clone(args)
+
+	// redact returns the value for the flag f
+	redact := func(f *pflag.Flag, value string) string {
+		switch f.Name {
+		case "password", "certs-password", "signing-bundle-password":
+			return placeholder
+		case "secure", "secureenv":
+			if name, _, found := strings.Cut(value, "="); found {
+				return name + "=" + placeholder
+			}
+		case "variable":
+			if strings.HasPrefix(value, "secret:") {
+				if name, _, found := strings.Cut(value, "="); found {
+					return name + "=" + placeholder
+				}
+			}
+		}
+		return value
+	}
+
+	for i := 0; i < len(out); i++ {
+		a := out[i]
+		switch {
+		case a == "--":
+			return out
+		case strings.HasPrefix(a, "--") && len(a) > 2:
+			name, value, attached := strings.Cut(a[2:], "=")
+			f := c.Flags().Lookup(name)
+			if f == nil {
+				continue
+			}
+			if attached {
+				out[i] = "--" + name + "=" + redact(f, value)
+			} else if f.NoOptDefVal == "" && i+1 < len(out) {
+				i++
+				out[i] = redact(f, out[i])
+			}
+		case strings.HasPrefix(a, "-") && len(a) > 1:
+			f := c.Flags().ShorthandLookup(a[1:2])
+			if f == nil {
+				continue
+			}
+			if len(a) > 2 {
+				// attached value, `-Xvalue` or `-X=value`
+				if v, ok := strings.CutPrefix(a[2:], "="); ok {
+					out[i] = a[:2] + "=" + redact(f, v)
+				} else {
+					out[i] = a[:2] + redact(f, a[2:])
+				}
+			} else if f.NoOptDefVal == "" && i+1 < len(out) {
+				i++
+				out[i] = redact(f, out[i])
+			}
+		}
+	}
+	return out
 }

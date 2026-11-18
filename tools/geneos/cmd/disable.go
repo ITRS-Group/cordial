@@ -61,7 +61,7 @@ var disableCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if instance.IsDisabled(i) {
@@ -83,22 +83,17 @@ var disableCmd = &cobra.Command{
 			}
 
 			if !disableCmdForce && instance.IsRunning(i) {
-				fmt.Printf("%s is running, skipping. Use the `--stop` option to stop running instances\n", i)
+				resp.Err = errors.New("running, not disabled. Use the `--stop` option to stop running instances")
 				return
 			}
 
-			if !instance.IsProtected(i) || disableCmdForce {
-				if resp.Err = instance.Disable(i); resp.Err == nil {
-					resp.Completed = append(resp.Completed, "disabled")
-					i.AuditEvent("action/disable", nil)
-					return
-				}
+			if err := instance.Disable(i); err != nil {
+				resp.Err = fmt.Errorf("not disabled: %w. Instances must not be running or use the '--force'/'-F' option", err)
+				return
 			}
-
-			resp.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
+			resp.Completed = append(resp.Completed, "disabled")
+			i.AuditEvent("action/disable", nil)
 			return
 		}).Report(os.Stdout)
-
-		return
 	},
 }

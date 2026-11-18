@@ -88,34 +88,39 @@ func main() {
 		os.Exit(0)
 	}
 
-	// otherwise emulate legacy ctl commands
+	// otherwise emulate legacy ctl commands. Anything that is not
+	// supported is an error, and the exit status of the commands that
+	// are run is set by cmd.Execute()
 	ct := geneos.ParseComponent(strings.TrimSuffix(execname, "ctl"))
 	if ct == nil {
 		fmt.Fprintf(os.Stderr, "unknown component type %q\n", strings.TrimSuffix(execname, "ctl"))
 		os.Exit(1)
 	}
-	if len(os.Args) > 1 {
-		name := os.Args[1]
-		switch name {
-		case "list":
-			os.Args = []string{execname, "ls", ct.String()}
-			cmd.Execute()
-		case "create":
-			fmt.Printf("create not support, please use 'geneos add %s ...'\n", ct)
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "no command given")
+		os.Exit(1)
+	}
+	name := os.Args[1]
+	switch name {
+	case "list":
+		os.Args = []string{execname, "ls", ct.String()}
+		cmd.Execute()
+	case "create":
+		fmt.Fprintf(os.Stderr, "create not support, please use 'geneos add %s ...'\n", ct)
+		os.Exit(1)
+	default:
+		if len(os.Args) < 3 {
+			fmt.Fprintln(os.Stderr, "unknown command")
 			os.Exit(1)
+		}
+		function := os.Args[2]
+		switch function {
+		case "start", "stop", "restart", "command", "log", "details", "refresh", "status", "delete":
+			os.Args = []string{execname, function, ct.String(), name}
+			cmd.Execute()
 		default:
-			if len(os.Args) > 2 {
-				function := os.Args[2]
-				switch function {
-				case "start", "stop", "restart", "command", "log", "details", "refresh", "status", "delete":
-					os.Args = []string{execname, function, ct.String(), name}
-					cmd.Execute()
-				default:
-					fmt.Printf("'%s' not supported\n", function)
-				}
-			} else {
-				fmt.Println("unknown command")
-			}
+			fmt.Fprintf(os.Stderr, "'%s' not supported\n", function)
+			os.Exit(1)
 		}
 	}
 }

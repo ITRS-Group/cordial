@@ -299,6 +299,7 @@ func CheckBasename(h *Host, ct *Component, options ...GeneosOption) (exists bool
 func Update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	wildcard := h == nil || h == ALL || ct == nil
 
+	// failures are returned together, after trying all of them
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
 			if uerr := update(h, ct, options...); uerr != nil {
@@ -324,19 +325,24 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	// only an error if none of the package types could be updated.
 	if len(ct.PackageTypes) > 0 {
 		var updated int
-		var errs error
+		var errs, hard []error
 		for _, ct := range ct.PackageTypes {
 			if err := Update(h, ct, options...); err != nil {
 				log.Debug("error updating package", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
-				errs = errors.Join(errs, err)
+				errs = append(errs, err)
+				if !errors.Is(err, os.ErrNotExist) {
+					hard = append(hard, fmt.Errorf("error updating %s package on %s: %w", ct, h, err))
+				}
 				continue
 			}
 			updated++
 		}
 		if updated == 0 {
-			return errs
+			return errors.Join(errs...)
 		}
-		return nil
+		// a package type that is not installed is fine as long as one
+		// of the others was updated
+		return errors.Join(hard...)
 	}
 
 	// from here hosts and component types must be specified
@@ -402,6 +408,7 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 	}
 
 	var restarted []Instance
+	var stopErrs error
 	if opts.start != nil && opts.stop != nil {
 		for _, c := range opts.restart {
 			// only stop selected instances using components on the host we are working on
@@ -412,10 +419,16 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 			if c.Type() != ct && config.Get[string](c.Config(), "pkgtype") != ct.String() {
 				continue
 			}
-			if err = opts.stop(c, opts.override); err == nil {
+			if stopErr := opts.stop(c, opts.override); stopErr == nil {
 				// only restart instances that we stopped, regardless of success of install/update
 				restarted = append(restarted, c)
-				defer opts.start(c)
+				defer func() {
+					if startErr := opts.start(c); startErr != nil {
+						err = errors.Join(err, fmt.Errorf("restarting %s: %w", c, startErr))
+					}
+				}()
+			} else if !errors.Is(stopErr, os.ErrProcessDone) {
+				stopErrs = errors.Join(stopErrs, fmt.Errorf("stopping %s: %w", c, stopErr))
 			}
 		}
 	}
@@ -430,5 +443,5 @@ func update(h *Host, ct *Component, options ...GeneosOption) (err error) {
 		c.AuditEvent("action/update", nil, slog.String("version", version), slog.String("base", opts.basename))
 	}
 	fmt.Printf("%s release on %s %q updated to %s\n", ct, h, h.Base(basepath), version)
-	return nil
+	return stopErrs
 }

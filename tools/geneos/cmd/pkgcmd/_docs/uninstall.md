@@ -1,6 +1,6 @@
 The `package uninstall` commands removes installed Geneos releases and downloaded archive files. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release for each matching component.
 
-To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise **all** files in that directory are removed, including the latest release and those that are for other components.
+To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise the downloaded archives for the releases that are removed are also removed. If `--all` is given then all the archives for the component type are removed. Archives for other components are never removed.
 
 If `TYPE` is given then only releases for that component are removed. Similarly, if `--version VERSION` is given then only that version is removed. `VERSION` must be an exact match and multiple versions or version wildcards are not yet supported.
 

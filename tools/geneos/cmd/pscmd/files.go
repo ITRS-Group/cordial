@@ -190,15 +190,10 @@ func psFilesCSV(i geneos.Instance, pid int, resp *responses.General) (err error)
 	return
 }
 
-func psFilesTable(i geneos.Instance, pid int, resp *responses.General) (err error) {
+func psFilesTable(i geneos.Instance, pid int, pi *instance.ProcessInfo, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
-
-	pi, _, _, _, err := psInstanceCommon(i)
-	if err != nil {
-		return
-	}
 
 	homedir := pi.Cwd
 	hs, err := h.Stat(homedir)

@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -141,14 +140,15 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 				if i > 0 {
 					fmt.Println()
 				}
-				if err = geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput, importCmdRootsOnly); err != nil {
-					if len(files) > 1 {
-						err = fmt.Errorf("%s: %w", file, err)
+				if importErr := geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput, importCmdRootsOnly); importErr != nil {
+					if len(files) == 1 {
+						return importErr
 					}
-					return err
+					// carry on with the other files
+					err = cmd.ReportFailure(file, importErr)
 				}
 			}
-			return nil
+			return err
 		}
 
 		if importCmdRootsOnly {
@@ -165,7 +165,7 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 			return cmd.GeneosUnsetError
 		}
 
-		if path.Ext(file) == ".pfx" || path.Ext(file) == ".p12" {
+		if isPKCS12(file) {
 			if len(importCmdPassword) == 0 {
 				importCmdPassword, err = config.ReadPasswordInput(false, 0, "Password")
 				if err != nil {
@@ -189,7 +189,7 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 			certBundle, err = certs.ParsePEM(certChain, key)
 			if err != nil {
 				log.Error("Failed to decompose PEM", slog.Any("error", err))
-				os.Exit(1)
+				return fmt.Errorf("failed to decompose PEM: %w", err)
 			}
 		}
 
@@ -200,9 +200,14 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
-		return nil
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 	},
+}
+
+// isPKCS12 returns true if file has a PFX/PKCS#12 file extension, in any case
+func isPKCS12(file string) bool {
+	ext := strings.ToLower(filepath.Ext(file))
+	return ext == ".pfx" || ext == ".p12"
 }
 
 // importFiles returns the list of files to import, made up of the

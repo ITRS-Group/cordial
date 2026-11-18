@@ -73,7 +73,7 @@ var deleteCmd = &cobra.Command{
 			h := geneos.GetHost(hostname)
 			if !h.Exists() {
 				log.Error("not a known host", slog.String("hostname", hostname))
-				return
+				return fmt.Errorf("unknown host %q", hostname)
 			}
 			hosts = append(hosts, h)
 		}
@@ -82,23 +82,29 @@ var deleteCmd = &cobra.Command{
 			deleteCmdStop = true
 		}
 
+		// a host is only removed if all of its instances were dealt with, but
+		// the other hosts are still processed
+		var failed error
+	HOSTS:
 		for _, h := range hosts {
 			// stop and/or delete instances on host
 			if deleteCmdStop {
 				for _, c := range instance.Instances(h, nil) {
 					if err := instance.Stop(c, instance.WithStopForce(deleteCmdForce)); err != nil && !errors.Is(err, os.ErrProcessDone) {
-						return err
+						failed = cmd.ReportFailure(c.String(), err)
+						continue HOSTS
 					}
 					if deleteCmdRecurse {
 						if deleteCmdForce || instance.IsDisabled(c) {
 							if err := c.Host().RemoveAll(c.Home()); err != nil {
-								return err
+								failed = cmd.ReportFailure(c.String(), err)
+								continue HOSTS
 							}
 							fmt.Printf("%s deleted %s:%s\n", c, c.Host().String(), c.Home())
 							c.Unload()
 						} else {
-							fmt.Printf("not deleting %q as it is not disabled and no --force flag given\n", c)
-							return geneos.ErrInvalidArgs
+							failed = cmd.ReportFailure(c.String(), errors.New("not deleted as it is not disabled and no --force flag given"))
+							continue HOSTS
 						}
 					}
 				}
@@ -108,8 +114,10 @@ var deleteCmd = &cobra.Command{
 			h.Delete()
 			fmt.Printf("%q deleted\n", h)
 		}
-		geneos.SaveHostConfig()
 
-		return nil
+		if err = geneos.SaveHostConfig(); err != nil {
+			return err
+		}
+		return failed
 	},
 }

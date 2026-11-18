@@ -29,7 +29,6 @@ geneos init templates [TYPE] [flags]
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --insecure[=true|false]            Do not create internal certificates for TLS support
   -l, --log[=true|false]                 Follow logs after starting instance(s)
-  -n, --name string                      Use name for instances and configurations instead of the hostname
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
       --profiles string                  profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.

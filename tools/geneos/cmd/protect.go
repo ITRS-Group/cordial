@@ -60,7 +60,7 @@ var protectCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			cf := i.Config()
 
@@ -94,6 +94,5 @@ var protectCmd = &cobra.Command{
 
 			return
 		}, !protectCmdUnprotect).Report(os.Stdout)
-		return
 	},
 }

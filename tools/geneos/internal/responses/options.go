@@ -18,9 +18,11 @@ limitations under the License.
 package responses
 
 import (
+	"errors"
 	"io"
 	"maps"
 	"os"
+	"slices"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
@@ -39,6 +41,7 @@ type options struct {
 	stderr       io.Writer
 	outputFields outputFields
 	ignoreerr    []error
+	warnerr      []error
 	skiponerr    bool
 	showtimes    bool
 	timesformat  string // first arg instance, second arg duration
@@ -61,6 +64,25 @@ var globalWriteOptions = options{
 
 // Option controls to behaviour of the responses.Write method
 type Option func(*options)
+
+// ignored returns true if err is one of the errors to ignore, which are
+// neither reported nor counted as failures.
+func (o *options) ignored(err error) bool {
+	return err != nil && slices.ContainsFunc(o.ignoreerr, func(i error) bool {
+		return errors.Is(err, i)
+	})
+}
+
+// failed returns true if err is an error that must cause the command to
+// fail: it is not ignored and has not been downgraded to a warning.
+func (o *options) failed(err error) bool {
+	if err == nil || o.ignored(err) {
+		return false
+	}
+	return !slices.ContainsFunc(o.warnerr, func(w error) bool {
+		return errors.Is(err, w)
+	})
+}
 
 func evalWriterOptions(options ...Option) *options {
 	opts := globalWriteOptions
@@ -90,6 +112,15 @@ func StderrWriter(stderr io.Writer) Option {
 func IgnoreErr(err error) Option {
 	return func(wo *options) {
 		wo.ignoreerr = append(wo.ignoreerr, err)
+	}
+}
+
+// WarnErr adds err to the list of errors that are reported but do not
+// cause the command to fail, for conditions that the user should be told
+// about but that do not mean the requested action has not been done.
+func WarnErr(err error) Option {
+	return func(wo *options) {
+		wo.warnerr = append(wo.warnerr, err)
 	}
 }
 

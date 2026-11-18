@@ -74,12 +74,12 @@ var psCmd = &cobra.Command{
 		cmd.CmdAuditCommand:         "never",
 		cmd.CmdAuditActions:         "never",
 	},
-	Run: func(command *cobra.Command, _ []string) {
+	RunE: func(command *cobra.Command, _ []string) error {
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {
-			return
+			return err
 		}
-		CommandPS(command, ct, names, params)
+		return CommandPS(command, ct, names, params)
 	},
 }
 
@@ -90,14 +90,17 @@ type psCommon struct {
 	PID  int               `json:"pid"`
 }
 
-// CommandPS writes running instance information to STDOUT
-func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, params []string) {
+// CommandPS writes running instance information to STDOUT. Instances
+// that are not running or are disabled are not listed, but a name that
+// is not an instance, or an instance that cannot be inspected, is an
+// error.
+func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, params []string) error {
 	// always start with a clean cache, in case this is called from init commands
 	process.ClearCache()
 
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
 			responses.IndentJSON(psCmdIndent),
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.IgnoreErr(os.ErrProcessDone),
@@ -150,7 +153,12 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			default:
 				var notRunning int
 				var disabled int
+				var total int
 				for _, r := range resps {
+					if r.Instance == nil {
+						continue
+					}
+					total++
 					if errors.Is(r.Err, os.ErrProcessDone) {
 						notRunning++
 					}
@@ -159,15 +167,15 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 					}
 				}
 				headlines = map[string]string{
-					"instances":  fmt.Sprint(len(resps)),
-					"running":    fmt.Sprint(len(resps) - notRunning - disabled),
+					"instances":  fmt.Sprint(total),
+					"running":    fmt.Sprint(total - notRunning - disabled),
 					"notRunning": fmt.Sprint(notRunning),
 					"disabled":   fmt.Sprint(disabled),
 				}
 			}
 		}
 
-		resps.Formatted(os.Stdout, format, columns, nil,
+		return resps.Formatted(os.Stdout, format, columns, nil,
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.AddHeadlines(headlines),
 		)
@@ -185,7 +193,9 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			columns = instanceCSVColumns
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil,
+			responses.IgnoreErr(geneos.ErrDisabled),
+		)
 	}
 }
 
@@ -217,17 +227,14 @@ func psInstanceCommon(i geneos.Instance) (pi *instance.ProcessInfo, base, actual
 func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
-	h := i.Host()
-	ct := i.Type()
-	name := i.Name()
-
 	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
+		resp.Err = err
 		return
 	}
 
 	if psCmdShowNet {
-		if err = psNetworkTable(i, pi.PID, resp); err != nil {
+		if err = psNetworkTable(i, pi.PID, pi, resp); err != nil {
 			resp.Err = err
 		}
 		return
@@ -235,50 +242,25 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	// file
 	if psCmdShowFiles {
-		if err := psFilesTable(i, pi.PID, resp); err != nil {
+		if err := psFilesTable(i, pi.PID, pi, resp); err != nil {
 			resp.Err = err
 		}
 		return
 	}
 
-	row := []string{}
-	row = append(row,
-		ct.String(),
-		name,
-		h.String(),
-		fmt.Sprint(pi.PID),
-		pi.ListeningPorts,
-		pi.Username,
-		pi.Groupname,
-		pi.StartTime.Local().Format(time.RFC3339),
-		fmt.Sprintf("%s%s%s", base, uptodate, actual),
-		i.Home(),
-	)
+	version := base + uptodate + actual
 
+	row := psRow(i, i.Type().String(), pi, version)
 	if psCmdLong {
 		row = append(row, psInstanceLongColumns(pi)...)
 	}
-
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
 		i.Log().Debug("pid has CA child process", slog.Int("parent_pid", pi.PID), slog.Int("child_pid", capi.PID))
 
-		row := []string{}
-		row = append(row,
-			ct.String()+"/ca",
-			name,
-			h.String(),
-			fmt.Sprint(capi.PID),
-			capi.ListeningPorts,
-			capi.Username,
-			capi.Groupname,
-			capi.StartTime.Local().Format(time.RFC3339),
-			fmt.Sprintf("%s%s%s", base, uptodate, actual),
-			i.Home(),
-		)
-
+		row := psRow(i, i.Type().String()+"/ca", capi, version)
 		if psCmdLong {
 			row = append(row, psInstanceLongColumns(capi)...)
 		}
@@ -288,12 +270,27 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 	return
 }
 
+// psRow returns the common columns for the process pi of the instance i,
+// listed with the type typ
+func psRow(i geneos.Instance, typ string, pi *instance.ProcessInfo, version string) []string {
+	return []string{
+		typ,
+		i.Name(),
+		i.Host().String(),
+		fmt.Sprint(pi.PID),
+		pi.ListeningPorts,
+		pi.Username,
+		pi.Groupname,
+		pi.StartTime.Local().Format(time.RFC3339),
+		version,
+		i.Home(),
+	}
+}
+
 func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
 	h := i.Host()
-	ct := i.Type()
-	name := i.Name()
 
 	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
@@ -316,56 +313,30 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 		return
 	}
 
-	var row []string
+	version := base + uptodate + actual
 
+	var row []string
 	if psCmdToolkit {
 		row = append(row, instance.IDString(i))
 	}
-
-	row = append(row,
-		ct.String(),
-		name,
-		h.String(),
-		fmt.Sprint(pi.PID),
-		pi.ListeningPorts,
-		pi.Username,
-		pi.Groupname,
-		pi.StartTime.Local().Format(time.RFC3339),
-		fmt.Sprintf("%s%s%s", base, uptodate, actual),
-		i.Home(),
-	)
-
+	row = append(row, psRow(i, i.Type().String(), pi, version)...)
 	if psCmdLong {
-		// p, _ := process.ProcessStatus[*process.ProcessInfo](h, pi.PID)
 		p, _ := process.GetProcessInfo[*instance.ProcessInfo](h, pi.PID, process.FetchLazyFields())
 		if p != nil {
 			row = append(row, psInstanceLongColumns(p)...)
 		}
 	}
-
 	resp.Dataview.Table = append(resp.Dataview.Table, row)
 
 	if capi, ok, err := checkCA(i, pi.Children); err == nil && ok {
-		row := []string{}
 		// if this is a netprobe and has a CA child process then we want to list it, but ignore other child processes for now
 		i.Log().Debug("pid has CA child process", slog.Int("parent_pid", pi.PID), slog.Int("child_pid", capi.PID))
+
+		var row []string
 		if psCmdToolkit {
 			row = append(row, instance.IDString(i)+" # ca")
 		}
-
-		row = append(row,
-			ct.String()+"/ca",
-			name,
-			h.String(),
-			fmt.Sprint(capi.PID),
-			capi.ListeningPorts,
-			capi.Username,
-			capi.Groupname,
-			capi.StartTime.Local().Format(time.RFC3339),
-			fmt.Sprintf("%s%s%s", base, uptodate, actual),
-			i.Home(),
-		)
-
+		row = append(row, psRow(i, i.Type().String()+"/ca", capi, version)...)
 		if psCmdLong {
 			p, _ := process.GetProcessInfo[*instance.ProcessInfo](h, capi.PID, process.FetchLazyFields())
 			if p != nil {
@@ -381,12 +352,27 @@ func psInstanceCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
 func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
-	pid, err := instance.GetLivePID(i)
-	if err != nil {
-		resp.Err = err
+	if psCmdShowNet || psCmdShowFiles {
+		pid, err := instance.GetLivePID(i)
+		if err != nil {
+			resp.Err = err
+			return
+		}
+		psInstanceDetailJSON(i, pid, resp)
 		return
 	}
 
+	if psData, err := getInstanceData(i); err != nil {
+		resp.Err = err
+	} else {
+		resp.Values = append(resp.Values, psData)
+	}
+	return
+}
+
+// psInstanceDetailJSON adds the network or open file details for the
+// process with PID pid to resp
+func psInstanceDetailJSON(i geneos.Instance, pid int, resp *responses.General) {
 	if psCmdShowNet {
 		if conns, err := psNetworkJSON(i, pid); err != nil {
 			resp.Err = err
@@ -406,13 +392,5 @@ func psInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
 				resp.Values = append(resp.Values, f)
 			}
 		}
-		return
 	}
-
-	if psData, err := getInstanceData(i); err != nil {
-		resp.Err = err
-	} else {
-		resp.Values = append(resp.Values, psData)
-	}
-	return
 }

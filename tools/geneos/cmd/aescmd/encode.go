@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -79,9 +81,12 @@ var encodeCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		h := geneos.GetHost(cmd.Hostname)
+		if h == nil {
+			h = geneos.ALL
+		}
 
 		if encodeCmdProvider != "" {
-			if encodeCmdProvider != "ssoAgent" && encodeCmdProvider != "obcerv" && encodeCmdProvider != "gatewayHub" {
+			if !slices.Contains([]string{"ssoAgent", "obcerv", "gatewayHub"}, encodeCmdProvider) {
 				return errors.New("--app-key PROVIDER must be one of `obcerv`, `ssoAgent` or `gatewayHub`")
 			}
 
@@ -101,14 +106,18 @@ var encodeCmd = &cobra.Command{
 				// to stdout
 				var keyfile config.KeyFile
 
+				// the keyfile is local unless found by the type for the host
+				var keyfileHost host.Host = host.Localhost
+
 				keyfilepath, _ := ct.KeyFilePath(h, encodeCmdKeyfile, encodeCmdCRC)
 
 				if keyfilepath == "" {
 					keyfile = geneos.DefaultUserKeyfile
 				} else {
-					if _, err := os.Stat(keyfilepath); err != nil {
+					if _, err := h.Stat(keyfilepath); err != nil {
 						return err
 					}
+					keyfileHost = h
 
 					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
@@ -131,7 +140,7 @@ var encodeCmd = &cobra.Command{
 					}
 					defer clear(encodeCmdClientSecret)
 				}
-				e, err := keyfile.Encode(host.Localhost, encodeCmdClientSecret, false)
+				e, err := keyfile.Encode(keyfileHost, encodeCmdClientSecret, false)
 				if err != nil {
 					return err
 				}
@@ -158,7 +167,7 @@ var encodeCmd = &cobra.Command{
 				defer clear(encodeCmdClientSecret)
 			}
 
-			instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+			return instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				if !i.Type().UsesKeyfiles {
 					return
@@ -167,10 +176,12 @@ var encodeCmd = &cobra.Command{
 				keyfilepath, _ := i.Type().KeyFilePath(i.Host(), encodeCmdKeyfile, encodeCmdCRC)
 
 				var keyfile config.KeyFile
+				var keyfileHost host.Host = host.Localhost
 
 				if keyfilepath == "" {
 					keyfile = geneos.DefaultUserKeyfile
 				} else {
+					keyfileHost = i.Host()
 					keyfile = config.KeyFile(keyfilepath)
 					if keyfile == "" {
 						keyfile = config.KeyFile(instance.PathTo(i, "keyfile"))
@@ -180,7 +191,7 @@ var encodeCmd = &cobra.Command{
 					}
 				}
 
-				e, err := keyfile.Encode(host.Localhost, encodeCmdClientSecret, false)
+				e, err := keyfile.Encode(keyfileHost, encodeCmdClientSecret, false)
 				if err != nil {
 					resp.Err = err
 					return
@@ -197,13 +208,15 @@ var encodeCmd = &cobra.Command{
 				fmt.Fprintf(w, "client_id: %s\n", encodeCmdClientID)
 				fmt.Fprintf(w, "client_secret: %s\n", e)
 				fmt.Fprintf(w, "sso_provider: %s\n", encodeCmdProvider)
-				w.Close()
+				if err = w.Close(); err != nil {
+					resp.Err = fmt.Errorf("%w close(%s)", err, dest)
+					return
+				}
 
 				resp.Completed = append(resp.Completed, fmt.Sprintf("app key written to %s", dest))
 
 				return
 			}).Report(os.Stdout)
-			return
 		}
 
 		var secret config.Secret
@@ -237,7 +250,7 @@ var encodeCmd = &cobra.Command{
 					if keyfilepath != "" {
 						keyfile := config.KeyFile(keyfilepath)
 						// encode using specific file
-						e, err := keyfile.Encode(host.Localhost, secret, encodeCmdExpandable)
+						e, err := keyfile.Encode(h, secret, encodeCmdExpandable)
 						if err != nil {
 							continue
 						}
@@ -249,7 +262,10 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		// instances without a key file are skipped, but it is an error if
+		// there is no instance that the secret could be encoded for
+		var encoded atomic.Int32
+		err = instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {
@@ -270,14 +286,18 @@ var encodeCmd = &cobra.Command{
 				resp.Err = fmt.Errorf("expected secret, got %T", params[0])
 				return
 			}
-			e, err := keyfile.Encode(host.Localhost, secret, encodeCmdExpandable)
+			e, err := keyfile.Encode(i.Host(), secret, encodeCmdExpandable)
 			if err != nil {
 				resp.Err = err
 				return
 			}
 			resp.Completed = append(resp.Completed, e)
+			encoded.Add(1)
 			return
 		}, secret).Report(os.Stdout)
+		if err == nil && encoded.Load() == 0 {
+			return fmt.Errorf("no matching instance with a key file found")
+		}
 		return
 	},
 }

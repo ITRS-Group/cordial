@@ -330,7 +330,7 @@ func renderMarkdownTable(rows [][]string, maxWidth int) []string {
 	widths := make([]int, columns)
 	for _, row := range rows {
 		for i, cell := range row {
-			if width := len([]rune(cell)); width > widths[i] {
+			if width := utf8.RuneCountInString(cell); width > widths[i] {
 				widths[i] = width
 			}
 		}
@@ -386,7 +386,7 @@ func renderMarkdownTable(rows [][]string, maxWidth int) []string {
 			if lineIndex < len(lines) {
 				cell = lines[lineIndex]
 			}
-			padding := max(widths[i]-len([]rune(cell)), 0)
+			padding := max(widths[i]-utf8.RuneCountInString(cell), 0)
 			result.WriteByte(' ')
 			result.WriteString(cell)
 			result.WriteString(strings.Repeat(" ", padding+1))
@@ -405,7 +405,7 @@ func renderMarkdownTable(rows [][]string, maxWidth int) []string {
 				lines = len(wrapped[i])
 			}
 		}
-		for lineIndex := 0; lineIndex < lines; lineIndex++ {
+		for lineIndex := range lines {
 			output = append(output, writeCellRow(wrapped, lineIndex))
 		}
 		if rowIndex == 0 {
@@ -432,7 +432,7 @@ func wrapTableCell(text string, width int) []string {
 	var lines []string
 	line := words[0]
 	for _, word := range words[1:] {
-		if len([]rune(line))+1+len([]rune(word)) > width {
+		if utf8.RuneCountInString(line)+1+utf8.RuneCountInString(word) > width {
 			lines = append(lines, line)
 			line = word
 		} else {

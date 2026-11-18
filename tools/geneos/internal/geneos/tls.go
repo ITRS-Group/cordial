@@ -479,11 +479,14 @@ func TLSSync() (err error) {
 
 	log.Debug("found root certificates to sync", slog.Int("count", len(allRoots)))
 
+	// carry on with the other hosts if one fails
+	var errs []error
 	for _, h := range allHosts {
 		hostname := h.Hostname()
 		updated, err := certs.UpdateCACertsFiles(h, PathToCABundle(h), allRoots...)
 		if err != nil {
-			log.Error("failed to update ca-bundle on host", slog.String("host", hostname), slog.Any("error", err))
+			log.Debug("failed to update ca-bundle on host", slog.String("host", hostname), slog.Any("error", err))
+			errs = append(errs, fmt.Errorf("failed to update ca-bundle on host %s: %w", hostname, err))
 			continue
 		}
 		if updated {
@@ -493,5 +496,5 @@ func TLSSync() (err error) {
 		}
 	}
 
-	return
+	return errors.Join(errs...)
 }

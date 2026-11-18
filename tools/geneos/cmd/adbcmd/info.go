@@ -47,9 +47,13 @@ var infoCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, paths []string) (err error) {
 		log = logger.Logger.With("command", "adb info")
 		for _, file := range paths {
-			log.Debug("Processing file: %s", "file", file)
-			if err = infoCommand(file); err != nil {
-				return
+			log.Debug("processing file", "file", file)
+			if infoErr := infoCommand(file); infoErr != nil {
+				if len(paths) == 1 {
+					return infoErr
+				}
+				// carry on with the other files
+				err = cmd.ReportFailure(file, infoErr)
 			}
 		}
 		return
@@ -63,7 +67,48 @@ const (
 	fieldSeparator = '~'
 )
 
+// readActivedashboard reads the lines of the zip file entry f, from the
+// file named file, and updates the totals
+func readActivedashboard(f *zip.File, file string) error {
+	if f.UncompressedSize64 > maxSize {
+		return fmt.Errorf("file %s is too large (%d bytes)", file, f.UncompressedSize64)
+	}
+
+	rc, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer rc.Close()
+
+	scanner := bufio.NewScanner(rc)
+	// lines can be longer than the default limit of the scanner
+	scanner.Buffer(make([]byte, 0, 64*1024), maxSize)
+	for scanner.Scan() {
+		processLine(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		return fmt.Errorf("error reading %s: %v", f.Name, err)
+	}
+	return nil
+}
+
+// resetTotals clears the totals so that each file is reported on its own
+func resetTotals() {
+	clear(gateways)
+	clear(probes)
+	clear(entities)
+	clear(attributes)
+	clear(samplers)
+	clear(types)
+	clear(dataviews)
+	clear(xpaths)
+	clear(links)
+	clear(urls)
+}
+
 func infoCommand(file string) (err error) {
+	resetTotals()
+
 	z, err := zip.OpenReader(file)
 	if err != nil {
 		return
@@ -74,27 +119,11 @@ func infoCommand(file string) (err error) {
 
 	// Look for the Activedashboard extension file
 	for _, f := range z.File {
-		log.Debug("checking zip context file: %s", "file", f.Name, "extension", path.Ext(f.Name))
+		log.Debug("checking zip content file", "file", f.Name, "extension", path.Ext(f.Name))
 		if path.Ext(f.Name) == extension {
 			// Found the extension file, check its contents
-			rc, err := f.Open()
-			if err != nil {
+			if err := readActivedashboard(f, file); err != nil {
 				return err
-			}
-			defer rc.Close()
-
-			if f.UncompressedSize64 > maxSize {
-				return fmt.Errorf("file %s is too large (%d bytes)", file, f.UncompressedSize64)
-			}
-
-			scanner := bufio.NewScanner(rc)
-			for scanner.Scan() {
-				line := scanner.Text()
-				// log.Debug("Processing line: %s", "line", line)
-				processLine(line)
-			}
-			if err := scanner.Err(); err != nil {
-				return fmt.Errorf("error reading %s: %v", f.Name, err)
 			}
 
 			if infoCmdShowXPaths || infoCmdShowURLs || infoCmdShowAll {
@@ -144,7 +173,7 @@ func infoCommand(file string) (err error) {
 					fmt.Println("  <no name>: ", len(attributes[name]))
 				} else {
 					fmt.Printf("  %q: %d\n", name, len(attributes[name]))
-					for values := range attributes[name] {
+					for _, values := range slices.Sorted(maps.Keys(attributes[name])) {
 						fmt.Printf("    =%q: %d\n", values, attributes[name][values])
 					}
 				}

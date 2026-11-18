@@ -146,6 +146,41 @@
     * Instances and components are now always processed in name order, and `geneos` commands that process several instances at once do so for no more than 16 at a time.
 
     * Commands that write JSON, with no data to write, now write `[]` and not `null`.
+  * Behaviour changes from the review of the `geneos` commands
+
+    * **Breaking Change** (minor): `geneos init` no longer accepts `--restore`/`-R`, `--no-install`/`-X` or `--name`/`-n`, which did nothing; they are hidden and deprecated and now fail with a "no longer supported" error. To restore a backup use `geneos init` followed by `geneos restore`. `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.
+
+    * The `--host`/`-H` option now rejects a host name that is not configured, instead of acting on all hosts (or panicking), and `geneos add` and `geneos deploy` also reject an unknown `@HOST` in an instance name. `geneos add` now fails for an instance that already exists.
+
+    * `geneos tls info --leaf-only` now behaves as documented and only lists certificates with a matching private key in one of the files; `geneos tls info` connections time out after 10 seconds, with at most 16 made at a time. `geneos tls export --output` is refused for more than one instance.
+
+    * `geneos tls list` now reports `remaining` in JSON output for instance certificates as a duration, as it does for the root and signing certificates.
+
+    * `geneos aes set` reads the key file from STDIN only if neither `--keyfile` nor `--crc` is given, and `--crc` cannot be combined with `--keyfile` or `--shared`. `geneos aes new --update` now saves the instance configuration.
+
+    * `geneos package uninstall` only removes the cached downloads for the releases it removes (all of them for `--all`), instead of every download for the type.
+
+    * `geneos enable --start` now also starts instances that were already enabled, and `geneos start --port` and `geneos restart --port` now follow logs with `--log`.
+
+    * `geneos command --json` now redacts secrets in arguments and environment variables as the default output does, and the audited command line redacts the values of `-s`, `-E`, secret variables and password options.
+
+    * `geneos backup` removes a partly written archive after an error, and `geneos restore` refuses to read an archive from a terminal.
+
+    * `geneos adb clean` and `edit` now check all `replace:` options before changing any files.
+
+    * **Breaking Change** (minor): The exit status of `geneos` is now correct for every command. Previously, commands that act on several instances, hosts, files or other items reported the failure of an item but still exited with `0`. They now still process all of the items, and show the result of each, but exit with a non-zero status if any of them failed, without repeating the error or showing the usage. This applies to `start`, `stop`, `restart`, `reload`, `rebuild`, `clean`, `reset`, `set`, `unset`, `add`, `delete`, `copy`, `move`, `import`, `enable`, `disable`, `protect`, `revert`, `migrate`, `command`, `logs`, `snapshot`, `backup`, `restore`, `ls`, `ps`, `show`, `package`, `host`, `aes`, `tls`, `adb` and `init` and so on. A name that is not an instance is now a failure for all of them, where it used to be ignored by commands such as `start`, `set`, `ls`, `ps` and `show`. Scripts that relied on a zero exit status after a failure must now handle the failure.
+
+      Not failures are stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, a pattern or component type that matches no instances (such as `geneos ls gateway` when there are none) and, when starting all instances, disabled instances. Commands that check all the names given before they act, such as `stop`, `delete` and `tls new`, still fail before changing anything if a name does not match an instance. See the new "Exit Status" section in `geneos help`.
+
+    * `geneos add` and `geneos deploy` fail with an "already exists" error for an instance that exists. A profile that exists is still applied again by `deploy` and `init`.
+
+    * `geneos init` returns an error, instead of ending the program, if the directory cannot be used, and fails with a message that refers to `--force` if the directory is not empty and `--force`/`-F` is not given. If several profiles are given the directory is only initialised once. Existing root and signing certificates are no longer replaced by `init`, including with `--force`, and are added to the trust chain of the installation. `geneos init` with a profile that is not defined is now an error.
+
+    * Other failures that were previously only logged, ignored or printed with a zero exit status are now failures: `disable` of an instance that is running (without `--stop` or `--force`), `tls create` of a certificate or key that exists, `tls info` for files and connections that could not be read, `tls sync` for a host that could not be updated, `config import`, `aes import`, `package install`/`uninstall`/`update` for sources, releases, links, downloads and instances that could not be dealt with and when protected instances stop an update, `restore` of an instance that is not in the archive, `host set`, `host unset` and `host list` for names that are not hosts, `adb clean` and `adb info` for files that could not be processed, and `aes decode` and `aes encode` when no instance could be used.
+
+    * The legacy `ctl` commands now exit with a non-zero status for commands that are not supported.
+
+    * `geneos config set`, `unset` and `show` now use the file given with `--config`/`-G`. `geneos host show` and `geneos host delete` fail for unknown host names and `geneos host list` accepts host names.
 
 * `integrations/servicenow2`
 
@@ -564,6 +599,33 @@
     * Fix a data race in commands that process several instances at once, such as `geneos set`, `protect` and `unset`, on the loaded time and the configuration of the instances, which are shared between the goroutines, and which could cause a crash or a configuration to be read or written incorrectly.
 
     * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
+  * Commands
+
+    * Fix legacy commands such as `geneos add remote`, `delete host`, `show host` and `set user` losing their arguments, panicking or doing nothing.
+
+    * Fix `geneos host unset` changing every remote host when hosts were named, `geneos host add` with a URL without a host name, and `geneos host delete` succeeding for unknown hosts or when the configuration could not be saved.
+
+    * Fix `geneos backup` failing to create new output directories, writing messages into an archive sent to standard output (`-o -`), ignoring tar and close errors and reading whole files into memory.
+
+    * Fix `geneos set` writing secret variable values to the audit log.
+
+    * Fix `geneos init` exiting without running deferred work, duplicating profile parameters and passing the root directory to profiles, and `geneos deploy` using the old local host after creating the installation.
+
+    * Fix errors being lost, with a success status or no message, in `geneos import`, `reload`, `disable`, `snapshot`, `unset`, `logout`, `ps`, `revert` and `migrate -X`, and `geneos show --output` writing to standard output and leaving an empty file. `geneos unset` now reports every instance with nothing to unset and `geneos revert` removes both of its files.
+
+    * Fix `geneos migrate -X` replacing the saved original `ctl` script with a link when run twice.
+
+    * Fix `geneos aes set --crc` never using the CRC, `aes list --shared --json` and `aes encode` and `aes list` for remote hosts.
+
+    * Fix `geneos tls init` and `tls create --force` failing without `--keytype`, `tls create` reporting success when files could not be written, `tls migrate` and `tls renew` panicking for a webserver without `security.properties`, and `tls info` not reporting file errors, clearing a shared password and hanging on unreachable hosts.
+
+    * Fix `geneos tls list` using the root certificate's expiry and fingerprint for the signing certificate, the instance `remaining` in JSON output, the 30 day toolkit headline (which used 210 days) and reading the CA bundle for each certificate.
+
+    * Fix `geneos package uninstall` stopping and restarting the wrong instances, `package install --download` with an archive URL, `--override` errors being ignored and `package list` being slow with many instances.
+
+    * Fix `geneos adb clean` adding an empty `/sampler` and printing "Managed Entitys", `adb info` adding up totals across files, and `adb` panics on short or malformed lines and failing on colour values over 127 or long lines.
+
+    * Fix `geneos deploy`, `snapshot` and `package install` carrying on with an empty password when prompting for it failed for a reason other than not being interactive.
 
 * `integrations/servicenow2`
 

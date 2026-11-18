@@ -20,12 +20,15 @@ package instance
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 // Copy copies the instance named source to destination for
@@ -70,24 +73,38 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 		}
 		// they both exist, now loop through all instances on src and try to move/copy
 		for _, name := range AllInstanceNames(sHost, ct) {
-			if err = Copy(ct, name, destination, options...); err != nil {
-				fmt.Println("Error:", err)
+			if copyErr := Copy(ct, name, destination, options...); copyErr != nil {
+				fmt.Fprintf(os.Stderr, "%s: %s\n", name, copyErr)
+				err = responses.ErrReported
 			}
 		}
-		return nil
+		return err
 	}
 
 	if ct == nil {
+		var copied bool
+		var errs []error
 		for ct := range ct.OrList() {
 			if err = Copy(ct, source, destination, options...); err != nil {
 				log.Debug("error copying", slog.Any("error", err), slog.String("component", ct.String()), slog.String("src", source), slog.String("destination", destination))
 				if errors.Is(err, host.ErrNotExist) {
 					return
 				}
+				// a source that is not of this type is not a failure
+				if !errors.Is(err, fs.ErrNotExist) && !errors.Is(err, geneos.ErrNotExist) {
+					errs = append(errs, err)
+				}
 				continue
 			}
+			copied = true
 		}
-		return nil
+		if copied {
+			return nil
+		}
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+		return fmt.Errorf("%w: %q", geneos.ErrNotExist, source)
 	}
 
 	src, err := Get(ct, source)
@@ -170,6 +187,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 				log.Debug("removing old instance", slog.String("instance", srcname))
 				srcrem.RemoveAll(srchome)
 				ResetHome(src)
+				src.Unload()
 				fmt.Println(srcname, "moved to", dst)
 			} else {
 				fmt.Println(srcname, "copied to", destination)

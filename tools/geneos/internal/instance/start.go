@@ -54,7 +54,7 @@ func Start(i geneos.Instance, options ...any) error {
 
 	if i.Type().IsA("profile") {
 		// start all the instances labelled with the profile
-		DoInstances("start",
+		return DoInstances("start",
 			Instances(i.Host(), nil, MatchParameters(cf.Join("config", "profile")+"="+i.Name())),
 			func(i geneos.Instance, _ ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
@@ -65,7 +65,6 @@ func Start(i geneos.Instance, options ...any) error {
 				return
 			},
 		).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
-		return nil
 	}
 
 	// filter out only StartOption types from the options slice

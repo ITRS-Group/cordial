@@ -41,7 +41,7 @@ func init() {
 	hostCmd.AddCommand(showCmd)
 
 	showCmd.Flags().BoolVarP(&showCmdRaw, "raw", "r", false, "show raw configuration, without defaults or expansion")
-	showCmd.Flags().MarkHidden("raw")
+	showCmd.Flags().MarkDeprecated("raw", "the configuration is always shown as stored")
 	showCmd.Flags().SortFlags = false
 }
 
@@ -63,22 +63,19 @@ var showCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, args []string) (err error) {
 		var hosts []*geneos.Host
 
-		if showCmdRaw {
-
-		}
-
 		if len(args) == 0 {
 			hosts = geneos.RemoteHosts(false)
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)
-				if h.Exists() {
-					hosts = append(hosts, h)
+				if !h.Exists() {
+					return fmt.Errorf("unknown host %q", a)
 				}
+				hosts = append(hosts, h)
 			}
 		}
 
-		var confs []showCmdConfig
+		confs := []showCmdConfig{}
 
 		for _, h := range hosts {
 			confs = append(confs, showCmdConfig{

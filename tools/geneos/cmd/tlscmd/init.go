@@ -33,6 +33,8 @@ var initCmdKeyType certs.KeyType
 func init() {
 	tlsCmd.AddCommand(initCmd)
 
+	initCmdKeyType = certs.DefaultKeyType
+
 	initCmd.Flags().VarP(&initCmdKeyType, "keytype", "K", "Key type for root. One of ecdh (an ECDSA P-256 key), ecdsa,\ned25519 or rsa")
 	initCmd.Flags().BoolVarP(&initCmdOverwrite, "force", "F", false, "Overwrite any existing root and signing certificates")
 
@@ -53,6 +55,14 @@ var initCmd = &cobra.Command{
 		cmd.CmdRequireHome: "false",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return geneos.TLSInit(geneos.LOCALHOST, initCmdOverwrite, initCmdKeyType)
+		return geneos.TLSInit(geneos.LOCALHOST, initCmdOverwrite, keyTypeOrDefault(initCmdKeyType))
 	},
+}
+
+// keyTypeOrDefault returns k or the default key type if it is not set
+func keyTypeOrDefault(k certs.KeyType) certs.KeyType {
+	if k == "" {
+		return certs.DefaultKeyType
+	}
+	return k
 }

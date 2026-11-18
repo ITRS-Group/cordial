@@ -67,13 +67,12 @@ geneos clean gateway Gateway1
 		if err != nil {
 			return err
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Completed = append(resp.Completed, "configured files and directories removed")
 			resp.Err = instance.Clean(i, instance.FullClean(cleanCmdFull))
 			return
 		}).Report(os.Stdout)
-		return nil
 	},
 }
 
@@ -119,12 +118,11 @@ geneos reset netprobe
 		if ct == nil && len(names) == 0 {
 			return fmt.Errorf("no matching instances")
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Completed = append(resp.Completed, "transient files and directories removed")
 			resp.Err = instance.Clean(i, instance.FullClean(true), instance.ForceClean(resetCmdForce))
 			return
 		}).Report(os.Stdout)
-		return nil
 	},
 }

@@ -29,7 +29,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
 )
@@ -52,7 +51,7 @@ func init() {
 var fileTypes = map[string]string{
 	".tar.gz":  "gzip",
 	".tgz":     "gzip",
-	".tar.bz2": "bz2",
+	".tar.bz2": "bzip2",
 	".tar":     "none",
 }
 
@@ -90,10 +89,7 @@ geneos restore gateway ABC x.tgz
 		}
 
 		// specific host or local, never all
-		h := geneos.NewHost(Hostname)
-		if h == geneos.ALL {
-			h = geneos.LOCAL
-		}
+		h := defaultHost()
 
 		// extract any args that look like archives
 		files := []string{}
@@ -135,6 +131,10 @@ geneos restore gateway ABC x.tgz
 		// if no file names are found in args then assume STDIN. later
 		// we could look for named file patterns, if it proves useful
 		if len(files) == 0 {
+			// do not wait for input from a terminal
+			if st, serr := os.Stdin.Stat(); serr == nil && st.Mode()&os.ModeCharDevice != 0 {
+				return fmt.Errorf("no archive file given and standard input is a terminal")
+			}
 			if err = restore.Restore("-",
 				restore.Host(h),
 				restore.Component(ct),
@@ -149,7 +149,7 @@ geneos restore gateway ABC x.tgz
 		} else {
 			for _, f := range files {
 				// process file
-				if err = restore.Restore(f,
+				if restoreErr := restore.Restore(f,
 					restore.Host(h),
 					restore.Component(ct),
 					restore.Names(names...),
@@ -157,8 +157,12 @@ geneos restore gateway ABC x.tgz
 					restore.Shared(restoreCmdShared),
 					restore.List(restoreCmdList),
 					restore.ProgressTo(os.Stdout),
-				); err != nil {
-					return
+				); restoreErr != nil {
+					if len(files) == 1 {
+						return restoreErr
+					}
+					// carry on with the other archives
+					err = ReportFailure(f, restoreErr)
 				}
 			}
 		}

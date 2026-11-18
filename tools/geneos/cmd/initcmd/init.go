@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -49,15 +50,11 @@ type initCmdOptions struct {
 	Extras                values.Values
 	Force                 bool
 	GatewayTemplate       string
-	ImportKey             string
 	Insecure              bool
 	LicenseFile           string
 	Logs                  bool
 	Minimal               bool
-	Name                  string
 	Nexus                 bool
-	NoInstall             bool
-	Restore               string
 	SigningBundle         string
 	SigningBundlePassword config.Secret
 	Site                  string
@@ -67,6 +64,9 @@ type initCmdOptions struct {
 }
 
 var initOptions = initCmdOptions{}
+
+// removedFlags are the names of flags that are no longer supported
+var removedFlags = []string{"restore", "no-install", "name"}
 
 var log = logger.Logger
 
@@ -78,8 +78,18 @@ func init() {
 
 	// common flags, need checking
 
-	initCmd.Flags().StringVarP(&initOptions.Restore, "restore", "R", "", "Restore from backup file `PATH`")
-	initCmd.Flags().BoolVarP(&initOptions.NoInstall, "no-install", "X", false, "Don't install any releases after restore")
+	// these options are no longer supported and are only kept so that
+	// old scripts get an error instead of silently doing nothing
+	initCmd.Flags().StringP("restore", "R", "", "Restore from backup file `PATH`")
+	initCmd.Flags().BoolP("no-install", "X", false, "Don't install any releases after restore")
+	initCmd.PersistentFlags().StringP("name", "n", "", "Use name for instances and configurations instead of the hostname")
+	for _, flags := range []*pflag.FlagSet{initCmd.Flags(), initCmd.PersistentFlags()} {
+		for _, name := range removedFlags {
+			if flags.Lookup(name) != nil {
+				flags.MarkDeprecated(name, "no longer supported")
+			}
+		}
+	}
 
 	// flags from old 'demo' and 'all'
 	initCmd.Flags().BoolVarP(&initOptions.Minimal, "minimal", "M", false, "use a minimal Netprobe release")
@@ -88,7 +98,6 @@ func init() {
 
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Logs, "log", "l", false, "Follow logs after starting instance(s)")
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Force, "force", "F", false, "Ignore existing directories and files and overwrite")
-	initCmd.PersistentFlags().StringVarP(&initOptions.Name, "name", "n", "", "Use name for instances and configurations instead of the hostname")
 	initCmd.Flags().StringVarP(&initOptions.Site, "site", "s", "", "Set the initial installation site name")
 
 	initCmd.PersistentFlags().BoolVarP(&initOptions.TLS, "tls", "T", false, "Create internal certificates for TLS support")
@@ -103,9 +112,6 @@ func init() {
 	initCmd.PersistentFlags().Var(&initOptions.SigningBundlePassword, "signing-bundle-password", "Password for PFX/PKCS#12 certificate file.\nYou will be prompted if required and not supplied as an argument.")
 
 	initCmd.PersistentFlags().BoolVarP(&initOptions.Insecure, "insecure", "", false, "Do not create internal certificates for TLS support")
-
-	// initCmd.PersistentFlags().StringVarP(&initCmdImportKey, "import-key", "k", "", "signing private key file, PEM format")
-	initCmd.PersistentFlags().MarkDeprecated("import-key", "please use --signing-bundle")
 
 	// initCmd.MarkFlagsMutuallyExclusive("tls", "signing-bundle")
 
@@ -154,6 +160,11 @@ geneos init
 	RunE: func(command *cobra.Command, argsInput []string) (err error) {
 		log := log.With("command", "init")
 
+		for _, name := range removedFlags {
+			if f := command.Flag(name); f != nil && f.Changed {
+				return fmt.Errorf("--%s is no longer supported", name)
+			}
+		}
 		if command.Flag("archive").Changed && initOptions.Archive == "" {
 			return fmt.Errorf("--archive must not be empty")
 		}
@@ -174,8 +185,6 @@ geneos init
 			profile.SetExpandOptions(geneos.LOCAL, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), argsInput)
 		}
 
-		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)
-
 		// find an absolute path in args, set it as root and remove it
 		// from args. if more that one is found, the last one takes
 		// precedence. if none found, the Initialise function will
@@ -192,54 +201,50 @@ geneos init
 			return false
 		})
 
-		initOptions.Extras.Params = append(initOptions.Extras.Params, params...)
+		initOptions.Extras.Params = params
 
-		if len(args) == 0 {
-			// init basics
-			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
-				geneos.UseRoot(root),
-				geneos.RootDirPrompt(config.ReadUserInputLine),
-				geneos.Override(initOptions.Force),
+		// the installation directory is initialised once, so that a
+		// directory with an installation is only an error before any
+		// profile has been deployed, and not for each of the profiles
+		initialiseOptions := []geneos.GeneosOption{
+			geneos.UseRoot(root),
+			geneos.RootDirPrompt(config.ReadUserInputLine),
+			geneos.Override(initOptions.Force),
 
-				geneos.Insecure(initOptions.Insecure),
-				geneos.SigningBundle(initOptions.SigningBundle),
-				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
-				geneos.SigningBundlePrompt(config.ReadPasswordInput),
-			); err != nil {
-				log.Error("initialise failed", slog.Any("error", err))
-			}
-			if profile.Initialise(cordial.ExecutableName()) {
-				log.Debug("profiles configuration written")
-			}
-			return
+			geneos.Insecure(initOptions.Insecure),
+			geneos.SigningBundle(initOptions.SigningBundle),
+			geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
+			geneos.SigningBundlePrompt(config.ReadPasswordInput),
 		}
-
-		// treat args as profile names
-		for _, p := range args {
-			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
-				geneos.UseRoot(root),
-				geneos.RootDirPrompt(config.ReadUserInputLine),
+		if len(args) > 0 {
+			initialiseOptions = append(initialiseOptions,
 				geneos.Version(initOptions.Version),
 				geneos.Basename("active_prod"),
-				geneos.Override(initOptions.Force),
 				geneos.Source(initOptions.Archive),
 				geneos.UseNexus(initOptions.Nexus),
 				geneos.UseNexusSnapshots(initOptions.Snapshot),
 				geneos.Headers(initOptions.Extras.Headers...),
+			)
+		}
+		if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL, initialiseOptions...); err != nil {
+			return err
+		}
+		if profile.Initialise(cordial.ExecutableName()) {
+			log.Debug("profiles configuration written")
+		}
 
-				geneos.Insecure(initOptions.Insecure),
-				geneos.SigningBundle(initOptions.SigningBundle),
-				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
-				geneos.SigningBundlePrompt(config.ReadPasswordInput),
-			); err != nil {
-				log.Error("initialise failed", slog.Any("error", err))
-				os.Exit(1)
-			}
-			if profile.Initialise(cordial.ExecutableName()) {
-				log.Debug("profiles configuration written")
-			}
+		if len(args) == 0 {
+			// init basics
+			return nil
+		}
 
-			err = profile.DeployProfile(geneos.LOCAL, p,
+		// Initialise replaces the local host, so refresh anything that
+		// holds on to the old one before using it
+		profile.SetExpandOptions(geneos.LOCAL, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), argsInput)
+
+		// treat args as profile names, and carry on after a failure
+		for _, p := range args {
+			if deployErr := profile.DeployProfile(geneos.LOCAL, p,
 				profile.WithValues(initOptions.Extras),
 				profile.WithFlags(command.Flags()),
 				profile.WithInsecure(initOptions.Insecure),
@@ -250,18 +255,21 @@ geneos init
 				profile.WithUsername(initOptions.DLUsername),
 				profile.WithStartAfterAdd(true),
 				profile.WithFollowLogs(initOptions.Logs),
-			)
-			if err != nil {
-				log.Error("deploy profile failed", slog.Any("error", err))
-				os.Exit(1)
+			); deployErr != nil {
+				if len(args) == 1 {
+					return deployErr
+				}
+				err = cmd.ReportFailure(p, deployErr)
 			}
 		}
 
 		// wait a moment to allow processes to start and then run ps
 		time.Sleep(time.Second * 2)
-		pscmd.CommandPS(command, nil, nil, nil)
+		if psErr := pscmd.CommandPS(command, nil, nil, nil); psErr != nil {
+			err = psErr
+		}
 
-		return nil
+		return err
 	},
 }
 
@@ -274,7 +282,7 @@ var initTLSCmd = &cobra.Command{
 	Annotations: map[string]string{
 		cmd.CmdGlobal:      "false",
 		cmd.CmdRequireHome: "true",
-		// cmd.CmdAliasFor:    "tls init",
+		cmd.CmdReplacedBy:  "tls init",
 	},
 	Hidden:                true,
 	DisableFlagParsing:    true,

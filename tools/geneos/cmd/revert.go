@@ -66,10 +66,9 @@ var revertCmd = &cobra.Command{
 			return
 		}
 		if revertCmdExecutables {
-			revertCommands()
-			return
+			return revertCommands()
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if instance.IsProtected(i) {
@@ -79,8 +78,11 @@ var revertCmd = &cobra.Command{
 
 			// if *.rc file exists, remove rc.orig+new, continue
 			if _, err := i.Host().Stat(instance.ComponentFilepath(i, "rc")); err == nil { // found ?
-				// ignore errors
-				if i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig")) == nil || i.Host().Remove(instance.ComponentFilepath(i)) == nil {
+				// try to remove both files, only a file that is already
+				// gone is not an error
+				origErr := i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig"))
+				jsonErr := i.Host().Remove(instance.ComponentFilepath(i))
+				if resp.Err = errors.Join(ignoreNotExist(origErr), ignoreNotExist(jsonErr)); resp.Err == nil {
 					i.Log().Debug("removed extra config file(s)")
 				}
 				return
@@ -105,7 +107,6 @@ var revertCmd = &cobra.Command{
 			resp.Completed = append(resp.Completed, "reverted to RC config")
 			return
 		}).Report(os.Stdout)
-		return
 	},
 }
 
@@ -118,12 +119,12 @@ func revertCommands() (err error) {
 	}
 
 	for _, ct := range geneos.RealComponents() {
-		path, err := exec.LookPath(ct.String() + "ctl")
-		if err != nil {
+		path, lookErr := exec.LookPath(ct.String() + "ctl")
+		if lookErr != nil {
 			continue
 		}
-		realpath, err := filepath.EvalSymlinks(path)
-		if err != nil {
+		realpath, linkErr := filepath.EvalSymlinks(path)
+		if linkErr != nil {
 			continue
 		}
 		realpath = filepath.ToSlash(realpath)
@@ -132,15 +133,23 @@ func revertCommands() (err error) {
 			continue
 		}
 
-		if err = os.Remove(path); err != nil {
-			log.Error("cannot remove symlink", slog.Any("error", err), slog.String("path", path))
-			return err
+		if rmErr := os.Remove(path); rmErr != nil {
+			err = ReportFailure(path, fmt.Errorf("cannot remove symlink: %w", rmErr))
+			continue
 		}
-		if err = os.Rename(path+".orig", path); err != nil {
-			log.Error("cannot rename symlink", slog.Any("error", err), slog.String("path", path))
-			return err
+		if mvErr := os.Rename(path+".orig", path); mvErr != nil {
+			err = ReportFailure(path, fmt.Errorf("cannot rename symlink: %w", mvErr))
+			continue
 		}
 		fmt.Printf("%s reverted\n", path)
 	}
 	return
+}
+
+// ignoreNotExist returns err unless it means that a file did not exist.
+func ignoreNotExist(err error) error {
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	return err
 }

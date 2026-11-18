@@ -31,8 +31,9 @@ var initialised sync.Map
 // which applies the profile to all of the instances.
 //
 // The port option can only be used with a profile that has a single
-// component. Any error installing or creating the components is
-// returned, and the profile instance is not created.
+// component. A profile that is not defined is an error. Every
+// component is tried, but any error installing or creating them is
+// returned together and then the profile instance is not created.
 func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) (err error) {
 	opts := evaluateProfileDeployOptions(options...)
 
@@ -42,8 +43,15 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 		return errors.New("no profiles configuration loaded")
 	}
 
+	// the failures of the individual components are returned together
+	// after all of them have been tried
+	var errs []error
+
 	instances := ListComponents(h, pf, name)
 	log.Debug("components in profile", slog.String("host", h.String()), slog.String("hostname", h.Hostname()), slog.String("profile", name), slog.Any("components", instances))
+	if len(instances) == 0 {
+		return fmt.Errorf("%w: profile %q is not defined or has no components", geneos.ErrNotExist, name)
+	}
 
 	if opts.port != 0 && len(instances) != 1 {
 		return fmt.Errorf("%w: a port can only be set for a profile with one component, profile %q has %d", geneos.ErrInvalidArgs, name, len(instances))
@@ -57,9 +65,14 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 	}()
 
 	for _, pi := range instances {
-		if err = deployComponent(h, pf, opts, pi); err != nil {
-			return err
+		if cerr := deployComponent(h, pf, opts, pi); cerr != nil {
+			errs = append(errs, fmt.Errorf("%s %s: %w", pi.Component, pi.Name, cerr))
 		}
+	}
+
+	// the profile instance is only created if all of the components are
+	if len(errs) > 0 {
+		return errors.Join(errs...)
 	}
 
 	// finally, install the profile instance. the port is for the
@@ -172,6 +185,10 @@ func deployComponent(h *geneos.Host, pf *config.Config, opts *profileDeployOptio
 		instance.WithFlags(opts.flags),
 		instance.WithProfiles(pf),
 	)
+	// an existing member is updated by the profile, not an error
+	if errors.Is(err, geneos.ErrExists) {
+		return nil
+	}
 	return err
 }
 

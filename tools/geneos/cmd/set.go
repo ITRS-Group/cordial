@@ -21,8 +21,11 @@ import (
 	_ "embed"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
+	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -35,6 +38,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
+var userKeyfileMutex sync.Mutex
 var setCmdKeyfile config.KeyFile
 var setCmdValues = values.Values{}
 
@@ -121,8 +125,7 @@ geneos set netprobe cloudapps1 -e SOME_CLIENT_ID=abcde -E SOME_CLIENT_SECRET
 		}
 
 		setCmdValues.Params = params
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, setValues, setCmdValues, instance.ProfileMembersOnly).Report(os.Stdout)
-		return
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, setValues, setCmdValues, instance.ProfileMembersOnly).Report(os.Stdout)
 	},
 }
 
@@ -162,7 +165,8 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 				return
 			}
 			if created {
-				crc, err := keyfile.ReadCRC(geneos.GetHost(Hostname))
+				// only the user keyfile is reported as created, and that is always local
+				crc, err := keyfile.ReadCRC(host.Localhost)
 				if err != nil {
 					i.Log().Warn("created keyfile but failed to read CRC", slog.Any("error", err), slog.Any("keyfile", keyfile))
 				}
@@ -180,7 +184,7 @@ func setValues(i geneos.Instance, args ...any) (resp *responses.General) {
 
 	resp = responses.MergeResponse(resp, instance.Write(i))
 	if resp.Err == nil {
-		i.AuditEvent("action/set", nil, slog.String("values", fmt.Sprintf("%+v", v)))
+		i.AuditEvent("action/set", nil, auditSetValues(v)...)
 	}
 	return
 }
@@ -223,7 +227,11 @@ func getKeyfile(i geneos.Instance) (keyFile config.KeyFile, created bool, err er
 		return
 	}
 
-	// try user keyfile or create for components that don't use key files
+	// try user keyfile or create for components that don't use key files.
+	// Instances are processed concurrently and must all use the same
+	// user keyfile, so do not let them race to create it
+	userKeyfileMutex.Lock()
+	defer userKeyfileMutex.Unlock()
 	_, created, err = geneos.DefaultUserKeyfile.ReadOrCreate(host.Localhost)
 	if err != nil {
 		return keyFile, created, err
@@ -231,5 +239,44 @@ func getKeyfile(i geneos.Instance) (keyFile config.KeyFile, created bool, err er
 
 	keyFile = geneos.DefaultUserKeyfile
 
+	return
+}
+
+// auditSetValues returns audit attributes describing the names, but
+// never the values, being set, as these may be secrets.
+func auditSetValues(v values.Values) (attrs []any) {
+	// names returns the part of each item before any "="
+	names := func(items []string) (n []string) {
+		for _, item := range items {
+			name, _, _ := strings.Cut(item, "=")
+			n = append(n, name)
+		}
+		return
+	}
+	secureNames := func(items values.SecureValues) (n []string) {
+		for _, item := range items {
+			n = append(n, item.Name)
+		}
+		return
+	}
+	add := func(key string, n []string) {
+		if len(n) > 0 {
+			attrs = append(attrs, slog.Any(key, n))
+		}
+	}
+
+	add("params", names(v.Params))
+	add("secure", secureNames(v.SecureParams))
+	add("envs", names(v.Envs))
+	add("secureenvs", secureNames(v.SecureEnvs))
+	add("attributes", names(v.Attributes))
+	add("gateways", v.Gateways)
+	add("types", v.Types)
+	add("includes", slices.Sorted(maps.Keys(v.Includes)))
+	var vars []string
+	for _, variable := range v.Variables {
+		vars = append(vars, strings.TrimPrefix(variable.Type+":"+variable.Name, ":"))
+	}
+	add("variables", vars)
 	return
 }

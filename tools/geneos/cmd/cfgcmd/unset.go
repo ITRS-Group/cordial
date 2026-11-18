@@ -60,6 +60,7 @@ var unsetCmd = &cobra.Command{
 		}
 
 		cf, err := config.Read(cordial.ExecutableName(),
+			config.FilePath(cmd.ConfigFile()),
 			config.SkipWorkingDir(),
 			config.SkipSystemDir(),
 		)
@@ -72,6 +73,6 @@ var unsetCmd = &cobra.Command{
 			config.Delete(cf, b)
 		}
 
-		return cf.Write(cordial.ExecutableName())
+		return cf.Write(cordial.ExecutableName(), config.FilePath(cmd.ConfigFile()))
 	},
 }
