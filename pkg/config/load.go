@@ -55,8 +55,15 @@ import (
 // for defaults see:
 // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 //
-// Regardless of errors loading configurations a configuration object is
-// always returned.
+// The order of precedence of the settings in the returned
+// configuration, highest first, is: values set explicitly using [Set]
+// and environment variables (if enabled with [WithEnvs]); the main
+// configuration file; defaults files; the embedded defaults from
+// [WithDefaults]; and last of all the settings given to [DefaultsFrom].
+// None of the defaults are used if [UseDefaults] is passed false.
+//
+// Regardless of errors loading configurations a non-nil configuration
+// object is always returned.
 //
 // The returned config object may be made up from multiple sources so
 // there is no simple way of getting the name of the final configuration
@@ -75,16 +82,19 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 	r := opts.remote
 
 	if opts.setGlobals {
-		ResetConfig(options...)
-		cf = global
 		// update config directory if available
+		var appUserConfDir string
 		if opts.userConfDir != "" {
-			cf.appUserConfDir = path.Join(opts.userConfDir, opts.appName)
+			appUserConfDir = path.Join(opts.userConfDir, opts.appName)
 		}
+		cf = resetGlobal(evalFileOptions(options...), appUserConfDir)
 	} else {
 		cf = New(options...)
-		cf.configType = opts.format
 	}
+
+	cf.rwmutex.Lock()
+	cf.configType = opts.format
+	cf.rwmutex.Unlock()
 
 	// return first error after initialising the config structure.
 	// Always return a config object.
@@ -95,16 +105,13 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 
 	cf.setFs(r.GetFs())
 
-	defaults := New(options...)
-
-	if opts.useDefaults && len(opts.internalDefaults) > 0 {
-		buf := bytes.NewBuffer(opts.internalDefaults)
-		internalDefaults := New(options...)
+	// the embedded defaults are already in cf, but check them if asked
+	if opts.useDefaults && len(opts.internalDefaults) > 0 && opts.internalDefaultsCheckErrors {
+		internalDefaults := newScratch(options...)
 		internalDefaults.setConfigType(opts.internalDefaultsFormat)
-		if err := internalDefaults.readConfig(buf); err != nil && opts.internalDefaultsCheckErrors {
-			return nil, fmt.Errorf("error reading internal defaults: %w", err)
+		if err = internalDefaults.readConfig(bytes.NewReader(opts.internalDefaults)); err != nil {
+			return cf, fmt.Errorf("error reading internal defaults: %w", err)
 		}
-		defaults.MergeConfigMap(internalDefaults.AllSettings())
 	}
 
 	// concatenate config directories in order - first match wins below,
@@ -114,7 +121,7 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 	// 2. The working directory unless the option IgnoreWorkingDir() is used
 	// 3. The user configuration directory plus `AppName`, unless IgnoreUserConfDir() is used
 	// 4. The system configuration directory plus `AppName`, unless IgnoreSystemDir() is used
-	confDirs := opts.configDirs
+	confDirs := slices.Clone(opts.configDirs)
 	if opts.workingDir != "" {
 		confDirs = append(confDirs, opts.workingDir)
 	}
@@ -135,48 +142,48 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 	// as an option to Load(). Do this even if the config file itself is
 	// set using option SetConfigFile()
 	if opts.useDefaults {
+		defaults := newScratch(options...)
+		defaults.setFs(r.GetFs())
+
 		if opts.merge {
 			for _, dir := range confDirs {
-				d := New(options...)
+				d := newScratch(options...)
 				d.setFs(r.GetFs())
 				d.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = d.readInConfig(); err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
 						// not found is fine
 						continue
-					} else {
-						return cf, fmt.Errorf("error reading defaults: %w", err)
 					}
+					return cf, fmt.Errorf("error reading defaults: %w", err)
 				}
 				defaults.MergeConfigMap(d.AllSettings())
 			}
-		} else if len(confDirs) > 0 {
+		} else {
 			for _, dir := range confDirs {
-				defaults.setFs(r.GetFs())
 				defaults.setConfigFile(path.Join(dir, module+".defaults."+opts.format))
 				if err = defaults.readInConfig(); err != nil {
 					if errors.Is(err, fs.ErrNotExist) {
-						// not found is fine
 						continue
-					} else {
-						return cf, fmt.Errorf("error reading defaults: %w", err)
 					}
+					return cf, fmt.Errorf("error reading defaults: %w", err)
 				}
 				break
 			}
-			// when we get here we have either loaded the first default
-			// file or not found one. clear err
-			err = nil
 		}
 
-		// merge all defaults into main config - internal defaults always,
-		// but any from the above too
+		// when we get here we have either loaded the first default
+		// file or not found one.
+		err = nil
+
+		// merge all defaults into main config over the internal ones
 		cf.MergeConfigMap(defaults.AllSettings())
 	}
 
-	// fixed configuration file, skip directory search
-	if opts.reader != nil {
-		ncf := New(options...)
+	switch {
+	case opts.reader != nil:
+		// fixed configuration source, skip directory search
+		ncf := newScratch(options...)
 		ncf.setFs(r.GetFs())
 		ncf.setConfigType(opts.format)
 
@@ -186,9 +193,13 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 
 		// merge into main config
 		cf.MergeConfigMap(ncf.AllSettings())
+
+		// there is no file to watch
 		return cf, nil
-	} else if opts.configFile != "" {
-		ncf := New(options...)
+
+	case opts.configFile != "":
+		// fixed configuration file, skip directory search
+		ncf := newScratch(options...)
 		ncf.setFs(r.GetFs())
 		ncf.setConfigFile(opts.configFile)
 
@@ -210,23 +221,20 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 
 		// merge into main config
 		cf.MergeConfigMap(ncf.AllSettings())
-		return cf, nil
-	}
 
-	// load configuration files from given directories, in order
-	if opts.merge {
+	case opts.merge:
+		// load configuration files from given directories, in order
 		found := 0
 		for _, dir := range confDirs {
-			d := New(options...)
+			d := newScratch(options...)
 			d.setFs(r.GetFs())
 			d.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = d.readInConfig(); err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					// not found is fine, we are merging
 					continue
-				} else {
-					return cf, fmt.Errorf("error reading config (%s): %w", d.configFileUsed(), err)
 				}
+				return cf, fmt.Errorf("error reading config (%s): %w", d.configFileUsed(), err)
 			}
 			found++
 			// set the config file we found and loaded, so WatchConfig works
@@ -239,17 +247,18 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 		if found == 0 && opts.mustExist {
 			return cf, fs.ErrNotExist
 		}
-	} else if len(confDirs) > 0 {
-		ncf := New(options...)
+		err = nil
+
+	case len(confDirs) > 0:
+		ncf := newScratch(options...)
 		ncf.setFs(r.GetFs())
 		for _, dir := range confDirs {
 			ncf.setConfigFile(path.Join(dir, module+"."+opts.format))
 			if err = ncf.readInConfig(); err != nil {
 				if errors.Is(err, fs.ErrNotExist) {
 					continue
-				} else {
-					return nil, fmt.Errorf("error reading config (%s): %w", path.Join(dir, module+"."+opts.format), err)
 				}
+				return cf, fmt.Errorf("error reading config (%s): %w", path.Join(dir, module+"."+opts.format), err)
 			}
 
 			// set the config file we found and loaded, so WatchConfig works
@@ -262,9 +271,9 @@ func Read(module string, options ...FileOption) (cf *Config, err error) {
 			break
 		}
 
-		// when we get here we have either loaded the first default
-		// file or not found one. if err check opts.mustexist of just
-		// give up
+		// when we get here we have either loaded the first file or not
+		// found one. if err then no file was found, so check
+		// opts.mustexist or just give up
 		if err != nil && opts.mustExist {
 			return
 		}
@@ -310,7 +319,7 @@ func Path(module string, options ...FileOption) string {
 		}
 	}
 
-	confDirs := opts.configDirs
+	confDirs := slices.Clone(opts.configDirs)
 	if opts.workingDir != "" {
 		confDirs = append(confDirs, opts.workingDir)
 	}
