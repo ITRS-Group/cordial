@@ -51,6 +51,36 @@ func WithGatewayTimeout(timeout time.Duration) GatewayReadOption {
 	}
 }
 
+// parseGatewaySource returns source as a URL if it is an HTTP(S) or file
+// URL, or has any other scheme followed by "//", and otherwise as a path
+// in the Path field of a URL without a scheme. This means that paths
+// such as `C:\gateway\setup.xml` or `gw:1.xml`, which url.Parse would
+// treat as having a scheme, can be used.
+func parseGatewaySource(source string) (*url.URL, error) {
+	lower := strings.ToLower(source)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "file:") {
+		return url.Parse(source)
+	}
+	if scheme, _, found := strings.Cut(source, "://"); found && isURLScheme(scheme) {
+		return url.Parse(source)
+	}
+	return &url.URL{Path: source}, nil
+}
+
+// isURLScheme returns true if s is a valid URL scheme of more than a
+// single letter, which is a Windows drive
+func isURLScheme(s string) bool {
+	if len(s) < 2 || !('a' <= s[0]|0x20 && s[0]|0x20 <= 'z') {
+		return false
+	}
+	for _, c := range s {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '+' || c == '-' || c == '.') {
+			return false
+		}
+	}
+	return true
+}
+
 // ReadGateway reads Gateway XML from a local path, a file URL, or an HTTP(S) URL.
 func ReadGateway(source string, options ...GatewayReadOption) (*Gateway, error) {
 	return ReadGatewayContext(context.Background(), source, options...)
@@ -79,7 +109,7 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 		return nil, errors.New("gateway read host is nil")
 	}
 
-	parsed, err := url.Parse(source)
+	parsed, err := parseGatewaySource(source)
 	if err != nil {
 		return nil, fmt.Errorf("parse gateway source %q: %w", source, err)
 	}

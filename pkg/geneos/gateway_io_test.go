@@ -319,3 +319,58 @@ func TestWriteGatewayHistoryLimitOption(t *testing.T) {
 		t.Fatalf("history beyond custom limit exists: %v", err)
 	}
 }
+
+// paths that url.Parse would take as having a scheme must open as files
+func TestReadGatewayPathsThatLookLikeURLs(t *testing.T) {
+	for _, name := range []string{`C:\gateway\setup.xml`, `c:/gateway/setup.xml`, `gw:1.xml`, `100%.xml`, `/gateway/with space.xml`} {
+		t.Run(name, func(t *testing.T) {
+			h := &gatewayIOTestHost{Host: host.NewLocal(), filesystem: afero.NewMemMapFs()}
+			if err := afero.WriteFile(h.filesystem, name, []byte(gatewayTestXML), 0640); err != nil {
+				t.Fatal(err)
+			}
+			gateway, err := ReadGateway(name, WithGatewayReadHost(h))
+			if err != nil || gateway.Compatibility != 1 {
+				t.Fatalf("ReadGateway(%q) = %v, %v", name, gateway, err)
+			}
+		})
+	}
+}
+
+func TestParseGatewaySource(t *testing.T) {
+	tests := []struct {
+		source     string
+		wantScheme string
+		wantPath   string
+		wantErr    bool
+	}{
+		{source: "/etc/gateway/setup.xml", wantPath: "/etc/gateway/setup.xml"},
+		{source: "setup.xml", wantPath: "setup.xml"},
+		{source: `C:\setup.xml`, wantPath: `C:\setup.xml`},
+		{source: `d:/setup.xml`, wantPath: `d:/setup.xml`},
+		{source: "gw:1.xml", wantPath: "gw:1.xml"},
+		{source: "https://example.com/setup.xml", wantScheme: "https"},
+		{source: "HTTP://example.com/setup.xml", wantScheme: "HTTP"},
+		{source: "file:///etc/setup.xml", wantScheme: "file"},
+		{source: "file:/etc/setup.xml", wantScheme: "file"},
+		{source: "ftp://example.com/setup.xml", wantScheme: "ftp"},
+		{source: "http://[bad", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.source, func(t *testing.T) {
+			u, err := parseGatewaySource(tt.source)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if !strings.EqualFold(u.Scheme, tt.wantScheme) || (tt.wantPath != "" && u.Path != tt.wantPath) {
+				t.Errorf("got scheme %q path %q", u.Scheme, u.Path)
+			}
+		})
+	}
+
+	if _, err := ReadGateway("ftp://example.com/setup.xml"); err == nil || !strings.Contains(err.Error(), "unsupported gateway source scheme") {
+		t.Errorf("unsupported scheme error = %v", err)
+	}
+}
