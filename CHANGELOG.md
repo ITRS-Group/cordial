@@ -188,6 +188,21 @@
   * **Behaviour change**: Credentials files, and the directories created for them, are now written with permissions `0600` and `0700` and keyfile directories with `0700`. The new `FileMode` and `DirMode` options set these for `Write`, which otherwise still uses `0644` and `0775`. A `Config` written by `Write` still contains all of its settings, including defaults and values from the environment.
 
   * `ReadOrCreate` for a keyfile now returns an error for a keyfile that exists but cannot be read, rather than success with no checksum.
+  * Commands run on a remote host over SSH, by `Start` and `Run`, now pass arguments, environment values and the working directory to the program exactly as given, using POSIX single-quote quoting, instead of Go-style quoting that the remote shell still expanded. Arguments containing `$`, backticks or `\` are no longer expanded by the remote shell, and environment values with spaces now work. Remote `Start` appends the output to the error file, as documented, and uses `/dev/null` if there is none.
+
+  * `NewSSHRemote` now uses the name as the hostname if no `Hostname` option is given, as documented, and accepts options as a slice (`[]SSHOption`) as well as individually. Options of any other type are no longer silently ignored but are reported by `LastError` and when connecting.
+
+  * `SSHRemote.LastError` no longer tries to connect again, it reports the error from the last failed attempt until a later connection succeeds. Connections that have closed are replaced when next used, and a handshake with a server that does not answer now times out after 15 seconds.
+
+  * `SSHRemote.RemoveAll` now returns errors, rather than ignoring them, and `Rename` falls back to a plain rename if the server does not support `posix-rename`. `CopyFile` returns an error, rather than truncating the file, when asked to copy a file onto itself.
+
+* `pkg/process`
+
+  * `PID` now returns the lowest matching PID rather than any one of them, and, as documented, only matches a process with all of the given arguments, not any one of them.
+
+  * `Start` now keeps any `HOME`, `SHELL`, `USER`, `LOGNAME` and `PATH` in `Env`, adding the defaults only for the ones that are missing, and returns the PID of a program started in the background (`0` for a program run in the foreground). It no longer starts a reaper of child processes for each program with `Restart` set, `Batch` does that, and returns the channel that stops it.
+
+  * `SignalProcess` returns an error for a PID that is zero or negative, rather than signalling a group of processes. `Daemonize` now also removes `-D=true`, `--daemon=true` and `-D` in a group of short flags, such as `-vD`, from the arguments of the new process.
 
 ## Version v1.31.0 Fixes
 
@@ -346,6 +361,31 @@
   * Fix `MergeHOCONConfig` failing to load values containing a backslash.
 
   * `ReadPasswordInput` now writes prompts to STDERR and clears all passwords not returned. `ReadPEM` prompts are also written to STDERR.
+  * Fix `pkg/host` not building for macOS, FreeBSD and 32-bit Linux, by moving the Linux-only CPU affinity, resource limit and `Lchtimes` code into Linux files, with stubs for other platforms where CPU affinity is ignored.
+
+  * Fix `CopyAll` doing nothing, with no error, when the source host was not a `*SSHRemote` or `*Local` itself, such as the wrapper in the `geneos` command, and `CopyFile` truncating a file that was copied onto itself.
+
+  * Fix `SSHRemote` opening a new connection for each of a number of concurrent callers and leaking all but one, returning a closed connection for ever, and data races on the failure state. The SSH agent connection is now closed once authenticated, IPv6 addresses work, `~/` in private key files is expanded, and `OS` detects Windows servers.
+
+  * Fix remote `Mkdir` and `MkdirAll` ignoring the permissions, `RemoveAll` ignoring errors and being slow for large trees, `GetFs` returning `nil` if the host could not be reached, `Create` returning a file with an error, and `WriteFile` and `CopyFile` ignoring errors from closing the file.
+
+  * Fix remote `Start`, `Run` and `Uname` carrying on when the remote is Windows, `Run` ignoring `cmd.Env` and `Signal` reporting a permission failure as a process that has already exited, and `Signal` with a PID of zero or less.
+
+  * Fix remote `WalkDir` stopping the whole walk for `fs.SkipDir`, not supporting `fs.SkipAll` and reporting errors differently from a local host.
+
+  * Fix local `Start` and `Run` leaving the thread pinned to the requested CPUs if the program failed to start, or for `Run`, discarding any `ExtraFiles`, overwriting the start of an existing error file and, if running as another user with no error file, changing the ownership of `/dev/null`. `Local.Signal` now checks for an error finding the process and `GetFileOwner` no longer panics if the file has no system details.
+
+* `pkg/process`
+
+  * Fix `OpenFiles`, `SocketToConn` and `AllTCPListenPorts` leaking a file for each call and reading the connection tables again for each socket, decoding IPv6 addresses wrongly (`::1` as `0:1::`), panicking on a short line and `AllTCPListenPorts` stopping at the first row that was not listening. `SocketToConn` returns no connection, rather than an empty one, if there is none, and `OpenFiles` sets `Lstat` for sockets and pipes.
+
+  * Fix the process information for a process whose executable cannot be read, such as that of another user, not including the command line, working directory, UID, GID, user name and group name, and the command name in `/proc/PID/stat` containing `) ` being split wrongly.
+
+  * Fix the process cache expiring all types of entry together, `ClearCache` and lazy fields being racy, `GetProcessInfo` returning a pointer to the cached entry and a panic setting a `*time.Time` `StartTime`.
+
+  * Fix two processes being able to hold the same PID file when one opens the file as another removes it on exit, and `LockPIDFile` failing while the status of the file was being checked.
+
+  * Fix `Start` failing for any user that was not root, never finding the PID of the process, panicking for a user that is not in the user database, and returning no done channel from `Batch`. `RemoveArgs` and `Daemon` no longer change `os.Args`.
 
 ---
 

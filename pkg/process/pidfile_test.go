@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"testing"
 	"time"
@@ -236,5 +238,128 @@ func TestSignalProcessErrors(t *testing.T) {
 	cmd.Run()
 	if err := SignalProcess(cmd.Process.Pid, SigTerm); err == nil {
 		t.Error("signalling a process that has exited succeeded")
+	}
+}
+
+func TestLockPIDFileReplacedBeforeLock(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "r.pid")
+	first, err := LockPIDFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// the holder exits, removing the file, after another process has
+	// opened it but before it has locked it
+	var once sync.Once
+	afterOpenHook = func() { once.Do(func() { first.Release() }) }
+	t.Cleanup(func() { afterOpenHook = nil })
+
+	second, err := LockPIDFile(path)
+	if err != nil {
+		t.Fatalf("LockPIDFile() error = %v", err)
+	}
+	defer second.Release()
+
+	// the lock must be on the file that is at the path, or another
+	// process can lock a new file and so both be running
+	onDisk, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("pid file does not exist after locking it: %v", err)
+	}
+	locked, _ := second.f.Stat()
+	if !os.SameFile(onDisk, locked) {
+		t.Fatal("the locked file is not the one at the path")
+	}
+	if _, err = LockPIDFile(path); !errors.As(err, new(*AlreadyRunningError)) {
+		t.Errorf("third LockPIDFile() error = %v, want AlreadyRunningError", err)
+	}
+}
+
+func TestLockPIDFileIsExclusiveWhileReleasing(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "x.pid")
+	var holders atomic.Int32
+	var violated atomic.Bool
+	var locked atomic.Int32
+
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for range 150 {
+				pf, err := LockPIDFile(path)
+				if err != nil {
+					if !errors.As(err, new(*AlreadyRunningError)) {
+						t.Error(err)
+						return
+					}
+					continue
+				}
+				locked.Add(1)
+				if holders.Add(1) > 1 {
+					violated.Store(true)
+				}
+				pf.Write(PIDInfo{})
+				holders.Add(-1)
+				if err := pf.Release(); err != nil {
+					t.Error(err)
+					return
+				}
+			}
+		})
+	}
+	wg.Wait()
+
+	if violated.Load() {
+		t.Error("more than one holder of the PID file at once")
+	}
+	if locked.Load() == 0 {
+		t.Error("the PID file was never locked")
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("pid file left behind: %v", err)
+	}
+}
+
+func TestStatusProbeDoesNotFailLocking(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "p.pid")
+	stop := make(chan struct{})
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				StatusOfPIDFile(path)
+			}
+		}
+	}()
+	defer func() {
+		close(stop)
+		<-done
+	}()
+
+	for i := range 300 {
+		pf, err := LockPIDFile(path)
+		if err != nil {
+			t.Fatalf("LockPIDFile() attempt %d error = %v", i, err)
+		}
+		pf.Release()
+	}
+}
+
+func TestSignalProcessRejectsGroupPIDs(t *testing.T) {
+	// signal 0 does nothing to a process, but to the process group it is
+	// sent to for 0 and to everything for -1
+	for _, pid := range []int{0, -1, -os.Getpid()} {
+		if err := SignalProcess(pid, syscall.Signal(0)); !errors.Is(err, os.ErrInvalid) {
+			t.Errorf("SignalProcess(%d) error = %v, want ErrInvalid", pid, err)
+		}
+		if processAlive(pid) {
+			t.Errorf("processAlive(%d) = true", pid)
+		}
+	}
+	if err := SignalProcess(os.Getpid(), syscall.Signal(0)); err != nil {
+		t.Errorf("SignalProcess() of this process error = %v", err)
 	}
 }

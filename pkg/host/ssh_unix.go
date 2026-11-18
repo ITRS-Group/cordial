@@ -20,17 +20,19 @@ limitations under the License.
 package host
 
 import (
+	"io"
 	"net"
 	"os"
 
 	"golang.org/x/crypto/ssh/agent"
 )
 
-func sshConnectAgent() (agentClient agent.ExtendedAgent) {
+func sshConnectAgent() (agentClient agent.ExtendedAgent, closer io.Closer) {
 	socket := os.Getenv("SSH_AUTH_SOCK")
 	if socket != "" {
 		if sshAgent, err := net.Dial("unix", socket); err == nil { // dial OK, return agent
 			agentClient = agent.NewClient(sshAgent)
+			closer = sshAgent
 		}
 	}
 	return

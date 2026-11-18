@@ -24,6 +24,7 @@ import (
 	"os/user"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -46,12 +47,12 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		return
 	}
 
-	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
+	if reflect.TypeFor[T]().Kind() != reflect.Pointer || reflect.TypeFor[T]().Elem().Kind() != reflect.Struct {
 		err = errors.New("pstats must be a pointer to a struct")
 		return
 	}
 
-	st := reflect.TypeOf(pstats).Elem()
+	st := reflect.TypeFor[T]().Elem()
 
 	if reflect.ValueOf(pstats).IsNil() {
 		pstats = reflect.New(st).Interface().(T)
@@ -59,7 +60,7 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 
 	sv := reflect.ValueOf(pstats).Elem()
 
-	for i := 0; i < st.NumField(); i++ {
+	for i := range st.NumField() {
 		ft := st.Field(i)
 		fv := sv.Field(i)
 
@@ -254,9 +255,9 @@ func ProcessStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 	svStartTime := sv.FieldByName("StartTime")
 	if svStartTime.IsValid() && svStartTime.CanSet() {
 		k := svStartTime.Kind()
-		if k == reflect.Struct && svStartTime.Type() == reflect.TypeOf(time.Time{}) {
+		if k == reflect.Struct && svStartTime.Type() == reflect.TypeFor[time.Time]() {
 			svStartTime.Set(reflect.ValueOf(startTime))
-		} else if k == reflect.Pointer && svStartTime.Type().Elem() == reflect.TypeOf(time.Time{}) {
+		} else if k == reflect.Pointer && svStartTime.Type().Elem() == reflect.TypeFor[time.Time]() {
 			svStartTime.Set(reflect.ValueOf(&startTime))
 		}
 	}
@@ -293,7 +294,7 @@ func fillWindowsProcessDetails(sv reflect.Value, pid int) {
 	if affinity, err := processCPUAffinity(pid); err == nil {
 		values := make([]string, len(affinity))
 		for i, cpu := range affinity {
-			values[i] = fmt.Sprint(cpu)
+			values[i] = strconv.Itoa(cpu)
 		}
 		setProcessString(sv, "CpusAllowedList", strings.Join(values, ","))
 	}
@@ -346,7 +347,7 @@ func processCPUAffinity(pid int) (cpus []int, err error) {
 		return nil, syscall.EINVAL
 	}
 	for cpu := 0; cpu < runtime.NumCPU() && cpu < 8*int(unsafe.Sizeof(processMask)); cpu++ {
-		if processMask&(uintptr(1)<<uint(cpu)) != 0 {
+		if processMask&(uintptr(1)<<cpu) != 0 {
 			cpus = append(cpus, cpu)
 		}
 	}
@@ -396,7 +397,7 @@ func setProcessInt(sv reflect.Value, name string, value int64) {
 
 func setProcessDuration(sv reflect.Value, name string, seconds float64) {
 	fv := sv.FieldByName(name)
-	if fv.IsValid() && fv.CanSet() && fv.Type() == reflect.TypeOf(time.Duration(0)) {
+	if fv.IsValid() && fv.CanSet() && fv.Type() == reflect.TypeFor[time.Duration]() {
 		fv.SetInt(int64(seconds * float64(time.Second)))
 	}
 }
@@ -426,7 +427,7 @@ func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		fv.SetInt(int64(len(files)))
 	case reflect.Slice:
-		if fv.Type().Elem() == reflect.TypeOf(ProcessFDs{}) {
+		if fv.Type().Elem() == reflect.TypeFor[ProcessFDs]() {
 			fv.Set(reflect.ValueOf(files))
 		} else if fv.Type().Elem().Kind() == reflect.String {
 			paths := make([]string, 0, len(files))
@@ -495,14 +496,14 @@ func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
 		} else if fv.Type().Elem().Kind() == reflect.String {
 			values := make([]string, 0, len(ports))
 			for _, port := range ports {
-				values = append(values, fmt.Sprint(port))
+				values = append(values, strconv.Itoa(port))
 			}
 			fv.Set(reflect.ValueOf(values))
 		}
 	case reflect.String:
 		values := make([]string, 0, len(ports))
 		for _, port := range ports {
-			values = append(values, fmt.Sprint(port))
+			values = append(values, strconv.Itoa(port))
 		}
 		if len(values) == 0 {
 			fv.SetString("NONE")
@@ -517,7 +518,7 @@ func GetUsername(uid int) (username string) {
 	if uid < 0 {
 		return "unknown"
 	}
-	return fmt.Sprint(uid)
+	return strconv.Itoa(uid)
 }
 
 // GetGroupname TODO: Document its behavior, inputs, and effects.
@@ -525,7 +526,7 @@ func GetGroupname(gid int) (groupname string) {
 	if gid < 0 {
 		return "unknown"
 	}
-	return fmt.Sprint(gid)
+	return strconv.Itoa(gid)
 }
 
 // GetLoginName TODO: Document its behavior, inputs, and effects.
