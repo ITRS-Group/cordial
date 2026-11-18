@@ -417,14 +417,10 @@ func ParseComponent(component string) *Component {
 		return nil
 	}
 	for _, ct := range registeredComponents {
-		names := []string{ct.Name}
-		if ct.DownloadInfix != "" {
-			names = append(names, ct.DownloadInfix)
-		}
-		for _, m := range append(names, ct.Aliases...) {
-			if strings.EqualFold(m, component) {
-				return ct
-			}
+		if strings.EqualFold(ct.Name, component) ||
+			(ct.DownloadInfix != "" && strings.EqualFold(ct.DownloadInfix, component)) ||
+			slices.ContainsFunc(ct.Aliases, func(a string) bool { return strings.EqualFold(a, component) }) {
+			return ct
 		}
 	}
 	return nil

@@ -155,9 +155,13 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			return err
 		}
 
-		// recreate LOCAL host to force load of "geneos" and other parameters
-		LOCAL = nil
-		LOCAL = NewHost(LOCALHOST)
+		// update the Geneos directory of LOCAL, which keeps the pointer
+		// valid for anything that already has it, or create it
+		if LOCAL == nil {
+			LOCAL = NewHost(LOCALHOST)
+		} else {
+			config.Set(LOCAL.Config, cordial.ExecutableName(), opts.geneosdir)
+		}
 		h = LOCAL
 
 		// initialise the global audit logger and log the original command event

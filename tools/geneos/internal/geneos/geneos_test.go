@@ -92,7 +92,8 @@ func TestInitialiseNeverRegeneratesCertificates(t *testing.T) {
 	confDir := useTestConfigDir(t)
 	useTestComponents(t)
 	root := filepath.Join(t.TempDir(), "geneos")
-	setTestHosts(t, root)
+	setTestHosts(t, filepath.Join(t.TempDir(), "not-the-root"))
+	local := LOCAL
 
 	t.Cleanup(func() {
 		globalAuditMutex.Lock()
@@ -107,6 +108,12 @@ func TestInitialiseNeverRegeneratesCertificates(t *testing.T) {
 
 	if err := Initialise("init", LOCAL, UseRoot(root)); err != nil {
 		t.Fatalf("Initialise() error = %v", err)
+	}
+	if LOCAL != local {
+		t.Error("Initialise() replaced LOCAL, which leaves other holders of the pointer with a host with no Geneos directory")
+	}
+	if got := config.Get[string](LOCAL.Config, cordial.ExecutableName()); got != root {
+		t.Errorf("LOCAL Geneos directory = %q, want %q", got, root)
 	}
 	created := readCAFiles(t, confDir)
 

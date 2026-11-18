@@ -715,22 +715,20 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	nv := "${config:version}"
 
 	libpathList := config.Get[string](cf, "libpaths", config.NoExpand())
-	var libpathValues []string
-	if libpathList != "" {
-		libpathValues = strings.Split(libpathList, host.ListSeparators[h.OS()])
-	}
 	libpathPrefix := strings.TrimSuffix(h.ToSlash(oldInstall), "/") + "/"
-	for _, p := range libpathValues {
-		p = h.ToSlash(p)
-		if after, ok := strings.CutPrefix(p, libpathPrefix); ok {
-			subpath := after
-			if after, ok := strings.CutPrefix(subpath, version); ok {
-				libpaths = append(libpaths, h.Join(np, nv, after))
+	if libpathList != "" {
+		for p := range strings.SplitSeq(libpathList, host.ListSeparators[h.OS()]) {
+			p = h.ToSlash(p)
+			if after, ok := strings.CutPrefix(p, libpathPrefix); ok {
+				subpath := after
+				if after, ok := strings.CutPrefix(subpath, version); ok {
+					libpaths = append(libpaths, h.Join(np, nv, after))
+				} else {
+					libpaths = append(libpaths, h.Join(np, subpath))
+				}
 			} else {
-				libpaths = append(libpaths, h.Join(np, subpath))
+				libpaths = append(libpaths, p)
 			}
-		} else {
-			libpaths = append(libpaths, p)
 		}
 	}
 	config.Set(cf, "libpaths", strings.Join(libpaths, host.ListSeparators[h.OS()]))
