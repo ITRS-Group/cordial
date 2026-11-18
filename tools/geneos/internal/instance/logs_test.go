@@ -1,6 +1,8 @@
 package instance
 
 import (
+	"io"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -132,5 +134,126 @@ func TestTailLinesWithUninitialisedReader(t *testing.T) {
 	text, err := tailLines(newLogTestInstance(t), nil, 10)
 	if text != "" || err != nil {
 		t.Fatalf("tailLines with nil reader = %q, %v; want empty text and no error", text, err)
+	}
+}
+
+// captureStdout returns everything written to os.Stdout by f
+func captureStdout(t *testing.T, f func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := os.Stdout
+	os.Stdout = w
+	defer func() { os.Stdout = previous }()
+	f()
+	w.Close()
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(out)
+}
+
+func TestFilterOutputOptions(t *testing.T) {
+	const text = "alpha\nbeta keep\ngamma\n"
+	for _, tt := range []struct {
+		name string
+		opts []LogWatcherOptions
+		want string
+	}{
+		{"none", nil, text},
+		{"match", []LogWatcherOptions{Matching("keep")}, "beta keep\n"},
+		{"ignore", []LogWatcherOptions{IgnoreMatches("keep")}, "alpha\ngamma\n"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			i := newLogTestInstance(t)
+			opts := evalLogWatcherOptions(append(tt.opts, WithNoHeaders(true))...)
+			if got := captureStdout(t, func() { filterOutput(i, "log", strings.NewReader(text), opts) }); got != tt.want {
+				t.Errorf("filterOutput() = %q, want %q", got, tt.want)
+			}
+			if got := filterOutputStrings(i, "log", strings.NewReader(text), opts); strings.Join(got, "\n")+"\n" != tt.want {
+				t.Errorf("filterOutputStrings() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// useTestTails replaces the log watchers, with no background watcher,
+// for the test
+func useTestTails(t *testing.T) *sync.Map {
+	t.Helper()
+	previous := tails
+	tails = new(sync.Map)
+	t.Cleanup(func() {
+		tails.Range(func(_, value any) bool {
+			if tail, ok := value.(*files); ok && tail.reader != nil {
+				tail.reader.Close()
+			}
+			return true
+		})
+		tails = previous
+	})
+	return tails
+}
+
+// TestFollowedLinesAreFiltered checks that the options for following a
+// log file, not just the defaults, are used for the lines that are
+// added to the file after it is opened
+func TestFollowedLinesAreFiltered(t *testing.T) {
+	watchers := useTestTails(t)
+	i := newLogTestInstance(t)
+	logfile := writeRollTestFile(t, i.rollTestInstance, "instance.log", "existing\n")
+
+	opts := evalLogWatcherOptions(MaxLines(0), Matching("keep"), WithNoHeaders(true))
+	if err := logFollowInstanceFile(i, logfile, opts); err != nil {
+		t.Fatal(err)
+	}
+
+	f, err := os.OpenFile(logfile, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString("drop this line\nkeep this line\n"); err != nil {
+		t.Fatal(err)
+	}
+	f.Close()
+
+	key := i.Host().String() + ":" + logfile
+	value, ok := watchers.Load(key)
+	if !ok {
+		t.Fatal("the log file is not being followed")
+	}
+	got := captureStdout(t, func() { pollTail(watchers, key, value) })
+	if got != "keep this line\n" {
+		t.Errorf("followed output = %q, want only the matching line", got)
+	}
+}
+
+// TestFollowedFileReopenFailure checks that a log file that cannot be
+// reopened is skipped, and not read through a nil reader
+func TestFollowedFileReopenFailure(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("permissions are not enforced for root")
+	}
+	watchers := useTestTails(t)
+	i := newLogTestInstance(t)
+	logfile := writeRollTestFile(t, i.rollTestInstance, "instance.log", "content\n")
+	if err := os.Chmod(logfile, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(logfile, 0o600) })
+
+	key := i.Host().String() + ":" + logfile
+	tail := &files{instance: i, opts: evalLogWatcherOptions(WithNoHeaders(true))}
+	watchers.Store(key, tail)
+
+	if got := captureStdout(t, func() { pollTail(watchers, key, tail) }); got != "" {
+		t.Errorf("output = %q for a file that cannot be opened", got)
+	}
+	value, _ := watchers.Load(key)
+	if again, ok := value.(*files); !ok || again.reader != nil {
+		t.Errorf("watcher state after a failed open = %+v, want no reader to try again", value)
 	}
 }

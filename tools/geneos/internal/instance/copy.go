@@ -147,6 +147,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
+	if isNilInstance(newdst) {
+		return fmt.Errorf("%w: cannot create instance %q", geneos.ErrInvalidArgs, destination)
+	}
 	ncf := newdst.Config()
 
 	// copy over settings from source
@@ -166,6 +169,7 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 				// once we are done, try to delete old instance
 				log.Debug("removing old instance", slog.String("instance", srcname))
 				srcrem.RemoveAll(srchome)
+				ResetHome(src)
 				fmt.Println(srcname, "moved to", dst)
 			} else {
 				fmt.Println(srcname, "copied to", destination)
@@ -174,8 +178,12 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 			// remove new instance
 			log.Debug("removing new instance", slog.String("directory", dstHome))
 			dHost.RemoveAll(dstHome)
+			ResetHome(newdst)
 		}
 	}(src.String(), src.Host(), src.Home(), dst)
+
+	// the destination directory is created below
+	defer ResetHome(newdst)
 
 	// copy directory
 	if err = host.CopyAll(src.Host(), src.Home(), dHost, dstHome); err != nil {

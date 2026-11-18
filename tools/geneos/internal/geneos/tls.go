@@ -108,6 +108,7 @@ func ReadRootCertificateAndKey() (cert *x509.Certificate, key certs.PrivateKey, 
 	cert = roots[0]
 	if !certs.IsValidRootCA(cert) {
 		err = fmt.Errorf("certificate in %q is not valid as a root CA", file)
+		return
 	}
 
 	confDir := config.AppConfigDir()
@@ -372,24 +373,39 @@ func importRootsOnly(w io.Writer, h *Host, source string, roots []*x509.Certific
 //
 // later options to allow import of a DCA
 //
-// This is also called from `init`
+// If overwrite is false then an existing and valid root certificate is
+// never replaced: if the signing certificate is also valid then nothing
+// is changed, otherwise only a new signing certificate is created from
+// the existing root (if the root private key is available). An
+// existing root certificate that cannot be used is an error and has to
+// be replaced explicitly with overwrite set to true.
+//
+// This is also called from `init`, which must never overwrite the
+// user-wide certificates.
 func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error) {
-	if !overwrite {
-		if _, _, err := ReadRootCertificateAndKey(); err == nil {
-			// root cert already exists
-			log.Debug("root certificate already exists, skipping TLS initialisation")
-			return nil
-		}
-		if _, err := readSigningCertificate(); err == nil {
-			// signing cert already exists
-			log.Debug("signing certificate already exists, skipping TLS initialisation")
-			return nil
-		}
-	}
-
 	confDir := config.AppConfigDir()
 	if confDir == "" {
 		return config.ErrNoUserConfigDir
+	}
+
+	if !overwrite {
+		rootCert, rootKey, err := ReadRootCertificateAndKey()
+		switch {
+		case err == nil:
+			defer clear(rootKey)
+			if _, err := readSigningCertificate(); err == nil {
+				log.Debug("root and signing certificates already exist, skipping TLS initialisation")
+				return nil
+			}
+			if rootKey == nil {
+				log.Debug("root certificate exists without a private key, skipping TLS initialisation")
+				return nil
+			}
+			return createSigningCert(hostname, confDir, rootCert, rootKey)
+		case !errors.Is(err, os.ErrNotExist):
+			return fmt.Errorf("existing root certificate cannot be used, replace it explicitly: %w", err)
+		}
+		// no root certificate, create everything below
 	}
 
 	// directory permissions do not need to be restrictive
@@ -421,6 +437,13 @@ func TLSInit(hostname string, overwrite bool, keytype certs.KeyType) (err error)
 		return err
 	}
 
+	return createSigningCert(hostname, confDir, rootCert, rootKey)
+}
+
+// createSigningCert creates a new signing certificate and key in confDir
+// from the given root and then syncs the ca-bundle files if the Geneos
+// directory exists.
+func createSigningCert(hostname, confDir string, rootCert *x509.Certificate, rootKey certs.PrivateKey) (err error) {
 	signing, err := certs.WriteNewSigningCert(LOCAL.Join(confDir, SigningCertBasename), rootCert, rootKey,
 		cordial.ExecutableName()+" "+SigningCertLabel+" ("+hostname+")",
 	)
@@ -443,8 +466,7 @@ func TLSSync() (err error) {
 	// add local root cert if it exists - this is needed for syncing to
 	// remote hosts but also to update local ca-bundle with any new root
 	// cert created with TLSInit
-	rootCert, _, err := ReadRootCertificateAndKey()
-	if err == nil {
+	if rootCert, _, rerr := ReadRootCertificateAndKey(); rerr == nil {
 		allRoots = append(allRoots, rootCert)
 	}
 

@@ -299,9 +299,10 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			instance.WithProfiles(pf),
 			instance.WithImports(common.Imports),
 		)
-		if err != nil {
+		if err != nil && !errors.Is(err, geneos.ErrExists) {
 			return err
 		}
+		err = nil
 	} else {
 		// update the first / only instance
 		i = instances[0]

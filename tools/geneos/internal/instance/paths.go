@@ -19,6 +19,7 @@ package instance
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
@@ -140,6 +141,64 @@ func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 	return
 }
 
+// homeState is the cached result of resolving the home directory of
+// one instance. The mutex is held while resolving, so that a reset can
+// never be overtaken by the store of a result that was resolved before
+// it.
+type homeState struct {
+	mutex sync.Mutex
+
+	valid bool
+	home  string
+
+	// the inputs that the result was resolved from and that are
+	// cheap to check without any file system access
+	cfHome string
+	cfSet  bool
+}
+
+// homeKey identifies an instance, and not a particular Go value for it,
+// as there can be more than one for the same instance, such as from
+// Add() and Get().
+type homeKey struct {
+	host *geneos.Host
+	ct   string
+	name string
+}
+
+// homes holds a homeState for each instance that has been looked at.
+var homes sync.Map
+
+func homeStateFor(h *geneos.Host, ct *geneos.Component, name string) *homeState {
+	key := homeKey{h, ct.String(), name}
+	if s, ok := homes.Load(key); ok {
+		return s.(*homeState)
+	}
+	s, _ := homes.LoadOrStore(key, &homeState{})
+	return s.(*homeState)
+}
+
+// ResetHome discards the cached home directory of the instance, so that
+// the next call to [Home] looks at the host again. It must be called by
+// anything that can change where the home directory of an instance is,
+// such as creating, moving or removing the directory.
+//
+// Changes to the "home" configuration parameter of an instance are
+// always noticed and do not need a reset.
+func ResetHome(i geneos.Instance) {
+	if i == nil || i.Config() == nil {
+		return
+	}
+	resetHome(i.Host(), i.Type(), i.Name())
+}
+
+func resetHome(h *geneos.Host, ct *geneos.Component, name string) {
+	s := homeStateFor(h, ct, name)
+	s.mutex.Lock()
+	s.valid = false
+	s.mutex.Unlock()
+}
+
 // Home return the directory for the instance. It checks for the first existing directory from:
 //
 //   - The one configured for the instance factory and in the configuration parameter "home"
@@ -147,47 +206,75 @@ func PathsTo(i geneos.Instance, names ...string) (filenames []string) {
 //   - If the instance's component type has a parent component then in the
 //     legacy instances directory
 //
-// If no directory is found then a default built using PathTo() is returned
+// If no directory is found then a default built using PathTo() is returned.
+//
+// Finding an existing directory needs a stat call per candidate, which
+// is slow on a remote host, so the directory that is found is
+// remembered for the instance until [ResetHome] is called or its
+// configured "home" changes. A default that was not found is never
+// remembered.
 func Home(i geneos.Instance) (home string) {
-	if i == nil || i.Config() == nil {
+	if i == nil {
+		return ""
+	}
+	cf := i.Config()
+	if cf == nil {
 		return ""
 	}
 
-	ct := i.Type()
 	h := i.Host()
+	name := i.Name()
+	cfHome, cfSet := config.Lookup[string](cf, "home")
 
-	var ok bool
+	s := homeStateFor(h, i.Type(), name)
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	if s.valid && s.cfSet == cfSet && s.cfHome == cfHome {
+		return s.home
+	}
+
+	home, found := resolveHome(i, h, name, cfHome, cfSet)
+	s.valid = found
+	if found {
+		s.home, s.cfHome, s.cfSet = home, cfHome, cfSet
+	}
+	return
+}
+
+// resolveHome looks for the existing home directory of the instance
+// and returns it with true. If none exists then the default directory
+// is returned with false.
+func resolveHome(i geneos.Instance, h *geneos.Host, name, cfHome string, cfSet bool) (home string, found bool) {
+	ct := i.Type()
 
 	// can't use c.Home() as this function is called from there!
-	if home, ok = config.Lookup[string](i.Config(), "home"); ok {
-		if d, err := i.Host().Stat(home); err == nil && d.IsDir() {
-			return
+	if cfSet {
+		if d, err := h.Stat(cfHome); err == nil && d.IsDir() {
+			return cfHome, true
 		}
 	}
 
 	// second, does the instance exist in the default instances parentDir?
-	parentDir := i.Type().InstancesDir(h)
-	if parentDir != "" {
-		home = h.Join(parentDir, i.Name())
+	if parentDir := ct.InstancesDir(h); parentDir != "" {
+		home = h.Join(parentDir, name)
 		if d, err := h.Stat(home); err == nil && d.IsDir() {
-			return
+			return home, true
 		}
 	}
 
 	// third, look in any "legacy" location, but only if parent type is
 	// non nil
-	if i.Type().ParentType != nil {
-		parentDir := h.PathTo(i.Type().String(), i.Type().String()+"s")
-		if parentDir != "" {
-			home = h.Join(parentDir, i.Name())
+	if ct.ParentType != nil {
+		if parentDir := h.PathTo(ct.String(), ct.String()+"s"); parentDir != "" {
+			home = h.Join(parentDir, name)
 			if d, err := h.Stat(home); err == nil && d.IsDir() {
-				return
+				return home, true
 			}
 		}
 	}
 
-	home = h.PathTo(ct, ct.String()+"s", i.Name())
-	return
+	return h.PathTo(ct, ct.String()+"s", name), false
 }
 
 // Shared returns the full path to a directory or file in the instances

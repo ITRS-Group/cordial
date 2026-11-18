@@ -24,6 +24,7 @@ import (
 	"maps"
 	"os"
 	"path"
+	"reflect"
 	"regexp"
 	"slices"
 	"strings"
@@ -38,7 +39,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-// The Instance type is the common data shared by all instances
+// The Instance type is the common data shared by all instances.
+//
+// Instances are cached and shared between goroutines. The fields Conf
+// and ConfigLoaded can change after an instance is created, so they must
+// only be used with the methods Config, SetConfig, Loaded and SetLoaded
+// once it can be shared, which are safe for concurrent use. The other
+// fields must not be changed after the instance is created.
 type Instance struct {
 	Conf         *config.Config      `json:"-"`
 	InstanceHost *geneos.Host        `json:"-"`
@@ -46,6 +53,50 @@ type Instance struct {
 	ConfigLoaded time.Time           `json:"-"`
 	Logger       *slog.Logger        `json:"-"`
 	AuditLogger  *logger.AuditLogger `json:"-"`
+
+	mutex sync.RWMutex // protects Conf and ConfigLoaded
+}
+
+// Config returns the configuration of the instance. It is safe to call
+// on a nil Instance.
+func (i *Instance) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+	return i.Conf
+}
+
+// SetConfig replaces the configuration of the instance.
+func (i *Instance) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+	i.Conf = cf
+}
+
+// Loaded returns the modification time of the configuration file that
+// the instance was loaded from, or the zero time if it is not loaded.
+func (i *Instance) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+	return i.ConfigLoaded
+}
+
+// SetLoaded sets the modification time of the loaded configuration file.
+func (i *Instance) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+	i.ConfigLoaded = t
 }
 
 // IsA returns true if instance i has a type that is component of one of
@@ -78,7 +129,7 @@ func Factory[T geneos.Instance](
 	}
 
 	h, packageType, local := ParseName(name)
-	if local == "" || h == nil || (h.IsLocalhost() && geneos.LocalRoot() == "") {
+	if local == "" || h.IsUnknown() || (h.IsLocalhost() && geneos.LocalRoot() == "") {
 		return zero
 	}
 
@@ -245,24 +296,36 @@ func LogFilePath(i geneos.Instance) (logfile string) {
 	return
 }
 
-// Signal sends the signal to the instance
+// Signal sends the signal to the instance. If the instance process
+// cannot be found then os.ErrProcessDone is returned, and any other
+// error from looking up the process is returned unchanged. A signal is
+// never sent to PID 0.
 func Signal(i geneos.Instance, signal syscall.Signal) (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
 	pid, err := GetPID(i) // check cache first
-	if err != nil && errors.Is(err, os.ErrProcessDone) {
+	if err != nil {
+		if !errors.Is(err, os.ErrProcessDone) {
+			return err
+		}
 		// only check live PID if no entry found in cache. If a PID is
 		// found in the cache but the process has terminated, signal
 		// will just return os.ErrProcessDone, so we don't want to check
 		// live PID in that case.
 		pid, err = GetLivePID(i)
 		if err != nil {
-			return os.ErrProcessDone
+			if errors.Is(err, os.ErrProcessDone) {
+				return os.ErrProcessDone
+			}
+			return err
 		}
 	}
+	if pid <= 0 {
+		return os.ErrProcessDone
+	}
 
-	return i.Host().Signal(int(pid), signal)
+	return i.Host().Signal(pid, signal)
 }
 
 // ProfileTargets selects the targets of a profile-specific action.
@@ -319,8 +382,8 @@ func Do(action string, h *geneos.Host, ct *geneos.Component, names []string, fn 
 			// do profile after instances
 			p, err := Get(ct, n)
 			if err != nil {
-				log.Debug("failed to get profile %s: %v", n, err)
-				return
+				log.Debug("failed to get profile", slog.String("name", n), slog.Any("error", err))
+				continue
 			}
 			resp := fn(p, values...)
 			finishResponse(action, p, resp)
@@ -345,15 +408,22 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 	if ct.IsA("profile") {
 		for _, n := range names {
 
-			// the instances
+			// the instances, stop on error as for Do()
 			var instances []geneos.Instance
 			if targets != ProfileOnly {
 				instances = Instances(h, nil, MatchParameters(config.Join("config", "profile")+"="+n))
 			}
+			var failed bool
 			for _, i := range instances {
 				resp := fn(i, values...)
 				finishResponse(action, i, resp)
 				rs[i.String()] = resp
+				if resp.Err != nil {
+					failed = true
+				}
+			}
+			if failed {
+				return
 			}
 
 			if targets == ProfileMembersOnly {
@@ -363,7 +433,7 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 			// do profile after instances
 			p, err := Get(ct, n)
 			if err != nil {
-				log.Debug("failed to get profile %s: %v", n, err)
+				log.Debug("failed to get profile", slog.String("name", n), slog.Any("error", err))
 				continue
 			}
 			resp := fn(p, values...)
@@ -398,32 +468,45 @@ func DoSerial(action string, h *geneos.Host, ct *geneos.Component, names []strin
 // the success or failure will be recorded in an attribute "result".
 func DoInstances(action string, instances []geneos.Instance, fn func(geneos.Instance, ...any) *responses.General, values ...any) (rs responses.GeneralResponses) {
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 
 	rs = make(responses.GeneralResponses, len(instances))
-	ch := make(chan *responses.General, len(instances))
+
+	// limit the number of concurrent calls, each of which may be using
+	// an SSH session or doing other I/O
+	limit := make(chan struct{}, maxConcurrentInstances)
 
 	for _, c := range instances {
 		if c == nil {
 			continue
 		}
-		wg.Add(1)
-		go func(c geneos.Instance) {
-			defer wg.Done()
+		limit <- struct{}{}
+		wg.Go(func() {
+			defer func() { <-limit }()
 
 			resp := fn(c, values...)
+			if resp == nil {
+				resp = responses.New[responses.General](c)
+			}
 			finishResponse(action, c, resp)
-			ch <- resp
-		}(c)
+
+			key := c.String()
+			if resp.Instance != nil {
+				key = resp.Instance.String()
+			}
+			mu.Lock()
+			rs[key] = resp
+			mu.Unlock()
+		})
 	}
 	wg.Wait()
-	close(ch)
-
-	for resp := range ch {
-		rs[resp.Instance.String()] = resp
-	}
 
 	return
 }
+
+// maxConcurrentInstances is the maximum number of instances that
+// DoInstances will process at the same time.
+const maxConcurrentInstances = 16
 
 // Disable the instance i. Does not try to stop a running instance and
 // returns an error if it is running.
@@ -469,19 +552,46 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 		return nil, geneos.ErrInvalidArgs
 	}
 
+	// the host is checked first, as the factory returns a nil instance
+	// for both a bad host and a missing root directory
+	h, _, _ := ParseName(name)
+	if err = checkHost(h); err != nil {
+		return nil, err
+	}
+
 	instance = ct.New(name)
-	if instance == nil {
+	if isNilInstance(instance) {
 		// if no instance is created, check why
-		h, _, _ := ParseName(name)
 		if h.IsLocalhost() && geneos.LocalRoot() == "" {
-			err = geneos.ErrRootNotSet
-			return
+			return nil, geneos.ErrRootNotSet
 		}
-		err = geneos.ErrInvalidArgs
-		return
+		return nil, geneos.ErrInvalidArgs
 	}
 	err = instance.Load()
 	return
+}
+
+// isNilInstance returns true if i is nil or an interface value holding
+// a nil pointer, which is what the component factories return when they
+// cannot create an instance.
+func isNilInstance(i geneos.Instance) bool {
+	if i == nil {
+		return true
+	}
+	v := reflect.ValueOf(i)
+	return v.Kind() == reflect.Pointer && v.IsNil()
+}
+
+// checkHost returns an error if h cannot be used as the host for an
+// instance, that is if it is nil or the unknown host.
+func checkHost(h *geneos.Host) error {
+	switch {
+	case h == nil:
+		return fmt.Errorf("no host given: %w", geneos.ErrInvalidArgs)
+	case h == geneos.UNKNOWN:
+		return fmt.Errorf("unknown host: %w", geneos.ErrNotExist)
+	}
+	return nil
 }
 
 // GetWithHost return instance of component name of type ct from host h
@@ -489,8 +599,11 @@ func Get(ct *geneos.Component, name string) (instance geneos.Instance, err error
 // If name has an embedded "@HOST" it must match h, else that is an
 // error.
 func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance geneos.Instance, err error) {
-	if ct == nil || h == nil || h == geneos.ALL || name == "" {
+	if ct == nil || h == geneos.ALL || name == "" {
 		return nil, geneos.ErrInvalidArgs
+	}
+	if err = checkHost(h); err != nil {
+		return nil, err
 	}
 
 	if strings.Contains(name, "@") && !strings.HasSuffix(name, "@"+h.String()) {
@@ -499,13 +612,11 @@ func GetWithHost(h *geneos.Host, ct *geneos.Component, name string) (instance ge
 	}
 
 	instance = ct.New(h.FullName(name))
-	if instance == nil {
+	if isNilInstance(instance) {
 		if h.IsLocalhost() && geneos.LocalRoot() == "" {
-			err = geneos.ErrRootNotSet
-			return
+			return nil, geneos.ErrRootNotSet
 		}
-		err = geneos.ErrInvalidArgs
-		return
+		return nil, geneos.ErrInvalidArgs
 	}
 	err = instance.Load()
 	return
@@ -520,8 +631,12 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 
 	opts := evalInstanceOptions(options...)
 
+	// directories are only listed once for this call, but never kept
+	// for the next
+	lister := newDirLister()
+
 	for ct := range ct.OrList() {
-		for _, name := range AllInstanceNames(h, ct) {
+		for _, name := range lister.instanceNames(h, ct) {
 			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
 	}
@@ -556,11 +671,11 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 	}
 
 	// now add parent type matches
-	if opts.matchParentPackage {
+	if opts.matchParentPackage && ct != nil && ct.ParentType != nil {
 		pt := ct.ParentType
 
 		var parentNames []string
-		for _, name := range AllInstanceNames(h, pt) {
+		for _, name := range lister.instanceNames(h, pt) {
 			parentNames = append(parentNames, pt.String()+":"+name)
 		}
 
@@ -672,18 +787,64 @@ func MatchParentPackage() InstanceOption {
 // to validate that the directory contains a valid instance.
 // AllInstanceNames are qualified with the host name. Regular files are
 // ignored.
+//
+// For each host and component the names are in sorted order, and a name
+// that is in more than one of the directories for the component, such
+// as a legacy one, is only returned once.
 func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
+	return newDirLister().instanceNames(h, ct)
+}
+
+// dirLister lists directories of instances, remembering the result for
+// each directory so that it is only read once. It is meant to be used
+// for a single call, to share the work between the parts of that call,
+// and must not be kept, as it would return stale results.
+type dirLister struct {
+	dirs map[dirKey][]string
+}
+
+type dirKey struct {
+	host *geneos.Host
+	dir  string
+}
+
+func newDirLister() *dirLister {
+	return &dirLister{dirs: map[dirKey][]string{}}
+}
+
+// subdirs returns the sorted names of the directories in dir on host h,
+// or nothing if it cannot be read.
+func (l *dirLister) subdirs(h *geneos.Host, dir string) []string {
+	key := dirKey{h, dir}
+	if names, ok := l.dirs[key]; ok {
+		return names
+	}
+
+	var names []string
+	if d, err := h.ReadDir(dir); err == nil {
+		for _, f := range d {
+			if f.IsDir() {
+				names = append(names, f.Name())
+			}
+		}
+		slices.Sort(names)
+	}
+	l.dirs[key] = names
+	return names
+}
+
+// instanceNames is AllInstanceNames using l to list directories.
+func (l *dirLister) instanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
+			seen := map[string]struct{}{}
 			for _, dir := range ct.InstancesBaseDirs(h) {
-				d, err := h.ReadDir(dir)
-				if err != nil {
-					continue
-				}
-				for _, f := range d {
-					if f.IsDir() {
-						names = append(names, f.Name()+"@"+h.String())
+				for _, name := range l.subdirs(h, dir) {
+					if _, ok := seen[name]; ok {
+						continue
 					}
+					seen[name] = struct{}{}
+					names = append(names, name+"@"+h.String())
 				}
 			}
 		}
@@ -696,7 +857,8 @@ func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 // hostname) on the host h and of the component type ct and returns all
 // matches. Valid patterns are the same as for path.Match.
 //
-// The returned slice is sorted and duplicates are removed.
+// Duplicates are removed from the returned slice, which is in pattern
+// order and, for each pattern, in host, component and name order.
 //
 // Patterns that resolve to empty (e.g. @hostname) are returned
 // unchanged and unchecked against valid names.
@@ -704,6 +866,9 @@ func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 // Patterns that have no globbing special characters are returned as-is
 // and the caller is expected to validate them.
 func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool, patterns ...string) (names []string, err error) {
+	// each directory is only listed once for all of the patterns
+	lister := newDirLister()
+
 	for _, pattern := range patterns {
 		if pattern == "all" {
 			pattern = "*"
@@ -717,7 +882,7 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		h, _, p := ParseName(pattern, h) // override 'h' inside loop
 
 		var matched bool
-		for _, name := range AllInstanceNames(h, ct) {
+		for _, name := range lister.instanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
 				matched = true

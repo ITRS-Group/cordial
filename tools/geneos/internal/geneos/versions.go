@@ -221,61 +221,69 @@ func LocalArchives(ct *Component, options ...GeneosOption) (archives []string, e
 // CompareVersion takes two Geneos package versions and returns an int
 // that is 0 if they are identical, negative if version1 < version2 and
 // positive is version1 > version2. If the version is prefixed with non
-// numeric values then "GA" is always greater thn "RA" (general versus
+// numeric values then "GA" is always greater than "RA" (general versus
 // restricted availability) for the same numeric version, otherwise a
-// lexical comparison is done on the prefixes.
+// lexical comparison is done on the prefixes. A version without a
+// prefix is treated as "GA".
 //
 // If either version is empty or unparseable then the return value is
 // set to favour the other version - or 0 if both are empty strings.
+// Two unparseable versions are compared lexically so that the result is
+// always consistent, i.e. CompareVersion(a, b) == -CompareVersion(b, a).
 func CompareVersion(version1, version2 string) int {
-	// cope with empty versions
-	if version1 == "" && version2 == "" {
-		return 0
-	}
-	if version1 == "" {
-		return -1
-	}
-	if version2 == "" {
-		return 1
-	}
+	p1, v1 := parseReleaseVersion(version1)
+	p2, v2 := parseReleaseVersion(version2)
 
-	v1parts := strings.FieldsFunc(version1, func(r rune) bool {
-		return !unicode.IsLetter(r)
-	})
-	if len(v1parts) == 0 {
-		v1parts = []string{"GA"}
-	} else if v1parts[0] == "" {
-		v1parts[0] = "GA"
-	} else {
-		version1 = strings.TrimPrefix(version1, v1parts[0])
-	}
-	v1, err := version.NewVersion(version1)
-	if err != nil {
-		// if version1 is unparseable, treat version2 as greater
-		return 1
-	}
-
-	v2parts := strings.FieldsFunc(version2, func(r rune) bool {
-		return !unicode.IsLetter(r)
-	})
-	if len(v2parts) == 0 {
-		v2parts = []string{"GA"}
-	} else if v2parts[0] == "" {
-		v2parts[0] = "GA"
-	} else {
-		version2 = strings.TrimPrefix(version2, v2parts[0])
-	}
-	v2, err := version.NewVersion(version2)
-	if err != nil {
-		// if version2 is unparseable, treat version2 as greater
+	switch {
+	case v1 == nil && v2 == nil:
+		return strings.Compare(version1, version2)
+	case v1 == nil:
 		return -1
+	case v2 == nil:
+		return 1
 	}
 
 	if i := v1.Compare(v2); i != 0 {
 		return i
 	}
 
-	return strings.Compare(v1parts[0], v2parts[0])
+	return compareVersionPrefix(p1, p2)
+}
+
+// parseReleaseVersion splits version into any leading non-numeric
+// prefix, which defaults to "GA", and the parsed numeric version. If
+// version is empty or cannot be parsed then the returned version is
+// nil.
+func parseReleaseVersion(v string) (prefix string, parsed *version.Version) {
+	i := strings.IndexFunc(v, unicode.IsDigit)
+	if i < 0 {
+		return "", nil
+	}
+	prefix = v[:i]
+	if prefix == "" {
+		prefix = "GA"
+	}
+	parsed, err := version.NewVersion(v[i:])
+	if err != nil {
+		return "", nil
+	}
+	return
+}
+
+// compareVersionPrefix orders release prefixes for the same numeric
+// version: "GA" is greater than "RA" and anything else is compared
+// lexically.
+func compareVersionPrefix(a, b string) int {
+	a, b = strings.ToUpper(a), strings.ToUpper(b)
+	switch {
+	case a == b:
+		return 0
+	case a == "GA" && b == "RA":
+		return 1
+	case a == "RA" && b == "GA":
+		return -1
+	}
+	return strings.Compare(a, b)
 }
 
 const stagingPrefix = ".installing-"

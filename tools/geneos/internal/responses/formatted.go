@@ -2,7 +2,6 @@ package responses
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"maps"
 	"slices"
@@ -40,7 +39,7 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 
 	// special-case "json", merge multiple Values and Value into a single slice and output
 	if format == "json" {
-		var data []any
+		var data = []any{}
 		j := json.NewEncoder(w)
 		j.SetEscapeHTML(false)
 		if opts.indentJSON {
@@ -48,11 +47,6 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 		}
 		for _, k := range slices.Sorted(maps.Keys(responses)) {
 			resp := responses[k]
-			for _, i := range opts.ignoreerr {
-				if errors.Is(resp.Err, i) {
-					continue
-				}
-			}
 			if resp.Err != nil {
 				continue
 			}
@@ -64,8 +58,7 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 			}
 		}
 
-		j.Encode(data)
-		return nil
+		return j.Encode(data)
 	}
 
 	r, err := reporter.NewReporter(format, w, reporterOptions...)
@@ -85,14 +78,8 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 		rows = prequel
 	}
 
-RESPONSES:
 	for _, k := range slices.Sorted(maps.Keys(responses)) {
 		resp := responses[k]
-		for _, i := range opts.ignoreerr {
-			if errors.Is(resp.Err, i) {
-				continue RESPONSES
-			}
-		}
 		if resp.Err != nil {
 			continue
 		}

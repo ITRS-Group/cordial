@@ -115,7 +115,7 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 
 					if reflect.TypeOf(resp.Value).Kind() == reflect.Slice {
 						s := reflect.ValueOf(resp.Value)
-						for i := 0; i < s.Len(); i++ {
+						for i := range s.Len() {
 							if s.Index(i).IsValid() {
 								if !startedJSON {
 									fmt.Fprint(w, "[")
@@ -126,6 +126,8 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 								if opts.indentJSON {
 									fmt.Fprint(w, "\n    ")
 								}
+								// each element is encoded on its own
+								b.Reset()
 								j.Encode(s.Index(i).Interface())
 								if b.Len() > 1 {
 									b.Truncate(b.Len() - 1)
@@ -152,7 +154,7 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 					}
 				} else {
 					fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-					fmt.Fprint(w, logger.Redact(fmt.Sprintf("%s", resp.Value)))
+					fmt.Fprint(w, logger.Redact(fmt.Sprint(resp.Value)))
 					fmt.Fprint(w, opts.suffix)
 				}
 			}
@@ -263,6 +265,8 @@ func (resp General) Report(writer any, options ...Option) {
 			}
 		}
 		if !ignored {
+			// skip the other output, but still report the error
+			resp.reportErr(opts)
 			return
 		}
 	}
@@ -306,7 +310,7 @@ func (resp General) Report(writer any, options ...Option) {
 				w.Write(logger.RedactJSON(b))
 			} else {
 				fmt.Fprintf(w, opts.prefixformat, resp.Instance)
-				fmt.Fprint(w, logger.Redact(fmt.Sprintf("%s", resp.Value)))
+				fmt.Fprint(w, logger.Redact(fmt.Sprint(resp.Value)))
 				fmt.Fprint(w, opts.suffix)
 			}
 		}
@@ -328,26 +332,35 @@ func (resp General) Report(writer any, options ...Option) {
 		os.Exit(1)
 	}
 
-	if opts.stderr != io.Discard {
-		errored := false
-		ignored := false
-		if resp.Err != nil {
-			for _, i := range opts.ignoreerr {
-				if errors.Is(resp.Err, i) {
-					ignored = true
-					break
-				}
-			}
-			if !ignored {
-				fmt.Fprintf(opts.stderr, "%s: %s\n", resp.Instance, resp.Err)
-				errored = true
-			}
-		}
+	resp.reportErr(opts)
+}
 
-		if !errored && !ignored && opts.showtimes {
-			s := resp.Duration.Seconds()
-			fmt.Fprintf(opts.stderr, opts.timesformat, resp.Instance, s)
+// reportErr writes the error, if any, that is not ignored, or otherwise
+// the elapsed time if enabled, to the error writer, unless it is
+// io.Discard.
+func (resp General) reportErr(opts *options) {
+	if opts.stderr == io.Discard {
+		return
+	}
+
+	errored := false
+	ignored := false
+	if resp.Err != nil {
+		for _, i := range opts.ignoreerr {
+			if errors.Is(resp.Err, i) {
+				ignored = true
+				break
+			}
 		}
+		if !ignored {
+			fmt.Fprintf(opts.stderr, "%s: %s\n", resp.Instance, resp.Err)
+			errored = true
+		}
+	}
+
+	if !errored && !ignored && opts.showtimes {
+		s := resp.Duration.Seconds()
+		fmt.Fprintf(opts.stderr, opts.timesformat, resp.Instance, s)
 	}
 }
 

@@ -1,6 +1,7 @@
 package instance
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -15,7 +16,7 @@ import (
 
 // SnapshotDataviews TODO: Document its behavior, inputs, and effects.
 func SnapshotDataviews(i geneos.Instance, paths []string, options ...SnapshotOptions) (dataviews []*commands.Dataview, err error) {
-	if CompareVersion(i, "5.14") <= 0 {
+	if CompareVersion(i, "5.14") < 0 {
 		err = fmt.Errorf("%s is too old (5.14 or above required)", i)
 		return
 	}
@@ -23,45 +24,53 @@ func SnapshotDataviews(i geneos.Instance, paths []string, options ...SnapshotOpt
 
 	opts := evalSnapshotOptions(options...)
 
+	// always try to use auth details in per-instance config, default to
+	// from the command line or user/global config or credentials file.
+	//
+	// only clear passwords that are copies made here, never the one
+	// passed in by the caller, which may be used for other instances
+	username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
+	password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
+	ownPassword := true
+	defer func() {
+		if ownPassword {
+			clear(password)
+		}
+	}()
+
+	if username == "" {
+		username = opts.username
+	}
+
+	if len(password) == 0 {
+		password = opts.password
+		ownPassword = false
+	}
+
+	// if username is still unset then look for credentials
+	//
+	// credential domain is gateway:NAME or gateway:* for wildcard
+	if username == "" {
+		creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.AppName(cordial.ExecutableName()))
+		if creds == nil {
+			creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName()))
+		}
+		if creds != nil {
+			username = config.Get[string](creds, "username")
+			password = config.Get[config.Secret](creds, "password")
+			ownPassword = true
+		}
+	}
+
+	var parseErrs error
+
 	for _, path := range paths {
 		var x *xpath.XPath
 		x, err = xpath.Parse(path)
 		if err != nil {
 			i.Log().Error("failed to parse xpath", slog.Any("error", err), slog.String("path", path))
+			parseErrs = errors.Join(parseErrs, fmt.Errorf("invalid xpath %q: %w", path, err))
 			continue
-		}
-
-		// always try to use auth details in per-instance config,
-		// default to from the command line or user/global config or
-		// credentials file
-		username := config.Get[string](i.Config(), config.Join("snapshot", "username"))
-		password := config.Get[config.Secret](i.Config(), config.Join("snapshot", "password"))
-		defer clear(password)
-
-		if username == "" {
-			username = opts.username
-		}
-
-		if password == nil {
-			password = opts.password
-		}
-
-		// if username is still unset then look for credentials
-		//
-		// credential domain is gateway:NAME or gateway:* for wildcard
-		if username == "" {
-			creds := config.FindCreds(i.Type().String()+":"+i.Name(), config.AppName(cordial.ExecutableName()))
-			if creds != nil {
-				username = config.Get[string](creds, "username")
-				password = config.Get[config.Secret](creds, "password")
-				defer clear(password)
-			} else {
-				if creds = config.FindCreds(i.Type().String()+":*", config.AppName(cordial.ExecutableName())); creds != nil {
-					username = config.Get[string](creds, "username")
-					password = config.Get[config.Secret](creds, "password")
-					defer clear(password)
-				}
-			}
 		}
 
 		i.Log().Debug("dialling", slog.Any("url", gatewayURL(i)))
@@ -100,7 +109,7 @@ func SnapshotDataviews(i geneos.Instance, paths []string, options ...SnapshotOpt
 		}
 	}
 
-	return
+	return dataviews, parseErrs
 }
 
 func gatewayURL(i geneos.Instance) (u *url.URL) {

@@ -19,6 +19,7 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 	"syscall"
@@ -51,13 +52,13 @@ func Stop(i geneos.Instance, options ...any) (err error) {
 	if wasRunning {
 		stoppedPID, _ = GetPID(i)
 	}
-	if err == nil && wasRunning && !opts.skipAudit {
+	if wasRunning && !opts.skipAudit {
 		defer func() {
 			args := []any{}
 			if stoppedPID > 0 {
 				args = append(args, slog.Int("pid", stoppedPID))
 			}
-			i.AuditEvent("action/stop", nil, args...)
+			i.AuditEvent("action/stop", err, args...)
 		}()
 	}
 
@@ -67,7 +68,7 @@ func Stop(i geneos.Instance, options ...any) (err error) {
 	}
 
 	if !opts.kill {
-		if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
+		if err = Signal(i, syscall.SIGTERM); errors.Is(err, os.ErrProcessDone) {
 			return nil
 		}
 
@@ -77,7 +78,7 @@ func Stop(i geneos.Instance, options ...any) (err error) {
 
 		for range 10 {
 			time.Sleep(250 * time.Millisecond)
-			if err = Signal(i, syscall.SIGTERM); err == os.ErrProcessDone {
+			if err = Signal(i, syscall.SIGTERM); errors.Is(err, os.ErrProcessDone) {
 				return nil
 			}
 		}
@@ -87,16 +88,45 @@ func Stop(i geneos.Instance, options ...any) (err error) {
 		}
 	}
 
-	if err = Signal(i, syscall.SIGKILL); err == os.ErrProcessDone {
+	signalErr := Signal(i, syscall.SIGKILL)
+	if errors.Is(signalErr, os.ErrProcessDone) {
 		return nil
 	}
 
-	time.Sleep(250 * time.Millisecond)
-	if !IsRunning(i) {
-		return nil
+	// SIGKILL cannot be handled but the process may take a while to go,
+	// or be unable to, so wait for it for a bounded time
+	deadline := time.Now().Add(killWait)
+	for {
+		time.Sleep(killPoll)
+		if !IsRunning(i) {
+			return nil
+		}
+		if !time.Now().Before(deadline) {
+			break
+		}
+	}
+
+	if stoppedPID > 0 {
+		err = fmt.Errorf("%w: pid %d", ErrStillRunning, stoppedPID)
+	} else {
+		err = ErrStillRunning
+	}
+	if signalErr != nil {
+		err = fmt.Errorf("%w (signal error: %w)", err, signalErr)
 	}
 	return
 }
+
+// ErrStillRunning is returned by [Stop] if the process of an instance is
+// still running after it has been sent SIGKILL and waited for.
+var ErrStillRunning = errors.New("process still running after SIGKILL")
+
+// how long, and how often, to check for a process to be gone after it
+// is killed
+var (
+	killWait = 5 * time.Second
+	killPoll = 250 * time.Millisecond
+)
 
 type stopOptions struct {
 	force     bool

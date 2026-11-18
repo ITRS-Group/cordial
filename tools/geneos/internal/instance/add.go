@@ -17,6 +17,9 @@ import (
 
 // Add add an instance of component type ct the the optional
 // extra configuration values extras
+//
+// If the instance already exists then it is returned, unchanged, along
+// with an error that matches [geneos.ErrExists].
 func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption) (i geneos.Instance, err error) {
 	if ct == nil {
 		return nil, fmt.Errorf("%w: unknown or no component type given", geneos.ErrInvalidArgs)
@@ -29,6 +32,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 
 	h, pkgct, local := ParseName(name, h)
 
+	if h == geneos.ALL {
+		h = geneos.LOCAL
+	}
+
+	if err = checkHost(h); err != nil {
+		return nil, err
+	}
+
 	if local == "" {
 		local = h.Hostname()
 	}
@@ -39,10 +50,6 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		} else {
 			pkgct = ct
 		}
-	}
-
-	if h == geneos.ALL {
-		h = geneos.LOCAL
 	}
 
 	name = fmt.Sprintf("%s:%s@%s", pkgct, local, h)
@@ -61,10 +68,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 	cf := i.Config()
 
+	// the instance directory is created and may be removed below, and
+	// the configuration may be replaced
+	defer func() { ResetHome(i) }()
+
 	// check if instance already exists
 	if !i.Loaded().IsZero() {
 		i.Log().Error("already exists")
-		return
+		return i, fmt.Errorf("%s: %w", i, geneos.ErrExists)
 	}
 
 	if opts.Port > 0 {
@@ -80,16 +91,28 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	// remove a partially created instance so that a later retry does not
 	// find it and treat it as already existing. Only the standard
 	// instance directory is removed, never a configured "home" which may
-	// have been overridden by parameters.
+	// have been overridden by parameters, and then only if it did not
+	// exist before this call. Otherwise only the instance configuration
+	// file is removed.
 	var created bool
 	newInstance := i
+	instanceDir := h.Join(ct.InstancesDir(h), i.Name())
+	configPath := ComponentFilepath(i)
+	_, statErr := h.Stat(instanceDir)
+	dirExisted := statErr == nil
 	defer func() {
 		if err == nil || created {
 			return
 		}
 		if parent := ct.InstancesDir(h); parent != "" && newInstance.Name() != "" {
-			newInstance.Log().Debug("removing partially created instance")
-			h.RemoveAll(h.Join(parent, newInstance.Name()))
+			if dirExisted {
+				newInstance.Log().Debug("removing configuration of partially created instance")
+				h.Remove(configPath)
+			} else {
+				newInstance.Log().Debug("removing partially created instance")
+				h.RemoveAll(instanceDir)
+			}
+			ResetHome(newInstance)
 		}
 		newInstance.Unload()
 	}()
@@ -157,10 +180,12 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 
 	keyfile := config.Get[config.KeyFile](cf, "keyfile")
-	if ncf, err := values.Set(i, opts.Values, keyfile); err == nil {
-		i.SetConfig(ncf)
-		cf = ncf
+	ncf, err := values.Set(i, opts.Values, keyfile)
+	if err != nil {
+		return nil, err
 	}
+	i.SetConfig(ncf)
+	cf = ncf
 
 	// update home to ensure write is correct
 	config.Set(cf, "home", Home(i))
@@ -179,10 +204,17 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 
 	// reload config as instance data is not updated by Add() as an interface value
-	i.Unload()
-	i.Load()
+	if err = i.Unload(); err != nil {
+		return nil, err
+	}
+	if err = i.Load(); err != nil {
+		return nil, err
+	}
 	if !ct.IsA("profile") {
-		i.Rebuild(true)
+		if _, err = i.Rebuild(true); err != nil && !errors.Is(err, geneos.ErrNotSupported) {
+			return nil, err
+		}
+		err = nil
 	}
 
 	if err = ImportFiles(i, opts.Imports...); err != nil {
@@ -196,7 +228,14 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 			i.Log().Error("failed to check base version", slog.Any("error", err))
 		} else if !exists {
 			i.Log().Debug("base version does not exist, attempting to create with an update", slog.String("base", basename))
-			geneos.Update(h, ct, geneos.Basename(basename))
+			// not an error if there is nothing to link to, yet
+			if err := geneos.Update(h, ct, geneos.Basename(basename)); err != nil {
+				if errors.Is(err, geneos.ErrNotExist) || errors.Is(err, os.ErrNotExist) {
+					i.Log().Debug("no release to link to base version, yet", slog.String("base", basename), slog.Any("error", err))
+				} else {
+					i.Log().Warn("cannot create base version link", slog.String("base", basename), slog.Any("error", err))
+				}
+			}
 		}
 	}
 

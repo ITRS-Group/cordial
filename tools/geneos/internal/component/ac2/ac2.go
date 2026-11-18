@@ -130,7 +130,7 @@ func (i *AC2) Type() *geneos.Component {
 
 // Name TODO: Document its behavior, inputs, and effects.
 func (i *AC2) Name() string {
-	if i == nil || i.Conf == nil {
+	if (*instance.Instance)(i).Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
@@ -178,7 +178,8 @@ func (i *AC2) Unload() (err error) {
 		return
 	}
 	ac2s.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return
 }
 
@@ -187,7 +188,7 @@ func (i *AC2) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -195,7 +196,7 @@ func (i *AC2) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -203,7 +204,7 @@ func (i *AC2) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -211,7 +212,7 @@ func (i *AC2) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add create a new instance of AC2

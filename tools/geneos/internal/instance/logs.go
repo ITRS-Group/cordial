@@ -23,19 +23,31 @@ type files struct {
 	instance geneos.Instance
 	reader   io.ReadSeekCloser
 	offset   int64
+	opts     logWatcherOptions // filters and headers to apply to followed lines
 }
 
 // global watchers for logs
 var tails *sync.Map
+
+// tailsMutex protects the initialisation of tails
+var tailsMutex sync.Mutex
+
+// initTails creates the global log watchers, if they do not already
+// exist
+func initTails() {
+	tailsMutex.Lock()
+	defer tailsMutex.Unlock()
+	if tails == nil {
+		tails = watchLogs()
+	}
+}
 
 // FollowLog sets up a watcher for the logs of a single instance. It is
 // used by both the logs command and the start command when --follow is
 // set. It never returns.
 func FollowLog(i geneos.Instance, options ...LogWatcherOptions) {
 	done := make(chan bool)
-	if tails == nil {
-		tails = watchLogs()
-	}
+	initTails()
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -51,9 +63,7 @@ func FollowLog(i geneos.Instance, options ...LogWatcherOptions) {
 func FollowLogs(cmdName string, h *geneos.Host, ct *geneos.Component, names []string, options ...LogWatcherOptions) {
 	// logCmdStderr = stderr
 	done := make(chan bool)
-	if tails == nil {
-		tails = watchLogs()
-	}
+	initTails()
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -66,9 +76,7 @@ func FollowLogs(cmdName string, h *geneos.Host, ct *geneos.Component, names []st
 func FollowInstanceLogs(instances []geneos.Instance, options ...LogWatcherOptions) {
 	// logCmdStderr = stderr
 	done := make(chan bool)
-	if tails == nil {
-		tails = watchLogs()
-	}
+	initTails()
 	args := []any{}
 	for _, o := range options {
 		args = append(args, o)
@@ -194,9 +202,7 @@ func FollowInstance(i geneos.Instance, args ...any) (resp *responses.General) {
 		resp.Err = geneos.ErrNotSupported
 		return
 	}
-	if tails == nil {
-		tails = watchLogs()
-	}
+	initTails()
 	options := []LogWatcherOptions{}
 	for _, arg := range args {
 		if o, ok := arg.(LogWatcherOptions); ok {
@@ -258,7 +264,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string, opts logWatcherOpt
 	// store a placeholder, records interest for this instance even if
 	// file does not exist at start
 	key := i.Host().String() + ":" + logfile
-	tails.Store(key, &files{i, nil, 0})
+	tails.Store(key, &files{instance: i, opts: opts})
 
 	f, err := i.Host().Open(logfile)
 	if err != nil {
@@ -272,7 +278,7 @@ func logFollowInstanceFile(i geneos.Instance, logfile string, opts logWatcherOpt
 		}
 
 		offset, _ := f.Seek(0, io.SeekCurrent)
-		tails.Store(key, &files{i, f, offset})
+		tails.Store(key, &files{instance: i, reader: f, offset: offset, opts: opts})
 	}
 	fl, _ := tails.Load(key)
 	offset, _ := f.Seek(0, io.SeekCurrent)
@@ -286,69 +292,10 @@ func watchLogs() (tails *sync.Map) {
 	tails = new(sync.Map)
 	ticker := time.NewTicker(500 * time.Millisecond)
 
-	opts := evalLogWatcherOptions()
 	go func() {
 		for range ticker.C {
 			tails.Range(func(key, value any) bool {
-				if value == nil {
-					return true
-				}
-				tail, ok := value.(*files)
-				if !ok {
-					return true
-				}
-
-				_, logfile, found := strings.Cut(key.(string), ":")
-				if !found {
-					return true
-				}
-
-				st, err := tail.instance.Host().Stat(logfile)
-				if err != nil {
-					return true
-				}
-				size := st.Size()
-
-				if size == tail.offset {
-					// no change
-					return true
-				}
-
-				// if we have an existing file and it appears
-				// to have grown then output whatever is new
-				if tail.reader != nil {
-					size = filterOutput(tail.instance, logfile, tail.reader, opts)
-
-					switch {
-					case size == tail.offset:
-						// check stat for real size, drop through to
-						// re-open if changed else return
-						var st fs.FileInfo
-						if st, err = tail.instance.Host().Stat(logfile); err != nil {
-							tail.instance.Log().Error("cannot stat file", slog.Any("error", err), slog.String("file", logfile))
-						} else if st.Size() == size {
-							return true
-						}
-					case size > tail.offset:
-						tail.offset = size
-						tails.Store(key, tail)
-						return true
-					case size < tail.offset:
-						// if the file seems to have shrunk, then close
-						// the old one, store a marker for next time
-						tail.reader.Close()
-						tails.Store(key, &files{tail.instance, nil, 0})
-						boldWhite.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
-					}
-				}
-
-				// open new file, read to the end, return
-				if tail.reader, err = tail.instance.Host().Open(logfile); err != nil {
-					tail.instance.Log().Error("cannot (re)open log file", slog.Any("error", err), slog.String("file", logfile))
-				}
-				tail.offset = filterOutput(tail.instance, logfile, tail.reader, opts)
-				tails.Store(key, tail)
-				return true
+				return pollTail(tails, key, value)
 			})
 		}
 	}()
@@ -356,24 +303,94 @@ func watchLogs() (tails *sync.Map) {
 	return
 }
 
+// pollTail checks the followed log file in value, stored in tails with
+// the key `HOST:PATH`, and outputs any new lines, using the options the
+// file is being followed with. It reopens the file if it has been
+// replaced and always returns true, to continue checking other files.
+func pollTail(tails *sync.Map, key, value any) bool {
+	if value == nil {
+		return true
+	}
+	tail, ok := value.(*files)
+	if !ok {
+		return true
+	}
+
+	_, logfile, found := strings.Cut(key.(string), ":")
+	if !found {
+		return true
+	}
+
+	st, err := tail.instance.Host().Stat(logfile)
+	if err != nil {
+		return true
+	}
+	size := st.Size()
+
+	if size == tail.offset {
+		// no change
+		return true
+	}
+
+	// if we have an existing file and it appears
+	// to have grown then output whatever is new
+	if tail.reader != nil {
+		size = filterOutput(tail.instance, logfile, tail.reader, tail.opts)
+
+		switch {
+		case size == tail.offset:
+			// check stat for real size, drop through to
+			// re-open if changed else return
+			var st fs.FileInfo
+			if st, err = tail.instance.Host().Stat(logfile); err != nil {
+				tail.instance.Log().Error("cannot stat file", slog.Any("error", err), slog.String("file", logfile))
+			} else if st.Size() == size {
+				return true
+			}
+		case size > tail.offset:
+			tail.offset = size
+			tails.Store(key, tail)
+			return true
+		case size < tail.offset:
+			// if the file seems to have shrunk, then close
+			// the old one, store a marker for next time
+			tail.reader.Close()
+			tails.Store(key, &files{instance: tail.instance, opts: tail.opts})
+			boldWhite.Printf("===> %s %s Rolled, re-opening <===\n", tail.instance, logfile)
+		}
+	}
+
+	// open new file, read to the end, return
+	if tail.reader, err = tail.instance.Host().Open(logfile); err != nil {
+		tail.instance.Log().Error("cannot (re)open log file", slog.Any("error", err), slog.String("file", logfile))
+		// try again on the next tick, with no reader
+		tail.reader = nil
+		tails.Store(key, &files{instance: tail.instance, opts: tail.opts})
+		return true
+	}
+	tail.offset = filterOutput(tail.instance, logfile, tail.reader, tail.opts)
+	tails.Store(key, tail)
+	return true
+}
+
 const charsPerLine = 132
 
 func tailLines(i geneos.Instance, f io.ReadSeekCloser, linecount int) (text string, err error) {
 	var j int64
 
-	// reasonable guess at bytes per line to use as a multiplier
-	chunk := int64(linecount * charsPerLine)
-	buf := make([]byte, chunk)
-	allLines := []string{""}
-
 	if f == nil {
 		return
 	}
-	if linecount == 0 {
+	if linecount <= 0 {
 		// seek to end and return
 		_, err = f.Seek(0, io.SeekEnd)
 		return
 	}
+
+	// reasonable guess at bytes per line to use as a multiplier
+	chunk := int64(linecount * charsPerLine)
+	buf := make([]byte, chunk)
+	allLines := []string{""}
 
 	pos, _ := f.Seek(0, io.SeekCurrent)
 	end, _ := f.Seek(0, io.SeekEnd)
@@ -381,8 +398,8 @@ func tailLines(i geneos.Instance, f io.ReadSeekCloser, linecount int) (text stri
 
 	for j = 1 + end/chunk; j > 0; j-- {
 		f.Seek((j-1)*chunk, io.SeekStart)
-		n, err := f.Read(buf)
-		if err != nil && !errors.Is(err, io.EOF) {
+		n, err := io.ReadFull(f, buf)
+		if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
 			i.Log().Error("error reading log file", slog.Any("error", err))
 			return "", err
 		}
@@ -398,7 +415,7 @@ func tailLines(i geneos.Instance, f io.ReadSeekCloser, linecount int) (text stri
 		if len(allLines) > linecount {
 			text = strings.Join(allLines[len(allLines)-linecount:], "\n")
 			f.Seek(end, io.SeekStart)
-			return text, err
+			return text, nil
 		}
 	}
 
@@ -414,38 +431,35 @@ func isLineSep(r rune) bool {
 	return unicode.Is(unicode.Zp, r)
 }
 
-func filterOutputStrings(i geneos.Instance, path string, r io.Reader, opts logWatcherOptions) (lines []string) {
+// wanted returns true if the log line passes the match or ignore filter
+func (opts logWatcherOptions) wanted(line string) bool {
 	switch {
 	case opts.match != "":
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, opts.match) {
-				lines = append(lines, line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
+		return strings.Contains(line, opts.match)
 	case opts.ignore != "":
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.Contains(line, opts.ignore) {
-				lines = append(lines, line)
-			}
+		return !strings.Contains(line, opts.ignore)
+	}
+	return true
+}
+
+// maxLogLine is the longest log line that is scanned for filtering
+const maxLogLine = 1024 * 1024
+
+func newLogScanner(r io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, bufio.MaxScanTokenSize), maxLogLine)
+	return scanner
+}
+
+func filterOutputStrings(i geneos.Instance, path string, r io.Reader, opts logWatcherOptions) (lines []string) {
+	scanner := newLogScanner(r)
+	for scanner.Scan() {
+		if line := scanner.Text(); opts.wanted(line) {
+			lines = append(lines, line)
 		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	default:
-		scanner := bufio.NewScanner(r)
-		for scanner.Scan() {
-			lines = append(lines, scanner.Text())
-		}
-		if err := scanner.Err(); err != nil {
-			i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
+	}
+	if err := scanner.Err(); err != nil {
+		i.Log().Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 	}
 
 	// if we read any lines, check for header change
@@ -455,12 +469,10 @@ func filterOutputStrings(i geneos.Instance, path string, r io.Reader, opts logWa
 }
 
 func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker, opts logWatcherOptions) (sz int64) {
-	switch {
-	case opts.match != "":
-		scanner := bufio.NewScanner(reader)
+	if opts.match != "" || opts.ignore != "" {
+		scanner := newLogScanner(reader)
 		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, opts.match) {
+			if line := scanner.Text(); opts.wanted(line) {
 				outHeader(i, path, opts)
 				fmt.Println(line)
 			}
@@ -468,19 +480,7 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker, opts log
 		if err := scanner.Err(); err != nil {
 			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
 		}
-	case opts.ignore != "":
-		scanner := bufio.NewScanner(reader)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if !strings.Contains(line, opts.ignore) {
-				outHeader(i, path, opts)
-				fmt.Println(line)
-			}
-		}
-		if err := scanner.Err(); err != nil {
-			log.Error("error scanning log file", slog.Any("error", err), slog.String("file", path))
-		}
-	default:
+	} else {
 		s, _ := reader.Seek(0, io.SeekCurrent)
 		e, _ := reader.Seek(0, io.SeekEnd)
 		reader.Seek(s, io.SeekStart)
@@ -497,14 +497,19 @@ func filterOutput(i geneos.Instance, path string, reader io.ReadSeeker, opts log
 	return
 }
 
-// last logfile written out
-var lastout string
+// last logfile written out, protected by lastoutMutex
+var (
+	lastout      string
+	lastoutMutex sync.Mutex
+)
 var boldWhite = color.New(color.FgWhite).Add(color.Bold)
 
 func outHeader(i geneos.Instance, path string, opts logWatcherOptions) {
 	if opts.noHeaders {
 		return
 	}
+	lastoutMutex.Lock()
+	defer lastoutMutex.Unlock()
 	if lastout == i.String()+":"+path {
 		return
 	}
@@ -519,6 +524,8 @@ func outHeaderString(i geneos.Instance, path string, opts logWatcherOptions) (li
 	if opts.noHeaders {
 		return
 	}
+	lastoutMutex.Lock()
+	defer lastoutMutex.Unlock()
 	if lastout == i.String()+":"+path {
 		return
 	}

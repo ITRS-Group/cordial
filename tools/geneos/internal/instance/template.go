@@ -19,8 +19,10 @@ package instance
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"iter"
 	"log/slog"
 	"maps"
@@ -29,6 +31,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
@@ -101,13 +104,18 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 
 	outputPathTmp := outputPath + ".new"
 
-	t := template.New("").Funcs(templateFuncMap(h)).Option("missingkey=zero")
-	if t, err = t.ParseGlob(h.PathTo(i.Type(), "templates", "*.gotmpl")); err != nil {
+	t, err := parseTemplates(h, h.PathTo(i.Type(), "templates", "*.gotmpl"))
+	if err == nil && t.Lookup(name) == nil {
+		err = fmt.Errorf("template %q not found", name)
+	}
+	if err != nil {
 		i.Log().Warn("Cannot parse template(s)", slog.Any("error", err))
 		t = template.New(name).Funcs(templateFuncMap(h)).Option("missingkey=zero")
 		// if there are no templates, use internal as a fallback
 		i.Log().Warn("No templates found, using internal defaults", slog.String("path", h.PathTo(i.Type(), "templates")))
-		t = template.Must(t.Parse(string(defaultTemplate)))
+		if t, err = t.Parse(string(defaultTemplate)); err != nil {
+			return changed, fmt.Errorf("cannot parse internal default template %q: %w", name, err)
+		}
 	}
 
 	if out, err = h.Create(outputPathTmp, perms); err != nil {
@@ -120,7 +128,7 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 	m["port"] = config.Get[uint16](cf, "port")
 
 	// set high level defaults
-	m["root"] = config.Get[string](h.Config, "geneos")
+	m["root"] = config.Get[string](h.Config, cordial.ExecutableName())
 	m["name"] = i.Name()
 	m["home"] = i.Home()
 
@@ -379,17 +387,48 @@ func ExecuteTemplate(i geneos.Instance, outputPath string, name string, defaultT
 		out.Close()
 		return
 	}
-	out.Close()
+	if err = out.Close(); err != nil {
+		return
+	}
 
 	// compare new and original files and return changed = false if they are the same
-	same, err := filesAreSame(outputPath, outputPathTmp)
+	same, cmpErr := filesAreSame(h, outputPath, outputPathTmp)
+	if cmpErr != nil && !errors.Is(cmpErr, fs.ErrNotExist) {
+		i.Log().Debug("cannot compare configuration files, assuming changed", slog.Any("error", cmpErr))
+	}
 
-	changed = !same
-
-	if changed {
-		err = h.Rename(outputPathTmp, outputPath)
+	if !same {
+		if err = h.Rename(outputPathTmp, outputPath); err != nil {
+			return false, err
+		}
+		changed = true
 	}
 	return
+}
+
+// parseTemplates parses all of the files on host h that match the glob
+// pattern into a template set, with the base name of each file as the
+// name of its template. It is an error if there are no matching files.
+func parseTemplates(h *geneos.Host, pattern string) (t *template.Template, err error) {
+	files, err := h.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("pattern %q matches no files", pattern)
+	}
+
+	t = template.New("").Funcs(templateFuncMap(h)).Option("missingkey=zero")
+	for _, file := range files {
+		data, err := h.ReadFile(file)
+		if err != nil {
+			return nil, err
+		}
+		if _, err = t.New(h.Base(file)).Parse(string(data)); err != nil {
+			return nil, err
+		}
+	}
+	return t, nil
 }
 
 // processIncludeString takes a string with '|' separated parts and
@@ -414,56 +453,32 @@ func processIncludeString(includes map[string]any, key, s string) {
 	includes[parts[0]] = nested
 }
 
-func filesAreSame(file1, file2 string) (bool, error) {
-	f1, err := os.Open(file1)
+// filesAreSame returns true if the two files on host h have identical
+// contents. If either cannot be read then they are not the same and the
+// error is returned.
+func filesAreSame(h *geneos.Host, file1, file2 string) (bool, error) {
+	stat1, err := h.Stat(file1)
 	if err != nil {
 		return false, err
 	}
-	defer f1.Close()
+	stat2, err := h.Stat(file2)
+	if err != nil {
+		return false, err
+	}
 
-	f2, err := os.Open(file2)
-	if err != nil {
-		return false, err
-	}
-	defer f2.Close()
-
-	// Check file sizes first; if they differ, files are not identical
-	stat1, err := f1.Stat()
-	if err != nil {
-		return false, err
-	}
-	stat2, err := f2.Stat()
-	if err != nil {
-		return false, err
-	}
+	// if the sizes differ, the files are not identical
 	if stat1.Size() != stat2.Size() {
 		return false, nil
 	}
 
-	// Compare chunks using a 64KB buffer
-	const chunkSize = 64 * 1024
-	b1 := make([]byte, chunkSize)
-	b2 := make([]byte, chunkSize)
-
-	for {
-		n1, err1 := f1.Read(b1)
-		n2, err2 := f2.Read(b2)
-
-		if err1 != nil && err1 != io.EOF {
-			return false, err1
-		}
-		if err2 != nil && err2 != io.EOF {
-			return false, err2
-		}
-
-		if n1 != n2 || !bytes.Equal(b1[:n1], b2[:n2]) {
-			return false, nil
-		}
-
-		if err1 == io.EOF && err2 == io.EOF {
-			break
-		}
+	b1, err := h.ReadFile(file1)
+	if err != nil {
+		return false, err
+	}
+	b2, err := h.ReadFile(file2)
+	if err != nil {
+		return false, err
 	}
 
-	return true, nil
+	return bytes.Equal(b1, b2), nil
 }

@@ -91,6 +91,40 @@
 
   * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
 
+  * Instances, hosts and packages (changes in behaviour)
+
+    * `geneos init` and `geneos init --force` never regenerate the user-wide root and signing certificates in the user configuration directory. They are only created if they are missing (or only the signing certificate, if that is missing) and an existing root certificate that cannot be used is now an error. Use `geneos tls init --overwrite` to replace them. A root certificate file that is not a valid root CA, for example because it has expired, is now rejected by all the commands that read it, where before it was accepted.
+
+    * `geneos init` now only adds the Geneos directory to an existing user configuration file, and keeps all other settings, of any type and including nested values. It also creates `packages/downloads` and reports errors creating component directories.
+
+    * The audit log retention and compression settings are now enforced, using the documented defaults of 10 MiB, 30 days, 5 backups and `gzip` compression, taken from the instance `audit` settings and then the global ones. Previously rotated files were never removed or compressed. An audit log file is now opened once per instance and not for every event.
+
+    * A minimum TLS version is now always passed to instances using TLS, from the instance and then global `tls.minimumversion` settings, and then `1.2`, as documented. Previously it was only passed when set on the instance.
+
+    * A host name that is not known, such as with `-H`, or as `name@host`, is now never the same as all hosts, and instances of an unknown host are never found. An instance created that already exists is now an error and does not report success.
+
+    * Download timeouts (`download.timeout` or `ITRS_DOWNLOAD_TIMEOUT`) now apply to connecting and waiting for the server, and to waiting for more data while downloading (the transfer fails with a "download stalled" error if no data arrives for that long, 60 seconds by default), but no longer stop a download that is progressing but takes longer. This also applies to archives given as a URL with `--archive`, which previously had no timeouts.
+
+    * `geneos stop` now waits up to 5 seconds after `SIGKILL` and returns an error, with the PID, if the process is still running, where before it returned success. The error is also what is recorded in the audit log.
+
+    * A zip archive that is not already a file, such as one downloaded or read from STDIN, is now copied to a temporary file, next to the destination on the local host, to unpack it, and is no longer held in memory. The size of an archive that is copied is limited to 8 GiB, which can be changed with `download.max-archive-size` or `ITRS_DOWNLOAD_MAX_ARCHIVE_SIZE` (in bytes, with zero for no limit). Symbolic links in zip archives are no longer written out as plain files; one that points outside of the destination is an error and the others are skipped.
+
+    * The file name suggested by a download server is now reduced to a plain file name, so it can no longer contain a path.
+
+    * `geneos package update` now returns an error, and a non-zero exit code, if there is no matching release to update to. Updating all components or hosts still skips those without a release.
+
+    * Versions that cannot be parsed are now ordered before others, `GA` ahead of `RA` for the same version, and `geneos snapshot` now accepts a Gateway of exactly 5.14.
+
+    * `geneos clean` and `geneos purge` now return errors from paths that cannot be removed and restart a stopped instance even if some paths could not be removed. The clean and purge lists can be separated with either `:` or `;`.
+
+    * Processes started on a remote host no longer receive the `HOME` and `USERPROFILE` of the local user; they use the home directory of the remote host.
+
+    * `geneos restore` now fails, instead of doing nothing, if the compression cannot be determined from the file name and `--decompress` was not given for STDIN. `--list` no longer writes any shared files or rebuilds any instances.
+
+    * Instances and components are now always processed in name order, and `geneos` commands that process several instances at once do so for no more than 16 at a time.
+
+    * Commands that write JSON, with no data to write, now write `[]` and not `null`.
+
 * `integrations/servicenow2`
 
   * **Breaking Change** (minor): The proxy now refuses to start without a `server.authentication.token` and a `server.listen` address.
@@ -396,6 +430,62 @@
   * Fix file and directory imports to leave unchanged files alone, without rewriting them or creating backups. Backup file names now remain unique when multiple imports take place within the same second, and imports to the same destination are protected against concurrent writes.
 
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
+
+  * Instances, hosts, packages and logs
+
+    * Fix `-H` with a host name that does not exist, or an instance name with an unknown host, being treated as all hosts or causing a panic.
+
+    * Fix `geneos init` replacing the user-wide root and signing certificates every time it was run.
+
+    * Fix `geneos init` losing the settings in an existing user configuration file other than strings, such as `download` and `audit` settings, and saving values that only came from the environment.
+
+    * Fix `geneos package list` panicking if a directory in a package directory is not a version, and `geneos package update` hiding the failure to find a release.
+
+    * Fix `geneos package install` of an archive for a different component silently installing nothing.
+
+    * Fix the audit settings for the size, age, number of backups and compression of audit logs being ignored, instance settings not falling back to the global ones, and an audit log file and its goroutines being created for every audit event.
+
+    * Fix `geneos stop` always recording success in the audit log, even when it failed.
+
+    * Fix instances on remote hosts not reading their templates from the remote host, and rewriting the configuration and reloading every time it was written.
+
+    * Fix the clean and purge lists, the port range and other settings with legacy names using the name of the setting as the value, so that for components with no list `clean` and `purge` removed a file named after the setting.
+
+    * Fix a failed `geneos add` removing the directory of an instance that existed before it was run, and ignoring errors from loading and rebuilding the new instance and from the values given, which were not applied.
+
+    * Fix finding the next free port: ports above 65534 wrapped around, an invalid port range could allocate port 65535, and white space in a list of ports ignored the entry.
+
+    * Fix `geneos stop` and `geneos status` treating failures to look up processes on a host, such as one that cannot be reached, as a running instance, and signalling PID 0.
+
+    * Fix `geneos copy` and `geneos move` of renamed instances not updating the paths in the configuration to the new `geneos` directory, and moving instances in a custom home directory to the standard location when their configuration was written.
+
+    * Fix following logs with `--match`, `--ignore` or `--no-headers` only applying to the lines output at the start, and a crash if a followed log file cannot be opened again after being replaced.
+
+    * Fix `geneos set` and other commands losing the `ResultText` of earlier steps, and the output of a command that returns a list of values being invalid JSON.
+
+    * Fix an instance that already exists being reported as successfully added by `instance.Add`.
+
+    * Fix certificate errors, such as a missing signing certificate, not being shown when adding an instance, as the errors of a single response were never written to standard error.
+
+    * Fix `geneos restore` of `.tar.bz2` archives, of the files of an instance if the first entry has no size, of instances of different types with the same name, and of an unrelated error being returned from the summary. Restore no longer rebuilds instances that already existed.
+
+    * Fix rolling certificate files that had no original file, which could not be rolled back after a later failure.
+
+    * Fix downloads authenticated with a body, where the second request, for a platform with no release, had no body, and response bodies that were not closed.
+
+    * Fix `geneos import` of `-` (STDIN) to the local host.
+
+    * Fix `geneos snapshot` clearing a password shared by other instances, and returning only the last of the errors for invalid paths.
+
+    * Fix the cost of looking for an instance directory on every use of its path, which is a round trip to the host for each one on a remote host. The directory is now remembered for each instance until it is loaded, unloaded, written, moved, copied or its `home` setting is changed.
+
+    * Fix `geneos` commands that match many instance names listing the instance directories of each host again for every name. They are now listed once, in name order, and an instance that is in both a legacy and the current directory is only listed once.
+
+    * Fix the templates and directories of a component only being initialised for the first host when more than one host is initialised in a single run, such as with `geneos deploy` to several hosts.
+
+    * Fix a data race in commands that process several instances at once, such as `geneos set`, `protect` and `unset`, on the loaded time and the configuration of the instances, which are shared between the goroutines, and which could cause a crash or a configuration to be read or written incorrectly.
+
+    * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
 
 * `integrations/servicenow2`
 

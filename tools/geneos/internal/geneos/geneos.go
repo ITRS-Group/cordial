@@ -151,13 +151,17 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 	if h.IsLocalhost() {
 		log.Debug("setting geneos directory", slog.String("executable", cordial.ExecutableName()), slog.String("directory", opts.geneosdir))
 		config.Set(config.Global(), cordial.ExecutableName(), opts.geneosdir)
-		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {
+		if err = SaveGlobalConfig(cordial.ExecutableName(), cordial.ExecutableName()); err != nil {
 			return err
 		}
 
-		// recreate LOCAL host to force load of "geneos" and other parameters
-		LOCAL = nil
-		LOCAL = NewHost(LOCALHOST)
+		// update the Geneos directory of LOCAL, which keeps the pointer
+		// valid for anything that already has it, or create it
+		if LOCAL == nil {
+			LOCAL = NewHost(LOCALHOST)
+		} else {
+			config.Set(LOCAL.Config, cordial.ExecutableName(), opts.geneosdir)
+		}
 		h = LOCAL
 
 		// initialise the global audit logger and log the original command event
@@ -175,7 +179,10 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 				return err
 			}
 		} else {
-			err = TLSInit(LOCALHOST, true, certs.DefaultKeyType)
+			// never overwrite the user-wide root and signing
+			// certificates from init, even when forced. Use `tls init
+			// --overwrite` to replace them.
+			err = TLSInit(LOCALHOST, false, certs.DefaultKeyType)
 			if err != nil {
 				return err
 			}
@@ -183,19 +190,16 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 	}
 
 	// 5. initialise all registered components, includeing writing out templates and include files
+	if err = RootComponent.MakeDirs(h); err != nil {
+		return fmt.Errorf("creating directories: %w", err)
+	}
 	var ct *Component
 	for ct = range ct.OrList(opts.components...) {
 		if err := ct.MakeDirs(h); err != nil {
-			continue
+			return fmt.Errorf("creating directories for component %s: %w", ct.Name, err)
 		}
-		if ct.Initialise != nil {
-			var initialiseErr error
-			ct.InitialiseOnce.Do(func() {
-				initialiseErr = ct.Initialise(h, ct, opts.override)
-			})
-			if initialiseErr != nil {
-				return fmt.Errorf("initialising component %s: %w", ct.Name, initialiseErr)
-			}
+		if err := ct.InitialiseOnce(h, opts.override); err != nil {
+			return fmt.Errorf("initialising component %s: %w", ct.Name, err)
 		}
 	}
 
@@ -217,40 +221,31 @@ func LocalRoot() string {
 		config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
 }
 
-// SaveGlobalConfig saves the global configuration (in config.Global)
-// but excludes any values that still have their defaults, by iterating
-// through registered components and checking. Any empty/zero values are
-// also excluded from the saved configuration.
-func SaveGlobalConfig(name string) error {
-	cf := config.New()
-	defaultSettings := make(map[string]string)
-	for _, ct := range AllComponents() {
-		for k, v := range ct.GlobalSettings {
-			// add main setting
-			defaultSettings[k] = v
-			// also add aliases
-			defaultSettings[ct.ConfigAliases[k]] = v
-
-		}
+// SaveGlobalConfig saves the user's global configuration file, called
+// name. The settings in the existing file are always kept, with their
+// original types and nested values, and the current value from the
+// global configuration (config.Global) of each of the top-level keys
+// given is added to or replaces it. Nothing else from the global
+// configuration is saved so that default values, and values that
+// only come from environment variables, are not persisted.
+func SaveGlobalConfig(name string, keys ...string) error {
+	oldConfDir, _ := config.UserConfigPath()
+	cf, err := config.Read(name,
+		config.SearchDirs(oldConfDir),
+		config.MergeSources(),
+		config.SkipWorkingDir(),
+		config.SkipSystemDir(),
+		config.UseDefaults(false),
+	)
+	if err != nil {
+		return fmt.Errorf("reading existing configuration: %w", err)
 	}
 
-	for k, v := range config.Global().AllSettings() {
+	for _, k := range keys {
 		if k == "" {
 			continue
 		}
-
-		// don't set key if value is the current default
-
-		if _, ok := v.(string); !ok {
-			// skip non-string values
-			continue
-		}
-
-		if v == defaultSettings[k] {
-			continue
-		}
-
-		config.Set(cf, k, v)
+		config.Set(cf, k, config.Get[any](config.Global(), k, config.NoExpand()))
 	}
 
 	return cf.Write(name)
