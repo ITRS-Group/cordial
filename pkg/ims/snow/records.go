@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -120,7 +121,7 @@ func (c *Client) Records(ctx context.Context, table string, options ...Option) (
 // an empty result if there is none.
 func (c *Client) Record(ctx context.Context, table string, options ...Option) (result Result, err error) {
 	// ensure limit is set to 1
-	results, err := c.Records(ctx, table, append(options, Limit(1))...)
+	results, err := c.Records(ctx, table, append(slices.Clone(options), Limit(1))...)
 	if err != nil {
 		return nil, err
 	}

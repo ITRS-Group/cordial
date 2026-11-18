@@ -61,18 +61,12 @@ type ActionGroup struct {
 //     when the child group has done everything needed and no further
 //     processing is required.
 func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool {
-	agcf := config.New(
-		config.DefaultsFrom(cf),
-		config.SetDefaultExpandOptions(
-			config.Prefix("match", matchPrefix),
-			config.Prefix("nomatch", noMatchPrefix),
-			config.Prefix("replace", replacePrefix),
-			config.Prefix("select", selectPrefix),
-			config.Prefix("field", fieldPrefix, incident),
-		))
+	// the prefixes are passed to every expansion, and not set as the
+	// defaults of a copy of cf, so that nothing is copied or shared
+	opts := actionOptions(incident)
 
 	for _, i := range ag.If {
-		v := config.Expand[string](agcf, i)
+		v := config.Expand[string](cf, i, opts...)
 		b, err := strconv.ParseBool(v)
 		if err != nil {
 			log.Warn("`if` value is not a boolean, treating as false", slog.String("if", i), slog.String("value", v))
@@ -84,7 +78,7 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 	}
 
 	for field, value := range ag.Set {
-		incident[field] = config.Expand[string](agcf, value)
+		incident[field] = config.Expand[string](cf, value, opts...)
 	}
 
 	for _, field := range ag.Unset {
@@ -92,15 +86,15 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 	}
 
 	for _, t := range ag.Subgroup {
-		if ProcessActionGroup(agcf, t, incident) {
+		if ProcessActionGroup(cf, t, incident) {
 			return false
 		}
 	}
 
-	// break and exit use agcf so that the same expansion functions are
-	// available as for `if` and `set`
+	// break and exit use the same options so that the same expansion
+	// functions are available as for `if` and `set`
 	for _, i := range ag.Break {
-		v := config.Expand[string](agcf, i)
+		v := config.Expand[string](cf, i, opts...)
 		b, err := strconv.ParseBool(v)
 		if err != nil {
 			log.Warn("`break` value is not a boolean, ignoring", slog.String("break", i), slog.String("value", v))
@@ -112,7 +106,7 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 	}
 
 	for _, i := range ag.Exit {
-		v := config.Expand[string](agcf, i)
+		v := config.Expand[string](cf, i, opts...)
 		code, err := strconv.ParseInt(v, 10, 0)
 		if err != nil {
 			log.Error("invalid exit code, exiting with exit code 1", slog.Any("error", err), slog.String("code", i), slog.String("value", v))
@@ -125,6 +119,18 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 	}
 
 	return false
+}
+
+// actionOptions returns the expansion options with the `match`,
+// `nomatch`, `replace`, `select` and `field` prefixes for the incident
+func actionOptions(incident Values) []config.ExpandOption {
+	return []config.ExpandOption{
+		config.Prefix("match", matchPrefix),
+		config.Prefix("nomatch", noMatchPrefix),
+		config.Prefix("replace", replacePrefix),
+		config.Prefix("select", selectPrefix),
+		config.Prefix("field", fieldPrefix, incident),
+	}
 }
 
 // "match" environment variable against regex and return
@@ -148,7 +154,7 @@ func matchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result string
 		log.Warn("invalid expansion pattern, treating as false", slog.String("pattern", pattern), slog.Any("error", err))
 		return "false", err
 	}
-	return fmt.Sprintf("%v", re.MatchString(val)), nil
+	return strconv.FormatBool(re.MatchString(val)), nil
 }
 
 func noMatchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result string, err error) {
@@ -169,7 +175,7 @@ func noMatchPrefix(_ map[string]any, s string, trim bool, _ ...any) (result stri
 		log.Warn("invalid expansion pattern, treating as false", slog.String("pattern", pattern), slog.Any("error", err))
 		return "false", err
 	}
-	return fmt.Sprintf("%v", !re.MatchString(val)), nil
+	return strconv.FormatBool(!re.MatchString(val)), nil
 }
 
 // "replace" takes a strings with four components of the

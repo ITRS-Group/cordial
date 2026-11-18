@@ -223,9 +223,8 @@ func extractAPIKey(r *http.Request) string {
 // can be set by the client
 func realIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if p := strings.Split(xff, ","); len(p) > 0 {
-			return strings.TrimSpace(p[0])
-		}
+		first, _, _ := strings.Cut(xff, ",")
+		return strings.TrimSpace(first)
 	}
 	if xrip := r.Header.Get("X-Real-IP"); xrip != "" {
 		return strings.TrimSpace(xrip)

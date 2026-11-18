@@ -400,3 +400,113 @@ func TestValidateFields(t *testing.T) {
 		}
 	}
 }
+
+// rotating a password or client secret must not keep using the client
+// that was created with the old one
+func TestNewReplacesClientWhenSecretsChange(t *testing.T) {
+	s := newStub(t, reply(200, `{"result":[]}`))
+
+	cf := testConfig(s.URL)
+	old, err := New(cf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cf = testConfig(s.URL)
+	config.Set(cf, "password", "rotated")
+	rotated, err := New(cf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rotated == old {
+		t.Fatal("a changed password returned the cached client")
+	}
+	if _, err := rotated.Records(context.Background(), "incident"); err != nil {
+		t.Fatal(err)
+	}
+	if want := "Basic dTpyb3RhdGVk"; s.lastReq().auth != want { // u:rotated
+		t.Errorf("Authorization = %q, want %q", s.lastReq().auth, want)
+	}
+
+	oauth := func(secret string) *Client {
+		cf := testConfig(s.URL)
+		config.Set(cf, "client-id", "id")
+		config.Set(cf, "client-secret", secret)
+		c, err := New(cf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return c
+	}
+	if oauth("one") == oauth("two") {
+		t.Error("a changed client secret returned the cached client")
+	}
+	if oauth("one") != oauth("one") {
+		t.Error("the same client secret did not return the cached client")
+	}
+}
+
+func TestNewTablePath(t *testing.T) {
+	tests := []struct {
+		path, want string
+	}{
+		{"", "/api/now/v2/table/incident"},
+		{"/api/now/v2/table", "/api/now/v2/table/incident"},
+		{"/api/now/v2/table/", "/api/now/v2/table/incident"},
+		{"/api/now/v2", "/api/now/v2/table/incident"},
+		{"api/now/v2/table", "/api/now/v2/table/incident"},
+		{"/custom/api", "/custom/api/table/incident"},
+		{"/custom/api/table", "/custom/api/table/incident"},
+		{"/", "/table/incident"},
+	}
+	for _, test := range tests {
+		t.Run(test.path, func(t *testing.T) {
+			s := newStub(t, reply(200, `{"result":[]}`))
+			cf := testConfig(s.URL)
+			if test.path != "" {
+				config.Set(cf, "path", test.path)
+			}
+			c, err := New(cf)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := c.Records(context.Background(), "incident"); err != nil {
+				t.Fatal(err)
+			}
+			if got := s.lastReq().path; got != test.want {
+				t.Errorf("path = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestRecordDoesNotChangeCallerOptions(t *testing.T) {
+	s := newStub(t, reply(200, `{"result":[]}`))
+	c := newClient(t, s)
+
+	// spare capacity is what would be written to by an append
+	options := make([]Option, 1, 4)
+	options[0] = Fields("sys_id")
+	if _, err := c.Record(context.Background(), "incident", options...); err != nil {
+		t.Fatal(err)
+	}
+	if extra := options[:2][1]; extra != nil {
+		t.Error("Record() wrote to the caller's options")
+	}
+}
+
+func TestTableConfigIsReadOnce(t *testing.T) {
+	cf := config.New()
+	config.Set(cf, "tables", []any{map[string]any{"name": "incident", "defaults": map[string]any{"a": "1"}}})
+
+	first, err := TableConfig(cf, "incident")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// the caller's changes are not seen by anyone else
+	first.Defaults["a"] = "changed"
+	second, _ := TableConfig(cf, "incident")
+	if second.Defaults["a"] != "1" {
+		t.Errorf("Defaults = %v, want the configured value", second.Defaults)
+	}
+}

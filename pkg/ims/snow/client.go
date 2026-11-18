@@ -24,10 +24,13 @@ package snow
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
+	pathpkg "path"
+	"strings"
 	"sync"
 	"time"
 
@@ -62,6 +65,13 @@ var clients = make(map[string]*Client)
 // `client-secret` as well for OAuth, `timeout` (default 10s),
 // `tls.skip-verify` and `trace`. For compatibility with earlier
 // versions `proxy.timeout` is used if `timeout` is not set.
+//
+// The `path` is the root of the Table API, to which the name of the
+// table is added, and so `/api/now/v2/table`, with or without a
+// trailing slash, and `/api/now/v2` are the same.
+//
+// A client is replaced if any of the settings, including the password
+// and client secret, are changed.
 func New(cf *config.Config) (c *Client, err error) {
 	username := config.Get[string](cf, "username")
 	password := config.Get[config.Secret](cf, "password")
@@ -96,7 +106,10 @@ func New(cf *config.Config) (c *Client, err error) {
 	path := config.Get[string](cf, "path", config.DefaultValue("/api/now/v2/table"))
 	trace := config.Get[bool](cf, "trace")
 
-	key := fmt.Sprint(sn, "|", path, "|", username, "|", clientID, "|", timeout, "|", skipVerify, "|", trace)
+	// the secrets are part of the key, so that a client is not reused
+	// after they are changed, but only as a hash
+	secrets := sha256.Sum256([]byte(string(password) + "\x00" + string(clientSecret)))
+	key := fmt.Sprint(sn, "|", tableBase(path), "|", username, "|", clientID, "|", timeout, "|", skipVerify, "|", trace, "|", secrets)
 	clientMutex.RLock()
 	c, ok := clients[key]
 	clientMutex.RUnlock()
@@ -122,7 +135,10 @@ func New(cf *config.Config) (c *Client, err error) {
 		},
 	}
 
-	p := sn.JoinPath(path)
+	p := sn.JoinPath(tableBase(path))
+	if !strings.HasSuffix(p.Path, "/") {
+		p.Path += "/"
+	}
 
 	c = &Client{trace: trace}
 
@@ -168,4 +184,17 @@ func New(cf *config.Config) (c *Client, err error) {
 	clientMutex.Unlock()
 
 	return c, nil
+}
+
+// tableBase returns the path that the name of a table is added to, as
+// the resolution of a relative URL, such as the result of [AssembleURL],
+// replaces the last segment of the base URL, which must therefore end
+// with a slash. A last segment of `table` is removed as that is part
+// of the relative URL.
+func tableBase(path string) string {
+	p := pathpkg.Clean("/" + path)
+	if pathpkg.Base(p) != "/" && strings.EqualFold(pathpkg.Base(p), "table") {
+		p = pathpkg.Dir(p)
+	}
+	return strings.TrimRight(p, "/") + "/"
 }

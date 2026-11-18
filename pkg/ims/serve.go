@@ -224,11 +224,7 @@ func ServeWith(cf *config.Config, endpoints []Endpoint, opts ServeOptions) (err 
 		if opts.Ready != nil {
 			opts.Ready(cur.ln.Addr())
 		}
-		draining.Add(1)
-		go func() {
-			defer draining.Done()
-			old.shutdown()
-		}()
+		draining.Go(old.shutdown)
 		return nil
 	}
 

@@ -104,3 +104,47 @@ func TestTransformationTransformRequiresFields(t *testing.T) {
 		t.Errorf("Transform() output on missing required field = %#v, want empty map", got)
 	}
 }
+
+func TestTransformationRename(t *testing.T) {
+	tests := []struct {
+		name   string
+		rename map[string]string
+		input  map[string]string
+		want   map[string]string
+	}{
+		{"to itself keeps the field", map[string]string{"x": "x"}, map[string]string{"x": "1"}, map[string]string{"x": "1"}},
+		{"chain moves each field once", map[string]string{"a": "b", "b": "c"}, map[string]string{"a": "1", "b": "2"}, map[string]string{"b": "1", "c": "2"}},
+		{"swap", map[string]string{"a": "b", "b": "a"}, map[string]string{"a": "1", "b": "2"}, map[string]string{"a": "2", "b": "1"}},
+		{"conflict, last name wins", map[string]string{"a": "z", "b": "z"}, map[string]string{"a": "1", "b": "2"}, map[string]string{"z": "2"}},
+		{"missing source", map[string]string{"a": "b"}, map[string]string{"b": "2"}, map[string]string{"b": "2"}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			// the result must not depend on map iteration order
+			for range 20 {
+				got, err := Transformation{Rename: test.rename}.Transform(config.New(), "snow", test.input)
+				if err != nil || !reflect.DeepEqual(got, test.want) {
+					t.Fatalf("Transform() = %v, %v, want %v", got, err, test.want)
+				}
+			}
+		})
+	}
+}
+
+func TestTransformationPatternsAreReused(t *testing.T) {
+	tr := Transformation{Include: []string{`^reuse_[a-z]+$`}}
+	for range 3 {
+		got, err := tr.Transform(config.New(), "", map[string]string{"reuse_a": "1", "other": "2"})
+		if err != nil || !reflect.DeepEqual(got, map[string]string{"reuse_a": "1"}) {
+			t.Fatalf("Transform() = %v, %v", got, err)
+		}
+	}
+	first, _ := compilePatterns(tr.Include)
+	second, _ := compilePatterns(tr.Include)
+	if first[0] != second[0] {
+		t.Error("an expression was compiled again")
+	}
+	if _, err := compilePatterns([]string{"("}); err == nil {
+		t.Error("an invalid expression was accepted")
+	}
+}
