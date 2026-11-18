@@ -1,6 +1,7 @@
 package geneos
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/xml"
@@ -82,6 +83,14 @@ func isURLScheme(s string) bool {
 }
 
 // ReadGateway reads Gateway XML from a local path, a file URL, or an HTTP(S) URL.
+//
+// The order of the child elements of every element in the document is
+// remembered, not the document itself, so that when the Gateway is
+// written with WriteGateway or Gateway.MarshalOrdered the differently
+// named sibling elements, including those that are only kept in the
+// Other fields, are in the same order as they were read. See
+// Gateway.MarshalOrdered and the package README for what is and is not
+// preserved.
 func ReadGateway(source string, options ...GatewayReadOption) (*Gateway, error) {
 	return ReadGatewayContext(context.Background(), source, options...)
 }
@@ -178,12 +187,24 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 		return nil, err
 	}
 
-	decoder := xml.NewDecoder(input)
+	data, err := io.ReadAll(input)
+	if err != nil {
+		return nil, fmt.Errorf("read gateway XML from %q: %w", source, err)
+	}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
 	decoder.CharsetReader = charset.NewReaderLabel
 	var gateway Gateway
 	if err := decoder.Decode(&gateway); err != nil {
 		line, column := decoder.InputPos()
 		return nil, fmt.Errorf("decode gateway XML from %q at line %d, column %d: %w", source, line, column, err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	// the original bytes are not kept, only the order of the elements, and
+	// if that cannot be built the Gateway is written in the model order
+	if order, err := buildXMLOrder(data); err == nil {
+		gateway.source = order
 	}
 	return &gateway, nil
 }
@@ -199,6 +220,8 @@ type gatewayWriteOptions struct {
 	backup       bool
 	overwrite    bool
 	historyLimit int
+	orderFrom    *Gateway
+	orderWarning func(error)
 }
 
 // GatewayWriteOption configures WriteGateway.
@@ -231,6 +254,21 @@ func WithGatewayHistoryLimit(limit int) GatewayWriteOption {
 	}
 }
 
+// WithGatewayOrderFrom writes the sibling elements in the order of the
+// document that src was read from, instead of that of the Gateway that
+// is written. See Gateway.PreserveOrderOf.
+func WithGatewayOrderFrom(src *Gateway) GatewayWriteOption {
+	return func(options *gatewayWriteOptions) { options.orderFrom = src }
+}
+
+// WithGatewayOrderWarning sets a function that is called with a
+// *GatewayOrderError if the order of the elements could not be restored
+// and the Gateway was written in the order encoding/xml uses instead.
+// Without it this is not reported.
+func WithGatewayOrderWarning(warn func(error)) GatewayWriteOption {
+	return func(options *gatewayWriteOptions) { options.orderWarning = warn }
+}
+
 func evalGatewayWriteOptions(options ...GatewayWriteOption) (*gatewayWriteOptions, error) {
 	result := &gatewayWriteOptions{host: host.Localhost}
 	for _, option := range options {
@@ -255,6 +293,9 @@ func evalGatewayWriteOptions(options ...GatewayWriteOption) (*gatewayWriteOption
 // file becomes destination_0001.history, with the oldest copy pruned at the
 // configured limit. WithGatewayOverwrite replaces an existing file without a
 // backup. It returns the new backup path, if created.
+//
+// Sibling elements are written in the order of the document that the
+// Gateway was read from, see Gateway.MarshalOrdered.
 func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteOption) (backupPath string, err error) {
 	if destination == "" {
 		return "", errors.New("gateway destination is empty")
@@ -268,11 +309,20 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	}
 	h := writeOptions.host
 
-	data, err := xml.MarshalIndent(gateway, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal gateway XML: %w", err)
+	order := gateway.source
+	if writeOptions.orderFrom != nil {
+		order = writeOptions.orderFrom.source
 	}
-	data = append(data, '\n')
+	data, err := marshalGatewayOrdered(gateway, order)
+	if err != nil {
+		var orderErr *GatewayOrderError
+		if !errors.As(err, &orderErr) {
+			return "", err
+		}
+		if writeOptions.orderWarning != nil {
+			writeOptions.orderWarning(orderErr)
+		}
+	}
 
 	lockPath := destination + ".lck"
 	if err := h.Mkdir(lockPath, 0o700); err != nil {

@@ -83,6 +83,10 @@ type Gateway struct {
 	ObcervConnection     *RawXMLElement        `xml:"obcervConnection,omitempty"`
 	OperatingEnvironment *OperatingEnvironment `xml:"operatingEnvironment,omitempty"`
 	Other                []RawXMLElement       `xml:",any"`
+
+	// source is the order of the elements of the document that was read,
+	// used to write the elements in the same order. It is never changed.
+	source *xmlOrder
 }
 
 type gatewayXML Gateway

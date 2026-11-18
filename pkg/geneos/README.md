@@ -2,7 +2,7 @@
 
 The `geneos` package models Geneos Gateway XML configuration with Go structs. `ReadGateway` reads XML from a local path, a `file:` URL, or an HTTP(S) URL, and `WriteGateway` writes a model to a local path. These helpers do not validate a document against a Gateway XSD.
 
-The model is intentionally partial and follows the Gateway element order where that order matters. Fields that have concrete models are convenient to inspect and edit. Unmodeled sections and schema choices can be kept as raw XML with `RawXMLElement`.
+The model is intentionally partial and its structs follow the Gateway element order where that order matters, but see below for how the order of the elements of a document that is read and written is kept. Fields that have concrete models are convenient to inspect and edit. Unmodeled sections and schema choices can be kept as raw XML with `RawXMLElement`.
 
 ## Core Types
 
@@ -137,6 +137,15 @@ gateway.Other = []geneos.RawXMLElement{{
 }}
 ```
 
-This preserves XML content semantically, not its original whitespace or formatting. Elements that have no field in the model, at the top level or in any nested section, are read into the `Other` field of the section they are in, and are written back unchanged after the modelled elements of that section, so reading, modifying and writing a Gateway setup does not lose them. The attributes of the `gateway` element are kept in `Compatibility`, `XMLNs`, `XSI` and `Attributes`.
+This preserves XML content semantically, not its original whitespace or formatting. Elements that have no field in the model, at the top level or in any nested section, are read into the `Other` field of the section they are in, so reading, modifying and writing a Gateway setup does not lose them. The attributes of the `gateway` element are kept in `Compatibility`, `XMLNs`, `XSI` and `Attributes`.
+
+The order of sibling elements is significant in a Gateway setup, but `encoding/xml` writes the modelled fields first and the `Other` elements after them. To avoid moving elements, `ReadGateway` records the order of the child elements of every element in the document it reads (just the element names, not the document) and `WriteGateway` and `Gateway.MarshalOrdered` restore it by rearranging the marshalled XML. This is what is, and is not, preserved:
+
+* The interleaving of siblings with different names is restored to that of the document that was read, at every level, for modelled and unmodelled elements alike. Elements are matched by their path, using the local name and the number of the earlier siblings with the same name, so the third `sampler` is matched with the third `sampler` of the original.
+* Siblings with the same name stay in the order of the model, so a program that re-sorts or removes samplers, rules or managed entities has its order respected. The elements inside them are matched by position, so after re-sorting, an element kept in `Other` inside a moved item is placed using the layout of the item that was in that position.
+* An element that was added, such as a new sampler or a modelled element that was not in the document, is written directly after the sibling that comes before it in the model, or first if there is none. An element that was removed is just not written.
+* Everything else is as marshalled by `encoding/xml`: attributes, namespace prefixes, the content of `RawXMLElement`, and the two space indentation. Text and comments written between children (the model keeps only the comments of an element, as its `Comment` field, written before its first child) stay in the same place between the same pair of children and do not move with them. The original white space and XML declaration, and empty wrapper elements such as `<headlines/>`, are not kept.
+* A Gateway that was not read, such as one built in a program, is written in the order of the model. Give it the order of another with `Gateway.PreserveOrderOf` or the `WithGatewayOrderFrom` option of `WriteGateway`. `xml.Marshal` of a `Gateway` does not restore the order, use `MarshalOrdered`.
+* If restoring the order fails, which it does not do for a document that `encoding/xml` has written, the document is written in the order of the model and `WithGatewayOrderWarning` is called with a `*GatewayOrderError`; `MarshalOrdered` returns the document with that error.
 
 Empty wrapper elements in the input that are only written when they have content, such as an empty `<headlines/>`, are not kept. If `Gateway.ProcessDescriptors` is set then it replaces the process descriptors in `Gateway.StaticVars` when the Gateway is written, and `StaticVars` is not changed.

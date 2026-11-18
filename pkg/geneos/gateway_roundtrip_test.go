@@ -87,19 +87,91 @@ func xmlDifferences(t *testing.T, want, got []byte) (diffs []string) {
 	return
 }
 
+// roundTripGateway reads in with ReadGateway, so the order of the
+// elements is recorded, and writes it back with MarshalOrdered
 func roundTripGateway(t *testing.T, in []byte) (*Gateway, []byte) {
 	t.Helper()
-	var g Gateway
-	d := xml.NewDecoder(bytes.NewReader(in))
-	d.CharsetReader = charset.NewReaderLabel
-	if err := d.Decode(&g); err != nil {
-		t.Fatalf("decode: %v", err)
+	path := filepath.Join(t.TempDir(), "setup.xml")
+	if err := os.WriteFile(path, in, 0o600); err != nil {
+		t.Fatal(err)
 	}
-	out, err := xml.MarshalIndent(&g, "", "  ")
+	g, err := ReadGateway(path)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	out, err := g.MarshalOrdered()
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
-	return &g, out
+	return g, out
+}
+
+// childSequences returns, for every element identified by its path with
+// the number of the preceding siblings of the same name, the names of its
+// children in document order
+func childSequences(t *testing.T, data []byte) map[string][]string {
+	t.Helper()
+	d := xml.NewDecoder(bytes.NewReader(data))
+	d.CharsetReader = charset.NewReaderLabel
+	type frame struct {
+		path   string
+		counts map[string]int
+	}
+	result := map[string][]string{}
+	var stack []*frame
+	for {
+		tok, err := d.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("parse XML: %v\n%s", err, data)
+		}
+		switch e := tok.(type) {
+		case xml.StartElement:
+			path := "/" + e.Name.Local
+			if len(stack) > 0 {
+				parent := stack[len(stack)-1]
+				path = fmt.Sprintf("%s/%s[%d]", parent.path, e.Name.Local, parent.counts[e.Name.Local])
+				parent.counts[e.Name.Local]++
+				result[parent.path] = append(result[parent.path], e.Name.Local)
+			}
+			stack = append(stack, &frame{path: path, counts: map[string]int{}})
+		case xml.EndElement:
+			stack = stack[:len(stack)-1]
+		}
+	}
+	return result
+}
+
+// orderDifferences compares the order of the children of every element
+// in want and got, ignoring the elements that are named in dropped
+func orderDifferences(t *testing.T, want, got []byte, dropped ...string) (diffs []string) {
+	t.Helper()
+	w, g := childSequences(t, want), childSequences(t, got)
+	for path, seq := range w {
+		seq = slices.DeleteFunc(slices.Clone(seq), func(s string) bool { return slices.Contains(dropped, s) })
+		if len(seq) == 0 && len(g[path]) == 0 {
+			continue
+		}
+		if !slices.Equal(seq, g[path]) {
+			diffs = append(diffs, fmt.Sprintf("%s: want %v got %v", path, seq, g[path]))
+		}
+	}
+	for path := range g {
+		if _, ok := w[path]; !ok {
+			diffs = append(diffs, fmt.Sprintf("%s: unexpected element", path))
+		}
+	}
+	slices.Sort(diffs)
+	return
+}
+
+func assertSameOrder(t *testing.T, want, got []byte, dropped ...string) {
+	t.Helper()
+	if diffs := orderDifferences(t, want, got, dropped...); len(diffs) > 0 {
+		t.Errorf("the order of elements changed:\n%s\n\noutput:\n%s", strings.Join(diffs, "\n"), got)
+	}
 }
 
 // A gateway setup like those written by Geneos, with namespaces, rows,
@@ -109,6 +181,7 @@ func roundTripGateway(t *testing.T, in []byte) (*Gateway, []byte) {
 const realisticGatewayXML = `<?xml version="1.0" encoding="ISO-8859-1"?>
 <gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd">
 	<!-- a comment -->
+	<futureTopLevelSection attr="1"><child/></futureTopLevelSection>
 	<probes>
 		<probe name="local">
 			<hostname>localhost</hostname>
@@ -123,10 +196,10 @@ const realisticGatewayXML = `<?xml version="1.0" encoding="ISO-8859-1"?>
 	<managedEntities>
 		<managedEntity name="entity">
 			<probe ref="local"/>
+			<futureEntityElement>kept</futureEntityElement>
 			<attribute name="ENV">prod</attribute>
 			<var name="v"><stringList><string>a</string><string>b</string></stringList></var>
 			<sampler ref="cpu"/>
-			<futureEntityElement>kept</futureEntityElement>
 		</managedEntity>
 	</managedEntities>
 	<samplers>
@@ -206,9 +279,9 @@ const realisticGatewayXML = `<?xml version="1.0" encoding="ISO-8859-1"?>
 	</samplers>
 	<rules>
 		<rule name="rule">
+			<futureRuleElement>kept</futureRuleElement>
 			<targets><target>/geneos</target></targets>
 			<priority>1</priority>
-			<futureRuleElement>kept</futureRuleElement>
 		</rule>
 	</rules>
 	<staticVars>
@@ -227,7 +300,6 @@ const realisticGatewayXML = `<?xml version="1.0" encoding="ISO-8859-1"?>
 	<operatingEnvironment>
 		<gatewayName>gw</gatewayName>
 	</operatingEnvironment>
-	<futureTopLevelSection attr="1"><child/></futureTopLevelSection>
 </gateway>
 `
 
@@ -246,6 +318,10 @@ func TestGatewayRoundTripIsLossless(t *testing.T) {
 	if g.XMLNs != xsiNamespace || g.XSI != "http://schema.itrsgroup.com/GA7.11.2-260908/gateway.xsd" {
 		t.Errorf("XMLNs = %q, XSI = %q", g.XMLNs, g.XSI)
 	}
+
+	// the elements, including those that are not modelled, are in the same
+	// order at every level
+	assertSameOrder(t, []byte(realisticGatewayXML), out)
 
 	// and a second round is identical to the first
 	_, again := roundTripGateway(t, out)
@@ -458,6 +534,7 @@ func TestGatewayRoundTripShippedSetups(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, out := roundTripGateway(t, data)
+			assertSameOrder(t, data, out, "headlines", "groups")
 			for _, diff := range xmlDifferences(t, data, out) {
 				if strings.HasPrefix(diff, "want ") && !strings.Contains(diff, " got 0:") {
 					t.Errorf("%s", diff)
