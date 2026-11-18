@@ -38,14 +38,15 @@ var setCmdShared, setCmdNoRoll bool
 func init() {
 	aesCmd.AddCommand(setCmd)
 
-	setCmdKeyfile = string(geneos.DefaultUserKeyfile)
-
-	setCmd.Flags().StringVarP(&setCmdKeyfile, "keyfile", "k", "-", "Key file to use. `PATH|URL|-`\nPath to a local file, a URL or a dash for STDIN.")
+	setCmd.Flags().StringVarP(&setCmdKeyfile, "keyfile", "k", "", "Key file to use. `PATH|URL|-`\nPath to a local file, a URL or a dash for STDIN.\nThe default, unless --crc is given, is to read from STDIN.")
 	setCmd.Flags().StringVarP(&setCmdCRC, "crc", "c", "", "`CRC` of an existing shared keyfile to use")
 	setCmd.Flags().StringVarP(&setCmdBackupSuffix, "backup", "b", "-prev", "Backup any existing keyfile with extension given")
 
 	setCmd.Flags().BoolVarP(&setCmdNoRoll, "no-roll", "N", false, "Do not roll any existing keyfile to previous keyfile setting")
 	setCmd.Flags().BoolVarP(&setCmdShared, "shared", "s", false, "Set as a shared keyfile, using the CRC as the file name prefix")
+
+	setCmd.MarkFlagsMutuallyExclusive("crc", "keyfile")
+	setCmd.MarkFlagsMutuallyExclusive("crc", "shared")
 
 	setCmd.Flags().SortFlags = false
 }
@@ -73,8 +74,14 @@ var setCmd = &cobra.Command{
 
 		h := geneos.GetHost(cmd.Hostname)
 
+		// the keyfile is read from stdin unless a CRC is given
+		keyfile := setCmdKeyfile
+		if keyfile == "" && setCmdCRC == "" {
+			keyfile = "-"
+		}
+
 		if setCmdShared {
-			paths, crc, err := geneos.ImportSharedKey(h, ct, setCmdKeyfile, "Paste AES key file contents, end with newline and CTRL+D:")
+			paths, crc, err := geneos.ImportSharedKey(h, ct, keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
 			if err != nil {
 				return err
 			}
@@ -87,26 +94,20 @@ var setCmd = &cobra.Command{
 			return nil
 		}
 
-		if setCmdCRC != "" && setCmdKeyfile == "" {
+		if setCmdCRC != "" {
 			// locate a shared keyfile for each matching host/type and set.
 			instance.Do(command.CommandPath(), h, ct, names, aesSetSharedAESInstance, setCmdCRC).Report(os.Stdout)
 			return nil
 		}
 
-		if setCmdKeyfile != "" {
-			kv, err := geneos.ReadKeyValues(setCmdKeyfile, "Paste AES key file contents, end with newline and CTRL+D:")
-			if err != nil {
-				return err
-			}
-			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				instance.Do(command.CommandPath(), h, ct, names, aesSetAESInstance, kv).Report(os.Stdout)
-			}
-			return nil
+		kv, err := geneos.ReadKeyValues(keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
+		if err != nil {
+			return err
 		}
-
-		// locate keyfile by CRC
-
-		return
+		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
+			instance.Do(command.CommandPath(), h, ct, names, aesSetAESInstance, kv).Report(os.Stdout)
+		}
+		return nil
 	},
 }
 
@@ -154,6 +155,10 @@ func aesSetAESInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
+	if len(params) == 0 {
+		resp.Err = geneos.ErrInvalidArgs
+		return
+	}
 	crc, ok := params[0].(string)
 	if !ok {
 		resp.Err = geneos.ErrInvalidArgs
@@ -161,10 +166,12 @@ func aesSetSharedAESInstance(i geneos.Instance, params ...any) (resp *responses.
 	}
 
 	kp := instance.Shared(i, "keyfiles", crc+".aes")
-	if st, err := i.Host().Stat(kp); err == nil && st.Mode().IsRegular() {
-		// exists
-		resp.Completed = append(resp.Completed, "already exists")
+	st, err := i.Host().Stat(kp)
+	if err != nil || !st.Mode().IsRegular() {
+		resp.Err = fmt.Errorf("shared keyfile %s not found: %w", kp, geneos.ErrNotExist)
+		return
 	}
+	resp.Completed = append(resp.Completed, "already exists")
 
 	cf := i.Config()
 
