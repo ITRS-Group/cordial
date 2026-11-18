@@ -498,13 +498,15 @@ func TestLogger(t *testing.T) {
 	_, _ = c.Delete(ctx, "/d", nil)
 
 	out := buf.String()
-	for _, want := range []string{"get request", "post request", "put request", "delete request", "post response", "status", `k`} {
+	for _, want := range []string{"get request", "post request", "put request", "delete request", "post response", "status", "body_bytes", "query_keys=a"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("log output missing %q:\n%s", want, out)
 		}
 	}
-	if strings.Contains(out, "secret-token") {
-		t.Errorf("log output contains the auth header value:\n%s", out)
+	for _, secret := range []string{"secret-token", `"k"`, "a=1"} {
+		if strings.Contains(out, secret) {
+			t.Errorf("log output contains %q:\n%s", secret, out)
+		}
 	}
 }
 
@@ -673,4 +675,73 @@ func TestAuthClientCredentials(t *testing.T) {
 			t.Errorf("error = %v, want the token failure", err)
 		}
 	})
+}
+
+func TestAuthSurvivesCancelledContext(t *testing.T) {
+	var tokens atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/oauth2/token" {
+			tokens.Add(1)
+			w.Header().Set("Content-Type", "application/json")
+			// already expired, so every request refreshes the token
+			_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"Bearer","expires_in":1}`))
+			return
+		}
+		_, _ = w.Write([]byte(`ok`))
+	}))
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	c := NewClient(BaseURLString(srv.URL))
+	c.Auth(ctx, "id", config.Secret("secret"))
+	cancel()
+	for range 2 {
+		if _, err := c.Get(context.Background(), "/data", nil, nil); err != nil {
+			t.Fatalf("Get() after the Auth context was cancelled: %v", err)
+		}
+	}
+	if n := tokens.Load(); n < 2 {
+		t.Errorf("token endpoint called %d times, want a refresh for each request", n)
+	}
+}
+
+func TestCustomAuthHeaderNotSentToOtherHostOnRedirect(t *testing.T) {
+	var other atomic.Value
+	other.Store("unset")
+	otherSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		other.Store(r.Header.Get("X-Token"))
+		_, _ = w.Write([]byte(`ok`))
+	}))
+	defer otherSrv.Close()
+
+	var same atomic.Value
+	same.Store("unset")
+	srv := httptest.NewServer(nil)
+	defer srv.Close()
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/other":
+			http.Redirect(w, r, otherSrv.URL+"/final", http.StatusTemporaryRedirect)
+		case "/same":
+			http.Redirect(w, r, srv.URL+"/final", http.StatusTemporaryRedirect)
+		default:
+			same.Store(r.Header.Get("X-Token"))
+			_, _ = w.Write([]byte(`ok`))
+		}
+	})
+
+	c := NewClient(BaseURLString(srv.URL))
+	c.SetAuth("X-Token", "secret")
+	if _, err := c.Post(context.Background(), "/other", `{}`, nil); err != nil {
+		t.Fatalf("redirect to other host: %v", err)
+	}
+	if got := other.Load(); got != "" {
+		t.Errorf("X-Token sent to the other host = %q, want none", got)
+	}
+	if _, err := c.Post(context.Background(), "/same", `{}`, nil); err != nil {
+		t.Fatalf("redirect to same host: %v", err)
+	}
+	if got := same.Load(); got != "secret" {
+		t.Errorf("X-Token on a same-host redirect = %q, want it kept", got)
+	}
 }

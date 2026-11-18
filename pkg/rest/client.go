@@ -40,8 +40,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/google/go-querystring/query"
@@ -157,7 +159,8 @@ func (c *Client) SetAuth(header, value string) {
 // Auth sets up a 2-legged OAUTH2 with client ID and Secret. If clientID
 // is empty just return, allowing callers to call when the value are not
 // set (or empty) not set. It should be called before the client is
-// used.
+// used. ctx is not retained, so it may be cancelled after Auth returns
+// without affecting later token refreshes.
 func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.Secret) {
 	if clientID == "" || c.BaseURL == nil {
 		return
@@ -171,8 +174,13 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.
 		EndpointParams: params,
 		TokenURL:       tokenauth.String(),
 	}
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient())
-	c.HTTPClient = conf.Client(ctx)
+
+	// the token source keeps the context it is created with for later
+	// refreshes, so it must not be the caller's, which may be cancelled
+	// once Auth returns. conf.Client keeps the timeout, redirect policy
+	// and cookie jar of the client in the context.
+	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, c.httpClient())
+	c.HTTPClient = conf.Client(tokenCtx)
 }
 
 // Do executes the given method (GET, POST, PUT, DELETE) with the given
@@ -280,10 +288,12 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 	}
 
 	if c.logger != nil {
+		// request bodies and query values may contain credentials, so
+		// only their size and names are logged
 		if hasBody {
-			c.logger.Debug(strings.ToLower(method)+" request", "url", req.URL.String(), "body", string(body))
+			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "body_bytes", len(body))
 		} else {
-			c.logger.Debug(strings.ToLower(method)+" request", "url", req.URL.String(), "query", req.URL.RawQuery)
+			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "query_keys", queryKeys(req.URL.RawQuery))
 		}
 	}
 
@@ -291,14 +301,14 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 		c.SetupRequest(req, c, body)
 	}
 
-	resp, err = c.httpClient().Do(req)
+	resp, err = c.clientFor(req).Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
 	if c.logger != nil {
-		c.logger.Debug(strings.ToLower(method)+" response", "url", req.URL.String(), "status", resp.Status)
+		c.logger.Debug(strings.ToLower(method)+" response", "url", logURL(req.URL), "status", resp.Status)
 	}
 
 	// a redirect that changed the method means the server never saw
@@ -331,6 +341,45 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 
 	err = decodeResponse(resp, response)
 	return
+}
+
+// clientFor returns the http client to use for req. If a custom
+// authentication header is set it is removed from any redirected
+// request to a different host, as Go itself only does this for a fixed
+// list of headers.
+func (c *Client) clientFor(req *http.Request) *http.Client {
+	hc := c.httpClient()
+	if c.authHeader == "" {
+		return hc
+	}
+	header, host, check := c.authHeader, req.URL.Host, hc.CheckRedirect
+	cc := *hc
+	cc.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if !strings.EqualFold(next.URL.Host, host) {
+			next.Header.Del(header)
+		}
+		if check != nil {
+			return check(next, via)
+		}
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		return nil
+	}
+	return &cc
+}
+
+// logURL returns u as a string without any query or password
+func logURL(u *url.URL) string {
+	c := *u
+	c.RawQuery, c.ForceQuery, c.Fragment, c.RawFragment = "", false, "", ""
+	return c.Redacted()
+}
+
+// queryKeys returns a comma separated list of the names in a raw query
+func queryKeys(rawQuery string) string {
+	v, _ := url.ParseQuery(rawQuery)
+	return strings.Join(slices.Sorted(maps.Keys(v)), ",")
 }
 
 var errNoBaseURL = errors.New("rest: client has no base URL")
