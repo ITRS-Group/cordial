@@ -18,8 +18,9 @@ limitations under the License.
 package gateway
 
 import (
-	"errors"
 	"os"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 // Reload TODO: Document its behavior, inputs, and effects.
@@ -27,5 +28,5 @@ func (i *Gateway) Reload() (err error) {
 	if i == nil {
 		return os.ErrInvalid
 	}
-	return errors.ErrUnsupported
+	return geneos.ErrNotSupported
 }

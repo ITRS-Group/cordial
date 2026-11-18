@@ -226,6 +226,9 @@ func (i *Netprobe) SetLoaded(t time.Time) {
 
 // Config TODO: Document its behavior, inputs, and effects.
 func (i *Netprobe) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
 	return i.Conf
 }
 

@@ -18,7 +18,9 @@ limitations under the License.
 package webserver
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path"
@@ -29,6 +31,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/tlsports"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
@@ -48,7 +51,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "8443,8080-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 			"webapps/",
@@ -251,28 +254,23 @@ func (i *Webserver) Add(options ...any) (err error) {
 	}
 	config.Set(i.Config(), "port", opts.Port)
 
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-
-	importFrom := instance.BaseVersion(i)
-	if err = os.Chdir(importFrom); err != nil {
-		i.Log().Debug("instance config", slog.Any("settings", i.Config().AllSettings()))
-		return
-	}
-
 	webappsdir := i.Host().Join(i.Home(), "webapps")
 	if err = i.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}
 
-	instance.ImportFiles(i, initialFiles...)
+	// copy default configs from the installed package
+	if err = instance.ImportPackageFiles(i, instance.BaseVersion(i), initialFiles...); err != nil {
+		i.Log().Debug("instance config", slog.Any("settings", i.Config().AllSettings()))
+		return err
+	}
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
-	return
+	return nil
 }
 
 // Rebuild updates the webserver configuration, including security
@@ -290,13 +288,24 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
 	h := i.Host()
 
+	// the conventional ports are 8080 for HTTP and 8443 for HTTPS (and
+	// 80 and 443), only switch between those if the configured port is
+	// one of the pair, any other port is left as configured
+	if tlsports.Apply(i, tlsports.Webserver) {
+		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+			i.Log().Error("Cannot save configuration", slog.Any("error", resp.Err))
+			return false, resp.Err
+		}
+		changed = true
+	}
+
 	spPath := instance.HomeRel(i, "config/security.properties")
 
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
 		i.Log().Error("reading security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return false, err
+		return changed, err
 	}
 
 	sp["port"] = config.Get[string](cf, "port")
@@ -307,7 +316,7 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 
 	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
 		i.Log().Error("writing security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return false, err
+		return changed, err
 	}
 	changed = true
 
@@ -320,41 +329,46 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
 	defer clear(truststorePassword)
 
-	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
+	roots, rerr := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
+	if rerr != nil {
+		i.Log().Debug("cannot read CA bundle", slog.Any("error", rerr))
+	}
 	if len(roots) > 0 && truststorePath != "" {
 		truststorePath = instance.HomeRel(i, truststorePath)
 		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
 			i.Log().Error("updating truststore", slog.Any("path", truststorePath), slog.Any("error", err))
-			return false, err
+			return changed, err
 		}
-		changed = true
 	}
 
 	// create keystore from certificate and private key
 	keyStore := sp["keyStore"]
+	if keyStore == "" {
+		i.Log().Warn("no keyStore set in security.properties, not creating a keystore", slog.Any("path", spPath))
+		return changed, nil
+	}
 	keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
 	defer clear(keyStorePassword)
-	alias := geneos.ALL.Hostname()
+	alias := h.Hostname()
 
 	certChain, err := instance.ReadCertificates(i)
 	if err != nil {
 		i.Log().Error("reading certificate chain", slog.Any("error", err))
-		return false, err
+		return changed, err
 	}
 	if len(certChain) == 0 {
-		return false, err
+		return changed, fmt.Errorf("no certificates found for %s", i)
 	}
 	key, err := instance.ReadPrivateKey(i)
 	if err != nil {
 		i.Log().Error("reading private key", slog.Any("error", err))
-		return false, err
+		return changed, err
 	}
 	keyStore = instance.HomeRel(i, keyStore)
-	err = certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
-	if err == nil {
-		changed = true
+	if err = certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...); err != nil {
+		return changed, err
 	}
-	return changed, err
+	return true, nil
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
@@ -425,7 +439,7 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	if truststorePath, ok := sp["trustStore"]; ok && truststorePath != "" {
 		truststorePath = instance.HomeRel(i, truststorePath)
 		// check for file, as defaults in security.properties may point to non-existent file
-		if _, err = i.Host().Stat(truststorePath); err == nil {
+		if _, serr := i.Host().Stat(truststorePath); serr == nil {
 			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
 			if truststorePassword, ok := sp["trustStorePassword"]; ok && truststorePassword != "" {
 				args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
@@ -446,13 +460,11 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	// if keystore exists, enable SSL
 	if keystorePath, ok := sp["keyStore"]; ok && keystorePath != "" {
 		keystorePath = instance.HomeRel(i, keystorePath)
-		if _, err = i.Host().Stat(keystorePath); err == nil {
+		if _, serr := i.Host().Stat(keystorePath); serr == nil {
 			args = append(args, "-ssl", "true")
 			checks = append(checks, keystorePath)
-		} else if !os.IsNotExist(err) || cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
-			return
-		} else {
-			err = nil
+		} else if !errors.Is(serr, fs.ErrNotExist) || cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
+			return args, env, home, serr
 		}
 	}
 

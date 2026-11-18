@@ -7,14 +7,6 @@
 		{{ $tls := .tls }}
 		{{ $secure := or (and $tls.certificate $tls.privatekey) (and .certificate .privatekey) -}}
 		{{- if $secure -}}
-			{{- if eq .port 7039 -}}
-			<secure>
-				<listenPort>7038</listenPort>
-			</secure>
-			<insecure>
-				<listenPort>7039</listenPort>
-			</insecure>
-			{{- else -}}
 			<secure>
 				<listenPort>{{.port}}</listenPort>
 			</secure>
@@ -22,7 +14,6 @@
 			<insecure>
 				<listenPort>{{.insecureport}}</listenPort>
 			</insecure>
-			{{- end }}
 			{{- end }}
 		{{- else -}}
 			<insecure>

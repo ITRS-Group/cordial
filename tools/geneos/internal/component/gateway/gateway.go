@@ -20,7 +20,6 @@ package gateway
 import (
 	_ "embed"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -31,6 +30,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 
 	"github.com/itrs-group/cordial/tools/geneos/includes"
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/tlsports"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
@@ -301,15 +301,18 @@ func (i *Gateway) Add(options ...any) (err error) {
 
 	cf.Default(cf.Join("config", "template"), templateName)
 	if opts.Template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
-		config.Set(cf, cf.Join("config", "template"), filenames[0])
+		filename, err := instance.ImportTemplate(i, opts.Template)
+		if err != nil {
+			return err
+		}
+		config.Set(cf, cf.Join("config", "template"), filename)
 	}
 
 	config.Set(cf, "includes", make(map[int]string))
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// always create a keyfile ?
@@ -333,40 +336,11 @@ func (i *Gateway) Rebuild(initial bool) (changed bool, err error) {
 	}
 	cf := i.Config()
 
-	// use getPorts() to check valid change, else go up one
-	ports := instance.GetAllPorts(i.Host())
-	nextport := instance.NextFreePort(i.Host(), &Component)
-	if nextport == 0 {
-		return false, fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
-	}
-
-	// gateways are special in that they can listen on two ports, so
-	// don't change ports if the configured port is one of the default
-	// ports (7038 or 7039) and the other is in use by the same process
-	secure := instance.IsTLSCapable(i)
-	port := config.Get[uint16](cf, "port")
-	if secure && port == 7039 {
-		if inUse, _ := instance.CheckPort(i, 7038); !inUse {
-			if _, ok := ports[7038]; !ok {
-				i.Log().Debug("found port 7038 free, switching to it for secure gateway")
-				config.Set[uint16](cf, "port", 7038)
-			} else {
-				i.Log().Debug("found port 7038 in use, switching to next free port for secure gateway")
-				config.Set(cf, "port", nextport)
-			}
-			changed = true
-		}
-	} else if !secure && port == 7038 {
-		if inUse, _ := instance.CheckPort(i, 7039); !inUse {
-			if _, ok := ports[7039]; !ok {
-				i.Log().Debug("found port 7039 free, switching to it for non-secure gateway")
-				config.Set[uint16](cf, "port", 7039)
-			} else {
-				i.Log().Debug("found port 7039 in use, switching to next free port for non-secure gateway")
-				config.Set(cf, "port", nextport)
-			}
-			changed = true
-		}
+	// gateways listen on 7038 when TLS capable and 7039 when not, but
+	// only if the configured port is one of those two, and only if the
+	// other port is free. all other ports are left as configured
+	if tlsports.Apply(i, tlsports.Gateway) {
+		changed = true
 	}
 
 	// always rebuild an instance template

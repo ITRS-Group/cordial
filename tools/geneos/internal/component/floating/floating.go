@@ -20,7 +20,6 @@ package floating
 import (
 	_ "embed"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"strings"
@@ -35,6 +34,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
+	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
 const name = "floating"
@@ -58,7 +58,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "7036,7100-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
@@ -210,6 +210,9 @@ func (i *Floating) SetLoaded(t time.Time) {
 
 // Config TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
 	return i.Conf
 }
 
@@ -240,14 +243,17 @@ func (i *Floating) Add(options ...any) (err error) {
 	config.Set(cf, cf.Join("config", "template"), templateName)
 
 	if opts.Template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
-		config.Set(cf, cf.Join("config", "template"), filenames[0])
+		filename, err := instance.ImportTemplate(i, opts.Template)
+		if err != nil {
+			return err
+		}
+		config.Set(cf, cf.Join("config", "template"), filename)
 	}
 
 	config.Set(cf, "types", []string{})
 	config.Set(cf, "attributes", make(map[string]string))
 	config.Set(cf, "variables", make(map[string]string))
-	config.Set(cf, "gateways", make(map[string]string))
+	config.Set(cf, values.GATEWAYS, []string{})
 
 	// create and fkm persistence directory
 	fkmdir := i.Host().Join(i.Home(), "fkm")
@@ -257,7 +263,7 @@ func (i *Floating) Add(options ...any) (err error) {
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	return nil
@@ -283,22 +289,16 @@ func (i *Floating) Rebuild(initial bool) (changed bool, err error) {
 		return
 	}
 
-	// recheck check certs/keys
+	// recheck check certs/keys and move gateway connections that use
+	// the conventional ports for TLS (7038) and non-TLS (7039)
+	// connections to match. all other gateways and ports are kept as
+	// configured
 	secure := instance.IsTLSCapable(i)
-	gws := config.Get[map[string]string](cf, "gateways")
-	for gw := range gws {
-		port := gws[gw]
-		if secure && port == "7039" {
-			port = "7038"
-			changed = true
-		} else if !secure && port == "7038" {
-			port = "7039"
-			changed = true
-		}
-		gws[gw] = port
-	}
-	if changed {
-		config.Set(cf, "gateways", gws)
+	gws, legacy := values.GatewaysFromConfig(cf)
+	gws, changed = values.TLSGatewayPorts(gws, secure)
+	if changed || legacy {
+		changed = true
+		config.Set(cf, values.GATEWAYS, gws)
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return changed, resp.Err
 		}
@@ -329,7 +329,9 @@ func (i *Floating) Command(skipFileCheck bool) (args, env []string, home string,
 		"-setup", config.Get[string](cf, "setup"),
 		// "-setup-interval", "300",
 	}
-	checks = append(checks, i.Host().Join(home, config.Get[string](cf, "setup")))
+	if setup := instance.PathTo(i, "setup"); setup != "" && !strings.HasPrefix(setup, "http:") && !strings.HasPrefix(setup, "https:") {
+		checks = append(checks, setup)
+	}
 
 	// secureArgs := instance.SetSecureArgs(i)
 	secureArgs, secureEnv, fileChecks, err := instance.SecureArgs(i)

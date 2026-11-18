@@ -19,7 +19,6 @@ package licd
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -49,7 +48,7 @@ var Component = geneos.Component{
 		config.Join(name, "clean"): strings.Join([]string{
 			"reporting/",
 		}, ":"),
-		config.Join(name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "purge"): "",
 	},
 	PortRange: config.Join(name, "ports"),
 	CleanList: config.Join(name, "clean"),
@@ -236,7 +235,7 @@ func (i *Licd) Add(options ...any) (err error) {
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// default config XML etc.

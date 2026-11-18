@@ -24,7 +24,6 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -67,7 +66,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "1180-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
@@ -252,23 +251,17 @@ func (i *SSOAgent) Add(options ...any) (err error) {
 	}
 	config.Set(i.Config(), "port", opts.Port)
 
-	// copy default configs
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-
-	importFrom := instance.BaseVersion(i)
-	if err = os.Chdir(importFrom); err != nil {
-		return
+	// copy default configs from the installed package
+	if err = instance.ImportPackageFiles(i, instance.BaseVersion(i), initialFiles...); err != nil {
+		return err
 	}
-
-	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
-	return
+	return nil
 }
 
 // Rebuild updates the SSO agent configuration, including the truststore
@@ -435,19 +428,23 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 				Content: cert.Raw,
 			})
 		}
-		ks.SetPrivateKeyEntry(
-			config.Get[string](sf, sf.Join("server", "ssl_alias"), config.DefaultValue(geneos.ALL.Hostname())),
+		if err = ks.SetPrivateKeyEntry(
+			config.Get[string](sf, sf.Join("server", "ssl_alias"), config.DefaultValue(i.Host().Hostname())),
 			keystore.PrivateKeyEntry{
 				CreationTime:     time.Now(),
 				PrivateKey:       []byte(key),
 				CertificateChain: ch,
 			},
 			keystorePassword,
-		)
+		); err != nil {
+			return false, fmt.Errorf("failed to add TLS key to keystore: %w", err)
+		}
 	}
 
 	// write the keystore here as the truststore *may* be different from the keystore
-	err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600)
+	if err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600); err != nil {
+		return false, fmt.Errorf("failed to write keystore %s: %w", keystorePath, err)
+	}
 
 	// only add root CAs to the truststore if it is different from the
 	// default CA bundle, which could be a `cacerts` without an
@@ -459,13 +456,14 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 				continue
 			}
 			// ignore errors, as this may be trying to write to a system file - just break out of the loop
-			if err = certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert); err != nil {
+			if terr := certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert); terr != nil {
+				i.Log().Debug("cannot update truststore, ignoring", slog.String("path", truststorePath), slog.Any("error", terr))
 				break
 			}
 		}
 	}
 
-	return true, err
+	return true, nil
 }
 
 // generate a keypair for ssoagent keystore with the alias "ssokey". This must be an RSA key
