@@ -309,6 +309,11 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 		return "", errors.New("gateway is nil")
 	}
 
+	writeOptions, err := evalGatewayWriteOptions(options...)
+	if err != nil {
+		return "", err
+	}
+
 	order := gateway.source
 	if writeOptions.orderFrom != nil {
 		order = writeOptions.orderFrom.source
