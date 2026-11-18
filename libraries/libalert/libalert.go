@@ -38,8 +38,6 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-mail/mail/v2"
-
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/email"
 )
@@ -309,11 +307,6 @@ func goSendMail(conf *config.Config, values map[string]string) int {
 			defer logofile.Close()
 			m.EmbedReader("logo.png", logofile)
 		} else {
-			// use var path and a default of the embedded logo
-			mail.SetCopyFunc(func(w io.Writer) error {
-				_, err := w.Write(logo)
-				return err
-			})
 			m.EmbedReadSeeker("logo.png", bytes.NewReader(logo))
 		}
 	}

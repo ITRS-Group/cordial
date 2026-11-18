@@ -146,6 +146,7 @@
     * Instances and components are now always processed in name order, and `geneos` commands that process several instances at once do so for no more than 16 at a time.
 
     * Commands that write JSON, with no data to write, now write `[]` and not `null`.
+
   * Behaviour changes from the review of the `geneos` commands
 
     * **Breaking Change** (minor): `geneos init` no longer accepts `--restore`/`-R`, `--no-install`/`-X` or `--name`/`-n`, which did nothing; they are hidden and deprecated and now fail with a "no longer supported" error. To restore a backup use `geneos init` followed by `geneos restore`. `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.

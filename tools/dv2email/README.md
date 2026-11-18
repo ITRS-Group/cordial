@@ -341,24 +341,32 @@ The configuration is in three parts; Gateway connectivity, EMail server connecti
 
     The hostname or IP of the SMTP server.
 
-  * `port` - default `25`
+  * `port` - automatically selected unless set
 
-    The port of the SMTP server. While the default is 25 most modern SMTP server will be listening on ports 465 or 587 depending on their configured services, especially when using TLS to protect the connection.
+    With `use-tls: default` or `force`, the client uses port `587`; `default` falls back to unencrypted port `25` if port 587 cannot be reached. With `use-tls: none`, it uses port `25`. With `use-tls: ssl`, it uses implicit TLS on port `465`. If `port` is set, that port is used without fallback. Port `465` uses implicit TLS unless `use-tls` is `none`.
 
   * `use-tls` - default `default`
 
-    By default the the SMTP connection is made using opportunistic TLS, i.e. TLS is used if the server advertises STARTTLS but otherwise the email is sent in the clear. The other options are `force` and `none` which do what the names suggest.
+    `default` uses STARTTLS when offered and otherwise allows clear-text SMTP, `force` requires STARTTLS, `none` disables TLS, and `ssl` enables implicit TLS. The `implicit` value is an alias for `ssl`.
 
-    Note that is it not possible to ignore server certificate errors for SMTP. This is intentional.
+  * `tls-skip-verify` - default `false`
+
+    Set to `true` to skip SMTP server certificate verification. This is not recommended except for a trusted network and a server with a certificate that cannot otherwise be validated.
 
   * `username` - no default
   * `password` - no default
 
-    The username and password to use for the SMTP connection. The password should ne AES256 encrypted as for the Gateway password above.
+    The username and password to use for the SMTP connection. The password should be AES256 encrypted as for the Gateway password above.
 
-    If no username or password are given then the SMTP connection is attempted without authentication.
+    If `username` is not set, `dv2email` looks up credentials for the SMTP hostname in the Geneos credentials store. If no credentials are found, it attempts to connect without authentication. If `username` is set, `password` is used as given (and may be empty).
 
-    In a future release there may be support for fetching these values from the `cordial` credentials store but for now they must be in one of the `dv2email` configuration files.
+  * `_smtp_auth` - default `auto`
+
+    When a username is configured, the strongest mechanism offered by the server is selected by default. This environment variable can select a different mechanism; supported values and the security implications of plaintext mechanisms are documented in the [`pkg/email` README](../../pkg/email/README.md).
+
+  * `_smtp_timeout` - default `10` seconds
+
+    Optionally set the SMTP timeout in seconds through the environment. It must be positive.
 
   * `contents` - default `[ text+html, images ]`
 
@@ -540,7 +548,7 @@ Time and date, for use to distinguish values, all in the local timezone:
 
 * `images`
 
-  A list of image files to embed into the resulting email. The name, on the left, is used as the href `cid` value. e.g.
+  A map of image files to embed into the resulting email. The name on the left is used as the `cid` value. When `images` is included in `email.contents` (the default), a built-in Geneos logo is embedded as `logo.png`; configuring `logo.png` overrides it. Other configured images are added alongside it. For example:
 
   ```yaml
   images:

@@ -36,7 +36,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-mail/mail/v2"
+	"github.com/wneessen/go-mail"
 )
 
 //go:embed text.gotmpl
@@ -201,8 +201,8 @@ func sendMail(conf EMailConfig) int {
 	}
 
 	body := replArgs(format, conf)
-	m.SetHeader("Subject", replArgs(subject, conf))
-	m.SetBody("text/plain", body)
+	m.SetGenHeader(mail.HeaderSubject, replArgs(subject, conf))
+	m.SetBodyString(mail.TypeTextPlain, body)
 
 	if err = d.DialAndSend(m); err != nil {
 		log.Println(err)
@@ -277,7 +277,7 @@ func goSendMail(conf EMailConfig) int {
 		}
 	}
 
-	m.SetHeader("Subject", replArgs(subject, conf))
+	m.SetGenHeader(mail.HeaderSubject, replArgs(subject, conf))
 
 	tmpl := template.New("text")
 	if _, ok := conf["_TEMPLATE_TEXT_FILE"]; ok {
@@ -346,13 +346,12 @@ func goSendMail(conf EMailConfig) int {
 				return 1
 			}
 			defer logofile.Close()
-			m.EmbedReader("logo.png", logofile)
+			if err := m.EmbedReader("logo.png", logofile); err != nil {
+				log.Println(err)
+				return 1
+			}
 		} else {
-			// use var path and a default of the embedded logo
-			m.Embed("logo.png", mail.SetCopyFunc(func(w io.Writer) error {
-				_, err := w.Write(logo)
-				return err
-			}))
+			m.EmbedReadSeeker("logo.png", bytes.NewReader(logo))
 		}
 	}
 
@@ -379,7 +378,7 @@ func goSendMail(conf EMailConfig) int {
 		log.Println(err)
 		return 1
 	}
-	m.SetBody("text/plain", output.String())
+	m.SetBodyString(mail.TypeTextPlain, output.String())
 
 	if !textOnly {
 		var htmlBody bytes.Buffer
@@ -388,7 +387,7 @@ func goSendMail(conf EMailConfig) int {
 			log.Println(err)
 			return 1
 		}
-		m.AddAlternative("text/html", htmlBody.String())
+		m.AddAlternativeString(mail.TypeTextHTML, htmlBody.String())
 	}
 
 	err = d.DialAndSend(m)

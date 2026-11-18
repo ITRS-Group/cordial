@@ -27,8 +27,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/go-mail/mail/v2"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/wneessen/go-mail"
 )
 
 func debug(conf EMailConfig) (debug bool) {
@@ -40,13 +40,26 @@ func debug(conf EMailConfig) (debug bool) {
 	return
 }
 
-func setupMail(conf EMailConfig) (m *mail.Message, err error) {
-	m = mail.NewMessage()
+func setupMail(conf EMailConfig) (m *mail.Msg, err error) {
+	m = mail.NewMsg()
+	if !debug(conf) {
+		defer func() {
+			for _, key := range []string{"_FROM", "_FROM_NAME",
+				"_TO", "_TO_NAME", "_TO_INFO_TYPE",
+				"_CC", "_CC_NAME", "_CC_INFO_TYPE",
+				"_BCC", "_BCC_NAME", "_BCC_INFO_TYPE",
+			} {
+				delete(conf, key)
+			}
+		}()
+	}
 
 	var from = getWithDefault("_FROM", conf, "geneos@localhost")
 	var fromName = getWithDefault("_FROM_NAME", conf, "Geneos")
 
-	m.SetAddressHeader("From", from, fromName)
+	if err = m.FromFormat(fromName, from); err != nil {
+		return nil, fmt.Errorf("invalid _FROM address %q: %w", from, err)
+	}
 
 	err = addAddresses(m, conf, "To")
 	if err != nil {
@@ -63,21 +76,10 @@ func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 		return
 	}
 
-	if !debug(conf) {
-		keys := []string{"_FROM", "_FROM_NAME",
-			"_TO", "_TO_NAME", "_TO_INFO_TYPE",
-			"_CC", "_CC_NAME", "_CC_INFO_TYPE",
-			"_BCC", "_BCC_NAME", "_BCC_INFO_TYPE",
-		}
-		for _, key := range keys {
-			delete(conf, key)
-		}
-	}
-
 	return
 }
 
-// Set-up a Dialer using the _SMTP_* parameters
+// dialServer configures an SMTP client using the _SMTP_* parameters.
 //
 // All the parameters in the official docs are supported and have the same
 // defaults
@@ -87,22 +89,39 @@ func setupMail(conf EMailConfig) (m *mail.Message, err error) {
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD_FILE - plain text password in external file
 // * XXX - _SMTP_REFERENCE - override the SMTP Reference header for conversations / threading
-func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
+func dialServer(conf EMailConfig) (d *mail.Client, err error) {
+	if !debug(conf) {
+		defer func() {
+			for _, key := range []string{"_SMTP_SERVER", "_SMTP_PORT", "_SMTP_TIMEOUT",
+				"_SMTP_USERNAME", "_SMTP_PASSWORD", "_SMTP_PASSWORD_FILE",
+				"_SMTP_TLS", "_SMTP_TLS_INSECURE",
+			} {
+				delete(conf, key)
+			}
+		}()
+	}
+
 	server := getWithDefault("_SMTP_SERVER", conf, "localhost")
 	port := getWithDefaultInt("_SMTP_PORT", conf, 25)
 	timeout := getWithDefaultInt("_SMTP_TIMEOUT", conf, 10)
 
-	var tlsPolicy mail.StartTLSPolicy
+	var tlsPolicy mail.TLSPolicy
 
 	tlsEnabled := getWithDefault("_SMTP_TLS", conf, "default")
 	tlsInsecure := getWithDefault("_SMTP_TLS_INSECURE", conf, "false")
 	switch strings.ToLower(tlsEnabled) {
 	case "force":
-		tlsPolicy = mail.MandatoryStartTLS
+		tlsPolicy = mail.TLSMandatory
 	case "none":
-		tlsPolicy = mail.NoStartTLS
+		tlsPolicy = mail.NoTLS
 	default:
-		tlsPolicy = mail.OpportunisticStartTLS
+		tlsPolicy = mail.TLSOpportunistic
+	}
+
+	options := []mail.Option{
+		mail.WithPort(port),
+		mail.WithTimeout(time.Duration(timeout) * time.Second),
+		mail.WithTLSPolicy(tlsPolicy),
 	}
 
 	username, ok := conf["_SMTP_USERNAME"]
@@ -121,29 +140,31 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 		}
 		// the password can be empty at this point. this is valid, even if a bit dumb.
 
-		d = mail.NewDialer(server, port, username, password)
+		options = append(options,
+			mail.WithUsername(username),
+			mail.WithPassword(password),
+			mail.WithSMTPAuth(mail.SMTPAuthAutoDiscover),
+		)
+		if port == 465 {
+			options = append(options, mail.WithSSL())
+		}
 	} else {
-		// no auth - initialise Dialer directly
-		d = &mail.Dialer{Host: server, Port: port}
+		options = append(options, mail.WithSMTPAuth(mail.SMTPAuthNoAuth))
 	}
-	// this is independent of authentication, as the connection can be
-	// encrypted without it
-	if t, err := strconv.ParseBool(tlsInsecure); err == nil && t {
-		d.TLSConfig = &tls.Config{
-			InsecureSkipVerify: true,
-		}
-	}
-	d.Timeout = time.Duration(timeout) * time.Second
-	d.StartTLSPolicy = tlsPolicy
 
-	if !debug(conf) {
-		keys := []string{"_SMTP_SERVER", "_SMTP_PORT", "_SMTP_TIMEOUT",
-			"_SMTP_USERNAME", "_SMTP_PASSWORD", "_SMTP_PASSWORD_FILE",
-			"_SMTP_TLS", "_SMTP_TLS_INSECURE",
-		}
-		for _, key := range keys {
-			delete(conf, key)
-		}
+	if t, err := strconv.ParseBool(tlsInsecure); err == nil && t {
+		options = append(options, mail.WithTLSConfig(&tls.Config{
+			InsecureSkipVerify: true,
+		}))
+	}
+
+	if timeout <= 0 {
+		return nil, fmt.Errorf("_SMTP_TIMEOUT must be greater than zero")
+	}
+
+	d, err = mail.NewClient(server, options...)
+	if err != nil {
+		return nil, err
 	}
 
 	return d, nil
@@ -180,8 +201,7 @@ func getWithDefault(key string, conf EMailConfig, def string) string {
 // return the value of the key from conf or a default
 func getWithDefaultInt(key string, conf EMailConfig, def int) int {
 	if val, ok := conf[key]; ok {
-		// a value that is not a number is not used, as zero for a
-		// timeout is no timeout
+		// Invalid integers use the default; callers validate zero and negative values.
 		num, err := strconv.Atoi(val)
 		if err != nil {
 			return def
@@ -194,7 +214,7 @@ func getWithDefaultInt(key string, conf EMailConfig, def int) int {
 // The Geneos libemail supports an optional text name per address and also the info type,
 // if given, must match "email" or "e-mail" (case insensitive). If either names or info types
 // are given they MUST have the same number of members otherwise it's a fatal error
-func addAddresses(m *mail.Message, conf EMailConfig, header string) error {
+func addAddresses(m *mail.Msg, conf EMailConfig, header string) error {
 	upperHeader := strings.ToUpper(header)
 	addrs := splitCommaTrimSpace(conf[fmt.Sprintf("_%s", upperHeader)])
 	names := splitCommaTrimSpace(conf[fmt.Sprintf("_%s_NAME", upperHeader)])
@@ -208,8 +228,6 @@ func addAddresses(m *mail.Message, conf EMailConfig, header string) error {
 		return fmt.Errorf("\"%s\" header items mismatch: addrs=%d != infotypes=%d", header, len(addrs), len(infotypes))
 	}
 
-	var addresses []string
-
 	for i, to := range addrs {
 		var name string
 		if len(infotypes) > 0 {
@@ -221,9 +239,19 @@ func addAddresses(m *mail.Message, conf EMailConfig, header string) error {
 		if len(names) > 0 {
 			name = names[i]
 		}
-		addresses = append(addresses, m.FormatAddress(to, name))
+		var err error
+		switch header {
+		case "To":
+			err = m.AddToFormat(name, to)
+		case "Cc":
+			err = m.AddCcFormat(name, to)
+		case "Bcc":
+			err = m.AddBccFormat(name, to)
+		}
+		if err != nil {
+			return fmt.Errorf("invalid %s address %q: %w", header, to, err)
+		}
 	}
-	m.SetHeader(header, addresses...)
 
 	return nil
 }

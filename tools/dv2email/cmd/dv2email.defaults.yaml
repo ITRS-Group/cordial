@@ -215,10 +215,11 @@ headline-filter:
 headline-property-filter:
   '*': [ "severity>0", "value=''" ]
 
-# embed these images and give them the (short) name on the left these
-# can then be referenced in the HTML as <img href="cid:logo.png"/> etc.
+# Embed these images with the name on the left as their Content-ID, so
+# they can be referenced in HTML as <img src="cid:logo.png"/>. A built-in
+# logo.png is used unless an image with that name is configured here.
 images:
-  # logo.png: ./cmd/icon_OurSolutions-geneos-image.png
+  # logo.png: /path/to/your/logo.png
 
 # settings for the different attachment types. The choice of attachments
 # to send is in the `email` section above.

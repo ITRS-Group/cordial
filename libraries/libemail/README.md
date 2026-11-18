@@ -54,6 +54,7 @@ The following additional parameters are supported by the `SendMail` function:
 * `_SMTP_PASSWORD`
 * `_SMTP_PASSWORD_FILE` **Deprecated**
 * `_SMTP_TLS`
+* `_SMTP_TIMEOUT`
 
 If `_SMTP_USERNAME` is set then authentication is attempted. As the Gateway writes all parameters to it's log file, the password should either be encoded using [ExpandString](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) or placed in a file with restrictive permissions that can be read by the Gateway process. The `_SMTP_PASSWORD_FILE` is either and absolute path or a path to a file relative to the working directory of the Gateway. If defined then `_SMTP_PASSWORD` overrides the value in any file referenced by `_SMTP_PASSWORD_FILE`.
 
@@ -72,6 +73,8 @@ Copy the entire output line to the value for `_SMTP_PASSWORD` and ensure that th
 Note: Another benefit of using ExpandString encoding is that the Gateway automatically redacts any string that starts `+encs+` in it's output, so all the log will show is (literally) `_SMTP_PASSWORD=${enc:~/.config/geneos/keyfile.aes:XXX}` which can serve as an extra layer of protection against casual viewing of the logs and configuration files.
 
 `_SMTP_TLS` can be one of `default`, `force` or `none` (case insensitive). `default` is to try TLS but fall back to plain text depending on the SMTP server.
+
+`_SMTP_TIMEOUT` is in seconds and defaults to 10. It must be positive; zero or a negative value now returns an error because the replacement SMTP client does not support unlimited timeouts.
 
 If you use this library with authentication and connect to a public server, such as GMail or Outlook, then you should always create and use a unique "app password" and never use the real password for the sender account.
 

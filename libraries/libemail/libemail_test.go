@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -26,17 +27,30 @@ func TestMain(m *testing.M) {
 // smtpServer is a fake SMTP server that keeps the messages it is sent
 type smtpServer struct {
 	addr     string
+	tlsCert  *tls.Certificate
 	mu       sync.Mutex
 	messages []string
 }
 
 func newSMTPServer(t *testing.T) *smtpServer {
+	return startSMTPServer(t, nil)
+}
+
+func newTLSSMTPServer(t *testing.T) *smtpServer {
+	t.Helper()
+	httpServer := httptest.NewTLSServer(http.NotFoundHandler())
+	cert := httpServer.TLS.Certificates[0]
+	httpServer.Close()
+	return startSMTPServer(t, &cert)
+}
+
+func startSMTPServer(t *testing.T, tlsCert *tls.Certificate) *smtpServer {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &smtpServer{addr: ln.Addr().String()}
+	s := &smtpServer{addr: ln.Addr().String(), tlsCert: tlsCert}
 	t.Cleanup(func() { ln.Close() })
 
 	go func() {
@@ -54,6 +68,7 @@ func newSMTPServer(t *testing.T) *smtpServer {
 func (s *smtpServer) serve(conn net.Conn) {
 	defer conn.Close()
 	r := bufio.NewReader(conn)
+	tlsActive := false
 	fmt.Fprint(conn, "220 test\r\n")
 	for {
 		line, err := r.ReadString('\n')
@@ -61,8 +76,23 @@ func (s *smtpServer) serve(conn net.Conn) {
 			return
 		}
 		switch cmd := strings.ToUpper(strings.TrimSpace(line)); {
-		case strings.HasPrefix(cmd, "EHLO"), strings.HasPrefix(cmd, "HELO"):
+		case strings.HasPrefix(cmd, "EHLO"):
+			if s.tlsCert != nil && !tlsActive {
+				fmt.Fprint(conn, "250-test\r\n250-STARTTLS\r\n250 ok\r\n")
+			} else {
+				fmt.Fprint(conn, "250 test\r\n")
+			}
+		case strings.HasPrefix(cmd, "HELO"):
 			fmt.Fprint(conn, "250 test\r\n")
+		case strings.HasPrefix(cmd, "STARTTLS"):
+			fmt.Fprint(conn, "220 ready\r\n")
+			tlsConn := tls.Server(conn, &tls.Config{Certificates: []tls.Certificate{*s.tlsCert}})
+			if err := tlsConn.Handshake(); err != nil {
+				return
+			}
+			conn = tlsConn
+			r = bufio.NewReader(conn)
+			tlsActive = true
 		case strings.HasPrefix(cmd, "DATA"):
 			fmt.Fprint(conn, "354 go\r\n")
 			var data strings.Builder
@@ -260,36 +290,54 @@ func TestSendToMsTeamsWorkflow(t *testing.T) {
 
 func TestDialServerTLSInsecure(t *testing.T) {
 	tests := []struct {
-		name string
-		conf EMailConfig
-		want bool
+		name     string
+		insecure bool
+		wantSend bool
 	}{
-		{"with a user", EMailConfig{"_SMTP_USERNAME": "u", "_SMTP_TLS_INSECURE": "true"}, true},
-		{"without a user", EMailConfig{"_SMTP_TLS_INSECURE": "true"}, true},
-		{"false", EMailConfig{"_SMTP_TLS_INSECURE": "false"}, false},
-		{"not set", EMailConfig{}, false},
-		{"not a boolean", EMailConfig{"_SMTP_TLS_INSECURE": "maybe"}, false},
+		{name: "insecure enabled", insecure: true, wantSend: true},
+		{name: "insecure disabled"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d, err := dialServer(test.conf)
+			srv := newTLSSMTPServer(t)
+			insecure := strconv.FormatBool(test.insecure)
+			client, err := dialServer(parseArgs(srv.args("_SMTP_TLS=force", "_SMTP_TLS_INSECURE="+insecure)))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := d.TLSConfig != nil && d.TLSConfig.InsecureSkipVerify; got != test.want {
-				t.Errorf("insecure = %t, want %t", got, test.want)
+			message, err := setupMail(parseArgs(srv.args()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = client.DialAndSend(message)
+			if got := err == nil; got != test.wantSend {
+				t.Errorf("DialAndSend success = %t, want %t (error: %v)", got, test.wantSend, err)
 			}
 		})
 	}
 }
 
-func TestDialServerInvalidTimeoutIsTheDefault(t *testing.T) {
-	d, err := dialServer(EMailConfig{"_SMTP_TIMEOUT": "abc", "_SMTP_PORT": "xyz"})
+func TestDialServerInvalidPortUsesDefault(t *testing.T) {
+	client, err := dialServer(EMailConfig{"_SMTP_PORT": "xyz"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if d.Timeout != 10*time.Second || d.Port != 25 {
-		t.Errorf("timeout = %s, port = %d, want 10s and 25", d.Timeout, d.Port)
+	if client.ServerAddr() != "localhost:25" {
+		t.Errorf("server address = %q, want localhost:25", client.ServerAddr())
+	}
+}
+
+func TestDialServerRejectsNonPositiveTimeout(t *testing.T) {
+	for _, timeout := range []string{"0", "-1"} {
+		t.Run(timeout, func(t *testing.T) {
+			conf := EMailConfig{"_SMTP_TIMEOUT": timeout, "_SMTP_PASSWORD": "secret"}
+			if _, err := dialServer(conf); err == nil {
+				t.Fatalf("dialServer() accepted _SMTP_TIMEOUT=%s", timeout)
+			}
+			if _, ok := conf["_SMTP_PASSWORD"]; ok {
+				t.Error("dialServer() retained SMTP password after failure")
+			}
+		})
 	}
 }
 
@@ -342,5 +390,26 @@ func TestSendMailValues(t *testing.T) {
 				t.Errorf("messages = %q", m)
 			}
 		})
+	}
+}
+
+func TestGoSendMailEmbedsLogo(t *testing.T) {
+	srv := newSMTPServer(t)
+	conf := parseArgs(srv.args(
+		"_TEMPLATE_TEXT=plain body",
+		"_TEMPLATE_HTML=<html><img src=\"cid:logo.png\"></html>",
+	))
+
+	if got := goSendMail(conf); got != 0 {
+		t.Fatalf("goSendMail() = %d, want 0", got)
+	}
+	messages := srv.sent()
+	if len(messages) != 1 {
+		t.Fatalf("sent %d messages, want 1", len(messages))
+	}
+	for _, want := range []string{"Content-Type: multipart/related", "Content-ID: <logo.png>", "cid:logo.png"} {
+		if !strings.Contains(strings.ToLower(messages[0]), strings.ToLower(want)) {
+			t.Errorf("message does not contain %q", want)
+		}
 	}
 }

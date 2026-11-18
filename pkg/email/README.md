@@ -9,7 +9,7 @@ This package duplicates the original functionality in the `cordial`
 [`libemail`](/libraries/libemail/README.md) library but for more general
 use.
 
-The Dial method accepts a [`config`](/pkg/config/README.md) object and returns a [`mail.Dialer`](https://pkg.go.dev/github.com/go-mail/mail/v2) or an error.
+The Dial method accepts a [`config`](/pkg/config/README.md) object and returns a [`mail.Client`](https://pkg.go.dev/github.com/wneessen/go-mail#Client) or an error.
 
 The new parameters, which are case-insensitive, are:
 

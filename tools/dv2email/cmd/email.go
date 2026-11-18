@@ -18,6 +18,8 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	htemplate "html/template"
 	"log/slog"
@@ -33,6 +35,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/email"
 )
+
+//go:embed icon_OurSolutions-geneos-image.png
+var defaultLogo []byte
 
 func sendEmail(cf *config.Config, em *config.Config, data any) (err error) {
 	m, err := buildMessage(cf, em, data)
@@ -135,6 +140,9 @@ func buildMessage(cf *config.Config, em *config.Config, data any) (m *mail.Msg, 
 
 	if slices.Contains(contents, "images") {
 		images := embeddedImages(cf)
+		if _, ok := images["logo.png"]; !ok {
+			m.EmbedReadSeeker("logo.png", bytes.NewReader(defaultLogo))
+		}
 		for _, name := range slices.Sorted(maps.Keys(images)) {
 			path := images[name]
 			if _, err := os.Stat(path); err != nil {

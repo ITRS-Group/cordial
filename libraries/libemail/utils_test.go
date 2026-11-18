@@ -5,9 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-	"time"
 
-	mail "github.com/go-mail/mail/v2"
+	"github.com/wneessen/go-mail"
 )
 
 func TestSetupMailBuildsFilteredAddressHeadersAndCleansConfig(t *testing.T) {
@@ -26,21 +25,21 @@ func TestSetupMailBuildsFilteredAddressHeadersAndCleansConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("setupMail() error = %v", err)
 	}
-	to, err := stdmail.ParseAddressList(strings.Join(message.GetHeader("To"), ","))
+	to, err := stdmail.ParseAddressList(strings.Join(message.GetAddrHeaderString(mail.HeaderTo), ","))
 	if err != nil {
 		t.Fatalf("parse To header: %v", err)
 	}
 	if len(to) != 2 || to[0].Address != "alice@example.com" || to[0].Name != "Alice" || to[1].Address != "bob@example.com" || to[1].Name != "Bob" {
 		t.Errorf("To recipients = %#v, want Alice and Bob email addresses", to)
 	}
-	cc, err := stdmail.ParseAddressList(strings.Join(message.GetHeader("Cc"), ","))
+	cc, err := stdmail.ParseAddressList(strings.Join(message.GetAddrHeaderString(mail.HeaderCc), ","))
 	if err != nil {
 		t.Fatalf("parse Cc header: %v", err)
 	}
 	if len(cc) != 1 || cc[0].Address != "ops@example.com" || cc[0].Name != "Operations" {
 		t.Errorf("Cc recipients = %#v, want Operations <ops@example.com>", cc)
 	}
-	from, err := stdmail.ParseAddress(strings.Join(message.GetHeader("From"), ","))
+	from, err := stdmail.ParseAddress(strings.Join(message.GetAddrHeaderString(mail.HeaderFrom), ","))
 	if err != nil {
 		t.Fatalf("parse From header: %v", err)
 	}
@@ -67,6 +66,23 @@ func TestSetupMailDebugPreservesHeaderConfig(t *testing.T) {
 	}
 }
 
+func TestSetupMailRejectsInvalidAddresses(t *testing.T) {
+	for key, value := range map[string]string{
+		"_FROM": "not-an-address",
+		"_TO":   "not-an-address",
+	} {
+		t.Run(key, func(t *testing.T) {
+			conf := EMailConfig{key: value}
+			if _, err := setupMail(conf); err == nil {
+				t.Fatalf("setupMail() accepted %s=%q", key, value)
+			}
+			if _, ok := conf[key]; ok {
+				t.Errorf("setupMail() retained invalid address configuration %q", key)
+			}
+		})
+	}
+}
+
 func TestAddAddressesRejectsMismatchedMetadata(t *testing.T) {
 	tests := []struct {
 		name string
@@ -77,7 +93,7 @@ func TestAddAddressesRejectsMismatchedMetadata(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if err := addAddresses(mail.NewMessage(), test.conf, "To"); err == nil {
+			if err := addAddresses(mail.NewMsg(), test.conf, "To"); err == nil {
 				t.Fatal("addAddresses() accepted mismatched address metadata")
 			}
 		})
@@ -85,7 +101,7 @@ func TestAddAddressesRejectsMismatchedMetadata(t *testing.T) {
 }
 
 func TestAddAddressesLeavesHeaderEmptyWhenAllTypesAreFiltered(t *testing.T) {
-	message := mail.NewMessage()
+	message := mail.NewMsg()
 	conf := EMailConfig{
 		"_TO":           "pager@example.com",
 		"_TO_INFO_TYPE": "pager",
@@ -93,7 +109,7 @@ func TestAddAddressesLeavesHeaderEmptyWhenAllTypesAreFiltered(t *testing.T) {
 	if err := addAddresses(message, conf, "To"); err != nil {
 		t.Fatalf("addAddresses() error = %v", err)
 	}
-	if got := message.GetHeader("To"); len(got) != 0 {
+	if got := message.GetAddrHeaderString(mail.HeaderTo); len(got) != 0 {
 		t.Errorf("To header = %#v, want no email addresses", got)
 	}
 }
@@ -120,11 +136,8 @@ func TestDialServerUsesConfiguredSMTPSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dialServer() error = %v", err)
 	}
-	if dialer.Host != "smtp.example.test" || dialer.Port != 2525 || dialer.Timeout != 7*time.Second {
-		t.Errorf("dialer settings = (%q, %d, %s)", dialer.Host, dialer.Port, dialer.Timeout)
-	}
-	if dialer.StartTLSPolicy != mail.NoStartTLS {
-		t.Errorf("StartTLSPolicy = %v, want NoStartTLS", dialer.StartTLSPolicy)
+	if dialer.ServerAddr() != "smtp.example.test:2525" || dialer.TLSPolicy() != "NoTLS" {
+		t.Errorf("client settings = (%q, %s)", dialer.ServerAddr(), dialer.TLSPolicy())
 	}
 }
 
@@ -138,8 +151,7 @@ func TestSplitCommaTrimSpaceAndDefaults(t *testing.T) {
 	if got := getWithDefault("missing", EMailConfig{}, "default"); got != "default" {
 		t.Errorf("getWithDefault() = %q, want default", got)
 	}
-	// a value that is not a number is the default, and not zero, which for a
-	// timeout is no timeout
+	// A value that is not a number uses the default.
 	if got := getWithDefaultInt("invalid", EMailConfig{"invalid": "not-a-number"}, 25); got != 25 {
 		t.Errorf("getWithDefaultInt(invalid) = %d, want 25", got)
 	}

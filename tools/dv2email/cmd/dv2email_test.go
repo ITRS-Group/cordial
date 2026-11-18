@@ -615,11 +615,40 @@ func TestBuildMessage(t *testing.T) {
 	config.Set(em, "_to", "to@example.com")
 	config.Set(em, "_from", "from@example.com")
 
+	t.Run("default logo is embedded when images are enabled", func(t *testing.T) {
+		testConfig(t, nil)
+		m, err := buildMessage(globalCf, em, fixtures(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		embeds := m.GetEmbeds()
+		if len(embeds) != 1 || embeds[0].Name != "logo.png" {
+			t.Fatalf("embedded files = %v, want the default logo.png", embeds)
+		}
+		var message bytes.Buffer
+		if _, err := m.WriteTo(&message); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(message.String(), "Content-Id: <logo.png>") {
+			t.Fatal("default logo has no matching Content-ID")
+		}
+		var image bytes.Buffer
+		if _, err := embeds[0].Writer(&image); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.HasPrefix(image.Bytes(), []byte("\x89PNG\r\n\x1a\n")) {
+			t.Fatal("default logo is not a PNG image")
+		}
+	})
+
 	t.Run("images use the file name as content id", func(t *testing.T) {
 		testConfigYAML(t, "email:\n  contents: [text+html, images]\nimages:\n  logo.png: "+logo+"\n  other.png: "+logo+"\n", nil)
 		m, err := buildMessage(globalCf, em, fixtures(t))
 		if err != nil {
 			t.Fatal(err)
+		}
+		if got := len(m.GetEmbeds()); got != 2 {
+			t.Fatalf("embedded files = %d, want custom logo and other image only", got)
 		}
 		var buf bytes.Buffer
 		if _, err := m.WriteTo(&buf); err != nil {
