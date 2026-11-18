@@ -65,7 +65,7 @@ All fields with the prefix `__incident_` will be used to create an incident in t
 
     A value that is used to match existing incidents in the target system. This can be used to link related incidents together or to update an existing incident instead of creating a new one. The exact behaviour will depend on the target system and how it handles correlation values. The correlation value should be unique enough to avoid collisions with unrelated incidents but consistent enough to ensure that related incidents are linked together.
 
-    In general the correlation value is hashed by the IMS Gateway before being sent to the target system to ensure that it is of a consistent format and length. The hashing algorithm used is SHA-1, which produces a 40 character upper case hexadecimal string. This is only done by the ServiceDesk Plus support, and only if there is no `correlation_id` field already. A request must have one or the other, and it must not be empty, as otherwise a request that is not related would be found and updated.
+    In general the correlation value is hashed by the IMS Gateway before being sent to the target system to ensure that it is of a consistent format and length. The hashing algorithm used is SHA-1, which produces a 40 character lower case hexadecimal string, the same as the `servicenow2` client creates. This is only done by the ServiceDesk Plus support, and only if there is no `correlation_id` field already. A request must have one or the other, and it must not be empty, as otherwise a request that is not related would be found and updated.
 
 * `__incident_update_only`
 

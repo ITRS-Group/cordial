@@ -220,9 +220,12 @@ func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 // but should produce a reasonably unique ID for the given data. The
 // same data should produce the same correlation ID, and different data
 // should produce different correlation IDs with a very high
-// probability. The correlation ID is returned as a hexadecimal string.
+// probability. The correlation ID is returned as a lower case
+// hexadecimal string, which is the same as the one that the
+// servicenow and servicenow2 clients have always created, so that an
+// incident is found by an update whichever of them raised it.
 func CorrelationID(data string) string {
-	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
+	return fmt.Sprintf("%x", sha1.Sum([]byte(data)))
 }
 
 var redactions = []struct {

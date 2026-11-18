@@ -119,6 +119,8 @@
 
   * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
 
+  * The correlation value that is hashed by the ServiceDesk Plus support, and by `geneos incident raise`, is now a lower case hexadecimal string, like the one that the `servicenow` and `servicenow2` clients have always created, so that an incident is found by an update whichever of them raised it. `ims.CorrelationID` was upper case, and the `servicenow2` client now uses it. The IMS Gateway and `geneos incident` were not yet in use, but any request that was created with an upper case correlation value will no longer be found.
+
   * The ServiceNow connection is now cached between requests, instead of a new client being created for each one, and uses `snow.timeout`. HTTP redirects are no longer followed.
 
   * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.

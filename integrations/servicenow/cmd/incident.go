@@ -97,9 +97,9 @@ func incident(args []string) {
 	}
 
 	if id != "" {
-		// the hash is lower case, as it has always been, which is not the
-		// same as the upper case of [ims.CorrelationID], so that the
-		// incidents that are already open are found by later updates
+		// this must stay the same as [ims.CorrelationID], a lower case
+		// SHA-1 hash, so that an incident is found by later updates
+		// whichever client raised it
 		id := fmt.Sprintf("%x", sha1.Sum([]byte(id)))
 		incident["correlation_id"] = id
 	} else if rawid != "" {
