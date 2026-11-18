@@ -1,0 +1,14 @@
+<gateway xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="gateway.xsd">
+	<authentication>
+		<users>
+			<user name="user">
+				<password>
+					<encodedPassword>0123456789</encodedPassword>
+				</password>
+			</user>
+		</users>
+	</authentication>
+	<probes>
+		<probe name="probe"><hostname>localhost</hostname><port>7036</port></probe>
+	</probes>
+</gateway>

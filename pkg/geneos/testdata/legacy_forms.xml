@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A small anonymised setup with the older forms that the model does not write the same way -->
+<gateway compatibility="1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://schema.itrsgroup.com/GA5.12.0-220125/gateway.xsd">
+	<!-- first comment -->
+	<types>
+		<type name="Legacy">
+			<environment name="Env"/>
+			<sampler ref="cpu"/>
+			<var name="ratio"><double>2.0</double></var>
+		</type>
+	</types>
+	<environments>
+		<environmentGroup name="Group" disabled="true">
+			<environment name="Env">
+				<var name="empty"><string/></var>
+			</environment>
+		</environmentGroup>
+	</environments>
+	<managedEntities>
+		<!-- second comment -->
+		<managedEntityGroup>
+			<managedEntity name="entity" custom="kept">
+				<probe ref="probe"/>
+				<sampler name="cpu"/>
+				<sampler ref="processes"/>
+			</managedEntity>
+		</managedEntityGroup>
+	</managedEntities>
+	<samplers>
+		<samplerGroup name="Group" disabled="true">
+			<sampler name="cpu">
+				<sampleInterval>80</sampleInterval>
+				<plugin>
+					<cpu/>
+				</plugin>
+				<dataviews>
+					<dataview name="cpu">
+						<additions>
+							<headlines>
+								<data>
+									<headline>Total</headline>
+								</data>
+							</headlines>
+							<columns>
+								<data>
+									<column>name</column>
+								</data>
+							</columns>
+							<rows>
+								<data>
+									<row>one</row>
+								</data>
+							</rows>
+						</additions>
+					</dataview>
+				</dataviews>
+				<schemas>
+					<dataviews>
+						<dataviewSchema>
+							<name>schema</name>
+							<schema>
+								<data>
+									<headlines/>
+									<columns/>
+									<publish>true</publish>
+								</data>
+							</schema>
+						</dataviewSchema>
+					</dataviews>
+				</schemas>
+			</sampler>
+			<sampler name="processes">
+				<plugin>
+					<processes>
+						<processParameters>
+							<data>
+								<parameter>pid</parameter>
+								<parameter>args</parameter>
+							</data>
+						</processParameters>
+						<processes>
+							<process>
+								<data>
+									<alias><data>Netprobe</data></alias>
+									<start><data>netprobe</data></start>
+								</data>
+							</process>
+						</processes>
+					</processes>
+				</plugin>
+			</sampler>
+			<sampler name="top">
+				<plugin>
+					<top>
+						<threshold>
+							<var-thresholdParameter><data>pcpu</data></var-thresholdParameter>
+							<greaterThanOrEqualTo>1000000.0</greaterThanOrEqualTo>
+						</threshold>
+					</top>
+				</plugin>
+			</sampler>
+			<sampler name="licence">
+				<plugin>
+					<Gateway-licenceUsage>
+						<groups/>
+					</Gateway-licenceUsage>
+				</plugin>
+			</sampler>
+			<sampler name="history">
+				<plugin>
+					<Gateway-scheduledCommandsHistoryData>
+						<history/>
+					</Gateway-scheduledCommandsHistoryData>
+				</plugin>
+			</sampler>
+			<sampler name="jmx">
+				<plugin>
+					<jmx-server>
+						<aliases>
+							<alias name="a"/>
+						</aliases>
+						<idAttributes/>
+					</jmx-server>
+				</plugin>
+			</sampler>
+			<sampler name="fkm">
+				<plugin>
+					<fkm>
+						<files>
+							<file>
+								<source><filename><data>log</data></filename></source>
+								<tables>
+									<table>
+										<severity>WARNING</severity>
+										<keyTable>
+											<data>
+												<keys>
+													<key>
+														<setKey>
+															<match>
+																<searchString><data>error</data></searchString>
+																<rules>REGEXP_IGNORE_CASE</rules>
+															</match>
+														</setKey>
+													</key>
+												</keys>
+											</data>
+										</keyTable>
+									</table>
+								</tables>
+							</file>
+						</files>
+					</fkm>
+				</plugin>
+			</sampler>
+			<sampler name="hardware">
+				<plugin>
+					<hardware>
+						<cpuSmoothing><data>true</data></cpuSmoothing>
+						<linux><includeBuffersAndCache><data>true</data></includeBuffersAndCache></linux>
+					</hardware>
+				</plugin>
+			</sampler>
+		</samplerGroup>
+	</samplers>
+	<operatingEnvironment>
+		<!-- the name is empty -->
+		<gatewayName/>
+		<listenPorts>
+			<insecure>7039</insecure>
+		</listenPorts>
+	</operatingEnvironment>
+</gateway>
+<!-- last comment -->

@@ -24,6 +24,11 @@ import (
 	"time"
 )
 
+// ErrNoColumns is returned when rows are built or a table is updated
+// for a Dataview before its columns have been set with
+// [Dataview.SetColumns].
+var ErrNoColumns = errors.New("dataview columns not set")
+
 // Dataview TODO: Describe its purpose and intended use.
 type Dataview struct {
 	APIClient
@@ -37,28 +42,57 @@ type Dataview struct {
 	sortcolumn  string
 }
 
+// SetColumns derives the column names, the display formats and the sort
+// column from the `column` struct tags of rowdata, which is a struct or
+// pointer to a struct and only its type is used. It must be called
+// before any of the methods that update a table from structs or build
+// rows from them.
+func (view *Dataview) SetColumns(rowdata any) error {
+	columns, columnnames, sortcolumn, err := ColumnInfo(rowdata)
+	if err != nil {
+		return err
+	}
+	if columns == nil {
+		return fmt.Errorf("%w: no struct supplied", ErrNoColumns)
+	}
+	view.columns, view.columnnames, view.sortcolumn = columns, columnnames, sortcolumn
+	return nil
+}
+
 // NewDataview returns a Dataview view. If the connection to the API
 // fails then a nil pointer is returned. If the dataview does not exist
-// in the Netprobe it is also created.
+// in the Netprobe it is also created. When a groupHeading is given the
+// view is created using separate group and view names, if the client
+// supports it, so that hyphens in either name are not ambiguous.
 func NewDataview(c APIClient, entity, sampler, typeName, groupHeading, viewName string) (view *Dataview, err error) {
 	if typeName != "" {
 		sampler += "(" + typeName + ")"
 	}
+	var group, groupedView string
 	if groupHeading != "" {
+		group, groupedView = groupHeading, viewName
 		viewName = groupHeading + "-" + viewName
 	}
 
 	view = &Dataview{
-		Entity:  entity,
-		Sampler: sampler,
-		Name:    viewName,
+		APIClient: c,
+		Entity:    entity,
+		Sampler:   sampler,
+		Name:      viewName,
 	}
 	exists, err := view.Exists()
 	if err != nil && !errors.Is(err, errors.ErrUnsupported) {
 		return nil, err
 	}
 	if err != nil || !exists {
-		if err = view.CreateDataview(entity, sampler, viewName); err != nil {
+		if creator, ok := c.(interface {
+			CreateView(entity, sampler, viewName, groupHeading string) error
+		}); ok && group != "" {
+			err = creator.CreateView(entity, sampler, groupedView, group)
+		} else {
+			err = view.CreateDataview(entity, sampler, viewName)
+		}
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -86,7 +120,10 @@ func (view *Dataview) Update() (err error) {
 // Sorting the data is only to define the "natural sort order" of the data
 // as it appears in a Geneos Dataview without further client-side sorting.
 func (view *Dataview) UpdateTableFromMap(data any) error {
-	table, _ := view.RowsFromMap(data)
+	table, err := view.RowsFromMap(data)
+	if err != nil {
+		return err
+	}
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
 
@@ -102,6 +139,10 @@ func (view *Dataview) RowsFromMap(rowdata any) (rows [][]string, err error) {
 		return
 	}
 	c := view.columns
+	if c == nil {
+		err = ErrNoColumns
+		return
+	}
 	r := reflect.Indirect(reflect.ValueOf(rowdata))
 	if r.Kind() != reflect.Map {
 		err = fmt.Errorf("non Map passed")
@@ -110,12 +151,15 @@ func (view *Dataview) RowsFromMap(rowdata any) (rows [][]string, err error) {
 
 	for _, k := range r.MapKeys() {
 		var cells []string
-		rawcells, _ := rowFromStruct(c, r.MapIndex(k))
+		rawcells, err := rowFromStruct(c, r.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
 		t := reflect.Indirect(r.MapIndex(k)).Type()
 		for i := range rawcells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "-" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 			cells = append(cells, fmt.Sprintf(format, rawcells[i]))
@@ -132,7 +176,10 @@ func (view *Dataview) RowsFromMap(rowdata any) (rows [][]string, err error) {
 // method renders a simple table of data as defined in the Columns part
 // of Samplers
 func (view *Dataview) UpdateTableFromSlice(rowdata any) error {
-	table, _ := view.RowsFromSlice(rowdata)
+	table, err := view.RowsFromSlice(rowdata)
+	if err != nil {
+		return err
+	}
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
 
@@ -144,6 +191,10 @@ func (view *Dataview) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 	}
 
 	c := view.columns
+	if c == nil {
+		err = ErrNoColumns
+		return
+	}
 
 	rd := reflect.Indirect(reflect.ValueOf(rowdata))
 	if rd.Kind() != reflect.Slice {
@@ -151,16 +202,19 @@ func (view *Dataview) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 		return
 	}
 
-	for i := 0; i < rd.Len(); i++ {
-		v := rd.Index(i)
+	for i := range rd.Len() {
+		v := reflect.Indirect(rd.Index(i))
 		t := v.Type()
 
-		rawcells, _ := rowFromStruct(c, v)
+		rawcells, err := rowFromStruct(c, v)
+		if err != nil {
+			return nil, err
+		}
 		var cells []string
 		for i := range rawcells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "-" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 			cells = append(cells, fmt.Sprintf(format, rawcells[i]))
@@ -174,7 +228,10 @@ func (view *Dataview) RowsFromSlice(rowdata any) (rows [][]string, err error) {
 // UpdateTableFromMapDelta calculates the difference between the
 // previous values and current, scaled by the interval
 func (view *Dataview) UpdateTableFromMapDelta(newdata, olddata any, interval time.Duration) error {
-	table, _ := view.RowsFromMapDelta(newdata, olddata, interval)
+	table, err := view.RowsFromMapDelta(newdata, olddata, interval)
+	if err != nil {
+		return err
+	}
 	return view.UpdateDataview(view.Entity, view.Sampler, view.Name, append([][]string{view.columnnames}, table...))
 }
 
@@ -193,6 +250,10 @@ func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata any,
 	}
 
 	c := view.columns
+	if c == nil {
+		err = ErrNoColumns
+		return
+	}
 
 	// if no interval is supplied - the same as an interval of zero
 	// then set 1 second as the interval as the divisor below takes
@@ -214,22 +275,31 @@ func (view Dataview) RowsFromMapDelta(newrowdata, oldrowdata any,
 	}
 
 	for _, k := range rNew.MapKeys() {
-		rawOld, _ := rowFromStruct(c, rOld.MapIndex(k))
-		rawCells, _ := rowFromStruct(c, rNew.MapIndex(k))
+		if !rOld.MapIndex(k).IsValid() {
+			err = fmt.Errorf("key %v missing from old data", k)
+			return nil, err
+		}
+		rawOld, err := rowFromStruct(c, rOld.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
+		rawCells, err := rowFromStruct(c, rNew.MapIndex(k))
+		if err != nil {
+			return nil, err
+		}
 		var cells []string
 		t := reflect.Indirect(rNew.MapIndex(k)).Type()
 		for i := range rawCells {
 			fieldname := t.Field(i).Name
 			format := c[fieldname].format
-			if c[fieldname].name == "-" {
+			if omitted(c[fieldname].name) {
 				continue
 			}
 
 			// calc diff here
 			oldCell, newCell := rawOld[i], rawCells[i]
 			if reflect.TypeOf(oldCell) != reflect.TypeOf(newCell) {
-				err = fmt.Errorf("non-matching types in data")
-				return
+				return nil, fmt.Errorf("non-matching types in data")
 			}
 			// can these fields be converted to float (the concrete value)
 			// this is not the same as parsing a string as float, but the

@@ -502,10 +502,10 @@ func unrollProcessDescriptorGroups(in *ProcessDescriptorGroup) (processDescripto
 
 // UnrollRules resolves all the individual rules in the input by
 // descending RuleGroups and returns a map of Rule with a key of rule
-// path (group name and rule name joined by ` > ` as per Geneos
-// convention) and each component followed by a priority in parenthesis.
-// If a group is disabled it is skipped and the contents ignored. If a
-// rule is disabled is is skipped.
+// path, which is the names of all the groups and then the rule name
+// joined by ` > ` as per Geneos convention. If a group is disabled it
+// is skipped and the contents ignored. If a rule is disabled is is
+// skipped.
 func UnrollRules(in *Rules) (rules map[string]Rule) {
 	rules = make(map[string]Rule)
 
@@ -521,29 +521,22 @@ func UnrollRules(in *Rules) (rules map[string]Rule) {
 	}
 
 	for _, g := range in.RuleGroups {
-		if boolPointerIsTrue(g.Disabled) {
-			continue
-		}
-		p, grouppath := unrollRuleGroups(&g, "")
-		for _, p := range p {
-			if boolPointerIsTrue(p.Disabled) {
-				continue
-			}
-			rules[grouppath+" > "+p.Name] = p
-		}
+		maps.Copy(rules, unrollRuleGroups(&g, ""))
 	}
 	return
 }
 
-func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, grouppath string) {
+// unrollRuleGroups returns the enabled rules in the group and, recursively,
+// all its groups, keyed by the full path of the group names and the rule
+// name below parentpath.
+func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule) {
 	rules = make(map[string]Rule)
 	if boolPointerIsTrue(in.Disabled) {
 		return
 	}
+	grouppath := in.Name
 	if parentpath != "" {
 		grouppath = parentpath + " > " + in.Name
-	} else {
-		grouppath = in.Name
 	}
 
 	for _, p := range in.Rules {
@@ -553,15 +546,22 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 		rules[grouppath+" > "+p.Name] = p
 	}
 	for _, g := range in.RuleGroups {
-		p, lowerpath := unrollRuleGroups(&g, grouppath)
-		for _, p := range p {
-			if boolPointerIsTrue(p.Disabled) {
-				continue
-			}
-			rules[lowerpath+" > "+p.Name] = p
-		}
+		maps.Copy(rules, unrollRuleGroups(&g, grouppath))
 	}
 	return
+}
+
+// inheritableKind returns true for the kinds of value that
+// setDefaults will inherit through a pointer
+func inheritableKind(k reflect.Kind) bool {
+	switch k {
+	case reflect.Bool, reflect.String,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	}
+	return false
 }
 
 // walk through a struct and set any defaults for fields that are
@@ -570,32 +570,52 @@ func unrollRuleGroups(in *RuleGroup, parentpath string) (rules map[string]Rule, 
 // loop over fields and if the default is not a nil pointer or a nil
 // values and the field is not set then assign. uses field name not
 // position for defaults.
+//
+// Pointers to bool, numbers and strings are inherited, as are numbers
+// and strings that are not zero, by copy. Slices have the defaults
+// appended, except for those of RawXMLElement. Embedded structs are
+// processed in the same way. Comments and any other fields, such as
+// RemoveTypes and RemoveSamplers in managed entities and groups, are
+// not "inherited".
 func setDefaults(source any, dest any) {
-	if reflect.TypeOf(dest).Kind() != reflect.Pointer {
+	dp := reflect.ValueOf(dest)
+	if dp.Kind() != reflect.Pointer || dp.IsNil() || dp.Elem().Kind() != reflect.Struct {
 		return
 	}
-	sv := reflect.ValueOf(dest).Elem()
+	dv := dp.Elem()
+	sv := reflect.Indirect(reflect.ValueOf(source))
+	if sv.Kind() != reflect.Struct {
+		return
+	}
 
-	for i := 0; i < sv.NumField(); i++ {
-		fv := sv.Field(i)
-		fn := sv.Type().Field(i).Name
-		dv := reflect.ValueOf(source).FieldByName(fn)
+	for i := range dv.NumField() {
+		field := dv.Type().Field(i)
+		fv := dv.Field(i)
+		if !fv.CanSet() || strings.Contains(field.Tag.Get("xml"), ",comment") {
+			continue
+		}
+		sf := sv.FieldByName(field.Name)
+		if !sf.IsValid() || sf.Type() != fv.Type() || !sf.CanInterface() {
+			continue
+		}
 
-		switch {
-		case fv.Type() == reflect.PointerTo(reflect.TypeFor[bool]()):
-			if fv.IsNil() && !dv.IsNil() && fv.CanSet() {
-				fv.Set(dv)
+		switch fv.Kind() {
+		case reflect.Pointer:
+			if fv.IsNil() && !sf.IsNil() && inheritableKind(fv.Type().Elem().Kind()) {
+				p := reflect.New(fv.Type().Elem())
+				p.Elem().Set(sf.Elem())
+				fv.Set(p)
 			}
-		case fv.Kind() == reflect.Int, fv.Kind() == reflect.String:
-			if fv.Int() == 0 && dv.Int() != 0 && fv.CanSet() {
-				fv.Set(dv)
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.String:
+			if fv.IsZero() && !sf.IsZero() {
+				fv.Set(sf)
 			}
-		case fv.Kind() == reflect.Slice:
-			if dv.Len() != 0 && fv.CanSet() {
-				fv.Set(reflect.AppendSlice(fv, dv)) // append defaults - then later checks can delete duplicates (e.g. attributes) easier
+		case reflect.Slice:
+			if sf.Len() != 0 && fv.Type().Elem() != reflect.TypeFor[RawXMLElement]() {
+				fv.Set(reflect.AppendSlice(fv, sf)) // append defaults - then later checks can delete duplicates (e.g. attributes) easier
 			}
-		case fv.Kind() == reflect.Struct && fv.CanSet():
-			setDefaults(dv.Interface(), fv.Addr().Interface())
+		case reflect.Struct:
+			setDefaults(sf.Interface(), fv.Addr().Interface())
 		default:
 			// ignore RemoveTypes and RemoveSamplers in managed entities and
 			// groups - they are not "inherited"
@@ -603,19 +623,19 @@ func setDefaults(source any, dest any) {
 	}
 }
 
-// GetPlugin searches plugin for the first non-nil/non-empty field and
-// returns it, using reflection
+// GetPlugin searches plugin for the first non-nil field and returns it,
+// using reflection. The result is nil if no plugin is set.
 func GetPlugin(plugin *Plugin) any {
 	if plugin == nil {
 		return nil
 	}
 	v := reflect.ValueOf(plugin).Elem()
 	for _, fv := range v.Fields() {
-		if fv.Kind() == reflect.String {
-			return fv.String()
-		}
-		if !fv.IsNil() {
-			return fv.Interface()
+		switch fv.Kind() {
+		case reflect.Pointer, reflect.Interface, reflect.Map, reflect.Slice:
+			if !fv.IsNil() {
+				return fv.Interface()
+			}
 		}
 	}
 	return nil

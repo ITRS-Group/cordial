@@ -317,6 +317,15 @@
   * `WriteNewRootCert` now accepts an empty key type and uses the default. `CreateCertificate` accepts a `nil` signing key for a self-signed certificate.
 
   * Truststore aliases are now unique: a root certificate with the same common name as a different certificate already in the truststore is added with the serial number added to the alias, and a root certificate without a common name uses its SHA-1 fingerprint, rather than replacing the other certificate or failing. Existing entries are no longer replaced by a different certificate with the same common name.
+  * `streams.RESTStream` now verifies the server certificate for HTTPS, which it previously never did, so streams to a Netprobe with a self-signed certificate must now pass the new `streams.SkipVerify(true)` option to `streams.NewRESTStream`. It also now has a 30 second timeout for each request (`streams.RESTTimeout`) and a `Close` method.
+
+  * `api.NewXMLRPCClient` now limits the wait for each response to `api.DefaultTimeout` (60 seconds), changed with the new `api.Timeout` option, and `xmlrpc.NewClient` has a new `xmlrpc.Timeout` option (default no limit).
+
+  * A few types changed to match the Geneos XML they model, so that they are no longer lost or truncated when read and written: `fkm.File.Alias` is now a `*SingleLineStringVar` (as in `<alias><var/><data/>...`) and `sqltoolkit.DBConnection.Password` is now a `*Value` (supporting `stdAES` and `extPwd`). `common.NewValue` joins the elements of a slice with a comma, where it used to keep only the last, and returns `nil` for `nil`. `StringList.UnmarshalText` and `NameValueList.UnmarshalText` now return an error for non-empty text, as a list cannot be set from it.
+
+  * `xpath.XPath.String` now writes `/headlines/cell` for a headline path with no name, instead of `/headlines`, and `/headlines` or `/rows` are kept as the end of a parsed path. `api.XMLRPCClient.UpdateRow` no longer repeats the row name as the first value, and `CreateDataview` and `DeleteDataview` return `ErrInvalidArgs` for a name that is not `group-view`. A column named `-` is now omitted in the same way as `OMIT`.
+
+  * New additions: `Gateway.Attributes` for other attributes of the Gateway element, `api.Dataview.SetColumns`, `xpath.XPath.Clone`, `common.RawXMLElement` and `common.MarshalOmitEmptyParents`, and an `Other` field in the model types that did not have one to hold elements that are not modelled.
 
 * `pkg/host`
 
@@ -859,6 +868,45 @@
   * Add a `.dockerignore` so local binaries, archives, release directories and `.git` are not sent to the Docker builds; remove the release `Makefile` steps for `servicenow`, `pagerduty` and `san-config`, which are not built, and the `clean` step that matched a label that was never set. Remove stale `.gitignore` entries, and stop tracking the generated `libalert.h`, which `make clean` deleted.
 
   * Update `go-pretty` to v6.9.2, `echo` to v4.16.5 and `golang.org/x/net` to v0.63.0.
+* `pkg/geneos`
+
+  * Gateway setup files
+
+    * Fix reading and then writing a Gateway setup, as `geneos includes fix` does, losing data and writing invalid XML. The `xmlns:xsi` and `xsi:noNamespaceSchemaLocation` attributes were written empty, and unknown attributes and any elements that are not modelled, at any level, including in plugins and process descriptors, were dropped; they are now kept. Empty elements for fields that were not set, such as the `contexts`, `activeTimes`, `pathVariables` and `pathAliases` of a rule, the `additions` of a dataview and the `var-columns` and `var-rows` in them, were written for every parent with an omitted field; these are no longer written. Empty elements in the input that the model leaves out, such as `<headlines/>`, are kept, see below.
+
+    * Fix reading and then writing a Gateway setup moving the elements that are not modelled to the end of their parent, as `encoding/xml` writes the `Other` fields last, which changes a document where the order of sibling elements matters. `ReadGateway` now remembers the order of the child elements of every element and `WriteGateway`, and the new `Gateway.MarshalOrdered`, write differently named siblings in that order again, including those whose order the model would change, with elements that were added placed after the sibling before them and siblings with the same name following the model. Use `Gateway.PreserveOrderOf` or `WithGatewayOrderFrom` to give a Gateway that was not read, such as a copy, the order of another, and `WithGatewayOrderWarning` to be told if the order could not be restored.
+
+    * Fix reading and then writing a Gateway setup still changing it, so that, for the real setup and include files that could be found, every element, attribute, text and comment is now written back in the same order. The model had no field for many older forms or wrote them differently: empty elements (`<gatewayName/>`, `<headlines/>`, `<groups/>`, `<history/>`, `<idAttributes/>`) and attributes (such as `disabled` on a group, now in the new `OtherAttributes` fields of nearly all types) were dropped, `<parameter>` in the process parameters of the `processes` and `top` plugins lost its text, elements inside the `data` of a value, such as the `keys` of an FKM key table, and text without a `data` element, were lost, the dataview additions `headlines`, `columns` and `rows`, numbers such as `1000000.0`, and the elements of the `hardware`, `fix-analyser2` and some Gateway plugins that have no field were changed or lost, and elements with no value were made up, such as `name=""` and `ref=""` attributes, an empty `connection` for `jmx-server` and `sql-toolkit`, and `parameters` for `api`. The model is fixed where that can be done. For everything else `ReadGateway` now also remembers the elements that the model does not write as it read them, the XML declaration and comments, and `WriteGateway` and `MarshalOrdered` write the original of such an element if the program has not changed it, put back empty elements, and write elements that the model has no place for at all, such as a section of the setup that the model does not write, and the comments, in their place. The `Parameter` type of the `processes` plugin has a `Name` that is the text of the element, and no `Value`. See Limitations in the `pkg/geneos` README for what is still not kept when an element that cannot be modelled is changed.
+
+    * Fix edits to `Gateway.ProcessDescriptors` being lost when writing a Gateway read from a file, and the `StaticVars` of the caller being modified by writing.
+
+    * Fix the rows in dataview additions, `<var-rows><data><row>`, being lost; the `sql-toolkit` password in `stdAES` or `extPwd` form being lost; the interface of a Sybase connection being lost; a `messageTimestamp` in a state tracker, and the `alias` of an FKM file with variables and text, being truncated; and `stringList` and `nameValueList` variables not being read from XML.
+
+    * Fix reading a Gateway from a Windows path such as `C:\gateway\setup.xml`, or any path that looks like a URL scheme, being rejected.
+
+  * Fix `UnrollProbes` and `UnrollEntities` panicking for any probe or entity in a group, and not inheriting integer and string settings such as `Port` from groups, `UnrollRules` using the wrong keys for rules in nested groups, and `GetPlugin` returning the comment instead of `nil`.
+
+  * Fix `fkm.Keys.Append` changing other Keys appended to the same value, the `Network` plugin having the YAML name of `Hardware`, `common.Host.String` for a variable, and `common.Value.String` for no data.
+
+  * `xpath`
+
+    * Fix `Match` for an entity filter with only attributes, a sampler filter with only a type, and for names containing `/`, such as the rows of a `DISK` dataview, where `*` and `?` now match `/`. A sampler with no type no longer matches a type filter other than a wildcard.
+
+    * Fix `Parse(x.String())` failing for names containing `/`, quotes and other special characters, and paths ending in `/rows` or `/headlines` losing that when formatted. Fix `UnmarshalJSON` failing for JSON `null` and for the empty XPath, and changing the value on error. `ResolveTo` now returns an XPath that shares nothing with the original.
+
+  * `api`, `xmlrpc` and `commands`
+
+    * Fix `api.XMLRPCClient` swapping the group and view names for `CreateDataview` and `DeleteDataview`, sending the two parameters of `createView`, `removeView`, `updateVariable`, `updateHeadline` and `updateTableCell` as a single array, sending the view name for `ColumnExists`, and accepting `SignOn` with 0 seconds. `NewDataview` now passes the separate group and view names, and no longer panics for not setting the client. `Dataview.UpdateTableFrom...` could not be used as the columns, column names and sort column were never set, so add `SetColumns` and return their errors. Columns marked `OMIT` no longer cause the wrong sort column or a panic, and `RESTClient` methods that are not implemented return `errors.ErrUnsupported` instead of `nil`.
+
+    * Fix `xmlrpc.Sampler.SignOff` calling `signOn`, `RowExists`, `ColumnExists` and `HeadlineExists` always returning false, `NewDataview` ignoring the error from updating the table, and a fault with a single member causing a panic. `xmlrpc.NewClient` no longer starts a goroutine and ticker that were never stopped.
+
+    * Fix `commands.Connection.RunCommandAll`, and so `SampleNow`, `SnoozeManual` and `Unsnooze`, reporting success when commands failed; the errors for all targets are now returned together. Fix all the `MimeType` entries but the last being lost, a new connection pool being left behind by every call, `DialGateways` reordering the slice passed to it and `Snapshot` ignoring `rowname` and panicking for a target that is not a dataview.
+
+  * Fix `samplers.Samplers.Start` panicking for a zero interval, and the same `OMIT` sort column and panics as in `api` for the rows built from structs.
+
+* `cordial`
+
+  * Fix `ExecutableName` returning `.` when symbolic links cannot be resolved, as `ExecutablePath` falls back, and the cached values not being safe for concurrent use.
 
 ---
 

@@ -180,7 +180,7 @@ func (c Client) signOn(entity string, sampler string, seconds int) (err error) {
 }
 
 func (c Client) signOff(entity string, sampler string) (err error) {
-	method := strings.Join([]string{entity, sampler, "signOn"}, ".")
+	method := strings.Join([]string{entity, sampler, "signOff"}, ".")
 	return c.callMethod(method)
 }
 

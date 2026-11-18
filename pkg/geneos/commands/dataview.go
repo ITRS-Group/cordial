@@ -235,6 +235,9 @@ NEXTROW:
 // to rowname, which defaults to the literal "rowname" if passed an
 // empty rowname.
 func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scope) (dataview *Dataview, err error) {
+	if target == nil || target.Dataview == nil {
+		return nil, fmt.Errorf("snapshot target is not a dataview: %w", os.ErrInvalid)
+	}
 	if rowname == "" {
 		rowname = "rowname"
 	}
@@ -259,6 +262,8 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 	// no error but no dataview? return a dataview with no content
 	if cr.Dataview == nil {
 		dataview = &Dataview{
+			Name:      target.Dataview.Name,
+			XPath:     target,
 			Headlines: map[string]DataItem{},
 			Table:     map[string]map[string]DataItem{},
 		}
@@ -268,5 +273,8 @@ func (c *Connection) Snapshot(target *xpath.XPath, rowname string, scope ...Scop
 	dataview = cr.Dataview
 	dataview.Name = target.Dataview.Name
 	dataview.XPath = target
+	if len(dataview.ColumnOrder) > 0 && dataview.ColumnOrder[0] == "rowname" {
+		dataview.ColumnOrder[0] = rowname
+	}
 	return
 }

@@ -19,24 +19,30 @@ package geneos
 
 import (
 	"encoding/xml"
+
+	"github.com/itrs-group/cordial/pkg/geneos/common"
 )
 
 // Samplers TODO: Describe its purpose and intended use.
 type Samplers struct {
-	XMLName       xml.Name       `xml:"samplers" json:"-" yaml:"-"`
-	Comment       string         `xml:",comment"`
-	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	XMLName         xml.Name        `xml:"samplers" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Samplers        []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups   []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerGroup TODO: Describe its purpose and intended use.
 type SamplerGroup struct {
-	XMLName       xml.Name       `xml:"samplerGroup" json:"-" yaml:"-"`
-	Comment       string         `xml:",comment"`
-	Name          string         `xml:"name,attr"`
-	Disabled      *bool          `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	XMLName         xml.Name        `xml:"samplerGroup" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Name            string          `xml:"name,attr"`
+	Disabled        *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Samplers        []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups   []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
@@ -60,6 +66,14 @@ type Sampler struct {
 	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
 	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other                  []RawXMLElement         `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes        []xml.Attr              `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Sampler without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Sampler) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 // Plugin lists all the plugins we know about
@@ -107,7 +121,7 @@ type Plugin struct {
 	Disk     *DiskPlugin     `xml:"disk,omitempty" json:"disk,omitempty" yaml:"disk,omitempty"`
 	DeviceIO *DeviceIOPlugin `xml:"deviceio,omitempty" json:"deviceio,omitempty" yaml:"deviceio,omitempty"`
 	Hardware *HardwarePlugin `xml:"hardware,omitempty" json:"hardware,omitempty" yaml:"hardware,omitempty"`
-	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"hardware,omitempty"`
+	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"network,omitempty"`
 
 	// jmx-server.go
 	JMXServer *JMXServerPlugin `xml:"jmx-server,omitempty" json:"jmx-server,omitempty" yaml:"jmx-server,omitempty"`
@@ -160,8 +174,9 @@ type Plugin struct {
 	XPing *XPingPlugin `xml:"x-ping,omitempty" json:"x-ping,omitempty" yaml:"x-ping,omitempty"`
 
 	// unsupported - put config in 'Other'
-	Other   *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
-	Comment string             `xml:",comment"`
+	Other           *UnsupportedPlugin `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr         `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+	Comment         string             `xml:",comment"`
 }
 
 // UnsupportedPlugin records any unsupported Plugin, capturing the

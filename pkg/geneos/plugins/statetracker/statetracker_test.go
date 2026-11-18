@@ -43,3 +43,20 @@ func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 	testhelpers.Unmarshal(t, data, &got)
 	testhelpers.AssertStable(t, &got, data)
 }
+
+// messageTimestamp can also be a structure, which was lost when read and written
+func TestMessageTimestampStructureIsKept(t *testing.T) {
+	in := `<tracker><name><data>t</data></name><filename><data>/f</data></filename>` +
+		`<messageTimestamp><identifyingPattern><data>^(\d+)</data></identifyingPattern><datePatternGroup>0</datePatternGroup>` +
+		`<dateFormat><data>%Y-%m-%d</data></dateFormat></messageTimestamp><template><data>true</data></template></tracker>`
+	var tracker Tracker
+	testhelpers.Unmarshal(t, []byte(in), &tracker)
+	data := testhelpers.Marshal(t, &tracker)
+	for _, element := range []string{
+		`<identifyingPattern><data>^(\d+)</data></identifyingPattern>`,
+		`<datePatternGroup>0</datePatternGroup>`,
+		`<dateFormat><data>%Y-%m-%d</data></dateFormat>`,
+	} {
+		testhelpers.Contains(t, data, element)
+	}
+}

@@ -11,10 +11,14 @@ type Plugin struct {
 	LanguageID             *common.SingleLineStringVar `xml:"languageID,omitempty"`
 	ObjectRefreshThreshold *common.Value               `xml:"objectRefreshThreshold,omitempty"`
 	Private                *Private                    `xml:"private,omitempty"`
+	Other                  []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes        []xml.Attr                  `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type Private struct {
-	Debug *bool `xml:"debug,omitempty"`
+	Debug           *bool                  `xml:"debug,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }

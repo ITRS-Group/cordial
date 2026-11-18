@@ -31,24 +31,36 @@ type Client struct {
 	url *url.URL
 }
 
-// NewClient TODO: Document its behavior, inputs, and effects.
+// idleConnTimeout is how long an unused connection is kept open by the
+// client's transport before being closed.
+const idleConnTimeout = 30 * time.Second
+
+// newTransport returns a transport that closes idle connections itself,
+// without needing a background goroutine to do so.
+func newTransport(insecureSkipVerify bool) *http.Transport {
+	return &http.Transport{
+		Proxy:           http.ProxyFromEnvironment,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify},
+		IdleConnTimeout: idleConnTimeout,
+	}
+}
+
+// NewClient returns a Client for the XML-RPC endpoint at url. Unless
+// the InsecureSkipVerify or Secure(false) options are given, HTTPS
+// certificates are verified. The Timeout option sets a limit on each
+// request, the default being no limit. Idle connections are closed by
+// the transport after 30 seconds so there is nothing to clean up when
+// the Client is discarded.
 func NewClient(url *url.URL, options ...Option) (c *Client) {
 	opt := &xmlrpcOptions{}
 	evalOptions(opt, options...)
 	c = &Client{
-		Transport: &http.Transport{
-			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: opt.insecureSkipVerify},
+		Client: http.Client{
+			Transport: newTransport(opt.insecureSkipVerify),
+			Timeout:   opt.timeout,
 		},
 		url: url,
 	}
-	// clean up idle connections every 30 seconds
-	ticker := time.NewTicker(30 * time.Second)
-	go func() {
-		for range ticker.C {
-			c.CloseIdleConnections()
-		}
-	}()
 	return
 }
 
@@ -66,13 +78,10 @@ func (c Client) Connected() bool {
 	return res
 }
 
-// InsecureSkipVerify TODO: Document its behavior, inputs, and effects.
+// InsecureSkipVerify disables verification of the server certificate
+// for HTTPS connections made by this Client.
 func (c *Client) InsecureSkipVerify() {
-	tr := &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	c.Client = http.Client{Transport: tr}
+	c.Client.Transport = newTransport(true)
 }
 
 // Sampler creates and returns a new Sampler struct from the lower

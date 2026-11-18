@@ -19,6 +19,7 @@ package streams
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
@@ -81,7 +83,7 @@ func (s Stream) WriteString(data string) (n int, err error) {
 	return
 }
 
-// RESTStream TODO: Describe its purpose and intended use.
+// RESTStream writes to a stream using the Geneos REST API.
 type RESTStream struct {
 	baseurl *url.URL
 	client  *http.Client
@@ -91,23 +93,67 @@ type RESTStream struct {
 // underlying HTTP response
 var ErrServerError = errors.New("error from server (HTTP Status > 299)")
 
-// NewRESTStream TODO: Document its behavior, inputs, and effects.
-func NewRESTStream(url *url.URL, entity, sampler, streamname string) (stream RESTStream, err error) {
+// DefaultRESTTimeout is the limit for each request made by a
+// RESTStream unless changed with [RESTTimeout].
+const DefaultRESTTimeout = 30 * time.Second
+
+type restStreamOptions struct {
+	skipVerify bool
+	timeout    time.Duration
+}
+
+// RESTStreamOption is an option for [NewRESTStream].
+type RESTStreamOption func(*restStreamOptions)
+
+// SkipVerify disables verification of the server certificate when
+// the stream URL is HTTPS. Certificates are verified by default.
+func SkipVerify(skip bool) RESTStreamOption {
+	return func(o *restStreamOptions) {
+		o.skipVerify = skip
+	}
+}
+
+// RESTTimeout sets the limit for each request, including reading the
+// response. A zero value means no limit.
+func RESTTimeout(timeout time.Duration) RESTStreamOption {
+	return func(o *restStreamOptions) {
+		o.timeout = timeout
+	}
+}
+
+// NewRESTStream returns a RESTStream that writes to the stream
+// streamname of sampler in entity, using the REST API at url. For
+// HTTPS URLs the server certificate is verified unless the
+// [SkipVerify] option is given. Call [RESTStream.Close] when finished
+// to release idle connections.
+func NewRESTStream(url *url.URL, entity, sampler, streamname string, options ...RESTStreamOption) (stream RESTStream, err error) {
+	opts := restStreamOptions{timeout: DefaultRESTTimeout}
+	for _, o := range options {
+		o(&opts)
+	}
 	stream.baseurl = url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", streamname)
 	stream.client = &http.Client{
 		Transport: &http.Transport{
 			Proxy:           http.ProxyFromEnvironment,
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: opts.skipVerify},
+			IdleConnTimeout: 90 * time.Second,
 		},
+		Timeout: opts.timeout,
 	}
 	return
 }
 
-// Write TODO: Document its behavior, inputs, and effects.
+// Close releases any idle connections held by the stream.
+func (s RESTStream) Close() error {
+	if s.client != nil {
+		s.client.CloseIdleConnections()
+	}
+	return nil
+}
+
+// Write sends data to the stream.
 func (s RESTStream) Write(data []byte) (n int, err error) {
-	b := bytes.NewBuffer(data)
-	u := s.baseurl.String()
-	req, err := http.NewRequest("PUT", u, b)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPut, s.baseurl.String(), bytes.NewReader(data))
 	if err != nil {
 		return
 	}
@@ -115,12 +161,14 @@ func (s RESTStream) Write(data []byte) (n int, err error) {
 	if err != nil {
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 		err = fmt.Errorf("%w: %s", ErrServerError, string(b))
 		return
 	}
-	resp.Body.Close()
+	// drain so that the connection can be reused
+	io.Copy(io.Discard, resp.Body)
 	n = len(data)
 	return
 }
