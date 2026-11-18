@@ -161,6 +161,14 @@
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
+* `Build and release`
+
+  * Release builds now use `-trimpath`, so executables and libraries no longer contain the build machine's source paths. The only visible difference is that the source locations in `debug` level log messages are shown as module paths.
+
+  * The release directory now includes `libalert.so`, which was already in the `cordial-<version>.tar.gz` archive, alongside `libemail.so`, and a `SHA256SUMS` file for the two `.tar.gz` archives. `libalert.so` is now built with the `netgo` and `osusergo` tags, like `libemail.so`, so it no longer depends on the host's name service libraries.
+
+  * The release `Makefile` refuses to build if `VERSION` contains whitespace or a trailing newline, and a new `make check-cross` builds every package for Linux (`amd64` and `arm64`), Windows and macOS to find platform specific compile errors. `make check-examples` checks the programs in `_examples`, which are now a separate Go module with their own dependencies and build against the current packages.
+
 ## Version v1.31.0 Fixes
 
 * `gdna`
@@ -272,6 +280,18 @@
 * `pkg/host`
 
   * Fix `CopyAll` silently ignoring directory walk errors when copying from a remote host.
+
+* `Build and release`
+
+  * Fix the generated command documentation being named after the documentation program: `san-config` pages were `docs.md` and `docs_server.md`, and the `geneos`, `gdna` and `gateway-reporter` pages referred to files such as `docs.json` and `docs.log`. The documentation is regenerated.
+
+  * Fix the "Commands" table in generated documentation having no header, or a header part-way down the table, when the first sub-command has its own sub-commands, and a panic generating documentation for a link with a blank target.
+
+  * Fix the Dockerfile setting `DEBIANFRONTEND` instead of `DEBIAN_FRONTEND` for the `gdna` image, and use a signing key file instead of `apt-key`, which is removed from newer Debian releases, to add the Chrome package repository for building PDF documentation.
+
+  * Add a `.dockerignore` so local binaries, archives, release directories and `.git` are not sent to the Docker builds; remove the release `Makefile` steps for `servicenow`, `pagerduty` and `san-config`, which are not built, and the `clean` step that matched a label that was never set. Remove stale `.gitignore` entries, and stop tracking the generated `libalert.h`, which `make clean` deleted.
+
+  * Update `go-pretty` to v6.9.2, `echo` to v4.16.5 and `golang.org/x/net` to v0.63.0.
 
 ---
 
