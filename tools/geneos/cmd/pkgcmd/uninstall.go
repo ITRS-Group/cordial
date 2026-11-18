@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"os"
 	"slices"
 	"strings"
 	"unicode"
@@ -112,27 +113,6 @@ geneos uninstall --version 7.4.2
 
 		for h := range h.OrList() {
 			for ct := range ct.OrList() {
-				// remove cached packages, but only locally
-				if h.IsLocalhost() && !uninstallCmdKeep {
-					pattern := ct.DownloadInfix
-					if pattern == "" {
-						pattern = ct.Name
-					}
-					files, err := h.Glob(h.PathTo("packages", "downloads", "*"+pattern+"*"))
-					if err != nil {
-						return fmt.Errorf("find cached packages for %s: %w", ct, err)
-					}
-					if len(files) == 0 {
-						fmt.Printf("cannot find any cached downloads to remove in %q\n", h.PathTo("packages", "downloads", "*"+pattern+"*"))
-					}
-					for _, f := range files {
-						if err = h.Remove(f); err == nil {
-							fmt.Printf("removed %q\n", f)
-						} else {
-							log.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
-						}
-					}
-				}
 				if len(ct.PackageTypes) > 0 {
 					log.Debug("skipping as has related types, remove those instead", slog.String("ct", ct.String()))
 					continue
@@ -211,11 +191,17 @@ geneos uninstall --version 7.4.2
 				// on the selected host
 				basedir := h.PathTo("packages", ct.String())
 				stopped := []geneos.Instance{}
+				removed := []*geneos.ReleaseDetails{}
 
 				for _, release := range removeReleases {
-					for _, c := range restart[version] {
+					// stop the running instances using this release
+					// before it is removed
+					for _, c := range restart[release.Version] {
 						c.Log().Debug("stopping")
-						instance.Stop(c, instance.WithStopForce(true))
+						if err := instance.Stop(c, instance.WithStopForce(true)); err != nil && !errors.Is(err, os.ErrProcessDone) {
+							log.Error("cannot stop instance", slog.Any("error", err), slog.String("instance", c.String()))
+							continue
+						}
 						stopped = append(stopped, c)
 					}
 					// remove the release
@@ -224,6 +210,7 @@ geneos uninstall --version 7.4.2
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
+					removed = append(removed, release)
 
 					if len(release.Links) != 0 {
 						if uninstallCmdAll {
@@ -258,11 +245,58 @@ geneos uninstall --version 7.4.2
 						fmt.Printf("restart %s failed, disabling instance\n", c)
 					}
 				}
+
+				// remove cached packages, but only locally, and only
+				// those for the releases removed unless removing all
+				if h.IsLocalhost() && !uninstallCmdKeep {
+					if err := removeCachedDownloads(h, ct, removed, uninstallCmdAll); err != nil {
+						return err
+					}
+				}
 			}
 		}
 
 		return
 	},
+}
+
+// removeCachedDownloads removes the cached downloads for the component
+// ct on host h. If all is true then every download for the type is
+// removed, otherwise only those for the given releases.
+func removeCachedDownloads(h *geneos.Host, ct *geneos.Component, releases []*geneos.ReleaseDetails, all bool) (err error) {
+	infix := ct.DownloadInfix
+	if infix == "" {
+		infix = ct.Name
+	}
+
+	var patterns []string
+	if all {
+		patterns = append(patterns, "*"+infix+"*")
+	} else {
+		for _, r := range releases {
+			version := strings.TrimLeftFunc(r.Version, func(r rune) bool { return !unicode.IsNumber(r) })
+			patterns = append(patterns, "*"+infix+"*-"+version+"-*", "*"+infix+"*-"+version+".*")
+		}
+	}
+
+	for _, p := range patterns {
+		pattern := h.PathTo("packages", "downloads", p)
+		files, err := h.Glob(pattern)
+		if err != nil {
+			return fmt.Errorf("find cached packages for %s: %w", ct, err)
+		}
+		if len(files) == 0 && all {
+			fmt.Printf("cannot find any cached downloads to remove in %q\n", pattern)
+		}
+		for _, f := range files {
+			if err = h.Remove(f); err == nil {
+				fmt.Printf("removed %q\n", f)
+			} else {
+				log.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
+			}
+		}
+	}
+	return nil
 }
 
 // updateLinks removes the base symlink for oldVersion and recreates a

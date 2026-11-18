@@ -129,11 +129,6 @@ geneos package update md-gateway-asx
 						i.Log().Debug("base different")
 						continue
 					}
-					pkg := config.Get[string](i.Config(), "pkgtype")
-					if pkg != "" && pkg == ct.String() {
-						instances = append(instances, i)
-						continue
-					}
 					instances = append(instances, i)
 				}
 			}

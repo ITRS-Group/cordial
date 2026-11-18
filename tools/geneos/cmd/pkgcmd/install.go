@@ -142,7 +142,7 @@ geneos package install md-gateway-asx -N -S
 		//
 		// if params contains directories then filter contents using
 		// given ct, if version if given then filter on that
-		if len(params) > 0 {
+		if len(params) > 0 && !installCmdDownloadOnly {
 			log.Debug("parameters found, local install only")
 			if installCmdOverride != "" {
 				if len(params) > 1 {
@@ -183,8 +183,7 @@ geneos package install md-gateway-asx -N -S
 				if installCmdOverride != "" {
 					nct, version, err = geneos.OverrideToComponentVersion(installCmdOverride)
 					if err != nil {
-						fmt.Printf("cannot user override: %s\n", err)
-						return nil
+						return fmt.Errorf("cannot use override: %w", err)
 					}
 				}
 
@@ -278,8 +277,10 @@ geneos package install md-gateway-asx -N -S
 
 			if installCmdUsername != "" && len(installCmdPassword) == 0 {
 				installCmdPassword, err = config.ReadPasswordInput(false, 0)
-				if err == config.ErrNotInteractive {
-					err = fmt.Errorf("%w and password required", err)
+				if err != nil {
+					if errors.Is(err, config.ErrNotInteractive) {
+						err = fmt.Errorf("%w and password required", err)
+					}
 					return
 				}
 				// ok to defer clear here as the options are used before returning to caller
@@ -337,12 +338,6 @@ geneos package install md-gateway-asx -N -S
 					if config.Get[string](i.Config(), "version") != installCmdBase {
 						continue
 					}
-					pkg := config.Get[string](i.Config(), "pkgtype")
-					if pkg != "" && pkg == ct.String() {
-						// TODO: this does nothing, fix it
-						instances = append(instances, i)
-						continue
-					}
 					instances = append(instances, i)
 				}
 			}
@@ -391,23 +386,9 @@ func install(h *geneos.Host, ct *geneos.Component, explicitSource bool, options 
 				for _, i := range instances {
 					if pct, found := config.Lookup[string](i.Config(), "pkgtype"); found {
 						cts[pct] = struct{}{}
-						continue
 					} else {
 						cts[ct.String()] = struct{}{}
 					}
-				}
-
-				// now loop over the actual components installed
-				tv := 0
-				for c := range cts {
-					ct := geneos.ParseComponent(c)
-
-					v, err := geneos.GetReleases(h, ct)
-					if err != nil {
-						return err
-					}
-					tv = tv + len(v)
-
 				}
 			} else {
 				cts[ct.String()] = struct{}{}
