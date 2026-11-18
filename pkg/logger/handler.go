@@ -49,6 +49,39 @@ type Handler struct {
 	preformatted   []byte   // data from WithGroup and WithAttrs
 	unopenedGroups []string // groups from WithGroup that haven't been opened
 	groupPrefix    []string
+	colours        *palette
+}
+
+// palette holds the colour functions used by a handler. The colours
+// are enabled or disabled for each handler, instead of using the
+// global setting, if it is told to.
+type palette struct {
+	grey, boldWhite, boldRed, cyan, magenta, yellow, boldYellow, green, boldGreen func(a ...any) string
+}
+
+func newPalette(enable *bool) *palette {
+	fn := func(attrs ...color.Attribute) func(a ...any) string {
+		c := color.New(attrs...)
+		if enable != nil {
+			if *enable {
+				c.EnableColor()
+			} else {
+				c.DisableColor()
+			}
+		}
+		return c.SprintFunc()
+	}
+	return &palette{
+		grey:       fn(color.FgHiBlack),
+		boldWhite:  fn(color.FgWhite, color.Bold),
+		boldRed:    fn(color.FgRed, color.Bold),
+		cyan:       fn(color.FgCyan),
+		magenta:    fn(color.FgMagenta),
+		yellow:     fn(color.FgYellow),
+		boldYellow: fn(color.FgYellow, color.Bold),
+		green:      fn(color.FgGreen),
+		boldGreen:  fn(color.FgGreen, color.Bold),
+	}
 }
 
 // NewHandler creates a new instance of the custom slog handler with the
@@ -71,13 +104,13 @@ func NewHandler(options ...HandlerOption) (handler slog.Handler) {
 			fp = file[:l+1]
 		}
 	}
-	timeFormat = opts.timeFormat
 	return &Handler{
 		mu:         &sync.Mutex{},
 		level:      opts.level,
 		w:          opts.w,
 		filePrefix: fp,
 		opts:       *opts,
+		colours:    newPalette(opts.colour),
 	}
 }
 
@@ -97,14 +130,17 @@ func (h *Handler) Handle(_ context.Context, r slog.Record) error {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		fp := strings.TrimPrefix(f.File, h.filePrefix)
-		buf = h.appendAttr(buf, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d %s", fp, f.Line, green(path.Base(f.Function)))), []string{})
+		buf = h.appendAttr(buf, slog.String(slog.SourceKey, fmt.Sprintf("%s:%d %s", fp, f.Line, h.colours.green(path.Base(f.Function)))), []string{})
 	}
 	buf = h.appendAttr(buf, slog.String(slog.MessageKey, r.Message), []string{})
 	// Insert preformatted attributes just after built-in ones.
 	buf = append(buf, h.preformatted...)
 	if r.NumAttrs() > 0 {
+		// a new slice, as appending to groupPrefix could change a slice
+		// shared with other handlers
+		prefix := slices.Concat(h.groupPrefix, h.unopenedGroups)
 		r.Attrs(func(a slog.Attr) bool {
-			buf = h.appendAttr(buf, a, append(h.groupPrefix, h.unopenedGroups...))
+			buf = h.appendAttr(buf, a, prefix)
 			return true
 		})
 	}
@@ -131,7 +167,7 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	// Force an append to copy the underlying array.
 	h2.preformatted = slices.Clip(h.preformatted)
 	// Each of those groups increased the indent level by 1.
-	h2.groupPrefix = append(h2.groupPrefix, h2.unopenedGroups...)
+	h2.groupPrefix = slices.Concat(h.groupPrefix, h.unopenedGroups)
 	// Now all groups have been opened.
 	h2.unopenedGroups = nil
 	// Pre-format the attributes.
@@ -154,28 +190,6 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
-var timeFormat = "2006-01-02T15:04:05.000Z07:00"
-
-var (
-	grey       = color.New(color.FgHiBlack).SprintFunc()
-	boldWhite  = color.New(color.FgWhite).Add(color.Bold).SprintFunc()
-// TODO: Revisit unused declaration red; restore it only when needed.
-// 	red        = color.New(color.FgRed).SprintFunc()
-	boldRed    = color.New(color.FgRed).Add(color.Bold).SprintFunc()
-	cyan       = color.New(color.FgCyan).SprintFunc()
-// TODO: Revisit unused declaration boldCyan; restore it only when needed.
-// 	boldCyan   = color.New(color.FgCyan).Add(color.Bold).SprintFunc()
-	magenta    = color.New(color.FgMagenta).SprintFunc()
-	yellow     = color.New(color.FgYellow).SprintFunc()
-	boldYellow = color.New(color.FgYellow).Add(color.Bold).SprintFunc()
-	green      = color.New(color.FgGreen).SprintFunc()
-	boldGreen  = color.New(color.FgGreen).Add(color.Bold).SprintFunc()
-// TODO: Revisit unused declaration blue; restore it only when needed.
-// 	blue       = color.New(color.FgBlue).SprintFunc()
-// TODO: Revisit unused declaration boldBlue; restore it only when needed.
-// 	boldBlue   = color.New(color.FgBlue).Add(color.Bold).SprintFunc()
-)
-
 func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []byte {
 	// Resolve the Attr's value before doing anything else.
 	a.Value = a.Value.Resolve()
@@ -192,24 +206,26 @@ func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []by
 	}
 	key += a.Key
 
+	c := h.colours
+
 	switch a.Value.Kind() {
 	case slog.KindTime:
 		switch key {
 		case slog.TimeKey:
-			buf = fmt.Appendf(buf, "%s ", grey(a.Value.Time().Format(timeFormat)))
+			buf = fmt.Appendf(buf, "%s ", c.grey(a.Value.Time().Format(h.opts.timeFormat)))
 		default:
-			buf = fmt.Appendf(buf, "%s=%q, ", yellow(key), a.Value.Time().Format(timeFormat))
+			buf = fmt.Appendf(buf, "%s=%q, ", c.yellow(key), a.Value.Time().Format(h.opts.timeFormat))
 		}
 	case slog.KindDuration:
-		buf = fmt.Appendf(buf, "%s=%.3fs, ", yellow(key), a.Value.Duration().Seconds())
+		buf = fmt.Appendf(buf, "%s=%.3fs, ", c.yellow(key), a.Value.Duration().Seconds())
 	case slog.KindString:
 		switch key {
 		case "msg":
-			buf = fmt.Appendf(buf, "%s { ", magenta(a.Value.String()))
+			buf = fmt.Appendf(buf, "%s { ", c.magenta(a.Value.String()))
 		case "source":
-			buf = fmt.Appendf(buf, "[%s] ", boldWhite(a.Value.String()))
+			buf = fmt.Appendf(buf, "[%s] ", c.boldWhite(a.Value.String()))
 		default:
-			buf = fmt.Appendf(buf, "%s=%q, ", yellow(key), a.Value.String())
+			buf = fmt.Appendf(buf, "%s=%q, ", c.yellow(key), a.Value.String())
 		}
 	case slog.KindGroup:
 		attrs := a.Value.Group()
@@ -218,29 +234,28 @@ func (h *Handler) appendAttr(buf []byte, a slog.Attr, groupIndent []string) []by
 			return buf
 		}
 		for _, ga := range attrs {
-			buf = h.appendAttr(buf, ga, append(groupIndent, a.Key))
+			buf = h.appendAttr(buf, ga, slices.Concat(groupIndent, []string{a.Key}))
 		}
 	default:
-		switch key {
-		case "level":
-			if l, ok := a.Value.Any().(slog.Level); ok {
-				switch l {
-				case slog.LevelDebug:
-					buf = fmt.Appendf(buf, "%s: ", cyan(a.Value.String()))
-				case slog.LevelInfo:
-					buf = fmt.Appendf(buf, "%s: ", boldGreen(a.Value.String()))
-				case slog.LevelWarn:
-					buf = fmt.Appendf(buf, "%s: ", boldYellow(a.Value.String()))
-				case slog.LevelError:
-					buf = fmt.Appendf(buf, "%s: ", boldRed(a.Value.String()))
-				default:
-					buf = fmt.Appendf(buf, "%s: ", a.Value.String())
-				}
+		switch l, isLevel := a.Value.Any().(slog.Level); {
+		case key == "level" && isLevel:
+			switch l {
+			case slog.LevelDebug:
+				buf = fmt.Appendf(buf, "%s: ", c.cyan(a.Value.String()))
+			case slog.LevelInfo:
+				buf = fmt.Appendf(buf, "%s: ", c.boldGreen(a.Value.String()))
+			case slog.LevelWarn:
+				buf = fmt.Appendf(buf, "%s: ", c.boldYellow(a.Value.String()))
+			case slog.LevelError:
+				buf = fmt.Appendf(buf, "%s: ", c.boldRed(a.Value.String()))
+			default:
+				buf = fmt.Appendf(buf, "%s: ", a.Value.String())
 			}
-		case "error":
-			buf = fmt.Appendf(buf, "%s=\"%v\", ", yellow(key), boldRed(a.Value.Any()))
+		case key == "error":
+			buf = fmt.Appendf(buf, "%s=\"%v\", ", c.yellow(key), c.boldRed(a.Value.Any()))
 		default:
-			buf = fmt.Appendf(buf, "%s=%s, ", yellow(key), a.Value.String())
+			// including a user attribute that is not a level but is named "level"
+			buf = fmt.Appendf(buf, "%s=%s, ", c.yellow(key), a.Value.String())
 		}
 	}
 	return buf

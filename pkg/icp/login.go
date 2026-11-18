@@ -2,6 +2,7 @@ package icp
 
 import (
 	"context"
+	"errors"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/rest"
@@ -14,8 +15,6 @@ type LoginRequest struct {
 	Username string `json:"Username"`
 	Password string `json:"Password"`
 }
-
-var icp *ICP
 
 // Login sends a login request to the http endpoint and returns a token
 // or an error
@@ -30,6 +29,10 @@ func Login(username string, password config.Secret, options ...rest.Option) (icp
 	if err != nil {
 		return
 	}
+	if token == "" {
+		return icp, errors.New("login did not return a token")
+	}
+	icp.token = token
 	icp.SetAuth("Authorization", "SUMERIAN "+token)
 	return
 }

@@ -2,9 +2,9 @@ package gwhub
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -57,7 +57,7 @@ type EntityMetricMapping struct {
 
 // EntityMetrics request
 func (h *Hub) EntityMetrics(ctx context.Context, request EntityMetricsRequest) (response EntityMetricsResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics")
+	endpoint, _ := url.JoinPath(EntitiesEndpoint, strconv.Itoa(request.EntityID), "metrics")
 	resp, err = h.Get(ctx, endpoint, request, &response)
 	return
 }
@@ -96,7 +96,7 @@ func (h *Hub) EntitiesSummary(ctx context.Context, request EntitiesSummaryReques
 
 // Entity request
 func (h *Hub) Entity(ctx context.Context, entity int) (response Entity, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(entity))
+	endpoint, _ := url.JoinPath(EntitiesEndpoint, strconv.Itoa(entity))
 	resp, err = h.Get(ctx, endpoint, nil, &response)
 	return
 }
@@ -113,7 +113,7 @@ type EntityMetricsRowsResponse []string
 
 // EntityMetricsRows request
 func (h *Hub) EntityMetricsRows(ctx context.Context, request EntityMetricsRowsRequest) (response EntityMetricsRowsResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics", "rows")
+	endpoint, _ := url.JoinPath(EntitiesEndpoint, strconv.Itoa(request.EntityID), "metrics", "rows")
 	resp, err = h.Get(ctx, endpoint, request, &response)
 	return
 }
@@ -147,7 +147,23 @@ type EntitiesMetricsRowsRequest struct {
 type EntitiesMetricsRowsResponse []string
 
 // EntitiesMetricsRows request
-func (h *Hub) EntitiesMetricsRows(ctx context.Context, request EntityMetricsRowsRequest) (response EntityMetricsRowsResponse, resp *http.Response, err error) {
+//
+// This function previously took an [EntityMetricsRowsRequest] and
+// returned an [EntityMetricsRowsResponse], which meant that the Filter
+// could not be sent. Those requests can be made with
+// [Hub.EntitiesMetricsRowsLegacy].
+func (h *Hub) EntitiesMetricsRows(ctx context.Context, request EntitiesMetricsRowsRequest) (response EntitiesMetricsRowsResponse, resp *http.Response, err error) {
+	resp, err = h.Get(ctx, EntitiesMetricsRowsEndpoint, request, &response)
+	return
+}
+
+// EntitiesMetricsRowsLegacy is the previous form of
+// [Hub.EntitiesMetricsRows], which does not send a filter and ignores
+// the EntityID in the request.
+//
+// Deprecated: use [Hub.EntitiesMetricsRows], or [Hub.EntityMetricsRows]
+// for the rows of a single entity.
+func (h *Hub) EntitiesMetricsRowsLegacy(ctx context.Context, request EntityMetricsRowsRequest) (response EntityMetricsRowsResponse, resp *http.Response, err error) {
 	resp, err = h.Get(ctx, EntitiesMetricsRowsEndpoint, request, &response)
 	return
 }
@@ -185,7 +201,7 @@ type EntityAttributeResponse []string
 
 // EntityAttributeValues request
 func (h *Hub) EntityAttributeValues(ctx context.Context, request EntitiesAttributeRequest) (response EntityAttributeResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntitiesAttributesEndpoint, request.Name)
+	endpoint, _ := url.JoinPath(EntitiesAttributesEndpoint, url.PathEscape(request.Name))
 	resp, err = h.Get(ctx, endpoint, nil, &response)
 	return
 }
@@ -196,8 +212,8 @@ type EntityMetricsDataRequest struct {
 	Path     string    `url:"path"`
 	From     time.Time `url:"from"`
 	To       time.Time `url:"to"`
-	Skip     int       `url:"skip"`
-	Limit    int       `url:"limit"`
+	Skip     int       `url:"skip,omitempty"`
+	Limit    int       `url:"limit,omitempty"` // zero is not sent, so the server default applies
 }
 
 // EntityMetricsDataResponse type
@@ -214,7 +230,7 @@ type EntityMetricsDataValue struct {
 
 // EntityMetricsData request
 func (h *Hub) EntityMetricsData(ctx context.Context, request EntityMetricsDataRequest) (response EntityMetricsDataResponse, resp *http.Response, err error) {
-	endpoint, _ := url.JoinPath(EntitiesEndpoint, fmt.Sprint(request.EntityID), "metrics", "data")
+	endpoint, _ := url.JoinPath(EntitiesEndpoint, strconv.Itoa(request.EntityID), "metrics", "data")
 	resp, err = h.Get(ctx, endpoint, request, &response)
 	return
 }

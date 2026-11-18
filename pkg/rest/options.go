@@ -127,9 +127,9 @@ func SetupRequestFunc(f func(req *http.Request, c *Client, body []byte)) Option 
 
 // Logger sets the logger used by the REST client. A nil logger disables
 // request logging. Requests and responses are logged at debug level,
-// including the URL and query or body of each request, so do not enable
-// debug logging where these may contain credentials that must not be
-// recorded. Authentication headers are never logged.
+// including the URL (without its query), the names of any query
+// parameters and the size of any request body. Request bodies, query
+// values and authentication headers are never logged.
 func Logger(logger *slog.Logger) Option {
 	return func(ro *restOptions) {
 		ro.logger = logger

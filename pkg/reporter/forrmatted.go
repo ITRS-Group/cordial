@@ -46,8 +46,11 @@ type FormattedReporter struct {
 	// added for those formats that need it
 	rendered bool
 
-	headlineOrder []string
-	headlines     map[string]string
+	// set once Prepare has been called, so that the first call does not
+	// render an empty report
+	prepared bool
+
+	headlines     headlineSet
 	headlinestyle table.Style
 
 	columns          []string
@@ -57,7 +60,6 @@ type FormattedReporter struct {
 	htmlpostscript   string
 	orderbycolumns   []int
 	options          []FormattedReporterOption
-	scrambleColumns  []string
 }
 
 // ensure that *FormattedReporter is a Reporter
@@ -78,9 +80,13 @@ func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter,
 	foptions := CollectOptions[FormattedReporterOption](options...)
 	opts := evalFormattedOptions(foptions...)
 
+	// an explicit Writer option takes precedence
+	if opts.writer != nil {
+		w = opts.writer
+	}
+
 	fr := &FormattedReporter{
-		format:         format,
-		scrambleNames:  ropts.scrambleNames,
+		reporterCommon: newReporterCommon(format, ropts),
 		w:              w,
 		z:              opts.zipWriter,
 		t:              table.NewWriter(),
@@ -90,33 +96,36 @@ func newFormattedReporter(format string, w io.Writer, options ...any) (Reporter,
 	}
 
 	fr.updateReporter(foptions...)
-	if fr.format == "html" {
-		fr.w.Write([]byte(fr.htmlpreamble))
+	if fr.format == "html" && fr.w != nil {
+		if _, err := fr.w.Write([]byte(fr.htmlpreamble)); err != nil {
+			return nil, fmt.Errorf("write report HTML preamble: %w", err)
+		}
 	}
 	return fr, nil
 }
 
 // Prepare TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Prepare(report Report) (err error) {
-	// flush any existing data
-	if err = fr.Render(); err != nil {
-		return
+	// flush any existing data, but not before the first report
+	if fr.prepared {
+		if err = fr.Render(); err != nil {
+			return
+		}
 	}
 
 	// reset
+	common := fr.reporterCommon
+	common.Report = report
 	*fr = FormattedReporter{
-		Report:        report,
-		format:        fr.format,
-		scrambleNames: fr.scrambleNames,
-		// title:           report.Title,
-		w:               fr.w,
-		t:               table.NewWriter(),
-		z:               fr.z,
-		columns:         []string{},
-		options:         fr.options,
-		scrambleColumns: report.ScrambleColumns,
-		rendered:        fr.rendered,
-		orderbycolumns:  fr.orderbycolumns,
+		reporterCommon: common,
+		w:              fr.w,
+		t:              table.NewWriter(),
+		z:              fr.z,
+		columns:        []string{},
+		options:        fr.options,
+		rendered:       fr.rendered,
+		orderbycolumns: fr.orderbycolumns,
+		prepared:       true,
 	}
 
 	fr.updateReporter(fr.options...)
@@ -127,21 +136,14 @@ func (fr *FormattedReporter) Prepare(report Report) (err error) {
 // is preserved, and the headlines are rendered in the order they were
 // added.
 func (fr *FormattedReporter) AddHeadline(name, value string) {
-	if fr.headlines == nil {
-		fr.headlines = map[string]string{}
-	}
-	fr.headlineOrder = append(fr.headlineOrder, name)
-	fr.headlines[name] = value
+	fr.headlines.add(name, value)
 }
 
-// AddHeadlines adds multiple headlines to the reporter. The order of
-// headlines is NOT preserved.
+// AddHeadlines adds multiple headlines to the reporter. As the order
+// of a map is undefined they are added in sorted name order, after any
+// headlines already added.
 func (fr *FormattedReporter) AddHeadlines(headlines map[string]string) {
-	if fr.headlines == nil {
-		fr.headlines = maps.Clone(headlines)
-		return
-	}
-	maps.Copy(fr.headlines, headlines)
+	fr.headlines.addAll(headlines)
 }
 
 // UpdateTable TODO: Document its behavior, inputs, and effects.
@@ -149,25 +151,25 @@ func (fr *FormattedReporter) UpdateTable(columns []string, data [][]string) {
 	if len(fr.columns) == 0 {
 		// init
 		fr.columns = columns
+	}
+	if fr.rowsBytableOrder == nil {
 		fr.rowsBytableOrder = make(map[string][][]string, len(data))
 	}
 
 	if len(data) == 0 {
 		return
 	}
-	if fr.scrambleNames {
-		scrambleColumns(columns, fr.scrambleColumns, data)
+	data = fr.scrambleTable(columns, data)
+
+	// order by the first column unless told otherwise
+	orderbycolumns := fr.orderbycolumns
+	if len(orderbycolumns) == 0 {
+		orderbycolumns = []int{0}
 	}
 	orderColumns := []int{}
-	if len(fr.orderbycolumns) == 0 {
-		for i := range columns {
-			orderColumns = append(orderColumns, i)
-		}
-	} else {
-		for _, c := range fr.orderbycolumns {
-			if c < len(columns) {
-				orderColumns = append(orderColumns, c)
-			}
+	for _, c := range orderbycolumns {
+		if c >= 0 && c < len(columns) {
+			orderColumns = append(orderColumns, c)
 		}
 	}
 
@@ -195,12 +197,12 @@ func (fr *FormattedReporter) Render() error {
 	var err error
 
 	if fr.z != nil || fr.format != "csv" {
-		if len(fr.headlines) > 0 {
+		if fr.headlines.len() > 0 {
 			// render headers
 			fr.t.AppendHeader(table.Row{"headline", "value"})
 			headlines := []table.Row{}
-			for _, h := range fr.headlineOrder {
-				headlines = append(headlines, table.Row{h, fr.headlines[h]})
+			for _, h := range fr.headlines.order {
+				headlines = append(headlines, table.Row{h, fr.headlines.values[h]})
 			}
 			fr.t.SetColumnConfigs([]table.ColumnConfig{
 				{Number: 2, WidthMax: 0},
@@ -266,7 +268,12 @@ func (fr *FormattedReporter) Render() error {
 		for _, r := range fr.rowsBytableOrder[rn] {
 			row := table.Row{}
 			for cn := range fr.columns {
-				row = append(row, r[cn])
+				// rows may be shorter than the columns
+				if cn < len(r) {
+					row = append(row, r[cn])
+				} else {
+					row = append(row, "")
+				}
 			}
 			fr.t.AppendRow(row)
 		}
@@ -301,7 +308,7 @@ func (fr *FormattedReporter) Render() error {
 
 // Close TODO: Document its behavior, inputs, and effects.
 func (fr *FormattedReporter) Close() error {
-	if fr.format == "html" {
+	if fr.format == "html" && fr.w != nil {
 		if _, err := fr.w.Write([]byte(fr.htmlpostscript)); err != nil {
 			return fmt.Errorf("write report HTML postscript: %w", err)
 		}

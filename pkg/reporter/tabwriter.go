@@ -38,9 +38,11 @@ func init() {
 	registerReporter("column", newTabWriterReporter)
 }
 
-func newTabWriterReporter(_ string, w io.Writer, _ ...any) (Reporter, error) {
+func newTabWriterReporter(format string, w io.Writer, options ...any) (Reporter, error) {
+	ropts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
 	return &TabWriterReporter{
-		writer: tabwriter.NewWriter(w, 3, 8, 2, ' ', 0),
+		reporterCommon: newReporterCommon(format, ropts),
+		writer:         tabwriter.NewWriter(w, 3, 8, 2, ' ', 0),
 	}, nil
 }
 
@@ -69,7 +71,7 @@ func (t *TabWriterReporter) AddHeadlines(headlines map[string]string) {
 // is output as-is and no quoting takes place
 func (t *TabWriterReporter) UpdateTable(columns []string, rows [][]string) {
 	t.Columns = columns
-	t.rows = rows
+	t.rows = t.scrambleTable(columns, rows)
 }
 
 // Reset is a no-op for TabWriterReporter.
@@ -91,6 +93,9 @@ func (t *TabWriterReporter) Render() error {
 		}
 	}
 
+	// the data has been written, do not write it again
+	t.Columns = nil
+	t.rows = nil
 	return t.writer.Flush()
 }
 

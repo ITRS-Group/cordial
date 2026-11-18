@@ -43,7 +43,6 @@ type EventFilterSetRequest struct {
 // https://icp-api.itrsgroup.com/v2.0/Help/Api/POST-api-events-eventfilter
 func (i *ICP) EventFilterSet(ctx context.Context, request EventFilterSetRequest) (resp *http.Response, err error) {
 	resp, err = i.Post(ctx, EventsEventFilterEndpoint, request, nil)
-	resp.Body.Close()
 	return
 }
 

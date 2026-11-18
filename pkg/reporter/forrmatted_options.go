@@ -36,7 +36,6 @@ func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedRep
 	fro = &formattedReporterOptions{
 		dvcssclass:       "table",
 		headlinecssclass: "headlines",
-		// orderbycolumns:   []int{0},
 	}
 	for _, opt := range options {
 		opt(fro)
@@ -47,7 +46,9 @@ func evalFormattedOptions(options ...FormattedReporterOption) (fro *formattedRep
 // FormattedReporterOption TODO: Describe its purpose and intended use.
 type FormattedReporterOption func(*formattedReporterOptions)
 
-// Writer TODO: Document its behavior, inputs, and effects.
+// Writer sets the destination for the report. It takes precedence over
+// the writer passed to [NewReporter], and is ignored if a [ZipWriter]
+// is also used.
 func Writer(w io.Writer) FormattedReporterOption {
 	return func(fro *formattedReporterOptions) {
 		fro.writer = w
