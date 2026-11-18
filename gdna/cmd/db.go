@@ -1100,7 +1100,6 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		if port := u.Port(); port != "" {
 			sourceName += ":" + port
 		}
-		sources = append(sources, sourceName)
 
 		// source timestamp defaults to "now" and is only updated from
 		// the detail report, the summary report time is ignored
@@ -1108,42 +1107,41 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 		client := licdHTTPClient(cf)
 
-		// read summary data
-		uSummary := u.JoinPath(SummaryPath)
-		body, err := licdGet(ctx, client, uSummary.String(), signedToken)
-		if err != nil {
-			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
-			return sources, err
-		}
-
-		if err = func() error {
-			defer body.Close()
-			r := io.Reader(body)
-			if w := saveRemoteSource(saveRemoteSources, u.Hostname(), timestamp, "summary", source); w != nil {
-				defer w.Close()
-				r = io.TeeReader(r, w)
+		// the summary and detail reports are one source, which is not
+		// loaded at all if either fails
+		if err = runSource(ctx, cf, tx, sourceName, u.Scheme, source, ts, func() error {
+			// read summary data
+			uSummary := u.JoinPath(SummaryPath)
+			body, err := licdGet(ctx, client, uSummary.String(), signedToken)
+			if err != nil {
+				return err
 			}
 
-			c := csv.NewReader(r)
-			c.ReuseRecord = false
-			c.Comment = '#'
+			if err = func() error {
+				defer body.Close()
+				r := io.Reader(body)
+				if w := saveRemoteSource(saveRemoteSources, u.Hostname(), timestamp, "summary", source); w != nil {
+					defer w.Close()
+					r = io.TeeReader(r, w)
+				}
 
-			return summaryReportToDB(ctx, cf, tx, c, sourceName, u.Scheme, source, ts)
-		}(); err != nil {
-			log.Error("processing summary report", slog.String("src", source), slog.Any("error", err))
-			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
-			return sources, err
-		}
+				c := csv.NewReader(r)
+				c.ReuseRecord = false
+				c.Comment = '#'
 
-		// read detail data
-		uDetail := u.JoinPath(DetailsPath)
-		body, err = licdGet(ctx, client, uDetail.String(), signedToken)
-		if err != nil {
-			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
-			return sources, err
-		}
+				return summaryReportToDB(ctx, cf, tx, c, sourceName, u.Scheme, source, ts)
+			}(); err != nil {
+				log.Error("processing summary report", slog.String("src", source), slog.Any("error", err))
+				return err
+			}
 
-		if err = func() error {
+			// read detail data
+			uDetail := u.JoinPath(DetailsPath)
+			body, err = licdGet(ctx, client, uDetail.String(), signedToken)
+			if err != nil {
+				return err
+			}
+
 			defer body.Close()
 			r := io.Reader(body)
 			if w := saveRemoteSource(saveRemoteSources, u.Hostname(), timestamp, "detail", source); w != nil {
@@ -1156,10 +1154,10 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			c.Comment = '#'
 
 			return detailReportToDB(ctx, cf, tx, c, sourceName, u.Scheme, source, ts)
-		}(); err != nil {
-			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
+		}); err != nil {
 			return sources, err
 		}
+		sources = append(sources, sourceName)
 
 	default:
 		log.Debug("looking for files matching", slog.String("pattern", source))
@@ -1175,7 +1173,9 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		}
 
 		// any file with the suffix `_summary` before the extension is
-		// loaded as a license summary
+		// loaded as a license summary. A file that fails does not stop
+		// the others being loaded.
+		var errs []error
 		for _, file := range files {
 			// skip _summary files, check them explicitly later
 			if strings.HasSuffix(strings.TrimSuffix(file, filepath.Ext(file)), "_summary") {
@@ -1183,19 +1183,26 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 			}
 
 			sourceName, err := readLicdFile(ctx, cf, tx, file, dbUpdated)
-			sources = append(sources, sourceName)
 			if err != nil {
-				return sources, err
+				log.Error("cannot read licd file", slog.String("file", file), slog.Any("error", err))
+				errs = append(errs, err)
+				if errors.Is(err, errSavepoint) || ctx.Err() != nil {
+					break
+				}
+				continue
 			}
+			sources = append(sources, sourceName)
 		}
+		return sources, errors.Join(errs...)
 	}
 
 	return sources, nil
 }
 
 // readLicdFile loads a licd detail report file and the summary report
-// that goes with it, if any. The name of the source is always returned,
-// even with an error, so that the source is not marked as stale.
+// that goes with it, if any, in a savepoint so that a failure of either
+// leaves none of the rows of the source. The name of the source is
+// always returned, even with an error.
 //
 // A detail report that has not changed since it was last loaded is
 // skipped, unless forced, but the summary report is still checked as it
@@ -1243,46 +1250,48 @@ func readLicdFile(ctx context.Context, cf *config.Config, tx *sql.Tx, file strin
 		}
 	}
 
-	if !unchanged {
-		r, err := os.Open(file)
-		if err != nil {
-			log.Error("opening file failed", slog.String("file", file), slog.Any("error", err))
-			return sourceName, nil
+	// the detail and summary reports are one source, which is not loaded
+	// at all if either fails
+	err = runSource(ctx, cf, tx, sourceName, "file", file, ts, func() error {
+		if !unchanged {
+			r, err := os.Open(file)
+			if err != nil {
+				log.Error("opening file failed", slog.String("file", file), slog.Any("error", err))
+				return nil
+			}
+			c := csv.NewReader(r)
+			c.ReuseRecord = true
+			c.Comment = '#'
+
+			err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts)
+			r.Close()
+			if err != nil {
+				log.Error("processing detail report", slog.String("file", file), slog.Any("error", err))
+				return err
+			}
 		}
+
+		// now try to process a _summary file for the same, which uses
+		// the same source name
+		summary := strings.TrimSuffix(file, filepath.Ext(file)) + "_summary" + filepath.Ext(file)
+
+		r, err := os.Open(summary)
+		if err != nil {
+			log.Debug("opening file failed", slog.String("file", summary), slog.Any("error", err))
+			return nil
+		}
+		defer r.Close()
+
 		c := csv.NewReader(r)
 		c.ReuseRecord = true
 		c.Comment = '#'
 
-		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
-			log.Error("processing detail report", slog.String("file", file), slog.Any("error", err))
-			// record error
-			updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
+		if err = summaryReportToDB(ctx, cf, tx, c, sourceName, "file", summary, ts); err != nil {
+			log.Error("processing summary report", slog.String("file", summary), slog.Any("error", err))
 		}
-		r.Close()
-	}
-
-	// now try to process a _summary file for the same, which uses the
-	// same source name
-	file = strings.TrimSuffix(file, filepath.Ext(file)) + "_summary" + filepath.Ext(file)
-
-	r, err := os.Open(file)
-	if err != nil {
-		log.Debug("opening file failed", slog.String("file", file), slog.Any("error", err))
-		return sourceName, nil
-	}
-	defer r.Close()
-
-	c := csv.NewReader(r)
-	c.ReuseRecord = true
-	c.Comment = '#'
-
-	if err = summaryReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
-		log.Error("processing summary report", slog.String("file", file), slog.Any("error", err))
-		updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
-		return sourceName, err
-	}
-
-	return sourceName, nil
+		return err
+	})
+	return sourceName, err
 }
 
 // licdGet requests url from a licd, with a bearer token if there is

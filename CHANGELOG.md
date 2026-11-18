@@ -199,6 +199,8 @@
 
   * Fix a panic in a fetch for a summary report or detail report that is not valid, such as a row with too few columns, a CSV that cannot be parsed, or a licd report file with a summary section that cannot be parsed.
 
+  * Fix a source that fails part way through a fetch, such as a licence daemon whose detail report is cut short or has a bad row, leaving the rows read before the failure in the database. All the reports of a source are now loaded in a savepoint that is rolled back on failure, so none of its rows are kept and the other sources are unaffected, and the error is recorded in the status of the source. A file source with a bad detail report was also reported as a valid source, with its partial data, despite the error.
+
   * Fix `gdna start` exiting, from a scheduled run, for an error loading filters or an `email.contents` that is not a list or string. The error is now logged and the run is marked as failed, and the process continues with its schedules.
 
   * Fix a licence source with a name containing a quote, such as `o'brien.csv`, failing the run, and the status of a failed source containing `%!w(<nil>)`.

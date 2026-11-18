@@ -166,13 +166,20 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		}
 
 		sourceName := "licd:" + licenceName + "_" + t.Format(time.DateOnly)
-		sources = append(sources, sourceName)
 
 		log.Debug("processing licd report file", slog.String("src", source), slog.String("label", sourceName))
-		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {
-			updateSources(ctx, cf, tx, sourceName, "licd", source, false, sourceTimestamp, err)
+		err = runSource(ctx, cf, tx, sourceName, "licd", source, sourceTimestamp, func() error {
+			return detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp)
+		})
+		if err != nil {
 			log.Error("cannot process licd report file", slog.Any("error", err), slog.String("src", source))
+			if errors.Is(err, errSavepoint) || ctx.Err() != nil {
+				return sources, err
+			}
+			// the failed source is not valid and is not reported as one
+			continue
 		}
+		sources = append(sources, sourceName)
 	}
 	return
 }

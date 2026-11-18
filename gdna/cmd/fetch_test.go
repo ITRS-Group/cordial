@@ -455,3 +455,315 @@ func TestReadLicdSummary(t *testing.T) {
 		})
 	}
 }
+
+// testDetailFor returns a detail report for the gateway and probe that are
+// named by id, as the rows that are the same in more than one source are
+// shared by them
+func testDetailFor(id string) string {
+	return strings.NewReplacer("GW1", "GW"+id, "host1", "host"+id, "abc123", "token"+id).Replace(testDetailCSV)
+}
+
+const (
+	// the rows before the last are loaded before the report fails
+	testBadSummaryCSV = "licenceName,Bad Licence\nmode,licd\nGroup,Token,Total,Used,Free\n" +
+		"Overall,server,10,3,7\nOverall,\"unterminated\n"
+)
+
+// sourceRows counts the rows of the source in the tables that the
+// reports are loaded into
+func sourceRows(t *testing.T, db *sql.DB, source string) (rows map[string]int) {
+	t.Helper()
+	rows = map[string]int{}
+	for _, table := range []string{"probes_all", "samplers_all", "gateways_all", "tokens_all", "sources_licence"} {
+		rows[table] = count(t, db, "SELECT count(*) FROM "+table+" WHERE source = ?", source)
+	}
+	return
+}
+
+// licdFakeServer is a licd that serves the reports given
+func licdFakeServer(t *testing.T, summary, detail string) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/"+SummaryPath, func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, summary) })
+	mux.HandleFunc("/"+DetailsPath, func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, detail) })
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// a source that fails part way leaves none of its rows, only the status
+// that records the failure, and the sources before and after it are
+// loaded, wherever it is in the list
+func TestFetchFailedSourceIsRolledBack(t *testing.T) {
+	type source struct {
+		name, location string
+	}
+	// each good source is a file with a summary report, so the tests do
+	// not depend on how many servers are running
+	goodFile := func(t *testing.T, dir, name string) source {
+		writeFile(t, filepath.Join(dir, name+".csv"), testDetailFor(name))
+		writeFile(t, filepath.Join(dir, name+"_summary.csv"), testSummaryCSV)
+		return source{"file:" + name, filepath.Join(dir, name+".csv")}
+	}
+	goodHTTP := func(t *testing.T, dir, name string) source {
+		srv := licdFakeServer(t, testSummaryCSV, testDetailFor(name))
+		return source{"http:" + strings.TrimPrefix(srv.URL, "http://"), srv.URL}
+	}
+
+	bads := map[string]func(t *testing.T, dir string) source{
+		// the rows of the summary report are loaded before the detail
+		// report fails
+		"http detail": func(t *testing.T, dir string) source {
+			srv := licdFakeServer(t, testSummaryCSV, testDetailFor("bad")+"3,gateway:GWbad\n")
+			return source{"http:" + strings.TrimPrefix(srv.URL, "http://"), srv.URL}
+		},
+		"http summary": func(t *testing.T, dir string) source {
+			srv := licdFakeServer(t, testBadSummaryCSV, testDetailFor("bad"))
+			return source{"http:" + strings.TrimPrefix(srv.URL, "http://"), srv.URL}
+		},
+		"file detail": func(t *testing.T, dir string) source {
+			writeFile(t, filepath.Join(dir, "bad.csv"), testDetailFor("bad")+"3,gateway:GWbad\n")
+			writeFile(t, filepath.Join(dir, "bad_summary.csv"), testSummaryCSV)
+			return source{"file:bad", filepath.Join(dir, "bad.csv")}
+		},
+		// the detail report of the source is loaded before the summary
+		// report fails
+		"file summary": func(t *testing.T, dir string) source {
+			writeFile(t, filepath.Join(dir, "bad.csv"), testDetailFor("bad"))
+			writeFile(t, filepath.Join(dir, "bad_summary.csv"), testBadSummaryCSV)
+			return source{"file:bad", filepath.Join(dir, "bad.csv")}
+		},
+		"licd report file": func(t *testing.T, dir string) source {
+			// the sections of a licd report file are separated by NUL
+			writeFile(t, filepath.Join(dir, "bad.dat"), "samplingStatus,ok\nlicenceName,Bad Licence\nexpiry,01 January 2030\n\x00"+
+				"Group,Token,Total,Used,Free\nOverall,server,1,1,0\n\x00"+
+				"Req Number"+strings.TrimPrefix(testDetailFor("bad")+"3,gateway:GWbad\n", "req number")+"\x00")
+			return source{"licd:Bad Licence_2030-01-01", "summary:" + filepath.Join(dir, "bad.dat")}
+		},
+	}
+
+	for name, makeBad := range bads {
+		for _, position := range []string{"first", "middle", "last"} {
+			t.Run(name+" "+position, func(t *testing.T) {
+				dir := t.TempDir()
+				bad := makeBad(t, dir)
+				good := []source{goodFile(t, dir, "good1"), goodHTTP(t, dir, "good2")}
+
+				var order []source
+				switch position {
+				case "first":
+					order = []source{bad, good[0], good[1]}
+				case "middle":
+					order = []source{good[0], bad, good[1]}
+				default:
+					order = []source{good[0], good[1], bad}
+				}
+				var locations []string
+				for _, s := range order {
+					locations = append(locations, s.location)
+				}
+
+				cf := fetchTestConfig(t, dir, locations...)
+				db := testDB(t, cf)
+				postProcess = true
+				if _, err := fetch(t.Context(), cf, db); err != nil {
+					t.Fatalf("fetch: %v", err)
+				}
+
+				for table, n := range sourceRows(t, db, bad.name) {
+					if n != 0 {
+						t.Errorf("%d rows of the failed source in %s, want none", n, table)
+					}
+				}
+				for _, s := range good {
+					rows := sourceRows(t, db, s.name)
+					if rows["probes_all"] != 1 || rows["samplers_all"] != 1 || rows["tokens_all"] != 1 || rows["sources_licence"] != 1 {
+						t.Errorf("rows of %s = %v, want one of each", s.name, rows)
+					}
+					if n := count(t, db, "SELECT count(*) FROM sources WHERE source = ? AND valid AND status = 'OK'", s.name); n != 1 {
+						t.Errorf("%s is not a valid source", s.name)
+					}
+				}
+				if n := count(t, db, "SELECT count(*) FROM sources WHERE source = ? AND NOT valid AND status LIKE 'ERROR:%'", bad.name); n != 1 {
+					var status string
+					db.QueryRow("SELECT status FROM sources WHERE source = ?", bad.name).Scan(&status)
+					t.Errorf("failed source status = %q, want an invalid source with an error", status)
+				}
+
+				// the reports are of the sources that were loaded
+				tx, err := db.BeginTx(t.Context(), nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback()
+				r := &recorder{}
+				if err = runReports(t.Context(), cf, tx, r, "licence-sources", -1); err != nil {
+					t.Fatal(err)
+				}
+				events := strings.Join(r.events, "\n")
+				for _, want := range []string{"totalSources=3", "erroredSources=1", "staleSources=1", "totalServerTokens=0"} {
+					if !strings.Contains(events, want) {
+						t.Errorf("licence-sources report has no %q:\n%s", want, events)
+					}
+				}
+				var probes int
+				if err = tx.QueryRow("SELECT count(*) FROM probes").Scan(&probes); err != nil || probes != 2 {
+					t.Errorf("active probes = %d, want those of the 2 good sources: %v", probes, err)
+				}
+			})
+		}
+	}
+}
+
+// savepointExists reports whether a savepoint of the name is in the
+// transaction, by using it
+func savepointExists(t *testing.T, tx *sql.Tx, name string) bool {
+	t.Helper()
+	_, err := tx.Exec("RELEASE " + name)
+	if err != nil && !strings.Contains(err.Error(), "no such savepoint") {
+		t.Fatalf("RELEASE %s: %v", name, err)
+	}
+	return err == nil
+}
+
+func sourceTestTx(t *testing.T) (context.Context, *config.Config, *sql.DB, *sql.Tx) {
+	t.Helper()
+	ctx := context.Background()
+	cf := fetchTestConfig(t, t.TempDir())
+	db := testDB(t, cf)
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { tx.Rollback() })
+	if err = createTables(ctx, cf, tx, "db.main-tables", "create"); err != nil {
+		t.Fatal(err)
+	}
+	return ctx, cf, db, tx
+}
+
+// a source that is loaded has its savepoint released and the
+// transaction carries on, committing all the sources
+func TestRunSourceSuccess(t *testing.T) {
+	ctx, cf, db, tx := sourceTestTx(t)
+	now := time.Now()
+
+	for _, name := range []string{"one", "two"} {
+		if err := runSource(ctx, cf, tx, name, "file", "/x", now, func() error {
+			return detailReportToDB(ctx, cf, tx, csv.NewReader(strings.NewReader(testDetailFor(name))), name, "file", "/x", now)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if savepointExists(t, tx, savepointName(savepoints.Load())) {
+			t.Errorf("the savepoint of %s was not released", name)
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if n := count(t, db, "SELECT count(*) FROM probes_all"); n != 2 {
+		t.Errorf("probes = %d, want 2", n)
+	}
+	if n := count(t, db, "SELECT count(*) FROM sources WHERE status = 'OK'"); n != 2 {
+		t.Errorf("sources with status OK = %d, want 2", n)
+	}
+}
+
+// the rows of a source that fails are removed and the status is
+// written after, and the transaction carries on
+func TestRunSourceFailure(t *testing.T) {
+	ctx, cf, db, tx := sourceTestTx(t)
+	now := time.Now()
+
+	err := runSource(ctx, cf, tx, "bad", "file", "/x", now, func() error {
+		// the detail and the summary of a source are in the same savepoint
+		if err := detailReportToDB(ctx, cf, tx, csv.NewReader(strings.NewReader(testDetailFor("bad"))), "bad", "file", "/x", now); err != nil {
+			return err
+		}
+		return summaryReportToDB(ctx, cf, tx, csv.NewReader(strings.NewReader(testBadSummaryCSV)), "bad", "file", "/x", now)
+	})
+	if err == nil {
+		t.Fatal("runSource succeeded")
+	}
+	if savepointExists(t, tx, savepointName(savepoints.Load())) {
+		t.Error("the savepoint of the failed source was not released")
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	for table, n := range sourceRows(t, db, "bad") {
+		if n != 0 {
+			t.Errorf("%d rows in %s, want none", n, table)
+		}
+	}
+	var status string
+	if err = db.QueryRow("SELECT status FROM sources WHERE source = 'bad'").Scan(&status); err != nil || !strings.HasPrefix(status, "ERROR:") {
+		t.Errorf("status = %q, %v, want the error", status, err)
+	}
+}
+
+// cancelling the context part way through a source rolls its rows back
+// and does not leave the transaction in a state that cannot be used
+func TestRunSourceCancelled(t *testing.T) {
+	_, cf, db, tx := sourceTestTx(t)
+	now := time.Now()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	err := runSource(ctx, cf, tx, "cancelled", "file", "/x", now, func() error {
+		if err := detailReportToDB(ctx, cf, tx, csv.NewReader(strings.NewReader(testDetailFor("cancelled"))), "cancelled", "file", "/x", now); err != nil {
+			return err
+		}
+		cancel()
+		return ctx.Err()
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("runSource = %v, want the cancellation", err)
+	}
+
+	// the transaction is not bound to the context that was cancelled
+	bg := context.Background()
+	if savepointExists(t, tx, savepointName(savepoints.Load())) {
+		t.Error("the savepoint of the cancelled source was not released")
+	}
+	if err = tx.QueryRowContext(bg, "SELECT count(*) FROM probes_all").Scan(new(int)); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if n := count(t, db, "SELECT count(*) FROM probes_all"); n != 0 {
+		t.Errorf("probes of the cancelled source = %d, want none", n)
+	}
+}
+
+// cancelling a fetch while a source is being read, after some of its
+// rows have been loaded, commits nothing and leaves the database usable
+func TestFetchCancelledMidSource(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/"+SummaryPath, func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, testSummaryCSV) })
+	mux.HandleFunc("/"+DetailsPath, func(w http.ResponseWriter, r *http.Request) {
+		// the summary report has been loaded by now
+		cancel()
+		<-r.Context().Done()
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	other := licdFakeServer(t, testSummaryCSV, testDetailFor("other"))
+
+	cf := fetchTestConfig(t, t.TempDir(), srv.URL, other.URL)
+	db := testDB(t, cf)
+	if _, err := fetch(ctx, cf, db); !errors.Is(err, context.Canceled) {
+		t.Fatalf("fetch = %v, want the cancellation", err)
+	}
+
+	// the connection is available again, so nothing is left in a
+	// transaction, and nothing, including the tables, was committed
+	if n := count(t, db, "SELECT count(*) FROM sqlite_master WHERE name IN ('tokens_all', 'probes_all', 'sources')"); n != 0 {
+		t.Errorf("%d tables committed by the cancelled fetch, want none", n)
+	}
+}
