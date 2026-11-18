@@ -71,13 +71,9 @@ var commandCmd = &cobra.Command{
 			return err
 		}
 		if commandCmdJSON {
-			results := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstanceJSON)
-			results.Report(os.Stdout, responses.IndentJSON(true))
-			return nil
+			return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstanceJSON).Report(os.Stdout, responses.IndentJSON(true))
 		}
-		results := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstance)
-		results.Report(os.Stdout)
-		return
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, commandInstance).Report(os.Stdout)
 	},
 }
 

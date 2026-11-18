@@ -79,8 +79,7 @@ var psCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		CommandPS(command, ct, names, params)
-		return nil
+		return CommandPS(command, ct, names, params)
 	},
 }
 
@@ -91,14 +90,17 @@ type psCommon struct {
 	PID  int               `json:"pid"`
 }
 
-// CommandPS writes running instance information to STDOUT
-func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, params []string) {
+// CommandPS writes running instance information to STDOUT. Instances
+// that are not running or are disabled are not listed, but a name that
+// is not an instance, or an instance that cannot be inspected, is an
+// error.
+func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, params []string) error {
 	// always start with a clean cache, in case this is called from init commands
 	process.ClearCache()
 
 	switch {
 	case psCmdJSON, psCmdIndent:
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceJSON).Formatted(os.Stdout, "json", nil, nil,
 			responses.IndentJSON(psCmdIndent),
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.IgnoreErr(os.ErrProcessDone),
@@ -151,7 +153,12 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			default:
 				var notRunning int
 				var disabled int
+				var total int
 				for _, r := range resps {
+					if r.Instance == nil {
+						continue
+					}
+					total++
 					if errors.Is(r.Err, os.ErrProcessDone) {
 						notRunning++
 					}
@@ -160,15 +167,15 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 					}
 				}
 				headlines = map[string]string{
-					"instances":  fmt.Sprint(len(resps)),
-					"running":    fmt.Sprint(len(resps) - notRunning - disabled),
+					"instances":  fmt.Sprint(total),
+					"running":    fmt.Sprint(total - notRunning - disabled),
 					"notRunning": fmt.Sprint(notRunning),
 					"disabled":   fmt.Sprint(disabled),
 				}
 			}
 		}
 
-		resps.Formatted(os.Stdout, format, columns, nil,
+		return resps.Formatted(os.Stdout, format, columns, nil,
 			responses.IgnoreErr(geneos.ErrDisabled),
 			responses.AddHeadlines(headlines),
 		)
@@ -186,7 +193,9 @@ func CommandPS(command *cobra.Command, ct *geneos.Component, names []string, par
 			columns = instanceCSVColumns
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil)
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, psInstanceTable).Formatted(os.Stdout, "column", columns, nil,
+			responses.IgnoreErr(geneos.ErrDisabled),
+		)
 	}
 }
 
@@ -220,6 +229,7 @@ func psInstanceTable(i geneos.Instance, _ ...any) (resp *responses.General) {
 
 	pi, base, actual, uptodate, err := psInstanceCommon(i)
 	if err != nil {
+		resp.Err = err
 		return
 	}
 

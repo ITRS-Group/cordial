@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"os"
 
@@ -105,10 +106,8 @@ geneos add netprobe infraprobe12 --start --log
 		}
 		// instance.Add does not fail for an existing instance, but the
 		// command must not report success when nothing was added
-		if ct != nil {
-			if _, merr := instance.Match(h, ct, false, true, names[0]); merr == nil {
-				return fmt.Errorf("%w: %s already exists", geneos.ErrExists, names[0])
-			}
+		if err = checkNotExisting(h, ct, names[0]); err != nil {
+			return err
 		}
 		addCmdExtras.Params = params
 		i, err := instance.Add(h, ct, names[0],
@@ -127,6 +126,9 @@ geneos add netprobe infraprobe12 --start --log
 			instance.WithProfiles(Profiles),
 		)
 		if err != nil {
+			if errors.Is(err, geneos.ErrExists) {
+				return existsError(names[0])
+			}
 			return err
 		}
 		if addCmdLogs {
@@ -134,4 +136,32 @@ geneos add netprobe infraprobe12 --start --log
 		}
 		return err
 	},
+}
+
+// existsError returns the error for an instance, name, that cannot be
+// added or deployed because it already exists.
+func existsError(name string) error {
+	return fmt.Errorf("%w: %s already exists", geneos.ErrExists, name)
+}
+
+// checkNotExisting returns an error if name, in the same format as for
+// [instance.Add], is the name of an existing instance of component type
+// ct. instance.Add does not fail for an existing instance, so this is
+// checked first, and an [geneos.ErrExists] error from instance.Add is
+// treated the same way.
+func checkNotExisting(h *geneos.Host, ct *geneos.Component, name string) error {
+	if ct == nil {
+		return nil
+	}
+	h, _, local := instance.ParseName(name, h)
+	if h == geneos.ALL {
+		h = geneos.LOCAL
+	}
+	if local == "" {
+		local = h.Hostname()
+	}
+	if _, err := instance.Match(h, ct, false, true, local); err == nil {
+		return existsError(name)
+	}
+	return nil
 }

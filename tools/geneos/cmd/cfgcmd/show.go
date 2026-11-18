@@ -20,6 +20,7 @@ package cfgcmd
 import (
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -70,15 +71,20 @@ var showCmd = &cobra.Command{
 
 		if len(args) > 0 {
 			values := make(map[string]any)
+			var unset error
 			for _, k := range args {
 				v := config.Get[any](cf, k)
 				if v != nil {
 					values[k] = v
+				} else {
+					unset = cmd.ReportFailure(k, errors.New("not set"))
 				}
 			}
 			if buffer, err = json.MarshalIndent(values, "", "    "); err != nil {
 				return
 			}
+			fmt.Println(string(buffer))
+			return unset
 		} else {
 			if buffer, err = json.MarshalIndent(cf.ExpandAllSettings(config.NoDecode(true)), "", "    "); err != nil {
 				return

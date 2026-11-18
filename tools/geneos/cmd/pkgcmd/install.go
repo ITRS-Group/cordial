@@ -172,8 +172,15 @@ geneos package install md-gateway-asx -N -S
 				geneos.Variant(variant),
 			}
 
+			// every source that is not installed, other than because it
+			// was filtered out by the type or variant, is a failure but
+			// the remaining sources are still installed
 			var installed bool
 			var missing error
+			var failures []error
+			fail := func(source string, err error) {
+				failures = append(failures, fmt.Errorf("%s: %w", source, err))
+			}
 			// work through command line params and try to install each
 			// argument using the naming format of standard downloads
 			for _, source := range params {
@@ -191,7 +198,7 @@ geneos package install md-gateway-asx -N -S
 				case geneos.IsURL(source):
 					u, err := url.Parse(source)
 					if err != nil {
-						log.Debug("skipping", slog.Any("error", err), slog.Any("src", source))
+						fail(source, err)
 						continue
 					}
 					// just take the last part of the path
@@ -200,7 +207,7 @@ geneos package install md-gateway-asx -N -S
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							log.Debug("cannot parse filename, skipping", slog.Any("error", err), slog.String("filename", p))
+							fail(source, err)
 							continue
 						}
 						if platform != "" {
@@ -214,14 +221,14 @@ geneos package install md-gateway-asx -N -S
 				case geneos.IsFile(source):
 					p, err := filepath.EvalSymlinks(source)
 					if err != nil {
-						log.Debug("cannot resolve path,skipping", slog.Any("error", err), slog.String("src", source))
+						fail(source, err)
 						continue
 					}
 					if installCmdOverride == "" {
 						var platform string
 						nct, version, platform, _, err = geneos.FilenameToComponentVersion(ct, path.Base(p))
 						if err != nil {
-							log.Debug("cannot parse filename, skipping", slog.Any("error", err), slog.String("filename", p))
+							fail(source, err)
 							continue
 						}
 						if platform != "" {
@@ -240,8 +247,8 @@ geneos package install md-gateway-asx -N -S
 				case geneos.IsDir(source):
 					// use as is
 				default:
-					// if none of the above, skip
-					log.Debug("skipping")
+					// if none of the above it is not something that can be installed
+					fail(source, fmt.Errorf("not a URL, file or directory: %w", fs.ErrNotExist))
 					continue
 				}
 
@@ -249,13 +256,29 @@ geneos package install md-gateway-asx -N -S
 
 				log.Debug("installing from source", slog.String("src", source), slog.String("version", version), slog.String("ct", ct.String()), slog.String("hostname", cmd.Hostname))
 				if err = install(h, nct, true, append(options, geneos.Source(source))...); err != nil {
+					// nothing in a directory that matches is not a failure
+					// if something else is installed
 					if errors.Is(err, fs.ErrNotExist) {
 						missing = errors.Join(missing, err)
-						continue
+					} else {
+						fail(source, err)
 					}
-					return err
+					continue
 				}
 				installed = true
+			}
+
+			// a single failure is returned as the error, otherwise they are
+			// all reported and the command fails
+			switch len(failures) {
+			case 0:
+			case 1:
+				return failures[0]
+			default:
+				for _, f := range failures {
+					err = cmd.ReportFailure("", f)
+				}
+				return err
 			}
 			if !installed {
 				if missing != nil {
@@ -326,8 +349,7 @@ geneos package install md-gateway-asx -N -S
 		}
 
 		if len(instance.Instances(h, ct, instance.MatchParameters("protected=true", "version="+installCmdBase))) > 0 && installCmdUpdate && !installCmdForce {
-			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
-			return
+			return errors.New("there are one or more protected instances using the current version, use `--force` to override")
 		}
 
 		// record which instances to stop early. once we get to components, we don't know about instances

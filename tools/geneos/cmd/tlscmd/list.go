@@ -185,7 +185,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 					}}
 			}
 		}
-		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
+		err = results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -226,7 +226,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Report(listCSVWriter)
+		err = resp.Report(listCSVWriter)
 
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
@@ -234,12 +234,11 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 
 		// TODO do this with more structured data (use responses.Value?)
 		for _, c := range resp {
-			var t time.Duration
 			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
-				err = nil
+			t, parseErr := time.ParseDuration(c.Dataview.Table[0][4] + "s")
+			if parseErr != nil {
 				continue
 			}
 			if t < expiringMonthLimit {
@@ -283,7 +282,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
 			os.Stdout,
 			"csv",
 			[]string{
@@ -325,7 +324,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -393,7 +392,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 					}}
 			}
 		}
-		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
+		err = results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -458,18 +457,17 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 			}
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Report(listCSVWriter)
+		err = resp.Report(listCSVWriter)
 
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
 		var expiringWeek, expiringMonth, invalid int
 		for _, c := range resp {
-			var t time.Duration
 			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
-				err = nil
+			t, parseErr := time.ParseDuration(c.Dataview.Table[0][4] + "s")
+			if parseErr != nil {
 				continue
 			}
 			if t < expiringMonthLimit {
@@ -544,7 +542,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
+		err = instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
 
 	default:
 		var prequel [][]string
@@ -588,7 +586,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{

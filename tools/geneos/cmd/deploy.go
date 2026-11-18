@@ -149,8 +149,7 @@ var deployCmd = &cobra.Command{
 		}
 
 		if ct == nil {
-			fmt.Println("component type must be given for a deployment")
-			return nil
+			return fmt.Errorf("%w: component type must be given for a deployment", geneos.ErrInvalidArgs)
 		}
 
 		if len(names) > 0 {
@@ -255,6 +254,14 @@ var deployCmd = &cobra.Command{
 			)
 		}
 
+		// deploying an instance that exists is an error, unlike a
+		// profile, which is applied again to update its members. This is
+		// checked before anything is installed, now that there is a
+		// root directory to look in
+		if err = checkNotExisting(h, ct, name); err != nil {
+			return err
+		}
+
 		// Package installation
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug("version", slog.String("version", version))
@@ -317,6 +324,9 @@ var deployCmd = &cobra.Command{
 			instance.StartAfterAdd(deployCmdStart),
 		)
 		if err != nil {
+			if errors.Is(err, geneos.ErrExists) {
+				return existsError(name)
+			}
 			return err
 		}
 

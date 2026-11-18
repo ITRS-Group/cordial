@@ -89,25 +89,19 @@ var setCmd = &cobra.Command{
 				fmt.Printf("imported keyfile to %s\n", p)
 			}
 
-			instance.Do(command.CommandPath(), h, ct, names, aesSetSharedAESInstance, crc).Report(os.Stdout)
-
-			return nil
+			return instance.Do(command.CommandPath(), h, ct, names, aesSetSharedAESInstance, crc).Report(os.Stdout)
 		}
 
 		if setCmdCRC != "" {
 			// locate a shared keyfile for each matching host/type and set.
-			instance.Do(command.CommandPath(), h, ct, names, aesSetSharedAESInstance, setCmdCRC).Report(os.Stdout)
-			return nil
+			return instance.Do(command.CommandPath(), h, ct, names, aesSetSharedAESInstance, setCmdCRC).Report(os.Stdout)
 		}
 
 		kv, err := geneos.ReadKeyValues(keyfile, "Paste AES key file contents, end with newline and CTRL+D:")
 		if err != nil {
 			return err
 		}
-		for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-			instance.Do(command.CommandPath(), h, ct, names, aesSetAESInstance, kv).Report(os.Stdout)
-		}
-		return nil
+		return instance.DoTypes(command.CommandPath(), h, ct, geneos.UsesKeyFiles(), names, aesSetAESInstance, kv).Report(os.Stdout)
 	},
 }
 

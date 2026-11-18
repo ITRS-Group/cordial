@@ -3,6 +3,7 @@ package tlscmd
 import (
 	"crypto/sha1"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -165,9 +166,10 @@ func TestTLSInfoReportsFileErrors(t *testing.T) {
 	}
 	missing := filepath.Join(dir, "missing.pem")
 
+	// the files with errors are listed, and fail the command
 	res := cmdtest.Run(t, cmd.Cmd, "tls", "info", bad, missing)
-	if res.Err != nil {
-		t.Fatalf("tls info: %v", res.Err)
+	if !errors.Is(res.Err, cmd.ErrReported) {
+		t.Fatalf("tls info error = %v, want the reported error", res.Err)
 	}
 	if n := strings.Count(res.Stdout, "ERROR"); n != 2 {
 		t.Errorf("found %d errors in the output, want one for each file:\n%s", n, res.Stdout)
@@ -253,8 +255,8 @@ func TestTLSInfoConnectTimesOut(t *testing.T) {
 
 	start := time.Now()
 	res := cmdtest.Run(t, cmd.Cmd, "tls", "info", "-c", l.Addr().String())
-	if res.Err != nil {
-		t.Fatal(res.Err)
+	if !errors.Is(res.Err, cmd.ErrReported) {
+		t.Fatalf("tls info error = %v, want the reported error", res.Err)
 	}
 	if time.Since(start) > 5*time.Second {
 		t.Errorf("connection attempt took %v", time.Since(start))
@@ -265,7 +267,8 @@ func TestTLSInfoConnectTimesOut(t *testing.T) {
 }
 
 // a webserver without its security.properties file must produce an
-// error for the instance, not a nil pointer panic
+// error for the instance, which fails the command, not a nil pointer
+// panic
 func TestTLSMigrateWebserverWithoutProperties(t *testing.T) {
 	root := cmdtest.Env(t)
 	if res := cmdtest.Run(t, cmd.Cmd, "tls", "init"); res.Err != nil {
@@ -284,8 +287,8 @@ func TestTLSMigrateWebserverWithoutProperties(t *testing.T) {
 	for _, command := range []string{"migrate", "renew"} {
 		t.Run(command, func(t *testing.T) {
 			res := cmdtest.Run(t, cmd.Cmd, "tls", command, "webserver", "ws1")
-			if res.Err != nil {
-				t.Fatalf("tls %s: %v", command, res.Err)
+			if !errors.Is(res.Err, cmd.ErrReported) {
+				t.Fatalf("tls %s error = %v, want the reported error", command, res.Err)
 			}
 		})
 	}

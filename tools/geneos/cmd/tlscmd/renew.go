@@ -103,8 +103,7 @@ var renewCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
-		return
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, renewInstanceCert).Report(os.Stdout)
 	},
 }
 

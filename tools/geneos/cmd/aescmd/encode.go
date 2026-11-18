@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sync/atomic"
 
 	"github.com/spf13/cobra"
 
@@ -166,7 +167,7 @@ var encodeCmd = &cobra.Command{
 				defer clear(encodeCmdClientSecret)
 			}
 
-			instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+			return instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
 				if !i.Type().UsesKeyfiles {
 					return
@@ -216,7 +217,6 @@ var encodeCmd = &cobra.Command{
 
 				return
 			}).Report(os.Stdout)
-			return
 		}
 
 		var secret config.Secret
@@ -262,7 +262,10 @@ var encodeCmd = &cobra.Command{
 			return fmt.Errorf("no matching keyfile found")
 		}
 
-		instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
+		// instances without a key file are skipped, but it is an error if
+		// there is no instance that the secret could be encoded for
+		var encoded atomic.Int32
+		err = instance.Do(command.CommandPath(), h, ct, args, func(i geneos.Instance, params ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			if len(params) == 0 {
@@ -289,8 +292,12 @@ var encodeCmd = &cobra.Command{
 				return
 			}
 			resp.Completed = append(resp.Completed, e)
+			encoded.Add(1)
 			return
 		}, secret).Report(os.Stdout)
+		if err == nil && encoded.Load() == 0 {
+			return fmt.Errorf("no matching instance with a key file found")
+		}
 		return
 	},
 }

@@ -99,8 +99,7 @@ var createCmd = &cobra.Command{
 		if createCmdSigning != "" {
 			if err = CreateSigningCert(createCmdDestDir, createCmdForce, createCmdSigning); err != nil {
 				if errors.Is(err, os.ErrExist) && !createCmdForce {
-					fmt.Printf("Signing certificate already exists for %q, use --force to overwrite\n", createCmdSigning)
-					return nil
+					return fmt.Errorf("signing certificate already exists for %q, use --force to overwrite", createCmdSigning)
 				}
 				return
 			}
@@ -110,8 +109,7 @@ var createCmd = &cobra.Command{
 		if createCmdPrivateKey {
 			if _, _, err = CreateKey(createCmdDestDir, createCmdForce, createCmdKeyType); err != nil {
 				if errors.Is(err, os.ErrExist) && !createCmdForce {
-					fmt.Printf("Private key already exists for %q, use --force to overwrite\n", privateKeyBasename+certs.PEMExtension)
-					return nil
+					return fmt.Errorf("private key already exists for %q, use --force to overwrite", privateKeyBasename+certs.PEMExtension)
 				}
 			}
 			return
@@ -119,8 +117,7 @@ var createCmd = &cobra.Command{
 
 		if err = CreateCert(createCmdDestDir, createCmdForce, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdForce {
-				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
-				return nil
+				return fmt.Errorf("certificate already exists for CN=%q, use --force to overwrite", createCmdCN)
 			}
 			return
 		}

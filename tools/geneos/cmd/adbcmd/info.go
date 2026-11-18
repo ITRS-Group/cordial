@@ -48,8 +48,12 @@ var infoCmd = &cobra.Command{
 		log = logger.Logger.With("command", "adb info")
 		for _, file := range paths {
 			log.Debug("processing file", "file", file)
-			if err = infoCommand(file); err != nil {
-				return
+			if infoErr := infoCommand(file); infoErr != nil {
+				if len(paths) == 1 {
+					return infoErr
+				}
+				// carry on with the other files
+				err = cmd.ReportFailure(file, infoErr)
 			}
 		}
 		return

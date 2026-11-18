@@ -238,7 +238,8 @@ geneos backup all
 		if archive == "-" {
 			out2 = os.Stderr
 		}
-		resp.Report(out2)
+		// an archive is still written for the instances that succeeded
+		reportErr := resp.Report(out2)
 		if backupCmdIncludeShared {
 			fmt.Fprintln(out2, "matching shared directories also included")
 		}
@@ -257,7 +258,7 @@ geneos backup all
 		}
 
 		fmt.Fprintln(out2, "archive written to", archive)
-		return nil
+		return reportErr
 	},
 }
 

@@ -149,7 +149,7 @@ geneos restore gateway ABC x.tgz
 		} else {
 			for _, f := range files {
 				// process file
-				if err = restore.Restore(f,
+				if restoreErr := restore.Restore(f,
 					restore.Host(h),
 					restore.Component(ct),
 					restore.Names(names...),
@@ -157,8 +157,12 @@ geneos restore gateway ABC x.tgz
 					restore.Shared(restoreCmdShared),
 					restore.List(restoreCmdList),
 					restore.ProgressTo(os.Stdout),
-				); err != nil {
-					return
+				); restoreErr != nil {
+					if len(files) == 1 {
+						return restoreErr
+					}
+					// carry on with the other archives
+					err = ReportFailure(f, restoreErr)
 				}
 			}
 		}

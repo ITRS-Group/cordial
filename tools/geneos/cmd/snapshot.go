@@ -123,8 +123,7 @@ var snapshotCmd = &cobra.Command{
 		default:
 			resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
 		}
-		resp.Report(os.Stdout, responses.IndentJSON(true))
-		return nil
+		return resp.Report(os.Stdout, responses.IndentJSON(true))
 	},
 }
 

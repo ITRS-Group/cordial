@@ -93,7 +93,7 @@ geneos unset san -g Gateway1
 		if unsetFlags == 0 {
 			return fmt.Errorf("nothing to unset: perhaps you forgot to use -k KEY or one of the other options?")
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			cf := i.Config()
@@ -118,6 +118,5 @@ geneos unset san -g Gateway1
 			resp = responses.MergeResponse(resp, instance.Write(i))
 			return
 		}, instance.ProfileMembersOnly).Report(os.Stdout)
-		return
 	},
 }

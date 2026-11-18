@@ -358,7 +358,16 @@ var infoCmd = &cobra.Command{
 			rp.AddHeadline("totalExpiring30days", strconv.FormatInt(totalExpiring30days, 10))
 		}
 
-		return rp.Render()
+		if err = rp.Render(); err != nil {
+			return err
+		}
+
+		// the files and connections that could not be read are listed
+		// above, so only the status is returned
+		if slices.ContainsFunc(certInfos, func(ci certInfo) bool { return ci.Error != nil }) {
+			return cmd.ErrReported
+		}
+		return nil
 	},
 }
 

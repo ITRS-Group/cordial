@@ -19,6 +19,7 @@ package hostcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -62,6 +63,7 @@ geneos host unset rem2 -i /path/to/id_rsa
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var hosts []*geneos.Host
+		var unknown error
 
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			command.Usage()
@@ -78,15 +80,18 @@ geneos host unset rem2 -i /path/to/id_rsa
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)
-				if h.Exists() {
-					hosts = append(hosts, h)
+				if !h.Exists() {
+					// carry on with the other hosts
+					unknown = cmd.ReportFailure(a, errors.New("unknown host"))
+					continue
 				}
+				hosts = append(hosts, h)
 			}
 		}
 		if len(hosts) == 0 {
 			// nothing to do
 			fmt.Println("nothing to do")
-			return
+			return unknown
 		}
 
 		log.Debug("hosts", slog.Int("count", len(hosts)), slog.Any("hosts", hosts))
@@ -112,6 +117,9 @@ geneos host unset rem2 -i /path/to/id_rsa
 			}
 		}
 
-		return geneos.SaveHostConfig()
+		if err = geneos.SaveHostConfig(); err != nil {
+			return err
+		}
+		return unknown
 	},
 }

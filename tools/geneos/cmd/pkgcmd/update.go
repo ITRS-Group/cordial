@@ -114,8 +114,7 @@ geneos package update md-gateway-asx
 
 		version := updateCmdVersion
 		if len(instance.Instances(h, ct, instance.MatchParameters("protected=true", "version="+updateCmdBase))) > 0 && !updateCmdForce {
-			fmt.Println("There are one or more protected instances using the current version. Use `--force` to override")
-			return
+			return errors.New("there are one or more protected instances using the current version, use `--force` to override")
 		}
 		if updateCmdVersion == "" && len(args) > 0 {
 			version = args[0]

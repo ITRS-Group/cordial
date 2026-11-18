@@ -203,57 +203,48 @@ geneos init
 
 		initOptions.Extras.Params = params
 
-		if len(args) == 0 {
-			// init basics
-			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
-				geneos.UseRoot(root),
-				geneos.RootDirPrompt(config.ReadUserInputLine),
-				geneos.Override(initOptions.Force),
+		// the installation directory is initialised once, so that a
+		// directory with an installation is only an error before any
+		// profile has been deployed, and not for each of the profiles
+		initialiseOptions := []geneos.GeneosOption{
+			geneos.UseRoot(root),
+			geneos.RootDirPrompt(config.ReadUserInputLine),
+			geneos.Override(initOptions.Force),
 
-				geneos.Insecure(initOptions.Insecure),
-				geneos.SigningBundle(initOptions.SigningBundle),
-				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
-				geneos.SigningBundlePrompt(config.ReadPasswordInput),
-			); err != nil {
-				log.Error("initialise failed", slog.Any("error", err))
-				return err
-			}
-			if profile.Initialise(cordial.ExecutableName()) {
-				log.Debug("profiles configuration written")
-			}
-			return nil
+			geneos.Insecure(initOptions.Insecure),
+			geneos.SigningBundle(initOptions.SigningBundle),
+			geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
+			geneos.SigningBundlePrompt(config.ReadPasswordInput),
 		}
-
-		// treat args as profile names
-		for _, p := range args {
-			if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL,
-				geneos.UseRoot(root),
-				geneos.RootDirPrompt(config.ReadUserInputLine),
+		if len(args) > 0 {
+			initialiseOptions = append(initialiseOptions,
 				geneos.Version(initOptions.Version),
 				geneos.Basename("active_prod"),
-				geneos.Override(initOptions.Force),
 				geneos.Source(initOptions.Archive),
 				geneos.UseNexus(initOptions.Nexus),
 				geneos.UseNexusSnapshots(initOptions.Snapshot),
 				geneos.Headers(initOptions.Extras.Headers...),
+			)
+		}
+		if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL, initialiseOptions...); err != nil {
+			return err
+		}
+		if profile.Initialise(cordial.ExecutableName()) {
+			log.Debug("profiles configuration written")
+		}
 
-				geneos.Insecure(initOptions.Insecure),
-				geneos.SigningBundle(initOptions.SigningBundle),
-				geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
-				geneos.SigningBundlePrompt(config.ReadPasswordInput),
-			); err != nil {
-				log.Error("initialise failed", slog.Any("error", err))
-				return err
-			}
-			if profile.Initialise(cordial.ExecutableName()) {
-				log.Debug("profiles configuration written")
-			}
+		if len(args) == 0 {
+			// init basics
+			return nil
+		}
 
-			// Initialise replaces the local host, so refresh anything that
-			// holds on to the old one before using it
-			profile.SetExpandOptions(geneos.LOCAL, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), argsInput)
+		// Initialise replaces the local host, so refresh anything that
+		// holds on to the old one before using it
+		profile.SetExpandOptions(geneos.LOCAL, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), argsInput)
 
-			err = profile.DeployProfile(geneos.LOCAL, p,
+		// treat args as profile names, and carry on after a failure
+		for _, p := range args {
+			if deployErr := profile.DeployProfile(geneos.LOCAL, p,
 				profile.WithValues(initOptions.Extras),
 				profile.WithFlags(command.Flags()),
 				profile.WithInsecure(initOptions.Insecure),
@@ -264,18 +255,21 @@ geneos init
 				profile.WithUsername(initOptions.DLUsername),
 				profile.WithStartAfterAdd(true),
 				profile.WithFollowLogs(initOptions.Logs),
-			)
-			if err != nil {
-				log.Error("deploy profile failed", slog.Any("error", err))
-				return err
+			); deployErr != nil {
+				if len(args) == 1 {
+					return deployErr
+				}
+				err = cmd.ReportFailure(p, deployErr)
 			}
 		}
 
 		// wait a moment to allow processes to start and then run ps
 		time.Sleep(time.Second * 2)
-		pscmd.CommandPS(command, nil, nil, nil)
+		if psErr := pscmd.CommandPS(command, nil, nil, nil); psErr != nil {
+			err = psErr
+		}
 
-		return nil
+		return err
 	},
 }
 

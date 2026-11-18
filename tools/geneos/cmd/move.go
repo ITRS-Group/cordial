@@ -64,8 +64,8 @@ var moveCmd = &cobra.Command{
 			}
 			for _, n := range names[:len(names)-1] {
 				log.Debug("moving instance", slog.String("src", n), slog.String("destination", names[len(names)-1]))
-				if err = instance.Copy(ct, n, names[len(names)-1], instance.Move()); err != nil {
-					return
+				if moveErr := instance.Copy(ct, n, names[len(names)-1], instance.Move()); moveErr != nil {
+					err = ReportFailure(n, moveErr)
 				}
 			}
 			return

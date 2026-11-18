@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -38,6 +39,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 const (
@@ -293,6 +295,74 @@ func cmddata(command *cobra.Command) *CmdValType {
 	return nil
 }
 
+// ErrReported is returned by commands that have already written an
+// error for each item that failed, for example for each instance. It
+// causes a non-zero exit status without a further error message and
+// without the usage, as the details are already known to the user.
+var ErrReported = responses.ErrReported
+
+// ReportFailure writes the failure err of the item called name, for
+// example an instance, to standard error and returns ErrReported. It is
+// for commands that carry on with the remaining items after a failure
+// and are not using [responses.GeneralResponses.Report], which does
+// the same, to return when they have finished. The name is not written
+// if it is empty.
+func ReportFailure(name string, err error) error {
+	if errors.Is(err, ErrReported) {
+		// already reported, for example for each of the items in err
+		return ErrReported
+	}
+	if name == "" {
+		fmt.Fprintln(os.Stderr, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", name, err)
+	}
+	return ErrReported
+}
+
+// silenced records the original silence settings of commands that were
+// changed because they returned ErrReported.
+var silenced = map[*cobra.Command][2]bool{}
+
+// silenceReportedRunE is the function that wraps the RunE of a command.
+func silenceReportedRunE(run func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(c *cobra.Command, args []string) error {
+		err := run(c, args)
+		if errors.Is(err, ErrReported) {
+			if _, ok := silenced[c]; !ok {
+				silenced[c] = [2]bool{c.SilenceErrors, c.SilenceUsage}
+			}
+			c.SilenceErrors = true
+			c.SilenceUsage = true
+		}
+		return err
+	}
+}
+
+// reportedRunEPC is the code address of silenceReportedRunE closures,
+// used to avoid wrapping a RunE more than once.
+var reportedRunEPC = reflect.ValueOf(silenceReportedRunE(nil)).Pointer()
+
+// silenceReported wraps the RunE function of command so that if it
+// returns ErrReported then neither cobra's error message nor the usage
+// are written. The change is undone by restoreSilence before the
+// command is run again, as can happen in tests.
+func silenceReported(command *cobra.Command) {
+	if command.RunE == nil || reflect.ValueOf(command.RunE).Pointer() == reportedRunEPC {
+		return
+	}
+	command.RunE = silenceReportedRunE(command.RunE)
+}
+
+// restoreSilence undoes the changes made when command last returned
+// ErrReported.
+func restoreSilence(command *cobra.Command) {
+	if orig, ok := silenced[command]; ok {
+		command.SilenceErrors, command.SilenceUsage = orig[0], orig[1]
+		delete(silenced, command)
+	}
+}
+
 // Cmd represents the base command when called without any subcommands
 var Cmd = &cobra.Command{
 	Use:   cordial.ExecutableName() + " COMMAND [flags] [TYPE] [NAME...] [parameters...]",
@@ -319,6 +389,8 @@ geneos restart
 	DisableFlagsInUseLine: true,
 	// SilenceErrors:      true, - this blocks all child errors too, don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		restoreSilence(command)
+
 		if profilesErr != nil {
 			return fmt.Errorf("failed to initialize profiles config: %w", profilesErr)
 		}
@@ -406,6 +478,10 @@ geneos restart
 			}
 			return nil
 		}
+
+		// the failures of the items acted on are reported by the
+		// command, so do not repeat them in the error or usage
+		silenceReported(command)
 
 		// check initialisation
 		if command.Annotations[CmdRequireHome] == "true" && geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {

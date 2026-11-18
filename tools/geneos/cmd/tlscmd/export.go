@@ -85,8 +85,7 @@ geneos tls export gateway mygateway
 			if exportCmdOutput != "" && len(instance.Instances(geneos.GetHost(cmd.Hostname), ct, instance.MatchNames(names...))) > 1 {
 				return fmt.Errorf("%w: --output can only be used with a single instance", geneos.ErrInvalidArgs)
 			}
-			instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
-			return
+			return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, exportInstanceCert).Report(os.Stdout)
 		}
 
 		confDir := config.AppConfigDir()

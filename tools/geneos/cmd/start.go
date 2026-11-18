@@ -21,6 +21,8 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -75,8 +77,7 @@ var startCmd = &cobra.Command{
 				instances = append(instances, i)
 			}
 			if len(instances) == 0 {
-				fmt.Printf("no instances using port %d found\n", startCmdPort)
-				return
+				return fmt.Errorf("no instances using port %d found", startCmdPort)
 			}
 			instance.DoInstances(cmd.CommandPath(), instances, func(i geneos.Instance, a ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
@@ -103,7 +104,7 @@ var startCmd = &cobra.Command{
 		if ct != nil && len(origargs) > 1 {
 			autostart = true
 		}
-		return Start(cmd, ct, startCmdLogs, autostart, names)
+		return Start(cmd, ct, startCmdLogs, autostart, selectedByName(origargs), names)
 	},
 }
 
@@ -112,8 +113,33 @@ var startCmd = &cobra.Command{
 // flag to, well, watch logs while autostart is a flag to indicate if
 // Start() is being called as part of a group of instances - this is for
 // use by autostart checking.
-func Start(command *cobra.Command, ct *geneos.Component, watchlogs bool, autostart bool, names []string) (err error) {
-	instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+// selectedByName returns true if any of args, the arguments of a
+// command, names an instance, instead of only being a component type,
+// "all" or all of the instances on a host.
+func selectedByName(args []string) bool {
+	return slices.ContainsFunc(args, func(a string) bool {
+		return a != "all" && !strings.HasPrefix(a, "@") && geneos.ParseComponent(a) == nil
+	})
+}
+
+// startReportOptions returns the options to report the results of
+// starting instances. Starting an instance that is already running is
+// not an error and the result is the same as what was asked for. A
+// disabled instance is a failure if it was asked for by name, but is
+// reported without failing if it was one of the instances selected
+// because they are set to start automatically, so that starting all the
+// instances, for example at boot, is not failed by an instance that has
+// been deliberately disabled.
+func startReportOptions(byName bool) []responses.Option {
+	options := []responses.Option{responses.IgnoreErr(geneos.ErrRunning)}
+	if !byName {
+		options = append(options, responses.WarnErr(geneos.ErrDisabled))
+	}
+	return options
+}
+
+func Start(command *cobra.Command, ct *geneos.Component, watchlogs bool, autostart bool, byName bool, names []string) (err error) {
+	err = instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 		resp = responses.New[responses.General](i)
 		if instance.IsAutoStart(i) || autostart {
 			resp.Err = instance.Start(i,
@@ -123,7 +149,7 @@ func Start(command *cobra.Command, ct *geneos.Component, watchlogs bool, autosta
 			resp.Audited = true
 		}
 		return
-	}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+	}).Report(os.Stdout, startReportOptions(byName)...)
 
 	if watchlogs {
 		// also watch STDERR on start-up

@@ -1,6 +1,7 @@
 package initcmd
 
 import (
+	"errors"
 	"maps"
 	"os"
 	"path/filepath"
@@ -90,9 +91,51 @@ func TestInitKeepsCertificates(t *testing.T) {
 			t.Fatalf("%v: %v\n%s%s", args, res.Err, res.Stdout, res.Stderr)
 		}
 		if got := read(); !maps.Equal(first, got) {
-			// TODO: remove the skip once internal/geneos.Initialise no
-			// longer overwrites existing certificates
-			t.Skipf("%v replaced the root or signing certificates, which Initialise must not do", args)
+			t.Fatalf("%v replaced the root or signing certificates, which init must not do", args)
+		}
+	}
+}
+
+// init of a directory that is not empty fails, without --force, with an
+// error and not by ending the process
+func TestInitNotEmpty(t *testing.T) {
+	cmdtest.Env(t)
+	root := filepath.Join(t.TempDir(), "geneos")
+
+	if res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", root); res.Err != nil {
+		t.Fatalf("init: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", root)
+	if res.Err == nil || !strings.Contains(res.Err.Error(), "not empty") || !strings.Contains(res.Err.Error(), "--force") {
+		t.Fatalf("second init error = %v, want a directory not empty error that refers to --force", res.Err)
+	}
+
+	if res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "--force", root); res.Err != nil {
+		t.Fatalf("init --force: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+}
+
+// the directory is initialised once, so that the second profile does not
+// fail because of what was done for the first, and the profiles that
+// fail do so on their own account
+func TestInitProfilesInitialiseOnce(t *testing.T) {
+	cmdtest.Env(t)
+	root := filepath.Join(t.TempDir(), "geneos")
+
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "noprofile1", "noprofile2", root)
+	if !errors.Is(res.Err, cmd.ErrReported) {
+		t.Fatalf("init error = %v, want the error for the profiles that failed, already reported\n%s%s", res.Err, res.Stdout, res.Stderr)
+	}
+	if !cmdtest.StderrCaptured {
+		return
+	}
+	if strings.Contains(res.Stderr, "not empty") {
+		t.Errorf("the directory was initialised more than once:\n%s", res.Stderr)
+	}
+	for _, name := range []string{"noprofile1", "noprofile2"} {
+		if n := strings.Count(res.Stderr, name+": "); n != 1 {
+			t.Errorf("%s is reported %d times, want once:\n%s", name, n, res.Stderr)
 		}
 	}
 }

@@ -89,9 +89,9 @@ geneos aes ls -S gateway -H localhost -c
 		case listCmdJSON, listCmdIndent:
 			if listCmdShared {
 				results := aesListSharedJSON(ct, h)
-				results.Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+				return results.Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			} else {
-				instance.Do(command.CommandPath(), h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+				return instance.Do(command.CommandPath(), h, ct, names, aesListInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 			}
 		case listCmdToolkit:
 			w := csv.NewWriter(os.Stdout)
@@ -106,9 +106,9 @@ geneos aes ls -S gateway -H localhost -c
 			})
 
 			if listCmdShared {
-				aesListSharedCSV(ct, h).Report(w)
+				return aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV).Report(w)
+				return instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		case listCmdCSV:
 			w := csv.NewWriter(os.Stdout)
@@ -122,21 +122,20 @@ geneos aes ls -S gateway -H localhost -c
 			})
 
 			if listCmdShared {
-				aesListSharedCSV(ct, h).Report(w)
+				return aesListSharedCSV(ct, h).Report(w)
 			} else {
-				instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV).Report(w)
+				return instance.Do(command.CommandPath(), h, ct, names, aesListInstanceCSV).Report(w)
 			}
 		default:
 			columns := []string{"Type", "Name", "Host", "Keyfile", "CRC32", "Modtime"}
 
 			if listCmdShared {
 				responses := aesListShared(ct, h)
-				responses.Formatted(os.Stdout, "column", columns, nil)
+				return responses.Formatted(os.Stdout, "column", columns, nil)
 			} else {
-				instance.Do(command.CommandPath(), h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
+				return instance.Do(command.CommandPath(), h, ct, names, aesListInstance).Formatted(os.Stdout, "column", columns, nil)
 			}
 		}
-		return
 	},
 }
 

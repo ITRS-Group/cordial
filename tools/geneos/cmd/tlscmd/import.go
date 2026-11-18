@@ -140,14 +140,15 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 				if i > 0 {
 					fmt.Println()
 				}
-				if err = geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput, importCmdRootsOnly); err != nil {
-					if len(files) > 1 {
-						err = fmt.Errorf("%s: %w", file, err)
+				if importErr := geneos.TLSImportBundle(file, importCmdPrivateKey, importCmdPassword, config.ReadPasswordInput, importCmdRootsOnly); importErr != nil {
+					if len(files) == 1 {
+						return importErr
 					}
-					return err
+					// carry on with the other files
+					err = cmd.ReportFailure(file, importErr)
 				}
 			}
-			return nil
+			return err
 		}
 
 		if importCmdRootsOnly {
@@ -199,8 +200,7 @@ geneos tls import --roots-only --file /path/to/root.pem --file '/path/to/more/*.
 			return fmt.Errorf("no leaf certificate and/or matching key found in instance bundle")
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
-		return nil
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, tlsWriteInstance, certBundle).Report(os.Stdout)
 	},
 }
 

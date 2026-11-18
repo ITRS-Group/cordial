@@ -322,16 +322,17 @@ var cleanCmd = &cobra.Command{
 			cleanFilterXPath = cleanFilterXPath.ResolveTo(&xpath.Dataview{Name: filters.Dataview})
 		}
 
+		// carry on with the other files after a failure
 		for _, file := range paths {
-			var stats cleanStats
-			if stats, err = cleanCommand(file, cleanCmdOutput); err != nil {
-				log.Error("Failed to clean file", "file", file, "error", err)
-			} else {
-				fmt.Printf("%s: %s\n", file, stats.summary())
+			stats, cleanErr := cleanCommand(file, cleanCmdOutput)
+			if cleanErr != nil {
+				err = cmd.ReportFailure(file, cleanErr)
+				continue
 			}
+			fmt.Printf("%s: %s\n", file, stats.summary())
 		}
 
-		return nil
+		return
 	},
 }
 

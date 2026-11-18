@@ -91,17 +91,17 @@ geneos uninstall --version 7.4.2
 					// otherwise remove the base link if it exists
 					baseLink := h.PathTo("packages", ct.String(), uninstallCmdBase)
 
-					if err = h.Remove(baseLink); err != nil && !errors.Is(err, fs.ErrNotExist) {
-						log.Error("cannot remove base link", slog.Any("error", err), slog.String("baseLink", baseLink))
+					rmErr := h.Remove(baseLink)
+					if rmErr != nil && !errors.Is(rmErr, fs.ErrNotExist) {
+						err = cmd.ReportFailure(baseLink, fmt.Errorf("cannot remove base link: %w", rmErr))
 						continue
 					}
-					if err == nil {
+					if rmErr == nil {
 						fmt.Printf("removed %q on %q base link %q\n", ct, h, uninstallCmdBase)
 					}
 				}
 			}
 
-			err = nil
 			return
 		}
 
@@ -110,6 +110,11 @@ geneos uninstall --version 7.4.2
 		if version == "" && len(args) > 0 {
 			version = args[0]
 		}
+
+		// all the failures are reported but the other releases, types and
+		// hosts are still processed
+		var failed error
+		var versionMatched bool
 
 		for h := range h.OrList() {
 			for ct := range ct.OrList() {
@@ -120,7 +125,8 @@ geneos uninstall --version 7.4.2
 
 				releases, err := geneos.GetReleases(h, ct)
 				if err != nil {
-					return err
+					failed = cmd.ReportFailure(ct.String()+"@"+h.String(), err)
+					continue
 				}
 
 				// create a slice of releases to remove
@@ -136,6 +142,9 @@ geneos uninstall --version 7.4.2
 					}
 					return true
 				})
+				if len(removeReleases) > 0 {
+					versionMatched = true
+				}
 
 				// loop over all instances and remove versions from a
 				// list as they are found so we end up with a map
@@ -199,14 +208,14 @@ geneos uninstall --version 7.4.2
 					for _, c := range restart[release.Version] {
 						c.Log().Debug("stopping")
 						if err := instance.Stop(c, instance.WithStopForce(true)); err != nil && !errors.Is(err, os.ErrProcessDone) {
-							log.Error("cannot stop instance", slog.Any("error", err), slog.String("instance", c.String()))
+							failed = cmd.ReportFailure(c.String(), fmt.Errorf("cannot stop instance: %w", err))
 							continue
 						}
 						stopped = append(stopped, c)
 					}
 					// remove the release
-					if err = h.RemoveAll(h.Join(basedir, release.Version)); err != nil {
-						log.Error("cannot remove release", slog.Any("error", err), slog.String("release", release.Version))
+					if err := h.RemoveAll(h.Join(basedir, release.Version)); err != nil {
+						failed = cmd.ReportFailure(ct.String()+" "+release.Version, fmt.Errorf("cannot remove release: %w", err))
 						continue
 					}
 					fmt.Printf("removed %s release %s from %s:%s\n", ct, release.Version, h, basedir)
@@ -224,14 +233,16 @@ geneos uninstall --version 7.4.2
 							versions, err := geneos.InstalledReleases(h, ct)
 							if err != nil {
 								if !errors.Is(err, fs.ErrNotExist) {
-									log.Error("cannot get installed releases", slog.Any("error", err))
+									failed = cmd.ReportFailure(ct.String(), fmt.Errorf("cannot get installed releases: %w", err))
 								}
 								continue
 							}
 							if len(versions) > 0 {
 								latest = versions[len(versions)-1]
 							}
-							updateLinks(h, ct, basedir, release, release.Version, latest)
+							if err := updateLinks(h, ct, basedir, release, release.Version, latest); err != nil {
+								failed = cmd.ReportFailure(ct.String(), err)
+							}
 						}
 					}
 
@@ -242,7 +253,7 @@ geneos uninstall --version 7.4.2
 					if err := instance.Start(c); err != nil {
 						// if start fails, disable the instance
 						instance.Disable(c)
-						fmt.Printf("restart %s failed, disabling instance\n", c)
+						failed = cmd.ReportFailure(c.String(), fmt.Errorf("restart failed, disabling instance: %w", err))
 					}
 				}
 
@@ -250,13 +261,16 @@ geneos uninstall --version 7.4.2
 				// those for the releases removed unless removing all
 				if h.IsLocalhost() && !uninstallCmdKeep {
 					if err := removeCachedDownloads(h, ct, removed, uninstallCmdAll); err != nil {
-						return err
+						failed = cmd.ReportFailure(ct.String(), err)
 					}
 				}
 			}
 		}
 
-		return
+		if failed == nil && version != "" && !versionMatched {
+			return fmt.Errorf("no installed release matching %q found", version)
+		}
+		return failed
 	},
 }
 
@@ -269,6 +283,7 @@ func removeCachedDownloads(h *geneos.Host, ct *geneos.Component, releases []*gen
 		infix = ct.Name
 	}
 
+	var errs []error
 	var patterns []string
 	if all {
 		patterns = append(patterns, "*"+infix+"*")
@@ -283,38 +298,40 @@ func removeCachedDownloads(h *geneos.Host, ct *geneos.Component, releases []*gen
 		pattern := h.PathTo("packages", "downloads", p)
 		files, err := h.Glob(pattern)
 		if err != nil {
-			return fmt.Errorf("find cached packages for %s: %w", ct, err)
+			errs = append(errs, fmt.Errorf("find cached packages for %s: %w", ct, err))
+			continue
 		}
 		if len(files) == 0 && all {
 			fmt.Printf("cannot find any cached downloads to remove in %q\n", pattern)
 		}
 		for _, f := range files {
-			if err = h.Remove(f); err == nil {
+			if rmErr := h.Remove(f); rmErr == nil {
 				fmt.Printf("removed %q\n", f)
 			} else {
-				log.Error("cannot remove cached download", slog.Any("error", err), slog.String("file", f))
+				errs = append(errs, fmt.Errorf("cannot remove cached download %q: %w", f, rmErr))
 			}
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // updateLinks removes the base symlink for oldVersion and recreates a
 // new one pointing to target. It also updates all other links in the
 // map to the same old target to the new one.
-func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release *geneos.ReleaseDetails, oldVersion, newVersion string) (err error) {
+func updateLinks(h *geneos.Host, ct *geneos.Component, releaseDir string, release *geneos.ReleaseDetails, oldVersion, newVersion string) error {
+	var errs []error
 	for _, l := range release.Links {
 		link := h.Join(releaseDir, l)
 		if err := h.Remove(link); err != nil && !errors.Is(err, fs.ErrNotExist) {
-			log.Error("cannot remove link", slog.Any("error", err), slog.String("link", link))
+			errs = append(errs, fmt.Errorf("cannot remove link %q: %w", link, err))
 			continue
 		}
 		if err := h.Symlink(newVersion, link); err != nil {
-			log.Error("cannot create symlink", slog.Any("error", err), slog.String("link", link), slog.String("newVersion", newVersion))
+			errs = append(errs, fmt.Errorf("cannot create symlink %q to %q: %w", link, newVersion, err))
 			continue
 		}
 		fmt.Printf("updated %s %s on %s, now linked to %s\n", ct, l, h, newVersion)
 	}
 
-	return
+	return errors.Join(errs...)
 }

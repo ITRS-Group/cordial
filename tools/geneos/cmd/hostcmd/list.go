@@ -21,6 +21,7 @@ import (
 	_ "embed"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -107,16 +108,26 @@ var listCmd = &cobra.Command{
 
 // loopHosts calls fn for each remote host, limited to those in names
 // if any are given
-func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool, names []string) error {
+// loopHosts calls fn for all the remote hosts, or those in names if any
+// are given. A name that is not a remote host is an error but the hosts
+// that are known are still listed.
+func loopHosts(fn func(*geneos.Host, any) error, w any, showHidden bool, names []string) (err error) {
+	found := map[string]bool{}
 	for _, h := range geneos.RemoteHosts(showHidden) {
 		if len(names) > 0 && !slices.Contains(names, h.String()) {
 			continue
 		}
+		found[h.String()] = true
 		if err := fn(h, w); err != nil {
 			return err
 		}
 	}
-	return nil
+	for _, name := range names {
+		if !found[name] {
+			err = cmd.ReportFailure(name, errors.New("unknown host"))
+		}
+	}
+	return
 }
 
 func hostListInstancePlainHosts(h *geneos.Host, w any) (err error) {

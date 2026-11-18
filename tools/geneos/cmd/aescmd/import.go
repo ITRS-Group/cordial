@@ -19,6 +19,7 @@ package aescmd
 
 import (
 	_ "embed"
+	"errors"
 
 	"github.com/spf13/cobra"
 
@@ -51,6 +52,6 @@ var importCmd = &cobra.Command{
 	},
 	Deprecated: "Please use `" + cordial.ExecutableName() + " aes set` instead",
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return
+		return errors.New("`aes import` is no longer supported, please use `aes set` instead")
 	},
 }
