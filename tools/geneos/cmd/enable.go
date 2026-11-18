@@ -62,16 +62,16 @@ var enableCmd = &cobra.Command{
 		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
-			if !instance.IsDisabled(i) {
-				return
-			}
-			if resp.Err = instance.Enable(i); resp.Err == nil {
-				resp.Completed = append(resp.Completed, "enabled")
-				i.AuditEvent("action/enable", nil)
-				if enableCmdStart {
-					resp.Err = instance.Start(i)
+			if instance.IsDisabled(i) {
+				if resp.Err = instance.Enable(i); resp.Err != nil {
 					return
 				}
+				resp.Completed = append(resp.Completed, "enabled")
+				i.AuditEvent("action/enable", nil)
+			}
+			// also start instances that were already enabled
+			if enableCmdStart && !instance.IsRunning(i) {
+				resp.Err = instance.Start(i)
 			}
 			return
 		}).Report(os.Stdout)

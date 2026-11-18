@@ -87,15 +87,12 @@ var disableCmd = &cobra.Command{
 				return
 			}
 
-			if !instance.IsProtected(i) || disableCmdForce {
-				if resp.Err = instance.Disable(i); resp.Err == nil {
-					resp.Completed = append(resp.Completed, "disabled")
-					i.AuditEvent("action/disable", nil)
-					return
-				}
+			if err := instance.Disable(i); err != nil {
+				resp.Err = fmt.Errorf("not disabled: %w. Instances must not be running or use the '--force'/'-F' option", err)
+				return
 			}
-
-			resp.Err = fmt.Errorf("not disabled. Instances must not be running or use the '--force'/'-F' option")
+			resp.Completed = append(resp.Completed, "disabled")
+			i.AuditEvent("action/disable", nil)
 			return
 		}).Report(os.Stdout)
 

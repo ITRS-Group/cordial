@@ -20,6 +20,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -109,7 +110,7 @@ func ImportFiles(cmd *cobra.Command, ct *geneos.Component, args []string, params
 		return nil
 	}
 
-	instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, args, importInstance, params)
+	instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, args, importInstance, params).Report(os.Stdout)
 	return
 }
 

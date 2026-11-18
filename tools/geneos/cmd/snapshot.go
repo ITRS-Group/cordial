@@ -19,6 +19,7 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -76,8 +77,7 @@ var snapshotCmd = &cobra.Command{
 		CmdAuditCommand:          "false",
 		CmdAuditActions:          "false",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
-		var err error
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		ct, names, params, err := FetchArgs(cmd)
 		if err != nil {
 			return
@@ -85,17 +85,14 @@ var snapshotCmd = &cobra.Command{
 		if ct == nil {
 			ct = geneos.ParseComponent("gateway")
 		} else if !ct.IsA("gateway") {
-			fmt.Println("snapshots are only valid for gateways")
-			return
+			return fmt.Errorf("snapshots are only valid for gateways")
 		}
 
 		if len(names) == 0 {
-			fmt.Println(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
-			return
+			return fmt.Errorf(`no gateway name(s) supplied. Use a NAME of "all" as an explicit wildcard`)
 		}
 		if len(params) == 0 {
-			fmt.Printf("no dataview xpath(s) supplied\n")
-			return
+			return fmt.Errorf("no dataview xpath(s) supplied")
 		}
 
 		cf := config.Global()
@@ -107,8 +104,10 @@ var snapshotCmd = &cobra.Command{
 
 		if snapshotCmdUsername != "" && snapshotCmdPassword == nil {
 			snapshotCmdPassword, err = config.ReadPasswordInput(false, 0)
-			if err == config.ErrNotInteractive {
-				fmt.Printf("not running interactive and password required")
+			if err != nil {
+				if errors.Is(err, config.ErrNotInteractive) {
+					err = fmt.Errorf("%w and password required", err)
+				}
 				return
 			}
 			defer clear(snapshotCmdPassword)
@@ -125,6 +124,7 @@ var snapshotCmd = &cobra.Command{
 			resp = instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, snapshotInstanceJSON, params)
 		}
 		resp.Report(os.Stdout, responses.IndentJSON(true))
+		return nil
 	},
 }
 

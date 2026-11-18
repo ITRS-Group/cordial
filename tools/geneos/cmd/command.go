@@ -135,11 +135,11 @@ func commandInstanceJSON(i geneos.Instance, _ ...any) (resp *responses.General) 
 		Type:     i.Type().Name,
 		Host:     i.Host().String(),
 		Path:     cmd.Path,
-		Env:      cmd.Environ(),
+		Env:      logger.RedactSlice(cmd.Environ()),
 		Home:     cmd.Dir,
 	}
 	if len(cmd.Args) > 1 {
-		command.Args = cmd.Args[1:]
+		command.Args = logger.RedactSlice(slices.Clone(cmd.Args[1:]))
 	}
 	resp.Value = command
 	return

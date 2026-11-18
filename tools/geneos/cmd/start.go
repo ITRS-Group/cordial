@@ -87,6 +87,11 @@ var startCmd = &cobra.Command{
 				resp.Audited = true
 				return
 			}).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
+
+			if startCmdLogs {
+				// also watch STDERR on start-up
+				instance.FollowInstanceLogs(instances, instance.WithStderr(true)) // never returns
+			}
 			return
 		}
 

@@ -90,20 +90,21 @@ var showCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		output := os.Stdout
-		if showCmdOutput != "" {
-			output, err = os.Create(showCmdOutput)
-			if err != nil {
-				return
-			}
-		}
-
 		if showCmdMerge && showCmdValidate {
 			return errors.New("cannot validate and merge at the same time")
 		}
 
 		if showCmdMerge {
 			showCmdSetup = true
+		}
+
+		output := os.Stdout
+		if showCmdOutput != "" {
+			output, err = os.Create(showCmdOutput)
+			if err != nil {
+				return
+			}
+			defer func() { err = errors.Join(err, output.Close()) }()
 		}
 
 		if showCmdValidate {
@@ -123,7 +124,7 @@ var showCmd = &cobra.Command{
 			)
 			return
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
+		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstance).Report(output, responses.IndentJSON(true))
 		return
 	},
 }

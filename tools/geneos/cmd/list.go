@@ -145,9 +145,6 @@ var listCmd = &cobra.Command{
 				"Home",
 			}, nil)
 		}
-		if err == os.ErrNotExist {
-			err = nil
-		}
 		return
 	},
 }

@@ -66,8 +66,7 @@ var revertCmd = &cobra.Command{
 			return
 		}
 		if revertCmdExecutables {
-			revertCommands()
-			return
+			return revertCommands()
 		}
 		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
@@ -79,8 +78,10 @@ var revertCmd = &cobra.Command{
 
 			// if *.rc file exists, remove rc.orig+new, continue
 			if _, err := i.Host().Stat(instance.ComponentFilepath(i, "rc")); err == nil { // found ?
-				// ignore errors
-				if i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig")) == nil || i.Host().Remove(instance.ComponentFilepath(i)) == nil {
+				// ignore errors, but try to remove both files
+				origErr := i.Host().Remove(instance.ComponentFilepath(i, "rc", "orig"))
+				jsonErr := i.Host().Remove(instance.ComponentFilepath(i))
+				if origErr == nil && jsonErr == nil {
 					i.Log().Debug("removed extra config file(s)")
 				}
 				return

@@ -33,8 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
-var unsetCmdWarned bool
-
 var unsetCmdValues = values.UnsetConfigValues{}
 
 func init() {
@@ -75,14 +73,16 @@ geneos unset san -g Gateway1
 		CmdNonInstanceArgsError:  "true",
 		CmdAllInstancesMustMatch: "true",
 	},
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
-			cmd.Usage()
-			return
+			return cmd.Usage()
 		}
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
+		}
+		if cmd.Flags().NFlag() == 0 {
+			return fmt.Errorf("nothing to unset: perhaps you forgot to use -k KEY or one of the other options?")
 		}
 		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
@@ -100,9 +100,8 @@ geneos unset san -g Gateway1
 				}
 			}
 
-			if !changed && !unsetCmdWarned {
-				resp.Err = fmt.Errorf("nothing unset. perhaps you forgot to use -k KEY or one of the other options?")
-				unsetCmdWarned = true
+			if !changed {
+				resp.Err = fmt.Errorf("nothing unset: no matching values found")
 				return
 			}
 
@@ -110,5 +109,6 @@ geneos unset san -g Gateway1
 			resp = responses.MergeResponse(resp, instance.Write(i))
 			return
 		}, instance.ProfileMembersOnly).Report(os.Stdout)
+		return
 	},
 }

@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 
@@ -66,6 +67,7 @@ var migrateCmd = &cobra.Command{
 		if migrateCmdExecutables {
 			if err := migrateCommands(); err != nil {
 				log.Error("migrating old executables failed", slog.Any("error", err))
+				return err
 			}
 		}
 		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, migrateInstance).Report(os.Stdout)
@@ -93,15 +95,25 @@ func migrateCommands() (err error) {
 		if err != nil {
 			continue
 		}
+		// do not migrate again, which would replace the saved original
+		// with the link
+		if realpath, err := filepath.EvalSymlinks(path); err == nil && filepath.ToSlash(realpath) == filepath.ToSlash(geneosExec) {
+			fmt.Printf("%s already migrated (skipping)\n", path)
+			continue
+		}
+		if _, err := os.Lstat(path + ".orig"); err == nil {
+			fmt.Printf("%s.orig already exists (skipping)\n", path)
+			continue
+		}
 		if err = os.Rename(path, path+".orig"); err != nil {
 			fmt.Printf("cannot rename %q to .orig (skipping): %s\n", path, err)
 			continue
 		}
 		if err = os.Symlink(geneosExec, path); err != nil {
-			if err = os.Rename(path+".orig", path); err != nil {
-				log.Error("cannot restore after backup", slog.Any("error", err), slog.String("file", path))
+			if rerr := os.Rename(path+".orig", path); rerr != nil {
+				log.Error("cannot restore after backup", slog.Any("error", rerr), slog.String("file", path))
 			}
-			fmt.Printf("cannot link %s to %s (skipping): %s", path, geneosExec, err)
+			fmt.Printf("cannot link %s to %s (skipping): %s\n", path, geneosExec, err)
 			continue
 		}
 		fmt.Printf("%s migrated\n", path)
