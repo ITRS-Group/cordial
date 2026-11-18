@@ -257,6 +257,8 @@
 
     * Fix `sso-agent` rebuilds ignoring errors writing the keystore and adding TLS keys, and `webserver` rebuilds failing when `security.properties` has no `keyStore` or the truststore file does not exist.
 
+    * Fix `sso-agent` and `webserver` rebuilds replacing, and so wiping, an existing keystore or truststore that could not be read, for example because the password was wrong or the file was corrupt or truncated. Only a missing or empty file is now created new; any other failure is returned, naming the file and the reason, from `geneos rebuild`, `add`, `tls renew`, `tls migrate` and other commands that rebuild, and the file is left untouched. The keystore, truststore, `ssokey.pem` and `security.properties` files are replaced together through temporary files and renames, with the original files restored if an update fails part way, and entries in an existing keystore or truststore are now preserved. Fixes the self-signature of a generated `ssokey` certificate, errors reading `sso-agent.conf` or `security.properties` being ignored by `geneos tls migrate`, and `geneos add` ignoring errors from the first rebuild of a new instance.
+
     * Fix `geneos add` for `ca3`, `netprobe-router`, `sso-agent`, `webserver` and `ac2` instances changing the working directory of the process, which does not work for remote hosts.
 
     * Fix `geneos set` returning an error only some of the time for invalid parameters (such as `NAME` without a value), and `geneos add` dropping settings silently when one was invalid.

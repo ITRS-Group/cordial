@@ -19,6 +19,7 @@ package ssoagent
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -328,24 +329,34 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	// at this point we have paths and passwords - rebuild using
 	// external files from instance config
 
-	ks := certs.NewKeyStore()
+	// start from the existing keystore so that other entries are
+	// preserved. Only a missing or empty file is a new keystore, any
+	// other failure, such as a wrong password or a corrupt file, is
+	// returned and the file is left untouched.
+	ks, keystoreExists, err := instance.LoadKeyStore(i.Host(), keystorePath, keystorePassword)
+	if err != nil {
+		return false, err
+	}
 
-	// first, ensure there is an `ssokey` in a new keystore, extracting
-	// one if the `ssokeypath` does not yet exist (for updates). If an
-	// existing keystore is not readable - perhaps the password has
-	// changed, a new one will be created and a new ssokey will be
-	// added.
+	// ensure there is an `ssokey` in the keystore, extracting one from
+	// the `ssokeypath` file if it exists, or from the existing
+	// keystore, otherwise generating a new one for a new keystore.
 
-	sp := instance.PathTo(i, "ssokeypath")
+	// nothing is written until everything has been prepared, and then
+	// all the files are replaced together (or none are)
+	var updates []instance.FileUpdate
+
+	sp := instance.HomeRel(i, instance.PathTo(i, "ssokeypath"))
 	ssokeypem, err := i.Host().ReadFile(sp)
-	if err == nil {
-		// parse existing PEM and add it to the new keystore
+	switch {
+	case err == nil:
+		// parse existing PEM and add it to the keystore
 		_, _, ssocerts, ssokeys, err := certs.DecodePEM(ssokeypem)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("ssokey file %q: %w", sp, err)
 		}
 		if len(ssokeys) == 0 || len(ssocerts) == 0 {
-			return false, fmt.Errorf("failed to decode ssokey PEM: incorrectly formatted certificate or private key")
+			return false, fmt.Errorf("ssokey file %q: failed to decode PEM: incorrectly formatted certificate or private key", sp)
 		}
 
 		i.Log().Debug("decoded ssokey PEM successfully", slog.String("ssokeypath", sp), slog.String("cert", ssocerts[0].Subject.CommonName))
@@ -354,54 +365,50 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 		// keys returned matches the cert
 		cert := ssocerts[0]
 		if cert.Subject.CommonName != "ssokey" {
-			return false, fmt.Errorf("ssokey certificate has incorrect CommonName: %s (must be 'ssokey')", cert.Subject.CommonName)
+			return false, fmt.Errorf("ssokey file %q: certificate has incorrect CommonName: %s (must be 'ssokey')", sp, cert.Subject.CommonName)
 		}
 
 		var idx int
 		if idx = certs.IndexPrivateKey(ssokeys, cert); idx == -1 {
-			return false, fmt.Errorf("no matching private key found for ssokey certificate")
+			return false, fmt.Errorf("ssokey file %q: no matching private key found for ssokey certificate", sp)
 		}
 		key := ssokeys[idx]
 
 		if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
-			i.Log().Error("failed to add keystore key for ssoagent", slog.String("ssokeypath", sp), slog.String("error", err.Error()))
-			return false, err
+			return false, fmt.Errorf("adding ssokey from %q to keystore %q: %w", sp, keystorePath, err)
 		}
-	} else {
-		// try to read the existing keystore and extract the ssokey if
-		// possible and then add to the new ks too
-		oldKs, err := certs.ReadKeystore(i.Host(), keystorePath, keystorePassword)
+	case !errors.Is(err, fs.ErrNotExist):
+		// never replace a key file that exists but could not be read
+		return false, fmt.Errorf("reading ssokey file %q: %w", sp, err)
+	case !keystoreExists:
+		// create a new ssokey for a new keystore
+		cert, key, err := genkeypair()
 		if err != nil {
-			// create new keystore if reading the existing one fails
-			cert, key, err := genkeypair()
-			if err != nil {
-				return false, fmt.Errorf("failed to generate keypair for ssoagent: %w", err)
-			}
-			if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
-				return false, fmt.Errorf("failed to add keystore key for ssoagent: %w", err)
-			}
-			err = certs.WritePrivateKeyEntryAsPEM(i.Host(), instance.HomeRel(i, sp), keystore.PrivateKeyEntry{
-				CreationTime:     time.Now(),
-				PrivateKey:       []byte(key),
-				CertificateChain: []keystore.Certificate{{Type: "X509", Content: cert.Raw}},
-			}, 0600)
-			if err != nil {
-				return false, err
-			}
-		} else {
-			pk, err := oldKs.GetPrivateKeyEntry("ssokey", keystorePassword)
-			if err == nil {
-				// add to new ks
-				if err = ks.SetPrivateKeyEntry("ssokey", pk, keystorePassword); err != nil {
-					i.Log().Error("failed to add keystore key for ssoagent from existing keystore", slog.String("ssokeypath", sp), slog.String("error", err.Error()))
-					return false, err
-				}
-				err = certs.WritePrivateKeyEntryAsPEM(i.Host(), instance.HomeRel(i, sp), pk, 0600)
-				if err != nil {
-					return false, err
-				}
-			}
+			return false, fmt.Errorf("failed to generate keypair for ssoagent: %w", err)
 		}
+		if err = ks.AddKeystoreKey("ssokey", key, keystorePassword, cert); err != nil {
+			return false, fmt.Errorf("adding ssokey to keystore %q: %w", keystorePath, err)
+		}
+		pem, err := ssokeyPEM(keystore.PrivateKeyEntry{
+			CreationTime:     time.Now(),
+			PrivateKey:       []byte(key),
+			CertificateChain: []keystore.Certificate{{Type: "X509", Content: cert.Raw}},
+		})
+		if err != nil {
+			return false, fmt.Errorf("encoding ssokey file %q: %w", sp, err)
+		}
+		updates = append(updates, instance.FileUpdate{Path: sp, Data: pem, Perm: 0600})
+	case ks.IsPrivateKeyEntry("ssokey"):
+		// extract the ssokey from the existing keystore
+		pk, err := ks.GetPrivateKeyEntry("ssokey", keystorePassword)
+		if err != nil {
+			return false, fmt.Errorf("keystore %q: cannot decrypt the ssokey entry (incorrect password?): %w", keystorePath, err)
+		}
+		pem, err := ssokeyPEM(pk)
+		if err != nil {
+			return false, fmt.Errorf("encoding ssokey file %q: %w", sp, err)
+		}
+		updates = append(updates, instance.FileUpdate{Path: sp, Data: pem, Perm: 0600})
 	}
 
 	// next, add instance certs and private keys for TLS
@@ -410,7 +417,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 	if tlsConfigured {
 		certChain, err := instance.ReadCertificates(i)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("reading certificates for %s: %w", i, err)
 		}
 		if len(certChain) == 0 {
 			return false, fmt.Errorf("no certificates found for %s", i)
@@ -418,7 +425,7 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 
 		key, err := instance.ReadPrivateKey(i)
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf("reading private key for %s: %w", i, err)
 		}
 
 		var ch []keystore.Certificate
@@ -437,33 +444,74 @@ func (i *SSOAgent) Rebuild(initial bool) (changed bool, err error) {
 			},
 			keystorePassword,
 		); err != nil {
-			return false, fmt.Errorf("failed to add TLS key to keystore: %w", err)
+			return false, fmt.Errorf("adding TLS key to keystore %q: %w", keystorePath, err)
 		}
-	}
-
-	// write the keystore here as the truststore *may* be different from the keystore
-	if err = ks.WriteKeystore(i.Host(), keystorePath, keystorePassword, 0600); err != nil {
-		return false, fmt.Errorf("failed to write keystore %s: %w", keystorePath, err)
 	}
 
 	// only add root CAs to the truststore if it is different from the
 	// default CA bundle, which could be a `cacerts` without an
 	// extension as well as `ca-bundle.db`
 	if tlsConfigured && strings.TrimSuffix(truststorePath, i.Host().Ext(truststorePath)) != geneos.PathToCABundle(i.Host()) {
-		roots, _ := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
+		roots, rerr := certs.ReadCertificates(i.Host(), geneos.PathToCABundlePEM(i.Host()))
+		if rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
+			return false, fmt.Errorf("reading CA bundle %q: %w", geneos.PathToCABundlePEM(i.Host()), rerr)
+		}
+		var valid []*x509.Certificate
 		for _, cert := range roots {
-			if !certs.IsValidRootCA(cert) {
-				continue
+			if certs.IsValidRootCA(cert) {
+				valid = append(valid, cert)
 			}
-			// ignore errors, as this may be trying to write to a system file - just break out of the loop
-			if terr := certs.AddRootsToTrustStore(i.Host(), truststorePath, truststorePassword, cert); terr != nil {
-				i.Log().Debug("cannot update truststore, ignoring", slog.String("path", truststorePath), slog.Any("error", terr))
-				break
+		}
+
+		if len(valid) > 0 {
+			// the truststore is normally the same file as the keystore
+			ts := ks
+			if truststorePath != keystorePath {
+				if ts, _, err = instance.LoadKeyStore(i.Host(), truststorePath, truststorePassword); err != nil {
+					return false, err
+				}
+			}
+			for _, cert := range valid {
+				if err = ts.AddTrustedCertificate(cert.Subject.CommonName, cert); err != nil {
+					return false, fmt.Errorf("adding %q to truststore %q: %w", cert.Subject.CommonName, truststorePath, err)
+				}
+			}
+			if truststorePath != keystorePath {
+				data, err := instance.MarshalKeyStore(ts, truststorePassword)
+				if err != nil {
+					return false, fmt.Errorf("truststore %q: %w", truststorePath, err)
+				}
+				updates = append(updates, instance.FileUpdate{Path: truststorePath, Data: data, Perm: 0644})
 			}
 		}
 	}
 
+	data, err := instance.MarshalKeyStore(ks, keystorePassword)
+	if err != nil {
+		return false, fmt.Errorf("keystore %q: %w", keystorePath, err)
+	}
+	updates = append([]instance.FileUpdate{{Path: keystorePath, Data: data, Perm: 0600}}, updates...)
+
+	// the keystore, truststore and ssokey file are replaced as a set
+	// and on any failure the existing files are left as they were
+	if err = instance.WriteFilesAtomic(i.Host(), updates...); err != nil {
+		return false, fmt.Errorf("sso-agent %s: %w", i, err)
+	}
+
 	return true, nil
+}
+
+// ssokeyPEM returns the PEM encoding of the ssokey private key entry.
+func ssokeyPEM(entry keystore.PrivateKeyEntry) ([]byte, error) {
+	cs, err := certs.ParsePrivateKeyCertificates(entry)
+	if err != nil {
+		return nil, err
+	}
+	var b bytes.Buffer
+	if _, err = certs.WriteCertificatesAndKeyTo(&b, entry.PrivateKey, cs...); err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
 }
 
 // generate a keypair for ssoagent keystore with the alias "ssokey". This must be an RSA key
@@ -485,12 +533,28 @@ func genkeypair() (cert *x509.Certificate, key certs.PrivateKey, err error) {
 		MaxPathLen:            -1,
 	}
 
-	privateKey, _, err := certs.GenerateKey("rsa")
+	// the certificate is signed by the key it certifies, so only one
+	// key is generated
+	key, pub, err := certs.GenerateKey(certs.RSA)
 	if err != nil {
 		return
 	}
-
-	return certs.CreateCertificate(template, template, privateKey)
+	priv, _, err := certs.ParsePrivateKey(key)
+	if err != nil {
+		return
+	}
+	signer, ok := priv.(crypto.Signer)
+	if !ok {
+		return nil, nil, fmt.Errorf("generated ssokey cannot sign")
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, pub, signer)
+	if err != nil {
+		return nil, nil, err
+	}
+	if cert, err = x509.ParseCertificate(der); err != nil {
+		return nil, nil, err
+	}
+	return cert, key, nil
 }
 
 // Command TODO: Document its behavior, inputs, and effects.

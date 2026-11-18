@@ -247,15 +247,18 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 		return
 	}
 	defer f.Close()
-	var keys []string
-	for k := range kvs {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	for _, k := range keys {
-		fmt.Fprintf(f, "%s=%s\n", k, kvs[k])
-	}
+	_, err = f.Write(MarshalKVConfig(kvs))
 	return
+}
+
+// MarshalKVConfig returns the contents of a file as written by
+// WriteKVConfig for the map kvs.
+func MarshalKVConfig(kvs map[string]string) []byte {
+	var b strings.Builder
+	for _, k := range slices.Sorted(maps.Keys(kvs)) {
+		fmt.Fprintf(&b, "%s=%s\n", k, kvs[k])
+	}
+	return []byte(b.String())
 }
 
 // write is the internal function that writes the instance configuration
