@@ -232,17 +232,29 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	if gateway == nil {
 		return "", errors.New("gateway is nil")
 	}
-	writeOptions, err := evalGatewayWriteOptions(options...)
-	if err != nil {
-		return "", err
-	}
-	h := writeOptions.host
 
 	data, err := xml.MarshalIndent(gateway, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("marshal gateway XML: %w", err)
 	}
 	data = append(data, '\n')
+
+	return WriteGatewayData(destination, data, options...)
+}
+
+// WriteGatewayData writes the XML data, as it is, to destination in
+// the same way as WriteGateway, with the same locking, history backup,
+// host and file mode handling. It is for callers that have edited
+// a setup file as text and must not have it serialized again.
+func WriteGatewayData(destination string, data []byte, options ...GatewayWriteOption) (backupPath string, err error) {
+	if destination == "" {
+		return "", errors.New("gateway destination is empty")
+	}
+	writeOptions, err := evalGatewayWriteOptions(options...)
+	if err != nil {
+		return "", err
+	}
+	h := writeOptions.host
 
 	lockPath := destination + ".lck"
 	if err := h.Mkdir(lockPath, 0o700); err != nil {

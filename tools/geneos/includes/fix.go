@@ -204,6 +204,7 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 		updatedIncludes any
 		configChanged   bool
 		locations       []string
+		modelCounts     = make(map[string]int)
 	)
 
 	if setup.setup.Includes == nil {
@@ -220,7 +221,7 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 		}
 		if replacement != *location {
 			changes[*location] = replacement
-			*location = replacement
+			modelCounts[*location]++
 			return
 		}
 		if *location != "" && !remoteIncludeLocation(*location) {
@@ -239,6 +240,16 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 		fmt.Printf("Gateway %s: no changes made\n", setup.gateway.Name())
 		return nil
 	}
+
+	// the setup is edited as text and not written from the model, so
+	// that everything except the changed locations is left as it is
+	var edited []byte
+	if !dryRun {
+		var err error
+		if edited, err = editGatewaySetup(setup.gateway, changes, modelCounts); err != nil {
+			return err
+		}
+	}
 	updatedIncludes, configChanged = fixIncludeConfig(includes, changes)
 	for location := range changes {
 		locations = append(locations, location)
@@ -253,7 +264,7 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 	if dryRun {
 		return nil
 	}
-	if _, err := instance.WriteGatewaySetup(setup.gateway, setup.setup); err != nil {
+	if _, err := instance.WriteGatewaySetupBytes(setup.gateway, edited); err != nil {
 		return err
 	}
 	if configChanged {
@@ -261,6 +272,27 @@ func fixGatewayIncludes(h *geneos.Host, setup includeFixSetup, candidates map[st
 		return instance.Write(setup.gateway, instance.NoRebuild(), instance.NoReload()).Err
 	}
 	return nil
+}
+
+// editGatewaySetup returns the setup file of the gateway with the
+// include locations in changes replaced. The model that the changes
+// were found from and the file must agree on the number of locations
+// that are replaced, otherwise nothing is written.
+func editGatewaySetup(gateway geneos.Instance, changes map[string]string, modelCounts map[string]int) ([]byte, error) {
+	raw, err := instance.ReadGatewaySetupBytes(gateway)
+	if err != nil {
+		return nil, fmt.Errorf("read setup: %w", err)
+	}
+	edited, counts, err := editIncludeLocations(raw, changes)
+	if err != nil {
+		return nil, fmt.Errorf("edit setup: %w", err)
+	}
+	for location, want := range modelCounts {
+		if got := counts[location]; got != want {
+			return nil, fmt.Errorf("model and raw setup file disagree: include %q changed %d times in the file but %d times in the parsed setup, no changes made", location, got, want)
+		}
+	}
+	return edited, nil
 }
 
 func fixIncludeConfig(value any, changes map[string]string) (any, bool) {

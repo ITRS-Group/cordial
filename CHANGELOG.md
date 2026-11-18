@@ -275,6 +275,8 @@
 
     * Fix `geneos includes extract` and `install` rewriting or backing up unchanged files over SSH because short reads were treated as differences, and returning success when an archive contains no include files. Include archives now have limits on the size of the files they contain.
 
+    * Fix `geneos includes fix` rewriting the whole Gateway setup file from the parsed setup, which dropped comments and unknown elements, changed the order and formatting of the setup, and lost the file's encoding declaration. Only the text of the changed include `location` elements is now edited, with every other byte of the file unchanged, and nothing is written if the file and the parsed setup disagree about the locations to change. History backups and the file mode are as before.
+
   * Packages
 
     * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
