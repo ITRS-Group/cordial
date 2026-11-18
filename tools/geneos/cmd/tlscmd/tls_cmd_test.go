@@ -17,6 +17,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/webserver"
 )
 
 func TestTLSInitDefaultKeyType(t *testing.T) {
@@ -260,5 +261,32 @@ func TestTLSInfoConnectTimesOut(t *testing.T) {
 	}
 	if !strings.Contains(res.Stdout, "ERROR") {
 		t.Errorf("no error reported for a connection that timed out:\n%s", res.Stdout)
+	}
+}
+
+// a webserver without its security.properties file must produce an
+// error for the instance, not a nil pointer panic
+func TestTLSMigrateWebserverWithoutProperties(t *testing.T) {
+	root := cmdtest.Env(t)
+	if res := cmdtest.Run(t, cmd.Cmd, "tls", "init"); res.Err != nil {
+		t.Fatalf("tls init: %v", res.Err)
+	}
+	// the webserver needs an installed package, but not a real one
+	if err := os.MkdirAll(filepath.Join(root, "packages", "webserver", "active_prod"), 0o775); err != nil {
+		t.Fatal(err)
+	}
+	if res := cmdtest.Run(t, cmd.Cmd, "add", "webserver", "ws1", "--insecure"); res.Err != nil {
+		t.Fatalf("add: %v\n%s", res.Err, res.Stderr)
+	}
+	home := filepath.Join(root, "webserver", "webservers", "ws1")
+	_ = os.Remove(filepath.Join(home, "config", "security.properties"))
+
+	for _, command := range []string{"migrate", "renew"} {
+		t.Run(command, func(t *testing.T) {
+			res := cmdtest.Run(t, cmd.Cmd, "tls", command, "webserver", "ws1")
+			if res.Err != nil {
+				t.Fatalf("tls %s: %v", command, res.Err)
+			}
+		})
 	}
 }
