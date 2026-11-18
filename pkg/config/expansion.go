@@ -274,6 +274,12 @@ func (x *expander) lookup(name string) (r resolved, err error) {
 func (x *expander) call(fm fnmap, name string) (r resolved, err error) {
 	r.value, err = fm.fn(x.c.allSettings(), name, x.opts.trimSpace, fm.data...)
 	r.nest = fm.nest
+	// the result of a call that refers back to the same call, directly or
+	// through other values, is not expanded again. The key cannot be a
+	// configuration key.
+	if r.nest {
+		r.key = "\x00" + name
+	}
 	return
 }
 
