@@ -20,6 +20,7 @@ package cmd
 import (
 	_ "embed"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
 	"strings"
@@ -38,7 +39,9 @@ var listExcludeCmdDescription string
 
 var listCmdFormat string
 
-var listFormat string
+// defaultListFormat is the output format of the list commands if none is
+// given
+const defaultListFormat = "table"
 
 func init() {
 	Cmd.AddCommand(listCmd)
@@ -46,13 +49,11 @@ func init() {
 	listCmd.AddCommand(listExcludeCmd)
 	listCmd.AddCommand(listIncludeCmd)
 
-	listCmd.PersistentFlags().StringVarP(&listCmdFormat, "format", "F", "table", "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
+	listCmd.PersistentFlags().StringVarP(&listCmdFormat, "format", "F", defaultListFormat, "format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown'")
 
 	listReportCmd.Flags().StringVarP(&reportNames, "report", "r", "", reportNamesDescription)
 	listReportCmd.Flags().SortFlags = false
 
-	listExcludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
-	listIncludeCmd.Flags().StringVarP(&listFormat, "format", "F", "", "output format")
 }
 
 var listCmd = &cobra.Command{
@@ -89,7 +90,10 @@ var listReportCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		r, _ := reporter.NewReporter(listCmdFormat, os.Stdout)
+		r, err := reporter.NewReporter(listCmdFormat, os.Stdout)
+		if err != nil {
+			return err
+		}
 
 		return listReports(cf, r)
 	},
@@ -116,7 +120,7 @@ var listIncludeCmd = &cobra.Command{
 		if len(args) > 0 {
 			category = args[0]
 		}
-		return listFilters("include", category, listFormat)
+		return listFilters("include", category, listCmdFormat)
 	},
 }
 
@@ -141,20 +145,14 @@ var listExcludeCmd = &cobra.Command{
 		if len(args) > 0 {
 			category = args[0]
 		}
-		return listFilters("exclude", category, listFormat)
+		return listFilters("exclude", category, listCmdFormat)
 	},
 }
 
 func listReports(cf *config.Config, r reporter.Reporter) (err error) {
-	var reports []string
-	for name := range config.Get[map[string]any](cf, "reports") {
-		reports = append(reports, name)
-	}
-	slices.Sort(reports)
-
 	var rows [][]string
 
-	for _, name := range reports {
+	for _, name := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, "reports"))) {
 		var rep Report
 
 		if reportNames != "" {

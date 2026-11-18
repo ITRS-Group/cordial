@@ -22,29 +22,40 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
 func loadPluginTables(ctx context.Context, cf *config.Config, tx *sql.Tx) (err error) {
-	for pluginTable := range config.Get[map[string]any](cf, "plugins") {
+	for _, pluginTable := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, "plugins"))) {
 		if table, ok := config.Lookup[string](cf, cf.Join("plugins", pluginTable, "table")); ok {
-			var stmt *sql.Stmt
-			if stmt, err = tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q VALUES (?);", table)); err != nil {
+			if err = loadPluginTable(ctx, tx, table, config.Get[[]string](cf, config.Join("plugins", pluginTable, "plugins"))); err != nil {
 				return
 			}
-			if _, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %q", table)); err != nil {
-				return
-			}
-			for _, p := range config.Get[[]string](cf, config.Join("plugins", pluginTable, "plugins")) {
-				if _, err = stmt.ExecContext(ctx, p); err != nil {
-					log.Error("insert failed", slog.Any("error", err), slog.String("plugin", p), slog.String("table", table))
-					return
-				}
-			}
-			stmt.Close()
 		}
 	}
 
 	return
+}
+
+// loadPluginTable replaces the contents of table with the plugins
+func loadPluginTable(ctx context.Context, tx *sql.Tx, table string, plugins []string) error {
+	stmt, err := tx.PrepareContext(ctx, fmt.Sprintf("INSERT INTO %q VALUES (?);", table))
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	if _, err = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %q", table)); err != nil {
+		return err
+	}
+	for _, p := range plugins {
+		if _, err = stmt.ExecContext(ctx, p); err != nil {
+			log.Error("insert failed", slog.Any("error", err), slog.String("plugin", p), slog.String("table", table))
+			return err
+		}
+	}
+	return nil
 }

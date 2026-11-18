@@ -39,9 +39,27 @@ import (
 	"github.com/itrs-group/cordial/pkg/process/control"
 )
 
+// netprobeDefaults are the defaults of the options for the connection
+// to the Netprobe, which are those in the default configuration so that
+// the help of the start and report commands is correct
+var netprobeDefaults = func() (d struct {
+	hostname, entity, sampler string
+	port                      uint16
+	secure, skipVerify        bool
+}) {
+	cf := config.New(config.WithDefaults(defaults, "yaml"))
+	d.hostname = config.Get[string](cf, "geneos.netprobe.hostname")
+	d.port = uint16(config.Get[int](cf, "geneos.netprobe.port"))
+	d.secure = config.Get[bool](cf, "geneos.netprobe.secure")
+	d.skipVerify = config.Get[bool](cf, "geneos.netprobe.skip-verify")
+	d.entity = config.Get[string](cf, "geneos.entity")
+	d.sampler = config.Get[string](cf, "geneos.sampler")
+	return
+}()
+
 var once bool
 var netprobeHost, entity, sampler string
-var netprobePort int16
+var netprobePort uint16
 var secure, skipVerify, onStart, onStartEMail bool
 
 func init() {
@@ -55,12 +73,12 @@ func init() {
 
 	startCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 
-	startCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", "localhost", "Connect to netprobe at `hostname`")
-	startCmd.Flags().Int16VarP(&netprobePort, "port", "P", 7036, "Connect to netprobe on `port`")
-	startCmd.Flags().BoolVarP(&secure, "secure", "S", false, "Use TLS connection to Netprobe")
-	startCmd.Flags().BoolVarP(&skipVerify, "skip-verify", "k", false, "Skip certificate verification for Netprobe connections")
-	startCmd.Flags().StringVarP(&entity, "entity", "e", "GDNA", "Send reports to Managed `Entity`")
-	startCmd.Flags().StringVarP(&sampler, "sampler", "s", "GDNA", "Send reports to `Sampler`")
+	startCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", netprobeDefaults.hostname, "Connect to netprobe at `hostname`")
+	startCmd.Flags().Uint16VarP(&netprobePort, "port", "P", netprobeDefaults.port, "Connect to netprobe on `port`")
+	startCmd.Flags().BoolVarP(&secure, "secure", "S", netprobeDefaults.secure, "Use TLS connection to Netprobe")
+	startCmd.Flags().BoolVarP(&skipVerify, "skip-verify", "k", netprobeDefaults.skipVerify, "Skip certificate verification for Netprobe connections")
+	startCmd.Flags().StringVarP(&entity, "entity", "e", netprobeDefaults.entity, "Send reports to Managed `Entity`")
+	startCmd.Flags().StringVarP(&sampler, "sampler", "s", netprobeDefaults.sampler, "Send reports to `Sampler`")
 	startCmd.Flags().BoolVarP(&resetViews, "reset", "R", false, "Reset/Delete configured Dataviews on first run")
 
 	startCmd.Flags().SortFlags = false
@@ -69,6 +87,13 @@ func init() {
 
 //go:embed _docs/start.md
 var startCmdDescription string
+
+// the jobs run by the schedules, which are variables so that the tests
+// can replace them
+var (
+	runMain  = do
+	runEmail = doEmail
+)
 
 var mainjob, emailjob gocron.Job
 var sched gocron.Scheduler
@@ -92,8 +117,6 @@ var startCmd = &cobra.Command{
 		}
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGHUP)
 		return start()
 	},
 }
@@ -155,19 +178,30 @@ func daemonize(cmd *cobra.Command) error {
 	return nil // not reached
 }
 
+// reloadSignals returns the signals that make a background process read
+// its configuration again, which are SIGUSR1 and, as it is the usual
+// signal to ask for that, SIGHUP, which is also what a hung up terminal
+// sends. There are none on Windows.
+func reloadSignals() []os.Signal {
+	if process.SigReload == nil {
+		return nil
+	}
+	return []os.Signal{process.SigReload, syscall.SIGHUP}
+}
+
 func start() (err error) {
 	// Handle SIGINT (CTRL+C) and SIGTERM, which is what `gdna stop`
 	// sends, gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// catch the reload signal before there is anything that can send
-	// it, as the default action is to terminate the process. It is not
-	// available on Windows.
+	// catch the reload signals before there is anything that can send
+	// them, as the default action is to terminate the process. They are
+	// not available on Windows.
 	var reloads chan os.Signal
-	if process.SigReload != nil && !once {
+	if signals := reloadSignals(); len(signals) > 0 && !once {
 		reloads = make(chan os.Signal, 1)
-		signal.Notify(reloads, process.SigReload)
+		signal.Notify(reloads, signals...)
 		defer signal.Stop(reloads)
 	}
 
@@ -190,6 +224,7 @@ func start() (err error) {
 		return
 	}
 	defer db.Close()
+	defer closeLicdClient()
 
 	if once {
 		return do(ctx, cf, db)
@@ -205,8 +240,8 @@ func start() (err error) {
 
 	// the tasks use the configuration they are given, so that a reload
 	// can replace them
-	maintask := gocron.NewTask(do, ctx, cf, db)
-	emailtask := gocron.NewTask(doEmail, ctx, cf, db, reportNames)
+	maintask := gocron.NewTask(runMain, ctx, cf, db)
+	emailtask := gocron.NewTask(runEmail, ctx, cf, db, reportNames)
 
 	if onStartEMail || onStart {
 		sched.NewJob(gocron.OneTimeJob(gocron.OneTimeJobStartImmediately()),
@@ -295,11 +330,14 @@ func reload(ctx context.Context, current *config.Config, db *sql.DB) (*config.Co
 	}
 
 	if err = scheduleJobs(ncf,
-		gocron.NewTask(do, ctx, ncf, db),
-		gocron.NewTask(doEmail, ctx, ncf, db, reportNames),
+		gocron.NewTask(runMain, ctx, ncf, db),
+		gocron.NewTask(runEmail, ctx, ncf, db, reportNames),
 	); err != nil {
 		return nil, err
 	}
+
+	// the connections to the licds were made using the old settings
+	closeLicdClient()
 	return ncf, nil
 }
 

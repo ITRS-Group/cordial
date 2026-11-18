@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -35,6 +36,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -45,12 +48,19 @@ import (
 	"github.com/itrs-group/cordial/pkg/host"
 )
 
-// openDB opens the given DSN and returns both a *sql.DB object and a
-// ready to go single *sql.Conn object. Remember to close the conn
-// first, then the db, else WAL files are left behind.
+// sourcesChanged is set when the database schema has been updated, which
+// forces the next fetch to load all the file sources again, and is
+// cleared by a fetch that has loaded them.
+var sourcesChanged atomic.Bool
+
+// openDB opens the given DSN and returns a *sql.DB object. Remember to
+// close it, else WAL files are left behind.
 //
-// The single conn connection forces all queries onto one connection to
-// avoid SQLite deadlocks
+// The pool is limited to a single connection, which forces all queries
+// onto one connection to avoid SQLite deadlocks and, for an in-memory
+// database, to always use the same database as each connection has its
+// own. A query must therefore not be run using the *sql.DB while a
+// transaction is open.
 //
 // check if a `gdna-version` table already exists and then do version
 // specific updates as necessary. currently none, just update version
@@ -66,6 +76,7 @@ func openDB(ctx context.Context, cf *config.Config, dsnBase string, readonly boo
 		log.Error("cannot connect to database", slog.String("dsn", dsn), slog.Any("error", err))
 		return
 	}
+	db.SetMaxOpenConns(1)
 
 	if err = db.PingContext(ctx); err != nil {
 		return
@@ -151,23 +162,12 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 		}
 
 		if required > 0 {
-			var tx *sql.Tx
-			tx, err = db.BeginTx(ctx, nil)
-			if err != nil {
-				return
-			}
-			defer tx.Rollback()
-
 			log.Debug("updateQuery", slog.String("query", updateQuery))
-			if _, err = tx.ExecContext(ctx, updateQuery); err != nil {
-				return
-			}
-
-			if err = tx.Commit(); err != nil {
+			if err = execInTx(ctx, db, updateQuery); err != nil {
 				return
 			}
 			// flag an update has happened, force reload of file sources later on, which then clears it
-			config.Set(cf, "db.updated", true)
+			sourcesChanged.Store(true)
 			log.Debug("completed update", slog.Int64("version", i))
 		} else {
 			log.Debug("update not required", slog.Int64("version", i))
@@ -181,6 +181,20 @@ func updateSchema(ctx context.Context, db *sql.DB, cf *config.Config) (err error
 	}
 
 	return
+}
+
+// execInTx runs query in a transaction of its own
+func execInTx(ctx context.Context, db *sql.DB, query string) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = tx.ExecContext(ctx, query); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func historicalPluginTables(ctx context.Context, db *sql.DB, cf *config.Config) (map[string]string, error) {
@@ -231,27 +245,34 @@ func queryToTable(ctx context.Context, tx *sql.Tx, columns []string, query strin
 		table = append(table, c)
 	}
 
-	// prepare a slice of "any" with underlying string pointers for scanning the row
-	r1 := make([]any, len(table[0]))
-	for i := range table[0] {
-		str := ""
-		r1[i] = &str
-	}
-
 	for rows.Next() {
-		r2 := []string{}
-		if err = rows.Scan(r1...); err != nil {
-			return
+		r2, err := scanStrings(rows, len(table[0]))
+		if err != nil {
+			return table, err
 		}
-		// pull out strings into a string slice
-		for _, c := range r1 {
-			r2 = append(r2, *(c.(*string)))
-		}
-
 		table = append(table, r2)
 	}
 	err = rows.Err()
 	return
+}
+
+// scanStrings reads the current row, of n columns, as strings, where a
+// NULL is an empty string
+func scanStrings(rows *sql.Rows, n int) ([]string, error) {
+	values := make([]sql.NullString, n)
+	dest := make([]any, n)
+	for i := range values {
+		dest[i] = &values[i]
+	}
+	if err := rows.Scan(dest...); err != nil {
+		return nil, err
+	}
+
+	row := make([]string, n)
+	for i, v := range values {
+		row[i] = v.String
+	}
+	return row, nil
 }
 
 // queryHeadlines runs query inside the transaction tx and returns a
@@ -274,21 +295,10 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 		return
 	}
 
-	// prepare a slice of "any" with underlying string pointers for scanning the row
-	r1 := make([]any, len(c))
-	for i := range len(c) {
-		str := ""
-		r1[i] = &str
-	}
-
 	for rows.Next() {
-		r2 := []string{}
-		if err = rows.Scan(r1...); err != nil {
+		var r2 []string
+		if r2, err = scanStrings(rows, len(c)); err != nil {
 			return
-		}
-		// pull out strings into a string slice
-		for _, c := range r1 {
-			r2 = append(r2, *(c.(*string)))
 		}
 
 		names = append(names, r2[0])
@@ -297,6 +307,10 @@ func queryHeadlines(ctx context.Context, tx *sql.Tx, query string) (names []stri
 	err = rows.Err()
 	return
 }
+
+// licdDescriptionRE matches the description of a detail report row for
+// a licd before 7.0.0, which is `host:port [host ID]`
+var licdDescriptionRE = regexp.MustCompile(`^(.+?):(\d+)\s\[(.*)\]$`)
 
 // detailReportToDB reads lines from a csv.Reader c and based on the
 // contents transforms and inserts them into the database using the
@@ -319,8 +333,11 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 
 	// read column names
 	colNames, err := c.Read()
-	if err == io.EOF {
-		return
+	if errors.Is(err, io.EOF) {
+		return fmt.Errorf("detail report for %s is empty: %w", source, io.ErrUnexpectedEOF)
+	}
+	if err != nil && !errors.Is(err, csv.ErrFieldCount) {
+		return fmt.Errorf("reading detail report for %s: %w", source, err)
 	}
 	// remember to clone colNames as reuserecords is in use
 	colNames = slices.Clone(colNames)
@@ -390,11 +407,9 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 	defer gwComponentsInsertStmt.Close()
 
 	// transform and insert
-	re := regexp.MustCompile(`^(.+?):(\d+)\s\[(.*)\]$`)
-
 	for {
 		fields, err := c.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// all good, end of CSV input, just return
 			break
 		}
@@ -427,7 +442,7 @@ func detailReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *csv
 				token_id = "INDIVIDUAL"
 			}
 		} else if len(values["description"]) > 0 {
-			matches := re.FindStringSubmatch(values["description"])
+			matches := licdDescriptionRE.FindStringSubmatch(values["description"])
 			if len(matches) == 4 {
 				host_name, port, host_id = matches[1], matches[2], matches[3]
 				token_id = host_id
@@ -653,8 +668,11 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 	for {
 		// consumes lines as name/value pairs until more columns show up, e.g. the "Group,..." as CSV header
 		row, err = c.Read()
-		if err == io.EOF {
-			return
+		if errors.Is(err, io.EOF) {
+			return fmt.Errorf("summary report for %s has no licence table: %w", source, io.ErrUnexpectedEOF)
+		}
+		if err != nil && !errors.Is(err, csv.ErrFieldCount) {
+			return fmt.Errorf("reading summary report for %s: %w", source, err)
 		}
 		if len(row) > 2 {
 			break
@@ -737,12 +755,16 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 
 	for {
 		row, err = c.Read()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
+		if err != nil && !errors.Is(err, csv.ErrFieldCount) {
+			return fmt.Errorf("reading summary report for %s: %w", source, err)
+		}
 		if len(row) != len(columns) {
-			line, _ := c.FieldPos(1)
+			line, _ := c.FieldPos(0)
 			log.Error("incorrect column count", slog.String("src", source), slog.Int("line", line))
+			continue
 		}
 		if row[groupsIndex] != "Overall" {
 			// we ignore all non "Overall" group lines
@@ -767,6 +789,7 @@ func summaryReportToDB(ctx context.Context, cf *config.Config, tx *sql.Tx, c *cs
 		)
 		if err != nil {
 			log.Error("inserting token", slog.Any("error", err), slog.String("src", source))
+			return err
 		}
 	}
 
@@ -793,6 +816,12 @@ func colOrNull(column string, columns map[string]int, fields []string) (val sql.
 		}
 	}
 	return
+}
+
+// traceQuery logs a query at the trace level, which is enabled by the
+// `--trace` flag
+func traceQuery(ctx context.Context, query string) {
+	log.Log(ctx, levelTrace, "query trace", slog.String("query", query))
 }
 
 // createTables iterates over the top-level settings in root and runs
@@ -831,7 +860,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 		}
 	case map[string]any:
 		// a list of config sections with a table name
-		for t := range r {
+		for _, t := range slices.Sorted(maps.Keys(r)) {
 			createQueries = append(createQueries, config.Join(append(prefixFields, fmt.Sprint(t), createSelector)...))
 		}
 	default:
@@ -848,7 +877,7 @@ func createTables(ctx context.Context, cf *config.Config, tx *sql.Tx, root, crea
 		}
 
 		query := config.Get[string](cf, table, filters)
-		log.Debug("query trace", slog.String("query", query))
+		traceQuery(ctx, query)
 		if _, err = tx.ExecContext(ctx, query); err != nil {
 			log.Error("creating table", slog.String("table", table), slog.String("query", query), slog.Any("error", err))
 			return
@@ -902,19 +931,26 @@ func updateReportingDatabase(ctx context.Context, cf *config.Config, tx *sql.Tx,
 			}
 			validSources = append(validSources, source)
 		}
+		if err = rows.Err(); err != nil {
+			return err
+		}
 	}
 
-	for i, s := range validSources {
-		validSources[i] = "'" + s + "'"
-	}
-
-	s := strings.Join(validSources, ", ")
-
-	if err = execSQL(ctx, cf, tx, "db.sources", "update-valid", map[string]string{"sources": s},
+	// the source names come from file names and URLs, so they are bound
+	// as parameters and not quoted into the query
+	var placeholders []string
+	args := []any{
 		sql.Named("oldestValidTime", oldestTimeUnix),
 		sql.Named("oldestValueTimeISO", oldestTime.UTC().Format(time.RFC3339)),
 		sql.Named("maxAge", maxAge.String()),
-	); err != nil {
+	}
+	for i, source := range validSources {
+		name := "source" + strconv.Itoa(i)
+		placeholders = append(placeholders, "@"+name)
+		args = append(args, sql.Named(name, source))
+	}
+
+	if err = execSQL(ctx, cf, tx, "db.sources", "update-valid", map[string]string{"sources": strings.Join(placeholders, ", ")}, args...); err != nil {
 		return
 	}
 
@@ -990,7 +1026,6 @@ func execSQL(ctx context.Context, cf *config.Config, tx *sql.Tx, root, queryName
 // before the extension, e.g. `hostname_20240601T150405_summary.csv`.
 func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source, saveRemoteSources string) (sources []string, err error) {
 	var signedToken string
-	var r io.Reader
 
 	// save a timestamp to the output files, if any, will be consistent
 	timestamp := time.Now().Format("20060102T150405")
@@ -1001,7 +1036,7 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 		return
 	}
 
-	dbUpdated := config.Get[bool](cf, cf.Join("db", "updated"))
+	dbUpdated := sourcesChanged.Load()
 
 	// new authentication, if private key exists.
 	//
@@ -1059,138 +1094,70 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 
 	switch u.Scheme {
 	case "https", "http":
-		sources = append(sources, u.Scheme+":"+u.Hostname())
+		// the port is part of the name so that licds on the same host
+		// are different sources
+		sourceName := u.Scheme + ":" + u.Hostname()
+		if port := u.Port(); port != "" {
+			sourceName += ":" + port
+		}
+		sources = append(sources, sourceName)
+
 		// source timestamp defaults to "now" and is only updated from
 		// the detail report, the summary report time is ignored
 		ts := time.Now()
 
-		tc := &tls.Config{}
-
-		if u.Scheme == "https" {
-			skip := config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify"))
-			roots, err := x509.SystemCertPool()
-			if err != nil {
-				log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
-			}
-
-			if !skip {
-				if chainfile := config.Get[string](cf, cf.Join("gdna", "licd-chain")); chainfile != "" {
-					if chainbytes, err := os.ReadFile(chainfile); err != nil {
-						log.Warn("cannot read licd certificate chain, continuing with system certificates only", slog.Any("error", err))
-					} else {
-						roots.AppendCertsFromPEM(chainbytes) // ignore ok/not ok
-					}
-				}
-			}
-
-			tc = &tls.Config{
-				RootCAs:            roots,
-				InsecureSkipVerify: skip,
-			}
-		}
-
-		client := &http.Client{
-			Transport: &http.Transport{
-				Proxy:           http.ProxyFromEnvironment,
-				TLSClientConfig: tc,
-			},
-			Timeout: config.Get[time.Duration](cf, "gdna.licd-timeout"),
-		}
+		client := licdHTTPClient(cf)
 
 		// read summary data
 		uSummary := u.JoinPath(SummaryPath)
-		req, err := http.NewRequestWithContext(ctx, "GET", uSummary.String(), nil)
+		body, err := licdGet(ctx, client, uSummary.String(), signedToken)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
+			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
-		if signedToken != "" {
-			req.Header.Set("Authorization", "Bearer "+signedToken)
-		}
-
-		resp, err := client.Do(req)
-		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
-			return sources, err
-		}
-		if resp.StatusCode > 299 {
-			resp.Body.Close()
-			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
-			return sources, err
-		}
-		defer resp.Body.Close()
-
-		r = resp.Body
-
-		if saveRemoteSources != "" {
-			filename := fmt.Sprintf("%s_%s_summary.csv", u.Hostname(), timestamp)
-			path := filepath.Join(saveRemoteSources, filename)
-			w, err := os.Create(path)
-			if err != nil {
-				log.Error("creating file to save summary report", slog.String("src", source), slog.Any("error", err))
-			} else {
-				r = io.TeeReader(r, w)
+		if err = func() error {
+			defer body.Close()
+			r := io.Reader(body)
+			if w := saveRemoteSource(saveRemoteSources, u.Hostname(), timestamp, "summary", source); w != nil {
 				defer w.Close()
+				r = io.TeeReader(r, w)
 			}
-		}
 
-		c := csv.NewReader(r)
-		c.ReuseRecord = false
-		c.Comment = '#'
+			c := csv.NewReader(r)
+			c.ReuseRecord = false
+			c.Comment = '#'
 
-		if err = summaryReportToDB(ctx, cf, tx, c, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, ts); err != nil {
+			return summaryReportToDB(ctx, cf, tx, c, sourceName, u.Scheme, source, ts)
+		}(); err != nil {
 			log.Error("processing summary report", slog.String("src", source), slog.Any("error", err))
-			updateSources(ctx, cf, tx, u.Scheme+":"+uSummary.Hostname(), u.Scheme, source, false, ts, err)
+			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
 		// read detail data
 		uDetail := u.JoinPath(DetailsPath)
-		req, err = http.NewRequestWithContext(ctx, "GET", uDetail.String(), nil)
+		body, err = licdGet(ctx, client, uDetail.String(), signedToken)
 		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
+			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
-		if signedToken != "" {
-			req.Header.Set("Authorization", "Bearer "+signedToken)
-		}
-		resp, err = client.Do(req)
-		if err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
-			return sources, err
-		}
-		if resp.StatusCode > 299 {
-			resp.Body.Close()
-			err = fmt.Errorf("server returned %s", resp.Status)
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
-			return sources, err
-		}
-		defer resp.Body.Close()
-
-		r = resp.Body
-		if saveRemoteSources != "" {
-			filename := fmt.Sprintf("%s_%s_detail.csv", u.Hostname(), timestamp)
-			path := filepath.Join(saveRemoteSources, filename)
-			w, err := os.Create(path)
-			if err != nil {
-				log.Error("creating file to save detail report", slog.String("src", source), slog.Any("error", err))
-			} else {
-				r = io.TeeReader(r, w)
+		if err = func() error {
+			defer body.Close()
+			r := io.Reader(body)
+			if w := saveRemoteSource(saveRemoteSources, u.Hostname(), timestamp, "detail", source); w != nil {
 				defer w.Close()
+				r = io.TeeReader(r, w)
 			}
-		}
 
-		// 2nd tee here - to save outputs
+			c := csv.NewReader(r)
+			c.ReuseRecord = true
+			c.Comment = '#'
 
-		c = csv.NewReader(r)
-		c.ReuseRecord = true
-		c.Comment = '#'
-
-		if err = detailReportToDB(ctx, cf, tx, c, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, ts); err != nil {
-			updateSources(ctx, cf, tx, u.Scheme+":"+uDetail.Hostname(), u.Scheme, source, false, ts, err)
+			return detailReportToDB(ctx, cf, tx, c, sourceName, u.Scheme, source, ts)
+		}(); err != nil {
+			updateSources(ctx, cf, tx, sourceName, u.Scheme, source, false, ts, err)
 			return sources, err
 		}
 
@@ -1215,90 +1182,231 @@ func readLicdReports(ctx context.Context, cf *config.Config, tx *sql.Tx, source,
 				continue
 			}
 
-			var s os.FileInfo
-			ts := time.Now()
-			file, _ = filepath.Abs(file)
-			file = filepath.ToSlash(file)
-
-			sourceName := "file:" + strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+			sourceName, err := readLicdFile(ctx, cf, tx, file, dbUpdated)
 			sources = append(sources, sourceName)
-			s, err = os.Stat(file)
 			if err != nil {
-				log.Error("stat file failed", slog.String("file", file), slog.Any("error", err))
-				// record the failure
-				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
 				return sources, err
 			}
-			if s.IsDir() {
-				// record failure as source file is a directory
-				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, os.ErrInvalid)
-				return sources, os.ErrInvalid // geneos.ErrIsADirectory
-			}
-
-			if !overrideFiletime {
-				ts = s.ModTime()
-			}
-
-			var tm sql.NullString
-			query := config.Expand[string](cf, `SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
-			r1 := tx.QueryRowContext(ctx, query, sourceName)
-			if err := r1.Scan(&tm); err != nil {
-				log.Debug("no data for query", slog.String("query", query), slog.String("src", sourceName), slog.Any("error", err))
-			}
-			if tm.Valid {
-				last, err := time.Parse(time.RFC3339, tm.String)
-				if err != nil {
-					log.Error("parse time failed", slog.String("tm", tm.String), slog.Any("error", err))
-					// drop through, time is nil
-				}
-
-				if ts.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !dbUpdated {
-					log.Debug("no update since", slog.String("tm", tm.String))
-					continue
-				}
-			}
-
-			r, err := os.Open(file)
-			if err != nil {
-				log.Error("opening file failed", slog.String("file", file), slog.Any("error", err))
-				continue
-			}
-			c := csv.NewReader(r)
-			c.ReuseRecord = true
-			c.Comment = '#'
-
-			if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
-				log.Error("processing detail report", slog.String("file", file), slog.Any("error", err))
-				// record error
-				updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
-			}
-			r.Close()
-
-			// now try to process a _summary file for the same
-			file = strings.TrimSuffix(file, filepath.Ext(file)) + "_summary" + filepath.Ext(file)
-			sourceName = strings.TrimSuffix(sourceName, filepath.Ext(sourceName)) + "_summary" + filepath.Ext(sourceName)
-
-			r, err = os.Open(file)
-			if err != nil {
-				log.Debug("opening file failed", slog.String("file", file), slog.Any("error", err))
-				continue
-			}
-			c = csv.NewReader(r)
-			c.ReuseRecord = true
-			c.Comment = '#'
-
-			sn := strings.TrimSuffix(sourceName, "_summary"+filepath.Ext(sourceName)) + filepath.Ext(sourceName)
-			if err = summaryReportToDB(ctx, cf, tx, c, sn, "file", file, ts); err != nil {
-				log.Error("processing summary report", slog.String("file", file), slog.Any("error", err))
-				updateSources(ctx, cf, tx, sn, "file", file, false, ts, err)
-				return sources, err
-			}
-
 		}
-		return sources, nil
 	}
 
 	return sources, nil
+}
+
+// readLicdFile loads a licd detail report file and the summary report
+// that goes with it, if any. The name of the source is always returned,
+// even with an error, so that the source is not marked as stale.
+//
+// A detail report that has not changed since it was last loaded is
+// skipped, unless forced, but the summary report is still checked as it
+// can be added later.
+func readLicdFile(ctx context.Context, cf *config.Config, tx *sql.Tx, file string, forced bool) (sourceName string, err error) {
+	ts := time.Now()
+	file, _ = filepath.Abs(file)
+	file = filepath.ToSlash(file)
+
+	sourceName = "file:" + strings.TrimSuffix(filepath.Base(file), filepath.Ext(file))
+
+	s, err := os.Stat(file)
+	if err != nil {
+		log.Error("stat file failed", slog.String("file", file), slog.Any("error", err))
+		// record the failure
+		updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
+		return
+	}
+	if s.IsDir() {
+		// record failure as source file is a directory
+		updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, os.ErrInvalid)
+		return sourceName, os.ErrInvalid // geneos.ErrIsADirectory
+	}
+
+	if !overrideFiletime {
+		ts = s.ModTime()
+	}
+
+	unchanged := false
+	var tm sql.NullString
+	query := config.Expand[string](cf, `SELECT lastSeen FROM ${db.sources.table} WHERE source = ?`)
+	if err := tx.QueryRowContext(ctx, query, sourceName).Scan(&tm); err != nil {
+		log.Debug("no data for query", slog.String("query", query), slog.String("src", sourceName), slog.Any("error", err))
+	}
+	if tm.Valid {
+		last, err := time.Parse(time.RFC3339, tm.String)
+		if err != nil {
+			log.Error("parse time failed", slog.String("tm", tm.String), slog.Any("error", err))
+			// drop through, time is nil
+		}
+
+		if ts.Truncate(time.Second).Equal(last) && !(onStart || onStartEMail) && !forced {
+			log.Debug("no update since", slog.String("tm", tm.String))
+			unchanged = true
+		}
+	}
+
+	if !unchanged {
+		r, err := os.Open(file)
+		if err != nil {
+			log.Error("opening file failed", slog.String("file", file), slog.Any("error", err))
+			return sourceName, nil
+		}
+		c := csv.NewReader(r)
+		c.ReuseRecord = true
+		c.Comment = '#'
+
+		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
+			log.Error("processing detail report", slog.String("file", file), slog.Any("error", err))
+			// record error
+			updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
+		}
+		r.Close()
+	}
+
+	// now try to process a _summary file for the same, which uses the
+	// same source name
+	file = strings.TrimSuffix(file, filepath.Ext(file)) + "_summary" + filepath.Ext(file)
+
+	r, err := os.Open(file)
+	if err != nil {
+		log.Debug("opening file failed", slog.String("file", file), slog.Any("error", err))
+		return sourceName, nil
+	}
+	defer r.Close()
+
+	c := csv.NewReader(r)
+	c.ReuseRecord = true
+	c.Comment = '#'
+
+	if err = summaryReportToDB(ctx, cf, tx, c, sourceName, "file", file, ts); err != nil {
+		log.Error("processing summary report", slog.String("file", file), slog.Any("error", err))
+		updateSources(ctx, cf, tx, sourceName, "file", file, false, ts, err)
+		return sourceName, err
+	}
+
+	return sourceName, nil
+}
+
+// licdGet requests url from a licd, with a bearer token if there is
+// one, and returns the body of the response, which the caller must
+// close, or an error for any response that is not a success.
+func licdGet(ctx context.Context, client *http.Client, url, token string) (io.ReadCloser, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode > 299 {
+		resp.Body.Close()
+		return nil, fmt.Errorf("server returned %s", resp.Status)
+	}
+	return resp.Body, nil
+}
+
+// saveRemoteSource creates the file to save a copy of a report fetched
+// from a remote licd in the directory dir, if it is set, and returns it,
+// or nil if there is no directory or the file cannot be created. The
+// caller must close it.
+func saveRemoteSource(dir, host, timestamp, kind, source string) *os.File {
+	if dir == "" {
+		return nil
+	}
+	w, err := os.Create(filepath.Join(dir, fmt.Sprintf("%s_%s_%s.csv", host, timestamp, kind)))
+	if err != nil {
+		log.Error("creating file to save "+kind+" report", slog.String("src", source), slog.Any("error", err))
+		return nil
+	}
+	return w
+}
+
+// the HTTP client used for all the requests to licds, which is shared
+// so that connections are reused. It is replaced when the settings that
+// it uses change and closed on a reload.
+var licdClients struct {
+	sync.Mutex
+	key    licdClientKey
+	client *http.Client
+}
+
+type licdClientKey struct {
+	skipVerify bool
+	chain      string
+	timeout    time.Duration
+}
+
+// licdHTTPClient returns the shared HTTP client for requests to licds
+// using the settings in cf
+func licdHTTPClient(cf *config.Config) *http.Client {
+	key := licdClientKey{
+		skipVerify: config.Get[bool](cf, cf.Join("gdna", "licd-skip-verify")),
+		timeout:    config.Get[time.Duration](cf, cf.Join("gdna", "licd-timeout")),
+	}
+
+	if !key.skipVerify {
+		if chainfile := config.Get[string](cf, cf.Join("gdna", "licd-chain")); chainfile != "" {
+			if chain, err := os.ReadFile(chainfile); err != nil {
+				log.Warn("cannot read licd certificate chain, continuing with system certificates only", slog.Any("error", err))
+			} else {
+				key.chain = string(chain)
+			}
+		}
+	}
+
+	licdClients.Lock()
+	defer licdClients.Unlock()
+
+	if licdClients.client != nil && licdClients.key == key {
+		return licdClients.client
+	}
+	closeLicdClientLocked()
+
+	// a nil pool uses the system certificates, which can only be added to
+	// if they can be read
+	roots, err := x509.SystemCertPool()
+	if err != nil {
+		log.Warn("cannot read system certificates, continuing anyway", slog.Any("error", err))
+		roots = nil
+	}
+	if key.chain != "" {
+		if roots == nil {
+			roots = x509.NewCertPool()
+		}
+		roots.AppendCertsFromPEM([]byte(key.chain)) // ignore ok/not ok
+	}
+
+	licdClients.key = key
+	licdClients.client = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			TLSClientConfig: &tls.Config{
+				RootCAs:            roots,
+				InsecureSkipVerify: key.skipVerify,
+			},
+			IdleConnTimeout: 30 * time.Second,
+		},
+		Timeout: key.timeout,
+	}
+	return licdClients.client
+}
+
+// closeLicdClient closes any idle connections to licds and drops the
+// shared client, so that the next request uses the current settings
+func closeLicdClient() {
+	licdClients.Lock()
+	defer licdClients.Unlock()
+	closeLicdClientLocked()
+}
+
+func closeLicdClientLocked() {
+	if licdClients.client != nil {
+		licdClients.client.CloseIdleConnections()
+		licdClients.client = nil
+	}
 }
 
 // updateSources updates the sources table with the given information
@@ -1307,7 +1415,10 @@ func updateSources(ctx context.Context, cf *config.Config, tx *sql.Tx, source, s
 	// is source is an error then unwrap it as prefix with a plain
 	// "ERROR:"
 	if s, ok := status.(error); ok {
-		status = fmt.Errorf("ERROR: %w", errors.Unwrap(s))
+		if cause := errors.Unwrap(s); cause != nil {
+			s = cause
+		}
+		status = "ERROR: " + s.Error()
 	}
 	return execSQL(ctx, cf, tx, "db.sources", "insert", nil,
 		sql.Named("source", source),

@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	dbg "runtime/debug"
+	"runtime"
 	"strings"
 
 	"github.com/DeRuina/timberjack"
@@ -67,6 +67,33 @@ func init() {
 }
 
 var cf *config.Config
+
+// levelTrace is the log level enabled by the `--trace` flag, below
+// debug, for the output of every SQL query
+const levelTrace = slog.LevelDebug - 4
+
+// logLevel returns the log level selected by the command line flags,
+// where trace includes debug
+func logLevel() slog.Level {
+	switch {
+	case trace:
+		return levelTrace
+	case debug:
+		return slog.LevelDebug
+	default:
+		return slog.LevelInfo
+	}
+}
+
+// logMaxAge returns the number of days to keep rotated log files, which
+// is the documented `gdna.log.max-age`. The undocumented
+// `gdna.log.stale-after` is only used, as it was before, if it is set.
+func logMaxAge(cf *config.Config) int {
+	if key := cf.Join("gdna", "log", "stale-after"); cf.IsSet(key) {
+		return config.Get[int](cf, key)
+	}
+	return config.Get[int](cf, cf.Join("gdna", "log", "max-age"), config.DefaultValue(14))
+}
 
 //go:embed gdna.defaults.yaml
 var defaults []byte
@@ -189,13 +216,21 @@ func loadConfig(file string) (*config.Config, error) {
 	if err = validateLayerConfig(cf); err != nil {
 		return nil, err
 	}
+	bindFilterSQL(cf)
 	return cf, nil
+}
+
+// bindFilterSQL makes the `filters` expansion prefix, used in queries,
+// available to every expansion using cf, and only cf. The prefix is
+// bound to the configuration when it is loaded, so that a reload does not
+// change the queries of runs that are using the previous one.
+func bindFilterSQL(cf *config.Config) {
+	cf.SetDefaultExpandOptions(append(cf.DefaultExpandOptions(), buildFilterSQL(cf))...)
 }
 
 func initConfig(cmd *cobra.Command) {
 	var err error
 	var deferredlog string
-	var loglevel slog.Level
 
 	if cf == nil {
 		if err = checkConfigFile(cfgFile); err != nil {
@@ -211,6 +246,8 @@ func initConfig(cmd *cobra.Command) {
 			)
 			os.Exit(1)
 		}
+
+		bindFilterSQL(cf)
 
 		// save log for after log setup
 		deferredlog = fmt.Sprintf("configuration loaded from %s",
@@ -239,14 +276,13 @@ func initConfig(cmd *cobra.Command) {
 			Filename:   logFile,
 			MaxSize:    config.Get[int](cf, cf.Join("gdna", "log", "max-size"), config.DefaultValue(10)),
 			MaxBackups: config.Get[int](cf, cf.Join("gdna", "log", "max-backups"), config.DefaultValue(5)),
-			MaxAge:     config.Get[int](cf, cf.Join("gdna", "log", "stale-after"), config.DefaultValue(30)),
+			MaxAge:     logMaxAge(cf),
 			Compress:   config.Get[bool](cf, cf.Join("gdna", "log", "compress"), config.DefaultValue(true)),
 		}),
 		logger.RotateOnStart(config.Get[bool](cf, cf.Join("gdna", "log", "rotate-on-start"), config.DefaultValue(false))),
-		logger.SetLogLevel(loglevel),
+		logger.SetLogLevel(logLevel()),
 	)
 
-	info, _ := dbg.ReadBuildInfo()
-	log.Info(fmt.Sprintf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, info.GoVersion))
+	log.Info(fmt.Sprintf("command %q version %s built with %s", cmd.Name(), cordial.VERSION, runtime.Version()))
 	log.Info(deferredlog)
 }

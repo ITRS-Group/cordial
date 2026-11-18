@@ -26,12 +26,12 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
 	"os/signal"
 	"os/user"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -89,12 +89,12 @@ func init() {
 	reportCmd.Flags().StringVarP(&reportNames, "reports", "r", "", reportNamesDescription)
 	reportCmd.Flags().BoolVarP(&scrambleNames, "scramble", "S", false, "Scramble configured column of data in reports with sensitive data")
 
-	reportCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", "localhost", "Connect to netprobe at `hostname`")
-	reportCmd.Flags().Int16VarP(&netprobePort, "port", "P", 7036, "Connect to netprobe on `port`")
-	reportCmd.Flags().BoolVarP(&secure, "tls", "T", false, "Use TLS connection to Netprobe")
-	reportCmd.Flags().BoolVarP(&skipVerify, "skip-verify", "k", false, "Skip certificate verification for Netprobe connections")
-	reportCmd.Flags().StringVarP(&entity, "entity", "e", "GDNA", "Send reports to Managed `Entity`")
-	reportCmd.Flags().StringVarP(&sampler, "sampler", "s", "GDNA", "Send reports to `Sampler`")
+	reportCmd.Flags().StringVarP(&netprobeHost, "hostname", "H", netprobeDefaults.hostname, "Connect to netprobe at `hostname`")
+	reportCmd.Flags().Uint16VarP(&netprobePort, "port", "P", netprobeDefaults.port, "Connect to netprobe on `port`")
+	reportCmd.Flags().BoolVarP(&secure, "tls", "T", netprobeDefaults.secure, "Use TLS connection to Netprobe")
+	reportCmd.Flags().BoolVarP(&skipVerify, "skip-verify", "k", netprobeDefaults.skipVerify, "Skip certificate verification for Netprobe connections")
+	reportCmd.Flags().StringVarP(&entity, "entity", "e", netprobeDefaults.entity, "Send reports to Managed `Entity`")
+	reportCmd.Flags().StringVarP(&sampler, "sampler", "s", netprobeDefaults.sampler, "Send reports to `Sampler`")
 	reportCmd.Flags().BoolVarP(&resetViews, "reset", "R", false, "Reset/Delete configured Dataviews")
 
 	// allow user to specify --ad-hoc as --adhoc
@@ -196,6 +196,31 @@ var reportCmd = &cobra.Command{
 	},
 }
 
+// xlsxOptions returns the options for an XLSX reporter using the
+// configuration, with defaults for anything that is not set so that a
+// missing setting is never a zero value, such as a column width, that
+// overrides the defaults of the reporter. scramble says if the columns
+// configured for scrambling are scrambled.
+func xlsxOptions(cf *config.Config, scramble bool) []any {
+	return []any{
+		reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"), config.DefaultValue("Summary"))),
+		reporter.Scramble(scramble),
+		reporter.XLSXPassword(config.Get[config.Secret](cf, cf.Join("xlsx", "password"))),
+		reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
+		reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
+		reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
+		reporter.SeverityColours(
+			config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "undefined"), config.DefaultValue("BFBFBF")),
+			config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "ok"), config.DefaultValue("5BB25C")),
+			config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "warning"), config.DefaultValue("F9B057")),
+			config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "critical"), config.DefaultValue("FF5668")),
+		),
+		reporter.MinColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "min-width"), config.DefaultValue(10.0))),
+		reporter.MaxColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "max-width"), config.DefaultValue(50.0))),
+		reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
+	}
+}
+
 func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, format string, reports string) (err error) {
 	var z *zip.Writer
 	var r reporter.Reporter
@@ -235,32 +260,22 @@ func report(ctx context.Context, cf *config.Config, tx *sql.Tx, w io.Writer, for
 			return
 		}
 		maxreports = 1
-		r, _ = reporter.NewReporter("toolkit", w)
+		if r, err = reporter.NewReporter("toolkit", w); err != nil {
+			return
+		}
 	case "table", "html", "tsv", "markdown", "md":
-		r, _ = reporter.NewReporter(format, w,
+		if r, err = reporter.NewReporter(format, w,
 			reporter.Scramble(scrambleNames),
 			reporter.DataviewCSSClass("gdna-dataview"),
 			reporter.HeadlineCSSClass("gdna-headlines"),
 			reporter.ZipWriter(z),
-		)
+		); err != nil {
+			return
+		}
 	case "xlsx":
-		r, _ = reporter.NewReporter("xlsx", w,
-			reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
-			reporter.Scramble(scrambleNames || config.Get[bool](cf, cf.Join("xlsx", "scramble"))),
-			reporter.XLSXPassword(config.Get[config.Secret](cf, cf.Join("xlsx", "password"))),
-			reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
-			reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
-			reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
-			reporter.SeverityColours(
-				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "undefined"), config.DefaultValue("BFBFBF")),
-				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "ok"), config.DefaultValue("5BB25C")),
-				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "warning"), config.DefaultValue("F9B057")),
-				config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "critical"), config.DefaultValue("FF5668")),
-			),
-			reporter.MinColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "min-width"))),
-			reporter.MaxColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "max-width"))),
-			reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
-		)
+		if r, err = reporter.NewReporter("xlsx", w, xlsxOptions(cf, scrambleNames || config.Get[bool](cf, cf.Join("xlsx", "scramble")))...); err != nil {
+			return
+		}
 	case "dataview":
 		fallthrough
 	default:
@@ -328,12 +343,20 @@ func validateLayerReportSelection(selection string) error {
 	return nil
 }
 
+// runReports runs the configured reports that match reportNames, or all
+// of them if empty, in the order of their names. At most maxreports are
+// run, if it is not -1.
+//
+// A report that fails does not stop the others from being run, so that
+// as many as possible are published, but the errors are all returned so
+// that a caller can tell that the output is not complete.
 func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, reportNames string, maxreports int) (err error) {
+	var errs []error
 	var standardReports []Report
 	var groupedReports []Report
 
 	var i int
-	for name := range config.Get[map[string]any](cf, "reports") {
+	for _, name := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, "reports"))) {
 		var rep Report
 		var subreport string
 		if reportNames != "" {
@@ -355,6 +378,7 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 
 		if err = cf.UnmarshalKey(config.Join("reports", name), &rep, config.NoExpand()); err != nil {
 			log.Error("skipping report due to configuration format incorrect", slog.Any("error", err), slog.String("report", name))
+			errs = append(errs, fmt.Errorf("report %s: %w", name, err))
 			continue
 		}
 
@@ -365,9 +389,8 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		if reportNames != "" {
 			if match, _ := matchReport(rep.Name, reportNames); match {
 				// override reports that may be disabled for the selected format
-				t := true
-				rep.Dataview.Enable = &t
-				rep.XLSX.Enable = &t
+				rep.Dataview.Enable = new(true)
+				rep.XLSX.Enable = new(true)
 			}
 		}
 
@@ -386,25 +409,16 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 				continue
 			}
 
-			publishReport(ctx, cf, tx, r, rep)
+			if err = publishReport(ctx, cf, tx, r, rep); err != nil {
+				errs = append(errs, fmt.Errorf("report %s: %w", name, err))
+			}
 		default:
 			standardReports = append(standardReports, rep)
 		}
 	}
 
-	// only sort reports if we have not been given a specific list given
-	if reportNames == "" {
-		slices.SortFunc(standardReports, func(a, b Report) int {
-			return strings.Compare(a.Name, b.Name)
-		})
-
-		slices.SortFunc(groupedReports, func(a, b Report) int {
-			return strings.Compare(a.Name, b.Name)
-		})
-	}
-
-	// compact report lists, even if not sorted above, to allow for command
-	// line repeats like `-r filters,filters`
+	// the reports are already in the order of their names, so only
+	// remove any repeats
 	standardReports = slices.CompactFunc(standardReports, func(a, b Report) bool {
 		return a.Name == b.Name
 	})
@@ -429,11 +443,14 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 
 		switch rep.Type {
 		case "plugin-groups":
-			publishReportPluginGroups(ctx, cf, tx, r, rep)
+			err = publishReportPluginGroups(ctx, cf, tx, r, rep)
 		case "indirect":
-			publishReportIndirect(ctx, cf, tx, r, rep)
+			err = publishReportIndirect(ctx, cf, tx, r, rep)
 		default:
-			publishReport(ctx, cf, tx, r, rep)
+			err = publishReport(ctx, cf, tx, r, rep)
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("report %s: %w", rep.Name, err))
 		}
 		log.Debug("report completed", slog.String("report", rep.Name), slog.Float64("duration", time.Since(start).Seconds()))
 	}
@@ -444,12 +461,13 @@ func runReports(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.R
 		start := time.Now()
 
 		if err = publishReportSplit(ctx, cf, tx, r, rep); err != nil {
-			return
+			errs = append(errs, fmt.Errorf("report %s: %w", rep.Name, err))
+			continue
 		}
 		log.Debug("report completed", slog.String("report", rep.Name), slog.Float64("duration", time.Since(start).Seconds()))
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func reportLookupTable(report, group string, scramble bool) (lookupTable map[string]string) {
@@ -483,18 +501,25 @@ func reportLookupTable(report, group string, scramble bool) (lookupTable map[str
 	return
 }
 
-func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
-	var err error
+// lookupTable returns the lookup table of the values that are available
+// when expanding the settings of the report
+func (report Report) lookupTable() map[string]string {
+	return reportLookupTable(report.Name, report.Dataview.Group, scrambleNames)
+}
 
+// prepareReport sets the file path of the report, from the
+// configuration or the name of the report, and prepares the report
+// ready for the data, with the default headlines
+func prepareReport(cf *config.Config, r reporter.Reporter, report *Report) error {
 	if report.FilePath != "" {
-		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
+		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(report.lookupTable()))
 	} else {
 		// generate filepath from report name
 		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
 	}
 
-	if err = r.Prepare(report.Report); err != nil {
-		return
+	if err := r.Prepare(report.Report); err != nil {
+		return fmt.Errorf("cannot prepare report: %w", err)
 	}
 	if !outputZip {
 		r.AddHeadline("reportName", report.Name)
@@ -502,111 +527,91 @@ func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporte
 			r.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
 		}
 	}
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
+	return nil
+}
+
+// addHeadlines runs the headlines query, if there is one, and adds the
+// results to the report
+func addHeadlines(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report, options ...config.ExpandOption) error {
+	query := config.Expand[string](cf, report.Headlines, append(options, config.ExpandNonStringToCSV())...)
+	if query == "" {
+		return nil
+	}
+	names, headlines, err := queryHeadlines(ctx, tx, query)
+	if err != nil {
+		log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
+		return fmt.Errorf("headline query: %w", err)
+	}
+	for _, h := range names {
+		r.AddHeadline(h, headlines[h])
+	}
+	return nil
+}
+
+func publishReport(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) error {
+	if err := prepareReport(cf, r, &report); err != nil {
+		return err
+	}
+	lookup := config.LookupTable(report.lookupTable())
 
 	query := config.Expand[string](cf, report.Query, lookup, config.ExpandNonStringToCSV())
 	log.Debug("query", slog.String("query", query))
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
 		log.Error("failed to execute query", slog.Any("error", err), slog.String("query", query))
-		return
+		return fmt.Errorf("query: %w", err)
 	}
 	if len(table) > 0 {
 		r.UpdateTable(table[0], table[1:])
 	}
 
-	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
-		names, headlines, err := queryHeadlines(ctx, tx, query)
-		if err != nil {
-			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
-			return
-		}
-		for _, h := range names {
-			r.AddHeadline(h, headlines[h])
-		}
-	}
+	return addHeadlines(ctx, cf, tx, r, report, lookup)
 }
 
 // publishReportIndirect runs the *result* of the query as another SQL
 // statement. The column names are always those from the second query
-func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report Report) {
-	var err error
-
-	if report.FilePath != "" {
-		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
-	} else {
-		// generate filepath from report name
-		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r2.Extension()
+func publishReportIndirect(ctx context.Context, cf *config.Config, tx *sql.Tx, r2 reporter.Reporter, report Report) error {
+	if err := prepareReport(cf, r2, &report); err != nil {
+		return err
 	}
-
-	if err = r2.Prepare(report.Report); err != nil {
-		return
-	}
-	if !outputZip {
-		r2.AddHeadline("reportName", report.Name)
-		if scrambleNames {
-			r2.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
-		}
-	}
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
+	lookup := config.LookupTable(report.lookupTable())
 
 	prequery := config.Expand[string](cf, report.Query, lookup, config.ExpandNonStringToCSV())
 	r := tx.QueryRowContext(ctx, prequery)
 	var query string
 	if err := r.Scan(&query); err != nil {
 		log.Error("failed to execute indirect report pre-query", slog.Any("error", err), slog.String("report", report.Title), slog.String("prequery", prequery))
-		return
+		return fmt.Errorf("indirect report pre-query: %w", err)
 	}
 
 	if query == "" {
 		log.Error("indirect report generated query is empty", slog.String("report", report.Title), slog.String("prequery", prequery))
-		return
+		return errors.New("indirect report generated query is empty")
 	}
 	log.Debug("generated query", slog.String("report", report.Title), slog.String("query", query))
 	table, err := queryToTable(ctx, tx, report.Columns, query)
 	if err != nil {
 		log.Error("failed to execute generated query", slog.Any("error", err), slog.String("query", query))
-		return
+		return fmt.Errorf("generated query: %w", err)
 	}
 	if len(table) == 1 {
-		return
+		return nil
 	}
 	if len(table) > 0 {
 		r2.UpdateTable(table[0], table[1:])
 	}
-	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
-		names, headlines, err := queryHeadlines(ctx, tx, query)
-		if err != nil {
-			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
-			return
-		}
-		for _, h := range names {
-			r2.AddHeadline(h, headlines[h])
-		}
-	}
+
+	return addHeadlines(ctx, cf, tx, r2, report, lookup)
 }
 
-func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) {
-	var err error
+func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.Tx, r reporter.Reporter, report Report) error {
+	var errs []error
 	table := [][]string{report.Columns}
 
-	if report.FilePath != "" {
-		report.FilePath = config.Expand[string](cf, report.FilePath, config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames)))
-	} else {
-		// generate filepath from report name
-		report.FilePath = strings.ReplaceAll(report.Name, " ", "_") + "." + r.Extension()
+	if err := prepareReport(cf, r, &report); err != nil {
+		return err
 	}
-
-	if err = r.Prepare(report.Report); err != nil {
-		return
-	}
-	if !outputZip {
-		r.AddHeadline("reportName", report.Name)
-		if scrambleNames {
-			r.AddHeadline("scrambledColumns", strings.Join(report.ScrambleColumns, ","))
-		}
-	}
-	lookup := config.LookupTable(reportLookupTable(report.Dataview.Group, report.Title, scrambleNames))
+	lookup := config.LookupTable(report.lookupTable())
 
 	groups := config.Get[map[string]string](cf, report.Grouping)
 
@@ -617,16 +622,17 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		}
 		groupnames = append(groupnames, k)
 	}
-	sort.Strings(groupnames)
+	slices.Sort(groupnames)
 	for _, group := range groupnames {
 		query := config.Expand[string](cf, report.Query, lookup, config.LookupTable(map[string]string{
 			"group":  group,
 			"filter": groups[group],
 		}), config.ExpandNonStringToCSV())
-		log.Debug("query trace", slog.String("query", query))
+		traceQuery(ctx, query)
 		t, err := queryToTable(ctx, tx, report.Columns, query)
 		if err != nil {
 			log.Error("failed to execute query", slog.Any("error", err), slog.String("query", query))
+			errs = append(errs, fmt.Errorf("query for group %q: %w", group, err))
 			continue
 		}
 		t = t[1:] // discard columns names
@@ -639,14 +645,8 @@ func publishReportPluginGroups(ctx context.Context, cf *config.Config, tx *sql.T
 		r.UpdateTable(table[0], table[1:])
 	}
 
-	if query := config.Expand[string](cf, report.Headlines, lookup, config.ExpandNonStringToCSV()); query != "" {
-		names, headlines, err := queryHeadlines(ctx, tx, query)
-		if err != nil {
-			log.Error("failed to execute headline query", slog.Any("error", err), slog.String("query", query))
-			return
-		}
-		for _, h := range names {
-			r.AddHeadline(h, headlines[h])
-		}
+	if err := addHeadlines(ctx, cf, tx, r, report, lookup); err != nil {
+		errs = append(errs, err)
 	}
+	return errors.Join(errs...)
 }
