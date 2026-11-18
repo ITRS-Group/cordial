@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/itrs-group/cordial/internal/configkeys"
+	"github.com/itrs-group/cordial/utils/testutil/configkeys"
 )
 
 // every setting in the example configuration must be one that is read,

@@ -15,8 +15,8 @@ import (
 	"github.com/PagerDuty/go-pagerduty"
 
 	"github.com/itrs-group/cordial"
-	"github.com/itrs-group/cordial/internal/configkeys"
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/utils/testutil/configkeys"
 )
 
 func TestMain(m *testing.M) {
