@@ -13,7 +13,7 @@ gdna list includes [CATEGORY]
 ```text
   -f, --config FILE     Use configuration FILE
   -F, --format string   format output. supported formats: 'html', 'table', 'tsv', 'toolkit', 'markdown' (default "table")
-  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file    Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO
