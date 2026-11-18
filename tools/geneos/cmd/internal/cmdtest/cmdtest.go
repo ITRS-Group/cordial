@@ -22,6 +22,11 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
+// StderrCaptured is true if everything written to standard error is
+// captured, including by code that saved the original os.Stderr.
+// Tests of error output should be skipped if it is false.
+const StderrCaptured = stderrCaptured
+
 // Result is the outcome of running a command.
 type Result struct {
 	Stdout string
@@ -127,8 +132,10 @@ func capture(t *testing.T, stdout, stderr io.Writer) (restore func()) {
 	oldOut, oldErr := os.Stdout, os.Stderr
 	po, pe := start(stdout), start(stderr)
 	os.Stdout, os.Stderr = po.w, pe.w
+	restoreFd := redirectStderrFd(pe.w)
 
 	return func() {
+		restoreFd()
 		os.Stdout, os.Stderr = oldOut, oldErr
 		for _, p := range []*pipe{po, pe} {
 			p.w.Close()
