@@ -517,32 +517,125 @@ func TestDataviewAdditionRows(t *testing.T) {
 	}
 }
 
-// every real include file that ships with the geneos command must come
-// back from a read and write with nothing lost
+// canonicalDocument returns the elements of a document, in order, as
+// lines of the path, sorted attributes with their namespaces and the
+// text, without the comments, white space, processing instructions and
+// the declaration of the xsi namespace, so that two documents with the
+// same lines are the same document. It also returns the comments.
+func canonicalDocument(t *testing.T, data []byte) (lines, comments []string) {
+	t.Helper()
+	d := xml.NewDecoder(bytes.NewReader(data))
+	d.CharsetReader = charset.NewReaderLabel
+	var path []string
+	var open []int
+	var texts []*strings.Builder
+	for {
+		tok, err := d.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatalf("parse XML: %v", err)
+		}
+		switch e := tok.(type) {
+		case xml.StartElement:
+			path = append(path, e.Name.Local)
+			var attrs []string
+			for _, a := range e.Attr {
+				space := a.Name.Space
+				switch {
+				case space == "xmlns" && a.Name.Local == "xsi":
+					continue // an undeclared xsi prefix is declared when written
+				case space == "xsi":
+					space = xsiNamespace
+				}
+				attrs = append(attrs, fmt.Sprintf("%s|%s=%q", space, a.Name.Local, a.Value))
+			}
+			slices.Sort(attrs)
+			lines = append(lines, fmt.Sprintf("/%s %s %s", strings.Join(path, "/"), e.Name.Space, strings.Join(attrs, ",")))
+			open = append(open, len(lines)-1)
+			texts = append(texts, &strings.Builder{})
+		case xml.EndElement:
+			i := open[len(open)-1]
+			lines[i] += " #" + strings.TrimSpace(texts[len(texts)-1].String())
+			open, texts, path = open[:len(open)-1], texts[:len(texts)-1], path[:len(path)-1]
+		case xml.CharData:
+			if len(texts) > 0 {
+				texts[len(texts)-1].Write(e)
+			}
+		case xml.Comment:
+			comments = append(comments, strings.TrimSpace(string(e)))
+		}
+	}
+	return
+}
+
+// assertSameDocument checks that got has the same elements, attributes
+// and text as want, in the same order
+func assertSameDocument(t *testing.T, want, got []byte) {
+	t.Helper()
+	w, _ := canonicalDocument(t, want)
+	g, _ := canonicalDocument(t, got)
+	if slices.Equal(w, g) {
+		return
+	}
+	counts := map[string]int{}
+	for _, l := range w {
+		counts[l]++
+	}
+	for _, l := range g {
+		counts[l]--
+	}
+	var diffs []string
+	for l, c := range counts {
+		if c > 0 {
+			diffs = append(diffs, fmt.Sprintf("lost %d: %s", c, l))
+		} else if c < 0 {
+			diffs = append(diffs, fmt.Sprintf("invented %d: %s", -c, l))
+		}
+	}
+	slices.Sort(diffs)
+	if len(diffs) > 20 {
+		diffs = append(diffs[:20], "...")
+	}
+	if len(diffs) == 0 {
+		diffs = []string{"the elements are the same but not in the same order"}
+	}
+	t.Errorf("document changed:\n%s", strings.Join(diffs, "\n"))
+}
+
+// assertSameComments checks that got has the same comments as want, in
+// the same order
+func assertSameComments(t *testing.T, want, got []byte) {
+	t.Helper()
+	_, w := canonicalDocument(t, want)
+	_, g := canonicalDocument(t, got)
+	if !slices.Equal(w, g) {
+		t.Errorf("comments changed:\nwant %q\ngot  %q", w, g)
+	}
+}
+
+// every real include file that ships with the geneos command, and any
+// fixtures in testdata, must come back from a read and write with nothing
+// lost or added, and in the same order
 func TestGatewayRoundTripShippedSetups(t *testing.T) {
 	files, err := filepath.Glob(filepath.Join("..", "..", "tools", "geneos", "includes", "files", "*.xml"))
 	if err != nil || len(files) == 0 {
 		t.Skip("no example setup files found")
 	}
-	// empty wrapper elements are not kept, e.g. <headlines/> or <groups/>
-	// for the elements that are written only if they have children
-	droppable := []string{"/schema/data/headlines ", "/Gateway-licenceUsage/groups "}
-	for _, file := range files {
+	fixtures, _ := filepath.Glob(filepath.Join("testdata", "*.xml"))
+	for _, file := range append(files, fixtures...) {
 		t.Run(filepath.Base(file), func(t *testing.T) {
 			data, err := os.ReadFile(file)
 			if err != nil {
 				t.Fatal(err)
 			}
 			_, out := roundTripGateway(t, data)
-			assertSameOrder(t, data, out, "headlines", "groups")
-			for _, diff := range xmlDifferences(t, data, out) {
-				if strings.HasPrefix(diff, "want ") && !strings.Contains(diff, " got 0:") {
-					t.Errorf("%s", diff)
-					continue
-				}
-				if !slices.ContainsFunc(droppable, func(d string) bool { return strings.Contains(diff, d) }) {
-					t.Errorf("%s", diff)
-				}
+			assertSameDocument(t, data, out)
+			assertSameOrder(t, data, out)
+			assertSameComments(t, data, out)
+			if bytes.HasPrefix(data, []byte("<?xml")) != bytes.HasPrefix(out, []byte("<?xml")) {
+				t.Errorf("the XML declaration was not kept as it was: %.60s", out)
 			}
 		})
 	}

@@ -201,10 +201,15 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	// the original bytes are not kept, only the order of the elements, and
-	// if that cannot be built the Gateway is written in the model order
-	if order, err := buildXMLOrder(data); err == nil {
-		gateway.source = order
+	// the original bytes are not kept, only the order of the elements and the
+	// elements that the model does not write as they were, and if that cannot
+	// be built the Gateway is written as the model does
+	if utf8Data, err := utf8Document(data); err == nil {
+		if model, err := xml.MarshalIndent(&gateway, "", "  "); err == nil {
+			if order, err := buildXMLOrder(utf8Data, model); err == nil {
+				gateway.source = order
+			}
+		}
 	}
 	return &gateway, nil
 }

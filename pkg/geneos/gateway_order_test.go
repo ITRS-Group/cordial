@@ -272,7 +272,7 @@ func TestGatewayPreserveOrderOfAndWriteOption(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := sequenceOf(t, data, "/gateway"), []string{"xFirst", "probes"}; !slices.Equal(got, want) {
+	if got, want := sequenceOf(t, data, "/gateway"), []string{"xFirst", "probes", "xLast"}; !slices.Equal(got, want) { // xLast is empty in src
 		t.Errorf("WithGatewayOrderFrom: children = %v, want %v", got, want)
 	}
 	// the Gateway itself is not changed by the option
@@ -361,7 +361,7 @@ func TestGatewayOrderFailureFallsBack(t *testing.T) {
 	}
 
 	// and the real function does not accept what it cannot parse
-	order, err := buildXMLOrder([]byte(`<a><b/></a>`))
+	order, err := buildXMLOrder([]byte(`<a><b/></a>`), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -371,12 +371,12 @@ func TestGatewayOrderFailureFallsBack(t *testing.T) {
 		}
 	}
 	for _, bad := range []string{``, `<a>`, `<a></b>`} {
-		if o, err := buildXMLOrder([]byte(bad)); err == nil {
+		if o, err := buildXMLOrder([]byte(bad), nil); err == nil {
 			t.Errorf("buildXMLOrder(%q) = %v, no error", bad, o)
 		}
 	}
 	// a document that cannot give an order is written as it is
-	if order, err := buildXMLOrder([]byte(`<a/>`)); err != nil || order != nil {
+	if order, err := buildXMLOrder([]byte(`<a/>`), nil); err != nil || order != nil {
 		t.Errorf("order of an empty element = %v, %v", order, err)
 	}
 }
@@ -434,7 +434,7 @@ func TestReorderXMLNeverLosesChildren(t *testing.T) {
 			next++
 			var child string
 			if withKids {
-				child = fmt.Sprintf("<%s id=\"%d\"><c%d/><d>%d</d></%s>", name, next, next%3, next, name)
+				child = fmt.Sprintf("<%s id=\"%d\"><c%d>x</c%d><d>%d</d></%s>", name, next, next%3, next%3, next, name)
 			} else {
 				child = fmt.Sprintf("<%s>%d</%s>", name, next, name)
 			}
@@ -450,7 +450,7 @@ func TestReorderXMLNeverLosesChildren(t *testing.T) {
 	for i := range 3000 {
 		refDoc, refNames := document(rng.Intn(9), i%2 == 0)
 		newDoc, newNames := document(rng.Intn(9), i%2 == 0)
-		order, err := buildXMLOrder([]byte(refDoc))
+		order, err := buildXMLOrder([]byte(refDoc), nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -489,7 +489,7 @@ func TestReorderXMLNeverLosesChildren(t *testing.T) {
 // finding the start of each at one level of indent
 func childElements(t *testing.T, doc string) (kids []string) {
 	t.Helper()
-	root, _, err := parseXMLSpans([]byte(doc))
+	root, _, err := parseXMLSpans([]byte(doc), false)
 	if err != nil {
 		t.Fatalf("%v\n%s", err, doc)
 	}
