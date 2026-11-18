@@ -25,6 +25,9 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/utils/docs/runas"
+
 	// main command directory for documentation
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 
@@ -72,8 +75,21 @@ var doclist = []docs{
 }
 
 func main() {
+	// the commands use the executable name in their help text, so run as
+	// `geneos` to match the real program
+	if cordial.ExecutableName() != "geneos" {
+		if err := runas.Run("geneos"); err != nil {
+			slog.Error("generate command documentation", "error", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	for _, d := range doclist {
-		os.MkdirAll(d.dir, 0775)
+		if err := os.MkdirAll(d.dir, 0775); err != nil {
+			slog.Error("create documentation directory", "directory", d.dir, "error", err)
+			os.Exit(1)
+		}
 		d.command.Use = "geneos"
 		if err := GenMarkdownTree(d.command, d.dir); err != nil {
 			slog.Error("generate command documentation", "directory", d.dir, "error", err)

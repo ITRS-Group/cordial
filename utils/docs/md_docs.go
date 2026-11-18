@@ -18,17 +18,18 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 )
 
-func printOptions(buf *bytes.Buffer, cmd *cobra.Command, name string) error {
+func printOptions(buf *bytes.Buffer, cmd *cobra.Command) error {
 	flags := cmd.Flags()
 	flags.SetOutput(buf)
 	if flags.HasAvailableFlags() {
@@ -65,7 +66,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 	}
 	if hasSeeAlso(cmd) {
 		children := cmd.Commands()
-		sort.Sort(byName(children))
+		slices.SortFunc(children, func(a, b *cobra.Command) int { return strings.Compare(a.Name(), b.Name()) })
 
 		groups := cmd.Groups()
 
@@ -112,9 +113,12 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 				}
 			}
 		} else {
-			hadChildren := true
+			needHeader := true
 			hasAliases := false
 			for _, child := range children {
+				if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
+					continue
+				}
 				if len(child.Aliases) > 0 {
 					hasAliases = true
 				}
@@ -123,7 +127,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 				if !child.IsAvailableCommand() || child.IsAdditionalHelpTopicCommand() {
 					continue
 				}
-				if !child.HasAvailableSubCommands() && hadChildren {
+				if needHeader {
 					buf.WriteString("\n## Commands\n\n")
 					if hasAliases {
 						buf.WriteString("| Command / Aliases | Description |\n")
@@ -131,7 +135,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 						buf.WriteString("| Command | Description |\n")
 					}
 					buf.WriteString("|-------|-------|\n")
-					hadChildren = false
+					needHeader = false
 				}
 				var cname strings.Builder
 				cname.WriteString(name)
@@ -148,7 +152,7 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 		buf.WriteString("\n")
 	}
 
-	if err := printOptions(buf, cmd, name); err != nil {
+	if err := printOptions(buf, cmd); err != nil {
 		return err
 	}
 
@@ -165,11 +169,6 @@ func GenMarkdownCustom(cmd *cobra.Command, w io.Writer, linkHandler func(string)
 			link := pname + ".md"
 			link = strings.ReplaceAll(link, " ", "_")
 			fmt.Fprintf(buf, "* [%s](%s)\t - %s\n", pname, linkHandler(link), parent.Short)
-			cmd.VisitParents(func(c *cobra.Command) {
-				if c.DisableAutoGenTag {
-					cmd.DisableAutoGenTag = c.DisableAutoGenTag
-				}
-			})
 		}
 	}
 	_, err := buf.WriteTo(w)
@@ -190,7 +189,7 @@ func GenMarkdownTree(cmd *cobra.Command, dir string) error {
 
 // GenMarkdownTreeCustom is the the same as GenMarkdownTree, but
 // with custom filePrepender and linkHandler.
-func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string) error {
+func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHandler func(string) string) (err error) {
 	for _, c := range cmd.Commands() {
 		if !c.IsAvailableCommand() || c.IsAdditionalHelpTopicCommand() {
 			continue
@@ -206,15 +205,14 @@ func GenMarkdownTreeCustom(cmd *cobra.Command, dir string, filePrepender, linkHa
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		err = errors.Join(err, f.Close())
+	}()
 
-	if _, err := io.WriteString(f, filePrepender(filename)); err != nil {
+	if _, err = io.WriteString(f, filePrepender(filename)); err != nil {
 		return err
 	}
-	if err := GenMarkdownCustom(cmd, f, linkHandler); err != nil {
-		return err
-	}
-	return nil
+	return GenMarkdownCustom(cmd, f, linkHandler)
 }
 
 // Test to see if we have a reason to print See Also information in docs
@@ -242,17 +240,6 @@ func hasSeeAlso(cmd *cobra.Command) bool {
 // 	}
 // 	return s
 // }
-
-type byName []*cobra.Command
-
-// Len TODO: Document its behavior, inputs, and effects.
-func (s byName) Len() int { return len(s) }
-
-// Swap TODO: Document its behavior, inputs, and effects.
-func (s byName) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-
-// Less TODO: Document its behavior, inputs, and effects.
-func (s byName) Less(i, j int) bool { return s[i].Name() < s[j].Name() }
 
 // TODO: Revisit unused declaration subsystemsThenNames; restore it only when needed.
 // type subsystemsThenNames []*cobra.Command

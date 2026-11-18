@@ -18,11 +18,21 @@ limitations under the License.
 // docs creates documentation from the tools and integrations in the
 // repo (except `geneos` which has it's own copy of this with custom
 // mods)
+//
+// The tools derive their name, and so the names in their default file
+// names and help text, from the name of the running executable. To get
+// documentation that matches each tool, `docs` runs a copy of itself
+// under the name of each tool in turn (see the runas package) and each
+// copy writes the documentation for just that tool.
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
+
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/utils/docs/runas"
 
 	gdnaCmd "github.com/itrs-group/cordial/gdna/cmd"
 
@@ -43,29 +53,57 @@ import (
 )
 
 type docs struct {
+	name    string // executable name of the documented tool
 	command *cobra.Command
 	dir     string
 }
 
 var doclist = []docs{
-	{gdnaCmd.Cmd, "../../gdna/docs"},
+	{"gdna", gdnaCmd.Cmd, "../../gdna/docs"},
 
-	{dv2email.Cmd, "../../tools/dv2email/docs"},
-	{imsGatewayCmd.Cmd, "../../tools/ims-gateway/docs"},
-	{gatewayReporter.Cmd, "../../tools/gateway-reporter/docs"},
-	{sanCfgCmd.Cmd, "../../tools/san-config/docs"},
+	{"dv2email", dv2email.Cmd, "../../tools/dv2email/docs"},
+	{"ims-gateway", imsGatewayCmd.Cmd, "../../tools/ims-gateway/docs"},
+	{"gateway-reporter", gatewayReporter.Cmd, "../../tools/gateway-reporter/docs"},
+	{"san-config", sanCfgCmd.Cmd, "../../tools/san-config/docs"},
 
-	{snowCmd.Cmd, "../../integrations/servicenow/docs"},
-	{snow2Cmd.Cmd, "../../integrations/servicenow2/docs"},
-	{pdCmd.Cmd, "../../integrations/pagerduty/docs"},
+	{"servicenow", snowCmd.Cmd, "../../integrations/servicenow/docs"},
+	{"servicenow2", snow2Cmd.Cmd, "../../integrations/servicenow2/docs"},
+	{"pagerduty", pdCmd.Cmd, "../../integrations/pagerduty/docs"},
 }
 
 func main() {
+	// when run under the name of a documented tool, only generate for that tool
 	for _, d := range doclist {
-		os.MkdirAll(d.dir, 0775)
-		if err := GenMarkdownTree(d.command, d.dir); err != nil {
-			slog.Error("generate command documentation", "directory", d.dir, "error", err)
-			os.Exit(1)
+		if d.name == cordial.ExecutableName() {
+			if err := generate(d); err != nil {
+				slog.Error("generate command documentation", "directory", d.dir, "error", err)
+				os.Exit(1)
+			}
+			return
 		}
 	}
+
+	if err := generateAll(); err != nil {
+		slog.Error("generate command documentation", "error", err)
+		os.Exit(1)
+	}
+}
+
+func generate(d docs) error {
+	if err := os.MkdirAll(d.dir, 0775); err != nil {
+		return err
+	}
+	d.command.Use = d.name
+	return GenMarkdownTree(d.command, d.dir)
+}
+
+// generateAll runs a copy of this executable, named after each tool in
+// turn, in the current directory
+func generateAll() error {
+	for _, d := range doclist {
+		if err := runas.Run(d.name); err != nil {
+			return fmt.Errorf("%s: %w", d.name, err)
+		}
+	}
+	return nil
 }
