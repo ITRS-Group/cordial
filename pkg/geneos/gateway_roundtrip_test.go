@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -467,5 +468,37 @@ func TestGatewayRoundTripShippedSetups(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// every struct type in the model that is a Marshaler, which includes
+// those using common.MarshalOmitEmptyParents, must be able to encode
+// a zero value, as reflect.StructOf panics for some kinds of embedded fields
+func TestModelMarshalersEncodeZeroValues(t *testing.T) {
+	seen := map[reflect.Type]bool{}
+	var walk func(rt reflect.Type)
+	walk = func(rt reflect.Type) {
+		for rt.Kind() == reflect.Pointer || rt.Kind() == reflect.Slice || rt.Kind() == reflect.Array || rt.Kind() == reflect.Map {
+			rt = rt.Elem()
+		}
+		if rt.Kind() != reflect.Struct || seen[rt] {
+			return
+		}
+		seen[rt] = true
+		for f := range rt.Fields() {
+			walk(f.Type)
+		}
+		if rt != reflect.TypeFor[Gateway]() && rt.Implements(reflect.TypeFor[xml.Marshaler]()) {
+			var b bytes.Buffer
+			e := xml.NewEncoder(&b)
+			start := xml.StartElement{Name: xml.Name{Local: "element"}}
+			if err := e.EncodeElement(reflect.Zero(rt).Interface(), start); err != nil {
+				t.Errorf("%s: %v", rt, err)
+			}
+		}
+	}
+	walk(reflect.TypeFor[gatewayXML]())
+	if len(seen) < 100 {
+		t.Errorf("only %d types found in the model", len(seen))
 	}
 }
