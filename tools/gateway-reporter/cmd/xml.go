@@ -20,7 +20,6 @@ package cmd
 import (
 	"bytes"
 	"os"
-	"path"
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -37,7 +36,7 @@ func outputXML(cf *config.Config, gateway string, savedXML *bytes.Buffer) (err e
 
 	filename := config.Get[string](cf, "output.formats.xml", conftable)
 	if !filepath.IsAbs(filename) {
-		filename = path.Join(dir, filename)
+		filename = filepath.Join(dir, filename)
 	}
 
 	f, err := os.Create(filename)

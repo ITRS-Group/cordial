@@ -20,13 +20,12 @@ package cmd
 import (
 	"archive/zip"
 	"encoding/csv"
-	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"os"
-	"path"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strconv"
 	"time"
 
@@ -55,13 +54,23 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 
 	filename := config.Get[string](cf, "output.formats.csv", conftable)
 	if !filepath.IsAbs(filename) {
-		filename = path.Join(dir, filename)
+		filename = filepath.Join(dir, filename)
 	}
 
 	zipfile, err := os.Create(filename)
-	defer zipfile.Close()
-
+	if err != nil {
+		return
+	}
 	z := zip.NewWriter(zipfile)
+	defer func() {
+		// report close errors, e.g. for a truncated or failed write
+		if cerr := z.Close(); err == nil {
+			err = cerr
+		}
+		if cerr := zipfile.Close(); err == nil {
+			err = cerr
+		}
+	}()
 
 	// output a summary file
 	w, err := createCSVZip(cf, z, config.Get[string](cf, "output.reports.summary.filename", conftable)+".csv")
@@ -69,7 +78,9 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 		log.Error("failed to create CSV zip", slog.Any("error", err))
 		return
 	}
-	outputCSVSummary(w, cf, gateway, Entities, probes)
+	if err = outputCSVSummary(w, cf, gateway, Entities, probes); err != nil {
+		return
+	}
 
 	// entities.csv
 	w, err = createCSVZip(cf, z, config.Get[string](cf, "output.reports.entities.filename", conftable)+".csv")
@@ -77,7 +88,9 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 		log.Error("failed to create CSV zip", slog.Any("error", err))
 		return
 	}
-	outputCVSEntities(w, Entities, cf, conftable)
+	if err = outputCVSEntities(w, Entities, cf, conftable); err != nil {
+		return
+	}
 
 	for _, plugin := range config.Get[[]string](cf, "output.plugins.single-column") {
 		rows := 0
@@ -94,10 +107,11 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
-			log.Error("failed to create CSV zip", slog.Any("error", err))
-			continue
+			return
 		}
-		outputCSVSinglePlugin(w, Entities, cf, conftable, plugin)
+		if err = outputCSVSinglePlugin(w, Entities, cf, conftable, plugin); err != nil {
+			return
+		}
 	}
 
 	for _, plugin := range config.Get[[]string](cf, "output.plugins.two-column") {
@@ -115,14 +129,12 @@ func outputCSVZip(cf *config.Config, gateway string, Entities []Entity, probes m
 
 		w, err = createCSVZip(cf, z, config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable)+".csv")
 		if err != nil {
-			log.Error("failed to create CSV zip", slog.Any("error", err))
-			continue
+			return
 		}
-
-		outputCSVTwoColumnPlugin(w, Entities, cf, conftable, plugin)
+		if err = outputCSVTwoColumnPlugin(w, Entities, cf, conftable, plugin); err != nil {
+			return
+		}
 	}
-
-	z.Close()
 
 	return
 }
@@ -137,6 +149,20 @@ type csvFiles struct {
 	sheetname string
 }
 
+// writeCSVFile creates filename in dir, calls write and returns the
+// first error from either the write or closing the file
+func writeCSVFile(dir, filename string, write func(w io.Writer) error) (err error) {
+	f, err := os.Create(filepath.Join(dir, filename))
+	if err != nil {
+		return
+	}
+	err = write(f)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return
+}
+
 func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes map[string]geneos.Probe) (csvfiles []csvFiles, subdir string, err error) {
 	conftable := config.LookupTable(map[string]string{
 		"gateway":  gateway,
@@ -146,19 +172,21 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 	dir := config.Get[string](cf, "output.directory")
 	subdir = config.Get[string](cf, "output.formats.csvdir", conftable)
 	if !filepath.IsAbs(subdir) {
-		subdir = path.Join(dir, subdir)
+		subdir = filepath.Join(dir, subdir)
 	}
-	_ = os.MkdirAll(subdir, 0775)
+	if err = os.MkdirAll(subdir, 0775); err != nil {
+		return
+	}
 
 	// output a summary file
 	summaryFile := config.Get[string](cf, "output.reports.summary.filename", conftable) + ".csv"
-	w, err := createCSVFile(cf, subdir, summaryFile)
+	err = writeCSVFile(subdir, summaryFile, func(w io.Writer) error {
+		return outputCSVSummary(w, cf, gateway, Entities, probes)
+	})
 	if err != nil {
 		log.Error("failed to create CSV file", slog.Any("error", err))
 		return
 	}
-	outputCSVSummary(w, cf, gateway, Entities, probes)
-	w.Close()
 
 	csvfiles = append(csvfiles, csvFiles{
 		path:      filepath.Join(subdir, summaryFile),
@@ -168,13 +196,13 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 
 	// entities.csv
 	entitiesFile := config.Get[string](cf, "output.reports.entities.filename", conftable) + ".csv"
-	w, err = createCSVFile(cf, subdir, entitiesFile)
+	err = writeCSVFile(subdir, entitiesFile, func(w io.Writer) error {
+		return outputCVSEntities(w, Entities, cf, conftable)
+	})
 	if err != nil {
 		log.Error("failed to create CSV file", slog.Any("error", err))
 		return
 	}
-	outputCVSEntities(w, Entities, cf, conftable)
-	w.Close()
 
 	csvfiles = append(csvfiles, csvFiles{
 		path:      filepath.Join(subdir, entitiesFile),
@@ -203,13 +231,13 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		}
 
 		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
-		w, err = createCSVFile(cf, subdir, pluginFile)
+		err = writeCSVFile(subdir, pluginFile, func(w io.Writer) error {
+			return outputCSVSinglePluginWithRowname(w, Entities, cf, conftable, plugin)
+		})
 		if err != nil {
 			log.Error("failed to create CSV file", slog.Any("error", err))
-			continue
+			return
 		}
-		outputCSVSinglePluginWithRowname(w, Entities, cf, conftable, plugin)
-		w.Close()
 
 		csvfiles = append(csvfiles, csvFiles{
 			path:      filepath.Join(subdir, pluginFile),
@@ -236,13 +264,13 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 		}
 
 		pluginFile := config.Get[string](cf, config.Join("output", "reports", plugin, "filename"), conftable) + ".csv"
-		w, err = createCSVFile(cf, subdir, pluginFile)
+		err = writeCSVFile(subdir, pluginFile, func(w io.Writer) error {
+			return outputCSVTwoColumnPluginWithRowname(w, Entities, cf, conftable, plugin)
+		})
 		if err != nil {
 			log.Error("failed to create CSV file", slog.Any("error", err))
-			continue
+			return
 		}
-		outputCSVTwoColumnPluginWithRowname(w, Entities, cf, conftable, plugin)
-		w.Close()
 
 		csvfiles = append(csvfiles, csvFiles{
 			path:      filepath.Join(subdir, pluginFile),
@@ -254,14 +282,10 @@ func outputCSVDir(cf *config.Config, gateway string, Entities []Entity, probes m
 	return
 }
 
-func createCSVFile(cf *config.Config, dir, filename string) (w io.WriteCloser, err error) {
-	return os.Create(filepath.Join(dir, filename))
-}
-
 func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe) (err error) {
 	scsv := csv.NewWriter(w)
 	hostname, _ := os.Hostname()
-	scsv.WriteAll([][]string{
+	return scsv.WriteAll([][]string{
 		{"Name", "Value"},
 		{"ITRS Gateway Reporter", "Version: " + cordial.VERSION},
 		{"Site", config.Get[string](cf, "site", config.DefaultValue("ITRS"))},
@@ -271,13 +295,50 @@ func outputCSVSummary(w io.Writer, cf *config.Config, gateway string, entities [
 		{"Probes", strconv.Itoa(len(probes))},
 		{"Managed Entities", strconv.Itoa(len(entities))},
 	})
-	return
+}
+
+// fitRow returns row padded with empty strings or truncated so that it
+// has exactly n columns, to keep rows consistent with the (configurable)
+// header
+func fitRow[T any](row []T, n int) []T {
+	if len(row) >= n {
+		return row[:n]
+	}
+	return append(row, make([]T, n-len(row))...)
+}
+
+// pluginColumns returns the configured column headings for the report
+func pluginColumns(cf *config.Config, report string, defaults []string) []string {
+	return config.Get[[]string](cf,
+		config.Join("output", "reports", report, "columns"),
+		config.DefaultValue(defaults),
+	)
+}
+
+// entityColumns returns the configured leading columns for the entities
+// report
+func entityColumns(cf *config.Config) []string {
+	return config.Get[[]string](cf, "output.reports.entities.columns",
+		config.DefaultValue([]string{"managedEntity", "probe", "hostname", "port"}),
+	)
+}
+
+// entityRow returns the leading columns for the entities report, fitted
+// to the number of configured columns
+func entityRow(e Entity, n int) []string {
+	port := "7036"
+	hostname := e.Probe.Hostname
+	if hostname == "" {
+		hostname = "[Virtual Probe]"
+		port = ""
+	} else if e.Probe.Port != 0 {
+		port = strconv.Itoa(e.Probe.Port)
+	}
+	return fitRow([]string{e.Name, e.Probe.Name, hostname, port}, n)
 }
 
 func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.ExpandOption) (cols, attrs, plugins []string, err error) {
-	cols = config.Get[[]string](cf, "output.reports.entities.columns",
-		config.DefaultValue([]string{"managedEntity", "probe", "hostname", "port"}),
-	)
+	cols = slices.Clone(entityColumns(cf))
 
 	attrs = config.Get[[]string](cf, "output.reports.entities.attributes")
 	if len(attrs) == 0 {
@@ -290,15 +351,17 @@ func outputEntityColumns(Entities []Entity, cf *config.Config, conftable config.
 	if len(plugins) == 0 {
 		plugins = getPlugins(Entities)
 	}
-	for _, p := range plugins {
-		cols = append(cols, p)
-	}
+	cols = append(cols, plugins...)
 
 	return
 }
 
 func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption) (err error) {
 	cols, attrs, plugins, err := outputEntityColumns(Entities, cf, conftable)
+	if err != nil {
+		return
+	}
+	nbase := len(entityColumns(cf))
 
 	ecsv := csv.NewWriter(w)
 
@@ -306,27 +369,10 @@ func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, confta
 		return
 	}
 	for _, e := range Entities {
-		port := "7036"
-		hostname := e.Probe.Hostname
-		if hostname == "" {
-			hostname = "[Virtual Probe]"
-			port = ""
-		} else if e.Probe.Port != 0 {
-			port = fmt.Sprint(e.Probe.Port)
-		}
-		cols := []string{
-			e.Name,
-			e.Probe.Name,
-			hostname,
-			port,
-		}
+		cols := entityRow(e, nbase)
 
 		for _, a := range attrs {
-			if attr, ok := e.Attributes[a]; ok {
-				cols = append(cols, attr)
-			} else {
-				cols = append(cols, "")
-			}
+			cols = append(cols, e.Attributes[a])
 		}
 		ptotals := make(map[string]int)
 		for _, s := range e.Samplers {
@@ -338,182 +384,138 @@ func outputCVSEntities(w io.Writer, Entities []Entity, cf *config.Config, confta
 		}
 		for _, p := range plugins {
 			if ptotals[p] > 0 {
-				cols = append(cols, fmt.Sprint(ptotals[p]))
+				cols = append(cols, strconv.Itoa(ptotals[p]))
 			} else {
 				cols = append(cols, "")
 			}
 		}
-		ecsv.Write(cols)
+		if err = ecsv.Write(cols); err != nil {
+			return
+		}
 	}
 	ecsv.Flush()
 
-	return
+	return ecsv.Error()
 }
 
 func outputCSVSinglePlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data",
-		}),
-	))
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data"})
+	if err = fcsv.Write(columns); err != nil {
+		return
+	}
 
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
 				for _, data := range s.Column1 {
-					fcsv.Write([]string{
-						e.Name,
-						s.Type,
-						s.Name,
-						data,
-					})
+					if err = fcsv.Write(fitRow([]string{e.Name, s.Type, s.Name, data}, len(columns))); err != nil {
+						return
+					}
 				}
 			}
 		}
 	}
 	fcsv.Flush()
+	return fcsv.Error()
+}
+
+// twoColumnRows returns the rows for a two column sampler, padding the
+// shorter list with empty strings
+func twoColumnRows(e Entity, s Sampler, n int) (rows [][]string) {
+	for i := range max(len(s.Column2), len(s.Column1)) {
+		row := []string{e.Name, s.Type, s.Name, "", ""}
+		if len(s.Column1) > i {
+			row[3] = s.Column1[i]
+		}
+		if len(s.Column2) > i {
+			row[4] = s.Column2[i]
+		}
+		rows = append(rows, fitRow(row, n))
+	}
 	return
 }
 
 func outputCSVTwoColumnPlugin(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	fcsv.Write(config.Get[[]string](cf, config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data1",
-			"data2",
-		}),
-	))
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data1", "data2"})
+	if err = fcsv.Write(columns); err != nil {
+		return
+	}
 
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := max(len(s.Column2), len(s.Column1))
-				for i := 0; i < items; i++ {
-					row := []string{
-						e.Name,
-						s.Type,
-						s.Name,
+				for _, row := range twoColumnRows(e, s, len(columns)) {
+					if err = fcsv.Write(row); err != nil {
+						return
 					}
-					if len(s.Column1) > i {
-						row = append(row, s.Column1[i])
-					} else {
-						row = append(row, "")
-					}
-					if len(s.Column2) > i {
-						row = append(row, s.Column2[i])
-					} else {
-						row = append(row, "")
-					}
-					fcsv.Write(row)
 				}
-
 			}
 		}
 	}
 	fcsv.Flush()
+	return fcsv.Error()
+}
+
+// samplerRowname returns the first column for the CSV files for
+// toolkit consumption
+func samplerRowname(e Entity, s Sampler) (rowname string) {
+	rowname = e.Name + "-" + s.Name
+	if s.Type != "" {
+		rowname += " (" + s.Type + ")"
+	}
 	return
 }
 
 func outputCSVSinglePluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	heading := []string{"rowname"}
-	heading = append(heading, config.Get[[]string](cf,
-		config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"rowname",
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data",
-		}),
-	)...)
-	fcsv.Write(heading)
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data"})
+	if err = fcsv.Write(append([]string{"rowname"}, columns...)); err != nil {
+		return
+	}
 
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
 				for _, data := range s.Column1 {
-					rowname := e.Name + "-" + s.Name
-					if s.Type != "" {
-						rowname += " (" + s.Type + ")"
+					rowname := samplerRowname(e, s) + "-" + data
+					row := append([]string{rowname}, fitRow([]string{e.Name, s.Type, s.Name, data}, len(columns))...)
+					if err = fcsv.Write(row); err != nil {
+						return
 					}
-					rowname += "-" + data
-					fcsv.Write([]string{
-						rowname,
-						e.Name,
-						s.Type,
-						s.Name,
-						data,
-					})
 				}
 			}
 		}
 	}
 	fcsv.Flush()
-	return
+	return fcsv.Error()
 }
 
 func outputCSVTwoColumnPluginWithRowname(w io.Writer, Entities []Entity, cf *config.Config, conftable config.ExpandOption, plugin string) (err error) {
 	fcsv := csv.NewWriter(w)
 
-	heading := []string{"rowname"}
-	heading = append(heading, config.Get[[]string](cf,
-		config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"rowname",
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data1",
-			"data2",
-		}),
-	)...)
-	fcsv.Write(heading)
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data1", "data2"})
+	if err = fcsv.Write(append([]string{"rowname"}, columns...)); err != nil {
+		return
+	}
 
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := max(len(s.Column2), len(s.Column1))
-				for i := 0; i < items; i++ {
-					rowname := e.Name + "-" + s.Name
-					if s.Type != "" {
-						rowname += " (" + s.Type + ")"
+				for _, row := range twoColumnRows(e, s, len(columns)) {
+					if err = fcsv.Write(append([]string{samplerRowname(e, s)}, row...)); err != nil {
+						return
 					}
-
-					row := []string{
-						rowname,
-						e.Name,
-						s.Type,
-						s.Name,
-					}
-					if len(s.Column1) > i {
-						row = append(row, s.Column1[i])
-					} else {
-						row = append(row, "")
-					}
-					if len(s.Column2) > i {
-						row = append(row, s.Column2[i])
-					} else {
-						row = append(row, "")
-					}
-					fcsv.Write(row)
 				}
-
 			}
 		}
 	}
 	fcsv.Flush()
-	return
+	return fcsv.Error()
 }
 
 func getAttributes(Entities []Entity) (attrnames []string) {
@@ -525,12 +527,7 @@ func getAttributes(Entities []Entity) (attrnames []string) {
 		}
 	}
 
-	for a := range attrs {
-		attrnames = append(attrnames, a)
-	}
-
-	sort.Strings(attrnames)
-	return
+	return slices.Sorted(maps.Keys(attrs))
 }
 
 func getPlugins(Entities []Entity) (plugins []string) {
@@ -546,10 +543,5 @@ func getPlugins(Entities []Entity) (plugins []string) {
 		}
 	}
 
-	for p := range plugmap {
-		plugins = append(plugins, p)
-	}
-
-	sort.Strings(plugins)
-	return
+	return slices.Sorted(maps.Keys(plugmap))
 }

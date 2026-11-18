@@ -25,11 +25,13 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -64,14 +66,16 @@ var reportCmd = &cobra.Command{
 	Long:         reportCmdDescription,
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		var input io.Reader
-
 		if len(args) == 0 {
 			args = []string{"-"}
 		}
 
 		if reportCmdMerge && reportCmdInstallation == "" {
 			return errors.New("merge requires --install DIR|FILE to be set correctly")
+		}
+
+		if reportCmdOutDir != "" {
+			config.Set(cf, "output.directory", reportCmdOutDir)
 		}
 
 		i := 1
@@ -82,50 +86,8 @@ var reportCmd = &cobra.Command{
 				prefix = fmt.Sprintf("%s_%d", reportCmdPrefix, i)
 				i++
 			}
-			switch {
-			case setup == "-":
-				if reportCmdMerge {
-					return errors.New("merge required the path to the setup files, none given")
-				}
-				input = os.Stdin
-			case strings.HasPrefix(setup, "https://") || strings.HasPrefix(setup, "http://"):
-				if reportCmdMerge {
-					merged, err := mergeConfig(reportCmdInstallation, setup)
-					if err != nil {
-						return err
-					}
-					input = bytes.NewReader(merged)
-					break
-				}
-				resp, err := http.Get(setup)
-				if err != nil {
-					return err
-				}
-				if resp.StatusCode > 299 {
-					resp.Body.Close()
-					return fmt.Errorf("failed to fetch %s - %s", setup, resp.Status)
-				}
-				input = resp.Body
-			default:
-				setup = config.ResolveHome(setup)
-				if reportCmdMerge {
-					setup, _ = filepath.Abs(setup)
-					merged, err := mergeConfig(reportCmdInstallation, setup)
-					if err != nil {
-						return err
-					}
-					input = bytes.NewReader(merged)
-					break
-				}
-				in, err := os.Open(setup)
-				if err != nil {
-					return err
-				}
-				defer in.Close()
-				input = in
-			}
 
-			gateway, err := generateReports(input, prefix)
+			gateway, err := reportSetup(setup, prefix)
 			if err != nil {
 				return err
 			}
@@ -135,14 +97,79 @@ var reportCmd = &cobra.Command{
 	},
 }
 
+// httpClient is used to fetch remote setup files
+var httpClient = &http.Client{Timeout: 5 * time.Minute}
+
+// reportSetup opens the setup source (STDIN, a URL or a file), merging
+// it first if required, and generates the reports for it
+func reportSetup(setup, prefix string) (gateway string, err error) {
+	var input io.Reader
+
+	switch {
+	case setup == "-":
+		if reportCmdMerge {
+			return "", errors.New("merge required the path to the setup files, none given")
+		}
+		input = os.Stdin
+	case strings.HasPrefix(setup, "https://") || strings.HasPrefix(setup, "http://"):
+		if reportCmdMerge {
+			merged, err := mergeConfig(reportCmdInstallation, setup)
+			if err != nil {
+				return "", err
+			}
+			input = bytes.NewReader(merged)
+			break
+		}
+		resp, err := httpClient.Get(setup)
+		if err != nil {
+			return "", err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode > 299 {
+			return "", fmt.Errorf("failed to fetch %s - %s", setup, resp.Status)
+		}
+		input = resp.Body
+	default:
+		setup = config.ResolveHome(setup)
+		if reportCmdMerge {
+			if setup, err = filepath.Abs(setup); err != nil {
+				return "", err
+			}
+			merged, err := mergeConfig(reportCmdInstallation, setup)
+			if err != nil {
+				return "", err
+			}
+			input = bytes.NewReader(merged)
+			break
+		}
+		in, err := os.Open(setup)
+		if err != nil {
+			return "", err
+		}
+		defer in.Close()
+		input = in
+	}
+
+	return generateReports(input, prefix)
+}
+
+// xmlFormatEnabled returns true if the merged XML is to be saved as one
+// of the output formats
+func xmlFormatEnabled(cf *config.Config) bool {
+	return config.Get[string](cf, "output.formats.xml") != ""
+}
+
 func generateReports(input io.Reader, prefix string) (gateway string, err error) {
-	// save XML
+	// only keep a copy of the XML if it will be written out
 	savedXML := new(bytes.Buffer)
-	input = io.TeeReader(input, savedXML)
+	if xmlFormatEnabled(cf) {
+		input = io.TeeReader(input, savedXML)
+	}
 
 	gateway, entities, probes, err := processInputFile(input)
 	if err != nil {
 		log.Error("failed to process input file", slog.Any("error", err))
+		return "", err
 	}
 	if gateway == "" {
 		if prefix == "" {
@@ -152,49 +179,51 @@ func generateReports(input io.Reader, prefix string) (gateway string, err error)
 		gateway = prefix
 	}
 
-	dir := reportCmdOutDir
-	if dir == "" {
-		dir = config.Get[string](cf, "output.directory")
-	}
-	_ = os.MkdirAll(dir, 0775)
+	err = writeReports(cf, gateway, entities, probes, savedXML)
+	return
+}
 
-OUTER:
-	for format, filename := range config.Get[map[string]any](cf, "output.formats") {
-		if filename == "" {
+// writeReports writes all the enabled output formats, in a stable order,
+// and returns the first error encountered. The toolkit include file is
+// written if the csvdir format and the include are both enabled.
+func writeReports(cf *config.Config, gateway string, entities []Entity, probes map[string]geneos.Probe, savedXML *bytes.Buffer) (err error) {
+	dir := config.Get[string](cf, "output.directory")
+	if err = os.MkdirAll(dir, 0775); err != nil {
+		return
+	}
+
+	formats := config.Get[map[string]any](cf, "output.formats")
+	for _, format := range slices.Sorted(maps.Keys(formats)) {
+		if filename, _ := formats[format].(string); filename == "" {
 			continue
 		}
 		switch format {
 		case "json":
-			if err = outputJSON(cf, gateway, entities, probes); err != nil {
-				break OUTER
-			}
+			err = outputJSON(cf, gateway, entities, probes)
 		case "csv":
-			if err = outputCSVZip(cf, gateway, entities, probes); err != nil {
-				break OUTER
-			}
+			err = outputCSVZip(cf, gateway, entities, probes)
 		case "csvdir":
-			csvFiles, destdir, err := outputCSVDir(cf, gateway, entities, probes)
+			var csvFiles []csvFiles
+			var destdir string
+			csvFiles, destdir, err = outputCSVDir(cf, gateway, entities, probes)
 			if err != nil {
-				break OUTER
+				break
 			}
 			if config.Get[bool](cf, cf.Join("output", "toolkit-include", "enable")) {
 				log.Debug("building include")
-				err = outputToolkitInclude(cf, gateway, destdir, csvFiles)
-				if err != nil {
+				if err = outputToolkitInclude(cf, gateway, destdir, csvFiles); err != nil {
 					log.Error("failed to build toolkit include", slog.Any("error", err))
-					break OUTER
 				}
 			}
 		case "xlsx":
-			if err = outputXLSX(cf, gateway, entities, probes); err != nil {
-				break OUTER
-			}
+			err = outputXLSX(cf, gateway, entities, probes)
 		case "xml":
-			if err = outputXML(cf, gateway, savedXML); err != nil {
-				break OUTER
-			}
+			err = outputXML(cf, gateway, savedXML)
 		default:
 			// unknown
+		}
+		if err != nil {
+			return fmt.Errorf("%s output: %w", format, err)
 		}
 	}
 	return
@@ -213,7 +242,6 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 	log.Debug("include file", slog.String("includeFile", includeFile))
 
 	samplers := make([]geneos.Sampler, len(csvFiles))
-	sampleOnStartup := true
 	for i, c := range csvFiles {
 		samplerConftable := config.LookupTable(map[string]string{
 			"gateway":   gateway,
@@ -225,7 +253,7 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 
 		samplers[i] = geneos.Sampler{
 			Name:            config.Get[string](cf, "output.toolkit-include.sampler-name", samplerConftable),
-			SampleOnStartup: &sampleOnStartup,
+			SampleOnStartup: new(true),
 			Group:           geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-group", samplerConftable)),
 			Plugin: &geneos.Plugin{Toolkit: &geneos.ToolkitPlugin{
 				SamplerScript: geneos.NewSingleLineString(config.Get[string](cf, "output.toolkit-include.sampler-script", samplerConftable)),
@@ -253,29 +281,29 @@ func outputToolkitInclude(cf *config.Config, gateway string, destdir string, csv
 		Samplers: &geneos.Samplers{Samplers: samplers},
 	}
 
+	b, err := xml.MarshalIndent(include, "", "    ")
+	if err != nil {
+		return
+	}
+
 	outfile, err := os.CreateTemp(filepath.Dir(includeFile), filepath.Base(includeFile))
 	if err != nil {
 		return
 	}
 	tmpfile := outfile.Name()
+	// no-op after a successful rename
 	defer os.Remove(tmpfile)
-	defer outfile.Close()
 
-	fmt.Fprint(outfile, xml.Header)
-	b, err := xml.MarshalIndent(include, "", "    ")
+	_, err = outfile.WriteString(xml.Header + string(b))
+	if err == nil {
+		// CreateTemp uses 0600, match the other report files
+		err = outfile.Chmod(0644)
+	}
+	if cerr := outfile.Close(); err == nil {
+		err = cerr
+	}
 	if err != nil {
 		return
 	}
-	if _, err = outfile.Write(b); err != nil {
-		return
-	}
-	// windows cannot rename an open file
-	// this is a small race condition, but otherwise it doesn't work
-	if runtime.GOOS == "windows" {
-		outfile.Close()
-	}
-	if err = os.Rename(tmpfile, includeFile); err != nil {
-		return
-	}
-	return
+	return os.Rename(tmpfile, includeFile)
 }

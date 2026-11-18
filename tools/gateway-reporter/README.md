@@ -190,7 +190,7 @@ The following settings are available, along with their default values:
 
       The `csv` file format is created as a ZIP file containing one CSV files per report (see below).
 
-    * `csvdir` - Default `${gateway}-CSV-Report-${datetime}`
+    * `csvdir` - Default `${gateway}-CSV-Reports`
 
       The `csvdir` format creates a directory and adds reports in that directory using the same naming as for the `csv` ZIP format. This can be useful where you need to pull the resulting CSV files directly back into Geneos or another system without having to unpack a ZIP file.
 
@@ -404,7 +404,7 @@ output:
   formats:
     xlsx: ${gateway}-Report-${datetime}.xlsx
     csv: ${gateway}-Report-${datetime}.zip
-    csvdir: ${gateway}-CSV-Report-${datetime}
+    csvdir: ${gateway}-CSV-Reports
     json: ${gateway}-Report-${datetime}.json
     xml: ${gateway}-Merged-${datetime}.xml
 
