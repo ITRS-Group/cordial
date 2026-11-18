@@ -54,6 +54,8 @@ func init() {
 //go:embed _docs/raise.md
 var raiseCmdDoc string
 
+var envRE = regexp.MustCompile(`^([A-Z_][A-Z0-9_]*)=(.*)$`)
+
 var raiseCmd = &cobra.Command{
 	Use:          "raise [FLAGS] [field=value ...]",
 	Short:        "Create or update an incident",
@@ -68,7 +70,6 @@ var raiseCmd = &cobra.Command{
 		// precedence over config file defaults and profile settings.
 		// The command line fields can also be used to remove fields by
 		// setting the value to an empty string.
-		envRE := regexp.MustCompile(`^([A-Z_][A-Z0-9_]*)=(.*)$`)
 		_, _, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return

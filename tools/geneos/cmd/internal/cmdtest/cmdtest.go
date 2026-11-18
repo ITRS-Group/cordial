@@ -9,6 +9,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -90,21 +92,20 @@ func AddHost(t *testing.T, name string, kv ...string) {
 
 // Run executes the root command with args, capturing os.Stdout and
 // os.Stderr, and restores all the flags of all the commands to their
-// defaults afterwards so that tests do not influence each other.
+// previous values afterwards so that tests do not influence each other.
 func Run(t *testing.T, root *cobra.Command, args ...string) (res Result) {
 	t.Helper()
 
 	var stdout, stderr bytes.Buffer
+	restoreFlags := snapshotFlags(root)
 	restore := capture(t, &stdout, &stderr)
 	defer func() {
 		restore()
 		res.Stdout, res.Stderr = stdout.String(), stderr.String()
-		resetFlags(root)
+		restoreFlags()
 	}()
 
 	root.SetArgs(args)
-	root.SetOut(&stdout)
-	root.SetErr(&stderr)
 	res.Err = root.Execute()
 	return
 }
@@ -145,23 +146,43 @@ func capture(t *testing.T, stdout, stderr io.Writer) (restore func()) {
 	}
 }
 
-func resetFlags(c *cobra.Command) {
-	// only flags that were used are reset, as setting some types of
-	// flag value to its default value has side effects
-	reset := func(f *pflag.Flag) {
-		if !f.Changed {
+// snapshotFlags records the values of the flags of c and its
+// sub-commands and returns a function that restores them, so that
+// tests do not influence each other.
+func snapshotFlags(c *cobra.Command) (restore func()) {
+	var restores []func()
+
+	save := func(f *pflag.Flag) {
+		changed := f.Changed
+		restores = append(restores, func() { f.Changed = changed })
+
+		if sv, ok := f.Value.(pflag.SliceValue); ok {
+			values := slices.Clone(sv.GetSlice())
+			restores = append(restores, func() { _ = sv.Replace(values) })
 			return
 		}
-		if sv, ok := f.Value.(pflag.SliceValue); ok {
-			_ = sv.Replace(nil)
-		} else {
-			_ = f.Value.Set(f.DefValue)
+		// flag values are pointers to the variables they set
+		if v := reflect.ValueOf(f.Value); v.Kind() == reflect.Pointer && !v.IsNil() {
+			elem := v.Elem()
+			saved := reflect.New(elem.Type()).Elem()
+			saved.Set(elem)
+			restores = append(restores, func() { elem.Set(saved) })
 		}
-		f.Changed = false
 	}
-	c.Flags().VisitAll(reset)
-	c.PersistentFlags().VisitAll(reset)
-	for _, child := range c.Commands() {
-		resetFlags(child)
+
+	var walk func(*cobra.Command)
+	walk = func(c *cobra.Command) {
+		c.Flags().VisitAll(save)
+		c.PersistentFlags().VisitAll(save)
+		for _, child := range c.Commands() {
+			walk(child)
+		}
+	}
+	walk(c)
+
+	return func() {
+		for _, r := range slices.Backward(restores) {
+			r()
+		}
 	}
 }

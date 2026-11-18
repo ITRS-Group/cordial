@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -74,14 +75,22 @@ geneos unset san -g Gateway1
 		CmdAllInstancesMustMatch: "true",
 	},
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
-			return cmd.Usage()
-		}
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
 		}
-		if cmd.Flags().NFlag() == 0 {
+		// only the options of this command count, not global ones like
+		// the host
+		unsetFlags := 0
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if f.Changed {
+				unsetFlags++
+			}
+		})
+		if len(args) == 0 && unsetFlags == 0 {
+			return cmd.Usage()
+		}
+		if unsetFlags == 0 {
 			return fmt.Errorf("nothing to unset: perhaps you forgot to use -k KEY or one of the other options?")
 		}
 		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
