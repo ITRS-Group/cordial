@@ -20,7 +20,9 @@ package initcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -29,7 +31,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
@@ -38,7 +39,9 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/pscmd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
+	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
 
@@ -54,7 +57,10 @@ type initCmdOptions struct {
 	LicenseFile           string
 	Logs                  bool
 	Minimal               bool
+	Name                  string
 	Nexus                 bool
+	NoInstall             bool
+	Restore               string
 	SigningBundle         string
 	SigningBundlePassword config.Secret
 	Site                  string
@@ -64,9 +70,6 @@ type initCmdOptions struct {
 }
 
 var initOptions = initCmdOptions{}
-
-// removedFlags are the names of flags that are no longer supported
-var removedFlags = []string{"restore", "no-install", "name"}
 
 var log = logger.Logger
 
@@ -78,18 +81,9 @@ func init() {
 
 	// common flags, need checking
 
-	// these options are no longer supported and are only kept so that
-	// old scripts get an error instead of silently doing nothing
-	initCmd.Flags().StringP("restore", "R", "", "Restore from backup file `PATH`")
-	initCmd.Flags().BoolP("no-install", "X", false, "Don't install any releases after restore")
-	initCmd.PersistentFlags().StringP("name", "n", "", "Use name for instances and configurations instead of the hostname")
-	for _, flags := range []*pflag.FlagSet{initCmd.Flags(), initCmd.PersistentFlags()} {
-		for _, name := range removedFlags {
-			if flags.Lookup(name) != nil {
-				flags.MarkDeprecated(name, "no longer supported")
-			}
-		}
-	}
+	initCmd.Flags().StringVarP(&initOptions.Restore, "restore", "R", "", "Restore from backup file `PATH`")
+	initCmd.Flags().BoolVarP(&initOptions.NoInstall, "no-install", "X", false, "Don't install any releases after restore")
+	initCmd.Flags().StringVarP(&initOptions.Name, "name", "n", "", "Override default Gateway, licence daemon and Webserver instance names for the all profile")
 
 	// flags from old 'demo' and 'all'
 	initCmd.Flags().BoolVarP(&initOptions.Minimal, "minimal", "M", false, "use a minimal Netprobe release")
@@ -160,10 +154,8 @@ geneos init
 	RunE: func(command *cobra.Command, argsInput []string) (err error) {
 		log := log.With("command", "init")
 
-		for _, name := range removedFlags {
-			if f := command.Flag(name); f != nil && f.Changed {
-				return fmt.Errorf("--%s is no longer supported", name)
-			}
+		if command.Flag("restore").Changed && initOptions.Restore == "" {
+			return fmt.Errorf("--restore must not be empty")
 		}
 		if command.Flag("archive").Changed && initOptions.Archive == "" {
 			return fmt.Errorf("--archive must not be empty")
@@ -216,18 +208,21 @@ geneos init
 			geneos.SigningBundlePassword(initOptions.SigningBundlePassword),
 			geneos.SigningBundlePrompt(config.ReadPasswordInput),
 		}
-		if len(args) > 0 {
-			initialiseOptions = append(initialiseOptions,
-				geneos.Version(initOptions.Version),
-				geneos.Basename("active_prod"),
-				geneos.Source(initOptions.Archive),
-				geneos.UseNexus(initOptions.Nexus),
-				geneos.UseNexusSnapshots(initOptions.Snapshot),
-				geneos.Headers(initOptions.Extras.Headers...),
-			)
+		if initOptions.Restore != "" {
+			initialiseOptions = append(initialiseOptions, geneos.BeforeComponentInit(func(h *geneos.Host) error {
+				if err := restore.Restore(initOptions.Restore, restore.Host(h), restore.Shared(true), restore.ProgressTo(os.Stdout)); err != nil {
+					return fmt.Errorf("restore from %q: %w", initOptions.Restore, err)
+				}
+				return nil
+			}))
 		}
 		if err = geneos.Initialise(command.CommandPath(), geneos.LOCAL, initialiseOptions...); err != nil {
 			return err
+		}
+		if initOptions.Restore != "" && !initOptions.NoInstall {
+			if err := initOptions.installRestoredReleases(geneos.LOCAL); err != nil {
+				return err
+			}
 		}
 		if profile.Initialise(cordial.ExecutableName()) {
 			log.Debug("profiles configuration written")
@@ -271,6 +266,52 @@ geneos init
 
 		return err
 	},
+}
+
+func (opts initCmdOptions) installRestoredReleases(h *geneos.Host) error {
+	options := []geneos.GeneosOption{
+		geneos.Version(opts.Version),
+		geneos.Source(opts.Archive),
+		geneos.Override(opts.Force),
+		geneos.UseNexus(opts.Nexus || opts.Snapshot),
+		geneos.UseNexusSnapshots(opts.Snapshot),
+		geneos.Headers(opts.Extras.Headers...),
+	}
+	needCredentials := opts.Archive == "" || geneos.IsURL(opts.Archive)
+
+	var all *geneos.Component
+	for ct := range all.OrList() {
+		if len(instance.AllInstanceNames(h, ct)) == 0 {
+			continue
+		}
+		if version, _ := geneos.CurrentVersion(h, ct, "active_prod"); version != "unknown" && (opts.Version == "latest" || version == opts.Version) {
+			continue
+		}
+		if needCredentials {
+			cf := config.Global()
+			username := opts.DLUsername
+			if username == "" {
+				username = config.Get[string](cf, cf.Join("download", "username"))
+			}
+			if username != "" {
+				password := config.Get[config.Secret](cf, cf.Join("download", "password"))
+				if len(password) == 0 {
+					var err error
+					password, err = config.ReadPasswordInput(false, 0)
+					if err != nil {
+						return fmt.Errorf("download password for %s: %w", username, err)
+					}
+					defer clear(password)
+				}
+				options = append(options, geneos.Username(username), geneos.Password(password))
+			}
+			needCredentials = false
+		}
+		if err := geneos.Install(h, ct, options...); err != nil && !errors.Is(err, fs.ErrExist) {
+			return fmt.Errorf("install %s after restore: %w", ct, err)
+		}
+	}
+	return nil
 }
 
 // alias for old `geneos init tls` command

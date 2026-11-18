@@ -36,9 +36,13 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 ## Restoring From Backup
 
-The `--restore/-R`, `--no-install/-X` and `--name/-n` options are no longer supported and now result in an error. To restore a backup file created with the `geneos backup` command use `geneos init` to create the directory structure and then the `geneos restore` command.
+Use `geneos init --restore PATH [DIRECTORY]` (`-R`) to initialise the installation and restore instances and shared files from a `geneos backup` archive. By default, `init` also installs the releases needed by the restored component types. Use `--archive`/`-A` to supply local release archives, or add `--no-install`/`-X` to restore without installing releases.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
+
+## Naming Instances
+
+Use `geneos init all --name NAME` (`-n`) to override the default Gateway, licence daemon and Webserver instance names in the `all` profile. This does not rename restored instances. Custom profile entries can use `${option:name}` to consume the option explicitly.
 
 ## Adopting An Existing Installation
 

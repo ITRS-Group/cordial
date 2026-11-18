@@ -81,6 +81,7 @@ var Profiles *config.Config
 //	"insecure"
 //	"licence"
 //	"minimal"
+//	"name"
 //	"type"
 //	"variable"
 var IncludeFlags = []string{
@@ -92,6 +93,7 @@ var IncludeFlags = []string{
 	"insecure",
 	"licence",
 	"minimal",
+	"name",
 	"type",
 	"variable",
 }
@@ -228,10 +230,7 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 		}
 
 		var commons []Common
-		if err := pf.UnmarshalKey(pf.Join(profileKey, key), &commons,
-			config.NoDecode(true),
-			config.LookupTable(lookup),
-		); err != nil {
+		if err := pf.UnmarshalKey(pf.Join(profileKey, key), &commons, config.NoExpand()); err != nil {
 			log.Error("cannot read profile components", slog.String("profile", name), slog.String("component", key), slog.Any("error", err))
 			continue
 		}
@@ -246,7 +245,7 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 		ct := geneos.ParseComponent(key)
 
 		for idx, common := range commons {
-			instanceName := config.Expand[string](pf, common.Name)
+			instanceName := ExpandInstanceName(pf, name, key, common.Name, lookup)
 
 			cf := config.New()
 			if idx < len(entries) {
@@ -271,6 +270,19 @@ func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances [
 	}
 
 	return
+}
+
+// ExpandInstanceName honors the old init all name override for the
+// default entries, including in profiles.yaml files already on disk.
+func ExpandInstanceName(pf *config.Config, profileName, component, name string, lookup map[string]string) string {
+	if profileName == "all" &&
+		((name == "${hostname}" && (component == "gateway" || component == "webserver")) ||
+			(name == "perm" && component == "licd")) {
+		if override := config.Get[string](pf, pf.Join("config", "options", "name"), config.NoExpand()); override != "" {
+			return override
+		}
+	}
+	return config.Expand[string](pf, name, config.LookupTable(lookup))
 }
 
 // CommonLookups returns the lookup values available in profile expansion.
@@ -448,7 +460,7 @@ func ApplyCommonProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config,
 	clearKeys := []string{values.ENVIRONMENT}
 
 	for _, common := range commons {
-		instanceName := config.Expand[string](pf, common.Name, config.LookupTable(lookup))
+		instanceName := ExpandInstanceName(pf, name, key, common.Name, lookup)
 
 		if instanceName == "" {
 			return fmt.Errorf("profile %q contains an empty instance name", name)

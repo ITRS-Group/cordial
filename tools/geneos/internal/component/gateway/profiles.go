@@ -41,7 +41,7 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 	}
 
 	for _, gateway := range gateways {
-		instanceName := config.Expand[string](pf, gateway.Name, config.LookupTable(lookup))
+		instanceName := profile.ExpandInstanceName(pf, name, key, gateway.Name, lookup)
 		if instanceName == "" {
 			return fmt.Errorf("profile %q contains an empty gateway name", name)
 		}

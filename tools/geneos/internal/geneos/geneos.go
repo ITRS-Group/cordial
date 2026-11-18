@@ -202,6 +202,13 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 		if err := ct.MakeDirs(h); err != nil {
 			return fmt.Errorf("creating directories for component %s: %w", ct.Name, err)
 		}
+	}
+	if opts.beforeComponentInit != nil {
+		if err := opts.beforeComponentInit(h); err != nil {
+			return err
+		}
+	}
+	for ct = range ct.OrList(opts.components...) {
 		if err := ct.InitialiseOnce(h, opts.override); err != nil {
 			return fmt.Errorf("initialising component %s: %w", ct.Name, err)
 		}

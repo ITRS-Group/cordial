@@ -5,6 +5,27 @@
 > [!NOTE]
 > **In development** - Please report issues via [github](https://github.com/ITRS-Group/cordial/issues) or the [ITRS Community Forum](https://community.itrsgroup.com/)
 
+## Version v1.31.0 At A Glance
+
+>[!NOTE]
+>This release has a substantial number of changes, including new features, reliability improvements, and updates to monitoring and incident management workflows. The detailed changelog is therefore very long and the short summary here highlights only the most significant changes.
+
+* **Automation:** `geneos` now returns a non-zero exit status if any requested item fails, while still processing the rest.
+* **Monitoring Health:** Replaces Monitor-Of-The-Monitors; migrate affected profiles, and update `level` names to `layer` in monitoring configurations and GDNA dashboards.
+* **Release contents:** The original `servicenow`, `pagerduty` and `san-config` are no longer shipped; use v1.30.1 or build them from source.
+* **Incident integrations:** The ServiceNow proxy and IMS Gateway require a configured token and a correlation ID on requests; clients now report failures.
+* **Background processes:** `servicenow2 proxy`, `ims-gateway` and `gdna` support `stop`, `restart`, `reload` and `status`, with PID files and startup checks.
+* **Gateway includes (preview):** Includes ship separately, support site-specific configuration, and can be installed, repaired or pruned with `geneos includes`.
+* **Package installation:** `-A` now means `--archive`, not `--all`; local archives no longer fall back to downloads.
+* **Backup and restore:** `geneos init --restore` and `--no-install` work again, and backup and restore handle more archive edge cases correctly.
+* **TLS and profiles:** Rebuilds preserve unreadable keystores and truststores, custom ports are kept, and redeploying a profile applies its saved TLS settings.
+* **GDNA reports:** Failed fetches no longer leave partial source data, and email reports are withheld if any report fails.
+* **GDNA configuration and logs:** Unreadable explicit configuration files now fail; use `gdna start -l -` to log to the console.
+* **Gateway configuration editing:** XML updates better preserve existing content, comments and element order.
+* **Reliability:** An in-depth code review fixed numerous regressions, inconsistent behaviours and cases where errors went unreported.
+
+See the [full details below](#version-v1310-new-features) and the [update notes](UPDATENOTES.md#v1310-in-development) for changes that may affect your upgrade.
+
 ## Version v1.31.0 New Features
 
 * `tools/geneos`
@@ -149,7 +170,7 @@
 
   * Behaviour changes from the review of the `geneos` commands
 
-    * **Breaking Change** (minor): `geneos init` no longer accepts `--restore`/`-R`, `--no-install`/`-X` or `--name`/`-n`, which did nothing; they are hidden and deprecated and now fail with a "no longer supported" error. To restore a backup use `geneos init` followed by `geneos restore`. `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.
+    * `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.
 
     * The `--host`/`-H` option now rejects a host name that is not configured, instead of acting on all hosts (or panicking), and `geneos add` and `geneos deploy` also reject an unknown `@HOST` in an instance name. `geneos add` now fails for an instance that already exists.
 
@@ -454,6 +475,8 @@
 
   * `geneos deploy`, `geneos init` and `geneos add`
 
+    * Restore `geneos init --restore`/`-R` and `--no-install`/`-X`, and `geneos init all --name`/`-n`. The profile refactor in [2996d83f](https://github.com/ITRS-Group/cordial/commit/2996d83fc9a9666d68185937ed0c451f5b421a20) made these options silently do nothing starting in v1.30.0; v1.30.1 was also affected.
+
     * Fix `geneos deploy --log` (`-l`) to start the new instance and keep following its logs, rather than panicking, returning immediately or leaving the instance stopped.
 
     * Fix `geneos add --log` to return creation or startup errors instead of attempting to follow logs for a failed instance.
@@ -555,6 +578,8 @@
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
 
   * Instances, hosts, packages and logs
+
+    * Report when an instance directory contains no supported configuration file, rather than reporting a missing legacy `.rc` file.
 
     * Fix `-H` with a host name that does not exist, or an instance name with an unknown host, being treated as all hosts or causing a panic.
 

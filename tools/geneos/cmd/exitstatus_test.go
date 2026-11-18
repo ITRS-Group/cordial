@@ -2,6 +2,8 @@ package cmd_test
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,7 +17,41 @@ import (
 	_ "github.com/itrs-group/cordial/tools/geneos/cmd/tlscmd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/netprobe"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/san"
 )
+
+func TestInstanceConfigurationErrors(t *testing.T) {
+	if !cmdtest.StderrCaptured {
+		t.Skip("standard error is not captured on this platform")
+	}
+
+	root := cmdtest.Env(t)
+	for _, tc := range []struct {
+		name string
+		want string
+	}{
+		{"incomplete", "does not contain a supported configuration file"},
+		{"malformed", "error reading config"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := filepath.Join(root, "netprobe", "sans", tc.name)
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if tc.name == "malformed" {
+				if err := os.WriteFile(filepath.Join(dir, "san.json"), []byte("{"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			res := cmdtest.Run(t, cmd.Cmd, "ls", "san", tc.name)
+			if res.Err == nil || !strings.Contains(res.Stderr, tc.want) ||
+				!strings.Contains(res.Stderr, dir) || strings.Contains(res.Stderr, "san.rc") {
+				t.Fatalf("error = %v, stderr = %q; want %q for %s without mention of san.rc", res.Err, res.Stderr, tc.want, dir)
+			}
+		})
+	}
+}
 
 // setupInstances creates the gateways gw1 and gw2 and a licd lic1, none
 // of which can run as there is no package installed

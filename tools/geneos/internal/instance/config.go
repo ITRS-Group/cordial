@@ -115,14 +115,20 @@ func Read(i geneos.Instance) (err error) {
 
 	if err == nil {
 		i.Config().SetConfigType(cf.ConfigType())
-	}
-	if err != nil {
-		if err = ReadRCConfig(h, cf, ComponentFilepath(i, "rc"), prefix, aliases); err != nil {
-			return
-		} else {
-			used = ComponentFilepath(i, "rc")
-			i.Config().SetConfigType("rc")
+	} else {
+		rc := ComponentFilepath(i, "rc")
+		if rcErr := ReadRCConfig(h, cf, rc, prefix, aliases); rcErr != nil {
+			switch {
+			case !errors.Is(err, fs.ErrNotExist):
+				return err
+			case !errors.Is(rcErr, fs.ErrNotExist):
+				return rcErr
+			default:
+				return fmt.Errorf("%w: instance directory %q does not contain a supported configuration file", fs.ErrNotExist, home)
+			}
 		}
+		used = rc
+		i.Config().SetConfigType("rc")
 	}
 
 	// now we have them, merge them into main instance config
@@ -131,11 +137,6 @@ func Read(i geneos.Instance) (err error) {
 	// aliases have to be set AFTER loading from file (https://github.com/spf13/viper/issues/560)
 	for a, k := range aliases {
 		i.Config().RegisterAlias(a, k)
-	}
-
-	if err != nil {
-		// generic error as no .json or .rc found
-		return fmt.Errorf("no configuration files for %s in %s: %w", i, i.Home(), geneos.ErrNotExist)
 	}
 
 	st, err := h.Stat(used)

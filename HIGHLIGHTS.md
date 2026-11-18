@@ -10,6 +10,8 @@ New features and notable capabilities, grouped by version, newest first. Version
 > [!NOTE]
 > Built with Go 1.27.4.
 
+* **Reliability:** An in-depth code review led to numerous fixes across the tools, including regressions and inconsistent behaviour. These fixes are intended to make existing workflows behave as users expect; intentional changes that may affect upgrades are covered in the [update notes](UPDATENOTES.md).
+
 * **Includes (preview):** Manage include files and configuration templates independently of the `geneos` program version, with a separate versioned includes archive in releases. Existing Gateway setups that use the old `config` includes can be moved to the new layout with `geneos includes fix`. This is still considered a feature preview and may undergo further changes before becoming fully stable.
 
 * **Site names:** Set an installation-wide site name, with `geneos config set site=acme` or `--site`/`-s` when using `geneos init` or `geneos deploy`, which is used for the Gateway include directory and file names. The supplied profiles use it in their include paths.

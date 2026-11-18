@@ -32,6 +32,7 @@ type geneosOptions struct {
 	archivename           string
 	archivesize           int64
 	basename              string
+	beforeComponentInit   func(*Host) error
 	components            []*Component
 	doupdate              bool
 	downloadbase          string
@@ -145,6 +146,14 @@ func SigningBundlePrompt(prompt func(bool, int, ...string) (config.Secret, error
 func RootDirPrompt(prompt func(string, ...any) (string, error)) GeneosOption {
 	return func(d *geneosOptions) {
 		d.promptRootDir = prompt
+	}
+}
+
+// BeforeComponentInit runs after the installation directories and TLS are
+// set up, but before components write default files.
+func BeforeComponentInit(f func(*Host) error) GeneosOption {
+	return func(d *geneosOptions) {
+		d.beforeComponentInit = f
 	}
 }
 

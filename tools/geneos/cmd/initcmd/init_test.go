@@ -1,6 +1,8 @@
 package initcmd
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"errors"
 	"maps"
 	"os"
@@ -12,6 +14,8 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
 	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/gateway"
+	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -25,23 +29,75 @@ func TestInitRejectsEmptyArchive(t *testing.T) {
 	}
 }
 
-func TestInitRemovedFlagsAreErrors(t *testing.T) {
+func TestInitRestore(t *testing.T) {
 	cmdtest.Env(t)
+	tmp := t.TempDir()
+	backup := filepath.Join(tmp, "backup.tar.gz")
+	writeInitArchive(t, backup, map[string]string{
+		"licd/licds/restored/licd.json": `{"name":"restored"}`,
+		"gateway/shared/restored.txt":   "shared contents",
+	})
+	writeInitArchive(t, filepath.Join(tmp, "geneos-licd-7.1.0-linux-x64.tar.gz"), map[string]string{
+		"licd/licd.linux_64": "fixture",
+	})
 
-	for _, args := range [][]string{
-		{"init", "--restore", "backup.tgz"},
-		{"init", "-R", "backup.tgz"},
-		{"init", "--no-install"},
-		{"init", "-X"},
-		{"init", "--name", "x"},
-		{"init", "-n", "x"},
+	for _, tc := range []struct {
+		name        string
+		args        []string
+		wantInstall bool
+	}{
+		{"install", []string{"--restore", backup, "--archive", tmp, "--version", "7.1.0", "--username", "unused"}, true},
+		{"skip", []string{"-R", backup, "-X", "--archive", tmp}, false},
 	} {
-		t.Run(strings.Join(args, " "), func(t *testing.T) {
-			res := cmdtest.Run(t, cmd.Cmd, args...)
-			if res.Err == nil || !strings.Contains(res.Err.Error(), "no longer supported") {
-				t.Fatalf("error = %v, want a no longer supported error", res.Err)
+		t.Run(tc.name, func(t *testing.T) {
+			cmdtest.Env(t)
+			root := filepath.Join(t.TempDir(), "geneos")
+			res := cmdtest.Run(t, cmd.Cmd, append([]string{"init", "--insecure", root}, tc.args...)...)
+			if res.Err != nil {
+				t.Fatalf("init: %v\n%s%s", res.Err, res.Stdout, res.Stderr)
+			}
+			if _, err := os.Stat(filepath.Join(root, "licd", "licds", "restored", "licd.json")); err != nil {
+				t.Fatal(err)
+			}
+			if got, err := os.ReadFile(filepath.Join(root, "gateway", "shared", "restored.txt")); err != nil || string(got) != "shared contents" {
+				t.Fatalf("restored shared file = %q, %v", got, err)
+			}
+			_, err := os.Stat(filepath.Join(root, "packages", "licd", "active_prod", "licd.linux_64"))
+			if tc.wantInstall && err != nil || !tc.wantInstall && !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("stat installed release = %v (want install: %v)", err, tc.wantInstall)
 			}
 		})
+	}
+}
+
+func TestInitRestoreMissingBackup(t *testing.T) {
+	cmdtest.Env(t)
+	tmp := t.TempDir()
+	backup := filepath.Join(tmp, "missing.tar.gz")
+	res := cmdtest.Run(t, cmd.Cmd, "init", "--insecure", "--restore", backup, "--no-install", filepath.Join(tmp, "geneos"))
+	if !errors.Is(res.Err, os.ErrNotExist) || !strings.Contains(res.Err.Error(), backup) {
+		t.Fatalf("init error = %v, want missing backup error", res.Err)
+	}
+}
+
+func writeInitArchive(t *testing.T, path string, entries map[string]string) {
+	t.Helper()
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gz := gzip.NewWriter(f)
+	tw := tar.NewWriter(gz)
+	for name, body := range entries {
+		if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o755, Size: int64(len(body)), Typeflag: tar.TypeReg}); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tw.Write([]byte(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := errors.Join(tw.Close(), gz.Close(), f.Close()); err != nil {
+		t.Fatal(err)
 	}
 }
 

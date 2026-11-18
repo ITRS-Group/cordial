@@ -72,9 +72,13 @@ func initTLS(t *testing.T) {
 // without TLS, and checks the same components, names and default ports
 // are always used, including when the deployment is repeated.
 func TestDeployAllProfileDefaults(t *testing.T) {
-	for _, insecure := range []bool{false, true} {
-		t.Run(fmt.Sprintf("insecure=%t", insecure), func(t *testing.T) {
-			root, _ := newAllRoot(t, "testhost")
+	for _, tc := range []struct {
+		insecure bool
+		name     string
+	}{{false, ""}, {true, ""}, {true, "restored-name"}} {
+		t.Run(fmt.Sprintf("insecure=%t/name=%s", tc.insecure, tc.name), func(t *testing.T) {
+			insecure := tc.insecure
+			root, pf := newAllRoot(t, "testhost")
 			skipIfPortsInUse(t, 7036, 7038, 7039, 7041, 8080, 8443)
 			if !insecure {
 				initTLS(t)
@@ -100,6 +104,11 @@ func TestDeployAllProfileDefaults(t *testing.T) {
 				"netprobe":  {"localhost", 7036},
 				"webserver": {"testhost", webserverPort},
 			}
+			if tc.name != "" {
+				for _, component := range []string{"gateway", "licd", "webserver"} {
+					want[component] = member{tc.name, want[component].port}
+				}
+			}
 
 			deploy := func() {
 				t.Helper()
@@ -107,6 +116,8 @@ func TestDeployAllProfileDefaults(t *testing.T) {
 				flags.Bool("insecure", insecure, "")
 				flags.Bool("minimal", false, "")
 				flags.String("licence", licence, "")
+				flags.String("name", tc.name, "")
+				profile.SetExpandOptions(geneos.LOCAL, pf, profile.PflagSetToMap(flags, profile.IncludeFlags...), nil)
 				if err := profile.DeployProfile(geneos.LOCAL, "all",
 					profile.WithInsecure(insecure), profile.WithFlags(flags)); err != nil {
 					t.Fatal(err)
