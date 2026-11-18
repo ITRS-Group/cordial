@@ -566,7 +566,7 @@ func (h *SSHRemote) Rel(basepath, targpath string) (string, error) {
 	}
 
 	parts := make([]string, 0, len(base)-common+len(target)-common)
-	for index := 0; index < len(base)-common; index++ {
+	for range len(base) - common {
 		parts = append(parts, "..")
 	}
 	parts = append(parts, target[common:]...)
