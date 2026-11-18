@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"path"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -56,7 +55,7 @@ func init() {
 
 	Cmd.Flags().SortFlags = false
 
-	Execname = path.Base(os.Args[0])
+	Execname = cordial.ExecutableName()
 	cobra.OnInitialize(func() {
 		var l slog.Level
 		if Debug {

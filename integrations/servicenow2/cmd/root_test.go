@@ -3,8 +3,10 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
@@ -47,4 +49,12 @@ func TestLoadConfigFile(t *testing.T) {
 			t.Errorf("proxy.url = %q", got)
 		}
 	})
+}
+
+// the name must not depend on how the program was started, as the
+// argument of a program on Windows is a path with a .exe suffix
+func TestExecnameIsTheExecutableName(t *testing.T) {
+	if Execname != cordial.ExecutableName() || strings.ContainsAny(Execname, `/\`) || strings.HasSuffix(strings.ToLower(Execname), ".exe") {
+		t.Errorf("Execname = %q, want %q", Execname, cordial.ExecutableName())
+	}
 }
