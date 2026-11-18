@@ -435,3 +435,64 @@ func TestCleanActivedashboardStats(t *testing.T) {
 		t.Errorf("no-link summary = %q", got)
 	}
 }
+
+func TestUpdateDataitemXpathDoesNotAddEmptySampler(t *testing.T) {
+	xp, err := xpath.Parse(`/geneos/gateway[(@name="GW")]/directory/probe[(@name="P")]/managedEntity[(@name="E")]`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := updateDataitemXpath(xp, cleaningOptions{Samplers: optionSlice{"keep"}, Types: optionSlice{"remove-empty"}}).String()
+	if strings.Contains(got, "sampler") {
+		t.Errorf("path = %s, want no sampler added", got)
+	}
+}
+
+func TestPluralCount(t *testing.T) {
+	for _, test := range []struct {
+		count    int
+		singular string
+		want     string
+	}{
+		{1, "Managed Entity", "1 Managed Entity"},
+		{2, "Managed Entity", "2 Managed Entities"},
+		{2, "startup-data entry", "2 startup-data entries"},
+		{2, "modifier alias", "2 modifier aliases"},
+		{3, "Sampler", "3 Samplers"},
+	} {
+		if got := pluralCount(test.count, test.singular); got != test.want {
+			t.Errorf("pluralCount(%d, %q) = %q, want %q", test.count, test.singular, got, test.want)
+		}
+	}
+}
+
+func TestCleanActivedashboardShortModifierLine(t *testing.T) {
+	originalLog := log
+	log = slog.Default()
+	defer func() { log = originalLog }()
+
+	// a short line is passed through and does not panic
+	line := dataItemExprNodeClass + "~7.0~$0$"
+	var out strings.Builder
+	if err := cleanActivedashboard(strings.NewReader(line+"\n"), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.String() != line+"\n" {
+		t.Errorf("output = %q, want the line unchanged", out.String())
+	}
+}
+
+func TestValidateReplaceSpecs(t *testing.T) {
+	if err := validateReplaceSpecs(cleaningOptions{Gateways: optionSlice{"replace:/a/b/"}, Attributes: optionSlice{"replace:NAME=/a/b/", "replace:NAME=value"}, WebPages: optionSlice{"replace:#a#b#"}}); err != nil {
+		t.Errorf("valid specs rejected: %v", err)
+	}
+	for _, opts := range []cleaningOptions{
+		{Gateways: optionSlice{"replace:/a/b"}},
+		{Dataviews: optionSlice{"replace:/(/b/"}},
+		{Attributes: optionSlice{"replace:NAME=/a"}},
+		{WebPages: optionSlice{"replace:x"}},
+	} {
+		if err := validateReplaceSpecs(opts); err == nil {
+			t.Errorf("invalid specs accepted: %+v", opts)
+		}
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -260,6 +261,10 @@ var cleanCmd = &cobra.Command{
 			cleanOptions.Dataviews = cleanOptions.Dataviews[1:]
 		}
 
+		if err = validateReplaceSpecs(cleanOptions); err != nil {
+			return err
+		}
+
 		if filters.XPath != "" {
 			cleanFilterXPath, err = xpath.Parse(filters.XPath)
 			if err != nil {
@@ -442,10 +447,11 @@ func pluralCount(count int, singular string) string {
 	if count == 1 {
 		return fmt.Sprintf("1 %s", singular)
 	}
-	if strings.HasSuffix(singular, "entry") || strings.HasSuffix(singular, "entity") {
+	lower := strings.ToLower(singular)
+	if strings.HasSuffix(lower, "entry") || strings.HasSuffix(lower, "entity") {
 		return fmt.Sprintf("%d %sies", count, strings.TrimSuffix(singular, "y"))
 	}
-	if strings.HasSuffix(singular, "alias") {
+	if strings.HasSuffix(lower, "alias") {
 		return fmt.Sprintf("%d %ses", count, singular)
 	}
 	return fmt.Sprintf("%d %ss", count, singular)
@@ -491,9 +497,11 @@ func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
 			}
 			wr, err := zw.Create(f.Name)
 			if err != nil {
+				r.Close()
 				return stats, err
 			}
 			err = cleanActivedashboardWithStats(r, wr, &stats)
+			r.Close()
 			if err != nil {
 				return stats, err
 			}
@@ -518,9 +526,14 @@ func cleanCommand(file, outputDir string) (stats cleanStats, err error) {
 
 	// rename file
 
-	// close handles for windows before renames
-	zw.Close()
-	w.Close()
+	// close handles for windows before renames, a failure here means
+	// the cleaned file is incomplete and must not replace the original
+	if err = zw.Close(); err != nil {
+		return stats, err
+	}
+	if err = w.Close(); err != nil {
+		return stats, err
+	}
 	zr.Close()
 
 	backup := true
@@ -564,6 +577,8 @@ func cleanActivedashboard(r io.Reader, w io.Writer) (err error) {
 
 func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) (err error) {
 	scanner := bufio.NewScanner(r)
+	// lines can be longer than the default limit of the scanner
+	scanner.Buffer(make([]byte, 0, 64*1024), maxSize)
 	for scanner.Scan() {
 		line := scanner.Text()
 		switch {
@@ -578,6 +593,10 @@ func cleanActivedashboardWithStats(r io.Reader, w io.Writer, stats *cleanStats) 
 			// yet, so just split and reassemble rather than unmarshal
 			// like info does
 			parts := strings.Split(line, string(fieldSeparator))
+			if len(parts) < 6 {
+				log.Warn("Too few fields in modifier line, skipping", slog.Int("fields", len(parts)))
+				break
+			}
 
 			modifierChanged := false
 			parts[4] = rewriteLinkTargets(parts[4], func(kind, target string) string {
@@ -720,8 +739,9 @@ func updateDataitemXpath(xpp *xpath.XPath, opts cleaningOptions) *xpath.XPath {
 	if xpp.Sampler != nil {
 		xpp.Sampler.Name = updateNameFromOptions(xpp.Sampler.Name, opts.Samplers)
 	} else if len(opts.Samplers) > 0 {
-		xpp.Sampler = &xpath.Sampler{
-			Name: updateNameFromOptions("", opts.Samplers),
+		// do not add an empty sampler to a path that has none
+		if name := updateNameFromOptions("", opts.Samplers); name != "" {
+			xpp.Sampler = &xpath.Sampler{Name: name}
 		}
 	}
 
@@ -803,8 +823,7 @@ func updateNameFromOptions(name string, options optionSlice) string {
 // unchanged.
 func updateTypeNameFromOptions(input *string, options optionSlice) (result *string) {
 	if input != nil {
-		name := *input
-		result = &name
+		result = new(*input)
 	}
 	for _, opt := range options {
 		switch {
@@ -822,16 +841,12 @@ func updateTypeNameFromOptions(input *string, options optionSlice) (result *stri
 				}
 			}
 		case strings.HasPrefix(opt, "set:"):
-			resultStr := strings.TrimPrefix(opt, "set:")
-			result = &resultStr
+			result = new(strings.TrimPrefix(opt, "set:"))
 		case opt == "set-empty":
-			resultStr := ""
-			result = &resultStr
+			result = new("")
 		case strings.HasPrefix(opt, "replace:"):
 			if result != nil {
-				spec := strings.TrimPrefix(opt, "replace:")
-				resultStr := replaceAll(*result, spec)
-				result = &resultStr
+				result = new(replaceAll(*result, strings.TrimPrefix(opt, "replace:")))
 			}
 		case opt == "keep":
 			// do nothing, keep the current name
@@ -898,19 +913,25 @@ func updateAttributesFromOptions(attr map[string]string, options optionSlice) ma
 	return attr
 }
 
-// replaceAll applies the replacement specified by spec to the given
-// name. The spec should be in the format /<pattern>/<replacement>/ with
-// a delimiter of your choice (e.g., / or #). Delimiters can be escaped
-// with a backslash.
-func replaceAll(name, spec string) string {
+// replacement is a parsed replacement spec
+type replacement struct {
+	re   *regexp.Regexp
+	repl string
+}
+
+// replacements caches parsed replacement specs, by spec
+var replacements sync.Map
+
+// parseReplaceSpec parses a replacement spec in the format
+// /<pattern>/<replacement>/ with a delimiter of your choice (e.g., / or
+// #). Delimiters can be escaped with a backslash.
+func parseReplaceSpec(spec string) (r replacement, err error) {
 	if len(spec) < 2 {
-		log.Error("Invalid replace option: missing delimiter", slog.String("pattern", spec))
-		return name
+		return r, fmt.Errorf("invalid replace option %q: missing delimiter", spec)
 	}
 	delim := spec[0]
 	if spec[len(spec)-1] != delim {
-		log.Error("Invalid replace option: delimiter mismatch", slog.String("pattern", spec))
-		return name
+		return r, fmt.Errorf("invalid replace option %q: delimiter mismatch", spec)
 	}
 
 	// Split at the first delimiter that is not escaped by a backslash.
@@ -926,22 +947,59 @@ func replaceAll(name, spec string) string {
 		}
 	}
 	if splitAt < 0 {
-		log.Error("Invalid replace option: missing pattern/replacement separator", slog.String("pattern", spec))
-		return name
+		return r, fmt.Errorf("invalid replace option %q: missing pattern/replacement separator", spec)
 	}
 
 	unescapeDelimiter := func(value string) string {
 		return strings.ReplaceAll(value, "\\"+string(delim), string(delim))
 	}
 	pattern := unescapeDelimiter(spec[1:splitAt])
-	replacement := unescapeDelimiter(spec[splitAt+1 : len(spec)-1])
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		log.Error("Invalid replace option pattern", slog.String("pattern", pattern), slog.Any("error", err))
+	r.repl = unescapeDelimiter(spec[splitAt+1 : len(spec)-1])
+	if r.re, err = regexp.Compile(pattern); err != nil {
+		return r, fmt.Errorf("invalid replace option pattern %q: %w", pattern, err)
+	}
+	return r, nil
+}
+
+// replaceAll applies the replacement specified by spec to the given
+// name, see [parseReplaceSpec]. Invalid specs leave the name unchanged.
+func replaceAll(name, spec string) string {
+	v, ok := replacements.Load(spec)
+	if !ok {
+		r, err := parseReplaceSpec(spec)
+		if err != nil {
+			log.Error("Invalid replace option", slog.Any("error", err))
+		}
+		v, _ = replacements.LoadOrStore(spec, r)
+	}
+	r := v.(replacement)
+	if r.re == nil {
 		return name
 	}
+	return r.re.ReplaceAllString(name, r.repl)
+}
 
-	return re.ReplaceAllString(name, replacement)
+// validateReplaceSpecs checks all the replacement specs in the options
+func validateReplaceSpecs(opts cleaningOptions) error {
+	for _, options := range []optionSlice{opts.Gateways, opts.Probes, opts.Entities, opts.Samplers, opts.Types, opts.Dataviews, opts.WebPages} {
+		for _, opt := range options {
+			if spec, ok := strings.CutPrefix(opt, "replace:"); ok {
+				if _, err := parseReplaceSpec(spec); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	for _, opt := range opts.Attributes {
+		if after, ok := strings.CutPrefix(opt, "replace:"); ok {
+			if _, spec, found := strings.Cut(after, "="); found && strings.HasPrefix(spec, "/") {
+				if _, err := parseReplaceSpec(spec); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 type optionSlice []string

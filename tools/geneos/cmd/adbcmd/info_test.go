@@ -1,8 +1,16 @@
 package adbcmd
 
 import (
+	"archive/zip"
+	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/itrs-group/cordial/tools/geneos/cmd"
+	"github.com/itrs-group/cordial/tools/geneos/cmd/internal/cmdtest"
 )
 
 func TestProcessLineLinkTypes(t *testing.T) {
@@ -113,5 +121,39 @@ func TestFormatTargetLists(t *testing.T) {
 				t.Errorf("formatTargetLists() = %q, want %q", got, test.want)
 			}
 		})
+	}
+}
+
+func TestInfoReportsEachFileSeparately(t *testing.T) {
+	cmdtest.Env(t)
+
+	dir := t.TempDir()
+	line := geneosURLClass + `~3.0~dataitem(/geneos/gateway[(@name="GW")]/directory/probe[(@name="P")]/managedEntity[(@name="E")])~Example~`
+	var files []string
+	for _, name := range []string{"a.adb", "b.adb"} {
+		path := filepath.Join(dir, name)
+		out, err := os.Create(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		zw := zip.NewWriter(out)
+		w, err := zw.Create("dashboard" + extension)
+		if err != nil {
+			t.Fatal(err)
+		}
+		fmt.Fprintln(w, line)
+		if err := zw.Close(); err != nil {
+			t.Fatal(err)
+		}
+		out.Close()
+		files = append(files, path)
+	}
+
+	res := cmdtest.Run(t, cmd.Cmd, append([]string{"adb", "info"}, files...)...)
+	if res.Err != nil {
+		t.Fatalf("adb info: %v", res.Err)
+	}
+	if n := strings.Count(res.Stdout, "Gateways: 1\n"); n != 2 {
+		t.Errorf("each file should report one gateway, found %d such lines:\n%s", n, res.Stdout)
 	}
 }

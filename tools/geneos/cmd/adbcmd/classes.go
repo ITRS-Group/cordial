@@ -56,18 +56,18 @@ type dataItemSeverityNodeFields struct {
 	Filters              []string `adb:"7-"`
 	DefaultValue         string   `adb:"-14"`
 	UseOppositeBoolValue bool     `adb:"-13"`
-	UndefinedColourR     int8     `adb:"-12"`
-	UndefinedColourG     int8     `adb:"-11"`
-	UndefinedColourB     int8     `adb:"-10"`
-	OKColourR            int8     `adb:"-9"`
-	OKColourG            int8     `adb:"-8"`
-	OKColourB            int8     `adb:"-7"`
-	WarningColourR       int8     `adb:"-6"`
-	WarningColourG       int8     `adb:"-5"`
-	WarningColourB       int8     `adb:"-4"`
-	CriticalColourR      int8     `adb:"-3"`
-	CriticalColourG      int8     `adb:"-2"`
-	CriticalColourB      int8     `adb:"-1"`
+	UndefinedColourR     uint8    `adb:"-12"`
+	UndefinedColourG     uint8    `adb:"-11"`
+	UndefinedColourB     uint8    `adb:"-10"`
+	OKColourR            uint8    `adb:"-9"`
+	OKColourG            uint8    `adb:"-8"`
+	OKColourB            uint8    `adb:"-7"`
+	WarningColourR       uint8    `adb:"-6"`
+	WarningColourG       uint8    `adb:"-5"`
+	WarningColourB       uint8    `adb:"-4"`
+	CriticalColourR      uint8    `adb:"-3"`
+	CriticalColourG      uint8    `adb:"-2"`
+	CriticalColourB      uint8    `adb:"-1"`
 }
 
 // com.itrsgroup.util.geneosurls.GeneosURL~3.0~dataitem(/geneos/gateway[(@name="Dashboard-GW-01")]/directory/probe]/managedEntity[(@name="Hardware")]/sampler[(@name="Hardware")][(@type="")]/dataview[(@name="Disk Issues")])~Disk Issues~
@@ -125,14 +125,11 @@ func unmarshalLineToStruct[V knownClasses](line string, v *V) error {
 		return fmt.Errorf("expected a pointer to a struct, got %T", v)
 	}
 
-	rt := rv.Type()
+	// lines end with a separator, which does not start another field,
+	// and empty fields are significant for the positions of the others
+	fields := strings.Split(strings.TrimSuffix(line, string(fieldSeparator)), string(fieldSeparator))
 
-	fields := strings.FieldsFunc(line, func(r rune) bool {
-		return r == fieldSeparator
-	})
-
-	for i := 0; i < rt.NumField(); i++ {
-		field := rt.Field(i)
+	for field, fv := range rv.Fields() {
 		tag := field.Tag.Get("adb")
 		if tag == "" {
 			continue
@@ -153,29 +150,31 @@ func unmarshalLineToStruct[V knownClasses](line string, v *V) error {
 		if err != nil {
 			return fmt.Errorf("invalid adb tag %q on field %s: %v", fieldSpec, field.Name, err)
 		}
-		if idx >= len(fields) {
-			if omitempty {
-				continue
-			}
-			return fmt.Errorf("field index %d out of range for fields length %d", idx, len(fields))
-		}
 
 		// negative index indicates counting from the end of the fields slice
 		if idx < 0 {
-			idx = len(fields) + idx
+			idx += len(fields)
+		}
+		if idx < 0 || idx >= len(fields) {
+			if omitempty {
+				continue
+			}
+			return fmt.Errorf("field index for %s out of range for fields length %d", field.Name, len(fields))
 		}
 
 		if fieldRange {
 			// handle field range logic here if needed
-			if rt.Field(i).Name == "Filters" {
-				if _, ok := rt.FieldByName("FilterCount"); ok {
-					filterCount := rv.FieldByName("FilterCount").Int()
-					for j := 0; j < int(filterCount); j++ {
-						// handle each filter here
-						if rv.Field(i).Kind() != reflect.Slice {
-							return fmt.Errorf("expected string kind for Filters field, got %s", rv.Field(i).Kind())
-						}
-						rv.Field(i).Set(reflect.Append(rv.Field(i), reflect.ValueOf(fields[idx+j])))
+			if field.Name == "Filters" {
+				if filterCountValue, ok := rv.Type().FieldByName("FilterCount"); ok {
+					filterCount := int(rv.FieldByIndex(filterCountValue.Index).Int())
+					if filterCount < 0 || idx+filterCount > len(fields) {
+						return fmt.Errorf("filter count %d out of range for fields length %d", filterCount, len(fields))
+					}
+					if fv.Kind() != reflect.Slice {
+						return fmt.Errorf("expected slice kind for Filters field, got %s", fv.Kind())
+					}
+					for j := range filterCount {
+						fv.Set(reflect.Append(fv, reflect.ValueOf(fields[idx+j])))
 					}
 				}
 			}
@@ -186,29 +185,41 @@ func unmarshalLineToStruct[V knownClasses](line string, v *V) error {
 		if omitempty && fieldValue == "" {
 			continue
 		}
-		switch rv.Field(i).Kind() {
+		switch fv.Kind() {
 		case reflect.String:
-			rv.Field(i).SetString(fieldValue)
+			fv.SetString(fieldValue)
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			intVal, err := strconv.ParseInt(fieldValue, 10, 64)
 			if err != nil {
 				return fmt.Errorf("failed to parse int for field %s: %v", field.Name, err)
 			}
-			rv.Field(i).SetInt(intVal)
+			if fv.OverflowInt(intVal) {
+				return fmt.Errorf("value %d overflows field %s", intVal, field.Name)
+			}
+			fv.SetInt(intVal)
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			uintVal, err := strconv.ParseUint(fieldValue, 10, 64)
+			if err != nil {
+				return fmt.Errorf("failed to parse unsigned int for field %s: %v", field.Name, err)
+			}
+			if fv.OverflowUint(uintVal) {
+				return fmt.Errorf("value %d overflows field %s", uintVal, field.Name)
+			}
+			fv.SetUint(uintVal)
 		case reflect.Float32, reflect.Float64:
 			floatVal, err := strconv.ParseFloat(fieldValue, 64)
 			if err != nil {
 				return fmt.Errorf("failed to parse float for field %s: %v", field.Name, err)
 			}
-			rv.Field(i).SetFloat(floatVal)
+			fv.SetFloat(floatVal)
 		case reflect.Bool:
 			boolVal, err := strconv.ParseBool(fieldValue)
 			if err != nil {
 				return fmt.Errorf("failed to parse bool for field %s: %v", field.Name, err)
 			}
-			rv.Field(i).SetBool(boolVal)
+			fv.SetBool(boolVal)
 		default:
-			return fmt.Errorf("unsupported field type %s for field %s", rv.Field(i).Kind(), field.Name)
+			return fmt.Errorf("unsupported field type %s for field %s", fv.Kind(), field.Name)
 		}
 	}
 	return nil
