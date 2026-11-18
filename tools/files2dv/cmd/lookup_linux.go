@@ -110,7 +110,12 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 		}
 		lookup["type"] = "other"
 	}
-	uid := strconv.Itoa(int(st.Sys().(*syscall.Stat_t).Uid))
+	sys, ok := st.Sys().(*syscall.Stat_t)
+	if !ok {
+		return
+	}
+
+	uid := strconv.FormatUint(uint64(sys.Uid), 10)
 	lookup["uid"] = uid
 	lookup["user"] = uid
 	if u, err := user.LookupId(uid); err == nil { // no error
@@ -118,17 +123,18 @@ func buildFileLookupTable(dv *config.Config, path, pattern string) (lookup map[s
 	} else {
 		log.Error("failed to lookup user", slog.Any("error", err), slog.String("uid", uid))
 	}
-	gid := strconv.Itoa(int(st.Sys().(*syscall.Stat_t).Gid))
+	// owner is the platform independent name for the file owner
+	lookup["owner"] = lookup["user"]
+
+	gid := strconv.FormatUint(uint64(sys.Gid), 10)
 	lookup["gid"] = gid
 	lookup["group"] = gid
 	if g, err := user.LookupGroupId(gid); err == nil { //no error
 		lookup["group"] = g.Name
 	}
 
-	device := strconv.FormatUint(st.Sys().(*syscall.Stat_t).Dev, 10)
-	lookup["device"] = device
-	inode := strconv.FormatUint(st.Sys().(*syscall.Stat_t).Ino, 10)
-	lookup["inode"] = inode
+	lookup["device"] = strconv.FormatUint(uint64(sys.Dev), 10)
+	lookup["inode"] = strconv.FormatUint(sys.Ino, 10)
 
 	return
 }

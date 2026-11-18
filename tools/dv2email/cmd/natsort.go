@@ -57,31 +57,15 @@ func Less(a, b string) bool {
 	}
 }
 
-// NatsortStringSlice satisfies the sort.Interface for []string, sorting in
-// increasing order using natural order.
-type NatsortStringSlice []string
-
-// Len TODO: Document its behavior, inputs, and effects.
-func (p NatsortStringSlice) Len() int           { return len(p) }
-// Less TODO: Document its behavior, inputs, and effects.
-func (p NatsortStringSlice) Less(i, j int) bool { return Less(p[i], p[j]) }
-// Swap TODO: Document its behavior, inputs, and effects.
-func (p NatsortStringSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
-
-//
-
 // commonPrefix returns the common prefix except for digits.
 func commonPrefix(a, b string) int {
-	m := len(a)
-	if n := len(b); n < m {
-		m = n
-	}
+	m := min(len(a), len(b))
 	if m == 0 {
 		return 0
 	}
 	_ = a[m-1]
 	_ = b[m-1]
-	for i := 0; i < m; i++ {
+	for i := range m {
 		ca := a[i]
 		cb := b[i]
 		if (ca >= '0' && ca <= '9') || (cb >= '0' && cb <= '9') || ca != cb {
@@ -92,7 +76,7 @@ func commonPrefix(a, b string) int {
 }
 
 func digits(s string) int {
-	for i := 0; i < len(s); i++ {
+	for i := range len(s) {
 		c := s[i]
 		if c < '0' || c > '9' {
 			return i

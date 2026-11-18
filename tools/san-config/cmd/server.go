@@ -23,8 +23,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	dbg "runtime/debug"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -40,6 +40,8 @@ import (
 
 var daemon bool
 
+// logfile is only set by the flag, the value is read through the flag
+// in initConfig
 var logfile string
 
 func init() {
@@ -60,17 +62,8 @@ var serverCmd = &cobra.Command{
 			process.Daemon(os.Stdout, nil, process.RemoveArgs, "-D", "--daemon")
 		}
 
-		if logfile == "" {
-			logfile = config.Get[string](cf, "server.logs.path")
-		}
-
-		logfile = config.ResolveHome(logfile)
-
-		done := make(chan bool)
-
-		if logfile == "-" {
-			logfile = ""
-		}
+		// reinitialise logging, after any daemonising, using the log file
+		// from the command line or the configuration
 		initConfig(cmd)
 
 		var usetls string
@@ -79,8 +72,7 @@ var serverCmd = &cobra.Command{
 		}
 		log.Info("starting server", slog.String("version", cordial.VERSION), slog.String("protocol", "http"+usetls), slog.String("host", config.Get[string](cf, "server.host")), slog.Int("port", config.Get[int](cf, "server.port")))
 		cs, e := initServer(cf)
-		go cs.startServer(e)
-		<-done
+		cs.startServer(e)
 		return
 	},
 }
@@ -115,6 +107,26 @@ type ConfigServer struct {
 	hosts    map[string]HostMappings // known host mappings - always Clone HostMappings before changing!
 }
 
+// interval returns the configured duration at key, defaulting to a
+// minute if it is zero
+func (cs *ConfigServer) interval(key string) time.Duration {
+	if check := config.Get[time.Duration](cs.conf, key); check != 0 {
+		return check
+	}
+	return 60 * time.Second
+}
+
+// safely runs f and logs, instead of propagating, any panic so that a
+// problem in one background refresh does not stop the server
+func safely(what string, f func()) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Error("recovered from panic", slog.String("operation", what), slog.Any("panic", r), slog.String("stack", string(dbg.Stack())))
+		}
+	}()
+	f()
+}
+
 func (cs *ConfigServer) startServer(e *echo.Echo) {
 	var err error
 
@@ -126,27 +138,21 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 			break
 		}
 		log.Error("retrying until first inventory load(s) succeeds", slog.Any("error", err))
-		check := config.Get[time.Duration](cs.conf, "inventory.check-interval")
-		if check == 0 {
-			check = 60 * time.Second
-		}
-		time.Sleep(check)
+		time.Sleep(cs.interval("inventory.check-interval"))
 	}
 	cs.gateways = CheckGateways(cs.conf)
 
 	// check for live gateways
 	go func(cs *ConfigServer) {
 		for {
-			check := config.Get[time.Duration](cs.conf, "geneos.check-interval")
-			if check == 0 {
-				check = 60 * time.Second
-			}
+			time.Sleep(cs.interval("geneos.check-interval"))
 
-			time.Sleep(check)
-
-			cs.Lock()
-			cs.gateways = CheckGateways(cs.conf)
-			cs.Unlock()
+			safely("gateway check", func() {
+				gateways := CheckGateways(cs.conf)
+				cs.Lock()
+				cs.gateways = gateways
+				cs.Unlock()
+			})
 		}
 	}(cs)
 
@@ -154,15 +160,19 @@ func (cs *ConfigServer) startServer(e *echo.Echo) {
 	go func(cs *ConfigServer) {
 		for {
 			// update each time in case configuration has changed
-			check := config.Get[time.Duration](cs.conf, "inventory.check-interval")
-			if check == 0 {
-				check = 60 * time.Second
-			}
-			time.Sleep(check)
+			time.Sleep(cs.interval("inventory.check-interval"))
 
-			cs.Lock()
-			cs.hosts, err = LoadHosts(cs.conf)
-			cs.Unlock()
+			safely("inventory load", func() {
+				hosts, err := LoadHosts(cs.conf)
+				if err != nil {
+					// keep the existing hosts
+					log.Error("inventory load failed, keeping existing hosts", slog.Any("error", err))
+					return
+				}
+				cs.Lock()
+				cs.hosts = hosts
+				cs.Unlock()
+			})
 		}
 	}(cs)
 
@@ -231,7 +241,7 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 
 	np, finalHosttype := cs.NetprobeConfig(hostname, hosttype)
 
-	if len(np.SelfAnnounce.Gateways) == 0 {
+	if np == nil || len(np.SelfAnnounce.Gateways) == 0 {
 		return echo.ErrInternalServerError
 	}
 	log.Info("sending config", slog.String("hostname", hostname), slog.String("type", finalHosttype))
@@ -250,11 +260,12 @@ func (cs *ConfigServer) ServeConfig(c echo.Context) (err error) {
 func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	var lines strings.Builder
 
-	cs.Lock()
-	gwlist := cs.gateways
-	cs.Unlock()
+	// sort a copy, the shared slice must not be changed
+	cs.RLock()
+	gwlist := slices.Clone(cs.gateways)
+	cs.RUnlock()
 
-	sort.Strings(gwlist)
+	slices.Sort(gwlist)
 	gwlist = slices.Compact(gwlist)
 
 	// only lookup allGateways once
@@ -263,9 +274,9 @@ func (cs *ConfigServer) ServeConnection(c echo.Context) (err error) {
 	for _, gw := range gwlist {
 		gateway := GatewayDetails(gw, allGateways)
 
-		lines.WriteString(fmt.Sprintf("%s~%d~%s~", gateway.Primary, gateway.PrimaryPort, gw))
+		fmt.Fprintf(&lines, "%s~%d~%s~", gateway.Primary, gateway.PrimaryPort, gw)
 		if gateway.Standby != "" && gateway.StandbyPort != 0 {
-			lines.WriteString(fmt.Sprintf("%s~%d~*~", gateway.Standby, gateway.StandbyPort))
+			fmt.Fprintf(&lines, "%s~%d~*~", gateway.Standby, gateway.StandbyPort)
 		} else {
 			lines.WriteString("~~*~")
 		}

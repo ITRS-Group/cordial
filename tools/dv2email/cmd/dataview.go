@@ -26,7 +26,6 @@ import (
 	"os"
 	"path"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -45,40 +44,16 @@ type dataFile struct {
 func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, headlineList, rowList, columnList, rowOrder string) (data DV2EMailData, err error) {
 	data = DV2EMailData{
 		Dataviews: []*commands.Dataview{},
-		Env:       make(map[string]string, len(os.Environ())),
 	}
 
 	// import all environment variables into both the template data
 	// and also the config structure (config.WithEnvs doesn't work
 	// for empty prefixes)
-	for _, e := range os.Environ() {
-		k, v, found := strings.Cut(e, "=")
-		if !found {
-			continue
-		}
-		data.Env[k] = v
-		config.Set(globalCf, k, v)
-	}
+	data.Env = importEnvironment(globalCf, os.Environ())
 
 	varpath := config.Get[string](globalCf, "_variablepath")
 	if varpath == "" {
-		varpath = "//managedEntity"
-		if entityArg != "" {
-			varpath += fmt.Sprintf("[(@name=%q)]", entityArg)
-		}
-		varpath += "/sampler"
-		if samplerArg != "" {
-			if cmd.Root().PersistentFlags().Changed("type") {
-				varpath += fmt.Sprintf("[(@name=%q)][(@type=%q)]", samplerArg, typeArg)
-			} else {
-				varpath += fmt.Sprintf("[(@name=%q)]", samplerArg)
-
-			}
-		}
-		varpath += "/dataview"
-		if dataviewArg != "" {
-			varpath += fmt.Sprintf("[(@name=%q)]", dataviewArg)
-		}
+		varpath = buildVarpath(cmd.Root().PersistentFlags().Changed("type"))
 	}
 	dv, err := xpath.Parse(varpath)
 	if err != nil {
@@ -111,6 +86,109 @@ func fetchDataviews(cmd *cobra.Command, gw *commands.Connection, firstcolumn, he
 	return
 }
 
+// importEnvironment copies all the environment variables into the
+// config structure, so that they can be used for settings and expansion,
+// and returns them as a map for use in templates.
+//
+// Environment variables with the same name (ignoring case) as a
+// top-level section or key already in the configuration, e.g. GATEWAY,
+// EMAIL, FILES, TEXT or HTML, are not copied into the config as that
+// would replace the whole section.
+func importEnvironment(cf *config.Config, environ []string) (env map[string]string) {
+	env = make(map[string]string, len(environ))
+
+	reserved := map[string]bool{}
+	for k := range cf.AllSettings() {
+		reserved[strings.ToLower(k)] = true
+	}
+
+	for _, e := range environ {
+		k, v, found := strings.Cut(e, "=")
+		if !found {
+			continue
+		}
+		env[k] = v
+		if reserved[strings.ToLower(k)] {
+			log.Debug("not importing environment variable over config section", slog.String("name", k))
+			continue
+		}
+		config.Set(cf, k, v)
+	}
+	return
+}
+
+// buildVarpath builds the default XPath to select dataviews from the
+// command line arguments. If typeSet is true then the (possibly empty)
+// type argument is used to select samplers.
+func buildVarpath(typeSet bool) (varpath string) {
+	varpath = "//managedEntity"
+	if entityArg != "" {
+		varpath += fmt.Sprintf("[(@name=%q)]", entityArg)
+	}
+	varpath += "/sampler"
+	if samplerArg != "" {
+		if typeSet {
+			varpath += fmt.Sprintf("[(@name=%q)][(@type=%q)]", samplerArg, typeArg)
+		} else {
+			varpath += fmt.Sprintf("[(@name=%q)]", samplerArg)
+		}
+	}
+	varpath += "/dataview"
+	if dataviewArg != "" {
+		varpath += fmt.Sprintf("[(@name=%q)]", dataviewArg)
+	}
+	return
+}
+
+// entityGroup is the dataviews for a single entity
+type entityGroup struct {
+	entity    string
+	dataviews []*commands.Dataview
+}
+
+// groupByEntity splits dataviews by entity name and returns the groups
+// in entity name order, with the dataviews in each group in their
+// original order
+func groupByEntity(dataviews []*commands.Dataview) (groups []entityGroup) {
+	byName := map[string][]*commands.Dataview{}
+	for _, d := range dataviews {
+		byName[d.XPath.Entity.Name] = append(byName[d.XPath.Entity.Name], d)
+	}
+	for _, name := range slices.Sorted(maps.Keys(byName)) {
+		groups = append(groups, entityGroup{entity: name, dataviews: byName[name]})
+	}
+	return
+}
+
+// matchesAny returns true if name matches any of the glob patterns. The
+// patterns have surrounding white space removed. Invalid patterns are
+// logged and never match.
+func matchesAny(patterns []string, name, what string) bool {
+	return slices.ContainsFunc(patterns, func(p string) bool {
+		p = strings.TrimSpace(p)
+		ok, err := path.Match(p, name)
+		if err != nil {
+			log.Error("invalid "+what, slog.Any("error", err), slog.String("filter", p))
+			return false
+		}
+		return ok
+	})
+}
+
+// validPatterns returns the patterns that are valid globs. If none are
+// valid the result is empty and so no filtering should be done.
+func validPatterns(patterns []string, what string) (valid []string) {
+	for _, p := range patterns {
+		p = strings.TrimSpace(p)
+		if _, err := path.Match(p, ""); err != nil {
+			log.Error("invalid "+what, slog.Any("error", err), slog.String("filter", p))
+			continue
+		}
+		valid = append(valid, p)
+	}
+	return
+}
+
 // getDataview fetches a dataview and applies filters and ordering based
 // on the configuration. It returns the resulting dataview or an error
 // if the fetch fails.
@@ -121,23 +199,26 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		return
 	}
 
+	filterDataview(dataview, firstcolumn, headlineList, rowList, columnList, rowOrder)
+	return
+}
+
+// filterDataview applies the configured filters and ordering to a
+// dataview. Each filter keeps an item if it matches any of the
+// patterns that apply to the dataview. The first column, the row name
+// column, is never filtered or re-ordered.
+func filterDataview(dataview *commands.Dataview, firstcolumn, headlineList, rowList, columnList, rowOrder string) {
 	// first, filter headlineFilter. There is no ordering as they are always
 	// displayed in alphabetical order in the Active Console
-	headlineFilter := match(dataview.Name, "headline-filter", headlineList)
+	headlineFilter := validPatterns(match(dataview.Name, "headline-filter", headlineList), "headline filter")
 	if len(headlineFilter) > 0 && len(dataview.Headlines) > 0 {
-		// remove headlines that do not match the filters
+		// remove headlines that do not match any of the filters
 		maps.DeleteFunc(dataview.Headlines, func(k string, _ commands.DataItem) bool {
-			return slices.ContainsFunc(headlineFilter, func(h string) bool {
-				h = strings.TrimSpace(h)
-				ok, err := path.Match(h, k)
-				if err != nil {
-					log.Error("invalid headline filter", slog.Any("error", err), slog.String("filter", h))
-					// if the filter is invalid then do not filter out
-					// the headline based on that filter
-					return false
-				}
-				return !ok
-			})
+			return !matchesAny(headlineFilter, k, "headline filter")
+		})
+		dataview.HeadlineOrder = slices.DeleteFunc(dataview.HeadlineOrder, func(k string) bool {
+			_, ok := dataview.Headlines[k]
+			return !ok
 		})
 	}
 
@@ -159,22 +240,15 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		dataview.ColumnOrder[0] = rowname
 	}
 
-	cols := match(dataview.Name, "column-filter", columnList)
-	if len(cols) > 0 {
-		// remove columns that do not match the filters
-		dataview.ColumnOrder = slices.DeleteFunc(dataview.ColumnOrder, func(c string) bool {
-			c = strings.TrimSpace(c)
-			return slices.ContainsFunc(cols, func(col string) bool {
-				ok, err := path.Match(col, c)
-				if err != nil {
-					log.Error("invalid column filter", slog.Any("error", err), slog.String("filter", col))
-					// if the filter is invalid then do not filter out
-					// the column based on that filter
-					return false
-				}
-				return !ok
-			})
-		})
+	cols := validPatterns(match(dataview.Name, "column-filter", columnList), "column filter")
+	if len(cols) > 0 && len(dataview.ColumnOrder) > 0 {
+		// remove columns that do not match any of the filters, but
+		// always keep the first column
+		first := dataview.ColumnOrder[0]
+		dataview.ColumnOrder = append([]string{first},
+			slices.DeleteFunc(slices.Clone(dataview.ColumnOrder[1:]), func(c string) bool {
+				return !matchesAny(cols, c, "column filter")
+			})...)
 	}
 
 	// order the resulting columns (after filters above) by their names.
@@ -187,67 +261,56 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 	// is "asc" or "desc" then all column names are sorted in ascending
 	// or descending order respectively.
 	matches := match(dataview.Name, "column-order", "")
-	if len(matches) == 1 && (strings.EqualFold(matches[0], "asc") || strings.EqualFold(matches[0], "desc")) {
-		slices.Sort(dataview.ColumnOrder[1:])
-		if strings.EqualFold(matches[0], "desc") {
-			slices.Reverse(dataview.ColumnOrder[1:])
-		}
-	} else if len(matches) > 0 {
-		// remove columns from oc as we match them
-		oc := slices.Clone(dataview.ColumnOrder)
-
-		nc := make([]string, 0, len(dataview.ColumnOrder))
-		for _, m := range matches {
-			m = strings.TrimSpace(m)
-			for i, c := range oc {
-				ok, err := path.Match(m, c)
-				if err != nil {
-					log.Error("invalid column order filter", slog.Any("error", err), slog.String("filter", m))
-					continue
-				}
-				if ok {
-					oc = slices.Delete(oc, i, i+1)
-					nc = append(nc, c)
-				}
+	if len(matches) > 0 && len(dataview.ColumnOrder) > 1 {
+		rest := dataview.ColumnOrder[1:]
+		if len(matches) == 1 && (strings.EqualFold(matches[0], "asc") || strings.EqualFold(matches[0], "desc")) {
+			slices.Sort(rest)
+			if strings.EqualFold(matches[0], "desc") {
+				slices.Reverse(rest)
 			}
+		} else {
+			nc := []string{dataview.ColumnOrder[0]}
+			// remaining columns are those not yet selected by an earlier pattern
+			remaining := slices.Clone(rest)
+			for _, m := range validPatterns(matches, "column order filter") {
+				var next []string
+				for _, c := range remaining {
+					if ok, _ := path.Match(m, c); ok {
+						nc = append(nc, c)
+					} else {
+						next = append(next, c)
+					}
+				}
+				remaining = next
+			}
+			// now add back any leftovers
+			dataview.ColumnOrder = append(nc, remaining...)
 		}
-		// now add back any leftovers
-		nc = append(nc, oc...)
-		dataview.ColumnOrder = nc
 	}
 
-	rows := match(dataview.Name, "row-filter", rowList)
-	if len(rows) > 0 && len(dataview.Table) > 0 {
+	rows := validPatterns(match(dataview.Name, "row-filter", rowList), "row filter")
+	if len(rows) > 0 {
+		keep := func(k string) bool { return matchesAny(rows, k, "row filter") }
 		maps.DeleteFunc(dataview.Table, func(k string, _ map[string]commands.DataItem) bool {
-			return slices.ContainsFunc(rows, func(r string) bool {
-				r = strings.TrimSpace(r)
-				ok, err := path.Match(r, k)
-				if err != nil {
-					log.Error("invalid row filter", slog.Any("error", err), slog.String("filter", r))
-					// if the filter is invalid then do not filter out
-					// the row based on that filter
-					return false
-				}
-				return !ok
-			})
+			return !keep(k)
+		})
+		dataview.RowOrder = slices.DeleteFunc(dataview.RowOrder, func(k string) bool {
+			return !keep(k)
 		})
 	}
 
 	// order rows based on the value in a column, or based on the row
 	// name if he column is the literal `rowname`
-	asc := true
 	matches = match(dataview.Name, "row-order", rowOrder)
-	if len(matches) > 0 && len(dataview.Table) > 0 {
-		colname := matches[0]
+	if len(matches) > 0 && len(dataview.RowOrder) > 0 && len(dataview.ColumnOrder) > 0 {
+		colname := strings.TrimSpace(matches[0])
+		asc := true
 		switch {
 		case strings.HasSuffix(colname, "-"):
 			asc = false
-			colname = colname[:len(colname)-1]
+			colname = strings.TrimSuffix(colname, "-")
 		case strings.HasSuffix(colname, "+"):
-			colname = colname[:len(colname)-1]
-			fallthrough
-		default:
-			asc = true
+			colname = strings.TrimSuffix(colname, "+")
 		}
 
 		// if the row-order is for a column that is used as the
@@ -255,35 +318,45 @@ func getDataview(gw *commands.Connection, dv *xpath.XPath, firstcolumn, headline
 		// the data.Rows slice directly based on value and
 		// not a cell in the row
 		if colname == "rowname" || colname == dataview.ColumnOrder[0] {
-			sort.Sort(NatsortStringSlice(dataview.RowOrder)) // natural sort
+			slices.SortStableFunc(dataview.RowOrder, natCompare) // natural sort
 			if !asc {
 				slices.Reverse(dataview.RowOrder)
 			}
 		} else {
 			// indirect sort of rownames based on the values in a given column (that isn't rowname)
-			r := dataview.RowOrder
-			sort.Slice(r, func(i, j int) bool {
-				a := dataview.Table[r[i]][colname].Value
-				b := dataview.Table[r[j]][colname].Value
-				if asc {
-					return Less(a, b)
-				} else {
-					return Less(b, a)
+			slices.SortStableFunc(dataview.RowOrder, func(x, y string) int {
+				a := dataview.Table[x][colname].Value
+				b := dataview.Table[y][colname].Value
+				if !asc {
+					a, b = b, a
 				}
+				return natCompare(a, b)
 			})
 		}
 	}
+}
 
-	return
+// natCompare compares a and b in natural sort order for use with
+// [slices.SortFunc]
+func natCompare(a, b string) int {
+	switch {
+	case Less(a, b):
+		return -1
+	case Less(b, a):
+		return 1
+	}
+	return 0
 }
 
 // buildName returns in as name unless in is "auto" in which case it
 // applies some heuristics to the name. It builds a name based on
-// `serial`, `entity`, `sampler` and `dataview` and `timestamp`from the
-// lookup map, removes empty values and adjacent duplicates and then
-// joins the remaining components with a `-`. If the resulting name (or
-// the input string `in`) is empty then the function returns value of
-// the "default" key in lookup or, if that is empty then "undefined"
+// `serial`, `entity`, `sampler` and `dataview` from the lookup map,
+// removes empty values and adjacent duplicates, joins the remaining
+// components with a `-` and then appends a `-` and the `timestamp`
+// value, if set. If the resulting name (or the input string `in`) is
+// empty then the function returns value of the "default" key in lookup
+// or, if that is empty then "undefined". The timestamp is only added
+// for "auto" names, any other name is used as given.
 func buildName(in string, lookup map[string]string) (name string) {
 	name = in
 	if in == "auto" {
@@ -294,7 +367,6 @@ func buildName(in string, lookup map[string]string) (name string) {
 			lookup["entity"],
 			lookup["sampler"],
 			lookup["dataview"],
-			// lookup["timestamp"],
 		}
 		parts = slices.DeleteFunc(parts, func(s string) bool {
 			return s == ""
@@ -309,8 +381,10 @@ func buildName(in string, lookup map[string]string) (name string) {
 			name = "undefined"
 		}
 	}
-	if t, ok := lookup["timestamp"]; ok {
-		name += "-" + t
+	if in == "auto" {
+		if t := lookup["timestamp"]; t != "" {
+			name += "-" + t
+		}
 	}
 	return
 }

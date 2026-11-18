@@ -21,8 +21,9 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -110,6 +111,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 	columnWidth := config.Get[float64](cf, "xlsx.column-width")
 
 	x := excelize.NewFile()
+	defer x.Close()
 
 	headingStyle, _ := x.NewStyle(&HeadingCellStyle)
 	criticalStyle, _ := x.NewStyle(&CriticalCellStyle)
@@ -121,28 +123,33 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 	// number of digits needed for "serial" - the length of string of the number of the length of dataviews
 	digits := len(strconv.Itoa(len(data.Dataviews)))
 
-	// sort by entity and dataview
-	sort.Slice(data.Dataviews, func(i, j int) bool {
-		return data.Dataviews[i].XPath.String() < data.Dataviews[j].XPath.String()
+	// sort by entity and dataview, without changing the caller's slice
+	// and calculating the sort keys only once
+	dataviews := slices.Clone(data.Dataviews)
+	keys := make(map[*commands.Dataview]string, len(dataviews))
+	for _, dv := range dataviews {
+		keys[dv] = dv.XPath.String()
+	}
+	slices.SortStableFunc(dataviews, func(a, b *commands.Dataview) int {
+		return strings.Compare(keys[a], keys[b])
 	})
 
-	for di, dv := range data.Dataviews {
+	// the default sheet is deleted below so must not be reused
+	usedSheets := map[string]bool{"sheet1": true}
+	usedTables := map[string]bool{}
+
+	for di, dv := range dataviews {
 		var sheetname string
 		lookup := dv.XPath.LookupValues()
 		lookup["date"] = t.Local().Format("20060102")
 		lookup["time"] = t.Local().Format("150405")
 		lookup["datetime"] = t.Local().Format(time.RFC3339)
-		lookup["serial"] = fmt.Sprintf("%0*d", digits, di)
+		lookup["serial"] = fmt.Sprintf("%0*d", digits, di+1)
 
 		// if sheetname is "auto" then apply some heuristics
 
 		sheetname = config.Get[string](cf, "xlsx.sheetname", config.LookupTable(lookup))
-		sheetname = buildName(sheetname, lookup)
-
-		if len(sheetname) > 31 {
-			log.Debug("truncating", slog.String("sheetname", sheetname), slog.String("truncated", sheetname[:31]))
-			sheetname = sheetname[:31]
-		}
+		sheetname = uniqueSheetName(buildName(sheetname, lookup), usedSheets)
 
 		if _, err = x.NewSheet(sheetname); err != nil {
 			log.Error("failed to create new sheet", slog.Any("error", err), slog.String("sheetname", sheetname))
@@ -158,19 +165,9 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		if err = x.SetSheetRow(sheetname, infoTable, &infoNames); err != nil {
 			log.Error("failed to set sheet row", slog.Any("error", err), slog.String("sheetname", sheetname))
 		}
-		info := []string{
-			"Geneos dv2email",
-			lookup["gateway"],
-			lookup["probe"],
-			lookup["entity"],
-			lookup["type"],
-			lookup["sampler"],
-			lookup["dataview"],
-			dv.SampleTime.Format(time.RFC3339),
-			dv.XPath.String(),
-		}
+		info := dataviewInfo(dv, lookup)
 
-		infoTableHeadingsEnd, _ := excelize.CoordinatesToCellName(infoColumn+len(info), infoRow)
+		infoTableHeadingsEnd, _ := excelize.CoordinatesToCellName(infoColumn+len(info)-1, infoRow)
 		x.SetCellStyle(sheetname, infoTable, infoTableHeadingsEnd, headingStyle)
 
 		if err = x.SetSheetRow(sheetname, infoTableData, &info); err != nil {
@@ -182,11 +179,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		// build two rows of headlines, which always have at least a samplingStatus
 
 		// sorted slice of headlines
-		headlines := []string{}
-		for h := range dv.Headlines {
-			headlines = append(headlines, h)
-		}
-		sort.Strings(headlines)
+		headlines := slices.Sorted(maps.Keys(dv.Headlines))
 		if err = x.SetSheetRow(sheetname, headlineTable, &headlines); err != nil {
 			log.Error("failed to set sheet row", slog.Any("error", err), slog.String("sheetname", sheetname))
 		}
@@ -205,8 +198,10 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 			}
 			colwidths[hi] = max(colWidth(len(value), minColWidth), colwidths[hi])
 		}
-		headlinesEnd, _ := excelize.CoordinatesToCellName(headlineColumn+len(dv.Headlines)-1, headlineRow)
-		x.SetCellStyle(sheetname, headlineTable, headlinesEnd, headingStyle)
+		if len(headlines) > 0 {
+			headlinesEnd, _ := excelize.CoordinatesToCellName(headlineColumn+len(headlines)-1, headlineRow)
+			x.SetCellStyle(sheetname, headlineTable, headlinesEnd, headingStyle)
+		}
 
 		// build main dataview table
 
@@ -228,7 +223,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 			// update the width of the first column based on each rowname
 			colwidths[0] = max(colWidth(len(r), minColWidth), colwidths[0])
 
-			for ci, c := range dv.ColumnOrder[1:] { // skip rowname column
+			for ci, c := range dataColumns(dv) { // skip rowname column
 				cell, _ := excelize.CoordinatesToCellName(dataviewColumn+ci+1, dataviewRow+ri+1)
 				value := dv.Table[r][c].Value
 				x.SetCellStr(sheetname, cell, value)
@@ -237,7 +232,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		}
 
 		end, _ := excelize.CoordinatesToCellName(dataviewColumn+len(dv.ColumnOrder)-1, dataviewRow+len(dv.RowOrder))
-		tablename := validTablename(sheetname, "Dataview")
+		tablename := uniqueName(validTablename(sheetname, "Dataview"), usedTables)
 		err = x.AddTable(sheetname, &excelize.Table{
 			Range:             dataviewTable + ":" + end,
 			Name:              tablename,
@@ -252,7 +247,7 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		}
 
 		for ri, r := range dv.RowOrder {
-			for ci, c := range dv.ColumnOrder[1:] { // skip rowname column
+			for ci, c := range dataColumns(dv) { // skip rowname column
 				cell, _ := excelize.CoordinatesToCellName(dataviewColumn+ci+1, dataviewRow+ri+1)
 				switch dv.Table[r][c].Severity {
 				case "CRITICAL":
@@ -292,10 +287,84 @@ func createXLSX(cf *config.Config, data DV2EMailData) (out *bytes.Reader, err er
 		return
 	}
 	out = bytes.NewReader(buf.Bytes())
-	if err = x.Close(); err != nil {
-		return
-	}
 	return
+}
+
+// dataviewInfo returns the values for the "Information" table, in the
+// order of infoNames
+func dataviewInfo(dv *commands.Dataview, lookup map[string]string) []string {
+	return []string{
+		"Geneos dv2email",
+		lookup["gateway"],
+		lookup["probe"],
+		lookup["entity"],
+		lookup["type"],
+		lookup["sampler"],
+		lookup["dataview"],
+		dv.SampleTime.Format(time.RFC3339),
+		dv.XPath.String(),
+	}
+}
+
+// dataColumns returns the column names of a dataview, excluding the
+// first (row name) column
+func dataColumns(dv *commands.Dataview) []string {
+	if len(dv.ColumnOrder) == 0 {
+		return nil
+	}
+	return dv.ColumnOrder[1:]
+}
+
+// maxSheetName is the maximum length, in characters, of an Excel sheet name
+const maxSheetName = 31
+
+// uniqueName returns name, or name with a numeric suffix if it has
+// already been used (ignoring case, as Excel does), and records it in
+// used. The suffix only uses characters valid in a table name.
+func uniqueName(name string, used map[string]bool) string {
+	candidate := name
+	for i := 2; used[strings.ToLower(candidate)]; i++ {
+		candidate = name + "_" + strconv.Itoa(i)
+	}
+	used[strings.ToLower(candidate)] = true
+	return candidate
+}
+
+// uniqueSheetName returns a valid Excel sheet name, based on name, that
+// has not already been used. Invalid characters are replaced with an
+// underscore, and the name is truncated to 31 characters (not bytes),
+// before making it unique.
+func uniqueSheetName(name string, used map[string]bool) string {
+	name = strings.Map(func(r rune) rune {
+		switch r {
+		case ':', '\\', '/', '?', '*', '[', ']':
+			return '_'
+		}
+		return r
+	}, name)
+	name = strings.Trim(name, "'")
+	if name == "" {
+		name = "dataviews"
+	}
+
+	runes := []rune(name)
+	if len(runes) > maxSheetName {
+		log.Debug("truncating", slog.String("sheetname", name), slog.String("truncated", string(runes[:maxSheetName])))
+		runes = runes[:maxSheetName]
+	}
+	name = string(runes)
+
+	candidate := name
+	for i := 2; used[strings.ToLower(candidate)]; i++ {
+		suffix := "~" + strconv.Itoa(i)
+		base := []rune(name)
+		if len(base)+len([]rune(suffix)) > maxSheetName {
+			base = base[:maxSheetName-len([]rune(suffix))]
+		}
+		candidate = string(base) + suffix
+	}
+	used[strings.ToLower(candidate)] = true
+	return candidate
 }
 
 // a scale factor for the column width versus string len
@@ -365,21 +434,14 @@ func buildXLSXFiles(cf *config.Config, d any, timestamp time.Time) (files []data
 	}
 	switch config.Get[string](cf, "xlsx.split") {
 	case "entity":
-		entities := map[string][]*commands.Dataview{}
-		for _, d := range data.Dataviews {
-			if len(entities[d.XPath.Entity.Name]) == 0 {
-				entities[d.XPath.Entity.Name] = []*commands.Dataview{}
-			}
-			entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
-		}
-		for entity, e := range entities {
+		for _, group := range groupByEntity(data.Dataviews) {
 			many := DV2EMailData{
-				Dataviews: e,
+				Dataviews: group.dataviews,
 				Env:       data.Env,
 			}
 			lookup := map[string]string{
 				"default":   "dataviews",
-				"entity":    entity,
+				"entity":    group.entity,
 				"sampler":   "",
 				"dataview":  "",
 				"timestamp": timestamp.Local().Format("20060102150405"),

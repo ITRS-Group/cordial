@@ -19,11 +19,12 @@ package cmd
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
-	"os"
-	"sort"
+	"maps"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -70,8 +71,8 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	}
 
 	if g.OperatingEnvironment == nil {
-		log.Error("no operating environment found")
-		os.Exit(1)
+		err = errors.New("no operating environment found in setup, perhaps you wanted to use --merge?")
+		return
 	}
 
 	gateway = g.OperatingEnvironment.GatewayName
@@ -82,10 +83,11 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 	entityMap := geneos.UnrollEntities(g.ManagedEntities, types)
 	samplers := geneos.UnrollSamplers(g.Samplers)
 	// fix-up clashing tags
-	for _, s := range samplers {
+	for n, s := range samplers {
 		if s.GroupNoVar != nil && s.Group == nil {
 			s.Group = s.GroupNoVar
 			s.GroupNoVar = nil
+			samplers[n] = s
 		}
 	}
 	// rules := geneos.UnrollRules(g.Rules)
@@ -93,13 +95,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 
 	// var Entities = []Entity{}
 
-	var entnames []string
-	for n := range entityMap {
-		entnames = append(entnames, n)
-	}
-	sort.Strings(entnames)
-
-	for _, entname := range entnames {
+	for _, entname := range slices.Sorted(maps.Keys(entityMap)) {
 		entity := entityMap[entname]
 		ent := Entity{}
 		var probename string
@@ -150,13 +146,7 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 
 		ent.Samplers = []Sampler{}
 
-		var names []string
-		for s := range entity.ResolvedSamplers {
-			names = append(names, s)
-		}
-		sort.Strings(names)
-
-		for _, s := range names {
+		for _, s := range slices.Sorted(maps.Keys(entity.ResolvedSamplers)) {
 			// s := entity.ResolvedSamplers[sampname]
 			// for s := range entity.ResolvedSamplers {
 			t, p, found := strings.Cut(s, ":")
@@ -164,7 +154,8 @@ func processInputFile(input io.Reader) (gateway string, entities []Entity, probe
 				log.Error("invalid sampler name", slog.String("sampler", s), slog.String("entity", entity.Name))
 				continue
 			}
-			plugin := geneos.GetPlugin(samplers[p].Plugin)
+			sd := samplers[p]
+			plugin := geneos.GetPlugin(sd.Plugin)
 			if plugin == nil {
 				plugin = ""
 			}
@@ -369,12 +360,13 @@ func pluginInfo(sampler *Sampler, in any, procdesc map[string]geneos.ProcessDesc
 			log.Debug("name, query", slog.String("name", q.Name.String()), slog.String("query", q.SQL.String()))
 			n, _ := strconv.Unquote(q.Name.String())
 			if n == "" || strings.TrimSpace(q.SQL.String()) == "" {
-				if config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
-					sampler.Column2 = []string{config.Get[string](cf, cf.Join("output", "reports", "sql-toolkit", "empty"))}
-				}
 				continue
 			}
 			sampler.Column2 = append(sampler.Column2, fmt.Sprintf("%q: [\n%.*s\n]", q.Name, 32000, strings.TrimSpace(q.SQL.String())))
+		}
+		// only show the empty message if there are no valid queries
+		if len(sampler.Column2) == 0 && config.Get[bool](cf, cf.Join("output", "show-empty-samplers")) {
+			sampler.Column2 = []string{config.Get[string](cf, cf.Join("output", "reports", "sql-toolkit", "empty"))}
 		}
 		log.Debug("columns", slog.Any("col1", sampler.Column1), slog.Any("col2", sampler.Column2))
 

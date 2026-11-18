@@ -20,6 +20,7 @@ package cmd
 import (
 	"bufio"
 	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -33,15 +34,17 @@ import (
 	"github.com/itrs-group/cordial/pkg/geneos"
 )
 
+// maxLineSize is the longest line that will be scanned from a file
+const maxLineSize = 16 * 1024 * 1024
+
 func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	dataview.Name = config.Get[string](dv, "name")
 	columns := []Column{}
 
-	max := config.Get[int](dv, "row-limit")
+	rowLimit := config.Get[int](dv, "row-limit")
 	var n int
 
 	ignores := []*regexp.Regexp{}
-	var matches int
 
 	for _, i := range config.Get[[]string](dv, "ignore-lines") {
 		if r, err := regexp.Compile(i); err != nil {
@@ -61,7 +64,8 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			err = errors.New("columns is not either an array or strings or maps of the right type")
 			return
 		}
-		values := config.Get[[]string](dv, "values")
+		// values are expanded later, per file, so must not be expanded here
+		values := config.Get[[]string](dv, "values", config.NoExpand())
 		if len(values) != len(cols) {
 			err = errors.New("number of columns does not match number of values")
 			return
@@ -72,9 +76,12 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				Value: values[i],
 			})
 		}
+		// the fall-back worked, so the unmarshal error is not an error
+		err = nil
 	}
 
 	colNames := []string{}
+	var matches int
 	for _, c := range columns {
 		colNames = append(colNames, c.Name)
 		if c.Match != nil {
@@ -83,14 +90,11 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	}
 	dataview.Table = append(dataview.Table, colNames)
 
-	fileCount := 0
-	// fileErrors := 0
-	// fileFails := 0
-
+PATHS:
 	for _, pattern := range config.Get[[]string](dv, "paths") {
-		var path string
-		path, err = geneos.ExpandFileDates(pattern, time.Now())
+		path, err := geneos.ExpandFileDates(pattern, time.Now())
 		if err != nil {
+			log.Error("failed to expand path", slog.Any("error", err), slog.String("pattern", pattern))
 			continue
 		}
 		var files []string
@@ -103,8 +107,6 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 		} else {
 			files = append(files, path)
 		}
-
-		fileCount += len(files)
 
 		if len(files) == 0 {
 			if slices.Contains(config.Get[[]string](dv, "ignore-file-errors"), "match") {
@@ -133,36 +135,17 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 			continue
 		}
 
-		// dv.Set("types", []string{"file", "symlink"})
-
 		for _, file := range files {
-			if max > 0 && n >= max {
-				return
+			// stop adding rows, but still output the headlines
+			if rowLimit > 0 && n >= rowLimit {
+				break PATHS
 			}
-			n++
 
 			lookup, skip := buildFileLookupTable(dv, file, pattern)
 			if skip {
-				cols := []string{}
-				for _, c := range columns {
-					cols = append(cols, config.Expand[string](dv, c.Value, config.LookupTable(lookup)))
-				}
-
-				dataview.Table = append(dataview.Table, cols)
+				// drop this file from the output
 				continue
 			}
-
-			if matches == 0 {
-				cols := []string{}
-				for _, c := range columns {
-					cols = append(cols, config.Expand[string](dv, c.Value, config.LookupTable(lookup)))
-				}
-
-				dataview.Table = append(dataview.Table, cols)
-				continue
-			}
-
-			// open file and scan for matches
 
 			values := make([]string, len(colNames))
 			for i, c := range columns {
@@ -171,81 +154,22 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 				}
 			}
 
-			inp, err := os.Open(file)
-			if err != nil {
-				log.Error("cannot open file", slog.Any("error", err), slog.String("file", file))
-				continue
-			}
-			maxlines := config.Get[int](dv, "max-lines")
-
-			s := bufio.NewScanner(inp)
-		LINE:
-			// loop until end of file or maxlines scanned - if maxlines
-			// is zero or less, then no limit
-			for i := 0; s.Scan() && (maxlines < 1 || i < maxlines) && matches > 0; i++ {
-				line := s.Text()
-				// skip ignored matches
-				for _, ignore := range ignores {
-					if ignore.MatchString(line) {
-						continue LINE
-					}
+			// only open the file if there is something to look for
+			if matches > 0 {
+				inp, err := os.Open(file)
+				if err != nil {
+					log.Error("cannot open file", slog.Any("error", err), slog.String("file", file))
+					continue
 				}
-
-				// check for matches, skip columns with existing values (first match wins)
-				for i, c := range columns {
-					if values[i] != "" {
-						continue
-					}
-
-					if c.Match != nil {
-						num := c.Match.NumSubexp()
-						names := c.Match.SubexpNames()
-						submatchLookup := make(map[string]string, num+len(names))
-						if numMatches := c.Match.FindStringSubmatchIndex(line); len(numMatches) > 0 {
-							// add indexes to colLookup (inc ${0} for whole match)
-							for j := 0; j <= num; j++ {
-								start, end := numMatches[j*2], numMatches[j*2+1]
-								submatchLookup[strconv.Itoa(j)] = line[start:end]
-							}
-
-							// add named matches to colLookup
-							for _, n := range names {
-								if n == "" {
-									continue
-								}
-								i := c.Match.SubexpIndex(n)
-								submatchLookup[n] = line[numMatches[i*2]:numMatches[i*2+1]]
-							}
-
-							values[i] = config.Expand[string](dv, c.Value, config.LookupTable(submatchLookup, lookup))
-							matches--
-						}
-					}
+				err = scanFile(dv, inp, columns, ignores, lookup, values)
+				inp.Close()
+				if err != nil {
+					log.Error("error reading file", slog.Any("error", err), slog.String("file", file))
 				}
-			}
-			inp.Close()
-
-			finalStatus := ""
-			onFail := config.Get[string](dv, "on-fail.status", config.NoExpand())
-
-			for i, col := range values {
-				if col == "" && columns[i].Fail != "" {
-					// set status to "on-fail.status"
-					if onFail != "" && finalStatus == "" {
-						finalStatus = config.Expand[string](dv, onFail, config.LookupTable(map[string]string{"status": onFail}, lookup))
-					}
-					values[i] = config.Expand[string](dv, columns[i].Fail, config.LookupTable(lookup))
-				}
+				values = applyFailures(dv, columns, values, lookup)
 			}
 
-			if finalStatus != "" {
-				for i, col := range columns {
-					if strings.Contains(col.Value, "${status}") {
-						values[i] = config.Expand[string](dv, col.Value, config.LookupTable(map[string]string{"status": finalStatus}, lookup))
-					}
-				}
-			}
-
+			n++
 			dataview.Table = append(dataview.Table, values)
 		}
 	}
@@ -260,4 +184,107 @@ func processFiles(dv *config.Config) (dataview Dataview, err error) {
 	}
 
 	return
+}
+
+// scanFile reads inp, a line at a time, and fills in the values of
+// the columns that have a `match` regular expression using the first
+// line that matches (ignoring any lines that match any of ignores).
+// The scan stops when every column with a `match` has a value, at the
+// end of the file or after `max-lines` lines.
+//
+// The state of which columns have been matched is local to each call,
+// so every file is scanned in full.
+func scanFile(dv *config.Config, inp io.Reader, columns []Column, ignores []*regexp.Regexp, lookup map[string]string, values []string) error {
+	remaining := 0
+	for _, c := range columns {
+		if c.Match != nil {
+			remaining++
+		}
+	}
+	done := make([]bool, len(columns))
+	maxlines := config.Get[int](dv, "max-lines")
+
+	s := bufio.NewScanner(inp)
+	s.Buffer(make([]byte, 0, 64*1024), maxLineSize)
+
+	lines := 0
+LINE:
+	// loop until end of file or maxlines scanned - if maxlines is zero
+	// or less, then no limit - or every match column has a value
+	for remaining > 0 && (maxlines < 1 || lines < maxlines) && s.Scan() {
+		lines++
+		line := s.Text()
+		// skip ignored matches
+		for _, ignore := range ignores {
+			if ignore.MatchString(line) {
+				continue LINE
+			}
+		}
+
+		// check for matches, skip columns with existing values (first match wins)
+		for i, c := range columns {
+			if c.Match == nil || done[i] {
+				continue
+			}
+			idx := c.Match.FindStringSubmatchIndex(line)
+			if len(idx) == 0 {
+				continue
+			}
+			values[i] = config.Expand[string](dv, c.Value, config.LookupTable(submatchLookup(c.Match, line, idx), lookup))
+			done[i] = true
+			remaining--
+		}
+	}
+	return s.Err()
+}
+
+// submatchLookup returns a lookup table of the numbered (including
+// ${0} for the whole match) and named sub-matches of re in line, given
+// the indexes from FindStringSubmatchIndex. Groups that did not take
+// part in the match are empty.
+func submatchLookup(re *regexp.Regexp, line string, idx []int) map[string]string {
+	lookup := make(map[string]string, re.NumSubexp()+1)
+	group := func(j int) string {
+		if start, end := idx[j*2], idx[j*2+1]; start >= 0 && end >= 0 {
+			return line[start:end]
+		}
+		return ""
+	}
+
+	for j := 0; j <= re.NumSubexp(); j++ {
+		lookup[strconv.Itoa(j)] = group(j)
+	}
+	for j, n := range re.SubexpNames() {
+		if n != "" {
+			lookup[n] = group(j)
+		}
+	}
+	return lookup
+}
+
+// applyFailures replaces empty column values with their `fail` value
+// and, if any were replaced, sets the `${status}` for the row from the
+// `on-fail.status` setting
+func applyFailures(dv *config.Config, columns []Column, values []string, lookup map[string]string) []string {
+	finalStatus := ""
+	onFail := config.Get[string](dv, "on-fail.status", config.NoExpand())
+
+	for i, col := range values {
+		if col == "" && columns[i].Fail != "" {
+			// set status to "on-fail.status"
+			if onFail != "" && finalStatus == "" {
+				finalStatus = config.Expand[string](dv, onFail, config.LookupTable(map[string]string{"status": onFail}, lookup))
+			}
+			values[i] = config.Expand[string](dv, columns[i].Fail, config.LookupTable(lookup))
+		}
+	}
+
+	if finalStatus != "" {
+		for i, col := range columns {
+			if strings.Contains(col.Value, "${status}") {
+				values[i] = config.Expand[string](dv, col.Value, config.LookupTable(map[string]string{"status": finalStatus}, lookup))
+			}
+		}
+	}
+	return values
 }

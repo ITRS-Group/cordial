@@ -22,6 +22,7 @@ package cmd
 //
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log/slog"
@@ -29,6 +30,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -43,6 +45,13 @@ type Inventory struct {
 	lastModified time.Time
 	cksum        string // (gitlab) cksum of file contents, for when if-modified-since r size don't work
 }
+
+// maxInventorySize is the largest remote inventory that will be loaded
+const maxInventorySize = 64 << 20
+
+// maxErrorBody is the most of an error response body that is included
+// in an error message
+const maxErrorBody = 4 << 10
 
 // ReadInventory reads the inventory from a file source
 func ReadInventory(cf *config.Config, file string, options ...FetchOption) (inv *Inventory, err error) {
@@ -64,10 +73,17 @@ func ReadInventory(cf *config.Config, file string, options ...FetchOption) (inv 
 		return
 	}
 	defer in.Close()
+
 	switch fo.inventoryType {
 	case "yaml":
 		inv, _, err = ParseInventoryYAML(cf, "", in)
+	default:
+		err = fmt.Errorf("unsupported inventory type %q", fo.inventoryType)
 	}
+	if err != nil {
+		return nil, err
+	}
+
 	inv.source = file
 	if st, err := os.Stat(file); err == nil { // stat succeeds
 		inv.size = st.Size()
@@ -84,20 +100,26 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 	fo := evalFetchOptions(options...)
 
 	req, err := http.NewRequest(fo.method, source, nil)
+	if err != nil {
+		return nil, err
+	}
 	req.Header = fo.header
 	if fo.ifmodified != nil && !fo.ifmodified.lastModified.IsZero() {
-		req.Header["if-modified-since"] = []string{fo.ifmodified.lastModified.Format(http.TimeFormat)}
+		req.Header.Set("If-Modified-Since", fo.ifmodified.lastModified.Format(http.TimeFormat))
 	}
 	if fo.username != "" && len(fo.password) > 0 {
 		req.SetBasicAuth(fo.username, string(fo.password))
 	}
-	req.Header["accept"] = []string{"application/json"}
+	req.Header.Set("Accept", "application/json")
 	resp, err := fo.client.Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotModified {
+		if fo.ifmodified == nil {
+			return nil, fmt.Errorf("%s for an unconditional request", resp.Status)
+		}
 		log.Info("inventory not modified (header)", slog.String("src", source))
 		inv = fo.ifmodified
 		return
@@ -110,7 +132,7 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 		}
 	}
 	if resp.StatusCode > 299 {
-		b, _ := io.ReadAll(resp.Body)
+		b, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 		err = fmt.Errorf("%s %s", resp.Status, string(b))
 		return
 	}
@@ -124,9 +146,24 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 		}
 	}
 
+	// read a bounded amount, to avoid an unreasonable memory use from a
+	// misbehaving server
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxInventorySize+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxInventorySize {
+		return nil, fmt.Errorf("inventory %s is larger than %d bytes", source, maxInventorySize)
+	}
+
 	switch fo.inventoryType {
 	case "yaml":
-		inv, cache, err = ParseInventoryYAML(cf, cacheFile, resp.Body)
+		inv, cache, err = ParseInventoryYAML(cf, cacheFile, bytes.NewReader(body))
+	default:
+		err = fmt.Errorf("unsupported inventory type %q", fo.inventoryType)
+	}
+	if err != nil {
+		return nil, err
 	}
 
 	// set size and last modified if available, ignore errors as zero values are valid
@@ -139,31 +176,48 @@ func FetchInventory(cf *config.Config, source string, cacheFile string, options 
 
 	// write cache if non-zero len. any error results in clean-up and no write.
 	if len(cache) > 0 && cacheFile != "" {
-		dir, file := filepath.Split(cacheFile)
-		if err = os.MkdirAll(dir, 0775); err != nil {
-			log.Warn("making directories", slog.Any("error", err))
-			return inv, nil
-		}
-		f, err := os.CreateTemp(dir, file+"-*")
-		if err != nil {
-			log.Warn("creating temp file", slog.Any("error", err))
-			return inv, nil
-		}
-		// defer clean-up (which fails once file is renamed)
-		defer f.Close()
-		defer os.Remove(f.Name())
-		if _, err = f.Write(cache); err != nil {
-			log.Warn("writing inventory to temp file", slog.Any("error", err))
-			return inv, nil
-		}
-		if err = os.Rename(f.Name(), cacheFile); err != nil {
-			log.Warn("renaming temp file", slog.Any("error", err))
-			return inv, nil
+		if err := writeCache(cacheFile, cache); err != nil {
+			log.Warn("writing inventory cache", slog.Any("error", err), slog.String("cache", cacheFile))
 		}
 	}
 
 	return
 }
+
+// writeCache atomically writes data to cacheFile, creating any
+// intermediate directories
+func writeCache(cacheFile string, data []byte) (err error) {
+	dir, file := filepath.Split(cacheFile)
+	if dir == "" {
+		dir = "."
+	}
+	if err = os.MkdirAll(dir, 0775); err != nil {
+		return
+	}
+	f, err := os.CreateTemp(dir, file+"-*")
+	if err != nil {
+		return
+	}
+	// clean-up, which fails harmlessly once the file is renamed
+	defer os.Remove(f.Name())
+	_, err = f.Write(data)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return
+	}
+	return os.Rename(f.Name(), cacheFile)
+}
+
+// defaultInventoryTransport returns a shared transport that supports
+// proxies from the environment and file: URLs. It is shared so that idle
+// connections are reused and not leaked
+var defaultInventoryTransport = sync.OnceValue(func() *http.Transport {
+	t := &http.Transport{Proxy: http.ProxyFromEnvironment}
+	t.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
+	return t
+})
 
 type fetchOptions struct {
 	inventoryType string
@@ -187,11 +241,10 @@ func evalFetchOptions(options ...FetchOption) (f *fetchOptions) {
 		opt(f)
 	}
 
-	// unless user has set the transport, add a file handler
+	// unless user has set the transport, use the shared one with a file
+	// handler
 	if f.client.Transport == nil {
-		t := &http.Transport{}
-		t.RegisterProtocol("file", http.NewFileTransport(http.Dir("/")))
-		f.client.Transport = t
+		f.client.Transport = defaultInventoryTransport()
 	}
 	return
 }
