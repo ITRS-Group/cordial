@@ -149,6 +149,14 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 			}
 		} else if s, err = readLicdReports(ctx, cf, tx, source, fetchCmdSaveRemoteSources); err != nil {
 			log.Error("readLicenseReports failed", slog.Any("error", err), slog.String("src", source))
+			// a failed source has been rolled back and recorded, and
+			// the others are still used, but not if the transaction
+			// cannot be used or the fetch has been cancelled
+			if errors.Is(err, errSavepoint) || ctx.Err() != nil {
+				return
+			}
+			sources = append(sources, s...)
+			err = nil
 			continue
 		}
 		sources = append(sources, s...)
@@ -180,6 +188,12 @@ func fetch(ctx context.Context, cf *config.Config, db *sql.DB) (sources []string
 		}
 	}
 
-	err = tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return
+	}
+
+	// all the file sources have been loaded, so they only need to be
+	// again when they change
+	sourcesChanged.Store(false)
 	return
 }

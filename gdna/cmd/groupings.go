@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"database/sql"
 	"encoding/csv"
@@ -72,6 +73,25 @@ type Allocation struct {
 	Timestamp  *time.Time `mapstructure:"timestamp,omitempty"`
 }
 
+// readFiltersForUpdate reads the filters file to be updated, and returns
+// it with the path to write it to, which is the one it was read from or,
+// if there is none, one in the user configuration directory
+func readFiltersForUpdate(cf *config.Config) (ig *config.Config, igPath string, err error) {
+	ig, err = config.Read(filterBase, filtersFile(cf, config.MustExist())...)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return
+	}
+
+	if err != nil {
+		log.Warn("loading filters failed", slog.Any("error", err))
+		igPath = config.Path(filterBase, filtersFile(cf, config.SkipSystemDir(), config.SkipWorkingDir())...)
+	} else {
+		igPath = config.Path(filterBase, filtersFile(cf)...)
+	}
+	log.Debug("loaded any existing filters", slog.String("path", igPath))
+	return ig, igPath, nil
+}
+
 // gdna add group gateway PROD 'PROD*'
 var addGroupCmd = &cobra.Command{
 	Use:     "group [FLAGS] CATEGORY NAME PATTERN...",
@@ -84,59 +104,26 @@ var addGroupCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"defaultlog": os.DevNull,
 	},
-	Args:                  cobra.MinimumNArgs(1),
+	Args:                  cobra.MinimumNArgs(2),
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		category := args[0]
-		var name string
-		var patterns []string
-
-		if len(args) > 1 {
-			name = args[1]
-		}
-		if len(args) > 2 {
-			patterns = args[2:]
-		}
-		var p2 []string
-		for _, name := range patterns {
-			p2 = append(p2, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
-		}
-		patterns = p2
+		name := args[1]
+		patterns := splitNames(args[2:])
 
 		ts := time.Now()
 
 		// load existing
-		ig, err := config.Read(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-			config.MustExist(),
-		)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		ig, igPath, err := readFiltersForUpdate(cf)
+		if err != nil {
 			return
 		}
-		var igPath string
-		if err != nil {
-			log.Warn("loading filters failed", slog.Any("error", err))
-			igPath = config.Path(filterBase,
-				config.AppName("geneos"),
-				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-				config.SkipSystemDir(),
-				config.SkipWorkingDir(),
-			)
-		} else {
-			igPath = config.Path(filterBase,
-				config.AppName("geneos"),
-				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-			)
-		}
-		log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 		var groups []Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
@@ -147,12 +134,7 @@ var addGroupCmd = &cobra.Command{
 
 		// find existing group, update, write back
 
-		i := slices.IndexFunc(groups, func(g Group) bool {
-			if g.Name == name {
-				return true
-			}
-			return false
-		})
+		i := slices.IndexFunc(groups, func(g Group) bool { return g.Name == name })
 
 		if i == -1 {
 			groups = append(groups, Group{
@@ -161,7 +143,7 @@ var addGroupCmd = &cobra.Command{
 				User:      addCmdUser,
 				Comment:   addCmdComment,
 				Origin:    addCmdOrigin,
-				Timestamp: &ts,
+				Timestamp: new(ts),
 			})
 		} else {
 			g := groups[i]
@@ -172,7 +154,7 @@ var addGroupCmd = &cobra.Command{
 			g.User = addCmdUser
 			g.Comment = addCmdComment
 			g.Origin = addCmdOrigin
-			g.Timestamp = &ts
+			g.Timestamp = new(ts)
 			groups[i] = g
 		}
 
@@ -191,10 +173,7 @@ var addGroupCmd = &cobra.Command{
 			// find existing group, update, write back
 
 			i := slices.IndexFunc(allocations, func(g Allocation) bool {
-				if g.Name == name && g.Token == addGroupAllocationToken {
-					return true
-				}
-				return false
+				return g.Name == name && g.Token == addGroupAllocationToken
 			})
 
 			if i == -1 {
@@ -205,7 +184,7 @@ var addGroupCmd = &cobra.Command{
 					User:       addCmdUser,
 					Comment:    addCmdComment,
 					Origin:     addCmdOrigin,
-					Timestamp:  &ts,
+					Timestamp:  new(ts),
 				})
 			} else {
 				a := allocations[i]
@@ -213,7 +192,7 @@ var addGroupCmd = &cobra.Command{
 				a.User = addCmdUser
 				a.Comment = addCmdComment
 				a.Origin = addCmdOrigin
-				a.Timestamp = &ts
+				a.Timestamp = new(ts)
 				allocations[i] = a
 			}
 
@@ -221,12 +200,7 @@ var addGroupCmd = &cobra.Command{
 		}
 
 		// always save the result back
-		ig.Write(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(igPath),
-		)
-
-		return
+		return ig.Write(filterBase, config.AppName("geneos"), config.FilePath(igPath))
 	},
 }
 
@@ -241,58 +215,27 @@ var removeGroupCmd = &cobra.Command{
 	Annotations: map[string]string{
 		"defaultlog": os.DevNull,
 	},
-	// Args:                  cobra.MinimumNArgs(2),
+	Args:                  removeArgs,
 	SilenceUsage:          true,
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		if (removeCmdAll && len(args) == 0) || len(args) < 2 {
-			return cmd.Usage()
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		var name string
+		if len(args) > 1 {
+			name = args[1]
 		}
-		category := args[0]
-		name := args[1]
-		var patterns []string
-		if len(args) > 2 {
-			patterns = args[2:]
-		}
-
-		var p2 []string
-		for _, name := range patterns {
-			p2 = append(p2, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
-		}
-		patterns = p2
+		patterns := splitNames(args[min(2, len(args)):])
 
 		// load existing
-		ig, err := config.Read(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-			config.MustExist(),
-		)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		ig, igPath, err := readFiltersForUpdate(cf)
+		if err != nil {
 			return
 		}
-
-		var igPath string
-		if err != nil {
-			log.Warn("loading filters failed", slog.Any("error", err))
-			igPath = config.Path(filterBase,
-				config.AppName("geneos"),
-				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-				config.SkipSystemDir(),
-				config.SkipWorkingDir(),
-			)
-		} else {
-			igPath = config.Path(filterBase,
-				config.AppName("geneos"),
-				config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-			)
-		}
-		log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 		var groups []*Group
 		if err = ig.UnmarshalKey(config.Join("filters", "group", category),
@@ -315,28 +258,17 @@ var removeGroupCmd = &cobra.Command{
 			}
 			// delete matching patterns from group
 			g.Patterns = slices.DeleteFunc(g.Patterns, func(p string) bool {
-				if slices.Contains(patterns, p) {
-					return true
-				}
-				return false
+				return slices.Contains(patterns, p)
 			})
 			// if patterns now empty, delete the group
-			if len(g.Patterns) == 0 {
-				return true
-			}
-			return false
+			return len(g.Patterns) == 0
 		})
 		log.Debug("groups loaded", slog.Any("groups", groups))
 
 		config.Set(ig, ig.Join("filters", "group", category), groups)
 
 		// always save the result back
-		ig.Write(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(igPath),
-		)
-
-		return
+		return ig.Write(filterBase, config.AppName("geneos"), config.FilePath(igPath))
 	},
 }
 
@@ -357,30 +289,22 @@ var listGroupCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// var category string
-		// if len(args) > 0 {
-		// 	category = args[0]
-		// }
-
-		ig, _ := config.Read(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
-		)
+		ig, err := readFilters(cf)
+		if err != nil {
+			return
+		}
 
 		log.Debug("loaded groups from filters file",
-			slog.String("path", config.Path(filterBase,
-				config.AppName("geneos"),
-				config.FilePath(config.Get[string](cf, cf.Join("filters", "file"))),
-			)),
+			slog.String("path", config.Path(filterBase, filtersFile(cf)...)),
 		)
 
-		if listFormat == "" {
-			listFormat = "table"
+		r, err := reporter.NewReporter(cmp.Or(listCmdFormat, defaultListFormat), os.Stdout)
+		if err != nil {
+			return
 		}
-		r, _ := reporter.NewReporter(listFormat, os.Stdout)
 
 		var rows [][]string
-		for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
+		for _, category := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, cf.Join("filters", "group")))) {
 			log.Debug("processing category", slog.String("category", category))
 			var groups []Group
 			if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
@@ -397,260 +321,257 @@ var listGroupCmd = &cobra.Command{
 					category,
 					group.Name,
 					strings.Join(group.Patterns, ", "),
-					group.Timestamp.Format(time.RFC3339),
+					formatTime(group.Timestamp),
 					group.User,
 					group.Comment,
 					group.Origin,
 				})
 			}
 		}
-		if len(rows) > 0 {
-			slices.SortFunc(rows[1:], func(a, b []string) int {
-				return strings.Compare(a[0], b[0])
-			})
-		}
+		slices.SortFunc(rows, func(a, b []string) int {
+			return strings.Compare(a[0], b[0])
+		})
 		r.UpdateTable([]string{"category:group", "category", "group", "patterns", "updated", "username", "comment", "source"}, rows)
 		return r.Render()
 	},
 }
 
-// processGroups
+// processGroups loads the groups from the on-disk file, or the defaults,
+// into the reporting tables. Any error is returned.
 func processGroups(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
 	// load persistence file
-	ig, _ := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	ig, err := readFilters(cf)
+	if err != nil {
+		return err
+	}
 
 	log.Debug("loaded groups from filters file",
-		slog.String("path", config.Path(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-		)),
+		slog.String("path", config.Path(filterBase, filtersFile(cf)...)),
 	)
 
-OUTER:
-	for category := range config.Get[map[string]any](cf, cf.Join("filters", "group")) {
-		table := config.Get[string](cf, cf.Join("filters", "group", category, "table"))
-
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			log.Info("delete from table failed", slog.String("category", category), slog.Any("error", err), slog.String("table", table))
-			// NOT an error in itself
-			err = nil
+	for _, category := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, cf.Join("filters", "group")))) {
+		if err = processGroupCategory(ctx, cf, tx, ig, category); err != nil {
+			return fmt.Errorf("loading groups for %s: %w", category, err)
 		}
-
-		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", "group", category, "insert")))
-		if err != nil {
-			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
-			continue
-		}
-		defer insertStmt.Close()
-
-		var groups []Group
-		if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
-			&groups,
-		); err != nil {
-			return err
-		}
-
-		// check for defaults
-		if len(groups) == 0 {
-			log.Debug("category not in filters file, checking default", slog.String("category", category))
-
-			defaults := config.Get[[]byte](cf, config.Join("filters", "group", category, "default"))
-			if len(defaults) == 0 {
-				log.Debug("default length 0", slog.String("path", config.Join("filters", "group", category, "default")))
-				continue OUTER
-			}
-
-			c := csv.NewReader(bytes.NewBuffer(defaults))
-			c.ReuseRecord = true
-			c.FieldsPerRecord = -1
-			c.Comment = '#'
-
-			lines := 0
-			for {
-				fields, err := c.Read()
-				if err == io.EOF {
-					// all good, end of CSV input, return
-					break
-				}
-				if err != nil {
-					return err
-				}
-				if len(fields) < 2 {
-					line, _ := c.FieldPos(0)
-					log.Debug("source: line has an incorrect format, it should be 'name,pattern'", slog.Int("line", line))
-					continue
-				}
-				//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
-
-				if _, err = insertStmt.ExecContext(ctx,
-					sql.Named("grouping", fields[0]),
-					sql.Named("pattern", fields[1]),
-					sql.Named("user", nil),
-					sql.Named("origin", "default"),
-					sql.Named("comment", nil),
-					sql.Named("timestamp", nil),
-				); err != nil {
-					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-					continue OUTER
-				}
-				lines++
-			}
-
-			log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
-			continue OUTER
-		}
-
-		for _, group := range groups {
-			for _, pattern := range group.Patterns {
-				if _, err = insertStmt.ExecContext(ctx,
-					sql.Named("grouping", group.Name),
-					sql.Named("pattern", pattern),
-					sql.Named("user", sql.NullString{
-						Valid:  group.User != "",
-						String: group.User,
-					}),
-					sql.Named("origin", sql.NullString{
-						Valid:  group.Origin != "",
-						String: group.Origin,
-					}),
-					sql.Named("comment", sql.NullString{
-						Valid:  group.Comment != "",
-						String: group.Comment,
-					}),
-					sql.Named("timestamp", sql.NullTime{
-						Valid: group.Timestamp == nil || !group.Timestamp.IsZero(),
-						Time:  *group.Timestamp,
-					}),
-				); err != nil {
-					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-					continue OUTER
-				}
-			}
-		}
-
 	}
 	return nil
 }
 
-func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
-	// load persistence file
-	ig, _ := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+func processGroupCategory(ctx context.Context, cf *config.Config, tx *sql.Tx, ig *config.Config, category string) (err error) {
+	table := config.Get[string](cf, cf.Join("filters", "group", category, "table"))
 
-	log.Debug("loaded groups from filters file",
-		slog.String("path", config.Path(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-		)),
-	)
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+		log.Info("delete from table failed", slog.String("category", category), slog.Any("error", err), slog.String("table", table))
+		// NOT an error in itself
+	}
 
-OUTER:
-	for category := range config.Get[map[string]any](cf, cf.Join("filters", "allocations")) {
-		table := config.Get[string](cf, config.Join("filters", "allocations", category, "table"))
+	insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", "group", category, "insert")))
+	if err != nil {
+		log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
+		return
+	}
+	defer insertStmt.Close()
 
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			log.Info("delete from table failed", slog.Any("error", err), slog.String("category", category), slog.String("table", table))
-			// NOT an error in itself
-			err = nil
+	var groups []Group
+	if err = ig.UnmarshalKey(ig.Join("filters", "group", category),
+		&groups,
+	); err != nil {
+		return
+	}
+
+	// check for defaults
+	if len(groups) == 0 {
+		log.Debug("category not in filters file, checking default", slog.String("category", category))
+
+		defaults := config.Get[[]byte](cf, config.Join("filters", "group", category, "default"))
+		if len(defaults) == 0 {
+			log.Debug("default length 0", slog.String("path", config.Join("filters", "group", category, "default")))
+			return nil
 		}
 
-		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, config.Join("filters", "allocations", category, "insert")))
-		if err != nil {
-			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
-			continue
-		}
-		defer insertStmt.Close()
+		c := csv.NewReader(bytes.NewBuffer(defaults))
+		c.ReuseRecord = true
+		c.FieldsPerRecord = -1
+		c.Comment = '#'
 
-		var allocations []Allocation
-		if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
-			&allocations,
-		); err != nil {
-			return err
-		}
-
-		// check for defaults
-		if len(allocations) == 0 {
-			log.Debug("category not in filters file, checking default", slog.String("category", category))
-
-			defaults := config.Get[[]byte](cf, config.Join("filters", "allocations", category, "default"))
-			if len(defaults) == 0 {
-				log.Debug("default length 0", slog.String("path", config.Join("filters", "allocations", category, "default")))
-				continue OUTER
+		lines := 0
+		for {
+			fields, err := c.Read()
+			if errors.Is(err, io.EOF) {
+				// all good, end of CSV input, return
+				break
 			}
-
-			c := csv.NewReader(bytes.NewBuffer(defaults))
-			c.ReuseRecord = true
-			c.FieldsPerRecord = -1
-			c.Comment = '#'
-
-			lines := 0
-			for {
-				fields, err := c.Read()
-				if err == io.EOF {
-					// all good, end of CSV input, return
-					break
-				}
-				if err != nil {
-					return err
-				}
-				if len(fields) < 3 {
-					line, _ := c.FieldPos(0)
-					log.Debug("source: line has an incorrect format, it should be 'name,pattern'", slog.Int("line", line))
-					continue
-				}
-				//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
-
-				if _, err = insertStmt.ExecContext(ctx,
-					sql.Named("grouping", fields[0]),
-					sql.Named("token", fields[1]),
-					sql.Named("allocation", fields[2]),
-					sql.Named("user", nil),
-					sql.Named("origin", "default"),
-					sql.Named("comment", nil),
-					sql.Named("timestamp", nil),
-				); err != nil {
-					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-					continue OUTER
-				}
-				lines++
+			if err != nil {
+				return err
 			}
+			if len(fields) < 2 {
+				line, _ := c.FieldPos(0)
+				log.Debug("source: line has an incorrect format, it should be 'name,pattern'", slog.Int("line", line))
+				continue
+			}
+			//           VALUES (@grouping, @pattern, @user, @origin, @comment, @timestamp)
 
-			log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
-			continue OUTER
-		}
-
-		for _, allocation := range allocations {
 			if _, err = insertStmt.ExecContext(ctx,
-				sql.Named("grouping", allocation.Name),
-				sql.Named("token", allocation.Token),
-				sql.Named("allocation", allocation.Allocation),
-				sql.Named("user", sql.NullString{
-					Valid:  allocation.User != "",
-					String: allocation.User,
-				}),
-				sql.Named("origin", sql.NullString{
-					Valid:  allocation.Origin != "",
-					String: allocation.Origin,
-				}),
-				sql.Named("comment", sql.NullString{
-					Valid:  allocation.Comment != "",
-					String: allocation.Comment,
-				}),
-				sql.Named("timestamp", sql.NullTime{
-					Valid: allocation.Timestamp == nil || !allocation.Timestamp.IsZero(),
-					Time:  *allocation.Timestamp,
-				}),
+				sql.Named("grouping", fields[0]),
+				sql.Named("pattern", fields[1]),
+				sql.Named("user", nil),
+				sql.Named("origin", "default"),
+				sql.Named("comment", nil),
+				sql.Named("timestamp", nil),
 			); err != nil {
 				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-				continue OUTER
+				return err
 			}
+			lines++
 		}
 
+		log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
+		return nil
+	}
+
+	for _, group := range groups {
+		for _, pattern := range group.Patterns {
+			if _, err = insertStmt.ExecContext(ctx,
+				sql.Named("grouping", group.Name),
+				sql.Named("pattern", pattern),
+				sql.Named("user", sql.NullString{
+					Valid:  group.User != "",
+					String: group.User,
+				}),
+				sql.Named("origin", sql.NullString{
+					Valid:  group.Origin != "",
+					String: group.Origin,
+				}),
+				sql.Named("comment", sql.NullString{
+					Valid:  group.Comment != "",
+					String: group.Comment,
+				}),
+				sql.Named("timestamp", nullTime(group.Timestamp)),
+			); err != nil {
+				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
+				return
+			}
+		}
+	}
+	return nil
+}
+
+// processAllocations loads the allocations from the on-disk file, or the
+// defaults, into the reporting tables. Any error is returned.
+func processAllocations(ctx context.Context, cf *config.Config, tx *sql.Tx) error {
+	// load persistence file
+	ig, err := readFilters(cf)
+	if err != nil {
+		return err
+	}
+
+	log.Debug("loaded groups from filters file",
+		slog.String("path", config.Path(filterBase, filtersFile(cf)...)),
+	)
+
+	for _, category := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, cf.Join("filters", "allocations")))) {
+		if err = processAllocationCategory(ctx, cf, tx, ig, category); err != nil {
+			return fmt.Errorf("loading allocations for %s: %w", category, err)
+		}
+	}
+	return nil
+}
+
+func processAllocationCategory(ctx context.Context, cf *config.Config, tx *sql.Tx, ig *config.Config, category string) (err error) {
+	table := config.Get[string](cf, config.Join("filters", "allocations", category, "table"))
+
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+		log.Info("delete from table failed", slog.Any("error", err), slog.String("category", category), slog.String("table", table))
+		// NOT an error in itself
+	}
+
+	insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, config.Join("filters", "allocations", category, "insert")))
+	if err != nil {
+		log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
+		return
+	}
+	defer insertStmt.Close()
+
+	var allocations []Allocation
+	if err = ig.UnmarshalKey(config.Join("filters", "allocations", category),
+		&allocations,
+	); err != nil {
+		return
+	}
+
+	// check for defaults
+	if len(allocations) == 0 {
+		log.Debug("category not in filters file, checking default", slog.String("category", category))
+
+		defaults := config.Get[[]byte](cf, config.Join("filters", "allocations", category, "default"))
+		if len(defaults) == 0 {
+			log.Debug("default length 0", slog.String("path", config.Join("filters", "allocations", category, "default")))
+			return nil
+		}
+
+		c := csv.NewReader(bytes.NewBuffer(defaults))
+		c.ReuseRecord = true
+		c.FieldsPerRecord = -1
+		c.Comment = '#'
+
+		lines := 0
+		for {
+			fields, err := c.Read()
+			if errors.Is(err, io.EOF) {
+				// all good, end of CSV input, return
+				break
+			}
+			if err != nil {
+				return err
+			}
+			if len(fields) < 3 {
+				line, _ := c.FieldPos(0)
+				log.Debug("source: line has an incorrect format, it should be 'name,token,allocation'", slog.Int("line", line))
+				continue
+			}
+			//           VALUES (@grouping, @token, @allocation, @user, @origin, @comment, @timestamp)
+
+			if _, err = insertStmt.ExecContext(ctx,
+				sql.Named("grouping", fields[0]),
+				sql.Named("token", fields[1]),
+				sql.Named("allocation", fields[2]),
+				sql.Named("user", nil),
+				sql.Named("origin", "default"),
+				sql.Named("comment", nil),
+				sql.Named("timestamp", nil),
+			); err != nil {
+				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
+				return err
+			}
+			lines++
+		}
+
+		log.Debug("read lines from defaults and added to table", slog.Int("lines", lines), slog.String("table", table))
+		return nil
+	}
+
+	for _, allocation := range allocations {
+		if _, err = insertStmt.ExecContext(ctx,
+			sql.Named("grouping", allocation.Name),
+			sql.Named("token", allocation.Token),
+			sql.Named("allocation", allocation.Allocation),
+			sql.Named("user", sql.NullString{
+				Valid:  allocation.User != "",
+				String: allocation.User,
+			}),
+			sql.Named("origin", sql.NullString{
+				Valid:  allocation.Origin != "",
+				String: allocation.Origin,
+			}),
+			sql.Named("comment", sql.NullString{
+				Valid:  allocation.Comment != "",
+				String: allocation.Comment,
+			}),
+			sql.Named("timestamp", nullTime(allocation.Timestamp)),
+		); err != nil {
+			log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
+			return
+		}
 	}
 	return nil
 }

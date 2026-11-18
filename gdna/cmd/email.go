@@ -25,6 +25,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -139,49 +140,33 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 	var data emailData
 	data.Timestamp = time.Now()
 
+	bodyReports := config.Get[string](cf, cf.Join("email", "body-reports"))
+	scramble := config.Get[bool](cf, cf.Join("email", "scramble"))
+
 	// always build a multipart body
 	data.HTMLBodyPart = &bytes.Buffer{}
-	r, _ := reporter.NewReporter("html", data.HTMLBodyPart,
+	if err = emailPart(ctx, cf, tx, "html", data.HTMLBodyPart, bodyReports,
 		reporter.HTMLPreamble(config.Get[string](cf, cf.Join("email", "html-preamble"))),
 		reporter.HTMLPostscript(config.Get[string](cf, cf.Join("email", "html-postscript"))),
-		reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
+		reporter.Scramble(scramble),
 		reporter.DataviewCSSClass("gdna-dataview"),
 		reporter.HeadlineCSSClass("gdna-headlines"),
-	)
-	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
-	if err = r.Render(); err != nil {
-		return
-	}
-	if err = r.Close(); err != nil {
-		return
+	); err != nil {
+		return fmt.Errorf("text+HTML report: %w", err)
 	}
 	log.Debug("text+HTML report complete", slog.Int("bytes", data.HTMLBodyPart.Len()))
 
 	data.TextBodyPart = &bytes.Buffer{}
-	r, _ = reporter.NewReporter("table", data.TextBodyPart,
-		reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
-	)
-	runReports(ctx, cf, tx, r, config.Get[string](cf, cf.Join("email", "body-reports")), -1)
-	if err = r.Render(); err != nil {
-		return
-	}
-	if err = r.Close(); err != nil {
-		return
+	if err = emailPart(ctx, cf, tx, "table", data.TextBodyPart, bodyReports,
+		reporter.Scramble(scramble),
+	); err != nil {
+		return fmt.Errorf("TEXT+html report: %w", err)
 	}
 	log.Debug("TEXT+html report complete", slog.Int("bytes", data.TextBodyPart.Len()))
 
-	var contents []string
-	c := config.Get[any](cf, cf.Join("email", "contents"))
-	switch c2 := c.(type) {
-	case []any:
-		for _, v := range c2 {
-			contents = append(contents, fmt.Sprint(v))
-		}
-	case string:
-		contents = strings.FieldsFunc(c2, func(r rune) bool { return unicode.IsSpace(r) || r == ',' })
-	default:
-		log.Error("content type", slog.Any("type", c2))
-		os.Exit(1)
+	contents, err := emailContents(config.Get[any](cf, cf.Join("email", "contents")))
+	if err != nil {
+		return err
 	}
 	for _, c := range contents {
 		switch c {
@@ -191,46 +176,20 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 				continue
 			}
 			data.HTMLAttachment = &bytes.Buffer{}
-			r, _ := reporter.NewReporter("html", data.HTMLAttachment,
+			if err = emailPart(ctx, cf, tx, "html", data.HTMLAttachment, reports,
 				reporter.HTMLPreamble(config.Get[string](cf, cf.Join("email", "html-preamble"))),
 				reporter.HTMLPostscript(config.Get[string](cf, cf.Join("email", "html-postscript"))),
-				reporter.Scramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
+				reporter.Scramble(scramble),
 				reporter.DataviewCSSClass("gdna-dataview"),
 				reporter.HeadlineCSSClass("gdna-headlines"),
-			)
-			runReports(ctx, cf, tx, r, reports, -1)
-			if err = r.Render(); err != nil {
-				return
-			}
-			if err = r.Close(); err != nil {
-				return
+			); err != nil {
+				return fmt.Errorf("HTML report: %w", err)
 			}
 			log.Debug("HTML report complete", slog.Int("bytes", data.HTMLAttachment.Len()))
 		case "xlsx":
 			data.XLSXAttachment = &bytes.Buffer{}
-			r, _ := reporter.NewReporter("xlsx", data.XLSXAttachment,
-				reporter.SummarySheetName(config.Get[string](cf, cf.Join("reports", "gdna-summary", "name"))),
-				reporter.XLSXScramble(config.Get[bool](cf, cf.Join("email", "scramble"))),
-				reporter.XLSXPassword(config.Get[config.Secret](cf, cf.Join("xlsx", "password"))),
-				reporter.DateFormat(config.Get[string](cf, cf.Join("xlsx", "formats", "datetime"), config.DefaultValue("yyyy-mm-ddThh:MM:ss"))),
-				reporter.IntFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "int"), config.DefaultValue(1))),
-				reporter.PercentFormat(config.Get[int](cf, cf.Join("xlsx", "formats", "percent"), config.DefaultValue(9))),
-				reporter.SeverityColours(
-					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "undefined"), config.DefaultValue("BFBFBF")),
-					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "ok"), config.DefaultValue("5BB25C")),
-					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "warning"), config.DefaultValue("F9B057")),
-					config.Get[string](cf, cf.Join("xlsx", "conditional-formats", "critical"), config.DefaultValue("FF5668")),
-				),
-				reporter.MinColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "min-width"))),
-				reporter.MaxColumnWidth(config.Get[float64](cf, cf.Join("xlsx", "formats", "max-width"))),
-				reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
-			)
-			runReports(ctx, cf, tx, r, reports, -1)
-			if err = r.Render(); err != nil {
-				return
-			}
-			if err = r.Close(); err != nil {
-				return
+			if err = emailPart(ctx, cf, tx, "xlsx", data.XLSXAttachment, reports, xlsxOptions(cf, scramble)...); err != nil {
+				return fmt.Errorf("XLSX report: %w", err)
 			}
 			log.Debug("XLSX report complete", slog.Int("bytes", data.XLSXAttachment.Len()))
 		default:
@@ -252,6 +211,59 @@ func doEmail(ctx context.Context, cf *config.Config, db *sql.DB, reports string)
 		return
 	}
 	log.Info("email report complete")
+	return
+}
+
+// emailPart creates a reporter of the given format that writes to w, runs
+// the reports that match reports and renders the result. The error of any
+// report that failed is returned, so that an email is not sent with
+// output that is incomplete.
+func emailPart(ctx context.Context, cf *config.Config, tx *sql.Tx, format string, w io.Writer, reports string, options ...any) (err error) {
+	r, err := reporter.NewReporter(format, w, options...)
+	if err != nil {
+		return
+	}
+	if err = runReports(ctx, cf, tx, r, reports, -1); err != nil {
+		return errors.Join(err, r.Close())
+	}
+	if err = r.Render(); err != nil {
+		return errors.Join(err, r.Close())
+	}
+	return r.Close()
+}
+
+// emailContents returns the formats to attach to the email from the
+// `email.contents` setting, which is a list or a string of formats
+// separated by white space or commas
+func emailContents(c any) (contents []string, err error) {
+	switch c2 := c.(type) {
+	case []any:
+		for _, v := range c2 {
+			contents = append(contents, fmt.Sprint(v))
+		}
+	case []string:
+		contents = c2
+	case string:
+		contents = strings.FieldsFunc(c2, func(r rune) bool { return unicode.IsSpace(r) || r == ',' })
+	default:
+		err = fmt.Errorf("email.contents must be a list or a string, not %T", c)
+	}
+	return
+}
+
+// smtpTimeout returns the timeout for the connection to the SMTP
+// server, which is the documented `email.timeout`. The undocumented
+// `_smtp_timeout`, in seconds, is only used, as it was before, if it is
+// set.
+func smtpTimeout(cf *config.Config) (timeout time.Duration) {
+	if cf.IsSet("_smtp_timeout") {
+		timeout = time.Duration(config.Get[int](cf, "_smtp_timeout")) * time.Second
+	} else {
+		timeout = config.Get[time.Duration](cf, cf.Join("email", "timeout"))
+	}
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
 	return
 }
 
@@ -360,7 +372,7 @@ func sendMail(cf *config.Config, data emailData) (err error) {
 
 	mailOpts := []mail.Option{
 		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithTimeout(time.Duration(config.Get[int](cf, "_smtp_timeout", config.DefaultValue(10))) * time.Second),
+		mail.WithTimeout(smtpTimeout(cf)),
 	}
 
 	if username != "" {

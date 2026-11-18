@@ -62,9 +62,9 @@ gdna report
                                    to the value given.
   -S, --scramble[=true|false]      Scramble configured column of data in reports with sensitive data
   -H, --hostname hostname          Connect to netprobe at hostname (default "localhost")
-  -P, --port port                  Connect to netprobe on port (default 7036)
-  -T, --tls[=true|false]           Use TLS connection to Netprobe
-  -k, --skip-verify[=true|false]   Skip certificate verification for Netprobe connections
+  -P, --port port                  Connect to netprobe on port (default 8101)
+  -T, --tls[=true|false]           Use TLS connection to Netprobe (default true)
+  -k, --skip-verify[=true|false]   Skip certificate verification for Netprobe connections (default true)
   -e, --entity Entity              Send reports to Managed Entity (default "GDNA")
   -s, --sampler Sampler            Send reports to Sampler (default "GDNA")
   -R, --reset[=true|false]         Reset/Delete configured Dataviews
