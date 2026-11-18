@@ -161,6 +161,20 @@
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
+* `pkg/config`
+
+  * **Behaviour change**: Expansion is nested, to a depth set by `Loop` (default 10), but values from lookup tables, the environment, files, URLs, expressions, and decoded `enc:` values are now inserted exactly as they are and are no longer expanded again, so request or user data in a `LookupTable` cannot inject `${file:...}`, `${env:...}` or `${config:...}`. Values from configuration items and from `Prefix` functions are still expanded in turn, as before. Use the new `PrefixVerbatim` for a function that returns untrusted data. A configuration value that refers to itself now stops with the reference left in the output.
+
+  * **Behaviour change**: `$${` is now an escape for a literal `${` (previously `$${name}` was `$` followed by the value of `name`). Lookup tables are now checked first for any name, so a table key can override a configuration key (containing the key delimiter) or a file path of the same name; names not found in any table still fall back to the environment, as before.
+
+  * **Behaviour change**: `UseDefaults(false)` now means that no defaults at all are used, including those given with `WithDefaults` and `DefaultsFrom`. The order of precedence of settings from `Read` is now documented: explicit `Set` and environment, the main file, defaults files, embedded defaults and last of all `DefaultsFrom`.
+
+  * **Behaviour change**: `SetKeyValuePairs` now sets `key==value` to `=value` rather than ignoring it.
+
+  * **Behaviour change**: Credentials files, and the directories created for them, are now written with permissions `0600` and `0700` and keyfile directories with `0700`. The new `FileMode` and `DirMode` options set these for `Write`, which otherwise still uses `0644` and `0775`. A `Config` written by `Write` still contains all of its settings, including defaults and values from the environment.
+
+  * `ReadOrCreate` for a keyfile now returns an error for a keyfile that exists but cannot be read, rather than success with no checksum.
+
 ## Version v1.31.0 Fixes
 
 * `gdna`
@@ -272,6 +286,32 @@
 * `pkg/host`
 
   * Fix `CopyAll` silently ignoring directory walk errors when copying from a remote host.
+
+* `pkg/config`
+
+  * Fix `Prefix` and `ExternalLookups` options, and a `Prefix("file", ...)` replacing the built-in, leaking into every later expansion of every `Config`, along with unlocked writes to a shared map. Options now only apply to the `Config` or call they are given to; `DefaultExpandOptions` and `SetDefaultExpandOptions` now use the lock of the `Config`.
+
+  * Fix `${~/file}` never reading the file, the built-in `${expr:...}` never evaluating, `Loop` with a value less than 1 returning an empty string (it now means no nested expansion), `NoDecode` with `[]byte` and `Secret` returning an empty string, and `InitialValue` not being expanded when the key is not set.
+
+  * Fix the expansion of `${enc:keyfile:config:KEY}`, `${enc:keyfile:env:NAME}` and `${enc:keyfile:file:PATH}`, as documented, which used the wrong part of the string as the keyfile.
+
+  * Fix `DefaultsFrom` values taking precedence over embedded defaults and defaults files, and `UseDefaults(false)` still using embedded defaults. `Read` now always returns a `Config`, even with an error, and `Read(..., UseGlobal())` now sets the `ConfigType`. `WatchConfig` now works with `FilePath`. `Read` no longer fails to set the format when the user configuration directory cannot be found.
+
+  * Fix `ExpandOnSave` converting every value to a string, and sharing the same setting as `SetDefaultExpandOptions`. Fix `Write` failing for files with no extension, leaving a temporary file after a failed write, not using the key delimiter of the `Config` being written, and applying `WithDefaults` and `WithEnvs` options given to `Write` to the output. `IgnoreKeys` now matches ignoring case and also ignores everything below a key.
+
+  * Fix setting maps with mixed case keys losing values, `Set` with a list modifying the caller's slice, `Replace` panicking or replacing text in the wrong places, `Sub` of a missing key using the wrong key delimiter, `UnmarshalKey` modifying the caller's options, named string types causing a panic when decoding, the default expand options of a `Config` being ignored when decoding, `PromoteFrom` saving decoded secrets and changing the configuration while only holding a read lock, and deleted map keys being returned from `Get` of a map.
+
+  * Fix `WithEnvs` with an empty delimiter, `MigrateFile` never migrating to a new path that does not exist, `AbbreviateHome` matching a directory name that only starts with the home directory, and a data race on the global `Config` when using `Join`, `AppConfigDir` and `ResetConfig`.
+
+  * Fix `ReadOrCreate` for keyfiles reporting success for a keyfile that cannot be read or is corrupt, and `CreateWithBackup` with no backup not overwriting an existing file. Fix `Decode` ignoring invalid hexadecimal and only checking the last padding byte, which could return the wrong plaintext for a wrong key.
+
+  * Fix `ReadPEM` panicking when a URL cannot be fetched. Requests for URLs now time out after 30 seconds and error responses are closed.
+
+  * Fix `FindCreds` to match patterns as documented as well as plain domains, and the default key delimiter for credentials being impossible to override.
+
+  * Fix `MergeHOCONConfig` failing to load values containing a backslash.
+
+  * `ReadPasswordInput` now writes prompts to STDERR and clears all passwords not returned. `ReadPEM` prompts are also written to STDERR.
 
 ---
 

@@ -6,13 +6,21 @@ Unless the file format is given to [`Load`](https://pkg.go.dev/github.com/itrs-g
 
 ## Expansion of values
 
-The following package functions and type methods are overridden to add expansion of embedded strings of the form `${name}` and `$name`:
+The `Get`, `Lookup` and `Expand` functions add expansion of embedded strings of the form `${name}` (but not the bare form `$name`) to the values from the configuration. The string values, including those in lists and maps and in structures passed to `UnmarshalKey`, are expanded using [`Expand`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Expand) which supports a range of data substitutions, described below. Use the `NoExpand()` option to retrieve the underlying value.
 
-* [`GetString`](config.go#GetString)
-* [`GetStringSlice`](config.go#GetStringSlice)
-* [`GetStringMapString`](config.go#GetStringMapString)
+## Defaults and precedence
 
-The string values are passed to [`ExpandString`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Config.ExpandString) which supports a range of data substitutions.
+When reading a configuration with [`Read`](https://pkg.go.dev/github.com/itrs-group/cordial/pkg/config#Read) the order of precedence, highest first, of the settings in the result is:
+
+1. values set explicitly using `Set`, and environment variables if enabled using `WithEnvs()`
+2. the main configuration file, or the `Reader()`
+3. defaults files, i.e. `NAME.defaults.EXT`
+4. the embedded defaults given using `WithDefaults()`
+5. the settings of the configuration passed to `DefaultsFrom()`
+
+Using `UseDefaults(false)` means that none of the defaults (3, 4 and 5) are used. `Read` always returns a configuration, even if there is also an error.
+
+`Write` writes all of the settings visible in a configuration, including any defaults and values from the environment. New files are created with permissions `0644` and directories with `0775` unless the `FileMode()` and `DirMode()` options are used, as they are for credentials files (`0600` and `0700`).
 
 ## Credentials
 
@@ -59,13 +67,18 @@ referred to as value maps.
 
     This prefix can be disabled with the `config.NoDecode()` option.
 
-    Note: The keyfile(s) can be in Windows file path format as the
-    fields for keyfiles and the encoded value are split based on the
-    last colon (`:`) in the string and not any contained in a drive
-    letter path. On Windows paths may also contain normal backslashes,
-    they are not considered escape characters once extracted from the
-    underlying configuration syntax (which may impose it's own rules,
-    e.g. JSON)
+    Note: The keyfile(s) can be in Windows file path format. The
+    fields for keyfiles and the encoded value are split at the first
+    colon (`:`) that is followed by `+encs+`, `config:`, `env:` or
+    the prefix of any other enabled expansion (e.g. `file:` or
+    `https:`), otherwise at the last colon in the string, and not any
+    contained in a drive letter path. On Windows paths may also
+    contain normal backslashes, they are not considered escape
+    characters once extracted from the underlying configuration
+    syntax (which may impose it's own rules, e.g. JSON)
+
+    The decoded value is inserted exactly as it is and is never
+    expanded further.
 
     Examples:
 
@@ -81,21 +94,27 @@ referred to as value maps.
     value containing one or more dots "." will be looked-up in the
     existing configuration that the method is called on. The underlying
     configuration is not changed and values are resolved each time
-    Expand*() is called. No locking of the configuration is done.
+    Expand is called. No locking of the configuration is done. The
+    value found is itself expanded, see "Nested expansion" below.
 
 * `${key}`
 
     `key` will be substituted with the value of the first matching key
     from the tables set using `config.LookupTable()`, in the order passed
-    to the function. If no lookup tables are set (as opposed to the
-    key not being found in any of the tables) then name is looked up
-    as an environment variable, as below.
+    to the function. The tables are checked first for any name, not
+    only plain words, so a table can override a configuration key or a
+    file path. If the name is not found in any table, or there are no
+    tables, then a plain name (one with no `:` and no `/`, and not
+    containing the key delimiter) is looked up as an environment
+    variable, as below. The values from tables are inserted exactly as
+    they are and are never expanded further.
 
 * `${env:name}`
 
     `name` will be substituted with the contents of the environment
     variable of the same name. If no environment variable with name
-    exists then the value returned is an empty string.
+    exists then the value returned is an empty string. The value is
+    inserted exactly as it is and is never expanded further.
 
 The additional prefixes below are enabled by default. They can be
 disabled using the config.ExternalLookups() option.
@@ -130,7 +149,9 @@ disabled using the config.ExternalLookups() option.
     files above. The URL is passed to
     [http.Get](https://pkg.go.dev/net/http#Client.Get) and supports
     proxies, embedded Basic Authentication and other features from that
-    function.
+    function. As for files, the content is inserted exactly as it is
+    and is never expanded further. The request times out after 30
+    seconds.
 
 The prefix below can be enabled with the config.Expressions() option.
 
@@ -142,32 +163,72 @@ The prefix below can be enabled with the config.Expressions() option.
     available. All results are returned as strings. An empty string
     may mean there was an error in evaluating the expression.
 
-Additional custom prefixes can be added with the config.Prefix() option.
+Additional custom prefixes can be added with the config.Prefix()
+option. A prefix, and any use of config.ExternalLookups() or
+config.Expressions(), only applies to the Config or call it is used
+with and is never seen by any other.
 
 The bare form `$name` is NOT supported, unlike os.Expand as this can
 unexpectedly match values containing valid literal dollar signs.
 
-Expansion is not recursive. Configuration values are read and stored as literals
-and are expanded each time they are used. For each substitution any leading and
-trailing whitespace are removed. External sources are fetched each time they are
-used and so there may be a performance impact as well as the value unexpectedly
-changing during a process lifetime.
+### Nested expansion
 
-Any errors (particularly from substitutions from external files or remote URLs)
-will result in an empty or corrupt string being returned. Error returns are
-intentionally discarded and an empty string substituted. Where a value contains
-multiple expandable items processing will continue even after an error for one
-of them.
+Expansion is nested, not just a single pass. Configuration values are
+stored as literals and are expanded each time they are used and a value
+that is itself found to contain `${...}` references is expanded in turn,
+so, for example, `${config:home}/${config:logfile}` can be used in a value
+that is referred to by another. The same applies to the results of
+functions registered with `config.Prefix()`. The nesting is limited by the
+`config.Loop()` option, which has a default of 10, counting the string
+passed to Expand as the first level. At the limit the value found is
+used as it is, without any further expansion, and so a configuration
+item that refers to itself results in a reference left in the output
+rather than an infinite loop. A limit of less than 1 means there is no
+nested expansion.
 
-It is not currently possible to escape the syntax supported by ExpandString
-and if it is necessary to have a configuration value be a literal of the form
-"${name}" then you can set an otherwise unused item to the value and refer to it
-using the dotted syntax, e.g. for YAML
+Only the values from configuration items and from `config.Prefix()`
+functions are expanded in this way. The values from lookup tables
+(`config.LookupTable()`), the environment, files, URLs, expressions,
+decoded `enc:` values and from functions registered with
+`config.PrefixVerbatim()` are inserted exactly as they are. This means
+that data from an untrusted source, such as from a network request used
+in a lookup table, can never cause further expansion, e.g. of
+`${file:...}` or `${config:password}`.
+
+For each substitution any leading and trailing whitespace are removed,
+unless `config.TrimSpace(false)` is used. External sources are fetched
+each time they are used and so there may be a performance impact as well
+as the value unexpectedly changing during a process lifetime.
+
+The default value for a Get, from `config.DefaultValue()`, is never
+expanded. The initial value, from `config.InitialValue()`, is.
+
+### Errors and escaping
+
+Any errors (particularly from substitutions from external files or
+remote URLs) will result in an empty string being substituted, as does a
+name that cannot be resolved, such as an unset environment variable or a
+prefix that has not been registered. Error returns are intentionally
+discarded. Where a value contains multiple expandable items processing
+will continue even after an error for one of them. An opening `${` with
+no closing brace is left as it is.
+
+To have a literal `${` in the result use `$${`, which is replaced by `${`
+with the remainder of the text left alone, e.g. `$${name}` is expanded to
+`${name}`. As values are expanded as they are used, the escape is only
+replaced once, at the level of the string that contains it, and the
+result is never expanded again. For example, for YAML
 
     config:
       real: ${config.literal}
-      literal: "${unchanged}"
+      literal: "$${unchanged}"
 
-In the above a reference to `${config.real}` will return the literal string
-`${unchanged}` as there is no recursive lookups.
+a reference to `${config.real}` will return the literal string
+`${unchanged}`.
+
+Inside the braces, any character, including a closing brace, can be
+escaped using a backslash and nested pairs of braces are matched, so
+`${replace:name:/(a)b/${1}c/}` is a single reference. The name, including
+any escapes, is passed as-is to the function for the prefix and is not
+expanded first.
 
