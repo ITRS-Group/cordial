@@ -20,6 +20,7 @@ package instance
 import (
 	"errors"
 	"log/slog"
+	"math"
 	"os"
 	"slices"
 	"strconv"
@@ -40,6 +41,9 @@ func GetAllPorts(h *geneos.Host) (ports map[uint16]struct{}) {
 		os.Exit(1)
 	}
 	ports = make(map[uint16]struct{})
+	if h.IsUnknown() {
+		return
+	}
 	for _, c := range Instances(h, nil) {
 		if c.Loaded().IsZero() {
 			c.Log().Error("cannot load configuration for instance")
@@ -130,56 +134,57 @@ func ByPort(h *geneos.Host, port uint16) (i geneos.Instance, err error) {
 //
 // not concurrency safe at this time
 func NextFreePort(h *geneos.Host, ct *geneos.Component) uint16 {
-	log.Debug("looking for next free port", slog.String("portRange", ct.PortRange), slog.String("default", ct.ConfigAliases[ct.PortRange]))
-	from := config.Get[string](config.Global(), ct.PortRange, config.DefaultValue(ct.ConfigAliases[ct.PortRange]))
-	used := GetAllPorts(h)
-	for p := range strings.SplitSeq(from, ",") {
-		// split on dash or ".."
-		start, end, found := strings.Cut(p, "-")
-		if !found {
-			start, end, found = strings.Cut(p, "..")
+	from := ct.GlobalSetting(ct.PortRange)
+	log.Debug("looking for next free port", slog.String("portRange", ct.PortRange), slog.String("ranges", from))
+	return firstFreePort(from, GetAllPorts(h))
+}
+
+// firstFreePort returns the first port in the comma separated list of
+// ports and ranges in ranges that is not in used, or 0 if there is
+// none. Entries can have surrounding white space, and invalid entries,
+// those that are not numbers or are outside 1-65535, are ignored.
+//
+// Open-ended ranges, e.g. "7100-", end at 49151, the top of the
+// registered ports, unless they start above that in which case they end
+// at 65535.
+func firstFreePort(ranges string, used map[uint16]struct{}) uint16 {
+	for entry := range strings.SplitSeq(ranges, ",") {
+		entry = strings.TrimSpace(entry)
+		if entry == "" {
+			continue
 		}
 
-		if found {
-			var min uint16
-			mn, err := strconv.Atoi(start)
-			if err != nil {
-				continue
-			}
-			if mn < 0 || mn > 65534 {
-				min = 65535
-			} else {
-				min = uint16(mn)
-			}
-			if end == "" {
-				end = "49151"
-			}
-			max, err := strconv.Atoi(end)
-			if err != nil {
-				continue
-			}
-			if int(min) >= max {
-				continue
-			}
-			for i := min; int(i) <= max; i++ {
-				if _, ok := used[i]; !ok {
-					// found an unused port
-					return i
+		// split on dash or ".."
+		start, end, isRange := strings.Cut(entry, "-")
+		if !isRange {
+			start, end, isRange = strings.Cut(entry, "..")
+		}
+
+		first, err := strconv.Atoi(strings.TrimSpace(start))
+		if err != nil || first < 1 || first > math.MaxUint16 {
+			continue
+		}
+
+		last := first
+		if isRange {
+			if end = strings.TrimSpace(end); end == "" {
+				last = 49151
+				if first > last {
+					last = math.MaxUint16
 				}
-			}
-		} else {
-			var p1 uint16
-			p, err := strconv.Atoi(start)
-			if err != nil {
+			} else if last, err = strconv.Atoi(end); err != nil {
 				continue
 			}
-			if p < 0 || p > 65534 {
-				p1 = 65535
-			} else {
-				p1 = uint16(p)
+			last = min(last, math.MaxUint16)
+			if last < first {
+				continue
 			}
-			if _, ok := used[p1]; !ok {
-				return p1
+		}
+
+		// use an int to loop to avoid wrapping at the top of the range
+		for p := first; p <= last; p++ {
+			if _, ok := used[uint16(p)]; !ok {
+				return uint16(p)
 			}
 		}
 	}

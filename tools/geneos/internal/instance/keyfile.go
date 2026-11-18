@@ -24,7 +24,7 @@ func CreateAESKeyFile(i geneos.Instance) (keyfile config.KeyFile, crc uint32, er
 func ReadAESKeyFile(i geneos.Instance, setting ...string) (keyfile config.KeyFile, kv *config.KeyValues, crc uint32, err error) {
 	k := "keyfile"
 	if len(setting) > 0 && setting[0] != "" {
-		k = "keyfile"
+		k = setting[0]
 	}
 	kp := config.Get[string](i.Config(), k)
 	if kp == "" {
@@ -33,9 +33,8 @@ func ReadAESKeyFile(i geneos.Instance, setting ...string) (keyfile config.KeyFil
 	}
 	keyfile = config.KeyFile(kp)
 	kv, err = keyfile.Read(i.Host())
-	if err != nil {
+	if err == nil {
 		crc, err = kv.Checksum()
-		// fallthrough and return any err
 	}
 	return
 }
@@ -56,7 +55,11 @@ func WriteAESKeyFile(i geneos.Instance, kv *config.KeyValues) (keyfile config.Ke
 	if err != nil {
 		return
 	}
-	defer w.Close()
+	defer func() {
+		if cerr := w.Close(); err == nil {
+			err = cerr
+		}
+	}()
 
 	if err = kv.Write(w); err != nil {
 		return

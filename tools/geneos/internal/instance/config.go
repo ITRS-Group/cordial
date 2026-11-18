@@ -220,7 +220,7 @@ func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 
 	kvs = make(map[string]string)
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(data))
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if len(line) == 0 || strings.HasPrefix(line, "#") {
@@ -444,16 +444,11 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	// minimum TLS version - from instance, global or 1.2 as a default
-	if minTLS, found := config.Lookup[string](cf,
-		cf.Join(TLSBASE, MINVERSION),
-		config.DefaultValue(
-			config.Get[string](
-				config.Global(),
-				config.Join(TLSBASE, MINVERSION),
-				config.DefaultValue("1.2"),
-			),
-		),
-	); found {
+	minTLS, found := config.Lookup[string](cf, cf.Join(TLSBASE, MINVERSION))
+	if !found {
+		minTLS = config.Get[string](config.Global(), config.Join(TLSBASE, MINVERSION), config.DefaultValue("1.2"))
+	}
+	if minTLS != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
 			env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
 		} else {
@@ -513,17 +508,21 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 
 	cf := i.Config()
 
-	// check if instance directory is up-to date
+	// check if instance directory is up-to date. Only instances in a
+	// legacy location, which is one of the standard instance
+	// directories for the component, are moved. A custom home directory
+	// is never moved.
 	h := i.Host()
 	current := h.Dir(i.Home())
 	shouldbe := i.Type().InstancesDir(h)
-	if current != shouldbe {
+	if current != shouldbe && slices.Contains(i.Type().InstancesBaseDirs(h), current) {
 		if resp.Err = h.MkdirAll(shouldbe, 0775); resp.Err != nil {
 			return
 		}
 		if resp.Err = h.Rename(i.Home(), h.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
+		config.Set(cf, "home", h.Join(shouldbe, i.Name()))
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe))
 	}
 
@@ -643,10 +642,11 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, options ...ConfigOption) (err error) {
 	opts := evalConfigOptions(options...)
 
+	// the old name is needed to find the old geneos directory below
+	oldName := config.Get[string](cf, "name")
 	if opts.newName != "" {
 		config.Set(cf, "name", opts.newName)
 	}
-	name := config.Get[string](cf, "name")
 
 	oldHome := config.Get[string](cf, "home")
 	if opts.newDir != "" {
@@ -657,8 +657,8 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	// the root component name, from pkgtype or the component type
 	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
 
-	newGeneosDir := config.Get[string](h.Config, "geneos")
-	oldGeneosDir := strings.TrimSuffix(oldHome, h.Join("/", nct, ct.String()+"s", name))
+	newGeneosDir := config.Get[string](h.Config, cordial.ExecutableName())
+	oldGeneosDir := strings.TrimSuffix(oldHome, h.Join("/", nct, ct.String()+"s", oldName))
 
 	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", nct)
@@ -686,12 +686,12 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 			// update path components
 			if vs, ok := v.(string); ok {
 				// replace home (unanchored)
-				if opts.newDir != "" {
+				if opts.newDir != "" && oldHome != "" {
 					vs = strings.Replace(vs, oldHome, newHome, 1)
 				}
 
 				// replace install (unanchored)
-				if oldInstall != newInstall {
+				if oldInstall != "" && oldInstall != newInstall {
 					vs = strings.Replace(vs, oldInstall, newInstall, 1)
 				}
 
@@ -701,7 +701,7 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 				}
 
 				// finally replace any remaining top-level paths (e.g. shared or tls)
-				if oldGeneosDir != newGeneosDir {
+				if oldGeneosDir != "" && oldGeneosDir != newGeneosDir {
 					vs = strings.Replace(vs, oldGeneosDir, newGeneosDir, 1)
 				}
 

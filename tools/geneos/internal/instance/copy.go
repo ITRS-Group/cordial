@@ -147,6 +147,9 @@ func Copy(ct *geneos.Component, source, destination string, options ...CopyOptio
 
 	// do a dance here to deep copy-ish the dst
 	newdst := src.Type().New(destination)
+	if isNilInstance(newdst) {
+		return fmt.Errorf("%w: cannot create instance %q", geneos.ErrInvalidArgs, destination)
+	}
 	ncf := newdst.Config()
 
 	// copy over settings from source

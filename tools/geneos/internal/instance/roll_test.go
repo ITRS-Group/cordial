@@ -110,3 +110,24 @@ func TestRollFilesPartialFailureRestoresCompletedFiles(t *testing.T) {
 	assertRollTestFileMissing(t, certificate+".old")
 	assertRollTestFile(t, key, "old key")
 }
+
+// TestRollFilesRollbackWithoutOriginal checks that a file that had no
+// original, and so has no backup, is put back as it was staged when a
+// later file fails
+func TestRollFilesRollbackWithoutOriginal(t *testing.T) {
+	i := newRollTestInstance(t)
+	certificate := filepath.Join(i.home, "gateway.pem")
+	writeRollTestFile(t, i, "gateway.pem.new", "new certificate")
+	// the key is not staged, so rolling it fails
+
+	err := RollFiles(i, "new", "old", "certificate", "privatekey")
+	if err == nil {
+		t.Fatal("expected roll to fail because the staged key is missing")
+	}
+	if strings.Contains(err.Error(), "rollback failed") {
+		t.Fatalf("rollback of a file with no original failed: %v", err)
+	}
+	assertRollTestFileMissing(t, certificate)
+	assertRollTestFile(t, certificate+".new", "new certificate")
+	assertRollTestFileMissing(t, certificate+".old")
+}

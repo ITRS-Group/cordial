@@ -152,7 +152,7 @@ func DeployProfile(h *geneos.Host, name string, options ...ProfileDeployOption) 
 				instance.WithFlags(opts.flags),
 				instance.WithProfiles(pf),
 			)
-			if err != nil {
+			if err != nil && !errors.Is(err, geneos.ErrExists) {
 				return err
 			}
 		}

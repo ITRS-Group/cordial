@@ -43,20 +43,35 @@ const lockDirSuffix = "lck"
 // operation.
 func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string) error {
 	var done []string
+	var created []string // files rolled that had no original, so there is no backup to restore
 	var rollErr error
 
 	for _, p := range params {
 		i.Log().Debug("rolling file", slog.String("file", p))
-		if rollErr = rollOneFileParam(i, p, newSuffix, oldSuffix); rollErr != nil {
+		noOriginal, err := rollOneFileParam(i, p, newSuffix, oldSuffix)
+		if err != nil {
+			rollErr = err
 			break
+		}
+		if noOriginal {
+			created = append(created, p)
+			continue
 		}
 		done = append(done, p)
 	}
 
 	if rollErr != nil {
 		var rollbackErr error
+		h := i.Host()
+		// files with no original are put back to where they were staged
+		for _, p := range created {
+			path := PathTo(i, p)
+			if err := h.Rename(path, path+"."+newSuffix); err != nil {
+				rollbackErr = errors.Join(rollbackErr, err)
+			}
+		}
 		if len(done) > 0 {
-			rollbackErr = RollFiles(i, oldSuffix, newSuffix, done...)
+			rollbackErr = errors.Join(rollbackErr, RollFiles(i, oldSuffix, newSuffix, done...))
 		}
 		if rollbackErr != nil {
 			return errors.Join(
@@ -72,15 +87,14 @@ func RollFiles(i geneos.Instance, newSuffix, oldSuffix string, params ...string)
 
 // rollOneFileParam tries to roll a single file for an instance. A lock
 // directory is created to avoid concurrent rolls. The new file is
-// linked into place, and the existing file is backed up.
+// linked into place, and the existing file is backed up. If there was
+// no existing file then noOriginal is true.
 //
 // If the file does not already exist then on error the files should be
 // left as they were.
-func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (err error) {
+func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (noOriginal bool, err error) {
 	h := i.Host()
 	// move new files to active files, backup existing ones
-
-	noOriginal := false
 
 	path := PathTo(i, param)
 	lockPath := path + "." + lockDirSuffix
@@ -97,12 +111,12 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 
 	// check that new file exists
 	if _, err = h.Stat(newPath); errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("no .%q file found for %s", newSuffix, i)
+		return false, fmt.Errorf("no .%q file found for %s", newSuffix, i)
 	}
 
 	// create lock directory or fail if it already exists
 	if err := h.Mkdir(lockPath, 0o700); err != nil {
-		return fmt.Errorf("could not create lock for %s: %w", i, err)
+		return false, fmt.Errorf("could not create lock for %s: %w", i, err)
 	}
 	defer h.Remove(lockPath)
 	i.Log().Debug("acquired lock", slog.String("lock", lockPath))
@@ -112,7 +126,7 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 		// backup existing files. On UNIX Rename is atomic, but not on all systems
 		i.Log().Debug("backing up original file", slog.String("file", path), slog.String("backup", oldPath))
 		if err := h.Rename(path, oldPath); err != nil {
-			return err
+			return false, err
 		}
 	}
 
@@ -128,10 +142,10 @@ func rollOneFileParam(i geneos.Instance, param, newSuffix, oldSuffix string) (er
 				err = fmt.Errorf("%v; additionally failed to restore original file: %w", err, err2)
 			}
 		}
-		return err
+		return false, err
 	}
 
 	i.Log().Debug("rolled file successfully", slog.String("file", path))
 	// remove files with new suffix
-	return h.Remove(newPath)
+	return noOriginal, h.Remove(newPath)
 }
