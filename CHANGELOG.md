@@ -123,6 +123,26 @@
 
   * **Breaking Change** (minor): `gdna` now exits with an error if the configuration file given with `--config`/`-f` cannot be read, instead of silently using the defaults. This applies to every command, including `start --daemon`, which no longer starts a background process in this case.
 
+  * Log files are now kept for the documented `gdna.log.max-age` days, which defaults to 14, instead of the hard-coded 30 days that was used because the setting was not read. The old and undocumented `gdna.log.stale-after` is still used if it is set. Set `gdna.log.max-age: 30` to keep the previous retention.
+
+  * The SMTP timeout for email reports is now set with the documented `email.timeout`, a duration which defaults to `10s`. The old and undocumented `_smtp_timeout`, in seconds, is still used if it is set.
+
+  * The defaults shown in the help of the Netprobe options of `gdna start` and `gdna report` (`--port`, `--secure`/`--tls` and `--skip-verify`) are now those of the configuration, which are port `8101` and TLS with verification skipped. The options override the configuration only if they are given, as before, so only the help has changed.
+
+  * The source name of a licence daemon fetched over HTTP or HTTPS now includes its port, if the URL has one, so that two licence daemons on the same host are different sources, for example `http:server:7041`. Existing source names in a database, and any `source` include, exclude or group patterns, that were for a URL with a port will no longer match; update them or the patterns. Names of sources without a port are unchanged.
+
+  * The `xlsx` attachment of an email report now has its columns scrambled, as the HTML and text parts already were, if `email.scramble` is set, which it is by default. Previously the setting was ignored for the attachment.
+
+  * The `gdna add`, `remove` and `list` commands now accept the plural forms of a category, such as `gateways`, as documented, and store the entries under the category, where previously they were never used. `gdna add group` requires a group name, and the `remove` commands require a category and either a name or `--all`; otherwise they exit with an error instead of a usage message or a panic.
+
+  * A filters file that cannot be read, other than not existing, is now an error for a run, where before the defaults were silently used instead of the filters in the file. A failure to prepare or insert filters, groups or allocations is also now an error for the run, instead of being logged and the run continuing with tables that were only partly loaded.
+
+  * An error in any report is now returned by the run, after all the other reports have been run, and an email report is not sent if any report in it fails, instead of being sent without it. A split report with no `split-values-query` is an error.
+
+  * Reports run in the order of their names, so `--reports` with a single report, as for `csv` and `toolkit` output, uses the first match by name. The `${report-name}` and `${report-group}` values that are available to the settings of a report are now the name of the report, which is the configuration key, and the group of its Dataview.
+
+  * `gdna start` handles `SIGHUP` in the same way as `SIGUSR1`, to reload the configuration; it was caught and ignored before. Not available on Windows.
+
 * Release contents
 
   * **Breaking Change**: The following programs, their configurations and documentation are no longer included in releases:
@@ -170,6 +190,34 @@
   * Fix the sources in `gdna.licd-sources` being remembered after the first fetch of a `gdna start` process, so that a reloaded configuration takes effect. Sources given with `--source` still take precedence.
 
   * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
+
+  * Fix the `--debug`/`-d` and `--trace`/`-t` options, which did nothing: they now set the log level, and the queries run are logged with `--trace`.
+
+  * Fix `--port` of `gdna start` and `gdna report` rejecting ports above 32767.
+
+  * Fix a panic, listing or reporting, for any filter, group or allocation in the filters file without a `timestamp`, and `gdna list includes` and `list excludes` without `--format` failing with a panic. Fix a panic in the `remove` commands with no arguments or with `--all` and only a category, a `list groups` ignoring `--format` and not being sorted, and `add` and `remove` exiting with success when the filters file could not be written.
+
+  * Fix a panic in a fetch for a summary report or detail report that is not valid, such as a row with too few columns, a CSV that cannot be parsed, or a licd report file with a summary section that cannot be parsed.
+
+  * Fix `gdna start` exiting, from a scheduled run, for an error loading filters or an `email.contents` that is not a list or string. The error is now logged and the run is marked as failed, and the process continues with its schedules.
+
+  * Fix a licence source with a name containing a quote, such as `o'brien.csv`, failing the run, and the status of a failed source containing `%!w(<nil>)`.
+
+  * Fix `gdna` leaking a file descriptor for every summary report file fetched, and a new HTTP transport and its connections for every fetch from a licence daemon. One client is now shared by all fetches and is closed on a reload.
+
+  * Fix a licence daemon fetch panicking when the system certificate pool cannot be read and `gdna.licd-chain` is set.
+
+  * Fix the file sources being read again by every fetch after a database schema update, and the summary report of a file source that was added after its detail report not being read.
+
+  * Fix a report with a NULL in any column of its query or headlines failing, where it is now empty.
+
+  * Fix the `${report-name}` and `${report-group}` lookups being swapped, and the dataviews of a split report with a value containing a quote, such as `o'brien`, being created with a doubled quote in the name and so never removed.
+
+  * Fix a split report using the previous report for the values after one that failed to be prepared, and `gdna` using the reports in random order.
+
+  * Fix the `gdna pubkey` command ignoring the default private key file when `gdna.licd-private-key` is not set, and the Excel column widths of a report being set to zero if `xlsx.formats.min-width` and `max-width` are not set.
+
+  * Fix the database not being limited to a single connection, as the temporary tables and an in-memory database for `gdna report --adhoc` require, and the `filters` expansion prefix in queries being bound to whichever configuration was loaded last instead of the one in use.
 
 * `tools/geneos`
 
