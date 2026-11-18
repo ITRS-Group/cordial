@@ -30,7 +30,7 @@ geneos host add [flags] [NAME] [SSHURL]
   -I, --init[=true|false]         Initialise the remote host directories and component files
   -p, --prompt[=true|false]       Prompt for password
   -P, --password SECRET           Password
-  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default ~/.config/geneos/keyfile.aes)
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/geneos/keyfile.aes)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)

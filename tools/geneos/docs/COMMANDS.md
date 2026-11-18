@@ -922,8 +922,8 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE           Path to keyfile (default ~/.config/geneos/keyfile.aes)
-  -v, --previous KEYFILE          Path to previous keyfile (default ~/.config/geneos/prevkeyfile.aes)
+  -k, --keyfile KEYFILE           Path to keyfile (default /home/peter/.config/geneos/keyfile.aes)
+  -v, --previous KEYFILE          Path to previous keyfile (default /home/peter/.config/geneos/prevkeyfile.aes)
   -e, --expandable string         The keyfile and ciphertext in expandable format (including '${...}')
   -p, --password string           Geneos formatted AES256 password
   -s, --source string             Alternative source for password
@@ -2320,7 +2320,7 @@ geneos host add [flags] [NAME] [SSHURL]
   -I, --init[=true|false]         Initialise the remote host directories and component files
   -p, --prompt[=true|false]       Prompt for password
   -P, --password SECRET           Password
-  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default ~/.config/geneos/keyfile.aes)
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/geneos/keyfile.aes)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
