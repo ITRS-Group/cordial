@@ -125,12 +125,22 @@ func ProcessActionGroup(cf *config.Config, ag ActionGroup, incident Values) bool
 // `nomatch`, `replace`, `select` and `field` prefixes for the incident
 func actionOptions(incident Values) []config.ExpandOption {
 	return []config.ExpandOption{
-		config.Prefix("match", matchPrefix),
-		config.Prefix("nomatch", noMatchPrefix),
-		config.Prefix("replace", replacePrefix),
-		config.Prefix("select", selectPrefix),
-		config.Prefix("field", fieldPrefix, incident),
+		registerClientPrefix("match", matchPrefix),
+		registerClientPrefix("nomatch", noMatchPrefix),
+		registerClientPrefix("replace", replacePrefix),
+		registerClientPrefix("select", selectPrefix),
+		registerClientPrefix("field", fieldPrefix, incident),
 	}
+}
+
+// registerClientPrefix registers a prefix function that returns data
+// from the client, such as the fields of the incident or the
+// environment, which must not be expanded again.
+//
+// TODO: use config.PrefixVerbatim here once it is in pkg/config, which
+// inserts the result as it is. Until then this is [config.Prefix].
+func registerClientPrefix(prefix string, fn func(configItems map[string]any, name string, trim bool, data ...any) (string, error), data ...any) config.ExpandOption {
+	return config.Prefix(prefix, fn, data...)
 }
 
 // "match" environment variable against regex and return

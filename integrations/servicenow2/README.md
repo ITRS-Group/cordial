@@ -221,7 +221,7 @@ Internal fields with special meanings are:
   * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/using-lists/concept/c_EncodedQueryStrings.html>
   * <https://www.servicenow.com/docs/bundle/xanadu-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html>
 
-* `_cmdb_table` - Default `cmdb_ci`
+* `_cmdb_table` - Default `cmdb_ci`. It must be the name of a table, which is letters, digits and underscores, and not a path, otherwise the request is rejected.
 
   The name of the table to search for the configuration item using `_cmdb_search` above.
 

@@ -324,6 +324,9 @@ func newGeneration(s serverSettings, handler http.Handler) (g *generation, err e
 
 	g = &generation{ln: ln, listen: s.listen, tls: s.tls}
 	g.setHandler(handler)
+	// there is no WriteTimeout as how long a handler takes is limited by
+	// the timeouts of the requests it makes, which can be longer than any
+	// one timeout that is right for all handlers
 	g.srv = &http.Server{
 		Addr: s.listen,
 		// requests are passed to whichever handler is current
