@@ -24,6 +24,8 @@ import (
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/ims"
+	snowcore "github.com/itrs-group/cordial/pkg/ims/snow"
 	"github.com/labstack/echo/v4"
 )
 
@@ -31,12 +33,21 @@ import (
 func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (incident_id string, short_description string, state int, err error) {
 	s := InitializeConnection(vc)
 
-	lookup_map := map[string]string{
+	// the values from the request are substituted as they are, and are
+	// never expanded
+	//
+	// the values are escaped for an encoded query, so that a `^` in a
+	// value cannot end the condition and add others
+	cmdb_ci, correlation_id = snowcore.EscapeQuery(cmdb_ci), snowcore.EscapeQuery(correlation_id)
+	lookup := ims.NewLiterals(true, nil, map[string]string{
 		"cmdb_ci":        cmdb_ci,
 		"correlation_id": correlation_id,
-	}
+	})
 
-	q := config.Get[string](vc, "servicenow.incident-query", config.LookupTable(lookup_map), config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci, correlation_id)))
+	q := lookup.Restore(config.Get[string](vc, "servicenow.incident-query", lookup.Option()))
+	if q == "" {
+		q = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s", cmdb_ci, correlation_id)
+	}
 	results, err := s.GET(Fields("sys_id,short_description,state"), Query(q)).QueryTableDetail(config.Get[string](vc, "servicenow.incidenttable"))
 	if err != nil {
 		err = echo.NewHTTPError(http.StatusInternalServerError, fmt.Sprintf("lookup incident: %s", err))
@@ -63,6 +74,9 @@ func LookupSysIDSimple(vc *config.Config, table, search, cmdb_ci_default string)
 	if found {
 		table = t
 		search = rest
+	}
+	if table, err = validTable(table); err != nil {
+		return
 	}
 	field, value, found = strings.Cut(search, "=")
 	if !found {
@@ -99,6 +113,9 @@ func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_
 		table = t
 		search = rest
 	}
+	if table, err = validTable(table); err != nil {
+		return
+	}
 
 	if r, err = s.GET(Fields("name,sys_id,sys_class_name"), Query(search)).QueryTableDetail(table); err != nil {
 		err = echo.NewHTTPError(http.StatusNotFound, err)
@@ -115,4 +132,14 @@ func LookupSysID(vc *config.Config, table, search, cmdb_ci_default string) (sys_
 	sys_class_name = r["sys_class_name"]
 
 	return
+}
+
+// validTable returns table, which is from the caller, if it is the name
+// of a table and cannot be used to change the path of the request
+func validTable(table string) (string, error) {
+	table, err := snowcore.CMDBTable(table)
+	if err != nil {
+		return "", echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+	return table, nil
 }

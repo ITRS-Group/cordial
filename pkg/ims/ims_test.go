@@ -177,3 +177,17 @@ func TestWriteJSONResponse(t *testing.T) {
 		}
 	})
 }
+
+// the correlation ID must stay lower case, to match the hash that the
+// servicenow and servicenow2 clients have always created, otherwise
+// incidents that are already open are not found by later updates
+func TestCorrelationID(t *testing.T) {
+	for data, want := range map[string]string{
+		"":    "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+		"raw": "ce15802a8c5e8e9db0ffaf10130ef265296e9ea4",
+	} {
+		if got := CorrelationID(data); got != want {
+			t.Errorf("CorrelationID(%q) = %q, want %q", data, got, want)
+		}
+	}
+}

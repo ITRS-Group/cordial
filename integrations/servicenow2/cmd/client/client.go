@@ -19,7 +19,6 @@ package client
 
 import (
 	"context"
-	"crypto/sha1"
 	"errors"
 	"fmt"
 	"io"
@@ -142,7 +141,7 @@ func submit(ctx context.Context, cf *config.Config, opts submitOptions, args []s
 	// check correlation ID, prefer a "raw" ID
 	if _, ok := incident[proxy.SNOW_CORRELATION_ID]; !ok {
 		if id, ok := incident[proxy.RAW_CORRELATION_ID]; ok {
-			incident[proxy.SNOW_CORRELATION_ID] = fmt.Sprintf("%x", sha1.Sum([]byte(id)))
+			incident[proxy.SNOW_CORRELATION_ID] = ims.CorrelationID(id)
 		}
 	}
 	// drop internal string either way

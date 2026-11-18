@@ -20,7 +20,6 @@ package cmd
 import (
 	"log/slog"
 	"os"
-	"path"
 
 	"github.com/spf13/cobra"
 
@@ -51,7 +50,7 @@ func init() {
 
 	Cmd.Flags().SortFlags = false
 
-	execname = path.Base(os.Args[0])
+	execname = cordial.ExecutableName()
 	log = logger.Init(execname)
 }
 
@@ -81,6 +80,10 @@ func Execute() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	var err error
+
+	if debug {
+		log = logger.Init(execname, logger.SetLogLevel(slog.LevelDebug))
+	}
 
 	cf, err = config.Read(execname,
 		config.AppName("geneos"),

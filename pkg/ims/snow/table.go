@@ -21,9 +21,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"net/http"
 	"regexp"
+	"runtime"
 	"slices"
 	"strings"
+	"sync"
+	"weak"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -77,18 +82,42 @@ func (t TableData) State(state int) (transform ims.Transformation, ok bool) {
 // configuration for the requested table.
 var ErrTableNotFound = errors.New("table details not found")
 
+type tablesEntry struct {
+	tables []TableData
+	err    error
+}
+
+var tableCache sync.Map // weak.Pointer[config.Config] -> *tablesEntry
+
 // TableConfig returns the configuration of the named table from the
 // `tables` list in cf, which is the configuration section for the
 // ServiceNow instance.
+//
+// The list of tables is read the first time it is needed for cf and
+// reused, so cf must not be changed while it is in use, which is the
+// case for the configuration of a server as a reload is a new one. Use
+// [ims.Section] to get cf so that it is the same for every request.
 func TableConfig(cf *config.Config, tableName string) (tableData TableData, err error) {
-	var tables []TableData
-
-	if err = cf.UnmarshalKey("tables", &tables, config.NoExpand()); err != nil {
-		log.Debug("failed to unmarshal table configuration", slog.Any("error", err))
-		return
+	key := weak.Make(cf)
+	entry, ok := tableCache.Load(key)
+	if !ok {
+		e := &tablesEntry{}
+		if e.err = cf.UnmarshalKey("tables", &e.tables, config.NoExpand()); e.err != nil {
+			log.Debug("failed to unmarshal table configuration", slog.Any("error", e.err))
+			// do not remember a failure
+			return TableData{}, e.err
+		}
+		var loaded bool
+		if entry, loaded = tableCache.LoadOrStore(key, e); !loaded {
+			runtime.AddCleanup(cf, func(k weak.Pointer[config.Config]) { tableCache.Delete(k) }, key)
+		}
 	}
-	for _, t := range tables {
+
+	for _, t := range entry.(*tablesEntry).tables {
 		if t.Name == tableName {
+			// the caller can change the maps without affecting others
+			t.Defaults = maps.Clone(t.Defaults)
+			t.CurrentStates = maps.Clone(t.CurrentStates)
 			return t, nil
 		}
 	}
@@ -103,6 +132,25 @@ func TableConfig(cf *config.Config, tableName string) (tableData TableData, err 
 var QueryRE = regexp.MustCompile(`^[\w\.,@=^!%*<> ]+$`)
 
 var fieldRE = regexp.MustCompile(`^[\w\.-]+$`)
+
+// tableNameRE is the characters in the name of a table, which is used
+// as part of the URL of the request
+var tableNameRE = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]{0,79}$`)
+
+// CMDBTable returns the name of the table to search for a configuration
+// item. If table is empty it is [ims.SNOW_CMDB_TABLE_DEFAULT], and
+// otherwise it must be a table name, which cannot contain anything that
+// would change the path of the request, so that a caller cannot choose
+// anything other than a table. The error has a 400 status.
+func CMDBTable(table string) (string, error) {
+	if table == "" {
+		return ims.SNOW_CMDB_TABLE_DEFAULT, nil
+	}
+	if !tableNameRE.MatchString(table) {
+		return "", &ims.HTTPError{Code: http.StatusBadRequest, Message: fmt.Sprintf("invalid table name %q", table)}
+	}
+	return table, nil
+}
 
 // ValidateFields checks all the keys in a record. ServiceNow fields can
 // consist of letters, numbers, underscores, dots and hyphens and cannot

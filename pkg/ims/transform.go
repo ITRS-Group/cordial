@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/itrs-group/cordial/pkg/config"
 )
@@ -70,7 +71,10 @@ func (e *patternError) Is(target error) bool { return target == ErrInvalidPatter
 //
 // b. For each key/value pair in the `Rename` map, if the key is present
 // in the incident, it is renamed to the value specified in the `Rename`
-// map. If a field is renamed from a name that starts with `__` to a
+// map. All the renames apply to the fields as they were before any of
+// them, so the order of the renames does not matter: `a: b` and `b: c`
+// together move `b` to `c` and `a` to `b`. A rename of a field to its
+// own name leaves it as it is. If a field is renamed from a name that starts with `__` to a
 // name that does not start with `__`, it will not be deleted after
 // renaming. This allows for fields that are meant to be preserved
 // during renaming to be retained.
@@ -133,8 +137,9 @@ func (s Transformation) TransformKeepInternal(cf *config.Config, idp string, inp
 	// 1. Defaults
 	for k, v := range s.Defaults {
 		if i, ok := output[k]; !ok || i == "" {
-			log.Debug("setting default value for field", slog.String("field", k), slog.String("value", config.Expand[string](cf, v)))
-			output[k] = config.Expand[string](cf, v)
+			value := config.Expand[string](cf, v)
+			log.Debug("setting default value for field", slog.String("field", k), slog.String("value", value))
+			output[k] = value
 		}
 	}
 
@@ -146,22 +151,29 @@ func (s Transformation) TransformKeepInternal(cf *config.Config, idp string, inp
 
 	// 3a. Rename fields with __IDPNAME_ prefix to same name without prefix
 	idpPrefix := "__" + idp + "_"
-	for k, v := range output {
-		if field, ok := strings.CutPrefix(k, idpPrefix); ok {
+	for _, k := range slices.Sorted(maps.Keys(output)) {
+		if field, ok := strings.CutPrefix(k, idpPrefix); ok && field != "" {
 			log.Debug("renaming field with prefix", slog.String("prefix", idpPrefix), slog.String("from", k), slog.String("to", field))
-			output[field] = v
+			output[field] = output[k]
 			delete(output, k)
 		}
 	}
 
-	// 3b. Rename fields according to Rename map
-	for from, to := range s.Rename {
-		if value, ok := output[from]; ok {
+	// 3b. Rename fields according to Rename map. All the renames apply
+	// to the fields as they were before any of them, so the result does
+	// not depend on the order they are done in and, for example, two
+	// fields can be swapped. If more than one field is renamed to the
+	// same name then the last of the old names, in sorted order, wins.
+	renamed := map[string]string{}
+	for _, from := range slices.Sorted(maps.Keys(s.Rename)) {
+		to := s.Rename[from]
+		if value, ok := output[from]; ok && from != to {
 			log.Debug("renaming field", slog.String("from", from), slog.String("to", to))
-			output[to] = value
+			renamed[to] = value
 			delete(output, from)
 		}
 	}
+	maps.Copy(output, renamed)
 
 	// 4. Exclude
 	if len(s.Exclude) > 0 {
@@ -211,12 +223,21 @@ func RemoveInternal(fields map[string]string, prefix string) {
 	})
 }
 
-func compilePatterns(patterns []string) (compiled []*regexp.Regexp, err error) {
-	for _, pattern := range patterns {
+// patterns holds the regular expressions that have been compiled, which
+// are only those from configuration and so are few
+var patterns sync.Map
+
+func compilePatterns(list []string) (compiled []*regexp.Regexp, err error) {
+	for _, pattern := range list {
+		if re, ok := patterns.Load(pattern); ok {
+			compiled = append(compiled, re.(*regexp.Regexp))
+			continue
+		}
 		re, err := regexp.Compile(pattern)
 		if err != nil {
 			return nil, fmt.Errorf("%q: %w", pattern, err)
 		}
+		patterns.Store(pattern, re)
 		compiled = append(compiled, re)
 	}
 	return

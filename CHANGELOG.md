@@ -109,15 +109,33 @@
 
   * Document that ServiceNow instances with the Basic Auth restriction enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy, with `401 User is not authenticated`, unless its user has the `snc_basic_auth_api_access` role.
 
+  * **Breaking Change** (minor): The `_cmdb_table` of a request, which is the table searched for the configuration item, is now `cmdb_ci` if not given, as documented, and must be the name of a table (letters, digits and underscores). A value that could change the path of the request, such as `../sys_user`, is rejected with a `400` error.
+
+  * The name of the program, which is used for the name of the configuration file and the log, is now the name of the executable as for other programs, without a directory or `.exe`, instead of the first argument.
+
 * `tools/ims-gateway`
 
   * **Breaking Change** (minor): The gateway now refuses to start without a `server.authentication.token`. Previously an empty token allowed requests that had no `Authorization` header.
 
   * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
 
+  * The correlation value that is hashed by the ServiceDesk Plus support, and by `geneos incident raise`, is now a lower case hexadecimal string, like the one that the `servicenow` and `servicenow2` clients have always created, so that an incident is found by an update whichever of them raised it. `ims.CorrelationID` was upper case, and the `servicenow2` client now uses it. The IMS Gateway and `geneos incident` were not yet in use, but any request that was created with an upper case correlation value will no longer be found.
+
   * The ServiceNow connection is now cached between requests, instead of a new client being created for each one, and uses `snow.timeout`. HTTP redirects are no longer followed.
 
   * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.
+
+  * **Breaking Change** (minor): The ServiceDesk Plus support now also rejects a request with an empty `correlation_id` (and no `__incident_correlation`) with a `400` error, as for ServiceNow.
+
+  * The values of the fields of a request are now always used exactly as they were received in the search, the requests that are sent and the response messages. They are never expanded, so a value such as `${env:HOME}` or `${file:/etc/hostname}` is just text and cannot be used to read the configuration, files or environment of the gateway. The same applies to the `query` parameter of a `GET` for ServiceDesk Plus, which is sent as it is received.
+
+  * The fields with a `__` prefix are now removed from the incident that is sent to ServiceNow whether or not a `current-state` transformation is configured, and are still available to the response messages after a transformation, as documented and as for `servicenow2`. Previously they were sent to ServiceNow if there was no transformation, and the response messages could not use them if there was one. For ServiceDesk Plus the `__` fields remain available to the request templates when a `transform` is configured, including those renamed from `__sdp_`.
+
+  * `__snow_cmdb_table` is now `cmdb_ci` if not given and must be the name of a table, as for `servicenow2`.
+
+  * The ServiceDesk Plus token is now shared by all requests and refreshed once when it expires, instead of by every request at the same time. It is only read from the user configuration directory, never the working directory, and is saved with permissions of `0600` in a directory of `0700`. A token saved by an earlier version is not changed until it is next refreshed.
+
+  * The `sdp.response` messages are now in the example configuration, and the unread `response.query` has been removed from the table examples.
 
 * `gdna`
 
@@ -148,6 +166,12 @@
   * `pkg/rest` clients now return a typed `HTTPError`, with the status code and body, for responses with a status above 299, so callers can tell them from a failure to get a response. The error text is unchanged.
 
   * The code shared by the ServiceNow proxy, the `ims-gateway` and `geneos incident`, such as the HTTP server, ServiceNow client, retrying of gateways, action groups and the reloading server, is now in `pkg/ims` and the new `pkg/ims/snow`, so that behaviour and tests are in one place. `pkg/process` adds locked PID files and detached starts that can wait for a process to be ready.
+
+  * `ims.Literals` and `ims.ExpandLiteral` substitute values that are from a caller into templates without expanding them, `ims.Section` caches a section of the configuration for the life of the configuration, and `snow.CMDBTable` defaults and checks the name of a table for a configuration item. `snow.TableConfig` now reads the list of tables once for each configuration, which must not be changed once in use, and `ims.Transformation` compiles each regular expression once.
+
+  * In a `rename` of a transformation all the renames now apply to the fields as they were before any of them, so the result no longer depends on the order the renames are done in, and a field renamed to its own name is kept. For example `a: b` with `b: c` moves `b` to `c` and `a` to `b`. Previously the result was chosen at random.
+
+  * The `path` of a ServiceNow instance is the root of the Table API and the table name is added, so `/api/now/v2/table`, `/api/now/v2/table/` and `/api/now/v2` are all the same. Previously a path that did not end in `table` replaced its last element.
 
   * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
 
@@ -292,6 +316,10 @@
 
   * Fix the proxy not logging the error for most failed requests, a panic in a request leaving no log and no response, and failing to start without any log if the ServiceNow URL, a TLS certificate or the listening address were not valid.
 
+  * Fix the values of an incident from a client being expanded when they were used in the search and in the response messages, which meant that a client that could send an incident could read the configuration, environment and files of the proxy, with values such as `${env:HOME}` or `${file:/etc/hostname}`. The values are now used as they are.
+
+  * Fix a `_cmdb_table` that was not given searching the root of the Table API instead of `cmdb_ci`, and one with a path in it reaching other tables.
+
 * `tools/ims-gateway`
 
   * Fix `GET` requests for ServiceNow records returning no data, or no error message, so that `geneos incident query` showed no incidents without an error.
@@ -300,7 +328,27 @@
 
   * Fix rejected requests, panics and errors not being logged, and the log not including the result of a request.
 
+  * ServiceDesk Plus
+
+    * Fix `input_data` of a create, update, note and search not being form encoded, so that a value with a `%` or `+`, such as `CPU 95%` or `C++`, was corrupted or rejected, and values with a `"` or `\` changing the JSON of the search. Values are now escaped as JSON strings and the form is encoded.
+
+    * Fix a `search` in the configuration that is a string and not a map having its `${correlation_id}` expanded to nothing before the request was added, so that it matched requests with no correlation.
+
+    * Fix the correlation ID that is made from `__incident_correlation` not being available to the `create` request, so that new requests had an empty correlation field and every later alert created another one, and an empty `correlation_id` being accepted.
+
+    * Fix field names that only differ in case not being found to be duplicates, the `__` fields being blank in the `create`, `edit_request` and `add_note` templates when a `transform` is configured, and the access token being refreshed by every request that found it had expired, which Zoho rate limits.
+
+    * Fix a saved token in the working directory being used in preference to the one that was saved, and the token file being created with permissions that other users could read.
+
+  * Fix a `GET` of ServiceDesk Plus expanding the `query` that the caller sent.
+
+  * Fix the ServiceNow client not being replaced when the `password` or `client-secret` of the configuration is changed by a reload.
+
+  * The ServiceDesk Plus access token is now only sent to the origin (scheme, host and port) of the API and never to another that a redirect points to, even if redirects were followed. Refreshes still use the token URL, which can be on another host.
+
 * `pkg/ims`
+
+  * Fix a `^` in a value from a request, such as the correlation ID or the configuration item, ending the condition in the ServiceNow encoded query that finds the existing incident, so that the rest of the value was read as further conditions or operators (`^OR`, `^NQ`). Values are now escaped with the new `snow.EscapeQuery`, which doubles the `^` as ServiceNow requires, in the proxy, the IMS Gateway and the `servicenow` client. This was checked against a live instance, and `CORDIAL_SNOW_LIVE` can be set to the path of a configuration file to run that test.
 
   * Action groups and transformations
 
@@ -311,6 +359,46 @@
     * Fix invalid `include` and `exclude` patterns in transformations being ignored, which could remove all fields from an incident. They are now errors.
 
   * Fix HTTP trace logging including credentials, and responses being written with a successful status and no body if the response was missing.
+
+  * Fix `ims.ProcessActionGroup` copying the configuration for every call, and relying on expansion prefixes that were set by another configuration. The `field`, `match`, `nomatch`, `replace` and `select` prefixes are now passed to each expansion.
+
+  * Fix a `snow` client for a `path` that ended in `/` or did not end in `table` requesting the wrong URL, and `snow.Client.Record` changing the options of its caller.
+
+  * Fix a transformation `rename` of a field to its own name deleting the field, and the result of renames that depend on each other depending on a random order.
+
+  * Add `ims.OriginOnly` and `ims.SameOriginRedirects` to keep OAuth tokens and credentials with the origin (scheme, host and port) they are for when a client is redirected, which the `snow` client now uses for its OAuth token. A redirect from `https` to `http` is refused for clients that use them.
+
+* `integrations/servicenow`
+
+  * Fix the router never authenticating to ServiceNow with a username and password, since the client was changed to have a timeout, and requests with a body having no `Content-Type`.
+
+  * Fix `GET /api/v1/incident` returning `null` with a status of 200 when ServiceNow reported an error or the response could not be read, and an update continuing after its body could not be encoded. The router now returns `502` and the error, and `[]` if there are no incidents.
+
+  * Fix the `incident` command waiting for ever for the router, the key of the router being compared in a way that could be timed, the `--debug` flag doing nothing, a table from a search such as `../sys_user:name=x` changing the path of a request, `incident-query` expanding the values of the request, and the trace including the `Authorization` header.
+
+  * Fix the OAuth token, username and password, and the router's API key, being sent to another origin that ServiceNow, or the router, redirected the request to, including the same host on another port. This also applies to the `incident` command. A redirect from `https` to `http` is now refused for these clients, which is a change of behaviour.
+
+* `integrations/pagerduty`
+
+  * Fix `payload.component` and `event.images` in the default configuration never being used, the routing key, and the environment if `send-env` is set, being written to the log when an event failed, a crash if `send-env` is set with no `details`, and the `timestamp` of an alert, which is in local time, being read as UTC. There is now a `timeout`, default 30 seconds, for requests to Pagerduty.
+
+  * Fix a redirect from the events API being followed and the event, which includes the routing key, being sent to wherever it pointed. Redirects are no longer followed and are reported as an error.
+
+* `libraries/libalert`
+
+  * Fix every function crashing the Gateway as the configuration was never created, `GoSendToMsTeamsChannel` always failing as the `_TO` check was inverted, and the templates failing as they were given a configuration and not the values.
+
+  * Fix webhooks after the first one being sent an empty message, response bodies not being left open, a function panicking in C when a template was not valid, and success being returned when no webhook accepted the message. Webhook URLs must now be `https` with a host that is entirely a Microsoft host, and `_TIMEOUT` is in milliseconds, as for `libemail`.
+
+  * Fix values from the alert, which are used in the formats and templates, being expanded as configuration, so that they could be used to read files and the environment of the Gateway.
+
+* `libraries/libemail`
+
+  * Fix `_TEMPLATE_TEXT_ONLY` being ignored by `GoSendToMsTeamsWorkflow`, `_RESUME_SUBJECT` and `_SUMMARY_SUBJECT` not being removed from the values for `SendMail`, and `_SMTP_PASSWORD` and `_SMTP_TLS_INSECURE` not being removed when `_DEBUG` is not set.
+
+  * Fix a number that is not valid, such as in `_SMTP_TIMEOUT`, being zero, which is no timeout, instead of the default, and `_SMTP_TLS_INSECURE` only being used with a user name.
+
+  * Fix webhook URLs only being matched at the start, so that a host such as `x.azure.com.example.com` was accepted, success being returned when no webhook accepted the message, and a panic in C. Webhook URLs must now be `https` with a host that is entirely a Microsoft host.
 
 * `pkg/rest`
 

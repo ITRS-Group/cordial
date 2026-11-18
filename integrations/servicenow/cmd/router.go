@@ -18,6 +18,7 @@ limitations under the License.
 package cmd
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
@@ -75,6 +76,12 @@ map and submit incidents.
 	},
 }
 
+// apiKeyValid returns true if key is the expected key, which is never
+// empty. The comparison takes the same time whatever the key is.
+func apiKeyValid(expected, key string) bool {
+	return expected != "" && subtle.ConstantTimeCompare([]byte(key), []byte(expected)) == 1
+}
+
 // timestamp the start of the request
 func Timestamp() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -107,7 +114,7 @@ func router() {
 	e.Use(Timestamp())
 	e.Use(middleware.BodyDump(bodyDumpLog))
 	e.Use(middleware.KeyAuth(func(key string, c echo.Context) (bool, error) {
-		return key == config.Get[string](cf, "api.apikey"), nil
+		return apiKeyValid(config.Get[string](cf, "api.apikey"), key), nil
 	}))
 
 	// list of endpoint routes

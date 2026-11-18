@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -463,5 +465,132 @@ func TestRequestLogShowsErrors(t *testing.T) {
 		if !strings.Contains(out, want) {
 			t.Errorf("log does not contain %q:\n%s", want, out)
 		}
+	}
+}
+
+type recorded struct{ path, query, body string }
+
+func record(into *[]recorded, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		*into = append(*into, recorded{r.URL.Path, r.URL.Query().Get("sysparm_query"), string(b)})
+		next(w, r)
+	}
+}
+
+// the fields in a request are from the caller and must never be expanded
+func TestAcceptRecordDoesNotExpandRequestValues(t *testing.T) {
+	secretFile := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(secretFile, []byte("file-secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("IMS_TEST_SECRET", "env-secret")
+
+	for _, value := range []string{"${file:" + secretFile + "}", "${config:servicenow.password}", "${env:IMS_TEST_SECRET}", "${IMS_TEST_SECRET}"} {
+		t.Run(value, func(t *testing.T) {
+			var gets, posts []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), record(&posts, reply(201, newRecord)), nil)
+			cf := newTestConfig(sn.URL, func(table map[string]any) {
+				table["response"] = map[string]any{
+					"created": "created ${_number}: ${_subject}",
+					"failed":  "failed: ${_subject}",
+				}
+			})
+
+			b, _ := json.Marshal(map[string]string{"correlation_id": value, "cmdb_ci": value, "_subject": value, "short_description": value})
+			rec := do(newHandler(cf, testToken), http.MethodPost, incidentPath, testToken, string(b))
+			if rec.Code != http.StatusCreated || len(gets) != 1 || len(posts) != 1 {
+				t.Fatalf("status = %d, body %q", rec.Code, rec.Body.String())
+			}
+			if want := "active=true^correlation_id=" + value; gets[0].query != want {
+				t.Errorf("search = %q, want %q", gets[0].query, want)
+			}
+			if got, want := decodeResponse(t, rec).Result, "created INC0001: "+value; got != want {
+				t.Errorf("result = %q, want %q", got, want)
+			}
+		})
+	}
+
+	t.Run("failure response", func(t *testing.T) {
+		sn := newStub(t, reply(500, `{}`), nil, nil)
+		cf := newTestConfig(sn.URL, func(table map[string]any) {
+			table["response"] = map[string]any{"failed": "failed: ${_subject}"}
+		})
+		rec := do(newHandler(cf, testToken), http.MethodPost, incidentPath, testToken, `{"correlation_id":"c","cmdb_ci":"ci","_subject":"${env:IMS_TEST_SECRET}"}`)
+		if got := decodeResponse(t, rec).Result; got != "failed: ${env:IMS_TEST_SECRET}" {
+			t.Errorf("result = %q", got)
+		}
+	})
+}
+
+// a ^ in a value must not end the condition and add others, which would
+// let a request choose which incident is found and updated
+func TestAcceptRecordEscapesQuerySeparators(t *testing.T) {
+	for name, test := range map[string]struct{ search, want string }{
+		// an empty search uses the built-in query
+		"fallback search": {"", "active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false^ORDERBYDESCnumber"},
+		"configured search": {
+			"active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}",
+			"active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), reply(201, newRecord), nil)
+			cf := newTestConfig(sn.URL, func(table map[string]any) {
+				table["search"] = test.search
+			})
+			body := `{"correlation_id":"c^ORactive=false","cmdb_ci":"ci^NQnumber=1","short_description":"x"}`
+			rec := do(newHandler(cf, testToken), http.MethodPost, incidentPath, testToken, body)
+			if rec.Code != http.StatusCreated || len(gets) != 1 {
+				t.Fatalf("status = %d, body %q", rec.Code, rec.Body.String())
+			}
+			if gets[0].query != test.want {
+				t.Errorf("search = %q, want %q", gets[0].query, test.want)
+			}
+		})
+	}
+}
+
+func TestAcceptRecordCMDBTable(t *testing.T) {
+	tests := []struct {
+		name, table string
+		want        int
+		wantPath    string
+	}{
+		{"default", "", http.StatusCreated, "/api/now/v2/table/cmdb_ci"},
+		{"named", "cmdb_ci_server", http.StatusCreated, "/api/now/v2/table/cmdb_ci_server"},
+		{"parent path", "../sys_user", http.StatusBadRequest, ""},
+		{"absolute", "/api/now/v2/table/sys_user", http.StatusBadRequest, ""},
+		{"query", "cmdb_ci?x=1", http.StatusBadRequest, ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "/incident") {
+					reply(200, noRecords)(w, r)
+					return
+				}
+				reply(200, `{"result":[{"sys_id":"ci1"}]}`)(w, r)
+			}), reply(201, newRecord), nil)
+
+			fields := map[string]string{"correlation_id": "c1", CMDB_SEARCH: "name=host"}
+			if test.table != "" {
+				fields[CMDB_TABLE] = test.table
+			}
+			b, _ := json.Marshal(fields)
+			rec := do(newHandler(newTestConfig(sn.URL), testToken), http.MethodPost, incidentPath, testToken, string(b))
+			if rec.Code != test.want {
+				t.Fatalf("status = %d, want %d, body %q", rec.Code, test.want, rec.Body.String())
+			}
+			if test.want == http.StatusCreated {
+				if gets[0].path != test.wantPath {
+					t.Errorf("CI search path = %q, want %q", gets[0].path, test.wantPath)
+				}
+			} else if len(gets) != 0 {
+				t.Errorf("a request was made to %q", gets[0].path)
+			}
+		})
 	}
 }

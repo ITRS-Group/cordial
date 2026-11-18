@@ -17,9 +17,7 @@ limitations under the License.
 
 package snow
 
-import (
-	"fmt"
-)
+import "strconv"
 
 type reqOptions struct {
 	limit   string
@@ -44,7 +42,7 @@ func evalReqOptions(options ...Option) (opts *reqOptions) {
 // Limit sets the `sysparm_limit` parameter
 func Limit(limit int) Option {
 	return func(ro *reqOptions) {
-		ro.limit = fmt.Sprintf("%d", limit)
+		ro.limit = strconv.Itoa(limit)
 	}
 }
 
