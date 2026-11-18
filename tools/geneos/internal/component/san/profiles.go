@@ -1,6 +1,7 @@
 package san
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"path"
@@ -79,18 +80,12 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 		vals := profile.ApplyCommonParams(pf, name, &san.Common, lookup)
 
 		// expand all elements of gateways, join with commas and split again to catch already expanded values
-		for _, gw := range profile.ExpandCommaList(pf, san.Gateways) {
-			// san.Gateways expands to a map of host:port
-			vals.Gateways = append(vals.Gateways, gw)
-		}
+		vals.Gateways = append(vals.Gateways, profile.ExpandCommaList(pf, san.Gateways)...)
 
 		vals.Types = pf.ExpandStringSlice(san.Types)
 
 		log.Debug("attributes", slog.Any("attrs", san.Attributes))
-		for attr := range strings.SplitSeq(config.Expand[string](pf, san.Attributes.String()), ",") {
-			log.Debug("expanded attribute", slog.String("attr", attr))
-			vals.Attributes = append(vals.Attributes, attr)
-		}
+		vals.Attributes = append(vals.Attributes, splitList(config.Expand[string](pf, san.Attributes.String()))...)
 
 		// vals.Variables = san.Variables
 		for _, v := range san.Variables {
@@ -103,12 +98,18 @@ func applyProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config, name,
 
 		// now add managed-entities, prefixing each with the "name/"
 		for _, me := range san.ManagedEntities {
-			// start with clean values for each managed entity
-			if entityVals, err := processSANManagedEntity(pf, me); err == nil {
-				vals.Attributes = append(vals.Attributes, entityVals.Attributes...)
-				vals.Types = append(vals.Types, entityVals.Types...)
-				vals.Variables = append(vals.Variables, entityVals.Variables...)
+			entityVals, err := processSANManagedEntity(pf, h, me)
+			if err != nil {
+				if errors.Is(err, geneos.ErrNotExist) {
+					log.Debug("no instances found for managed entity", slog.String("for-each", me.ForEach), slog.String("name", me.Name))
+				} else {
+					log.Warn("skipping managed entity", slog.String("for-each", me.ForEach), slog.String("name", me.Name), slog.Any("error", err))
+				}
+				continue
 			}
+			vals.Attributes = append(vals.Attributes, entityVals.Attributes...)
+			vals.Types = append(vals.Types, entityVals.Types...)
+			vals.Variables = append(vals.Variables, entityVals.Variables...)
 		}
 
 		if err := profile.ApplyInstance(h, pf, ct, instanceName, san.Common, vals, clearKeys, forceRebuild); err != nil {
@@ -188,46 +189,38 @@ func mergeVariables(common, specific []values.Variable) []values.Variable {
 	return result
 }
 
-func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals values.Values, err error) {
-	entities := []ManagedEntity{entity}
-	// names := entity.Match
-
-	ct := geneos.ParseComponent(entity.ForEach)
+func processSANManagedEntity(pf *config.Config, h *geneos.Host, entity ManagedEntity) (vals values.Values, err error) {
+	// without a for-each the entity is used as defined, but still
+	// expanded using the profile configuration
+	entities := []ManagedEntity{expandStaticEntity(pf, entity)}
 
 	if entity.ForEach != "" {
+		ct := geneos.ParseComponent(entity.ForEach)
+		if ct == nil {
+			return vals, fmt.Errorf("%w: unknown for-each component type %q", geneos.ErrInvalidArgs, entity.ForEach)
+		}
+
 		// default is match all
 		match := []string{"*"}
 		if len(entity.Match) > 0 {
 			match = entity.Match
 		}
 
-		names, err := instance.Match(geneos.LOCAL, ct, false, true, match...)
+		names, err := instance.Match(h, ct, false, true, match...)
 		if err != nil {
 			return vals, geneos.ErrNotExist
 		}
 
 		// now ignore instances that match the ignore patterns
-		if len(entity.Ignore) > 0 {
-			filtered := make([]string, 0, len(names))
-			for _, name := range names {
-				ignore := false
-				for _, pattern := range entity.Ignore {
-					if matched, _ := path.Match(pattern, name); matched {
-						ignore = true
-						break
-					}
-				}
-				if !ignore {
-					filtered = append(filtered, name)
-				}
-			}
-			names = filtered
+		names = filterIgnored(names, entity.Ignore)
+		if len(names) == 0 {
+			// there is nothing left to match. an empty list of names
+			// would match all instances, so stop here
+			return vals, nil
 		}
 
 		// expand the entities slice based on the for-each logic
-		instances := instance.Instances(geneos.LOCAL,
-			geneos.ParseComponent(entity.ForEach),
-			instance.MatchNames(names...))
+		instances := instance.Instances(h, ct, instance.MatchNames(names...))
 
 		entities = make([]ManagedEntity, len(instances))
 		for idx, i := range instances {
@@ -256,15 +249,10 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 				}
 			}
 
-			var attrs values.NameValues
-			for attr := range strings.SplitSeq(config.Expand[string](cf, entity.Attributes.String(), expandOptions...), ",") {
-				attrs = append(attrs, attr)
-			}
-
 			e := ManagedEntity{
 				Name:       config.Expand[string](cf, entity.Name, expandOptions...),
 				Types:      cf.ExpandStringSlice(entity.Types, expandOptions...),
-				Attributes: attrs,
+				Attributes: splitList(config.Expand[string](cf, entity.Attributes.String(), expandOptions...)),
 				Variables:  variables,
 			}
 			entities[idx] = e
@@ -273,20 +261,71 @@ func processSANManagedEntity(pf *config.Config, entity ManagedEntity) (vals valu
 
 	// append managed entity information to the view, prefixed with the entity name
 	for _, entity := range entities {
-		for i := range entity.Types {
-			vals.Types = append(vals.Types, entity.Name+"/"+entity.Types[i])
+		for _, t := range entity.Types {
+			vals.Types = append(vals.Types, entity.Name+"/"+t)
 		}
-		for i := range entity.Attributes {
-			vals.Attributes = append(vals.Attributes, entity.Name+"/"+entity.Attributes[i])
+		for _, a := range entity.Attributes {
+			vals.Attributes = append(vals.Attributes, entity.Name+"/"+a)
 		}
-		for i := range entity.Variables {
+		for _, v := range entity.Variables {
 			vals.Variables = append(vals.Variables, values.Variable{
-				Type:  entity.Variables[i].Type,
-				Name:  entity.Name + "/" + entity.Variables[i].Name,
-				Value: entity.Variables[i].Value,
+				Type:  v.Type,
+				Name:  entity.Name + "/" + v.Name,
+				Value: v.Value,
 			})
 		}
 	}
 
 	return vals, nil
+}
+
+// expandStaticEntity expands the name, types, attributes and variables
+// of an entity that is not generated from instances, using the profile
+// configuration.
+func expandStaticEntity(pf *config.Config, entity ManagedEntity) ManagedEntity {
+	variables := make([]values.Variable, len(entity.Variables))
+	for idx, v := range entity.Variables {
+		variables[idx] = values.Variable{
+			Type:  v.Type,
+			Name:  v.Name,
+			Value: config.Expand[string](pf, v.Value),
+		}
+	}
+
+	entity.Name = config.Expand[string](pf, entity.Name)
+	entity.Types = pf.ExpandStringSlice(entity.Types)
+	entity.Attributes = splitList(config.Expand[string](pf, entity.Attributes.String()))
+	entity.Variables = variables
+	return entity
+}
+
+// splitList splits an expanded comma-separated list, ignoring empty
+// items.
+func splitList(s string) (list []string) {
+	for item := range strings.SplitSeq(s, ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			list = append(list, item)
+		}
+	}
+	return
+}
+
+// filterIgnored removes the instance names, as returned by
+// [instance.Match] and so with an `@HOST` suffix, that match any of the
+// ignore patterns. A pattern is matched against the instance name
+// without the host and, to allow host specific patterns, the full name.
+func filterIgnored(names []string, ignore []string) []string {
+	if len(ignore) == 0 {
+		return names
+	}
+	return slices.DeleteFunc(slices.Clone(names), func(name string) bool {
+		bare, _, _ := strings.Cut(name, "@")
+		return slices.ContainsFunc(ignore, func(pattern string) bool {
+			if matched, _ := path.Match(pattern, bare); matched {
+				return true
+			}
+			matched, _ := path.Match(pattern, name)
+			return matched
+		})
+	})
 }

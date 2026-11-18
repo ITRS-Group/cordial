@@ -3,6 +3,7 @@ package includes
 import (
 	"archive/tar"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -11,6 +12,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+)
+
+// limits on the size of include archives, to protect against corrupted
+// or malicious files. The real include files are small XML files.
+const (
+	maxIncludeFileSize    = 32 << 20  // largest single file in an archive
+	maxIncludeArchiveSize = 256 << 20 // total size of all files in an archive
+	maxArchiveTrailer     = 1 << 20   // data allowed after the last tar entry
 )
 
 var includeVersionPattern = regexp.MustCompile(`^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$`)
@@ -28,8 +37,10 @@ func stageIncludeArchive(source io.Reader, staging string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := io.Copy(io.Discard, compressed); err != nil {
+	if n, err := io.Copy(io.Discard, io.LimitReader(compressed, maxArchiveTrailer+1)); err != nil {
 		return "", fmt.Errorf("invalid include archive: %w", err)
+	} else if n > maxArchiveTrailer {
+		return "", errors.New("invalid include archive: unexpected data after the last entry")
 	}
 	return version, nil
 }
@@ -38,11 +49,12 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 	var version string
 	var archiveRoot string
 	var archiveRootVersion string
+	var totalSize int64
 	includeCount := 0
 	seen := make(map[string]bool)
 	for {
 		header, err := archive.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
@@ -109,6 +121,12 @@ func readIncludeArchive(archive *tar.Reader, staging string) (string, error) {
 		seen[parts[1]] = true
 		if parts[0] == "docs" {
 			continue
+		}
+		if header.Size > maxIncludeFileSize {
+			return "", fmt.Errorf("include archive file %q is too large (%d bytes, limit %d)", header.Name, header.Size, maxIncludeFileSize)
+		}
+		if totalSize += header.Size; totalSize > maxIncludeArchiveSize {
+			return "", fmt.Errorf("include archive contents are too large (limit %d bytes)", maxIncludeArchiveSize)
 		}
 		destination, err := os.OpenFile(filepath.Join(staging, "files", parts[1]), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 		if err != nil {

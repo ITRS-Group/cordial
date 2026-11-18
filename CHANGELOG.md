@@ -53,6 +53,28 @@
 
 * `tools/geneos`
 
+  * Profiles, ports and TLS
+
+    * Gateway listening ports are only moved to match TLS between the conventional 7039 (no TLS) and 7038 (TLS) ports, and a Web Dashboard server between 8080 (HTTP) and 8443 (HTTPS), and between 80 and 443, and only when it is configured with one of the pair and the other is free. Any other port is never changed. Previously, if the other Gateway port was in use, the Gateway was moved to an arbitrary free port such as 7100; it now keeps its configured port and a warning is logged. A new Web Dashboard server is given port 8443 with TLS and 8080 without. The generated Gateway `instance.setup.xml` no longer lists a TLS listen port of 7038 for a TLS Gateway configured on 7039.
+
+    * **Behaviour change**: applying a profile again to an existing instance, with `geneos deploy`, `geneos rebuild profile` or `geneos set profile`, now follows the `insecure` option saved with the profile, which was previously only used when an instance was created. An instance that is not TLS capable gets a certificate (an unchanged one kept from earlier is reused) when the profile is secure, and one with TLS parameters has them removed from its configuration, but never the files, when the profile is `insecure`, and it is then rebuilt so that the conventional Gateway and Web Dashboard server ports follow. A user-defined port is never changed. A secure profile fails with an error if no signing certificate is available. A Web Dashboard server's keystore is renamed with a `.disabled` suffix when it becomes insecure. Profiles saved without the `insecure` option are not changed. If you have secured instances by hand that belong to a profile saved as `--insecure`, rebuilding the profile now removes their TLS parameters.
+
+    * SAN and floating Netprobe gateway connections (`gateways`) are now always stored as a list of `HOST:PORT` strings. A map of host to port saved by earlier versions is still read and is converted the next time the instance is rebuilt or set. Only connections to port 7039 or 7038 are changed to match whether the probe uses TLS; all other connections and ports are kept as they are.
+
+    * `geneos deploy profile --port` can now only be used with a profile that has a single component, and is an error otherwise instead of failing part way through. The port is applied to that component.
+
+    * The instances for a profile are now always created in the same, sorted by component type, order. `geneos deploy profile` and `geneos init` now create every component instance the same way whether or not its package was installed by the command, and stop with an error when a package cannot be installed or a directory cannot be created, rather than carrying on and creating the profile without them.
+
+    * Profiles are now applied to a member's environment (`env`) for all component types, as for Gateways, SANs and floating Netprobes, so environment variables that are no longer in the profile are removed from a member when the profile is applied again.
+
+    * Certificate creation errors are now shown when adding all component types, they were previously discarded for most.
+
+    * The `gateway-name`, `licd-host`, `licd-port` and `licd-secure` keys of a Gateway in a profile are now applied, as documented in the profile help. `licd-host` is also reset when the profile is applied again.
+
+    * The `tcp-reporter-port` of a `ca3` instance now defaults to the instance `port` instead of 9137, so that multiple instances no longer conflict.
+
+    * `geneos add` for `ca3`, `netprobe-router`, `sso-agent` and `webserver` instances now copies the initial files from the installed package on the instance's host, instead of from the working directory of the command, and returns an error if they cannot be copied. The directory `packages/ca3` is no longer created.
+
   * `geneos includes`
 
     * **Breaking Change** (minor): The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
@@ -410,6 +432,62 @@
     * Fix `geneos set profile` and `geneos unset profile` to update profile members without immediately reapplying the original profile settings and repeating its imports.
 
     * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
+
+    * Fix profile options being saved as strings, so that after `geneos set profile`, `geneos unset profile` or a rebuild `${option:insecure?8080:8443}` was no longer evaluated correctly and, for example, an insecure Web Dashboard server moved from port 8080 to 8443. Options keep their types, and options saved as strings by earlier versions (`"1"`, `"0"`, `"true"` and `"false"` for `insecure` and `minimal`) are read as booleans.
+
+    * Fix `geneos set profile` with `--type` or `--param` removing all the existing values, and `geneos unset profile` matching types and parameters by prefix.
+
+    * Fix `geneos add profile NAME` panicking.
+
+    * Fix the profile `template` setting of a component never being used, `geneos deploy profile` silently ignoring errors writing templates, and an unknown component type in a profile causing a panic.
+
+    * Fix the `health-gateway` profile include priorities `00500`, `01010`, `00510`, `01020` and `00520` being read as octal numbers. They are now the decimal 500, 1010, 510, 1020 and 520, in the same relative order.
+
+    * Fix the `logFilePath` variable in the `health-gateway` profile expanding to `/` instead of the path of the Gateway log file.
+
+    * Fix the SAN `ignore` setting in profile managed entities never matching, and ignoring every instance selecting all of them, and managed entities using the local host rather than the profile's host. Managed entities that are not generated with `for-each` now have their names, types, attributes and variables expanded.
+
+    * Fix `geneos deploy profile` and `geneos init` ignoring errors installing packages, creating directories and reading a password, and passing `--port` to every component of a profile.
+
+    * Fix the `select`, `replace` and `joinpath` profile expansions: they now match numbers and booleans, `select` can use parameters that have `-` in their name, `joinpath` uses the path conventions of the host, and `replace` no longer panics on an empty value. `PflagSetToMap` handles more flag types, and an empty gateway list no longer expands to an empty gateway. An invalid port in a profile is now reported rather than truncated.
+
+  * SAN and floating Netprobes
+
+    * Fix `geneos unset --gateway HOST` removing all gateways of a SAN or floating Netprobe instead of only those for that host (or the `HOST:PORT` given).
+
+    * Fix `geneos set` of a managed entity (`--type`, `--attribute` and `--variable` with `ENTITY/`) replacing the existing entities when it is not the first set, and new entities taking the place of existing ones after another was removed.
+
+    * Fix the TLS port rewrite of gateway connections never running for SAN and floating Netprobes.
+
+    * Fix `geneos add san`, `floating`, `gateway` and `netprobe-router` panicking when the `--template` file cannot be imported, and the directory `netprobe/sans` not being created for SANs.
+
+    * Fix a floating Netprobe never passing its start-up checks because of the path of its setup file, and the `Reload` of Gateways, SANs and floating Netprobes on Windows returning an error that was not recognised as unsupported.
+
+  * Components
+
+    * Fix the default ports of `netprobe-router` (4317) and `minimal` Netprobes (7036), the default `binary` of `fa2` and `profile` instances, and the default `config` file name of `ac2`.
+
+    * Fix the `HOSTNAME` for `ca3` and `netprobe-router` instances being that of the local host rather than the instance's host, and `sso-agent` and `webserver` TLS keys using the local host name as the alias for remote instances.
+
+    * Fix `sso-agent` rebuilds ignoring errors writing the keystore and adding TLS keys, and `webserver` rebuilds failing when `security.properties` has no `keyStore` or the truststore file does not exist.
+
+    * Fix `sso-agent` and `webserver` rebuilds replacing, and so wiping, an existing keystore or truststore that could not be read, for example because the password was wrong or the file was corrupt or truncated. Only a missing or empty file is now created new; any other failure is returned, naming the file and the reason, from `geneos rebuild`, `add`, `tls renew`, `tls migrate` and other commands that rebuild, and the file is left untouched. The keystore, truststore, `ssokey.pem` and `security.properties` files are replaced together through temporary files and renames, with the original files restored if an update fails part way, and entries in an existing keystore or truststore are now preserved. Fixes the self-signature of a generated `ssokey` certificate, errors reading `sso-agent.conf` or `security.properties` being ignored by `geneos tls migrate`, and `geneos add` ignoring errors from the first rebuild of a new instance.
+
+    * Fix the default `home` of `minimal` Netprobes naming `netprobe/netprobes` while instances have always been created in `netprobe/minimals`, and `geneos init` creating the unused `netprobe/netprobes` for them. The location of instances is unchanged; only the registered default and the directories created now match it.
+
+    * Fix `geneos add` for `ca3`, `netprobe-router`, `sso-agent`, `webserver` and `ac2` instances changing the working directory of the process, which does not work for remote hosts.
+
+    * Fix `geneos set` returning an error only some of the time for invalid parameters (such as `NAME` without a value), and `geneos add` dropping settings silently when one was invalid.
+
+    * Fix `geneos set --variable` panicking, or ignoring, variables with an invalid type or hand-edited, incomplete entries, and `--include` treating a URL or Windows path without a priority as a priority and path.
+
+    * Fix the `ctl` command emulation with an unknown component name running a different command, and the dropping of privileges on Unix systems where the group is now dropped before the user.
+
+  * `geneos includes`
+
+    * Fix `geneos includes extract` and `install` rewriting or backing up unchanged files over SSH because short reads were treated as differences, and returning success when an archive contains no include files. Include archives now have limits on the size of the files they contain.
+
+    * Fix `geneos includes fix` rewriting the whole Gateway setup file from the parsed setup, which dropped comments and unknown elements, changed the order and formatting of the setup, and lost the file's encoding declaration. Only the text of the changed include `location` elements is now edited, with every other byte of the file unchanged, and nothing is written if the file and the parsed setup disagree about the locations to change. History backups and the file mode are as before.
 
   * Packages
 

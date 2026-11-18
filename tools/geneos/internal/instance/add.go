@@ -211,8 +211,10 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 		return nil, err
 	}
 	if !ct.IsA("profile") {
+		// a failed rebuild, for example an unreadable keystore, must
+		// fail the add (which is then rolled back)
 		if _, err = i.Rebuild(true); err != nil && !errors.Is(err, geneos.ErrNotSupported) {
-			return nil, err
+			return nil, fmt.Errorf("rebuilding new instance %s: %w", i, err)
 		}
 		err = nil
 	}

@@ -20,7 +20,6 @@ package router
 import (
 	_ "embed"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -64,8 +63,8 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "4317,4319-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
+		config.Join(name, "purge"): "",
 	},
 	PortRange: config.Join(name, "ports"),
 	CleanList: config.Join(name, "clean"),
@@ -85,7 +84,7 @@ var Component = geneos.Component{
 		`program={{"/usr/bin/java"}}`,
 		`logdir=logs`,
 		`logfile=` + name + `.log`,
-		`port=1180`,
+		`port=4317`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib"}}`,
 		`setup={{join "${config:home}" "router-config.yaml"}}`,
 		`autostart=true`,
@@ -257,27 +256,24 @@ func (i *Router) Add(options ...any) (err error) {
 
 	cf.Default(cf.Join("config", "template"), templateName)
 	if opts.Template != "" {
-		filenames, _ := geneos.ImportCommons(i.Host(), i.Type(), "templates", []string{opts.Template})
-		config.Set(cf, cf.Join("config", "template"), filenames[0])
+		filename, err := instance.ImportTemplate(i, opts.Template)
+		if err != nil {
+			return err
+		}
+		config.Set(cf, cf.Join("config", "template"), filename)
 	}
 
-	// copy default configs
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-
-	importFrom := instance.BaseVersion(i)
-	if err = os.Chdir(importFrom); err != nil {
-		return
+	// copy default configs from the installed package
+	if err = instance.ImportPackageFiles(i, instance.BaseVersion(i), initialFiles...); err != nil {
+		return err
 	}
-
-	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
-	return
+	return nil
 }
 
 // Rebuild any configuration based on the template configured.
@@ -349,8 +345,8 @@ func (i *Router) Command(skipFileCheck bool) (args, env []string, home string, e
 		config.Get[string](cf, "setup", config.DefaultValue("router-config.yaml")),
 	)
 
-	hostname, err := os.Hostname()
-	if err != nil {
+	hostname := i.Host().Hostname()
+	if hostname == "" {
 		hostname = "localhost"
 	}
 

@@ -19,10 +19,8 @@ package fileagent
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -47,8 +45,8 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "7030,7100-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
+		config.Join(name, "purge"): "",
 	},
 	PortRange: config.Join(name, "ports"),
 	CleanList: config.Join(name, "clean"),
@@ -218,7 +216,7 @@ func (i *FileAgent) Add(options ...any) (err error) {
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// default config XML etc.

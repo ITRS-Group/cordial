@@ -26,6 +26,7 @@ type profileDeployOptions struct {
 	override           string
 	password           config.Secret
 	port               uint16
+	promptedPassword   bool // the password was read from the user, not passed in
 	snapshot           bool
 	startAfterAdd      bool
 	template           string

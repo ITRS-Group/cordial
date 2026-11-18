@@ -90,6 +90,10 @@ func main() {
 
 	// otherwise emulate legacy ctl commands
 	ct := geneos.ParseComponent(strings.TrimSuffix(execname, "ctl"))
+	if ct == nil {
+		fmt.Fprintf(os.Stderr, "unknown component type %q\n", strings.TrimSuffix(execname, "ctl"))
+		os.Exit(1)
+	}
 	if len(os.Args) > 1 {
 		name := os.Args[1]
 		switch name {
