@@ -1,3 +1,5 @@
+//go:build unix
+
 /*
 Copyright © 2023 ITRS Group
 
@@ -15,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package floating
+package san
 
 import (
 	"os"
@@ -25,7 +27,7 @@ import (
 )
 
 // Reload TODO: Document its behavior, inputs, and effects.
-func (i *Floating) Reload() (err error) {
+func (i *San) Reload() (err error) {
 	if i == nil {
 		err = os.ErrInvalid
 		return

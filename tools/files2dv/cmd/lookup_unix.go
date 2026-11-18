@@ -1,3 +1,5 @@
+//go:build unix
+
 /*
 Copyright © 2023 ITRS Group
 

@@ -1,5 +1,7 @@
+//go:build unix
+
 /*
-Copyright © 2022 ITRS Group
+Copyright © 2023 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,7 +17,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package gateway
+package floating
 
 import (
 	"os"
@@ -25,7 +27,7 @@ import (
 )
 
 // Reload TODO: Document its behavior, inputs, and effects.
-func (i *Gateway) Reload() (err error) {
+func (i *Floating) Reload() (err error) {
 	if i == nil {
 		err = os.ErrInvalid
 		return

@@ -294,7 +294,7 @@ func toInt64(v any) (i int64, ok bool) {
 	case int64:
 		return v, true
 	case uint:
-		return int64(v), v <= math.MaxInt64
+		return int64(v), uint64(v) <= math.MaxInt64
 	case uint8:
 		return int64(v), true
 	case uint16:
@@ -302,7 +302,7 @@ func toInt64(v any) (i int64, ok bool) {
 	case uint32:
 		return int64(v), true
 	case uint64:
-		return int64(v), v <= math.MaxInt64
+		return int64(v), uint64(v) <= math.MaxInt64
 	case float32:
 		return toInt64(float64(v))
 	case float64:

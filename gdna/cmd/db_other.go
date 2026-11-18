@@ -1,5 +1,7 @@
+//go:build !linux
+
 /*
-Copyright © 2023 ITRS Group
+Copyright © 2024 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,20 +17,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package san
+package cmd
+
+// on all platforms other than Linux we use the pure Go sqlite driver
 
 import (
-	"os"
-	"syscall"
-
-	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
+	_ "modernc.org/sqlite"
 )
 
-// Reload TODO: Document its behavior, inputs, and effects.
-func (i *San) Reload() (err error) {
-	if i == nil {
-		err = os.ErrInvalid
-		return
-	}
-	return instance.Signal(i, syscall.SIGUSR1)
-}
+const dbtype = "sqlite"

@@ -1,5 +1,7 @@
+//go:build unix
+
 /*
-Copyright © 2024 ITRS Group
+Copyright © 2022 ITRS Group
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,12 +17,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package cmd
-
-// on windows we use the pure Go sqlite driver
+package gateway
 
 import (
-	_ "modernc.org/sqlite"
+	"os"
+	"syscall"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 )
 
-const dbtype = "sqlite"
+// Reload TODO: Document its behavior, inputs, and effects.
+func (i *Gateway) Reload() (err error) {
+	if i == nil {
+		err = os.ErrInvalid
+		return
+	}
+	return instance.Signal(i, syscall.SIGUSR1)
+}

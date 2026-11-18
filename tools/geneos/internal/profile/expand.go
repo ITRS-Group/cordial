@@ -134,15 +134,18 @@ func newExpander(ci map[string]any, data []any) func(string) string {
 		}
 	}
 	return func(s string) string {
+		// a single pass is enough, nesting is bounded by the depth
+		// counter and a self-referencing value would otherwise expand
+		// exponentially as every level loops again
 		if ctx == nil {
-			return config.Expand[string](cf, s)
+			return config.Expand[string](cf, s, config.Loop(1))
 		}
 		if ctx.depth.Add(1) > maxExpandDepth {
 			ctx.depth.Add(-1)
 			return s
 		}
 		defer ctx.depth.Add(-1)
-		return config.Expand[string](cf, s)
+		return config.Expand[string](cf, s, config.Loop(1))
 	}
 }
 
