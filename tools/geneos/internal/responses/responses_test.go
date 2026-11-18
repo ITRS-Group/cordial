@@ -5,8 +5,14 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
 	"reflect"
+	"strings"
 	"testing"
+
+	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 func TestNewAndFinished(t *testing.T) {
@@ -70,8 +76,8 @@ func TestFormattedCSVOrdersResponsesAndSkipsErrors(t *testing.T) {
 		"x": {Err: errors.New("failed"), Dataview: &Dataview{Table: [][]string{{"x", "hidden"}}}},
 	}
 	var output bytes.Buffer
-	if err := responses.Formatted(&output, "csv", []string{"name", "value"}, nil); err != nil {
-		t.Fatalf("Formatted() error = %v", err)
+	if err := responses.Formatted(&output, "csv", []string{"name", "value"}, nil, StderrWriter(io.Discard)); !errors.Is(err, ErrReported) {
+		t.Fatalf("Formatted() error = %v, want ErrReported", err)
 	}
 	got, err := csv.NewReader(&output).ReadAll()
 	if err != nil {
@@ -94,8 +100,8 @@ func TestFormattedJSONMergesValuesAndSkipsErrors(t *testing.T) {
 		"x": {Err: errors.New("failed"), Value: map[string]string{"name": "hidden"}},
 	}
 	var output bytes.Buffer
-	if err := responses.Formatted(&output, "json", nil, nil); err != nil {
-		t.Fatalf("Formatted() error = %v", err)
+	if err := responses.Formatted(&output, "json", nil, nil, StderrWriter(io.Discard)); !errors.Is(err, ErrReported) {
+		t.Fatalf("Formatted() error = %v, want ErrReported", err)
 	}
 	var got []map[string]string
 	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
@@ -105,4 +111,52 @@ func TestFormattedJSONMergesValuesAndSkipsErrors(t *testing.T) {
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("JSON values = %#v, want %#v", got, want)
 	}
+}
+
+func TestReportFailures(t *testing.T) {
+	failed := errors.New("failed")
+
+	for _, test := range []struct {
+		name      string
+		err       error
+		options   []Option
+		want      error
+		wantStder string
+	}{
+		{name: "no error"},
+		{name: "failure", err: failed, want: ErrReported, wantStder: "x: failed\n"},
+		{name: "wrapped failure", err: fmt.Errorf("more: %w", failed), want: ErrReported, wantStder: "x: more: failed\n"},
+		{name: "ignored", err: os.ErrProcessDone},
+		{name: "not supported", err: geneos.ErrNotSupported},
+		{name: "ignored by option", err: geneos.ErrRunning, options: []Option{IgnoreErr(geneos.ErrRunning)}},
+		{name: "running is a failure", err: geneos.ErrRunning, want: ErrReported, wantStder: "x: instance is running\n"},
+		{name: "warning", err: geneos.ErrDisabled, options: []Option{WarnErr(geneos.ErrDisabled)}, wantStder: "x: instance is disabled\n"},
+		{name: "already reported", err: ErrReported, want: ErrReported},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var stderr bytes.Buffer
+			rs := GeneralResponses{"x": &General{Err: test.err, Dataview: &Dataview{}}}
+			err := rs.Report(io.Discard, append(test.options, StderrWriter(&stderr))...)
+			if !errors.Is(err, test.want) || (err == nil) != (test.want == nil) {
+				t.Errorf("Report() error = %v, want %v", err, test.want)
+			}
+			if stderr.String() != test.wantStder {
+				t.Errorf("stderr = %q, want %q", stderr.String(), test.wantStder)
+			}
+		})
+	}
+
+	t.Run("other responses are still written", func(t *testing.T) {
+		var stdout bytes.Buffer
+		rs := GeneralResponses{
+			"a": &General{Completed: []string{"done"}, Dataview: &Dataview{}},
+			"b": NewFailed(failed),
+		}
+		if err := rs.Report(&stdout, StderrWriter(io.Discard)); !errors.Is(err, ErrReported) {
+			t.Errorf("Report() error = %v, want ErrReported", err)
+		}
+		if !strings.Contains(stdout.String(), "done") {
+			t.Errorf("output = %q, want the response without an error", stdout.String())
+		}
+	})
 }

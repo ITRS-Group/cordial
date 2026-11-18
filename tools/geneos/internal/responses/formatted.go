@@ -16,7 +16,10 @@ import (
 //
 // options are any reporter.ReporterOptions to control the output.
 //
-// If any response has a non-nil Err field then it is skipped.
+// If any response has a non-nil Err field then it is skipped and, unless
+// the error is ignored (see [IgnoreErr]), it is written to the error
+// writer after the output and Formatted returns [ErrReported], unless
+// writing the output also failed in which case that error is returned.
 //
 // The response struct field used is Rows for table rows and headlines
 // should be passed in as a responses.ReporterOption with
@@ -64,8 +67,10 @@ func (responses GeneralResponses) Formatted(w io.Writer, format string, headings
 			}
 		}
 
-		j.Encode(data)
-		return nil
+		if err = j.Encode(data); err != nil {
+			return err
+		}
+		return responses.writeErrors(opts, false)
 	}
 
 	r, err := reporter.NewReporter(format, w, reporterOptions...)
@@ -106,5 +111,8 @@ RESPONSES:
 	r.AddHeadlines(opts.headlines)
 
 	r.UpdateTable(headings, rows)
-	return r.Render()
+	if err = r.Render(); err != nil {
+		return err
+	}
+	return responses.writeErrors(opts, false)
 }

@@ -67,6 +67,30 @@ type Dataview struct {
 
 var log = logger.Logger
 
+// ErrReported is returned by [GeneralResponses.Report] and
+// [GeneralResponses.Formatted] if one or more of the responses failed.
+// The failures have already been reported to the user, per response, so
+// the command should return this error unchanged, to cause a non-zero
+// exit status, and it is not written again.
+var ErrReported = errors.New("one or more operations failed")
+
+// label returns the name to use for a response in messages. It is the
+// instance, or the key of the response if there is no instance, for
+// example for a name that did not match any instance.
+func (r *General) label(key string) string {
+	if r.Instance == nil {
+		return key
+	}
+	return r.Instance.String()
+}
+
+// NewFailed returns a response, not associated with an instance, for
+// something that failed with err, such as a name that did not match any
+// instance. The name should be used as the key for the response.
+func NewFailed(err error) *General {
+	return &General{Err: err, start: time.Now(), Dataview: &Dataview{}}
+}
+
 // Finished TODO: Document its behavior, inputs, and effects.
 func Finished[R Response](resp *R) {
 	switch any(*resp).(type) {

@@ -47,11 +47,19 @@ import (
 // and when structured logging is introduced.
 //
 // Report calls Flush() after writing to CSV or Tab writers.
-func (responses GeneralResponses) Report(writer any, options ...Option) {
+//
+// Report returns [ErrReported] if any response has an error that is not
+// ignored (see [IgnoreErr] and [WarnErr]), after all the responses have
+// been written, as the errors have then already been reported to the
+// user. The caller should return that error from the command so that
+// the exit status is non-zero. Responses with an [ErrReported] error,
+// for example from an action that has itself reported failures for a
+// group of instances, are counted but their error is not written again.
+func (responses GeneralResponses) Report(writer any, options ...Option) (err error) {
 	var rows [][]string
 
 	if len(responses) == 0 {
-		return
+		return nil
 	}
 	opts := evalWriterOptions(options...)
 
@@ -186,11 +194,11 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 		w.UpdateTable(w.Columns, rows)
 		if err := w.Render(); err != nil {
 			slog.Error("render response table failed", slog.Any("error", err))
-			return
+			return err
 		}
 		if err := w.Close(); err != nil {
 			slog.Error("close response table failed", slog.Any("error", err))
-			return
+			return err
 		}
 	}
 
@@ -198,30 +206,36 @@ func (responses GeneralResponses) Report(writer any, options ...Option) {
 		w.Flush()
 	}
 
-	if opts.stderr != io.Discard {
-		for _, k := range slices.Sorted(maps.Keys(responses)) {
-			r := responses[k]
-			errored := false
-			ignored := false
-			if r.Err != nil && opts.skiponerr {
-				for _, i := range opts.ignoreerr {
-					if errors.Is(r.Err, i) {
-						ignored = true
-						break
-					}
-				}
-				if !ignored {
-					fmt.Fprintf(opts.stderr, "%s: %s\n", r.Instance, r.Err)
-					errored = true
-				}
-			}
+	return responses.writeErrors(opts, true)
+}
 
-			if !errored && !ignored && opts.showtimes {
-				s := r.Duration.Seconds()
-				fmt.Fprintf(opts.stderr, opts.timesformat, r.Instance, s)
+// writeErrors writes the non-ignored errors of responses to the error
+// writer, in the order of the response keys, and returns [ErrReported]
+// if there are any failures. If timings is true then the timing of each
+// response that did not fail is also written, if enabled.
+func (responses GeneralResponses) writeErrors(opts *options, timings bool) (err error) {
+	for _, k := range slices.Sorted(maps.Keys(responses)) {
+		r := responses[k]
+		errored := false
+		ignored := opts.ignored(r.Err)
+
+		if opts.failed(r.Err) {
+			err = ErrReported
+		}
+
+		if r.Err != nil && !ignored {
+			errored = true
+			if opts.stderr != io.Discard && opts.skiponerr && !errors.Is(r.Err, ErrReported) {
+				fmt.Fprintf(opts.stderr, "%s: %s\n", r.label(k), r.Err)
 			}
 		}
+
+		if timings && !errored && !ignored && opts.showtimes && opts.stderr != io.Discard {
+			s := r.Duration.Seconds()
+			fmt.Fprintf(opts.stderr, opts.timesformat, r.label(k), s)
+		}
 	}
+	return
 }
 
 // Report writes a single General response to the writer w controlled by
