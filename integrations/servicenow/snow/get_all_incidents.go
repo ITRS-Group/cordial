@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	snowcore "github.com/itrs-group/cordial/pkg/ims/snow"
 	"github.com/labstack/echo/v4"
 )
 
@@ -49,7 +50,7 @@ func GetAllIncidents(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
 	}
 
-	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
+	q := fmt.Sprintf(`active=true^opened_by=%s`, snowcore.EscapeQuery(u["sys_id"]))
 
 	l, err := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
 	if err != nil {

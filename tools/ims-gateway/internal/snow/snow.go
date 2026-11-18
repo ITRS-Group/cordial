@@ -86,6 +86,9 @@ func tableConfig(cf *config.Config, tableName string) (TableData, error) {
 // active records with the same configuration item and correlation ID
 // are searched for.
 func (c *client) lookupRecord(ctx context.Context, cf *config.Config, table TableData, lookup map[string]string) (sysID string, state int, err error) {
+	// the values are escaped for an encoded query, so that a `^` in a
+	// value cannot end the condition and add others
+	lookup = snowcore.EscapeQueryValues(lookup)
 	query := ims.ExpandLiteral(cf, table.Search, true, lookup)
 	if query == "" {
 		query = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber",

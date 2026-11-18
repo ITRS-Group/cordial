@@ -443,6 +443,35 @@ func record(into *[]recorded, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// a ^ in a value must not end the condition and add others, which would
+// let a request choose which incident is found and updated
+func TestSendEscapesQuerySeparators(t *testing.T) {
+	for name, test := range map[string]struct{ search, want string }{
+		// an empty search uses the built-in query
+		"fallback search": {"", "active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false^ORDERBYDESCnumber"},
+		"configured search": {
+			"active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}",
+			"active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), reply(201, newRecord), nil)
+			cf := testConfig(sn.URL, func(table map[string]any) {
+				table["search"] = test.search
+			})
+			body := `{"correlation_id":"c^ORactive=false","cmdb_ci":"ci^NQnumber=1","short_description":"x"}`
+			rec, response := call(send, cf, http.MethodPost, "/snow/incident", body)
+			if rec.Code != http.StatusCreated || len(gets) != 1 {
+				t.Fatalf("status = %d, response %+v", rec.Code, response)
+			}
+			if gets[0].query != test.want {
+				t.Errorf("search = %q, want %q", gets[0].query, test.want)
+			}
+		})
+	}
+}
+
 // the fields that start with double underscores are for the gateway, and
 // not for ServiceNow, but are available to the messages that are returned
 func TestSendRemovesInternalFields(t *testing.T) {

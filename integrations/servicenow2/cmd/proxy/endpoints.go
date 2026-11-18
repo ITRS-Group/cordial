@@ -263,12 +263,16 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 
 	// the search is expanded with the values from the request
 	// substituted as they are, and not expanded themselves
+	//
+	// the values are escaped for an encoded query, so that a `^` in a
+	// value cannot end the condition and add others
+	cmdbCI, correlationID := snow.EscapeQuery(incident[SNOW_CMDB_CI]), snow.EscapeQuery(incident[SNOW_CORRELATION_ID])
 	search := ims.ExpandLiteral(cf, table.Search, true, map[string]string{
-		SNOW_CMDB_CI:        incident[SNOW_CMDB_CI],
-		SNOW_CORRELATION_ID: incident[SNOW_CORRELATION_ID],
+		SNOW_CMDB_CI:        cmdbCI,
+		SNOW_CORRELATION_ID: correlationID,
 	})
 	if search == "" {
-		search = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])
+		search = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", cmdbCI, correlationID)
 	}
 	incident_id, state, err := c.LookupRecord(r.Context(), tableName, search)
 	if err != nil {

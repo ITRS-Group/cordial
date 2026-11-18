@@ -291,6 +291,8 @@
 
 * `pkg/ims`
 
+  * Fix a `^` in a value from a request, such as the correlation ID or the configuration item, ending the condition in the ServiceNow encoded query that finds the existing incident, so that the rest of the value was read as further conditions or operators (`^OR`, `^NQ`). Values are now escaped with the new `snow.EscapeQuery`, which doubles the `^` as ServiceNow requires, in the proxy, the IMS Gateway and the `servicenow` client. This was checked against a live instance, and `CORDIAL_SNOW_LIVE` can be set to the path of a configuration file to run that test.
+
   * Action groups and transformations
 
     * Fix the `field` expansion in action groups not having access to the incident fields, and `break` and `exit` expressions not supporting the `match`, `nomatch`, `replace`, `select` and `field` expansions.

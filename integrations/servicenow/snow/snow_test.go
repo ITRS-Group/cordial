@@ -227,6 +227,25 @@ func TestLookupIncidentDoesNotExpandValues(t *testing.T) {
 		})
 	}
 
+	// a ^ in a value must not end the condition and add others
+	t.Run("encoded query separators", func(t *testing.T) {
+		for _, templated := range []bool{false, true} {
+			conn, requests := newInstance(t, jsonReply(200, `{"result":[]}`))
+			useConnection(t, conn)
+			cf := config.New()
+			config.Set(cf, "servicenow.incidenttable", "incident")
+			if templated {
+				config.Set(cf, "servicenow.incident-query", "active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}")
+			}
+			if _, _, _, err := LookupIncident(cf, "ci^NQnumber=1", "c^ORactive=false"); err != nil {
+				t.Fatal(err)
+			}
+			if want := "active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false"; requests()[0].query != want {
+				t.Errorf("templated=%v: query = %q, want %q", templated, requests()[0].query, want)
+			}
+		}
+	})
+
 	t.Run("default query", func(t *testing.T) {
 		conn, requests := newInstance(t, jsonReply(200, `{"result":[]}`))
 		useConnection(t, conn)

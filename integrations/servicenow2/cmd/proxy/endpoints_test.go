@@ -523,6 +523,35 @@ func TestAcceptRecordDoesNotExpandRequestValues(t *testing.T) {
 	})
 }
 
+// a ^ in a value must not end the condition and add others, which would
+// let a request choose which incident is found and updated
+func TestAcceptRecordEscapesQuerySeparators(t *testing.T) {
+	for name, test := range map[string]struct{ search, want string }{
+		// an empty search uses the built-in query
+		"fallback search": {"", "active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false^ORDERBYDESCnumber"},
+		"configured search": {
+			"active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}",
+			"active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), reply(201, newRecord), nil)
+			cf := newTestConfig(sn.URL, func(table map[string]any) {
+				table["search"] = test.search
+			})
+			body := `{"correlation_id":"c^ORactive=false","cmdb_ci":"ci^NQnumber=1","short_description":"x"}`
+			rec := do(newHandler(cf, testToken), http.MethodPost, incidentPath, testToken, body)
+			if rec.Code != http.StatusCreated || len(gets) != 1 {
+				t.Fatalf("status = %d, body %q", rec.Code, rec.Body.String())
+			}
+			if gets[0].query != test.want {
+				t.Errorf("search = %q, want %q", gets[0].query, test.want)
+			}
+		})
+	}
+}
+
 func TestAcceptRecordCMDBTable(t *testing.T) {
 	tests := []struct {
 		name, table string

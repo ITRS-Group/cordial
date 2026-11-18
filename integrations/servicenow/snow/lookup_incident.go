@@ -35,6 +35,10 @@ func LookupIncident(vc *config.Config, cmdb_ci string, correlation_id string) (i
 
 	// the values from the request are substituted as they are, and are
 	// never expanded
+	//
+	// the values are escaped for an encoded query, so that a `^` in a
+	// value cannot end the condition and add others
+	cmdb_ci, correlation_id = snowcore.EscapeQuery(cmdb_ci), snowcore.EscapeQuery(correlation_id)
 	lookup := ims.NewLiterals(true, nil, map[string]string{
 		"cmdb_ci":        cmdb_ci,
 		"correlation_id": correlation_id,
