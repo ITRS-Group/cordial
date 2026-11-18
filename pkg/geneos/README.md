@@ -137,4 +137,6 @@ gateway.Other = []geneos.RawXMLElement{{
 }}
 ```
 
-This preserves XML content semantically, not its original whitespace or formatting. Unknown top-level sections are stored in `Gateway.Other`; nested sections generally expose their own `Other` or raw-content fields.
+This preserves XML content semantically, not its original whitespace or formatting. Elements that have no field in the model, at the top level or in any nested section, are read into the `Other` field of the section they are in, and are written back unchanged after the modelled elements of that section, so reading, modifying and writing a Gateway setup does not lose them. The attributes of the `gateway` element are kept in `Compatibility`, `XMLNs`, `XSI` and `Attributes`.
+
+Empty wrapper elements in the input that are only written when they have content, such as an empty `<headlines/>`, are not kept. If `Gateway.ProcessDescriptors` is set then it replaces the process descriptors in `Gateway.StaticVars` when the Gateway is written, and `StaticVars` is not changed.
