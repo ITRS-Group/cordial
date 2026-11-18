@@ -8,11 +8,11 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 	extmemory "github.com/mackerelio/go-osstat/memory"
 )
 
-var log = cordial.Logger
+var log = logger.Logger
 
 // DoSample TODO: Document its behavior, inputs, and effects.
 func (p *MemorySampler) DoSample() error {
