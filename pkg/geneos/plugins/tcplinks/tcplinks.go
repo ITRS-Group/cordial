@@ -14,13 +14,21 @@ type Plugin struct {
 	NameContents  *NameContents                `xml:"nameContents,omitempty" json:"nameContents,omitempty" yaml:"nameContents,omitempty"`
 	ServiceTokens []common.SingleLineStringVar `xml:"serviceTokens>serviceToken,omitempty" json:"serviceTokens,omitempty" yaml:"serviceTokens,omitempty"`
 	ShowAllStates *common.Value                `xml:"showAllStates,omitempty" json:"showAllStates,omitempty" yaml:"showAllStates,omitempty"`
+	Other         []common.RawXMLElement       `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Plugin without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Plugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
 
 type NameContents struct {
-	ShowLocalAddress  *common.Value `xml:"showLocalAddress,omitempty" json:"showLocalAddress,omitempty" yaml:"showLocalAddress,omitempty"`
-	ShowLocalPort     *common.Value `xml:"showLocalPort,omitempty" json:"showLocalPort,omitempty" yaml:"showLocalPort,omitempty"`
-	ShowRemoteAddress *common.Value `xml:"showRemoteAddress,omitempty" json:"showRemoteAddress,omitempty" yaml:"showRemoteAddress,omitempty"`
-	ShowRemotePort    *common.Value `xml:"showRemotePort,omitempty" json:"showRemotePort,omitempty" yaml:"showRemotePort,omitempty"`
+	ShowLocalAddress  *common.Value          `xml:"showLocalAddress,omitempty" json:"showLocalAddress,omitempty" yaml:"showLocalAddress,omitempty"`
+	ShowLocalPort     *common.Value          `xml:"showLocalPort,omitempty" json:"showLocalPort,omitempty" yaml:"showLocalPort,omitempty"`
+	ShowRemoteAddress *common.Value          `xml:"showRemoteAddress,omitempty" json:"showRemoteAddress,omitempty" yaml:"showRemoteAddress,omitempty"`
+	ShowRemotePort    *common.Value          `xml:"showRemotePort,omitempty" json:"showRemotePort,omitempty" yaml:"showRemotePort,omitempty"`
+	Other             []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }

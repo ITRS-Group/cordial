@@ -1,6 +1,7 @@
 package fkm
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/itrs-group/cordial/pkg/geneos/common"
@@ -45,4 +46,56 @@ func TestPluginSchemaFieldsRoundTrip(t *testing.T) {
 		testhelpers.Contains(t, data, element)
 	}
 	testhelpers.RoundTrip(t, &plugin)
+}
+
+// Appending to the same Keys more than once must not overwrite each other
+func TestKeysAppendDoesNotAlias(t *testing.T) {
+	base := NewKeys("a", "b", "c") // spare capacity after appending
+	first := base.Append("one")
+	second := base.Append("two")
+
+	if len(base.Keys) != 3 || len(first.Keys) != 4 || len(second.Keys) != 4 {
+		t.Fatalf("lengths = %d %d %d", len(base.Keys), len(first.Keys), len(second.Keys))
+	}
+	search := func(k any) string {
+		return k.(Key).SetKey.Match.SearchString.String()
+	}
+	if got := search(first.Keys[3]); got != "one" {
+		t.Errorf("first = %q, want one", got)
+	}
+	if got := search(second.Keys[3]); got != "two" {
+		t.Errorf("second = %q, want two", got)
+	}
+}
+
+func TestKeysAppendKinds(t *testing.T) {
+	keys := NewKeys("plain", "=exact", "!ignore", "!=ignoreexact", "re.*", "/regexp/", "icase/i")
+	var types []string
+	for _, k := range keys.Keys {
+		switch k.(type) {
+		case Key:
+			types = append(types, "key")
+		case IgnoreKey:
+			types = append(types, "ignore")
+		}
+	}
+	if got := strings.Join(types, ","); got != "key,key,ignore,ignore,key,key,key" {
+		t.Errorf("types = %s", got)
+	}
+}
+
+// the alias is built from several variables and text, not a single value
+func TestFileAliasKeepsAllParts(t *testing.T) {
+	in := `<file><source><filename><data>/f</data></filename></source>` +
+		`<alias><var ref="type"/><data> </data><var ref="name"/><data> - Log</data></alias></file>`
+	var file File
+	testhelpers.Unmarshal(t, []byte(in), &file)
+	if got := file.Alias.String(); got != "$(type) $(name) - Log" {
+		t.Errorf("Alias = %q", got)
+	}
+	data := string(testhelpers.Marshal(t, &file))
+	want := `<alias><var ref="type"></var><data> </data><var ref="name"></var><data> - Log</data></alias>`
+	if !strings.Contains(data, want) {
+		t.Errorf("got %s, want it to contain %s", data, want)
+	}
 }

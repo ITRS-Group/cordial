@@ -19,24 +19,28 @@ package geneos
 
 import (
 	"encoding/xml"
+
+	"github.com/itrs-group/cordial/pkg/geneos/common"
 )
 
 // Samplers TODO: Describe its purpose and intended use.
 type Samplers struct {
-	XMLName       xml.Name       `xml:"samplers" json:"-" yaml:"-"`
-	Comment       string         `xml:",comment"`
-	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	XMLName       xml.Name        `xml:"samplers" json:"-" yaml:"-"`
+	Comment       string          `xml:",comment"`
+	Samplers      []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerGroup TODO: Describe its purpose and intended use.
 type SamplerGroup struct {
-	XMLName       xml.Name       `xml:"samplerGroup" json:"-" yaml:"-"`
-	Comment       string         `xml:",comment"`
-	Name          string         `xml:"name,attr"`
-	Disabled      *bool          `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Samplers      []Sampler      `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
-	SamplerGroups []SamplerGroup `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	XMLName       xml.Name        `xml:"samplerGroup" json:"-" yaml:"-"`
+	Comment       string          `xml:",comment"`
+	Name          string          `xml:"name,attr"`
+	Disabled      *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Samplers      []Sampler       `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
+	SamplerGroups []SamplerGroup  `xml:"samplerGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplergroup"`
+	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // A Sampler is a Geneos Sampler structure. The Plugin field should be
@@ -60,6 +64,13 @@ type Sampler struct {
 	Dataviews              *[]Dataview             `xml:"dataviews>dataview,omitempty" json:",omitempty" yaml:",omitempty"`
 	Schemas                *Schemas                `xml:"schemas,omitempty" json:",omitempty" yaml:",omitempty"`
 	StandardisedFormatting *StandardisedFormatting `xml:"standardisedFormatting,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other                  []RawXMLElement         `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Sampler without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Sampler) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 // Plugin lists all the plugins we know about

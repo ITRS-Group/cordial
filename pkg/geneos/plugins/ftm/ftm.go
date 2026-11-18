@@ -7,21 +7,22 @@ import (
 )
 
 type Plugin struct {
-	XMLName                    xml.Name          `xml:"ftm" json:"-" yaml:"-"`
-	Files                      []File            `xml:"files>file"`
-	MonitoringPeriod           *MonitoringPeriod `xml:"monitoringPeriod,omitempty"`
-	HolidayDates               *Holidays         `xml:"holidays,omitempty" geneos:"deprecated"`
-	Holidays                   *HolidaysVars     `xml:"holidaysVar,omitempty"`
-	MonitoredDays              *common.Weekdays  `xml:"monitoredDays,omitempty"`
-	ConsistentDateStamps       *common.Value     `xml:"consistentDateStamps,omitempty"`
-	DisplayTimeInISO8601Format *common.Value     `xml:"displayTimeInIso8601Format,omitempty"`
-	ShowPreviousDay            *common.Value     `xml:"showPreviousDay,omitempty"`
-	PreviousDayFile            *common.Value     `xml:"previousDayFile,omitempty"`
-	ShowActualFilename         *common.Value     `xml:"showActualFilename,omitempty"`
-	DelayUnit                  *string           `xml:"delayUnit,omitempty"`
-	SizeUnit                   *string           `xml:"sizeUnit,omitempty"`
-	UseChangedTime             *common.Value     `xml:"useChangedTime,omitempty"`
-	Debug                      *common.Value     `xml:"debug,omitempty"`
+	XMLName                    xml.Name               `xml:"ftm" json:"-" yaml:"-"`
+	Files                      []File                 `xml:"files>file"`
+	MonitoringPeriod           *MonitoringPeriod      `xml:"monitoringPeriod,omitempty"`
+	HolidayDates               *Holidays              `xml:"holidays,omitempty" geneos:"deprecated"`
+	Holidays                   *HolidaysVars          `xml:"holidaysVar,omitempty"`
+	MonitoredDays              *common.Weekdays       `xml:"monitoredDays,omitempty"`
+	ConsistentDateStamps       *common.Value          `xml:"consistentDateStamps,omitempty"`
+	DisplayTimeInISO8601Format *common.Value          `xml:"displayTimeInIso8601Format,omitempty"`
+	ShowPreviousDay            *common.Value          `xml:"showPreviousDay,omitempty"`
+	PreviousDayFile            *common.Value          `xml:"previousDayFile,omitempty"`
+	ShowActualFilename         *common.Value          `xml:"showActualFilename,omitempty"`
+	DelayUnit                  *string                `xml:"delayUnit,omitempty"`
+	SizeUnit                   *string                `xml:"sizeUnit,omitempty"`
+	UseChangedTime             *common.Value          `xml:"useChangedTime,omitempty"`
+	Debug                      *common.Value          `xml:"debug,omitempty"`
+	Other                      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
@@ -37,6 +38,7 @@ type File struct {
 	TZOffset         *common.Value               `xml:"tzOffset,omitempty"`
 	MonitoringPeriod *MonitoringPeriod           `xml:"monitoringPeriod,omitempty"`
 	Alias            *common.SingleLineStringVar `xml:"alias"`
+	Other            []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MonitoringPeriodAlias struct {
@@ -48,20 +50,24 @@ type MonitoringPeriodStart struct {
 }
 
 type MonitoringPeriod struct {
-	PeriodAlias *string       `xml:"periodAlias,omitempty"`
-	PeriodStart *common.Value `xml:"periodStartTime,omitempty"`
+	PeriodAlias *string                `xml:"periodAlias,omitempty"`
+	PeriodStart *common.Value          `xml:"periodStartTime,omitempty"`
+	Other       []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type Holidays struct {
-	Holidays []string `xml:"holiday,omitempty"`
+	Holidays []string               `xml:"holiday,omitempty"`
+	Other    []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type AdditionalPaths struct {
 	Paths []*common.SingleLineStringVar `xml:"additionalPath"`
+	Other []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type HolidaysVars struct {
 	XMLName xml.Name                      `xml:"holidaysVar" json:"-" yaml:"-"`
 	Holiday []*common.SingleLineStringVar `xml:"holiday,omitempty"`
 	Day     *common.Weekdays              `xml:"day,omitempty"`
+	Other   []common.RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
 }

@@ -47,11 +47,13 @@ type SamplerIncludePlugin struct {
 type SamplerIncludeExpectRows struct {
 	Var     *common.Reference             `xml:"var,omitempty"`
 	Data    *SamplerIncludeExpectRowsData `xml:"data,omitempty"`
+	Other   []RawXMLElement               `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment string                        `xml:",comment"`
 }
 
 type SamplerIncludeExpectRowsData struct {
 	Rows    []common.SingleLineStringVar `xml:"expectRow,omitempty"`
+	Other   []RawXMLElement              `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment string                       `xml:",comment"`
 }
 
@@ -89,12 +91,19 @@ type Annotations struct {
 }
 
 type Annotation struct {
-	XMLName xml.Name `xml:"annotation"`
-	Comment string   `xml:",comment"`
-	Name    string   `xml:"name,attr"`
-	Key     string   `xml:"key"`
-	Value   string   `xml:"value"`
-	Targets []string `xml:"targets>target,omitempty"`
+	XMLName xml.Name        `xml:"annotation"`
+	Comment string          `xml:",comment"`
+	Name    string          `xml:"name,attr"`
+	Key     string          `xml:"key"`
+	Value   string          `xml:"value"`
+	Targets []string        `xml:"targets>target,omitempty"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Annotation without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Annotation) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 type AnnotationGroup struct {
@@ -120,15 +129,17 @@ type Commands struct {
 }
 
 type RESTServiceCommands struct {
-	Enabled              *bool  `xml:"enabled,omitempty"`
-	AllowOnInsecureComms *bool  `xml:"allowOnInsecureComms,omitempty"`
-	MaxBufferSize        *int   `xml:"maxBufferSize,omitempty"`
-	Comment              string `xml:",comment"`
+	Enabled              *bool           `xml:"enabled,omitempty"`
+	AllowOnInsecureComms *bool           `xml:"allowOnInsecureComms,omitempty"`
+	MaxBufferSize        *int            `xml:"maxBufferSize,omitempty"`
+	Other                []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment              string          `xml:",comment"`
 }
 
 type GSECommands struct {
-	EnableProposeSchema *bool  `xml:"enableProposeSchema,omitempty"`
-	Comment             string `xml:",comment"`
+	EnableProposeSchema *bool           `xml:"enableProposeSchema,omitempty"`
+	Other               []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment             string          `xml:",comment"`
 }
 
 type GatewayNamedItem struct {
@@ -163,6 +174,7 @@ type Alerting struct {
 type HierarchyProcessing struct {
 	ProcessAll      *common.EmptyStruct `xml:"processAll,omitempty"`
 	StopWhenMatched *common.EmptyStruct `xml:"stopWhenMatched,omitempty"`
+	Other           []RawXMLElement     `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment         string              `xml:",comment"`
 }
 
@@ -206,9 +218,10 @@ type HotStandby struct {
 }
 
 type HotStandbyGateway struct {
-	Hostname string `xml:"hostname"`
-	Port     *int   `xml:"port,omitempty"`
-	Comment  string `xml:",comment"`
+	Hostname string          `xml:"hostname"`
+	Port     *int            `xml:"port,omitempty"`
+	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment  string          `xml:",comment"`
 }
 
 type HotStandbySyncFiles struct {
@@ -216,13 +229,21 @@ type HotStandbySyncFiles struct {
 	DisabledSetupIncludes      *bool                    `xml:"disabledSetupIncludes,omitempty"`
 	ExternalFilesCheckInterval *int                     `xml:"externalFilesCheckInterval,omitempty"`
 	ExternalFiles              []HotStandbyExternalFile `xml:"externalFiles>externalFile,omitempty"`
+	Other                      []RawXMLElement          `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                    string                   `xml:",comment"`
 }
 
+// MarshalXML encodes the HotStandbySyncFiles without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v HotStandbySyncFiles) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
+}
+
 type HotStandbyExternalFile struct {
-	PrimaryPath   string `xml:"primaryPath"`
-	SecondaryPath string `xml:"secondaryPath,omitempty"`
-	Comment       string `xml:",comment"`
+	PrimaryPath   string          `xml:"primaryPath"`
+	SecondaryPath string          `xml:"secondaryPath,omitempty"`
+	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment       string          `xml:",comment"`
 }
 
 type Authentication struct {
@@ -238,6 +259,12 @@ type Authentication struct {
 	SingleSignOn             *RawXMLElement      `xml:"singleSignOn,omitempty"`
 	Other                    []RawXMLElement     `xml:",any"`
 	Comment                  string              `xml:",comment"`
+}
+
+// MarshalXML encodes the Authentication without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Authentication) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 type Persistence struct {
@@ -313,6 +340,12 @@ type StaticFKMKey struct {
 	Comment    string                      `xml:",comment"`
 }
 
+// MarshalXML encodes the StaticFKMKey without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v StaticFKMKey) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
+}
+
 type StaticFKMIgnoreKey struct {
 	Match      *StaticFKMMatchKey `xml:"match,omitempty"`
 	ActiveTime *StaticActiveTime  `xml:"activeTime,omitempty"`
@@ -324,17 +357,20 @@ type StaticFKMKeyDefinition struct {
 	Match        *StaticFKMMatchKey     `xml:"match,omitempty"`
 	Updated      *string                `xml:"updated,omitempty"`
 	NotUpdatedIn *StaticFKMNotUpdatedIn `xml:"notUpdatedIn,omitempty"`
+	Other        []RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment      string                 `xml:",comment"`
 }
 
 type StaticFKMNotUpdatedIn struct {
-	TimePeriodInSeconds *common.Value `xml:"timePeriodInSeconds"`
-	Comment             string        `xml:",comment"`
+	TimePeriodInSeconds *common.Value   `xml:"timePeriodInSeconds"`
+	Other               []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment             string          `xml:",comment"`
 }
 
 type StaticActiveTime struct {
 	ActiveTime *common.Reference `xml:"activeTime,omitempty"`
 	Var        *common.Reference `xml:"var,omitempty"`
+	Other      []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment    string            `xml:",comment"`
 }
 
@@ -342,35 +378,40 @@ type StaticFKMMatchKey struct {
 	SearchString     *common.SingleLineStringVar `xml:"searchString,omitempty"`
 	Rules            string                      `xml:"rules,omitempty"`
 	OriginalSeverity *StaticFKMOriginalSeverity  `xml:"originalSeverity,omitempty"`
+	Other            []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment          string                      `xml:",comment"`
 }
 
 type StaticFKMOriginalSeverity struct {
-	None     *bool  `xml:"NONE,omitempty"`
-	Critical *bool  `xml:"CRITICAL,omitempty"`
-	Error    *bool  `xml:"ERROR,omitempty"`
-	Warn     *bool  `xml:"WARN,omitempty"`
-	Info     *bool  `xml:"INFO,omitempty"`
-	Debug    *bool  `xml:"DEBUG,omitempty"`
-	Trace    *bool  `xml:"TRACE,omitempty"`
-	Comment  string `xml:",comment"`
+	None     *bool           `xml:"NONE,omitempty"`
+	Critical *bool           `xml:"CRITICAL,omitempty"`
+	Error    *bool           `xml:"ERROR,omitempty"`
+	Warn     *bool           `xml:"WARN,omitempty"`
+	Info     *bool           `xml:"INFO,omitempty"`
+	Debug    *bool           `xml:"DEBUG,omitempty"`
+	Trace    *bool           `xml:"TRACE,omitempty"`
+	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment  string          `xml:",comment"`
 }
 
 type StaticFKMClearKey struct {
 	Match   *StaticFKMMatchKey `xml:"match,omitempty"`
 	Mode    string             `xml:"mode,omitempty"`
+	Other   []RawXMLElement    `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment string             `xml:",comment"`
 }
 
 type StaticFKMTags struct {
 	StartTag *common.SingleLineStringVar `xml:"startTag,omitempty"`
 	EndTag   *common.SingleLineStringVar `xml:"endTag,omitempty"`
+	Other    []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment  string                      `xml:",comment"`
 }
 
 type StaticFKMExtractor struct {
 	Name    *common.SingleLineStringVar `xml:"name,omitempty"`
 	Regex   *common.SingleLineStringVar `xml:"regex,omitempty"`
+	Other   []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment string                      `xml:",comment"`
 }
 
@@ -411,6 +452,7 @@ type StaticDatabase struct {
 	SQLServer  *StaticSQLServerDatabase  `xml:"sqlServer,omitempty"`
 	DB2        *StaticDB2Database        `xml:"db2,omitempty"`
 	PostgreSQL *StaticPostgreSQLDatabase `xml:"PostgreSQL,omitempty"`
+	Other      []RawXMLElement           `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment    string                    `xml:",comment"`
 }
 
@@ -422,6 +464,7 @@ type StaticMySQLDatabase struct {
 	VarPort          *common.Value                `xml:"var-port,omitempty"`
 	Port             *int                         `xml:"port,omitempty"`
 	SSLConfiguration *StaticMySQLSSLConfiguration `xml:"sslConfiguration,omitempty"`
+	Other            []RawXMLElement              `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment          string                       `xml:",comment"`
 }
 
@@ -431,6 +474,7 @@ type StaticMySQLSSLConfiguration struct {
 	ClientCert  *common.SingleLineStringVar `xml:"clientCert,omitempty"`
 	ClientKey   *common.SingleLineStringVar `xml:"clientKey,omitempty"`
 	CipherSuite *common.SingleLineStringVar `xml:"cipherSuite,omitempty"`
+	Other       []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment     string                      `xml:",comment"`
 }
 
@@ -441,6 +485,7 @@ type StaticSybaseDatabase struct {
 	DatabaseName             string                      `xml:"databaseName,omitempty"`
 	VarApplicationName       *common.SingleLineStringVar `xml:"var-applicationName,omitempty"`
 	UseWindowsAuthentication *common.Value               `xml:"useWindowsAuthentication,omitempty"`
+	Other                    []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                  string                      `xml:",comment"`
 }
 
@@ -448,6 +493,7 @@ type StaticOracleDatabase struct {
 	VarDatabaseName    *common.SingleLineStringVar `xml:"var-databaseName,omitempty"`
 	DatabaseName       string                      `xml:"databaseName,omitempty"`
 	VarApplicationName *common.SingleLineStringVar `xml:"var-applicationName,omitempty"`
+	Other              []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment            string                      `xml:",comment"`
 }
 
@@ -463,11 +509,13 @@ type StaticSQLServerDatabase struct {
 	UseWindowsAuthentication *common.Value                    `xml:"useWindowsAuthentication,omitempty"`
 	VarGMSA                  *common.SingleLineStringVar      `xml:"var-gMSA,omitempty"`
 	SSLConfiguration         *StaticSQLServerSSLConfiguration `xml:"sslConfiguration,omitempty"`
+	Other                    []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                  string                           `xml:",comment"`
 }
 
 type StaticSQLServerSSLConfiguration struct {
 	EncryptionOption *StaticSQLServerEncryptionOption `xml:"encryptionOption,omitempty"`
+	Other            []RawXMLElement                  `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment          string                           `xml:",comment"`
 }
 
@@ -475,24 +523,28 @@ type StaticSQLServerEncryptionOption struct {
 	Optional  *StaticSQLServerCertificate       `xml:"optional,omitempty"`
 	Mandatory *StaticSQLServerCertificate       `xml:"mandatory,omitempty"`
 	Strict    *StaticSQLServerStrictCertificate `xml:"strict,omitempty"`
+	Other     []RawXMLElement                   `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment   string                            `xml:",comment"`
 }
 
 type StaticSQLServerCertificate struct {
 	TrustServerCertificate *common.Value               `xml:"trustServerCertificate,omitempty"`
 	HostnameInCertificate  *common.SingleLineStringVar `xml:"hostnameInCertificate,omitempty"`
+	Other                  []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                string                      `xml:",comment"`
 }
 
 type StaticSQLServerStrictCertificate struct {
 	ServerCertificate     *common.SingleLineStringVar `xml:"serverCertificate,omitempty"`
 	HostnameInCertificate *common.SingleLineStringVar `xml:"hostnameInCertificate,omitempty"`
+	Other                 []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment               string                      `xml:",comment"`
 }
 
 type StaticDB2Database struct {
 	VarDatabaseName *common.SingleLineStringVar `xml:"var-databaseName,omitempty"`
 	DatabaseName    string                      `xml:"databaseName,omitempty"`
+	Other           []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment         string                      `xml:",comment"`
 }
 
@@ -503,6 +555,7 @@ type StaticPostgreSQLDatabase struct {
 	VarApplicationName       *common.SingleLineStringVar       `xml:"var-applicationName,omitempty"`
 	SSLConfiguration         *StaticPostgreSQLSSLConfiguration `xml:"sslConfiguration,omitempty"`
 	UseWindowsAuthentication *common.Value                     `xml:"useWindowsAuthentication,omitempty"`
+	Other                    []RawXMLElement                   `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                  string                            `xml:",comment"`
 }
 
@@ -511,12 +564,14 @@ type StaticPostgreSQLSSLConfiguration struct {
 	CACert     *common.SingleLineStringVar `xml:"caCert,omitempty"`
 	ClientCert *common.SingleLineStringVar `xml:"clientCert,omitempty"`
 	ClientKey  *common.SingleLineStringVar `xml:"clientKey,omitempty"`
+	Other      []RawXMLElement             `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment    string                      `xml:",comment"`
 }
 
 type StaticProcessDescriptors struct {
 	ProcessDescriptors      []ProcessDescriptor      `xml:"processDescriptor,omitempty"`
 	ProcessDescriptorGroups []ProcessDescriptorGroup `xml:"processDescriptorGroup,omitempty"`
+	Other                   []RawXMLElement          `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                 string                   `xml:",comment"`
 }
 
@@ -551,11 +606,19 @@ type ExportedDataSet struct {
 }
 
 type ExportedDataPaths struct {
-	Paths   []string `xml:"path"`
-	Comment string   `xml:",comment"`
+	Paths   []string        `xml:"path"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment string          `xml:",comment"`
 }
 
 type ExportedDataRestrictedAccess struct {
-	Users   []string `xml:"users>user,omitempty"`
-	Comment string   `xml:",comment"`
+	Users   []string        `xml:"users>user,omitempty"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment string          `xml:",comment"`
+}
+
+// MarshalXML encodes the ExportedDataRestrictedAccess without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v ExportedDataRestrictedAccess) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }

@@ -2,6 +2,7 @@ package fkm
 
 import (
 	"encoding/xml"
+	"slices"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/geneos/common"
@@ -39,38 +40,50 @@ type Plugin struct {
 	Files                        *Files                      `xml:"files,omitempty" mapstructure:"files"`
 	ExtendedNTEventLogOutput     *common.Value               `xml:"extendedNTEventLogOutput,omitempty"`
 	PersistentData               *PersistentData             `xml:"persistentData,omitempty"`
+	Other                        []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (*Plugin) String() string { return "fkm" }
 
 type Display struct {
-	TriggerMode *string `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
+	TriggerMode *string                `xml:"triggerMode,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other       []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type Tags struct {
 	StartTag *common.SingleLineStringVar `xml:"startTag,omitempty"`
 	EndTag   *common.SingleLineStringVar `xml:"endTag,omitempty"`
+	Other    []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type PersistentData struct {
 	Enabled             *common.Value               `xml:"enabled,omitempty"`
 	ExpireTimeInMinutes *common.Value               `xml:"expireTimeInMinutes,omitempty"`
 	SaveLocation        *common.SingleLineStringVar `xml:"saveLocation,omitempty"`
+	Other               []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type Files struct {
-	XMLName xml.Name `xml:"files" json:"-" yaml:"-"`
-	Files   []File   `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
+	XMLName xml.Name               `xml:"files" json:"-" yaml:"-"`
+	Files   []File                 `xml:"file,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"file"`
+	Other   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type File struct {
-	XMLName             xml.Name      `xml:"file" json:"-" yaml:"-"`
-	Source              *FileSource   `xml:"source"`
-	Tables              []Table       `xml:"tables>table,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"tables"`
-	ClearTime           *common.Value `xml:"clearTime,omitempty" json:",omitempty" yaml:",omitempty"`
-	DefaultKeyClearTime *common.Value `xml:"defaultKeyClearTime,omitempty" json:",omitempty" yaml:",omitempty"`
-	Rewind              *common.Value `xml:"rewind,omitempty" json:",omitempty" yaml:",omitempty"`
-	Alias               *common.Value `xml:"alias,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName             xml.Name                    `xml:"file" json:"-" yaml:"-"`
+	Source              *FileSource                 `xml:"source"`
+	Tables              []Table                     `xml:"tables>table,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"tables"`
+	ClearTime           *common.Value               `xml:"clearTime,omitempty" json:",omitempty" yaml:",omitempty"`
+	DefaultKeyClearTime *common.Value               `xml:"defaultKeyClearTime,omitempty" json:",omitempty" yaml:",omitempty"`
+	Rewind              *common.Value               `xml:"rewind,omitempty" json:",omitempty" yaml:",omitempty"`
+	Alias               *common.SingleLineStringVar `xml:"alias,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other               []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the File without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v File) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 type FileSource struct {
@@ -78,12 +91,14 @@ type FileSource struct {
 	Stream            *common.SingleLineStringVar `xml:"stream,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"stream"`
 	NTEventLog        string                      `xml:"ntEventLog,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"ntEventLog"`
 	ProcessDescriptor *common.Reference           `xml:"processDescriptor,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"processDescriptor"`
+	Other             []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type Table struct {
-	XMLName  xml.Name      `xml:"table" json:"-" yaml:"-"`
-	Severity string        `xml:"severity"`
-	KeyTable *common.Value `xml:"keyTable"`
+	XMLName  xml.Name               `xml:"table" json:"-" yaml:"-"`
+	Severity string                 `xml:"severity"`
+	KeyTable *common.Value          `xml:"keyTable"`
+	Other    []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type KeyTable struct {
@@ -109,13 +124,23 @@ type Keys struct {
 
 func NewKeys(keys ...string) (out Keys) {
 	for _, key := range keys {
-		out = out.Append(key)
+		out.appendKey(key)
 	}
 	return
 }
 
+// Append returns a copy of in with key added. The Keys of in are never
+// changed, so the result can be built on without affecting other
+// Keys that were appended to the same value.
 func (in Keys) Append(key string) (out Keys) {
 	out = in
+	out.Keys = slices.Clip(in.Keys)
+	out.appendKey(key)
+	return
+}
+
+// appendKey adds key, which can be prefixed to indicate its type, to out
+func (out *Keys) appendKey(key string) {
 	rule := Basic
 	switch {
 	case strings.HasPrefix(key, "!="), strings.HasPrefix(key, "=!"):
@@ -158,7 +183,6 @@ func (in Keys) Append(key string) (out Keys) {
 	default:
 		out.Keys = append(out.Keys, Key{SetKey: SetKey{Match: &Match{SearchString: common.NewSingleLineString(key), Rules: rule}}})
 	}
-	return
 }
 
 type IgnoreKey struct {

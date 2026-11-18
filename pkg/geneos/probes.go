@@ -38,6 +38,7 @@ type Probes struct {
 	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
 	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
 	FloatingProbes []FloatingProbe `xml:"floatingProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
+	Other          []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // ProbeGroup TODO: Describe its purpose and intended use.
@@ -52,6 +53,7 @@ type ProbeGroup struct {
 	Probes         []Probe         `xml:"probe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"probe"`
 	VirtualProbes  []VirtualProbe  `xml:"virtualProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"virtualprobe"`
 	FloatingProbes []FloatingProbe `xml:"floatingProbe,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"floatingprobe"`
+	Other          []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // ProbeInfo is embedded in groups and probes
@@ -109,17 +111,19 @@ type Probe struct {
 	LicensingGroup *string  `xml:"licensingGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 	Hostname       string   `xml:"hostname" json:"hostname" yaml:"hostname"`
 	ProbeInfo      `json:",inline" yaml:",inline" mapstructure:",squash"`
+	Other          []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // VirtualProbe TODO: Describe its purpose and intended use.
 type VirtualProbe struct {
-	XMLName     xml.Name `xml:"virtualProbe" json:"-" yaml:"-"`
-	Comment     string   `xml:",comment"`
-	Name        string   `xml:"name,attr" json:"name" yaml:"name"`
-	Disabled    *bool    `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Group       *string  `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
-	Description *string  `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
-	DisplayName *string  `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName     xml.Name        `xml:"virtualProbe" json:"-" yaml:"-"`
+	Comment     string          `xml:",comment"`
+	Name        string          `xml:"name,attr" json:"name" yaml:"name"`
+	Disabled    *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Group       *string         `xml:"group,omitempty" json:",omitempty" yaml:",omitempty"`
+	Description *string         `xml:"description,omitempty" json:",omitempty" yaml:",omitempty"`
+	DisplayName *string         `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other       []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // FloatingProbe TODO: Describe its purpose and intended use.
@@ -133,4 +137,5 @@ type FloatingProbe struct {
 	DisplayName          *string  `xml:"displayName,omitempty" json:",omitempty" yaml:",omitempty"`
 	LicensingGroup       *string  `xml:"licensingGroup,omitempty" json:",omitempty" yaml:",omitempty"`
 	ProbeInfoWithoutPort `yaml:",inline" mapstructure:",squash"`
+	Other                []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }

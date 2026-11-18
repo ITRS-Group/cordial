@@ -18,14 +18,25 @@ type Reference struct {
 
 type EmptyStruct struct{}
 
+// RawXMLElement preserves the nested contents of schema choices not yet
+// modeled explicitly and of any elements found where the model has no
+// field for them, so that they are written back unchanged.
+type RawXMLElement struct {
+	XMLName    xml.Name
+	Comment    string     `xml:",comment"`
+	Attributes []xml.Attr `xml:",any,attr"`
+	Content    string     `xml:",innerxml"`
+}
+
 type Weekdays struct {
-	Monday    bool `xml:"monday"`
-	Tuesday   bool `xml:"tuesday"`
-	Wednesday bool `xml:"wednesday"`
-	Thursday  bool `xml:"thursday"`
-	Friday    bool `xml:"friday"`
-	Saturday  bool `xml:"saturday"`
-	Sunday    bool `xml:"sunday"`
+	Monday    bool            `xml:"monday"`
+	Tuesday   bool            `xml:"tuesday"`
+	Wednesday bool            `xml:"wednesday"`
+	Thursday  bool            `xml:"thursday"`
+	Friday    bool            `xml:"friday"`
+	Saturday  bool            `xml:"saturday"`
+	Sunday    bool            `xml:"sunday"`
+	Other     []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // SingleLineStringVar represents a string that may contain Geneos variables.
@@ -143,6 +154,10 @@ type Value struct {
 	Var    *Var   `xml:"var,omitempty" json:",omitempty" yaml:",omitempty"`
 	ExtPwd string `xml:"extPwd,omitempty" json:",omitempty" yaml:",omitempty"`
 	StdAES string `xml:"stdAES,omitempty" json:",omitempty" yaml:",omitempty"`
+
+	// Other keeps any other elements, from a choice with more than a
+	// simple value, so that they are not lost
+	Other []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // NewValue converts primitive input into a Geneos value. Input that is
@@ -226,6 +241,12 @@ func (v *Value) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			if err := d.DecodeElement(&v.StdAES, &element); err != nil {
 				return err
 			}
+		default:
+			var other RawXMLElement
+			if err := d.DecodeElement(&other, &element); err != nil {
+				return err
+			}
+			v.Other = append(v.Other, other)
 		}
 	}
 }
@@ -254,9 +275,10 @@ func (s *Value) String() string {
 
 // Host identifies a host by name, address, or variable.
 type Host struct {
-	Name      string     `xml:"name,omitempty"`
-	IPAddress *IPAddress `xml:"ipAddress,omitempty"`
-	Var       *Reference `xml:"var,omitempty"`
+	Name      string          `xml:"name,omitempty"`
+	IPAddress *IPAddress      `xml:"ipAddress,omitempty"`
+	Var       *Reference      `xml:"var,omitempty"`
+	Other     []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (t *Host) String() string {
@@ -274,7 +296,8 @@ func (t *Host) String() string {
 
 // IPAddress stores four address octets.
 type IPAddress struct {
-	Octets []int `xml:"value"`
+	Octets []int           `xml:"value"`
+	Other  []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (ip *IPAddress) String() string {
@@ -288,13 +311,15 @@ func (ip *IPAddress) String() string {
 }
 
 type Regex struct {
-	Regex string      `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
-	Flags *RegexFlags `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
+	Regex string          `xml:"regex" json:"regex,omitempty" yaml:"regex,omitempty"`
+	Flags *RegexFlags     `xml:"flags,omitempty" json:"flags,omitempty" yaml:"flags,omitempty"`
+	Other []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type RegexFlags struct {
-	CaseInsensitive *bool `xml:"i,omitempty" json:"i,omitempty" yaml:"i,omitempty"`
-	DotMatchesAll   *bool `xml:"s,omitempty" json:"s,omitempty" yaml:"s,omitempty"`
+	CaseInsensitive *bool           `xml:"i,omitempty" json:"i,omitempty" yaml:"i,omitempty"`
+	DotMatchesAll   *bool           `xml:"s,omitempty" json:"s,omitempty" yaml:"s,omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (r *Regex) String() (s string) {

@@ -27,6 +27,7 @@ type ManagedEntities struct {
 	Comment             string               `xml:",comment"`
 	Entities            []ManagedEntity      `xml:"managedEntity,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
 	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
+	Other               []RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // ManagedEntityGroup TODO: Describe its purpose and intended use.
@@ -39,6 +40,7 @@ type ManagedEntityGroup struct {
 	ManagedEntityInfo   `yaml:",inline" mapstructure:",squash"`
 	Entities            []ManagedEntity      `xml:"managedEntity,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentity"`
 	ManagedEntityGroups []ManagedEntityGroup `xml:"managedEntityGroup,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"managedentitygroup"`
+	Other               []RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // ManagedEntity TODO: Describe its purpose and intended use.
@@ -58,6 +60,7 @@ type ManagedEntity struct {
 	Samplers          []SamplerRef        `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 	SamplerIncludes   []SamplerIncludeRef `xml:"samplerInclude,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplerinclude"`
 	Banner            *string             `xml:"banner,omitempty" json:",omitempty" yaml:",omitempty" geneos:"deprecated"`
+	Other             []RawXMLElement     `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // ManagedEntityInfo TODO: Describe its purpose and intended use.
@@ -73,9 +76,10 @@ type ManagedEntityInfo struct {
 
 // RemoveTypes TODO: Describe its purpose and intended use.
 type RemoveTypes struct {
-	XMLName xml.Name  `xml:"removeTypes" json:"-" yaml:"-"`
-	Comment string    `xml:",comment"`
-	Types   []TypeRef `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	XMLName xml.Name        `xml:"removeTypes" json:"-" yaml:"-"`
+	Comment string          `xml:",comment"`
+	Types   []TypeRef       `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // RemoveSamplers TODO: Describe its purpose and intended use.
@@ -83,6 +87,7 @@ type RemoveSamplers struct {
 	XMLName  xml.Name          `xml:"removeSamplers" json:"-" yaml:"-"`
 	Comment  string            `xml:",comment"`
 	Samplers []SamplerWithType `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other    []RawXMLElement   `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // AddTypes TODO: Describe its purpose and intended use.
@@ -90,14 +95,16 @@ type AddTypes struct {
 	XMLName xml.Name         `xml:"addTypes" json:"-" yaml:"-"`
 	Comment string           `xml:",comment"`
 	Types   []TypeRefWithEnv `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	Other   []RawXMLElement  `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerWithType TODO: Describe its purpose and intended use.
 type SamplerWithType struct {
-	XMLName xml.Name `xml:"sampler" json:"-" yaml:"-"`
-	Comment string   `xml:",comment"`
-	Sampler string   `xml:"ref,attr"`
-	Type    TypeRef  `xml:"type"`
+	XMLName xml.Name        `xml:"sampler" json:"-" yaml:"-"`
+	Comment string          `xml:",comment"`
+	Sampler string          `xml:"ref,attr"`
+	Type    TypeRef         `xml:"type"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // Attribute TODO: Describe its purpose and intended use.
@@ -126,6 +133,7 @@ type TypeRefWithEnv struct {
 	Comment     string          `xml:",comment"`
 	Type        string          `xml:"ref,attr" json:",omitempty" yaml:",omitempty" mapstructure:"ref"`
 	Environment *EnvironmentRef `xml:",omitempty" json:",omitempty" yaml:",omitempty"`
+	Other       []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerIncludeRef references a sampler include with an optional disabled override.

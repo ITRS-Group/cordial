@@ -17,25 +17,31 @@ limitations under the License.
 
 package geneos
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+
+	"github.com/itrs-group/cordial/pkg/geneos/common"
+)
 
 // Includes is the top-level includes element
 type Includes struct {
-	XMLName       xml.Name       `xml:"includes"`
-	Comment       string         `xml:",comment"`
-	Priority      int            `xml:"priority"`
-	Reloading     *Reloading     `xml:"reloading,omitempty"`
-	Includes      []Include      `xml:"include,omitempty"`
-	IncludeGroups []IncludeGroup `xml:"includeGroup,omitempty"`
+	XMLName       xml.Name        `xml:"includes"`
+	Comment       string          `xml:",comment"`
+	Priority      int             `xml:"priority"`
+	Reloading     *Reloading      `xml:"reloading,omitempty"`
+	Includes      []Include       `xml:"include,omitempty"`
+	IncludeGroups []IncludeGroup  `xml:"includeGroup,omitempty"`
+	Other         []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // Reloading defines reload settings for includes
 type Reloading struct {
-	XMLName         xml.Name   `xml:"reloading"`
-	Comment         string     `xml:",comment"`
-	ReloadInterval  *int       `xml:"reloadInterval,omitempty"`
-	ActiveTime      *Reference `xml:"activeTime,omitempty"`
-	ApplyToIncludes *bool      `xml:"applyToIncludes,omitempty"`
+	XMLName         xml.Name        `xml:"reloading"`
+	Comment         string          `xml:",comment"`
+	ReloadInterval  *int            `xml:"reloadInterval,omitempty"`
+	ActiveTime      *Reference      `xml:"activeTime,omitempty"`
+	ApplyToIncludes *bool           `xml:"applyToIncludes,omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // IncludesGroup is the reusable group of include and includeGroup elements
@@ -56,6 +62,7 @@ type Include struct {
 	ReloadInterval *int                   `xml:"reloadInterval,omitempty"`
 	ActiveTime     *Reference             `xml:"activeTime,omitempty"`
 	Remote         *RemoteIncludeSettings `xml:"remote,omitempty"`
+	Other          []RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // IncludeGroup is a named group of includes
@@ -67,6 +74,7 @@ type IncludeGroup struct {
 	Includes      []Include              `xml:"include,omitempty"`
 	IncludeGroups []IncludeGroup         `xml:"includeGroup,omitempty"`
 	Remote        *RemoteIncludeSettings `xml:"remote,omitempty"`
+	Other         []RawXMLElement        `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // RemoteIncludeSettings is remoteIncludeSettingsType
@@ -75,15 +83,17 @@ type RemoteIncludeSettings struct {
 	Authentication          *IncludeAuthentication   `xml:"authentication,omitempty"`
 	Proxy                   *IncludeProxy            `xml:"proxy,omitempty"`
 	Timeout                 *int                     `xml:"timeout,omitempty"`
+	Other                   []RawXMLElement          `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment                 string                   `xml:",comment"`
 }
 
 // CertificateVerification is a choice of one of its members
 type CertificateVerification struct {
-	None                        *EmptyType `xml:"none,omitempty"`
-	AgainstAuthority            *CABundle  `xml:"againstAuthority,omitempty"`
-	AgainstAuthorityAndHostname *CABundle  `xml:"againstAuthorityAndHostname,omitempty"`
-	Comment                     string     `xml:",comment"`
+	None                        *EmptyType      `xml:"none,omitempty"`
+	AgainstAuthority            *CABundle       `xml:"againstAuthority,omitempty"`
+	AgainstAuthorityAndHostname *CABundle       `xml:"againstAuthorityAndHostname,omitempty"`
+	Other                       []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment                     string          `xml:",comment"`
 }
 
 // EmptyType is an empty element
@@ -93,30 +103,34 @@ type EmptyType struct {
 
 // CABundle holds a CA bundle
 type CABundle struct {
-	CABundle *string `xml:"caBundle,omitempty"`
-	Comment  string  `xml:",comment"`
+	CABundle *string         `xml:"caBundle,omitempty"`
+	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment  string          `xml:",comment"`
 }
 
 // IncludeAuthentication is a choice of none or password
 type IncludeAuthentication struct {
 	None     *EmptyType       `xml:"none,omitempty"`
 	Password *IncludePassword `xml:"password,omitempty"`
+	Other    []RawXMLElement  `xml:",any" json:",omitempty" yaml:",omitempty"`
 	Comment  string           `xml:",comment"`
 }
 
 // IncludePassword holds password authentication settings
 type IncludePassword struct {
-	Username *string        `xml:"username,omitempty"`
-	Password *RawXMLElement `xml:"password,omitempty"`
-	Method   *IncludeMethod `xml:"method,omitempty"`
-	Comment  string         `xml:",comment"`
+	Username *string         `xml:"username,omitempty"`
+	Password *RawXMLElement  `xml:"password,omitempty"`
+	Method   *IncludeMethod  `xml:"method,omitempty"`
+	Other    []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment  string          `xml:",comment"`
 }
 
 // IncludeMethod holds authentication methods
 type IncludeMethod struct {
-	Basic        *bool  `xml:"basic,omitempty"`
-	GSSNegotiate *bool  `xml:"gssnegotiate,omitempty"`
-	Comment      string `xml:",comment"`
+	Basic        *bool           `xml:"basic,omitempty"`
+	GSSNegotiate *bool           `xml:"gssnegotiate,omitempty"`
+	Other        []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment      string          `xml:",comment"`
 }
 
 // IncludeProxy is a choice of none or proxyServer
@@ -129,13 +143,11 @@ type IncludeProxy struct {
 		Password *RawXMLElement `xml:"password,omitempty"`
 		Comment  string         `xml:",comment"`
 	} `xml:"proxyServer,omitempty"`
-	Comment string `xml:",comment"`
+	Other   []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	Comment string          `xml:",comment"`
 }
 
-// RawXMLElement preserves the nested contents of schema choices not yet modeled explicitly.
-type RawXMLElement struct {
-	XMLName    xml.Name
-	Comment    string     `xml:",comment"`
-	Attributes []xml.Attr `xml:",any,attr"`
-	Content    string     `xml:",innerxml"`
-}
+// RawXMLElement preserves the nested contents of schema choices not yet
+// modeled explicitly and of any elements found where the model has no
+// field for them, so that they are written back unchanged.
+type RawXMLElement = common.RawXMLElement

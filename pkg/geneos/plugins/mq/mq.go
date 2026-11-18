@@ -7,13 +7,20 @@ import (
 )
 
 type MQChannelPlugin struct {
-	XMLName       xml.Name        `xml:"mq-channel" json:"-" yaml:"-"`
-	Connection    *MQConnection   `xml:"connection,omitempty"`
-	QueueManager  *common.Value   `xml:"queueManager"`
-	Channels      []MQChannel     `xml:"channels>channel,omitempty"`
-	Columns       []string        `xml:"columns>column,omitempty"`
-	DisplayFormat *string         `xml:"displayFormat,omitempty"`
-	Debug         *MQChannelDebug `xml:"debug,omitempty"`
+	XMLName       xml.Name               `xml:"mq-channel" json:"-" yaml:"-"`
+	Connection    *MQConnection          `xml:"connection,omitempty"`
+	QueueManager  *common.Value          `xml:"queueManager"`
+	Channels      []MQChannel            `xml:"channels>channel,omitempty"`
+	Columns       []string               `xml:"columns>column,omitempty"`
+	DisplayFormat *string                `xml:"displayFormat,omitempty"`
+	Debug         *MQChannelDebug        `xml:"debug,omitempty"`
+	Other         []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the MQChannelPlugin without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v MQChannelPlugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 func (p *MQChannelPlugin) String() string { return p.XMLName.Local }
@@ -29,20 +36,28 @@ type MQQInfoPlugin struct {
 	SecurityExitConfig                     *MQSecurityExitConfig       `xml:"securityExitConfig,omitempty"`
 	SecurityConnectionAuthenticationConfig *MQSecurityConnAuth         `xml:"securityConnectionAuthenticationConfig,omitempty"`
 	Private                                *MQPrivate                  `xml:"private,omitempty"`
+	Other                                  []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 func (p *MQQInfoPlugin) String() string { return p.XMLName.Local }
 
 type MQQueuePlugin struct {
-	XMLName                      xml.Name      `xml:"mq-queue" json:"-" yaml:"-"`
-	Connection                   *MQConnection `xml:"connection,omitempty"`
-	QueueManager                 *common.Value `xml:"queueManager"`
-	Queues                       []MQQueue     `xml:"queues>queue,omitempty"`
-	Columns                      []string      `xml:"columns>column,omitempty"`
-	DisableQueueResetAttributes  *common.Value `xml:"disableQueueResetAttributes,omitempty"`
-	DisableQueueBrowseAttributes *common.Value `xml:"disableQueueBrowseAttributes,omitempty"`
-	StagnantMessageAge           *common.Value `xml:"stagnantMessageAge,omitempty"`
-	Debug                        *MQQueueDebug `xml:"debug,omitempty"`
+	XMLName                      xml.Name               `xml:"mq-queue" json:"-" yaml:"-"`
+	Connection                   *MQConnection          `xml:"connection,omitempty"`
+	QueueManager                 *common.Value          `xml:"queueManager"`
+	Queues                       []MQQueue              `xml:"queues>queue,omitempty"`
+	Columns                      []string               `xml:"columns>column,omitempty"`
+	DisableQueueResetAttributes  *common.Value          `xml:"disableQueueResetAttributes,omitempty"`
+	DisableQueueBrowseAttributes *common.Value          `xml:"disableQueueBrowseAttributes,omitempty"`
+	StagnantMessageAge           *common.Value          `xml:"stagnantMessageAge,omitempty"`
+	Debug                        *MQQueueDebug          `xml:"debug,omitempty"`
+	Other                        []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the MQQueuePlugin without the empty wrapper elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v MQQueuePlugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 func (p *MQQueuePlugin) String() string { return p.XMLName.Local }
@@ -53,6 +68,7 @@ type MQConnection struct {
 	SSL                                    *MQSSL                      `xml:"ssl,omitempty"`
 	SecurityExitConfig                     *MQSecurityExitConfig       `xml:"securityExitConfig,omitempty"`
 	SecurityConnectionAuthenticationConfig *MQSecurityConnAuth         `xml:"securityConnectionAuthenticationConfig,omitempty"`
+	Other                                  []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQSSL struct {
@@ -60,59 +76,69 @@ type MQSSL struct {
 	CipherSpec    *common.SingleLineStringVar `xml:"cipherSpec,omitempty"`
 	MQSender      *common.Value               `xml:"mqSender,omitempty"`
 	MQReceiver    *common.Value               `xml:"mqReceiver,omitempty"`
+	Other         []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQSecurityExitConfig struct {
 	SecurityExit         *common.SingleLineStringVar `xml:"securityExit"`
 	RemoteUserIdentifier *common.SingleLineStringVar `xml:"remoteUserIdentifier,omitempty"`
 	RemotePassword       *common.Value               `xml:"remotePassword,omitempty"`
+	Other                []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQSecurityConnAuth struct {
 	Username *common.SingleLineStringVar `xml:"username,omitempty"`
 	Password *common.Value               `xml:"password,omitempty"`
+	Other    []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQChannelDebug struct {
-	SampleTimeout *int                  `xml:"sampleTimeout,omitempty"`
-	Output        *MQChannelDebugOutput `xml:"output,omitempty"`
+	SampleTimeout *int                   `xml:"sampleTimeout,omitempty"`
+	Output        *MQChannelDebugOutput  `xml:"output,omitempty"`
+	Other         []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQChannelDebugOutput struct {
-	Setup      *bool `xml:"setup,omitempty"`
-	MQAPI      *bool `xml:"mqApi,omitempty"`
-	Connection *bool `xml:"connection,omitempty"`
-	Commands   *bool `xml:"commands,omitempty"`
-	Results    *bool `xml:"results,omitempty"`
-	Summary    *bool `xml:"summary,omitempty"`
+	Setup      *bool                  `xml:"setup,omitempty"`
+	MQAPI      *bool                  `xml:"mqApi,omitempty"`
+	Connection *bool                  `xml:"connection,omitempty"`
+	Commands   *bool                  `xml:"commands,omitempty"`
+	Results    *bool                  `xml:"results,omitempty"`
+	Summary    *bool                  `xml:"summary,omitempty"`
+	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQQueueDebug struct {
-	SampleTimeout           *int                `xml:"sampleTimeout,omitempty"`
-	DisableBrowseTimeAdjust *bool               `xml:"disableBrowseTimeAdjust,omitempty"`
-	BrowseWarnThreshold     *int                `xml:"browseWarnThreshold,omitempty"`
-	Output                  *MQQueueDebugOutput `xml:"output,omitempty"`
+	SampleTimeout           *int                   `xml:"sampleTimeout,omitempty"`
+	DisableBrowseTimeAdjust *bool                  `xml:"disableBrowseTimeAdjust,omitempty"`
+	BrowseWarnThreshold     *int                   `xml:"browseWarnThreshold,omitempty"`
+	Output                  *MQQueueDebugOutput    `xml:"output,omitempty"`
+	Other                   []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQQueueDebugOutput struct {
-	Setup      *bool `xml:"setup,omitempty"`
-	MQAPI      *bool `xml:"mqApi,omitempty"`
-	Connection *bool `xml:"connection,omitempty"`
-	Commands   *bool `xml:"commands,omitempty"`
-	Results    *bool `xml:"results,omitempty"`
-	Browsing   *bool `xml:"browsing,omitempty"`
+	Setup      *bool                  `xml:"setup,omitempty"`
+	MQAPI      *bool                  `xml:"mqApi,omitempty"`
+	Connection *bool                  `xml:"connection,omitempty"`
+	Commands   *bool                  `xml:"commands,omitempty"`
+	Results    *bool                  `xml:"results,omitempty"`
+	Browsing   *bool                  `xml:"browsing,omitempty"`
+	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQPrivate struct {
-	Debug *common.Value `xml:"debug,omitempty"`
+	Debug *common.Value          `xml:"debug,omitempty"`
+	Other []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQChannel struct {
 	Matches    *common.SingleLineStringVar `xml:"matches,omitempty"`
 	StartsWith *common.SingleLineStringVar `xml:"startsWith,omitempty"`
+	Other      []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 type MQQueue struct {
 	Matches    *common.SingleLineStringVar `xml:"matches,omitempty"`
 	StartsWith *common.SingleLineStringVar `xml:"startsWith,omitempty"`
+	Other      []common.RawXMLElement      `xml:",any" json:",omitempty" yaml:",omitempty"`
 }

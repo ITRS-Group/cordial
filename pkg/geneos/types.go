@@ -21,20 +21,22 @@ import "encoding/xml"
 
 // Types TODO: Describe its purpose and intended use.
 type Types struct {
-	XMLName    xml.Name    `xml:"types" json:"-" yaml:"-"`
-	Comment    string      `xml:",comment"`
-	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
-	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	XMLName    xml.Name        `xml:"types" json:"-" yaml:"-"`
+	Comment    string          `xml:",comment"`
+	Types      []Type          `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	TypeGroups []TypeGroup     `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	Other      []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // TypeGroup TODO: Describe its purpose and intended use.
 type TypeGroup struct {
-	XMLName    xml.Name    `xml:"typeGroup" json:"-" yaml:"-"`
-	Comment    string      `xml:",comment"`
-	Name       string      `xml:"name,attr"`
-	Disabled   *bool       `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
-	Types      []Type      `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
-	TypeGroups []TypeGroup `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	XMLName    xml.Name        `xml:"typeGroup" json:"-" yaml:"-"`
+	Comment    string          `xml:",comment"`
+	Name       string          `xml:"name,attr"`
+	Disabled   *bool           `xml:"disabled,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+	Types      []Type          `xml:"type,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"type"`
+	TypeGroups []TypeGroup     `xml:"typeGroup,omitempty" json:"typeGroup,omitempty" yaml:",omitempty" mapstructure:"typegroup"`
+	Other      []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // Type TODO: Describe its purpose and intended use.
@@ -47,6 +49,7 @@ type Type struct {
 	Vars            []Vars              `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
 	Samplers        []SamplerRef        `xml:"sampler,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"sampler"`
 	SamplerIncludes []SamplerIncludeRef `xml:"samplerInclude,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"samplerinclude"`
+	Other           []RawXMLElement     `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 // SamplerRef TODO: Describe its purpose and intended use.
