@@ -24,6 +24,7 @@ package snow
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -76,17 +77,21 @@ func newClient(cf *config.Config) (c client, err error) {
 // tableConfig returns the configuration of the named table from the
 // `snow` section of the configuration
 func tableConfig(cf *config.Config, tableName string) (TableData, error) {
-	return snowcore.TableConfig(cf.Sub("snow"), tableName)
+	return snowcore.TableConfig(ims.Section(cf, "snow"), tableName)
 }
 
 // lookupRecord finds the existing record using the `search` query of the
-// table, expanded using options
-func (c *client) lookupRecord(ctx context.Context, cf *config.Config, tableName string, options ...config.ExpandOption) (sysID string, state int, err error) {
-	table, err := tableConfig(cf, tableName)
-	if err != nil {
-		return
+// table, expanded using the values in lookup, which are substituted as
+// they are. If the table has no search, or it expands to nothing, then
+// active records with the same configuration item and correlation ID
+// are searched for.
+func (c *client) lookupRecord(ctx context.Context, cf *config.Config, table TableData, lookup map[string]string) (sysID string, state int, err error) {
+	query := ims.ExpandLiteral(cf, table.Search, true, lookup)
+	if query == "" {
+		query = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber",
+			lookup[ims.SNOW_CMDB_CI_FIELD], lookup[ims.SNOW_CORRELATION_FIELD])
 	}
-	return c.LookupRecord(ctx, tableName, config.Expand[string](cf, table.Search, options...))
+	return c.LookupRecord(ctx, table.Name, query)
 }
 
 func (c *client) lookupCmdbCI(ctx context.Context, cf *config.Config, table, query, cmdbCIDefault string) (string, error) {

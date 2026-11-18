@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
+	snowcore "github.com/itrs-group/cordial/pkg/ims/snow"
 )
 
 // send is the main entry point for accepting a record from the
@@ -58,23 +58,22 @@ func send(w http.ResponseWriter, r *http.Request) {
 	fields := incident
 
 	// fail sets the error and expands the configured failure response
+	//
+	// the values from the request are substituted as they are, and are
+	// never expanded themselves
 	fail := func(status int, msg string) {
 		response.Error = msg
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(
-				map[string]string{
-					"__error":     msg,
-					"__timestamp": timestamp,
-				},
-				fields,
-			),
-			config.TrimSpace(false),
+		response.ResultDetail = ims.ExpandLiteral(cf, table.Response.Failed, false,
+			map[string]string{
+				"__error":     msg,
+				"__timestamp": timestamp,
+			},
+			fields,
 		)
 		ims.WriteJSONResponse(w, r, status)
 	}
 
-	c, err := newClient(cf.Sub("snow"))
+	c, err := newClient(ims.Section(cf, "snow"))
 	if err != nil {
 		fail(http.StatusInternalServerError, err.Error())
 		return
@@ -110,7 +109,12 @@ func send(w http.ResponseWriter, r *http.Request) {
 			if _, ok = incident[ims.SNOW_CMDB_CI_DEFAULT]; !ok {
 				incident[ims.SNOW_CMDB_CI_DEFAULT] = table.Defaults[ims.SNOW_CMDB_CI_DEFAULT]
 			}
-			if incident[ims.SNOW_CMDB_CI_FIELD], err = c.lookupCmdbCI(r.Context(), cf, incident[ims.SNOW_CMDB_TABLE], query, incident[ims.SNOW_CMDB_CI_DEFAULT]); err != nil {
+			cmdbTable, err := snowcore.CMDBTable(incident[ims.SNOW_CMDB_TABLE])
+			if err != nil {
+				fail(ims.StatusFor(err, http.StatusBadRequest), "invalid "+ims.SNOW_CMDB_TABLE+": "+err.Error())
+				return
+			}
+			if incident[ims.SNOW_CMDB_CI_FIELD], err = c.lookupCmdbCI(r.Context(), cf, cmdbTable, query, incident[ims.SNOW_CMDB_CI_DEFAULT]); err != nil {
 				fail(ims.StatusFor(err, http.StatusBadRequest), "failed to look up cmdb_ci: "+err.Error())
 				return
 			}
@@ -129,58 +133,47 @@ func send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lookupMap := map[string]string{
+	incidentID, state, err := c.lookupRecord(r.Context(), cf, table, map[string]string{
 		ims.SNOW_CMDB_CI_FIELD:     incident[ims.SNOW_CMDB_CI_FIELD],
 		ims.SNOW_CORRELATION_FIELD: incident[ims.SNOW_CORRELATION_FIELD],
-	}
-
-	incidentID, state, err := c.lookupRecord(
-		r.Context(),
-		cf,
-		table.Name,
-		config.LookupTable(lookupMap),
-		config.DefaultValue(fmt.Sprintf(
-			"active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber",
-			incident[ims.SNOW_CMDB_CI_FIELD], incident[ims.SNOW_CORRELATION_FIELD],
-		)),
-	)
+	})
 	if err != nil {
 		fail(ims.StatusFor(err, http.StatusInternalServerError), "error looking up incident: "+err.Error())
 		return
 	}
 
-	transform, ok := table.CurrentStates[state]
-	if !ok {
-		transform, ok = table.CurrentStates[-1] // unknown state fallback
-	}
-
-	incidentTransformed := maps.Clone(incident)
-
-	if ok {
-		incidentTransformed, err = transform.Transform(cf, "snow", incident)
+	// apply the transformation for the state of the existing incident,
+	// or the default for any state that is not otherwise known. This is
+	// not the same as a state of 0, which means the incident is new.
+	//
+	// fields has all the fields, including the internal ones with a
+	// leading double underscore, for use in the messages returned, and
+	// what is sent to ServiceNow has the internal ones removed
+	fields = maps.Clone(incident)
+	payload := maps.Clone(incident)
+	if transform, ok := table.State(state); ok {
+		transformed, err := transform.TransformKeepInternal(cf, "snow", incident)
 		if err != nil {
 			fail(http.StatusBadRequest, fmt.Sprintf("error applying transform for state %d: %v", state, err))
 			return
 		}
-		fields = incidentTransformed
+		payload = transformed
+		maps.Copy(fields, transformed)
 	}
+	ims.RemoveInternal(payload, "__")
 
 	if incidentID != "" {
-		number, err := c.updateRecord(r.Context(), cf, incidentTransformed, table.Name, incidentID)
+		number, err := c.updateRecord(r.Context(), cf, payload, table.Name, incidentID)
 		if err != nil {
 			fail(ims.StatusFor(err, http.StatusInternalServerError), fmt.Sprintf("error updating incident: %v", err))
 			return
 		}
 		response.Action = "Updated"
 		response.ID = number
-		response.ResultDetail = config.Expand[string](cf,
-			table.Response.Updated,
-			config.LookupTable(incident, map[string]string{
-				"__number":    number,
-				"__timestamp": timestamp,
-			}),
-			config.TrimSpace(false),
-		)
+		response.ResultDetail = ims.ExpandLiteral(cf, table.Response.Updated, false, fields, map[string]string{
+			"__number":    number,
+			"__timestamp": timestamp,
+		})
 		ims.WriteJSONResponse(w, r, http.StatusOK)
 		return
 	}
@@ -192,20 +185,16 @@ func send(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	number, err := c.createRecord(r.Context(), cf, incidentTransformed, table.Name)
+	number, err := c.createRecord(r.Context(), cf, payload, table.Name)
 	if err != nil {
 		fail(ims.StatusFor(err, http.StatusInternalServerError), fmt.Sprintf("error creating incident: %v", err))
 		return
 	}
 	response.Action = "Created"
 	response.ID = number
-	response.ResultDetail = config.Expand[string](cf,
-		table.Response.Created,
-		config.LookupTable(incident, map[string]string{
-			"__number":    number,
-			"__timestamp": timestamp,
-		}),
-		config.TrimSpace(false),
-	)
+	response.ResultDetail = ims.ExpandLiteral(cf, table.Response.Created, false, fields, map[string]string{
+		"__number":    number,
+		"__timestamp": timestamp,
+	})
 	ims.WriteJSONResponse(w, r, http.StatusCreated)
 }

@@ -7,10 +7,13 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -32,7 +35,11 @@ func useToken(t *testing.T, token *oauth2.Token, err error) {
 	t.Helper()
 	orig := tokenLoader
 	tokenLoader = func() (*oauth2.Token, error) { return token, err }
-	t.Cleanup(func() { tokenLoader = orig })
+	resetTokenSources()
+	t.Cleanup(func() {
+		tokenLoader = orig
+		resetTokenSources()
+	})
 }
 
 func validToken() *oauth2.Token {
@@ -406,5 +413,247 @@ func TestTokenRoundTrip(t *testing.T) {
 	}
 	if got.AccessToken != "ACCESS" || got.RefreshToken != "REFRESH" || !got.Expiry.Equal(expiry) {
 		t.Errorf("loadToken() = %+v, want the saved values decrypted", got)
+	}
+}
+
+// capture returns a handler that records the input_data of each request
+// it receives, from the form body or the query, and then replies
+func capture(inputs *[]string, next http.HandlerFunc) http.HandlerFunc {
+	var mu sync.Mutex
+	return func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		mu.Lock()
+		*inputs = append(*inputs, r.Form.Get("input_data"))
+		mu.Unlock()
+		next(w, r)
+	}
+}
+
+func TestSendInputDataIsFormEncoded(t *testing.T) {
+	useToken(t, validToken(), nil)
+
+	subjects := []string{"CPU 95%", "C++ & more=1", "100% of 50%25", "plus + space", "unicode ✓ \"quoted\" {braces}"}
+	for _, subject := range subjects {
+		t.Run(subject, func(t *testing.T) {
+			var created []string
+			s := newSDPStub(t)
+			s.list, s.create = reply(200, noRequests), capture(&created, reply(201, createdBody))
+
+			body, _ := json.Marshal(map[string]string{"correlation_id": "c1", "subject": subject})
+			rec, response := call(send, testConfig(s.URL), http.MethodPost, "/sdp", string(body))
+			if rec.Code != http.StatusOK || len(created) != 1 {
+				t.Fatalf("status = %d, response %+v, creates %d", rec.Code, response, len(created))
+			}
+			var got struct{ Subject string }
+			var doc struct{ Request struct{ Subject string } }
+			if err := json.Unmarshal([]byte(created[0]), &doc); err != nil {
+				t.Fatalf("input_data %q is not JSON: %v", created[0], err)
+			}
+			got.Subject = doc.Request.Subject
+			if got.Subject != subject {
+				t.Errorf("subject = %q, want %q", got.Subject, subject)
+			}
+		})
+	}
+}
+
+func TestSendCorrelation(t *testing.T) {
+	useToken(t, validToken(), nil)
+
+	t.Run("derived before the templates are used", func(t *testing.T) {
+		var created []string
+		s := newSDPStub(t)
+		s.list, s.create = reply(200, noRequests), capture(&created, reply(201, createdBody))
+		cf := testConfig(s.URL)
+		config.Set(cf, "sdp.requests.create.request.udf_fields.txt_correlation_id", "${correlation_id}")
+
+		rec, response := call(send, cf, http.MethodPost, "/sdp", `{"__incident_correlation":"raw","subject":"x"}`)
+		if rec.Code != http.StatusOK || len(created) != 1 {
+			t.Fatalf("status = %d, response %+v", rec.Code, response)
+		}
+		var doc struct {
+			Request struct {
+				UDF struct {
+					ID string `json:"txt_correlation_id"`
+				} `json:"udf_fields"`
+			}
+		}
+		if err := json.Unmarshal([]byte(created[0]), &doc); err != nil || doc.Request.UDF.ID != ims.CorrelationID("raw") {
+			t.Errorf("input_data = %s (%v), want correlation ID %s", created[0], err, ims.CorrelationID("raw"))
+		}
+	})
+
+	for name, body := range map[string]string{
+		"empty":                       `{"correlation_id":""}`,
+		"empty with empty raw":        `{"correlation_id":"","__incident_correlation":""}`,
+		"missing with empty raw":      `{"__incident_correlation":""}`,
+		"missing":                     `{"subject":"x"}`,
+		"empty and no create allowed": `{"correlation_id":"","subject":"x"}`,
+	} {
+		t.Run("rejected when "+name, func(t *testing.T) {
+			s := newSDPStub(t)
+			s.list, s.create = reply(200, noRequests), reply(201, createdBody)
+			rec, response := call(send, testConfig(s.URL), http.MethodPost, "/sdp", body)
+			if rec.Code != http.StatusBadRequest || response.Action != "Failed" || s.lists.Load() != 0 || s.creates.Load() != 0 {
+				t.Errorf("status = %d, response %+v, lists %d, creates %d", rec.Code, response, s.lists.Load(), s.creates.Load())
+			}
+		})
+	}
+
+	t.Run("empty is replaced by a derived one", func(t *testing.T) {
+		s := newSDPStub(t)
+		s.list, s.create = reply(200, noRequests), reply(201, createdBody)
+		rec, response := call(send, testConfig(s.URL), http.MethodPost, "/sdp", `{"correlation_id":"","__incident_correlation":"raw"}`)
+		if rec.Code != http.StatusOK || response.Action != "Created" {
+			t.Errorf("status = %d, response %+v", rec.Code, response)
+		}
+	})
+}
+
+func TestSendSearchEscapesValues(t *testing.T) {
+	useToken(t, validToken(), nil)
+
+	for _, id := range []string{`a"b`, `x"},{"field":"status.name","condition":"is","value":"Closed`, `back\slash`, "new\nline"} {
+		var searches []string
+		s := newSDPStub(t)
+		s.list, s.create = capture(&searches, reply(200, noRequests)), reply(201, createdBody)
+
+		body, _ := json.Marshal(map[string]string{"correlation_id": id})
+		rec, response := call(send, testConfig(s.URL), http.MethodPost, "/sdp", string(body))
+		if rec.Code != http.StatusOK || len(searches) != 1 {
+			t.Fatalf("%q: status = %d, response %+v", id, rec.Code, response)
+		}
+		var doc struct {
+			ListInfo struct {
+				SearchCriteria []struct{ Field, Value string } `json:"search_criteria"`
+			} `json:"list_info"`
+		}
+		if err := json.Unmarshal([]byte(searches[0]), &doc); err != nil {
+			t.Fatalf("%q: search %q is not JSON: %v", id, searches[0], err)
+		}
+		if len(doc.ListInfo.SearchCriteria) != 1 || doc.ListInfo.SearchCriteria[0].Value != id {
+			t.Errorf("%q: criteria = %+v", id, doc.ListInfo.SearchCriteria)
+		}
+	}
+}
+
+// the fields in a request are from the caller and must never be expanded
+// by the templates they are substituted into
+func TestSendDoesNotExpandRequestValues(t *testing.T) {
+	useToken(t, validToken(), nil)
+
+	secretFile := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(secretFile, []byte("file-secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("IMS_TEST_SECRET", "env-secret")
+
+	hostile := []string{
+		"${file:" + secretFile + "}",
+		"${config:sdp.client-secret}",
+		"${env:IMS_TEST_SECRET}",
+		"${IMS_TEST_SECRET}",
+	}
+	for _, value := range hostile {
+		t.Run(value, func(t *testing.T) {
+			var searches, creates []string
+			s := newSDPStub(t)
+			s.list, s.create = capture(&searches, reply(200, noRequests)), capture(&creates, reply(201, createdBody))
+
+			cf := testConfig(s.URL)
+			config.Set(cf, "sdp.requests.create.request.subject", "${__incident_subject}")
+			config.Set(cf, "sdp.response.created", "created ${__request_id}: ${__incident_subject}")
+			config.Set(cf, "sdp.response.failed", "failed: ${__incident_subject} ${__error}")
+
+			body, _ := json.Marshal(map[string]string{"correlation_id": value, "__incident_subject": value})
+			rec, response := call(send, cf, http.MethodPost, "/sdp", string(body))
+			if rec.Code != http.StatusOK || len(creates) != 1 {
+				t.Fatalf("status = %d, response %+v", rec.Code, response)
+			}
+
+			var doc struct{ Request struct{ Subject string } }
+			if err := json.Unmarshal([]byte(creates[0]), &doc); err != nil || doc.Request.Subject != value {
+				t.Errorf("create subject = %q (%v), want %q", doc.Request.Subject, err, value)
+			}
+			if want := "created 999: " + value; response.ResultDetail != want {
+				t.Errorf("result detail = %q, want %q", response.ResultDetail, want)
+			}
+			if strings.Contains(searches[0]+creates[0]+response.ResultDetail, "secret") && !strings.Contains(value, "secret") {
+				t.Errorf("a secret was expanded: %s %s %s", searches[0], creates[0], response.ResultDetail)
+			}
+		})
+	}
+
+	t.Run("failure response", func(t *testing.T) {
+		s := newSDPStub(t)
+		s.list = reply(500, `{}`)
+		cf := testConfig(s.URL)
+		config.Set(cf, "sdp.response.failed", "failed: ${__incident_subject}")
+		_, response := call(send, cf, http.MethodPost, "/sdp", `{"correlation_id":"c","__incident_subject":"${env:IMS_TEST_SECRET}"}`)
+		if response.ResultDetail != "failed: ${env:IMS_TEST_SECRET}" {
+			t.Errorf("result detail = %q", response.ResultDetail)
+		}
+	})
+}
+
+func TestGetQueryFromCallerIsNotExpanded(t *testing.T) {
+	useToken(t, validToken(), nil)
+	t.Setenv("IMS_TEST_SECRET", "env-secret")
+
+	var lists []string
+	s := newSDPStub(t)
+	s.list = capture(&lists, reply(200, noRequests))
+
+	query := `{"list_info":{"search_fields":{"subject":"${env:IMS_TEST_SECRET}"}}}`
+	rec, _ := call(get, testConfig(s.URL), http.MethodGet, "/sdp?query="+url.QueryEscape(query), "")
+	if rec.Code != http.StatusOK || len(lists) != 1 || lists[0] != query {
+		t.Errorf("status = %d, input_data = %q, want %q", rec.Code, lists, query)
+	}
+}
+
+func TestSendTransformKeepsInternalFields(t *testing.T) {
+	useToken(t, validToken(), nil)
+
+	var created []string
+	s := newSDPStub(t)
+	s.list, s.create = reply(200, noRequests), capture(&created, reply(201, createdBody))
+	cf := testConfig(s.URL)
+	config.Set(cf, "sdp.requests.create.request.subject", "${__incident_subject}")
+	config.Set(cf, "sdp.requests.create.request.status.name", "${__sdp_status}")
+	config.Set(cf, "sdp.requests.transform.remove", []string{"unwanted"})
+
+	rec, response := call(send, cf, http.MethodPost, "/sdp", `{"correlation_id":"c","__incident_subject":"subject","__sdp_status":"Open","unwanted":"x"}`)
+	if rec.Code != http.StatusOK || len(created) != 1 {
+		t.Fatalf("status = %d, response %+v", rec.Code, response)
+	}
+	var doc struct {
+		Request struct {
+			Subject string
+			Status  struct{ Name string }
+		}
+	}
+	if err := json.Unmarshal([]byte(created[0]), &doc); err != nil || doc.Request.Subject != "subject" || doc.Request.Status.Name != "Open" {
+		t.Errorf("input_data = %s (%v), want the internal fields used by the templates", created[0], err)
+	}
+}
+
+func TestValidateFields(t *testing.T) {
+	tests := []struct {
+		keys []string
+		want bool
+	}{
+		{[]string{"a", "b"}, true},
+		{[]string{"a", "A"}, false},
+		{[]string{"Correlation_ID", "correlation_id"}, false},
+		{[]string{"a", "b", "c", "B"}, false},
+		{[]string{"a", "-b"}, false},
+		{[]string{"a b"}, false},
+		{nil, false},
+	}
+	for _, test := range tests {
+		keys := slices.Clone(test.keys)
+		if got := validateFields(keys); got != test.want {
+			t.Errorf("validateFields(%v) = %t, want %t", test.keys, got, test.want)
+		}
 	}
 }

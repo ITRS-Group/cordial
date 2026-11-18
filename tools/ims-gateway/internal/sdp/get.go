@@ -19,7 +19,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("handling request", slog.String("path", r.URL.Path))
 
-	sdpCf := cf.Sub("sdp")
+	sdpCf := ims.Section(cf, "sdp")
 	c, err := newClient(r.Context(), sdpCf, "SDP.requests.ALL")
 	if err != nil {
 		log.Error("cannot create ServiceDesk Plus client", slog.Any("error", err))
@@ -27,15 +27,15 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := config.Get[any](sdpCf, sdpCf.Join("requests", "get"))
-
-	q := r.URL.Query().Get("query")
-	if q != "" {
+	// the query from the caller is sent as it is, and is not expanded as
+	// it could then be used to read values from the server
+	var resp *RequestGetListResponse
+	if q := r.URL.Query().Get("query"); q != "" {
 		log.Debug("using query from request URL", slog.String("query", q))
-		query = q
+		resp, err = c.getRawRequests(r.Context(), q)
+	} else {
+		resp, err = c.getRequests(r.Context(), sdpCf, config.Get[any](sdpCf, sdpCf.Join("requests", "get"), config.NoExpand()), nil)
 	}
-
-	resp, err := c.getRequests(r.Context(), sdpCf, query)
 	if err != nil {
 		ims.WriteError(w, r, response, ims.StatusFor(err, http.StatusBadGateway), err)
 		return

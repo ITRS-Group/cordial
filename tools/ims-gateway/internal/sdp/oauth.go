@@ -27,6 +27,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -46,57 +48,28 @@ var DefaultUserKeyfile = config.KeyFile(
 	),
 )
 
-// Config TODO: Describe its purpose and intended use.
-type Config struct {
-	oauth2.Config
-	Code config.Secret
-}
-
-// SDPTokenSource TODO: Describe its purpose and intended use.
-type SDPTokenSource struct {
-	next   oauth2.TokenSource
-	expiry time.Time
-}
-
-// NewSDPTokenSource TODO: Document its behavior, inputs, and effects.
-func NewSDPTokenSource(ctx context.Context, conf *Config, token *oauth2.Token) *SDPTokenSource {
-	return &SDPTokenSource{
-		next:   conf.TokenSource(ctx, token),
-		expiry: token.Expiry,
-	}
-}
-
-// Token TODO: Document its behavior, inputs, and effects.
-func (s *SDPTokenSource) Token() (*oauth2.Token, error) {
-	token, err := s.next.Token()
-	if err != nil {
-		return nil, err
-	}
-
-	if s.expiry != token.Expiry {
-		// the refreshed token is valid, so a failure to save it should
-		// not fail the request, but must be visible as it means the
-		// next request has to refresh the token again
-		if err := saveToken(token); err != nil {
-			log.Error("failed to save refreshed ServiceDesk Plus token", slog.Any("error", err))
-		}
-		s.expiry = token.Expiry
-	}
-
-	return token, nil
-}
-
 // tokenLoader loads the saved token and can be replaced in tests
 var tokenLoader = loadToken
+
+// redirectURL is the redirect URL registered for the ServiceDesk Plus
+// client, which is not used as the authorization code is entered by hand
+const redirectURL = "https://www.zoho.com"
+
+// tokenDirOptions limit the token file to the user configuration
+// directory, which is where [saveToken] writes it, so that a file in the
+// working directory, or elsewhere, never takes precedence over the
+// saved token
+var tokenDirOptions = []config.FileOption{
+	config.AppName("geneos"),
+	config.Format("json"),
+	config.SkipWorkingDir(),
+	config.SkipSystemDir(),
+}
 
 // loadToken reads the token saved by [saveToken], which decrypts any
 // encoded values, and returns an error if there is no usable token.
 func loadToken() (token *oauth2.Token, err error) {
-	pf, err := config.Read("sdp.token",
-		config.AppName("geneos"),
-		config.Format("json"),
-		config.MustExist(),
-	)
+	pf, err := config.Read("sdp.token", append([]config.FileOption{config.MustExist()}, tokenDirOptions...)...)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", errNoToken, err)
 	}
@@ -112,6 +85,9 @@ func loadToken() (token *oauth2.Token, err error) {
 
 	return
 }
+
+// tokenSaver saves a token and can be replaced in tests
+var tokenSaver = saveToken
 
 func saveToken(token *oauth2.Token) (err error) {
 	pf := config.New()
@@ -133,10 +109,27 @@ func saveToken(token *oauth2.Token) (err error) {
 	}
 	config.Set(pf, pf.Join("token", "refresh_token"), rt)
 
-	return pf.Write("sdp.token",
-		config.AppName("geneos"),
-		config.Format("json"),
-	)
+	// the values are encrypted, but the file is only for the user. The
+	// file is created here, with the permissions wanted, as an existing
+	// file keeps its permissions when it is written
+	dir, err := config.UserConfigPath("geneos")
+	if err != nil {
+		return err
+	}
+	if err = os.MkdirAll(dir, 0o700); err != nil {
+		return err
+	}
+	p := path.Join(dir, "sdp.token.json")
+	f, err := os.OpenFile(p, os.O_CREATE|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	f.Close()
+	if err = os.Chmod(p, 0o600); err != nil {
+		return err
+	}
+
+	return pf.Write("sdp.token", config.FilePath(p), config.Format("json"))
 }
 
 // InitialAuth
@@ -190,26 +183,15 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 		},
 	}
 
-	conf := &Config{
-		Config: oauth2.Config{
-			ClientID:     clientID,
-			ClientSecret: string(clientSecret),
-			Endpoint: oauth2.Endpoint{
-				TokenURL: auth.JoinPath("/oauth/v2/token").String(),
-			},
-			RedirectURL: "https://www.zoho.com",
-		},
-		Code: code,
-	}
-
 	params := make(url.Values)
-	params.Set("code", string(conf.Code))
-	params.Set("client_id", conf.ClientID)
-	params.Set("client_secret", conf.ClientSecret)
-	params.Set("redirect_uri", conf.RedirectURL)
+	params.Set("code", string(code))
+	params.Set("client_id", clientID)
+	params.Set("client_secret", string(clientSecret))
+	params.Set("redirect_uri", redirectURL)
 	params.Set("grant_type", "authorization_code")
 
-	req, err := http.NewRequest("POST", auth.JoinPath("/oauth/v2/token").String(), strings.NewReader(params.Encode()))
+	// there is no context for the command
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, auth.JoinPath("/oauth/v2/token").String(), strings.NewReader(params.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OAuth2 token request: %v", err)
 	}
@@ -247,7 +229,7 @@ func InitialAuth(sdpCf *config.Config, code config.Secret) (tok *oauth2.Token, e
 		return nil, fmt.Errorf("no refresh token received from OAuth2 token response")
 	}
 
-	if err = saveToken(tok); err != nil {
+	if err = tokenSaver(tok); err != nil {
 		return nil, err
 	}
 

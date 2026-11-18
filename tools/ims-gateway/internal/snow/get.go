@@ -81,7 +81,7 @@ func get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := newClient(cf.Sub("snow"))
+	c, err := newClient(ims.Section(cf, "snow"))
 	if err != nil {
 		reply(http.StatusInternalServerError, err)
 		return
