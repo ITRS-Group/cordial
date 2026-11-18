@@ -57,6 +57,12 @@ func NewRoot(t testing.TB, hostname string, packages ...string) string {
 		for _, i := range instance.Instances(geneos.LOCAL, nil) {
 			_ = i.Unload()
 		}
+		// profile instances are not included in all instances
+		if pct := geneos.ParseComponent("profile"); pct != nil {
+			for _, i := range instance.Instances(geneos.LOCAL, pct) {
+				_ = i.Unload()
+			}
+		}
 		config.Set(config.Global(), key, previousRoot)
 		geneos.LOCAL, geneos.ALL, geneos.LOCALHOST = previousLocal, previousAll, previousHostname
 		logger.LogHandler = previousHandler
