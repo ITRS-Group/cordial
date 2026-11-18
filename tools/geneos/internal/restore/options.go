@@ -33,7 +33,9 @@ func evalRestoreOptions(options ...RestoreOption) *restoreOptions {
 	return &opts
 }
 
-// Compression sets the compression type to use for backup and restore. Valid values are "gzip", "bzip2", "xz" and "none"
+// Compression sets the compression type to use for restore from STDIN.
+// Valid values are "gzip", "bzip2" and "none", and also "gz" and "bz2".
+// The type for files is derived from the file name.
 func Compression(compression string) RestoreOption {
 	return func(ro *restoreOptions) {
 		ro.compression = compression

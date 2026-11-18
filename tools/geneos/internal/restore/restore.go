@@ -29,8 +29,22 @@ var log = logger.Logger
 var fileTypes = map[string]string{
 	".tar.gz":  "gzip",
 	".tgz":     "gzip",
-	".tar.bz2": "bz2",
+	".tar.bz2": "bzip2",
 	".tar":     "none",
+}
+
+// compressionAliases maps alternative compression names to those used
+// by Restore
+var compressionAliases = map[string]string{
+	"gz":  "gzip",
+	"bz2": "bzip2",
+}
+
+// restoreStat records what is restored, or listed, for an instance or
+// for the shared directories
+type restoreStat struct {
+	skipped bool  // true if nothing is restored, e.g. because the instance already exists
+	size    int64 // total size of the entries restored or listed
 }
 
 // Restore reads the file at the local archive path and restores
@@ -40,12 +54,14 @@ var fileTypes = map[string]string{
 // then all instances are restored. Existing instances with matching
 // names are not overwritten.
 //
+// The compression of the archive is taken from the file extension or,
+// for STDIN (an archive of "-"), the Compression option, which must be
+// one of "gzip", "bzip2" or "none". It is an error if the compression
+// cannot be determined.
+//
 // TODO: shared file control (use flag selector and limit to ct, if not
 // nil)
 func Restore(archive string, options ...RestoreOption) (err error) {
-	// instancesRestored restored, for final Rebuilds
-	instancesRestored := map[string]geneos.Instance{}
-
 	var tin io.ReadCloser
 	var fileType string
 
@@ -53,6 +69,9 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	if archive == "-" {
 		fileType = opts.compression
 		archive = ""
+		if fileType == "" {
+			return fmt.Errorf("%w: compression type is required when restoring from STDIN", geneos.ErrInvalidArgs)
+		}
 	} else {
 		for s, t := range fileTypes {
 			if strings.HasSuffix(archive, s) {
@@ -60,10 +79,13 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				break
 			}
 		}
+		if fileType == "" {
+			return fmt.Errorf("%w: cannot determine the compression of %q (expected one of %s)", geneos.ErrInvalidArgs,
+				archive, strings.Join(slices.Sorted(maps.Keys(fileTypes)), ", "))
+		}
 	}
-
-	if fileType == "" {
-		return
+	if alias, ok := compressionAliases[fileType]; ok {
+		fileType = alias
 	}
 
 	names := opts.names
@@ -79,21 +101,8 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	}
 
 	switch fileType {
-	case "", "none":
-		switch {
-		case strings.HasSuffix(archive, ".gz") || strings.HasSuffix(archive, ".tgz"):
-			if tin, err = gzip.NewReader(in); err != nil {
-				return
-			}
-			defer tin.Close()
-		case strings.HasSuffix(archive, ".bz2"):
-			if tin, err = bzip2.NewReader(in, nil); err != nil {
-				return
-			}
-			defer tin.Close()
-		default:
-			tin = in
-		}
+	case "none":
+		tin = in
 	case "gzip":
 		if tin, err = gzip.NewReader(in); err != nil {
 			return
@@ -105,7 +114,7 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		}
 		defer tin.Close()
 	default:
-		err = fmt.Errorf("unknown decompression type %s", opts.compression)
+		err = fmt.Errorf("%w: unknown decompression type %q", geneos.ErrInvalidArgs, fileType)
 		return
 	}
 
@@ -113,11 +122,10 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	// of skipping, to prevent overwrites, to anticipate instances that
 	// are spread out
 
-	// sizes - key is type:name and the value is the number of files
-	// written out. Initial value, when type:name is found in archive,
-	// is -1 to indicate destination either not tested or already
-	// exists.
-	sizes := map[string]int64{}
+	// stats - key is type:name. An entry is added when type:name is
+	// first found in archive and is marked as skipped if the
+	// destination already exists.
+	stats := map[string]*restoreStat{}
 
 	// files counts the number of files restored for each type:name
 	files := map[string]int64{}
@@ -192,20 +200,11 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		// restore top level tls is restoring shared files
 		if ctName == "tls" {
 			if opts.shared {
-				if _, ok := sizes["TLS:!SHARED"]; !ok {
-					sizes["TLS:!SHARED"] = -1
-					files["TLS:!SHARED"] = 0
+				if err = restoreShared(stats, files, "TLS:!SHARED", hdr, opts, func() error {
+					return writeSharedTLSFile(path.Join(instance.TLSBASE, rest), tr, hdr, opts)
+				}); err != nil {
+					return
 				}
-				if err = writeSharedTLSFile(path.Join(instance.TLSBASE, rest), tr, hdr, opts); err != nil {
-					if errors.Is(err, os.ErrExist) && opts.list {
-						// up the count regardless of existence when listing
-						sizes["TLS:!SHARED"] += hdr.Size
-						files["TLS:!SHARED"] += 1
-					}
-					continue
-				}
-				sizes["TLS:!SHARED"] += hdr.Size
-				files["TLS:!SHARED"] += 1
 			}
 			continue
 		}
@@ -231,20 +230,11 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		if opts.shared {
 			if slices.Contains(nct.SharedDirectories, path.Join(nct.String(), ctSubdir)) {
 				if ct == nil || ct == nct {
-					if _, ok := sizes[nct.String()+":!SHARED"]; !ok {
-						sizes[nct.String()+":!SHARED"] = -1
-						files[nct.String()+":!SHARED"] = 0
+					if err = restoreShared(stats, files, nct.String()+":!SHARED", hdr, opts, func() error {
+						return writeSharedFile(path.Join(nct.String(), ctSubdir, rest), tr, hdr, opts)
+					}); err != nil {
+						return
 					}
-					if err = writeSharedFile(path.Join(nct.String(), ctSubdir, rest), tr, hdr, opts); err != nil {
-						if errors.Is(err, os.ErrExist) && opts.list {
-							// up the count regardless of existence when listing
-							sizes[nct.String()+":!SHARED"] += hdr.Size
-							files[nct.String()+":!SHARED"] += 1
-						}
-						continue
-					}
-					sizes[nct.String()+":!SHARED"] += hdr.Size
-					files[nct.String()+":!SHARED"] += 1
 					continue
 				}
 			}
@@ -271,24 +261,18 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 				if dest == src {
 					if matched, _ := filepath.Match(dest, instanceName); matched {
 						// save
-						if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(instanceName, instRelfilePath, tr, hdr, stats, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
 						files[packageCt.String()+":"+instanceName] += 1
-						if _, ok := instancesRestored[instanceName]; !ok {
-							instancesRestored[instanceName] = nil
-						}
 					}
 				} else {
 					if src == instanceName {
 						// rename and save
-						if err = processFile(dest, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+						if err = processFile(dest, instRelfilePath, tr, hdr, stats, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 							return
 						}
 						files[packageCt.String()+":"+dest] += 1
-						if _, ok := instancesRestored[dest]; !ok {
-							instancesRestored[dest] = nil
-						}
 					}
 				}
 			}
@@ -297,13 +281,10 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 
 		// otherwise restore all instances in the archive
 		if restoreAll {
-			if err = processFile(instanceName, instRelfilePath, tr, hdr, sizes, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
+			if err = processFile(instanceName, instRelfilePath, tr, hdr, stats, created, Component(packageCt), Host(opts.host), List(opts.list)); err != nil {
 				return
 			}
 			files[packageCt.String()+":"+instanceName] += 1
-			if _, ok := instancesRestored[instanceName]; !ok {
-				instancesRestored[instanceName] = nil
-			}
 		}
 	}
 
@@ -315,41 +296,36 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 		fmt.Fprintf(opts.progress, "Restoring from archive %s:\n", archive)
 	}
 
-	for _, k := range slices.Sorted(maps.Keys(sizes)) {
+	for _, k := range slices.Sorted(maps.Keys(stats)) {
 		ctName, name, _ := strings.Cut(k, ":")
+		stat := stats[k]
 
 		if name == "!SHARED" {
 			name = "(shared dirs)"
-		} else {
-			if i, ok := instancesRestored[name]; ok && i == nil {
-				i, err = instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
-				if err != nil {
-					log.Debug("getting instance for final rebuild", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
-				} else {
-					instancesRestored[name] = i
-					if _, err = i.Rebuild(false); err != nil {
-						if !errors.Is(err, geneos.ErrNotSupported) {
-							i.Log().Debug("rebuild of instance failed", slog.Any("error", err), slog.String("ctName", ctName), slog.String("name", name))
-						} else {
-							err = nil
-						}
-					} else {
-						fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
-					}
+		} else if !opts.list && !stat.skipped {
+			// rebuild the configuration of each instance restored
+			i, gerr := instance.GetWithHost(opts.host, geneos.ParseComponent(ctName), name)
+			if gerr != nil {
+				log.Debug("getting instance for final rebuild", slog.Any("error", gerr), slog.String("ctName", ctName), slog.String("name", name))
+			} else if _, rerr := i.Rebuild(false); rerr != nil {
+				if !errors.Is(rerr, geneos.ErrNotSupported) {
+					i.Log().Debug("rebuild of instance failed", slog.Any("error", rerr), slog.String("ctName", ctName), slog.String("name", name))
 				}
+			} else {
+				fmt.Fprintf(opts.progress, "%s %s config rebuild complete\n", ctName, name)
 			}
 		}
 
 		if opts.list {
-			fmt.Fprintf(opts.progress, "%s %s %d files, total %.3f MiB\n", ctName, name, files[k], float64(sizes[k])/(1024*1024))
+			fmt.Fprintf(opts.progress, "%s %s %d files, total %.3f MiB\n", ctName, name, files[k], float64(stat.size)/(1024*1024))
 			continue
 		}
 
-		if sizes[k] > -1 {
+		if !stat.skipped {
 			if name != mapping[name] && !restoreAll {
-				fmt.Fprintf(opts.progress, "%s %s (from %s) %d files, total %.3f MiB\n", ctName, name, mapping[name], files[k], float64(sizes[k])/(1024*1024))
+				fmt.Fprintf(opts.progress, "%s %s (from %s) %d files, total %.3f MiB\n", ctName, name, mapping[name], files[k], float64(stat.size)/(1024*1024))
 			} else {
-				fmt.Fprintf(opts.progress, "%s %s %d files, total %.3f MiB\n", ctName, name, files[k], float64(sizes[k])/(1024*1024))
+				fmt.Fprintf(opts.progress, "%s %s %d files, total %.3f MiB\n", ctName, name, files[k], float64(stat.size)/(1024*1024))
 			}
 
 		} else {
@@ -359,36 +335,64 @@ func Restore(archive string, options ...RestoreOption) (err error) {
 	return
 }
 
-func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, sizes map[string]int64, created map[string]bool, options ...RestoreOption) (err error) {
+// restoreShared writes the entry in a shared directory, by calling
+// write, or only counts it if listing. The result is added to the
+// totals for key. Entries that already exist are skipped.
+func restoreShared(stats map[string]*restoreStat, files map[string]int64, key string, hdr *tar.Header, opts *restoreOptions, write func() error) error {
+	stat, ok := stats[key]
+	if !ok {
+		stat = &restoreStat{skipped: true}
+		stats[key] = stat
+		files[key] = 0
+	}
+
+	if !opts.list {
+		if err := write(); err != nil {
+			if errors.Is(err, os.ErrExist) {
+				return nil
+			}
+			return err
+		}
+	}
+
+	stat.skipped = false
+	stat.size += hdr.Size
+	files[key]++
+	return nil
+}
+
+func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.Header, stats map[string]*restoreStat, created map[string]bool, options ...RestoreOption) (err error) {
 	opts := evalRestoreOptions(options...)
 
 	ct := opts.component
 	h := opts.host
+	key := ct.String() + ":" + instanceName
 
-	// otherwise restore all instances in the archive
-	if process, ok := sizes[ct.String()+":"+instanceName]; ok {
-		if process > 0 {
+	// the instance has already been seen in the archive
+	if stat, ok := stats[key]; ok {
+		if !stat.skipped {
 			if !opts.list {
 				if err = writeFile(instanceName, instRelFilePath, tr, hdr, opts); err != nil {
-					// if written ok, add one more file
 					return
 				}
 			}
-			sizes[ct.String()+":"+instanceName] += hdr.Size
+			stat.size += hdr.Size
 		}
 		return
 	}
 
-	// init sizes entry
+	// first entry for the instance
 	if opts.list {
-		sizes[ct.String()+":"+instanceName] = hdr.Size
+		stats[key] = &restoreStat{size: hdr.Size}
 		return
 	}
 
-	// otherwise init to -1
-	sizes[ct.String()+":"+instanceName] = -1
+	// otherwise skipped unless the instance does not exist and is
+	// written
+	stat := &restoreStat{skipped: true}
+	stats[key] = stat
 
-	// write file and update sizes
+	// write file and update stats
 	instDir := h.PathTo(ct, ct.String()+"s", instanceName)
 	if _, err = h.Stat(instDir); err != nil {
 		// instance does not yet exist
@@ -397,7 +401,8 @@ func processFile(instanceName, instRelFilePath string, tr *tar.Reader, hdr *tar.
 			return
 		}
 		// first file written
-		sizes[ct.String()+":"+instanceName] = hdr.Size
+		stat.skipped = false
+		stat.size = hdr.Size
 	}
 	return
 }
@@ -441,7 +446,11 @@ func writeFile(instanceName string, instRelFilePath string, tr *tar.Reader, hdr 
 			log.Debug("creating file failed", slog.Any("error", err), slog.String("destPath", destPath))
 			return
 		}
-		defer w.Close()
+		defer func() {
+			if cerr := w.Close(); err == nil {
+				err = cerr
+			}
+		}()
 
 		_, err = io.Copy(w, tr)
 		return
@@ -512,7 +521,11 @@ func writeSharedEntry(fp string, tr *tar.Reader, hdr *tar.Header, opts *restoreO
 		if w, err = h.Create(destPath, hdr.FileInfo().Mode()); err != nil {
 			return
 		}
-		defer w.Close()
+		defer func() {
+			if cerr := w.Close(); err == nil {
+				err = cerr
+			}
+		}()
 
 		_, err = io.Copy(w, tr)
 		return
