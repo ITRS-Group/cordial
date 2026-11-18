@@ -160,9 +160,35 @@ func (c Client) post(method string, args ...any) (result methodResponse, err err
 	}
 
 	if result.Fault != nil {
-		err = fmt.Errorf("%d %s", result.Fault[0].Int, result.Fault[1].String)
+		err = faultError(result.Fault)
 	}
 	return
+}
+
+// faultError converts the members of an XML-RPC fault struct to an
+// error. Members are matched by name, falling back to position for
+// servers that do not name them, and a malformed fault never panics.
+func faultError(fault []members) error {
+	var code int
+	var message string
+	named := false
+	for _, m := range fault {
+		switch m.Name {
+		case "faultCode":
+			code, named = m.Int, true
+		case "faultString":
+			message, named = m.String, true
+		}
+	}
+	if !named {
+		if len(fault) > 0 {
+			code = fault[0].Int
+		}
+		if len(fault) > 1 {
+			message = fault[1].String
+		}
+	}
+	return fmt.Errorf("%d %s", code, message)
 }
 
 func (c Client) callMethodBool(method string, args ...any) (result bool, err error) {

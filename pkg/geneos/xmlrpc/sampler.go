@@ -107,7 +107,7 @@ func (s Sampler) NewDataview(groupName string, viewName string, args ...[]string
 	}
 
 	if len(args) > 0 {
-		d.UpdateTable(args[0], args[1:]...)
+		err = d.UpdateTable(args[0], args[1:]...)
 	}
 	return
 }
