@@ -81,7 +81,7 @@ var Component = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "netprobe" "netprobes" .name}}`,
+		`home={{join .root "netprobe" "` + name + `s" .name}}`,
 		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
@@ -94,7 +94,7 @@ var Component = geneos.Component{
 	Directories: []string{
 		path.Join("packages", name),
 		path.Join("netprobe", "shared"),
-		path.Join("netprobe", "netprobes"),
+		path.Join("netprobe", name+"s"),
 	},
 	SharedDirectories: []string{
 		path.Join("netprobe", "netprobes_shared"),
