@@ -137,10 +137,9 @@ func actionOptions(incident Values) []config.ExpandOption {
 // from the client, such as the fields of the incident or the
 // environment, which must not be expanded again.
 //
-// TODO: use config.PrefixVerbatim here once it is in pkg/config, which
-// inserts the result as it is. Until then this is [config.Prefix].
+// The result is inserted as returned, using [config.PrefixVerbatim].
 func registerClientPrefix(prefix string, fn func(configItems map[string]any, name string, trim bool, data ...any) (string, error), data ...any) config.ExpandOption {
-	return config.Prefix(prefix, fn, data...)
+	return config.PrefixVerbatim(prefix, fn, data...)
 }
 
 // "match" environment variable against regex and return

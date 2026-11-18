@@ -68,7 +68,7 @@ func TestActionPrefixesDoNotLeakToOtherConfigurations(t *testing.T) {
 	ProcessActionGroup(config.New(), ActionGroup{Set: map[string]string{"a": "${field:x:def}"}}, Values{})
 
 	if got := config.Expand[string](config.New(), "${field:x:def}"); got == "def" {
-		t.Skip("pkg/config shares per-call prefixes between configurations; the consumer passes its own on every call so is not affected")
+		t.Fatal("a prefix registered for one configuration is visible to another")
 	}
 
 	incident := Values{}

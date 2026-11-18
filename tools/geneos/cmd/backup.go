@@ -380,8 +380,8 @@ func getInstanceFilePaths(i geneos.Instance, params ...any) (resp *responses.Gen
 	}
 
 	if !backupCmdIncludeAll {
-		ignore := strings.Split(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])), ":")
-		ignore = append(ignore, strings.Split(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])), ":")...)
+		ignore := strings.Split(ct.GlobalSetting(ct.CleanList), ":")
+		ignore = append(ignore, strings.Split(ct.GlobalSetting(ct.PurgeList), ":")...)
 		if geneos.RootComponent.CleanList != "" {
 			ignore = append(ignore, filepath.SplitList(geneos.RootComponent.CleanList)...)
 		}
