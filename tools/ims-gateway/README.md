@@ -37,7 +37,9 @@ The IMS Gateway supports authentication against ServiceDesk Plus using OAuth2 Cl
 
 ## Fields
 
-Any fields passed by clients to the IMS Gateway that have a prefix of two underscores (`__`) will be treated as special fields and will be used to control the behaviour of the IMS Gateway or as general metadata that can be converted to platform specific values. Once the IMS Gateway has processed the incoming data, these fields will be removed from the data that is sent to the target system to avoid any potential conflicts with reserved field names in the target system.
+Any fields passed by clients to the IMS Gateway that have a prefix of two underscores (`__`) will be treated as special fields and will be used to control the behaviour of the IMS Gateway or as general metadata that can be converted to platform specific values. Once the IMS Gateway has processed the incoming data, these fields will be removed from the data that is sent to the target system to avoid any potential conflicts with reserved field names in the target system. They are still available, with the other fields of the request, to the configuration of the messages that are returned to the caller and, for ServiceDesk Plus, to the templates of the requests that are sent.
+
+The values of all of the fields are always used exactly as they are received. They are never expanded, so a value that looks like `${env:HOME}` or `${file:/etc/hostname}` is just text.
 
 After the prefix an additional identifier can be used to highlight the functional group of the field. For example, `__snow_` and `__sdp_` are used to identify fields that are specific to ServiceNow and ServiceDesk Plus respectively.
 
@@ -63,7 +65,7 @@ All fields with the prefix `__incident_` will be used to create an incident in t
 
     A value that is used to match existing incidents in the target system. This can be used to link related incidents together or to update an existing incident instead of creating a new one. The exact behaviour will depend on the target system and how it handles correlation values. The correlation value should be unique enough to avoid collisions with unrelated incidents but consistent enough to ensure that related incidents are linked together.
 
-    In general the correlation value is hashed by the IMS Gateway before being sent to the target system to ensure that it is of a consistent format and length. The hashing algorithm used is SHA-256, which produces a 64 character hexadecimal string.
+    In general the correlation value is hashed by the IMS Gateway before being sent to the target system to ensure that it is of a consistent format and length. The hashing algorithm used is SHA-1, which produces a 40 character upper case hexadecimal string. This is only done by the ServiceDesk Plus support, and only if there is no `correlation_id` field already. A request must have one or the other, and it must not be empty, as otherwise a request that is not related would be found and updated.
 
 * `__incident_update_only`
 
@@ -92,6 +94,8 @@ Examples of these fields include:
 * `__snow_cmdb_search`
 
 * `__snow_cmdb_table`
+
+    The table to search for the configuration item, which is `cmdb_ci` if not set. It must be the name of a table, which is letters, digits and underscores, and cannot be a path, otherwise the request is rejected.
 
 * `__snow_table`
 

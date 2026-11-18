@@ -8,11 +8,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/go-viper/mapstructure/v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/ims"
@@ -508,5 +513,43 @@ func TestTableConfigIsReadOnce(t *testing.T) {
 	second, _ := TableConfig(cf, "incident")
 	if second.Defaults["a"] != "1" {
 		t.Errorf("Defaults = %v, want the configured value", second.Defaults)
+	}
+}
+
+// every setting of a table in the example configurations that are
+// shipped must be one that is read, which a strict decode finds
+func TestExampleTablesAreAllRead(t *testing.T) {
+	examples := map[string]string{
+		"../../../tools/ims-gateway/ims-gateway.example.yaml":              "snow",
+		"../../../integrations/servicenow2/servicenow2.proxy.example.yaml": "servicenow",
+	}
+	for file, section := range examples {
+		t.Run(filepath.Base(file), func(t *testing.T) {
+			b, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var doc map[string]map[string]any
+			if err := yaml.Unmarshal(b, &doc); err != nil {
+				t.Fatal(err)
+			}
+			tables, ok := doc[section]["tables"].([]any)
+			if !ok || len(tables) == 0 {
+				t.Fatalf("no tables in %s", file)
+			}
+
+			var got []TableData
+			decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+				ErrorUnused:      true,
+				WeaklyTypedInput: true,
+				Result:           &got,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := decoder.Decode(tables); err != nil {
+				t.Errorf("tables in %s have settings that are not read: %v", file, err)
+			}
+		})
 	}
 }

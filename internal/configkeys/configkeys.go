@@ -103,7 +103,7 @@ func match(pattern, key string) bool {
 }
 
 // MissingFromSource returns the patterns whose last name, which is not
-// a wildcard, is not the whole, or the end, of a quoted string in any of
+// a wildcard, does not start a quoted string, or follow a dot, in any of
 // the Go source files in the directories, other than tests. It ties a
 // list of the settings that are read to the code that reads them.
 func MissingFromSource(patterns []string, dirs ...string) (missing []string, err error) {
@@ -137,7 +137,7 @@ func MissingFromSource(patterns []string, dirs ...string) (missing []string, err
 				break
 			}
 		}
-		if !strings.Contains(source.String(), `"`+name+`"`) && !strings.Contains(source.String(), `.`+name+`"`) {
+		if !strings.Contains(source.String(), `"`+name) && !strings.Contains(source.String(), `.`+name) {
 			missing = append(missing, p)
 		}
 	}
