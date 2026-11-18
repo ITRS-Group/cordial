@@ -6,7 +6,7 @@ To create a key file with new contents use the `aes new` command.
 
 If the `--shared`/`-s` flag is set then the provided key file is imported to matching component shared key file directories and matching instances have their key file parameters set to point to the new location.
 
-If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed.
+If neither `--keyfile`/`-k` or `--crc`/`-c` is given then the key file contents are read from STDIN. If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed and it is an error if the key file does not exist. The `--crc` option cannot be combined with `--keyfile` or `--shared`.
 
 Depending on the `--no-roll`/`-N` flag, any matching instances may have their `prevkeyfile` parameter updated to reference any original key file and, if a new key file is written in a non-shared location the previous file is also renamed using the suffix in the `--backup`/`-b` flag.
 
@@ -22,7 +22,8 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ```text
   -k, --keyfile PATH|URL|-        Key file to use. PATH|URL|-
-                                  Path to a local file, a URL or a dash for STDIN. (default "-")
+                                  Path to a local file, a URL or a dash for STDIN.
+                                  The default, unless --crc is given, is to read from STDIN.
   -c, --crc CRC                   CRC of an existing shared keyfile to use
   -b, --backup string             Backup any existing keyfile with extension given (default "-prev")
   -N, --no-roll[=true|false]      Do not roll any existing keyfile to previous keyfile setting

@@ -91,6 +91,30 @@
 
   * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
 
+  * Behaviour changes from the review of the `geneos` commands
+
+    * **Breaking Change** (minor): `geneos init` no longer accepts `--restore`/`-R`, `--no-install`/`-X` or `--name`/`-n`, which did nothing; they are hidden and deprecated and now fail with a "no longer supported" error. To restore a backup use `geneos init` followed by `geneos restore`. `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.
+
+    * The `--host`/`-H` option now rejects a host name that is not configured, instead of acting on all hosts (or panicking), and `geneos add` and `geneos deploy` also reject an unknown `@HOST` in an instance name. `geneos add` now fails for an instance that already exists.
+
+    * `geneos tls info --leaf-only` now behaves as documented and only lists certificates with a matching private key in one of the files; `geneos tls info` connections time out after 10 seconds, with at most 16 made at a time. `geneos tls export --output` is refused for more than one instance.
+
+    * `geneos tls list` now reports `remaining` in JSON output for instance certificates as a duration, as it does for the root and signing certificates.
+
+    * `geneos aes set` reads the key file from STDIN only if neither `--keyfile` nor `--crc` is given, and `--crc` cannot be combined with `--keyfile` or `--shared`. `geneos aes new --update` now saves the instance configuration.
+
+    * `geneos package uninstall` only removes the cached downloads for the releases it removes (all of them for `--all`), instead of every download for the type.
+
+    * `geneos enable --start` now also starts instances that were already enabled, and `geneos start --port` and `geneos restart --port` now follow logs with `--log`.
+
+    * `geneos command --json` now redacts secrets in arguments and environment variables as the default output does, and the audited command line redacts the values of `-s`, `-E`, secret variables and password options.
+
+    * `geneos backup` removes a partly written archive after an error, and `geneos restore` refuses to read an archive from a terminal.
+
+    * `geneos adb clean` and `edit` now check all `replace:` options before changing any files.
+
+    * `geneos config set`, `unset` and `show` now use the file given with `--config`/`-G`. `geneos host show` and `geneos host delete` fail for unknown host names and `geneos host list` accepts host names.
+
 * `integrations/servicenow2`
 
   * **Breaking Change** (minor): The proxy now refuses to start without a `server.authentication.token` and a `server.listen` address.
@@ -218,6 +242,34 @@
   * Fix file and directory imports to leave unchanged files alone, without rewriting them or creating backups. Backup file names now remain unique when multiple imports take place within the same second, and imports to the same destination are protected against concurrent writes.
 
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
+
+  * Commands
+
+    * Fix legacy commands such as `geneos add remote`, `delete host`, `show host` and `set user` losing their arguments, panicking or doing nothing.
+
+    * Fix `geneos host unset` changing every remote host when hosts were named, `geneos host add` with a URL without a host name, and `geneos host delete` succeeding for unknown hosts or when the configuration could not be saved.
+
+    * Fix `geneos backup` failing to create new output directories, writing messages into an archive sent to standard output (`-o -`), ignoring tar and close errors and reading whole files into memory.
+
+    * Fix `geneos set` writing secret variable values to the audit log.
+
+    * Fix `geneos init` exiting without running deferred work, duplicating profile parameters and passing the root directory to profiles, and `geneos deploy` using the old local host after creating the installation.
+
+    * Fix errors being lost, with a success status or no message, in `geneos import`, `reload`, `disable`, `snapshot`, `unset`, `logout`, `ps`, `revert` and `migrate -X`, and `geneos show --output` writing to standard output and leaving an empty file. `geneos unset` now reports every instance with nothing to unset and `geneos revert` removes both of its files.
+
+    * Fix `geneos migrate -X` replacing the saved original `ctl` script with a link when run twice.
+
+    * Fix `geneos aes set --crc` never using the CRC, `aes list --shared --json` and `aes encode` and `aes list` for remote hosts.
+
+    * Fix `geneos tls init` and `tls create --force` failing without `--keytype`, `tls create` reporting success when files could not be written, `tls migrate` and `tls renew` panicking for a webserver without `security.properties`, and `tls info` not reporting file errors, clearing a shared password and hanging on unreachable hosts.
+
+    * Fix `geneos tls list` using the root certificate's expiry and fingerprint for the signing certificate, the instance `remaining` in JSON output, the 30 day toolkit headline (which used 210 days) and reading the CA bundle for each certificate.
+
+    * Fix `geneos package uninstall` stopping and restarting the wrong instances, `package install --download` with an archive URL, `--override` errors being ignored and `package list` being slow with many instances.
+
+    * Fix `geneos adb clean` adding an empty `/sampler` and printing "Managed Entitys", `adb info` adding up totals across files, and `adb` panics on short or malformed lines and failing on colour values over 127 or long lines.
+
+    * Fix `geneos deploy`, `snapshot` and `package install` carrying on with an empty password when prompting for it failed for a reason other than not being interactive.
 
 * `integrations/servicenow2`
 

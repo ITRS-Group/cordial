@@ -12,7 +12,7 @@ Most commands work on "instances" of "components". As the names suggest, a "comp
 
 Instances can be created locally or on remote hosts over SSH connections without the need to install `geneos` on the remote Linux server.
 
-Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information.
+Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information. Using the `--host`/`-H` option with a name that is not a configured host is an error.
 
 For many commands you can also use wildcards for the `NAME` part. These wildcards are not complex regular expressions but instead follow more common file system patterns. (Note that the exact patterns support are the same as for the Go [`path.Match`](https://pkg.go.dev/path#Match) function.). These wildcards only work on `NAME` and not the `HOST` part and then only for those commands where they make sense, such as `geneos ls`, `geneos start` and so on.
 
@@ -592,7 +592,7 @@ For "gateway", "probe", "entity", "sampler", and "dataview" elements, the follow
 * `keep` - keep the name predicate for the element. This is the default for "sampler" and "dataview" elements.
 * `remove:NAME` - remove the matching name predicate from the element. NAME can be a glob (not regexp) pattern, e.g. "PROD*".
 * `set:NAME` - set the name predicates for the element.
-* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash.
+* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash. All replacement expressions are checked before any file is processed and an invalid one is an error.
 
 For "type" elements, the following additional modifications are available:
 
@@ -1164,7 +1164,7 @@ To create a key file with new contents use the `aes new` command.
 
 If the `--shared`/`-s` flag is set then the provided key file is imported to matching component shared key file directories and matching instances have their key file parameters set to point to the new location.
 
-If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed.
+If neither `--keyfile`/`-k` or `--crc`/`-c` is given then the key file contents are read from STDIN. If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed and it is an error if the key file does not exist. The `--crc` option cannot be combined with `--keyfile` or `--shared`.
 
 Depending on the `--no-roll`/`-N` flag, any matching instances may have their `prevkeyfile` parameter updated to reference any original key file and, if a new key file is written in a non-shared location the previous file is also renamed using the suffix in the `--backup`/`-b` flag.
 
@@ -1180,7 +1180,8 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ```text
   -k, --keyfile PATH|URL|-        Key file to use. PATH|URL|-
-                                  Path to a local file, a URL or a dash for STDIN. (default "-")
+                                  Path to a local file, a URL or a dash for STDIN.
+                                  The default, unless --crc is given, is to read from STDIN.
   -c, --crc CRC                   CRC of an existing shared keyfile to use
   -b, --backup string             Backup any existing keyfile with extension given (default "-prev")
   -N, --no-roll[=true|false]      Do not roll any existing keyfile to previous keyfile setting
@@ -1203,11 +1204,11 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 Backup instance data in an archive file, either for a safety backup or to be restored on another system using the `geneos restore` command.
 
-Each matching instance has its primary configuration files included in the archive. By default, no AES files, instance certificates, or instance private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below, then only files in the instance directory are included; files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-a` flag is given, in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
+Each matching instance has its primary configuration files included in the archive. By default, no AES files, instance certificates, or instance private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below, then only files in the instance directory are included; files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-A` flag is given, in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
 
 The global `tls/` directory is always included in the backup. This is so that the trusted roots that may be used by instances are included. The directory should never contain anything other than certificates, which are public information.
 
-The default output format is a `tar.gz` file (gzipped tar). You can also select bzip2 or none using the `--compress/-c` option. Unless you set your own archive file name using the `--output/-o` flag, the file name will be automatically generated based on how many unique component types and instance names there are. The `--output/-o` flags will also accept `-` to mean output to stdout.
+The default output format is a `tar.gz` file (gzipped tar). You can also select bzip2 or none using the `--compress/-z` option. Unless you set your own archive file name using the `--output/-o` flag, the file name will be automatically generated based on how many unique component types and instance names there are. The `--output/-o` flags will also accept `-` to mean output to stdout.
 
 If a single instance is selected than the default destination archive is made up of `geneos`, the component type and the instance name, in the format `geneos-TYPE-NAME.tar.gz` in the current directory. Use the `--output`/`-o` option to override, including a `-` to indicate STDOUT for piping to another command. In this case any other messages are written to STDERR. If written to a file. any existing file with the same name is overwritten. If the program is invoked using another name then that is used instead of `geneos`. All spaces in instance names are replaced with underscores. So, a Gateway with the name "Demo Gateway" would be saved as `geneos-gateway-Demo_Gateway.tar.gz`.
 
@@ -1223,9 +1224,9 @@ To include AES files, use the `--aes` option. Without this option the files that
 
 To include certificate and private key files, use the `--tls` option. Without this option the files skipped are those referenced by the instance parameters `certificate`, `privatekey` and `certchain`. When using `--shared` all files with the extensions `.pem`, `.key` and `.crt` are skipped.
 
-File over 2MiB are not included in the archive unless the `--all/-a` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
+File over 2MiB are not included in the archive unless the `--all/-A` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
 
-The contents of the archive are relative to the root of the Geneos installation, and the `geneos load` command will refactor any changes to paths in the instance configuration JSON files.
+The contents of the archive are relative to the root of the Geneos installation, and the `geneos restore` command will refactor any changes to paths in the instance configuration JSON files.
 
 Note that instances are not stopped or restarted as part of the backup process. If files are locked or changed during the backup then the contents may be inconsistent. If you want to stop the instance before backup and restart it afterwards then you can use the `geneos stop` and `geneos start` commands in a script.
 
@@ -1360,7 +1361,7 @@ geneos clean gateway Gateway1
 
 Show the command line and environment variables for matching instances.
 
-If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used.
+If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used. As for the default output, the values of arguments and environment variables that look like secrets are redacted.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the command constructors. This is primarily to match the `start` and `restart` commands and for diagnostics and debugging
 
@@ -1889,7 +1890,7 @@ geneos disable [TYPE] [NAME...] [flags]
 
 <sub>[Up: geneos](#geneos)</sub>
 
-Enable matching instances and, if the `--start`/`-S` options is set then start the instance. Only those instances that were disabled are started when the `--start`/`-S` flag is used.
+Enable matching instances and, if the `--start`/`-S` options is set then start the instance. The `--start`/`-S` flag also starts matching instances that were already enabled, but only if they are not already running.
 
 If called with no arguments `delete` will take no action. If you do want to match all instances then you must use the explicit instance wildcard `all`.
 
@@ -2457,7 +2458,7 @@ geneos host show [flags] [NAME...]
 
 <sub>[Up: geneos host](#geneos-host) | [Top: geneos](#geneos)</sub>
 
-The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards.
+The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards. If no host names are given then all remote hosts are changed, otherwise only the named hosts.
 
 ## Usage
 
@@ -3139,9 +3140,7 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 ## Restoring From Backup
 
-The `--restore/-R` option will restore a backup file created with the `geneos backup` command. This will create the directory structure if it does not exist but will not remove or change any existing files. If this directory is not empty then you can also use the `--force/-F` option to force the use of this directory. Unlike the `geneos restore` command, using `geneos init --restore FILE` restores the complete contents of the backup file while rebuilding the instance configuration files to match the new root directory. Just like the `geneos restore` command it does not alter the component configuration files, only the metadata created and managed by the `geneos` command, so you will need to manually check and edit paths in files like `gateway.setup.xml` etc.
-
-The `--restore/-R` option will also install Geneos software releases used by the instances being restored unless the `--no-install/-X` option is specified. You must either provide download credentials using the `--user/-u` option (or run `geneos login` first) or have the packages already downloaded and then pass the containing directory path using the `--archive/-A` flag.
+The `--restore/-R`, `--no-install/-X` and `--name/-n` options are no longer supported and now result in an error. To restore a backup file created with the `geneos backup` command use `geneos init` to create the directory structure and then the `geneos restore` command.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 
@@ -3185,8 +3184,6 @@ geneos init [PROFILE] [flags] [DIRECTORY]
 ### Options
 
 ```text
-  -R, --restore PATH                     Restore from backup file PATH
-  -X, --no-install[=true|false]          Don't install any releases after restore
   -M, --minimal[=true|false]             use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
@@ -3194,7 +3191,6 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -s, --site string                      Set the initial installation site name
   -l, --log[=true|false]                 Follow logs after starting instance(s)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
-  -n, --name string                      Use name for instances and configurations instead of the hostname
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -3263,7 +3259,6 @@ geneos init templates [TYPE] [flags]
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --insecure[=true|false]            Do not create internal certificates for TLS support
   -l, --log[=true|false]                 Follow logs after starting instance(s)
-  -n, --name string                      Use name for instances and configurations instead of the hostname
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
       --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
@@ -3966,7 +3961,7 @@ geneos package list [flags] [TYPE]
 
 The `package uninstall` commands removes installed Geneos releases and downloaded archive files. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release for each matching component.
 
-To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise **all** files in that directory are removed, including the latest release and those that are for other components.
+To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise the downloaded archives for the releases that are removed are also removed. If `--all` is given then all the archives for the component type are removed. Archives for other components are never removed.
 
 If `TYPE` is given then only releases for that component are removed. Similarly, if `--version VERSION` is given then only that version is removed. `VERSION` must be an exact match and multiple versions or version wildcards are not yet supported.
 
@@ -4857,7 +4852,7 @@ Protected instances will not be restarted unless the `--force`/`-F` option is gi
 
 Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a short period before trying again until the process is no longer running. If this fails to stop the process a `SIGKILL` is sent to terminate the process without further action. If the `--kill`/`-K` option is used then the terminate signal is sent immediately without waiting. Beware that this can leave instance files corrupted or in an indeterminate state.
 
-If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user.
+If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user. This also applies to instances selected using `--port`/`-p`.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos restart gateway Example -x -skip-cache`.
 
@@ -5512,7 +5507,7 @@ The start-up command and environment can be seen using the `geneos command` comm
 
 Any matching instances that are marked as `disabled` are not started. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
 
-With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues.
+With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues. This also applies to instances selected using `--port`/`-p`, which are started regardless of their `autostart` setting.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos start gateway Example -x -skip-cache`.
 
@@ -5706,7 +5701,7 @@ geneos tls create [flags]
 
 Exports either the local signer private key, certificate and root certificate suitable for importing into another cordial `geneos` installation or, if you specify either component TYPE or instance NAMEs then the private key, instance certificate and other certificates up to and including the trust root for matching instances is output instead.
 
-The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
+The default output is to the console but you can specify a file destination using the `--output`/`-o` option. For instance certificates a file destination can only be used if a single instance matches, as the certificates of every instance would otherwise be written to the same file.
 
 ## Usage
 
@@ -5894,7 +5889,7 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa (default ecdh)
   -F, --force[=true|false]        Overwrite any existing root and signing certificates
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)

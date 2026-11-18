@@ -15,7 +15,7 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa (default ecdh)
   -F, --force[=true|false]        Overwrite any existing root and signing certificates
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
