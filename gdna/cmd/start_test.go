@@ -2,10 +2,14 @@ package cmd
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -14,6 +18,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	"github.com/itrs-group/cordial/pkg/process"
 )
 
 // writeScheduleConfig writes a configuration file for the tests of the
@@ -222,6 +227,7 @@ func TestBindNetprobeFlags(t *testing.T) {
 					f.Value.Set(f.DefValue)
 					f.Changed = false
 				})
+				fetchCmdSources = nil // setting the default of this flag adds an empty source
 			})
 
 			if err := flags.Parse([]string{"--hostname", "np.example.com", "--port", "9999", test.extra, "--skip-verify", "--entity", "E", "--sampler", "S"}); err != nil {
@@ -256,5 +262,100 @@ func TestBindNetprobeFlags(t *testing.T) {
 				t.Errorf("sampler = %q, want S", got)
 			}
 		})
+	}
+}
+
+// a run that is in progress when the configuration is reloaded keeps the
+// configuration that it started with and the next run uses the new one
+func TestReloadUsesNewConfigForLaterRuns(t *testing.T) {
+	dir := t.TempDir()
+	quietLog(t)
+
+	oldSched, oldMain, oldEmail, oldCfgFile, oldRun := sched, mainjob, emailjob, cfgFile, runMain
+	t.Cleanup(func() {
+		if sched != nil && sched != oldSched {
+			sched.Shutdown()
+		}
+		sched, mainjob, emailjob, cfgFile, runMain = oldSched, oldMain, oldEmail, oldCfgFile, oldRun
+	})
+	mainjob, emailjob = nil, nil
+
+	writeConfig := func(siteName string) string {
+		path := filepath.Join(dir, "gdna.yaml")
+		body := fmt.Sprintf("gdna:\n  site-name: %s\n  schedule: \"0 0 1 1 *\"\n  email-schedule: \"\"\n", siteName)
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return path
+	}
+
+	// each run reports the configuration it was given at the start and
+	// the one it sees when it ends, after it is released
+	type run struct{ started, ended string }
+	starts := make(chan struct{})
+	release := make(chan struct{})
+	results := make(chan run)
+	runMain = func(ctx context.Context, c *config.Config, db *sql.DB) error {
+		r := run{started: config.Get[string](c, "gdna.site-name")}
+		starts <- struct{}{}
+		<-release
+		r.ended = config.Get[string](c, "gdna.site-name")
+		results <- r
+		return nil
+	}
+
+	var err error
+	if sched, err = gocron.NewScheduler(); err != nil {
+		t.Fatal(err)
+	}
+	sched.Start()
+
+	cfgFile = writeConfig("old")
+	initial, err := loadConfig(cfgFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = scheduleJobs(initial, gocron.NewTask(runMain, t.Context(), initial, (*sql.DB)(nil)), gocron.NewTask(func() {})); err != nil {
+		t.Fatal(err)
+	}
+
+	// start a run, and reload while it is running
+	if err = mainjob.RunNow(); err != nil {
+		t.Fatal(err)
+	}
+	<-starts
+
+	cfgFile = writeConfig("new")
+	if _, err = reload(t.Context(), initial, nil); err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	release <- struct{}{}
+	if r := <-results; r.started != "old" || r.ended != "old" {
+		t.Errorf("run in progress during the reload used %+v, want the old configuration throughout", r)
+	}
+
+	// the next run uses the new configuration
+	if err = mainjob.RunNow(); err != nil {
+		t.Fatal(err)
+	}
+	<-starts
+	release <- struct{}{}
+	if r := <-results; r.started != "new" {
+		t.Errorf("run after the reload used the %q configuration, want the new one", r.started)
+	}
+}
+
+func TestReloadSignals(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		if signals := reloadSignals(); len(signals) != 0 {
+			t.Errorf("reloadSignals() = %v, want none on Windows", signals)
+		}
+		return
+	}
+	signals := reloadSignals()
+	for _, want := range []os.Signal{process.SigReload, syscall.SIGHUP} {
+		if !slices.Contains(signals, want) {
+			t.Errorf("reloadSignals() = %v, want %v included", signals, want)
+		}
 	}
 }
