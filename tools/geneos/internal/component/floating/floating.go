@@ -194,29 +194,29 @@ func (i *Floating) Load() (err error) {
 // Unload TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Unload() (err error) {
 	floatings.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
 	instance.ResetHome(i)
 	return
 }
 
 // Loaded TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Loaded() time.Time {
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
 func (i *Floating) SetLoaded(t time.Time) {
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
 func (i *Floating) Config() *config.Config {
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
 func (i *Floating) SetConfig(cf *config.Config) {
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add TODO: Document its behavior, inputs, and effects.

@@ -2,6 +2,7 @@ package geneos
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"slices"
@@ -68,53 +69,57 @@ func TestComponentIsA(t *testing.T) {
 // TestComponentGlobalSetting checks that the registered default is used,
 // that an empty default is empty and not the name of the legacy alias,
 // and that a legacy setting is honoured
+var settingTestRuns atomic.Int64
+
 func TestComponentGlobalSetting(t *testing.T) {
+	// the global configuration is shared by repeated runs
+	st := fmt.Sprintf("settingtest%d", settingTestRuns.Add(1))
 	cf := config.Global()
 	ct := &Component{
-		Name:           "settingtest",
-		GlobalSettings: map[string]string{"settingtest.clean": "*.old:*.bak"},
+		Name:           st,
+		GlobalSettings: map[string]string{st + ".clean": "*.old:*.bak"},
 		ConfigAliases: map[string]string{
-			"settingtest.clean": "settingtestcleanlist",
-			"settingtest.purge": "settingtestpurgelist",
-			"settingtest.ports": "settingtestportrange",
+			st + ".clean": st + "cleanlist",
+			st + ".purge": st + "purgelist",
+			st + ".ports": st + "portrange",
 		},
 	}
 	for k, v := range ct.GlobalSettings {
 		cf.Default(k, v)
 	}
-	keys := []string{"settingtest.clean", "settingtestcleanlist", "settingtest.purge", "settingtestpurgelist", "settingtest.ports", "settingtestportrange"}
+	keys := []string{st + ".clean", st + "cleanlist", st + ".purge", st + "purgelist", st + ".ports", st + "portrange"}
 	t.Cleanup(func() {
 		for _, k := range keys {
 			config.Delete(cf, k)
 		}
 	})
 
-	if got := ct.GlobalSetting("settingtest.clean"); got != "*.old:*.bak" {
+	if got := ct.GlobalSetting(st + ".clean"); got != "*.old:*.bak" {
 		t.Errorf("default clean list = %q", got)
 	}
 	// no default is an empty value, not the name of the alias
-	if got := ct.GlobalSetting("settingtest.purge"); got != "" {
+	if got := ct.GlobalSetting(st + ".purge"); got != "" {
 		t.Errorf("purge list with no default = %q, want empty", got)
 	}
 
-	config.Set(cf, "settingtestpurgelist", "*.log")
-	if got := ct.GlobalSetting("settingtest.purge"); got != "*.log" {
+	config.Set(cf, st+"purgelist", "*.log")
+	if got := ct.GlobalSetting(st + ".purge"); got != "*.log" {
 		t.Errorf("legacy purge list = %q, want *.log", got)
 	}
 
 	// a legacy setting is used over the registered default, but a new
 	// setting overrides the legacy one
-	config.Set(cf, "settingtestcleanlist", "legacy")
-	if got := ct.GlobalSetting("settingtest.clean"); got != "legacy" {
+	config.Set(cf, st+"cleanlist", "legacy")
+	if got := ct.GlobalSetting(st + ".clean"); got != "legacy" {
 		t.Errorf("legacy clean list over default = %q, want legacy", got)
 	}
-	config.Set(cf, "settingtest.clean", "new")
-	if got := ct.GlobalSetting("settingtest.clean"); got != "new" {
+	config.Set(cf, st+".clean", "new")
+	if got := ct.GlobalSetting(st + ".clean"); got != "new" {
 		t.Errorf("new clean list = %q, want new", got)
 	}
 
-	config.Set(cf, "settingtestportrange", "7000-7100")
-	if got := ct.GlobalSetting("settingtest.ports"); got != "7000-7100" {
+	config.Set(cf, st+"portrange", "7000-7100")
+	if got := ct.GlobalSetting(st + ".ports"); got != "7000-7100" {
 		t.Errorf("legacy port range = %q", got)
 	}
 

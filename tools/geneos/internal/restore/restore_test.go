@@ -21,6 +21,7 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/component/licd"
 	_ "github.com/itrs-group/cordial/tools/geneos/internal/component/san"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/restore"
 )
 
@@ -37,6 +38,21 @@ func newTestRoot(t *testing.T) (root string) {
 		config.Set(config.Global(), key, previousRoot)
 		geneos.LOCAL, geneos.ALL, geneos.LOCALHOST = previousLocal, previousAll, previousHostname
 		logger.LogHandler = previousHandler
+	})
+	// instances are cached for the life of the process, even if they
+	// cannot be loaded, and must not be found by a later test, or run,
+	// with a different root
+	t.Cleanup(func() {
+		for _, ct := range append(geneos.RealComponents(), geneos.ParseComponent("profile")) {
+			if ct == nil {
+				continue
+			}
+			for _, name := range instance.AllInstanceNames(geneos.LOCAL, ct) {
+				if i := ct.New(name); i != nil {
+					_ = i.Unload()
+				}
+			}
+		}
 	})
 	logger.LogHandler = slog.NewTextHandler(io.Discard, nil)
 	config.Set(config.Global(), key, root)

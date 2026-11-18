@@ -39,7 +39,13 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
-// The Instance type is the common data shared by all instances
+// The Instance type is the common data shared by all instances.
+//
+// Instances are cached and shared between goroutines. The fields Conf
+// and ConfigLoaded can change after an instance is created, so they must
+// only be used with the methods Config, SetConfig, Loaded and SetLoaded
+// once it can be shared, which are safe for concurrent use. The other
+// fields must not be changed after the instance is created.
 type Instance struct {
 	Conf         *config.Config      `json:"-"`
 	InstanceHost *geneos.Host        `json:"-"`
@@ -47,6 +53,50 @@ type Instance struct {
 	ConfigLoaded time.Time           `json:"-"`
 	Logger       *slog.Logger        `json:"-"`
 	AuditLogger  *logger.AuditLogger `json:"-"`
+
+	mutex sync.RWMutex // protects Conf and ConfigLoaded
+}
+
+// Config returns the configuration of the instance. It is safe to call
+// on a nil Instance.
+func (i *Instance) Config() *config.Config {
+	if i == nil {
+		return nil
+	}
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+	return i.Conf
+}
+
+// SetConfig replaces the configuration of the instance.
+func (i *Instance) SetConfig(cf *config.Config) {
+	if i == nil {
+		return
+	}
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+	i.Conf = cf
+}
+
+// Loaded returns the modification time of the configuration file that
+// the instance was loaded from, or the zero time if it is not loaded.
+func (i *Instance) Loaded() time.Time {
+	if i == nil {
+		return time.Time{}
+	}
+	i.mutex.RLock()
+	defer i.mutex.RUnlock()
+	return i.ConfigLoaded
+}
+
+// SetLoaded sets the modification time of the loaded configuration file.
+func (i *Instance) SetLoaded(t time.Time) {
+	if i == nil {
+		return
+	}
+	i.mutex.Lock()
+	defer i.mutex.Unlock()
+	i.ConfigLoaded = t
 }
 
 // IsA returns true if instance i has a type that is component of one of

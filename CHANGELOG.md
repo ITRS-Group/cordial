@@ -305,6 +305,8 @@
 
     * Fix the templates and directories of a component only being initialised for the first host when more than one host is initialised in a single run, such as with `geneos deploy` to several hosts.
 
+    * Fix a data race in commands that process several instances at once, such as `geneos set`, `protect` and `unset`, on the loaded time and the configuration of the instances, which are shared between the goroutines, and which could cause a crash or a configuration to be read or written incorrectly.
+
     * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
 
 * `integrations/servicenow2`

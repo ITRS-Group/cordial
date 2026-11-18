@@ -136,6 +136,7 @@ func TestHomeNotFoundIsNotCached(t *testing.T) {
 	ch := useCountHost(t)
 
 	i := licd.Component.New("not-created")
+	t.Cleanup(func() { _ = i.Unload() })
 	want := filepath.Join(root, "licd", "licds", "not-created")
 	for range 2 {
 		requireReset(t, ch, i, want)

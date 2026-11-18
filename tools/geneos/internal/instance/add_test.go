@@ -31,6 +31,18 @@ func newTestRoot(t *testing.T) (root string) {
 		geneos.LOCAL, geneos.ALL, geneos.LOCALHOST = previousLocal, previousAll, previousHostname
 		logger.LogHandler = previousHandler
 	})
+	// instances are cached for the life of the process, even if they
+	// cannot be loaded, and must not be found by a later test, or run,
+	// with a different root
+	t.Cleanup(func() {
+		for _, ct := range geneos.RealComponents() {
+			for _, name := range instance.AllInstanceNames(geneos.LOCAL, ct) {
+				if i := ct.New(name); i != nil {
+					_ = i.Unload()
+				}
+			}
+		}
+	})
 	logger.LogHandler = slog.NewTextHandler(io.Discard, nil)
 	config.Set(config.Global(), key, root)
 	geneos.LOCALHOST = "localhost"
