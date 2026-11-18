@@ -177,10 +177,73 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.
 
 	// the token source keeps the context it is created with for later
 	// refreshes, so it must not be the caller's, which may be cancelled
-	// once Auth returns. conf.Client keeps the timeout, redirect policy
-	// and cookie jar of the client in the context.
-	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, c.httpClient())
-	c.HTTPClient = conf.Client(tokenCtx)
+	// once Auth returns. Refreshes use the client in the context and
+	// not the one returned, so they do not depend on where requests are
+	// redirected to.
+	hc := c.httpClient()
+	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, hc)
+	base := hc.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	c.HTTPClient = &http.Client{
+		Transport: &originTransport{
+			origin: *c.BaseURL,
+			base:   base,
+			auth: &oauth2.Transport{
+				Base:   base,
+				Source: oauth2.ReuseTokenSource(nil, conf.TokenSource(tokenCtx)),
+			},
+		},
+		CheckRedirect: hc.CheckRedirect,
+		Jar:           hc.Jar,
+		Timeout:       hc.Timeout,
+	}
+}
+
+// originTransport adds the OAuth2 token only to requests for the same
+// origin (scheme, host and port) as the client base URL. A request to
+// any other origin, such as after a redirect to another host or from
+// https to http, is sent without it, and a redirected request has any
+// Authorization or Proxy-Authorization header removed.
+type originTransport struct {
+	origin url.URL
+	base   http.RoundTripper
+	auth   http.RoundTripper
+}
+
+func (t *originTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if sameOrigin(&t.origin, req.URL) {
+		return t.auth.RoundTrip(req)
+	}
+	if req.Response != nil && (req.Header.Get("Authorization") != "" || req.Header.Get("Proxy-Authorization") != "") {
+		// req.Response is only set for a redirected request
+		req = req.Clone(req.Context())
+		req.Header.Del("Authorization")
+		req.Header.Del("Proxy-Authorization")
+	}
+	return t.base.RoundTrip(req)
+}
+
+// sameOrigin returns true if a and b have the same scheme, host name
+// and port, using the default port for the scheme if there is none.
+func sameOrigin(a, b *url.URL) bool {
+	return strings.EqualFold(a.Scheme, b.Scheme) &&
+		strings.EqualFold(a.Hostname(), b.Hostname()) &&
+		originPort(a) == originPort(b)
+}
+
+func originPort(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return "443"
+	case "http":
+		return "80"
+	}
+	return ""
 }
 
 // Do executes the given method (GET, POST, PUT, DELETE) with the given
@@ -373,20 +436,25 @@ func (c *Client) send(req *http.Request, body []byte, hasBody bool, response any
 	return
 }
 
-// clientFor returns the http client to use for req. If a custom
-// authentication header is set it is removed from any redirected
-// request to a different host, as Go itself only does this for a fixed
-// list of headers.
+// clientFor returns the http client to use for req. A redirect to a
+// different origin (scheme, host and port) has the custom
+// authentication header, if set, and any Authorization or
+// Proxy-Authorization header removed, as Go itself only does this for a
+// fixed list of headers and not for a redirect to a sub-domain or
+// to a lower security scheme. The OAuth2 token is added by the
+// transport set up by [Client.Auth], which also only does this for the
+// base URL origin.
 func (c *Client) clientFor(req *http.Request) *http.Client {
 	hc := c.httpClient()
-	if c.authHeader == "" {
-		return hc
-	}
-	header, host, check := c.authHeader, req.URL.Host, hc.CheckRedirect
+	header, origin, check := c.authHeader, *req.URL, hc.CheckRedirect
 	cc := *hc
 	cc.CheckRedirect = func(next *http.Request, via []*http.Request) error {
-		if !strings.EqualFold(next.URL.Host, host) {
-			next.Header.Del(header)
+		if !sameOrigin(&origin, next.URL) {
+			if header != "" {
+				next.Header.Del(header)
+			}
+			next.Header.Del("Authorization")
+			next.Header.Del("Proxy-Authorization")
 		}
 		if check != nil {
 			return check(next, via)

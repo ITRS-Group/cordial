@@ -279,6 +279,8 @@
 
   * Fix `Auth` using the context passed to it for all later token refreshes, so cancelling it broke the client, a custom authentication header being sent to a different host by a redirect, and debug logging including the values of request bodies and queries.
 
+  * Fix the OAuth2 bearer token set up by `Auth`, and any `Authorization` or `Proxy-Authorization` header, being sent to a different host, port or scheme after a redirect, including from `https` to `http`. The token is now only added to requests to the same scheme, host and port as the base URL, and a redirect to anywhere else, which previously could expose it, no longer carries it or a custom authentication header.
+
   * Add `Client.Send` for requests that are built by the caller, such as those with a streamed body.
 
 * `pkg/icp`

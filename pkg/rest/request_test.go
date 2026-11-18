@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -744,4 +745,155 @@ func TestCustomAuthHeaderNotSentToOtherHostOnRedirect(t *testing.T) {
 	if got := same.Load(); got != "secret" {
 		t.Errorf("X-Token on a same-host redirect = %q, want it kept", got)
 	}
+}
+
+// authRedirectServer sets the handler of srv to be an OAuth2 token endpoint on
+// /oauth2/token, issuing tokens that expire at once so that every
+// request refreshes, redirect /redirect/<code> to target() with that status
+// and record the authorization headers of anything else
+func authRedirectServer(t *testing.T, srv *httptest.Server, target func() string, tokens *atomic.Int32, seen *atomic.Value) *httptest.Server {
+	t.Helper()
+	srv.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/oauth2/token":
+			tokens.Add(1)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"access_token":"tok-secret","token_type":"Bearer","expires_in":1}`))
+		case strings.HasPrefix(r.URL.Path, "/redirect/"):
+			code, _ := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/redirect/"))
+			http.Redirect(w, r, target()+"/final", code)
+		default:
+			seen.Store(r.Header.Get("Authorization") + "|" + r.Header.Get("X-Token") + "|" + r.Header.Get("Proxy-Authorization"))
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"ok":true}`))
+		}
+	})
+	return srv
+}
+
+func TestOAuthTokenNotSentToOtherOriginOnRedirect(t *testing.T) {
+	ctx := context.Background()
+	newSeen := func() *atomic.Value {
+		v := new(atomic.Value)
+		v.Store("unset")
+		return v
+	}
+
+	t.Run("other host", func(t *testing.T) {
+		for _, code := range []int{http.StatusFound, http.StatusTemporaryRedirect, http.StatusPermanentRedirect} {
+			t.Run(strconv.Itoa(code), func(t *testing.T) {
+				var tokens atomic.Int32
+				aSeen, bSeen := newSeen(), newSeen()
+				b := authRedirectServer(t, httptest.NewServer(nil), nil, new(atomic.Int32), bSeen)
+				defer b.Close()
+				a := authRedirectServer(t, httptest.NewServer(nil), func() string { return b.URL }, &tokens, aSeen)
+				defer a.Close()
+
+				c := NewClient(BaseURLString(a.URL))
+				c.Auth(ctx, "id", config.Secret("secret"))
+				if _, err := c.Get(ctx, "/data", nil, nil); err != nil {
+					t.Fatalf("Get() to the base host: %v", err)
+				}
+				if got := aSeen.Load(); got != "Bearer tok-secret||" {
+					t.Errorf("headers at the base host = %q, want the token", got)
+				}
+				if _, err := c.Get(ctx, fmt.Sprintf("/redirect/%d", code), nil, nil); err != nil {
+					t.Fatalf("Get() redirected to another host: %v", err)
+				}
+				if got := bSeen.Load(); got != "||" {
+					t.Errorf("headers at the other host = %q, want no authorization", got)
+				}
+				if n := tokens.Load(); n < 2 {
+					t.Errorf("token endpoint called %d times, want a refresh for each request", n)
+				}
+			})
+		}
+	})
+
+	t.Run("other host with custom header and Proxy-Authorization", func(t *testing.T) {
+		var tokens atomic.Int32
+		aSeen, bSeen := newSeen(), newSeen()
+		b := authRedirectServer(t, httptest.NewServer(nil), nil, new(atomic.Int32), bSeen)
+		defer b.Close()
+		a := authRedirectServer(t, httptest.NewServer(nil), func() string { return b.URL }, &tokens, aSeen)
+		defer a.Close()
+
+		c := NewClient(BaseURLString(a.URL), SetupRequestFunc(func(req *http.Request, _ *Client, _ []byte) {
+			req.Header.Set("Proxy-Authorization", "Basic cHJveHk=")
+		}))
+		c.SetAuth("X-Token", "custom")
+		if _, err := c.Get(ctx, "/data", nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := aSeen.Load(); got != "|custom|Basic cHJveHk=" {
+			t.Errorf("headers at the base host = %q", got)
+		}
+		if _, err := c.Post(ctx, "/redirect/307", `{}`, nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := bSeen.Load(); got != "||" {
+			t.Errorf("headers at the other host = %q, want none", got)
+		}
+	})
+
+	t.Run("same host keeps the token", func(t *testing.T) {
+		var tokens atomic.Int32
+		seen := newSeen()
+		var a *httptest.Server
+		a = authRedirectServer(t, httptest.NewServer(nil), func() string { return a.URL }, &tokens, seen)
+		defer a.Close()
+
+		c := NewClient(BaseURLString(a.URL))
+		c.Auth(ctx, "id", config.Secret("secret"))
+		if _, err := c.Get(ctx, "/redirect/307", nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := seen.Load(); got != "Bearer tok-secret||" {
+			t.Errorf("headers after a same-host redirect = %q, want the token", got)
+		}
+	})
+
+	t.Run("https to http", func(t *testing.T) {
+		var tokens atomic.Int32
+		aSeen, bSeen := newSeen(), newSeen()
+		b := authRedirectServer(t, httptest.NewServer(nil), nil, new(atomic.Int32), bSeen)
+		defer b.Close()
+		a := authRedirectServer(t, httptest.NewUnstartedServer(nil), func() string { return b.URL }, &tokens, aSeen)
+		a.StartTLS()
+		defer a.Close()
+
+		c := NewClient(BaseURLString(a.URL), HTTPClient(a.Client()))
+		c.Auth(ctx, "id", config.Secret("secret"))
+		if _, err := c.Get(ctx, "/data", nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := aSeen.Load(); got != "Bearer tok-secret||" {
+			t.Errorf("headers at the https base = %q, want the token", got)
+		}
+		if _, err := c.Get(ctx, "/redirect/302", nil, nil); err != nil {
+			t.Fatal(err)
+		}
+		if got := bSeen.Load(); got != "||" {
+			t.Errorf("headers after a redirect to http = %q, want none", got)
+		}
+	})
+
+	t.Run("same host name, different port or scheme", func(t *testing.T) {
+		for _, tc := range []struct{ a, b string }{
+			{"https://example.com", "https://example.com:8443"},
+			{"https://example.com", "http://example.com"},
+			{"https://example.com", "https://www.example.com"},
+		} {
+			ua, _ := url.Parse(tc.a)
+			ub, _ := url.Parse(tc.b)
+			if sameOrigin(ua, ub) {
+				t.Errorf("sameOrigin(%s, %s) = true", tc.a, tc.b)
+			}
+		}
+		ua, _ := url.Parse("https://Example.com")
+		ub, _ := url.Parse("https://example.com:443/x")
+		if !sameOrigin(ua, ub) {
+			t.Error("default port and case should be the same origin")
+		}
+	})
 }
