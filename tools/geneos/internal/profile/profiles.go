@@ -331,6 +331,9 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 // the instance configuration before applying new values. The
 // forceRebuild flag determines whether the instance should be rebuilt
 // after applying changes if it's config.rebuild is not set to always..
+//
+// An existing instance is also changed to match the `insecure` option
+// of the profile, see applyTLSState.
 func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
 	var i geneos.Instance
 
@@ -391,6 +394,13 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			}
 		}
 
+		// follow the profile's `insecure` option, the rebuild below
+		// then applies the component's port rules for the new state
+		tlsChange, err := applyTLSState(i, pf, common)
+		if err != nil {
+			return fmt.Errorf("update TLS of instance %q: %w", name, err)
+		}
+
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
@@ -407,6 +417,15 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			if err := i.Reload(); err != nil && !errors.Is(err, geneos.ErrNotSupported) && !errors.Is(err, os.ErrProcessDone) {
 				return fmt.Errorf("reload instance %q: %w", name, err)
 			}
+		}
+
+		if tlsChange != tlsUnchanged {
+			state := "secure"
+			if tlsChange == tlsDisabled {
+				state = "insecure"
+			}
+			fmt.Printf("%s updated (now %s)\n", i, state)
+			i.AuditEvent("action/update", nil, slog.String("tls", state))
 		}
 	}
 

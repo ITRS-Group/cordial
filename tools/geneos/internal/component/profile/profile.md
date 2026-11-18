@@ -326,6 +326,16 @@ The licence daemon settings are cleared and set again whenever the profile is ap
 
 A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS port 7038, and a Gateway without TLS on 7038 is moved to 7039, but only if the other port is free. Any other port is never changed, and if the other port is in use then the Gateway keeps its configured port.
 
+## Changing TLS when a Profile Is Applied Again
+
+The `insecure` option is saved with the profile. When the profile is applied again, for example by `geneos deploy` with the profile name or by `geneos rebuild profile`, the TLS state of each existing instance is compared with the saved option and changed to match, and the instance is then rebuilt so that the port conventions above follow:
+
+* If the option is not `insecure` and the instance is not TLS capable, the certificate and key kept from an earlier secure state are used again if they are still valid, otherwise a new instance certificate is created as `geneos add` does. If a certificate bundle is given in the profile it is imported first and used. If no signing certificate is available the update fails with an error, rather than leaving the instance insecure; run `geneos tls init` or use `--insecure`.
+* If the option is `insecure` and the instance has TLS parameters, they are removed from the instance configuration only. The certificate and key files are never deleted. A certificate bundle given in the profile takes precedence over `insecure`, as it does when an instance is created.
+* If the state already matches, or the profile has no saved `insecure` option, nothing is changed.
+
+A Web Dashboard server is only started with HTTPS if its keystore exists, so when its TLS is removed the keystore is set aside by renaming it with a `.disabled` suffix, and it is built again when TLS is enabled. The keystore and truststore of an `sso-agent` are not changed, because it always has a keystore for its signing key and its use of TLS is set in `conf/sso-agent.conf`. Instances are reported as `updated` and an audit event is recorded.
+
 ## SAN Configuration
 
 A `san` entry accepts common keys and the following keys:
