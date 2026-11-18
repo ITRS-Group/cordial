@@ -581,8 +581,12 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 
 	opts := evalInstanceOptions(options...)
 
+	// directories are only listed once for this call, but never kept
+	// for the next
+	lister := newDirLister()
+
 	for ct := range ct.OrList() {
-		for _, name := range AllInstanceNames(h, ct) {
+		for _, name := range lister.instanceNames(h, ct) {
 			instanceNames = append(instanceNames, ct.String()+":"+name)
 		}
 	}
@@ -621,7 +625,7 @@ func Instances(h *geneos.Host, ct *geneos.Component, options ...InstanceOption) 
 		pt := ct.ParentType
 
 		var parentNames []string
-		for _, name := range AllInstanceNames(h, pt) {
+		for _, name := range lister.instanceNames(h, pt) {
 			parentNames = append(parentNames, pt.String()+":"+name)
 		}
 
@@ -733,18 +737,64 @@ func MatchParentPackage() InstanceOption {
 // to validate that the directory contains a valid instance.
 // AllInstanceNames are qualified with the host name. Regular files are
 // ignored.
+//
+// For each host and component the names are in sorted order, and a name
+// that is in more than one of the directories for the component, such
+// as a legacy one, is only returned once.
 func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
+	return newDirLister().instanceNames(h, ct)
+}
+
+// dirLister lists directories of instances, remembering the result for
+// each directory so that it is only read once. It is meant to be used
+// for a single call, to share the work between the parts of that call,
+// and must not be kept, as it would return stale results.
+type dirLister struct {
+	dirs map[dirKey][]string
+}
+
+type dirKey struct {
+	host *geneos.Host
+	dir  string
+}
+
+func newDirLister() *dirLister {
+	return &dirLister{dirs: map[dirKey][]string{}}
+}
+
+// subdirs returns the sorted names of the directories in dir on host h,
+// or nothing if it cannot be read.
+func (l *dirLister) subdirs(h *geneos.Host, dir string) []string {
+	key := dirKey{h, dir}
+	if names, ok := l.dirs[key]; ok {
+		return names
+	}
+
+	var names []string
+	if d, err := h.ReadDir(dir); err == nil {
+		for _, f := range d {
+			if f.IsDir() {
+				names = append(names, f.Name())
+			}
+		}
+		slices.Sort(names)
+	}
+	l.dirs[key] = names
+	return names
+}
+
+// instanceNames is AllInstanceNames using l to list directories.
+func (l *dirLister) instanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 	for h := range h.OrList() {
 		for ct := range ct.OrList() {
+			seen := map[string]struct{}{}
 			for _, dir := range ct.InstancesBaseDirs(h) {
-				d, err := h.ReadDir(dir)
-				if err != nil {
-					continue
-				}
-				for _, f := range d {
-					if f.IsDir() {
-						names = append(names, f.Name()+"@"+h.String())
+				for _, name := range l.subdirs(h, dir) {
+					if _, ok := seen[name]; ok {
+						continue
 					}
+					seen[name] = struct{}{}
+					names = append(names, name+"@"+h.String())
 				}
 			}
 		}
@@ -766,6 +816,9 @@ func AllInstanceNames(h *geneos.Host, ct *geneos.Component) (names []string) {
 // Patterns that have no globbing special characters are returned as-is
 // and the caller is expected to validate them.
 func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool, patterns ...string) (names []string, err error) {
+	// each directory is only listed once for all of the patterns
+	lister := newDirLister()
+
 	for _, pattern := range patterns {
 		if pattern == "all" {
 			pattern = "*"
@@ -779,7 +832,7 @@ func Match(h *geneos.Host, ct *geneos.Component, keepHosts bool, mustMatch bool,
 		h, _, p := ParseName(pattern, h) // override 'h' inside loop
 
 		var matched bool
-		for _, name := range AllInstanceNames(h, ct) {
+		for _, name := range lister.instanceNames(h, ct) {
 			_, _, n := ParseName(name, h)
 			if match, _ := path.Match(p, n); match {
 				matched = true

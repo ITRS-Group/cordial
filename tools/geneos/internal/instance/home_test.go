@@ -4,6 +4,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 	"sync/atomic"
 	"testing"
 
@@ -19,6 +20,29 @@ import (
 type countHost struct {
 	host.Host
 	stats atomic.Int64
+
+	mutex    sync.Mutex
+	readDirs map[string]int
+}
+
+func (c *countHost) ReadDir(name string) ([]os.DirEntry, error) {
+	c.mutex.Lock()
+	if c.readDirs == nil {
+		c.readDirs = map[string]int{}
+	}
+	c.readDirs[name]++
+	c.mutex.Unlock()
+	return c.Host.ReadDir(name)
+}
+
+// takeReadDirs returns the number of times that each directory has
+// been read, and resets the counts
+func (c *countHost) takeReadDirs() map[string]int {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	counts := c.readDirs
+	c.readDirs = nil
+	return counts
 }
 
 func (c *countHost) Stat(name string) (fs.FileInfo, error) {
