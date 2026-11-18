@@ -259,6 +259,13 @@ func (cs *ConfigServer) Gateways(hostname string) (NPgateways []netprobe.Gateway
 // reverseConnections returns the `geneos.sans.reverse-connections`
 // setting. The singular `reverse-connection`, which is what the code
 // used to read, is still accepted if it is set.
+//
+// TODO(maintainer): the documented default for this setting was `true`
+// but the original code never applied it and always generated
+// `requireReverseConnection` as `false`, which is the default kept here
+// (in san-config.defaults.yaml) to avoid changing the generated XML of
+// existing setups. The documented and the effective defaults differ and
+// a decision is needed on which one is wanted.
 func reverseConnections(conf *config.Config) bool {
 	if conf.IsSet(conf.Join("geneos", "sans", "reverse-connection")) {
 		return config.Get[bool](conf, "geneos.sans.reverse-connection")

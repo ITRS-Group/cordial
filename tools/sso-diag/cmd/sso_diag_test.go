@@ -45,17 +45,17 @@ func TestLDAPFilterEscapesUser(t *testing.T) {
 	}
 }
 
-func TestLDAPTLSVerifiesByDefault(t *testing.T) {
-	old := ldapInsecure
-	t.Cleanup(func() { ldapInsecure = old })
+func TestLDAPTLSSkipsVerificationByDefault(t *testing.T) {
+	old := ldapVerify
+	t.Cleanup(func() { ldapVerify = old })
 
-	ldapInsecure = false
-	if ldapTLSConfig().InsecureSkipVerify {
-		t.Error("LDAP certificates are not verified by default")
-	}
-	ldapInsecure = true
+	ldapVerify = false
 	if !ldapTLSConfig().InsecureSkipVerify {
-		t.Error("--ldap-insecure has no effect")
+		t.Error("LDAP certificates are verified by default")
+	}
+	ldapVerify = true
+	if ldapTLSConfig().InsecureSkipVerify {
+		t.Error("--ldap-verify has no effect")
 	}
 }
 
@@ -160,36 +160,36 @@ func TestTestUserPageWithoutADUser(t *testing.T) {
 }
 
 func TestConfigFileIsConsumed(t *testing.T) {
-	oldFile, oldDir, oldInsecure := cfgFile, confDir, ldapInsecure
+	oldFile, oldDir, oldVerify := cfgFile, confDir, ldapVerify
 	t.Cleanup(func() {
-		cfgFile, confDir, ldapInsecure = oldFile, oldDir, oldInsecure
+		cfgFile, confDir, ldapVerify = oldFile, oldDir, oldVerify
 		viper.Reset()
 		rootCmd.PersistentFlags().Lookup("dir").Changed = false
-		rootCmd.PersistentFlags().Lookup("ldap-insecure").Changed = false
+		rootCmd.PersistentFlags().Lookup("ldap-verify").Changed = false
 	})
 
 	conf := filepath.Join(t.TempDir(), "sso-diag.yaml")
-	if err := os.WriteFile(conf, []byte("dir: /some/agent\nldap-insecure: true\n"), 0600); err != nil {
+	if err := os.WriteFile(conf, []byte("dir: /some/agent\nldap-verify: true\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Run("used when flags are not given", func(t *testing.T) {
 		viper.Reset()
-		cfgFile, confDir, ldapInsecure = conf, ".", false
+		cfgFile, confDir, ldapVerify = conf, ".", false
 		initConfig()
-		if confDir != "/some/agent" || !ldapInsecure {
-			t.Errorf("confDir = %q, ldapInsecure = %v", confDir, ldapInsecure)
+		if confDir != "/some/agent" || !ldapVerify {
+			t.Errorf("confDir = %q, ldapVerify = %v", confDir, ldapVerify)
 		}
 	})
 
 	t.Run("flags take precedence", func(t *testing.T) {
 		viper.Reset()
-		cfgFile, confDir, ldapInsecure = conf, "/from/flag", false
+		cfgFile, confDir, ldapVerify = conf, "/from/flag", false
 		rootCmd.PersistentFlags().Lookup("dir").Changed = true
-		rootCmd.PersistentFlags().Lookup("ldap-insecure").Changed = true
+		rootCmd.PersistentFlags().Lookup("ldap-verify").Changed = true
 		initConfig()
-		if confDir != "/from/flag" || ldapInsecure {
-			t.Errorf("confDir = %q, ldapInsecure = %v", confDir, ldapInsecure)
+		if confDir != "/from/flag" || ldapVerify {
+			t.Errorf("confDir = %q, ldapVerify = %v", confDir, ldapVerify)
 		}
 	})
 }

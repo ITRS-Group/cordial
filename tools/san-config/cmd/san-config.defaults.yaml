@@ -167,7 +167,14 @@ geneos:
     # configuration. Apart from the `retry-interval` these should not be
     # changed.
     retry-interval: 60s
-    reverse-connections: true
+
+    # TODO(maintainer): the default for `reverse-connections` used to
+    # be documented as `true` but the program never applied it and
+    # always generated `requireReverseConnection` as `false`. The
+    # effective default is kept as `false` so that generated XML does
+    # not change for existing setups; a decision is needed on which
+    # default is wanted.
+    reverse-connections: false
     xmlns: http://www.w3.org/2001/XMLSchema-instance
     xsi: http://schema.itrsgroup.com/GA5.12.0-220125/netprobe.xsd
 

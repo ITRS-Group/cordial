@@ -32,8 +32,9 @@ import (
 
 var cfgFile, confDir string
 
-// ldapInsecure disables the verification of the LDAP server certificate
-var ldapInsecure bool
+// ldapVerify enables the verification of the LDAP server certificate,
+// which is skipped by default
+var ldapVerify bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -49,7 +50,7 @@ Settings for sso-diag itself can be given as command line flags or in an
 optional YAML configuration file (see --conf), with the keys:
 
   dir: SSO Agent directory
-  ldap-insecure: true | false`,
+  ldap-verify: true | false`,
 	Version: cordial.VERSION,
 }
 
@@ -80,7 +81,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/sso-diag.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution")
-	rootCmd.PersistentFlags().BoolVar(&ldapInsecure, "ldap-insecure", false, "do not verify the LDAP server certificate (insecure)")
+	rootCmd.PersistentFlags().BoolVar(&ldapVerify, "ldap-verify", false, "verify the LDAP server certificate (not verified by default)")
 
 	execname = filepath.Base(os.Args[0])
 	logger.Init(execname)
@@ -116,7 +117,7 @@ func initConfig() {
 	if f := rootCmd.PersistentFlags().Lookup("dir"); f != nil && !f.Changed && viper.IsSet("dir") {
 		confDir = viper.GetString("dir")
 	}
-	if f := rootCmd.PersistentFlags().Lookup("ldap-insecure"); f != nil && !f.Changed && viper.IsSet("ldap-insecure") {
-		ldapInsecure = viper.GetBool("ldap-insecure")
+	if f := rootCmd.PersistentFlags().Lookup("ldap-verify"); f != nil && !f.Changed && viper.IsSet("ldap-verify") {
+		ldapVerify = viper.GetBool("ldap-verify")
 	}
 }

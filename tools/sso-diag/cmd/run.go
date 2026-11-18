@@ -38,7 +38,7 @@ The server logs in to Kerberos using the configured account and then serves:
   /testuser    authenticates the caller with SPNEGO/Kerberos and shows the LDAP entry for them
   /authorize   a placeholder for the SSO Agent token endpoint
 
-LDAP connections verify the server certificate unless --ldap-insecure is given.`,
+LDAP connections do not verify the server certificate unless --ldap-verify is given.`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return start()

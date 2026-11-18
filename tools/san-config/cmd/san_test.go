@@ -344,16 +344,25 @@ components:
 		}
 	})
 
-	t.Run("reverse connections setting is used", func(t *testing.T) {
+	t.Run("reverse connections are not required by default", func(t *testing.T) {
 		np, _ := cs.NetprobeConfig("web1", "")
 		b, err := xml.Marshal(np)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(string(b), "<requireReverseConnection>true</requireReverseConnection>") {
+		if np.SelfAnnounce.RequireReverseConnection || strings.Contains(string(b), "requireReverseConnection") {
 			t.Errorf("XML = %s", b)
 		}
 	})
+
+	for _, key := range []string{"reverse-connections", "reverse-connection"} {
+		t.Run("reverse connections can be set with "+key, func(t *testing.T) {
+			rc := testConf(t, "geneos:\n  sans:\n    "+key+": true\n")
+			if !reverseConnections(rc) {
+				t.Errorf("%s: true was not used", key)
+			}
+		})
+	}
 
 	t.Run("alias loops return nothing and do not panic", func(t *testing.T) {
 		if np, _ := cs.NetprobeConfig("loopa", ""); np != nil {

@@ -265,11 +265,12 @@ func authorizePage(w http.ResponseWriter, r *http.Request) {
 }
 
 // ldapTLSConfig returns the TLS settings for connecting to the LDAP
-// server, which verify the server certificate unless the user has
-// asked not to
+// server, which do not verify the server certificate unless the user
+// has asked for it with --ldap-verify
 func ldapTLSConfig() *tls.Config {
 	return &tls.Config{
-		InsecureSkipVerify: ldapInsecure,
+		// TODO(maintainer): verify the LDAP server certificate by default
+		InsecureSkipVerify: !ldapVerify,
 	}
 }
 

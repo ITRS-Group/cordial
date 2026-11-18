@@ -161,15 +161,13 @@
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
 
-* `tools/dv2email`, `tools/files2dv`, `tools/gateway-reporter`, `tools/san-config` and `tools/sso-diag`
+* `tools/dv2email`, `tools/files2dv`, `tools/gateway-reporter` and `tools/san-config`
 
   * `tools/dv2email`: the `headline-filter`, `column-filter` and `row-filter` settings, and the `__HEADLINES`, `__COLUMNS` and `__ROWS` environment variables, now keep an item that matches **any** of the patterns, as documented, instead of only those that matched all of them. Filtered rows are also removed from the row order, the first (row name) column is never filtered, and the `--inline-css`/`-i` option, which never inlined anything, is deprecated, hidden and ignored. Output file names given explicitly are no longer suffixed with a timestamp, only `auto` names are. The text and XLSX `serial` value now starts from 1, as documented, and the sheet name, attachment and email order for `split: entity` is now by entity name.
 
   * `tools/gateway-reporter`: as the built-in defaults are now valid, reports are written to the default output directory (`/tmp/gateway-reporter`) in all the default formats, instead of silently not being written. The `--out`/`-o` option now sets the directory for all the formats, and a validation hook now also creates the Toolkit include file. A SQL Toolkit sampler with no valid queries now shows the configured `empty` message, which is no longer able to replace the valid queries of a sampler that has some.
 
-  * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, and `geneos.sans.reverse-connections` (default `true`) now sets `requireReverseConnection` in the generated XML; both were previously ignored. Older key names that the program used to read are still accepted. A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
-
-  * `tools/sso-diag`: the LDAP server certificate is now verified. Use the new `--ldap-insecure` option or `ldap-insecure: true` in `sso-diag.yaml` to restore the previous behaviour.
+  * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, having previously been ignored. The `geneos.sans.reverse-connections` setting is now read under its documented name, as well as the older key names that the program used to read, with the default unchanged (`false`). A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
 
 ## Version v1.31.0 Fixes
 
@@ -215,7 +213,7 @@
 
 * `tools/sso-diag`
 
-  * Fix LDAP connections never being closed, the user name not being escaped in the LDAP filter, a missing return after an authentication failure, a panic for a non-RSA key, and key version numbers above 255 being truncated. Handlers no longer exit the process, and the `--conf` file is now read.
+  * Fix LDAP connections never being closed, the user name not being escaped in the LDAP filter, a missing return after an authentication failure, a panic for a non-RSA key, and key version numbers above 255 being truncated. Handlers no longer exit the process, and the `--conf` file is now read. The new `--ldap-verify` option, or `ldap-verify: true` in `sso-diag.yaml`, verifies the LDAP server certificate, which is still not verified by default.
 
 * `tools/geneos`
 
