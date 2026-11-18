@@ -34,9 +34,7 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 ## Restoring From Backup
 
-The `--restore/-R` option will restore a backup file created with the `geneos backup` command. This will create the directory structure if it does not exist but will not remove or change any existing files. If this directory is not empty then you can also use the `--force/-F` option to force the use of this directory. Unlike the `geneos restore` command, using `geneos init --restore FILE` restores the complete contents of the backup file while rebuilding the instance configuration files to match the new root directory. Just like the `geneos restore` command it does not alter the component configuration files, only the metadata created and managed by the `geneos` command, so you will need to manually check and edit paths in files like `gateway.setup.xml` etc.
-
-The `--restore/-R` option will also install Geneos software releases used by the instances being restored unless the `--no-install/-X` option is specified. You must either provide download credentials using the `--user/-u` option (or run `geneos login` first) or have the packages already downloaded and then pass the containing directory path using the `--archive/-A` flag.
+The `--restore/-R`, `--no-install/-X` and `--name/-n` options are no longer supported and now result in an error. To restore a backup file created with the `geneos backup` command use `geneos init` to create the directory structure and then the `geneos restore` command.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 
