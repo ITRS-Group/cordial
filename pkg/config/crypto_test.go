@@ -1,7 +1,10 @@
 package config
 
 import (
+	"bytes"
 	"crypto/aes"
+	"crypto/cipher"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
@@ -66,5 +69,76 @@ func TestKeyValuesEncodeDecode(t *testing.T) {
 
 	if _, err := values.DecodeString("not-hex"); err == nil {
 		t.Fatal("DecodeString() succeeded for malformed ciphertext")
+	}
+}
+
+// encryptBlocks encrypts plaintext, which must be a multiple of the
+// block size, using kv without adding any padding
+func encryptBlocks(t *testing.T, kv *KeyValues, plaintext []byte) string {
+	t.Helper()
+	block, err := aes.NewCipher(kv.key[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := make([]byte, len(plaintext))
+	cipher.NewCBCEncrypter(block, kv.iv[:]).CryptBlocks(out, plaintext)
+	return strings.ToUpper(hex.EncodeToString(out))
+}
+
+func TestKeyValuesDecodeChecksAllPaddingBytes(t *testing.T) {
+	kv := NewKeyValues()
+	defer kv.Destroy()
+
+	tests := []struct {
+		name      string
+		plaintext []byte
+		want      string
+		wantErr   bool
+	}{
+		{name: "valid padding", plaintext: append([]byte("0123456789"), bytes.Repeat([]byte{6}, 6)...), want: "0123456789"},
+		{name: "full block of padding", plaintext: bytes.Repeat([]byte{16}, 16), want: ""},
+		{name: "only the last pad byte is right", plaintext: append([]byte("0123456789ab"), 1, 2, 3, 4), wantErr: true},
+		{name: "zero padding", plaintext: append([]byte("0123456789abcde"), 0), wantErr: true},
+		{name: "padding longer than a block", plaintext: append([]byte("0123456789abcde"), 17), wantErr: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := kv.DecodeString(encryptBlocks(t, kv, test.plaintext))
+			if (err != nil) != test.wantErr {
+				t.Fatalf("DecodeString() error = %v, wantErr %v", err, test.wantErr)
+			}
+			if got != test.want {
+				t.Errorf("DecodeString() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
+
+func TestKeyValuesDecodeRejectsInvalidHex(t *testing.T) {
+	kv := NewKeyValues()
+	defer kv.Destroy()
+
+	good := encryptBlocks(t, kv, bytes.Repeat([]byte{16}, 16))
+	for name, input := range map[string]string{
+		"bad character": good[:30] + "zz",
+		"odd length":    good + "0",
+	} {
+		if out, err := kv.Decode([]byte(input)); err == nil || out != nil {
+			t.Errorf("%s: Decode() = %q, %v; want an error", name, out, err)
+		}
+	}
+}
+
+func TestKeyValuesEncodeDoesNotModifyCallersSecret(t *testing.T) {
+	kv := NewKeyValues()
+	defer kv.Destroy()
+
+	backing := []byte("secret-and-spare-capacity-here")
+	secret := Secret(backing[:6])
+	if _, err := kv.Encode(secret); err != nil {
+		t.Fatal(err)
+	}
+	if string(backing) != "secret-and-spare-capacity-here" {
+		t.Errorf("Encode() modified memory beyond the secret: %q", backing)
 	}
 }
