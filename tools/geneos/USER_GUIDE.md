@@ -310,12 +310,12 @@ export GENEOS_NON_INTERACTIVE=true
 # JSON output for parsing
 geneos ps --json
 
-# Exit codes for automation
-if geneos ps gateway MyGW > /dev/null 2>&1; then
-    echo "Gateway is running"
+# Exit status for automation: 0 if everything that was asked for
+# succeeded, non-zero if any instance (or other item) failed
+if geneos start gateway MyGW1 MyGW2; then
+    echo "Gateways are running"
 else
-    echo "Gateway is not running"
-    geneos start gateway MyGW
+    echo "One or more Gateways could not be started"
 fi
 ```
 

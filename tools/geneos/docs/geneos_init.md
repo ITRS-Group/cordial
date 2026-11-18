@@ -4,6 +4,8 @@ The `init` sub-system is used to initialise your Geneos environment ready to run
 
 On it's own the `init` command will create a new directory structure (or use an existing one if it's considered empty) based on the options you supply. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path. Either specify a directory on the command line or you will be prompted for one. To specify a directory pass it as an argument without a flag. It must be an absolute path.
 
+It is an error, and the exit status is non-zero, if the directory is not empty and `--force`/`-F` is not given, and nothing is changed. If several profile names are given the directory is only initialised once. Any existing root and signing certificates are always kept and never replaced by `init`, and they are added to the trust chain of the installation.
+
 The installation directory is considered empty if it exists but only contains dot prefixed files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` it should work as expected.
 
 If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories but will not remove or change existing files. If you adopt an existing installation then see the `init templates` command for how to add default template files to the installation for use by new instances.

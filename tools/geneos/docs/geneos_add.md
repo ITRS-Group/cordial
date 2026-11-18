@@ -1,6 +1,6 @@
 # `geneos add`
 
-The `geneos add` command is used to create a new instance of a component. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
+The `geneos add` command is used to create a new instance of a component. It is an error, and the exit status is non-zero, to add an instance that already exists. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
 
 The options accepted vary by component `TYPE` and are the resulting parameters are stored in a metadata configuration file in the instance directory. The default configuration file format is in JSON format. There may also be support for YAML configuration files in future releases.
 	

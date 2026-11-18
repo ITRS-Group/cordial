@@ -20,6 +20,8 @@ Use `--archive`/`-A` to select a release archive or directory on the local machi
 > - Use the same site name on all Geneos servers for consistent paths.
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
+It is an error, and the exit status is non-zero, to deploy an instance that already exists, but a profile that already exists is applied again to update its instances.
+
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
 The stages that deploy goes through will help you choose the options you need:

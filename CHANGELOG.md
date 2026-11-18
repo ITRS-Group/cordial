@@ -113,6 +113,18 @@
 
     * `geneos adb clean` and `edit` now check all `replace:` options before changing any files.
 
+    * **Breaking Change** (minor): The exit status of `geneos` is now correct for every command. Previously, commands that act on several instances, hosts, files or other items reported the failure of an item but still exited with `0`. They now still process all of the items, and show the result of each, but exit with a non-zero status if any of them failed, without repeating the error or showing the usage. This applies to `start`, `stop`, `restart`, `reload`, `rebuild`, `clean`, `reset`, `set`, `unset`, `add`, `delete`, `copy`, `move`, `import`, `enable`, `disable`, `protect`, `revert`, `migrate`, `command`, `logs`, `snapshot`, `backup`, `restore`, `ls`, `ps`, `show`, `package`, `host`, `aes`, `tls`, `adb` and `init` and so on. A name that is not an instance is now a failure for all of them, where it used to be ignored by commands such as `start`, `set`, `ls`, `ps` and `show`. Scripts that relied on a zero exit status after a failure must now handle the failure.
+
+      Not failures are stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, a pattern or component type that matches no instances (such as `geneos ls gateway` when there are none) and, when starting all instances, disabled instances. Commands that check all the names given before they act, such as `stop`, `delete` and `tls new`, still fail before changing anything if a name does not match an instance. See the new "Exit Status" section in `geneos help`.
+
+    * `geneos add` and `geneos deploy` fail with an "already exists" error for an instance that exists. A profile that exists is still applied again by `deploy` and `init`.
+
+    * `geneos init` returns an error, instead of ending the program, if the directory cannot be used, and fails with a message that refers to `--force` if the directory is not empty and `--force`/`-F` is not given. If several profiles are given the directory is only initialised once. Existing root and signing certificates are no longer replaced by `init`, including with `--force`, and are added to the trust chain of the installation. `geneos init` with a profile that is not defined is now an error.
+
+    * Other failures that were previously only logged, ignored or printed with a zero exit status are now failures: `disable` of an instance that is running (without `--stop` or `--force`), `tls create` of a certificate or key that exists, `tls info` for files and connections that could not be read, `tls sync` for a host that could not be updated, `config import`, `aes import`, `package install`/`uninstall`/`update` for sources, releases, links, downloads and instances that could not be dealt with and when protected instances stop an update, `restore` of an instance that is not in the archive, `host set`, `host unset` and `host list` for names that are not hosts, `adb clean` and `adb info` for files that could not be processed, and `aes decode` and `aes encode` when no instance could be used.
+
+    * The legacy `ctl` commands now exit with a non-zero status for commands that are not supported.
+
     * `geneos config set`, `unset` and `show` now use the file given with `--config`/`-G`. `geneos host show` and `geneos host delete` fail for unknown host names and `geneos host list` accepts host names.
 
 * `integrations/servicenow2`

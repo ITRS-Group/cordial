@@ -2,7 +2,7 @@ The `start` command starts the matching instances unless they are already runnin
 
 The start-up command and environment can be seen using the `geneos command` command.
 
-Any matching instances that are marked as `disabled` are not started. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
+Any matching instances that are marked as `disabled` are not started. This is an error, and the exit status is non-zero, if the instance was given by name, but not if it was selected because it is set to start automatically, as when starting all instances. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
 
 With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues. This also applies to instances selected using `--port`/`-p`, which are started regardless of their `autostart` setting.
 

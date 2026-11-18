@@ -122,6 +122,10 @@ geneos COMMAND [flags] [TYPE] [NAME...]
 
 Options can differ between commands. Check the command help before using a flag in an operational script.
 
+### Exit Status
+
+`0` means that everything that was asked for succeeded and non-zero means that at least one thing failed. Commands that act on several instances, hosts or files process all of them, show the result of each, and fail if any of them failed, so a script can rely on the exit status of, for example, `geneos start gateway`. A failure is written once, on standard error. Stopping an instance that is not running, starting one that is already running and actions that a component does not support are not failures, and neither is a pattern that matches no instances, but a name that is not an instance is. See `geneos help` for details.
+
 ## Concepts & Terminology
 
 The terms below describe how the `geneos` command organises and manages an installation.

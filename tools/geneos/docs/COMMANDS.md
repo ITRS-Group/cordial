@@ -16,6 +16,14 @@ Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that
 
 For many commands you can also use wildcards for the `NAME` part. These wildcards are not complex regular expressions but instead follow more common file system patterns. (Note that the exact patterns support are the same as for the Go [`path.Match`](https://pkg.go.dev/path#Match) function.). These wildcards only work on `NAME` and not the `HOST` part and then only for those commands where they make sense, such as `geneos ls`, `geneos start` and so on.
 
+## Exit Status
+
+The exit status of `geneos` is `0` if everything that was asked for succeeded, and non-zero if at least one thing failed. This applies to every command that acts on one or more instances, hosts, files or other items: all of the items are still processed, and the result for each one is shown, but if any of them fail, for example an instance that does not exist or cannot be started, the exit status is non-zero. Each failure is reported once, on standard error, and the command does not then repeat it with a final error message or the usage.
+
+Some commands, such as `stop`, `restart`, `reload`, `delete` and `tls new`, check all of the instance names given before they do anything and fail, without changing any of the instances, if any of them does not match an instance.
+
+These are not failures: stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, and instances that are disabled when `geneos start` selects instances that are set to start automatically. A pattern or component type that does not match any instances, such as `geneos ls gateway` when there are no Gateways, is also not a failure, but a name that is not an instance is. For commands that list, e.g. `ls`, `ps` and `show`, the instances that do exist are still listed.
+
 The subsystems below group related functions together and have their own sub-commands, such as `geneos aes password` and `geneos init demo`. Use `geneos SUBSYSTEM help` to see more or, if you are reading this online you should be able to click through for further information.
 
 ## Subsystems
@@ -752,7 +760,7 @@ geneos adb info [PATH...] [flags]
 
 <sub>[Up: geneos](#geneos)</sub>
 
-The `geneos add` command is used to create a new instance of a component. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
+The `geneos add` command is used to create a new instance of a component. It is an error, and the exit status is non-zero, to add an instance that already exists. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
 
 The options accepted vary by component `TYPE` and are the resulting parameters are stored in a metadata configuration file in the instance directory. The default configuration file format is in JSON format. There may also be support for YAML configuration files in future releases.
 	
@@ -914,8 +922,8 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE           Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
-  -v, --previous KEYFILE          Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
+  -k, --keyfile KEYFILE           Path to keyfile (default ~/.config/docs/keyfile.aes)
+  -v, --previous KEYFILE          Path to previous keyfile (default ~/.config/docs/prevkeyfile.aes)
   -e, --expandable string         The keyfile and ciphertext in expandable format (including '${...}')
   -p, --password string           Geneos formatted AES256 password
   -s, --source string             Alternative source for password
@@ -1706,6 +1714,8 @@ Use `--archive`/`-A` to select a release archive or directory on the local machi
 > - Use the same site name on all Geneos servers for consistent paths.
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
+It is an error, and the exit status is non-zero, to deploy an instance that already exists, but a profile that already exists is applied again to update its instances.
+
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
 The stages that deploy goes through will help you choose the options you need:
@@ -2309,7 +2319,7 @@ geneos host add [flags] [NAME] [SSHURL]
   -I, --init[=true|false]         Initialise the remote host directories and component files
   -p, --prompt[=true|false]       Prompt for password
   -P, --password SECRET           Password
-  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default ~/.config/docs/keyfile.aes)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
   -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
@@ -3107,6 +3117,8 @@ geneos includes update [flags]
 The `init` sub-system is used to initialise your Geneos environment ready to run Geneos instances. To deploy a single instance, for example a Netprobe on a remote endpoint, you should probably use the `geneos deploy` command instead.
 
 On it's own the `init` command will create a new directory structure (or use an existing one if it's considered empty) based on the options you supply. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path. Either specify a directory on the command line or you will be prompted for one. To specify a directory pass it as an argument without a flag. It must be an absolute path.
+
+It is an error, and the exit status is non-zero, if the directory is not empty and `--force`/`-F` is not given, and nothing is changed. If several profile names are given the directory is only initialised once. Any existing root and signing certificates are always kept and never replaced by `init`, and they are added to the trust chain of the installation.
 
 The installation directory is considered empty if it exists but only contains dot prefixed files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` it should work as expected.
 
@@ -4898,7 +4910,7 @@ Those backup archives that contain a `tls/` directory will have the contents res
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
-Existing instances will not be overwritten, similarly for shared directories.
+Existing instances will not be overwritten, similarly for shared directories. It is an error if an instance named on the command line is not in the archive, but the other instances that are are still restored.
 
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 
@@ -5505,7 +5517,7 @@ The `start` command starts the matching instances unless they are already runnin
 
 The start-up command and environment can be seen using the `geneos command` command.
 
-Any matching instances that are marked as `disabled` are not started. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
+Any matching instances that are marked as `disabled` are not started. This is an error, and the exit status is non-zero, if the instance was given by name, but not if it was selected because it is set to start automatically, as when starting all instances. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
 
 With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues. This also applies to instances selected using `--port`/`-p`, which are started regardless of their `autostart` setting.
 
