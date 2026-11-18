@@ -151,6 +151,18 @@
 
   * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
 
+* `pkg/icp`, `pkg/reporter`, `pkg/email`, `pkg/logger`, `pkg/gwhub` and `pkg/rest`
+
+  * **Breaking Change** (minor): `gwhub.EntitiesMetricsRows` now takes an `EntitiesMetricsRowsRequest` and returns an `EntitiesMetricsRowsResponse`, as its filter could not be sent before. The previous form is kept as the deprecated `EntitiesMetricsRowsLegacy`. `gwhub.FormatDuration(0)` is now `PT0S`, and `gwhub.ParseDuration` returns an error for durations with years or months, such as `P1M`, and with no elements, such as `P`, instead of returning a zero duration.
+
+  * `icp.New` now defaults the base URL to `https://icp-api.itrsgroup.com/v2.0`, as documented, instead of `https://localhost`.
+
+  * `pkg/reporter`: the formatted reporters (`table`, `html`, `markdown`, `csv` and `tsv`) now order rows by the first column only, as documented for `OrderByColumns`, instead of by all columns; rows with the same first column are kept in the order given. `XLSXScramble`, `ScrambleFunc`, `ScrambleColumns` and `Writer` now take effect. The XLSX reporter keeps all rows, even those with the same first column, and an `UpdateTable` call replaces the table instead of adding to it. `MinColumnWidth` and `MaxColumnWidth` ignore zero or negative values, so an unset configuration value keeps the default widths. `AddHeadlines` headlines are now output, in sorted name order, for the formatted, toolkit and XLSX reporters.
+
+  * `pkg/email`: SMTP authentication now selects the strongest mechanism offered by the server unless the new `_smtp_auth` setting names one, instead of always using `LOGIN`, and so no longer works with `_smtp_tls=none` unless `plain-noenc` or `login-noenc` is given. Add `_smtp_tls=ssl` for implicit TLS, which is also used when `_smtp_port` is `465` unless `_smtp_tls=none`.
+
+  * `pkg/logger`: `Init` no longer sets the global `color.NoColor` when the output is not a terminal; colour is decided for the log handler only (see the new `Color` handler option). `RotateOnStart` is honoured when a log file is given. `RedactSlice` returns a new slice instead of changing its argument. `pkg/rest` debug logging only records the size of request bodies and the names of query parameters, never their values.
+
 * `pkg/geneos`
 
   * Gateway configuration support has been expanded with safer read and write operations, making it easier for applications to inspect and update Gateway setups reliably.
@@ -265,9 +277,41 @@
 
   * Fix the text of a `HTTPError` growing without limit with the body of the response.
 
+  * Fix `Auth` using the context passed to it for all later token refreshes, so cancelling it broke the client, a custom authentication header being sent to a different host by a redirect, and debug logging including the values of request bodies and queries.
+
+  * Add `Client.Send` for requests that are built by the caller, such as those with a streamed body.
+
+* `pkg/icp`
+
+  * Fix `Upload` always panicking, `Login` not keeping the token for it to use and the `Content-Type` header being misspelt. `Upload` now checks the response status like the other requests.
+
+  * Fix a panic in 13 requests, such as the `DataMart` requests, when no response was received, for example for a connection error.
+
+  * Fix `EntityMetaDataExport` changing the `ProjectID` of the request passed to it.
+
+* `pkg/reporter`
+
+  * Fix the `api` reporter returning no error when the Entity/Sampler does not exist, `APIMaxRows` keeping one row too many and IPv6 host names.
+
+  * Fix the XLSX reporter exiting the program on a conditional format error (it is now returned from `Render`), unknown columns in freeze panes or conditional formats skipping the later sheets, panics for sheets without a table and for empty or over-long rows, a duplicate first column showing the last row twice, integers with leading zeros or beyond 64 bits being changed and sheet names being truncated in the middle of a character.
+
+  * Fix scrambling changing the rows passed by the caller. Fix the first `Prepare` of a formatted reporter writing an unnamed entry to a ZIP archive, formatted reporters panicking on rows shorter than the columns, the Toolkit reporter quoting values with a double quote and giving headlines in a random order, and the `column` reporter writing the previous table again.
+
+* `pkg/email`
+
+  * Fix a failure to connect to a custom `_smtp_port` falling back to port 25 without TLS, and port 25 being changed to 587 when set. An invalid `_from` address is now an error.
+
+* `pkg/logger`
+
+  * Fix `RotateOnStart` and the log file being ignored when a `timberjack.Logger` was given with `SetLogfile`, `ResetEventID` not changing the ID of existing audit loggers, data races in `groupPrefix` handling and the time format being shared by all handlers, and a log attribute named `level` being dropped.
+
+  * Fix redaction of the closing single quote of a value, of unterminated quoted values, of escaped quotes in JSON and, in audit logs, of lists and errors.
+
 * `pkg/gwhub`
 
   * Fix `MetricsAggregations` always returning an empty result.
+
+  * Fix `ParseDuration` losing precision (it used 32-bit floats) and `EntityMetricsData` always sending `limit=0`.
 
 * `pkg/host`
 
