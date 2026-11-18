@@ -18,10 +18,10 @@ limitations under the License.
 package cmd
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
 	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -33,7 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/config"
 )
 
-//go:embed _docs/root.md
+//go:embed _docs/export.md
 var exportCmdDescription string
 
 var exportCmdDir string
@@ -65,8 +65,7 @@ var exportCmd = &cobra.Command{
 
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			log.Error("failed to dial gateway", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("failed to dial gateway: %w", err)
 		}
 		data, err := fetchDataviews(cmd, gw, exportCmdFirstColumn, exportCmdHeadlines, exportCmdRows, exportCmdColumns, exportCmdRowOrder)
 		if err != nil {
@@ -81,6 +80,24 @@ var exportCmd = &cobra.Command{
 	},
 }
 
+// writeFile creates the file name in dir and copies r to it, returning
+// any error from the copy or from closing the file
+func writeFile(dir, name string, r io.Reader) (err error) {
+	f, err := os.Create(filepath.Join(dir, name))
+	if err != nil {
+		return
+	}
+	_, err = io.Copy(f, r)
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	if err != nil {
+		return
+	}
+	fmt.Printf("written %s\n", filepath.Join(dir, name))
+	return
+}
+
 func writeFiles(dir string, data DV2EMailData) (err error) {
 	run := time.Now()
 
@@ -88,52 +105,40 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		return
 	}
 
-	if slices.Contains(config.Get[[]string](globalCf, "files"), "texttable") {
+	formats := config.Get[[]string](globalCf, "files")
+
+	if slices.Contains(formats, "texttable") {
 		var files []dataFile
 		files, err = buildTextTableFiles(globalCf, data, run)
-
 		if err != nil {
 			return err
 		}
 		for _, file := range files {
-			var f *os.File
-			f, err = os.Create(filepath.Join(dir, file.name))
-			if err != nil {
+			if err = writeFile(dir, file.name, file.content); err != nil {
 				return
 			}
-			if _, err = io.Copy(f, file.content); err != nil {
-				return
-			}
-			fmt.Printf("written %s\n", filepath.Join(dir, file.name))
-			f.Close()
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](globalCf, "files"), "html") {
+	if slices.Contains(formats, "html") {
 		m := mail.NewMsg()
 
 		if err = buildHTMLAttachments(globalCf, m, data, run); err != nil {
 			return err
 		}
 
-		files := m.GetAttachments()
-
-		for _, file := range files {
-			var f *os.File
-			f, err = os.Create(filepath.Join(dir, file.Name))
-			if err != nil {
+		for _, file := range m.GetAttachments() {
+			var buf bytes.Buffer
+			if _, err = file.Writer(&buf); err != nil {
 				return
 			}
-
-			if _, err = file.Writer(f); err != nil {
+			if err = writeFile(dir, file.Name, &buf); err != nil {
 				return
 			}
-			fmt.Printf("written %s\n", filepath.Join(dir, file.Name))
-			f.Close()
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](globalCf, "files"), "xlsx") {
+	if slices.Contains(formats, "xlsx") {
 		var files []dataFile
 		files, err = buildXLSXFiles(globalCf, data, run)
 		if err != nil {
@@ -141,16 +146,9 @@ func writeFiles(dir string, data DV2EMailData) (err error) {
 		}
 
 		for _, file := range files {
-			var f *os.File
-			f, err = os.Create(filepath.Join(dir, file.name))
-			if err != nil {
+			if err = writeFile(dir, file.name, file.content); err != nil {
 				return
 			}
-			if _, err = io.Copy(f, file.content); err != nil {
-				return
-			}
-			f.Close()
-			fmt.Printf("written %s\n", filepath.Join(dir, file.name))
 		}
 	}
 	return

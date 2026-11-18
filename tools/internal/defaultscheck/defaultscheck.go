@@ -27,6 +27,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -127,15 +128,18 @@ func literals(t testing.TB, dir string) map[string]bool {
 }
 
 // CheckRead fails the test for every leaf key in the defaults that is
-// not referenced by the Go source in dir, unless the leaf (or a parent
-// of it) is listed in documentedOnly. Keys are considered referenced if
+// not referenced by the Go source in any of dirs, unless the leaf (or a
+// parent of it) is listed in documentedOnly. Keys are considered referenced if
 // the first and last path elements appear as string literals, which
 // allows for keys that are built up at run time such as per-plugin
 // settings. Keys that are only present to document or example a setting
 // for users must be listed explicitly.
-func CheckRead(t testing.TB, defaults map[string]any, dir string, documentedOnly ...string) {
+func CheckRead(t testing.TB, defaults map[string]any, dirs []string, documentedOnly ...string) {
 	t.Helper()
-	lits := literals(t, dir)
+	lits := map[string]bool{}
+	for _, dir := range dirs {
+		maps.Copy(lits, literals(t, dir))
+	}
 	for _, leaf := range Leaves(defaults) {
 		if slices.ContainsFunc(documentedOnly, func(d string) bool {
 			return leaf == d || strings.HasPrefix(leaf, d+".")
@@ -144,7 +148,7 @@ func CheckRead(t testing.TB, defaults map[string]any, dir string, documentedOnly
 		}
 		parts := strings.Split(leaf, ".")
 		if !lits[parts[0]] || !lits[parts[len(parts)-1]] {
-			t.Errorf("defaults key %q is not read by any code in %s (list it as documented-only if intended)", leaf, dir)
+			t.Errorf("defaults key %q is not read by any code in %v (list it as documented-only if intended)", leaf, dirs)
 		}
 	}
 }

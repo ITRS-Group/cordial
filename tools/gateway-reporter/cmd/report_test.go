@@ -97,7 +97,7 @@ func TestDefaultsFile(t *testing.T) {
 		}
 	}
 
-	defaultscheck.CheckRead(t, m, ".")
+	defaultscheck.CheckRead(t, m, []string{"."})
 }
 
 // a broken embedded defaults file used to be silently ignored, giving

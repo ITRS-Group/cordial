@@ -68,21 +68,14 @@ func buildHTMLAttachments(cf *config.Config, m *mail.Msg, d any, timestamp time.
 
 	switch config.Get[string](cf, "html.split") {
 	case "entity":
-		entities := map[string][]*commands.Dataview{}
-		for _, d := range data.Dataviews {
-			if len(entities[d.XPath.Entity.Name]) == 0 {
-				entities[d.XPath.Entity.Name] = []*commands.Dataview{}
-			}
-			entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
-		}
-		for entity, e := range entities {
+		for _, group := range groupByEntity(data.Dataviews) {
 			many := DV2EMailData{
-				Dataviews: e,
+				Dataviews: group.dataviews,
 				Env:       data.Env,
 			}
 			lookup := map[string]string{
 				"default":   "dataviews",
-				"entity":    entity,
+				"entity":    group.entity,
 				"sampler":   "",
 				"dataview":  "",
 				"timestamp": timestamp.Local().Format("20060102150405"),
