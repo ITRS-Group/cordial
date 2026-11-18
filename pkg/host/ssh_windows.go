@@ -18,16 +18,16 @@ limitations under the License.
 package host
 
 import (
+	"io"
+
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/crypto/ssh/agent"
 )
 
-func sshConnectAgent() (agentClient agent.ExtendedAgent) {
-	socket := `\\.\pipe\openssh-ssh-agent`
-	if socket != "" {
-		if sshAgent, err := winio.DialPipe(socket, nil); err == nil { // dial OK, return agent
-			agentClient = agent.NewClient(sshAgent)
-		}
+func sshConnectAgent() (agentClient agent.ExtendedAgent, closer io.Closer) {
+	if sshAgent, err := winio.DialPipe(`\\.\pipe\openssh-ssh-agent`, nil); err == nil { // dial OK, return agent
+		agentClient = agent.NewClient(sshAgent)
+		closer = sshAgent
 	}
 	return
 }

@@ -23,11 +23,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -44,18 +46,52 @@ import (
 
 const userSSHdir = ".ssh"
 
-var sshSessions sync.Map
-var sftpSessions sync.Map
+// timeouts for connecting to remote hosts. These are variables so that
+// tests can shorten them.
+var (
+	sshDialTimeout      = 5 * time.Second
+	sshHandshakeTimeout = 15 * time.Second
+	sshSFTPTimeout      = 15 * time.Second
+
+	// how long a failure is remembered before another attempt is made
+	sshRetryInterval = 5 * time.Second
+)
+
+// sshSession holds the connections for a remote name. There is one per
+// name, shared between all SSHRemote values with that name, and the
+// mutex is held while connecting so that concurrent callers share one
+// connection rather than each dialling their own.
+type sshSession struct {
+	mu   sync.Mutex
+	ssh  *ssh.Client
+	sftp *sftp.Client
+}
+
+var sshSessions sync.Map // name -> *sshSession
+
+func sessionFor(name string) *sshSession {
+	if s, ok := sshSessions.Load(name); ok {
+		return s.(*sshSession)
+	}
+	s, _ := sshSessions.LoadOrStore(name, &sshSession{})
+	return s.(*sshSession)
+}
 
 // An SSHRemote a type that satisfies the Host interface for SSH
 // attached remote hosts
 type SSHRemote struct {
-	name        string
-	username    string
-	hostname    string
-	port        uint16
-	password    []byte // cannot use *config.Secret because of import loop
-	keys        []string
+	name     string
+	username string
+	hostname string
+	port     uint16
+	password []byte // cannot use *config.Secret because of import loop
+	keys     []string
+
+	// optionsErr is set if the options passed to NewSSHRemote could not
+	// be used, and is returned when connecting
+	optionsErr error
+
+	mu          sync.Mutex // protects failed and lastAttempt
 	failed      error
 	lastAttempt time.Time
 }
@@ -67,6 +103,11 @@ type SSHRemote struct {
 // private keys) for the remote host. If no options are given then the
 // local username is used and the hostname is set to the name of the
 // remote.
+//
+// Each option must be an [SSHOption] or a slice of them, so that
+// `host.PrivateKeyFiles(...)` results can be passed with or without
+// being spread. Anything else cannot be applied and is reported as an
+// error, which is returned by [SSHRemote.LastError] and when connecting.
 func NewSSHRemote(name string, options ...any) Host {
 	r := &SSHRemote{
 		name: name,
@@ -86,13 +127,32 @@ func evalOptions(r *SSHRemote, options ...any) {
 		r.username = os.Getenv("USER")
 	}
 
-	for _, opt := range options {
-		switch o := opt.(type) {
-		case SSHOption:
+	var errs []error
+	apply := func(o SSHOption) {
+		if o != nil {
 			o(r)
 		}
 	}
+	for _, opt := range options {
+		switch o := opt.(type) {
+		case nil:
+		case SSHOption:
+			apply(o)
+		case func(*SSHRemote):
+			apply(o)
+		case []SSHOption:
+			for _, so := range o {
+				apply(so)
+			}
+		default:
+			errs = append(errs, fmt.Errorf("%w: unsupported SSH option of type %T for remote %s", ErrInvalidArgs, opt, r.name))
+		}
+	}
 
+	if r.hostname == "" {
+		r.hostname = r.name
+	}
+	r.optionsErr = errors.Join(errs...)
 }
 
 // Username TODO: Document its behavior, inputs, and effects.
@@ -142,24 +202,21 @@ func (s *SSHRemote) Hostname() string {
 	return s.hostname
 }
 
-// load any/all the known private keys with no passphrase
+// load any/all the known private keys with no passphrase. A leading `~/`
+// in a file name is replaced with homedir.
 func readSSHkeys(passphrase []byte, homedir string, files ...string) (signers []ssh.Signer) {
 	for _, p := range files {
+		if rest, ok := strings.CutPrefix(p, "~/"); ok && homedir != "" {
+			p = filepath.Join(homedir, rest)
+		}
 		key, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
 		signer, err := ssh.ParsePrivateKey(key)
-		pperr := &ssh.PassphraseMissingError{}
-		if err != nil && errors.As(err, &pperr) {
-			err = nil
+		if _, ok := errors.AsType[*ssh.PassphraseMissingError](err); ok {
 			signer, err = ssh.ParsePrivateKeyWithPassphrase(key, passphrase)
-
-			if err != nil {
-				continue
-			}
 		}
-
 		if err != nil {
 			continue
 		}
@@ -204,7 +261,9 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 		return nil, fmt.Errorf("no public key found for %s", dest)
 	}
 
-	if agentClient := sshConnectAgent(); agentClient != nil {
+	// the agent connection is only needed while authenticating
+	if agentClient, closer := sshConnectAgent(); agentClient != nil {
+		defer closer.Close()
 		authmethods = append(authmethods, ssh.PublicKeysCallback(agentClient.Signers))
 	}
 
@@ -221,48 +280,121 @@ func sshConnect(dest, username string, password []byte, keyfiles ...string) (cli
 		Auth:              authmethods,
 		HostKeyCallback:   kh.HostKeyCallback(),
 		HostKeyAlgorithms: kh.HostKeyAlgorithms(dest),
-		Timeout:           5 * time.Second,
 	}
-	client, err = ssh.Dial("tcp", dest, config)
-	if err != nil && knownhosts.IsHostKeyChanged(err) {
-		return nil, fmt.Errorf("host key has changed for %s: %w", dest, err)
+
+	// as ssh.Dial, but with a deadline for the handshake, as the
+	// ClientConfig Timeout only covers making the TCP connection
+	conn, err := net.DialTimeout("tcp", dest, sshDialTimeout)
+	if err != nil {
+		return nil, err
 	}
-	return
+	if err = conn.SetDeadline(time.Now().Add(sshHandshakeTimeout)); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	c, chans, reqs, err := ssh.NewClientConn(conn, dest, config)
+	if err != nil {
+		conn.Close()
+		if knownhosts.IsHostKeyChanged(err) {
+			return nil, fmt.Errorf("host key has changed for %s: %w", dest, err)
+		}
+		return nil, err
+	}
+	if err = conn.SetDeadline(time.Time{}); err != nil {
+		c.Close()
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
+}
+
+// recentFailure returns the error from the last failed attempt to
+// connect if it was less than sshRetryInterval ago.
+func (h *SSHRemote) recentFailure() (since time.Duration, failed error, ok bool) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < sshRetryInterval {
+		return time.Since(h.lastAttempt), h.failed, true
+	}
+	return 0, nil, false
+}
+
+func (h *SSHRemote) setFailed(err error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.failed = err
+	h.lastAttempt = time.Now()
+}
+
+func (h *SSHRemote) clearFailed() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.failed = nil
+	h.lastAttempt = time.Time{}
 }
 
 // DialSSH connects to a remote host using ssh and returns an *ssh.Client
-// on success. Each connection is cached and returned if found without
-// checking if it is still valid. To remove a session call Close()
+// on success. Each connection is cached and returned if found, but a
+// connection that has been closed is replaced. Concurrent callers for
+// the same remote share a single connection attempt. To remove a
+// session call Close()
 func (h *SSHRemote) DialSSH() (sc *ssh.Client, err error) {
 	if h == nil {
 		err = ErrInvalidArgs
 		return
 	}
 
-	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second {
-		err = h.failed
-		return
+	s := sessionFor(h.name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return h.dialSSH(s)
+}
+
+// dialSSH returns the cached connection or makes a new one, and must be
+// called with s.mu held.
+func (h *SSHRemote) dialSSH(s *sshSession) (sc *ssh.Client, err error) {
+	if h.optionsErr != nil {
+		return nil, h.optionsErr
+	}
+
+	if s.ssh != nil {
+		return s.ssh, nil
+	}
+
+	if _, failed, ok := h.recentFailure(); ok {
+		return nil, failed
 	}
 
 	if h.hostname == "" {
 		return nil, fmt.Errorf("%w hostname not set for remote %s", ErrInvalidArgs, h)
 	}
-	if h.port == 0 {
-		h.port = 22
+	port := h.port
+	if port == 0 {
+		port = 22
 	}
 
-	dest := fmt.Sprintf("%s:%d", h.hostname, h.port)
-	if val, ok := sshSessions.Load(h.name); ok {
-		sc = val.(*ssh.Client)
-	} else {
-		sc, err = sshConnect(dest, h.username, h.password, h.keys...)
-		if err != nil {
-			h.failed = err
-			h.lastAttempt = time.Now()
-			return sc, fmt.Errorf("%w (note: you MUST add remote keys manually to known_hosts)", err)
-		}
-		sshSessions.Store(h.name, sc)
+	dest := net.JoinHostPort(h.hostname, strconv.Itoa(int(port)))
+	sc, err = sshConnect(dest, h.username, h.password, h.keys...)
+	if err != nil {
+		err = fmt.Errorf("%w (note: you MUST add remote keys manually to known_hosts)", err)
+		h.setFailed(err)
+		return nil, err
 	}
+	h.clearFailed()
+	s.ssh = sc
+
+	// forget the connection, and anything using it, when it closes
+	go func() {
+		sc.Wait()
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.ssh == sc {
+			s.ssh = nil
+			if s.sftp != nil {
+				s.sftp.Close()
+				s.sftp = nil
+			}
+		}
+	}()
 	return
 }
 
@@ -272,57 +404,85 @@ func (h *SSHRemote) Close() {
 		return
 	}
 
-	h.CloseSFTP()
+	s := sessionFor(h.name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.close()
+}
 
-	val, ok := sshSessions.Load(h.name)
-	if ok {
-		s := val.(*ssh.Client)
-		s.Close()
-		sshSessions.Delete(h.name)
+// close drops both connections, and must be called with s.mu held
+func (s *sshSession) close() {
+	if s.sftp != nil {
+		s.sftp.Close()
+		s.sftp = nil
+	}
+	if s.ssh != nil {
+		s.ssh.Close()
+		s.ssh = nil
 	}
 }
 
 // DialSFTP connects to the remote host using SSH and returns an
 // *sftp.Client is successful. The connection is cached and returned if
-// found, without checking if it is still valid.
+// found, but one that has been closed is replaced.
 func (h *SSHRemote) DialSFTP() (f *sftp.Client, err error) {
 	if h == nil {
 		err = ErrInvalidArgs
 		return
 	}
 
-	if val, ok := sftpSessions.Load(h.name); ok {
-		f = val.(*sftp.Client)
-		return
+	s := sessionFor(h.name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.sftp != nil {
+		return s.sftp, nil
 	}
 
-	var s *ssh.Client
-	if s, err = h.DialSSH(); err != nil {
-		h.failed = err
-		h.lastAttempt = time.Now()
-		return
+	sc, err := h.dialSSH(s)
+	if err != nil {
+		return nil, err
 	}
-	if f, err = sftp.NewClient(s); err != nil {
-		h.failed = err
-		h.lastAttempt = time.Now()
-		return
+
+	// the SFTP handshake has no deadline of its own, so close the
+	// connection if the server does not answer
+	timer := time.AfterFunc(sshSFTPTimeout, func() { sc.Close() })
+	f, err = sftp.NewClient(sc)
+	if !timer.Stop() && err == nil {
+		f.Close()
+		err = fmt.Errorf("sftp handshake with %s timed out after %s", h.name, sshSFTPTimeout)
 	}
-	sftpSessions.Store(h.name, f)
+	if err != nil {
+		h.setFailed(err)
+		return nil, err
+	}
+	s.sftp = f
+
+	go func() {
+		f.Wait()
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if s.sftp == f {
+			s.sftp = nil
+		}
+	}()
 
 	return
 }
 
-// CloseSFTP TODO: Document its behavior, inputs, and effects.
+// CloseSFTP closes the cached SFTP connection to the remote host, if
+// any. The SSH connection is not closed.
 func (h *SSHRemote) CloseSFTP() {
 	if h == nil {
 		return
 	}
 
-	val, ok := sftpSessions.Load(h.name)
-	if ok {
-		f := val.(*sftp.Client)
-		f.Close()
-		sftpSessions.Delete(h.name)
+	s := sessionFor(h.name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.sftp != nil {
+		s.sftp.Close()
+		s.sftp = nil
 	}
 }
 
@@ -337,12 +497,9 @@ func (h *SSHRemote) IsAvailable() (ok bool, err error) {
 		return false, ErrInvalidArgs
 	}
 
-	if h.failed != nil {
-		// only retry every 5 seconds, otherwise return previous error with a time
-		if !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) < 5*time.Second {
-			// not available for 5 seconds since last error
-			return false, fmt.Errorf("%w (%v ago)", h.failed, time.Since(h.lastAttempt))
-		}
+	// only retry every few seconds, otherwise return previous error with a time
+	if since, failed, ok := h.recentFailure(); ok {
+		return false, fmt.Errorf("%w (%v ago)", failed, since)
 	}
 
 	_, err = h.DialSSH()
@@ -469,22 +626,53 @@ func (h *SSHRemote) Readlink(file string) (string, error) {
 	}
 }
 
-// Mkdir TODO: Document its behavior, inputs, and effects.
+// Mkdir creates a directory on the remote host with permissions perm.
+// SFTP creates directories with the server's default permissions, so
+// they are set afterwards and are not subject to the remote umask.
 func (h *SSHRemote) Mkdir(p string, perm os.FileMode) error {
-	if s, err := h.DialSFTP(); err != nil {
+	s, err := h.DialSFTP()
+	if err != nil {
 		return err
-	} else {
-		return s.Mkdir(p)
 	}
+	if err = s.Mkdir(p); err != nil {
+		return err
+	}
+	return s.Chmod(p, perm)
 }
 
-// MkdirAll TODO: Document its behavior, inputs, and effects.
+// MkdirAll creates a directory and any missing parents on the remote
+// host, giving each directory it creates the permissions perm, like
+// [os.MkdirAll].
 func (h *SSHRemote) MkdirAll(p string, perm os.FileMode) error {
-	if s, err := h.DialSFTP(); err != nil {
+	s, err := h.DialSFTP()
+	if err != nil {
 		return err
-	} else {
-		return s.MkdirAll(p)
 	}
+	return sftpMkdirAll(s, path.Clean(p), perm)
+}
+
+func sftpMkdirAll(s *sftp.Client, p string, perm os.FileMode) error {
+	if fi, err := s.Stat(p); err == nil {
+		if fi.IsDir() {
+			return nil
+		}
+		return &fs.PathError{Op: "mkdir", Path: p, Err: syscall.ENOTDIR}
+	}
+
+	if parent := path.Dir(p); parent != p {
+		if err := sftpMkdirAll(s, parent, perm); err != nil {
+			return err
+		}
+	}
+
+	if err := s.Mkdir(p); err != nil {
+		// lost a race to create it
+		if fi, serr := s.Lstat(p); serr == nil && fi.IsDir() {
+			return nil
+		}
+		return err
+	}
+	return s.Chmod(p, perm)
 }
 
 // Chown TODO: Document its behavior, inputs, and effects.
@@ -524,21 +712,24 @@ func (h *SSHRemote) Lchtimes(path string, atime time.Time, mtime time.Time) (err
 	}
 }
 
-// Create TODO: Document its behavior, inputs, and effects.
+// Create opens p for writing on the remote host, creating or truncating
+// it. SFTP cannot set permissions when creating a file, so perms are set
+// immediately afterwards and a new file is briefly created with the
+// server's default permissions.
 func (h *SSHRemote) Create(p string, perms fs.FileMode) (out io.WriteCloser, err error) {
-	var cf *sftp.File
-	var s *sftp.Client
-	if s, err = h.DialSFTP(); err != nil {
-		return
+	s, err := h.DialSFTP()
+	if err != nil {
+		return nil, err
 	}
-	if cf, err = s.Create(p); err != nil {
-		return
+	cf, err := s.Create(p)
+	if err != nil {
+		return nil, err
 	}
-	out = cf
 	if err = cf.Chmod(perms); err != nil {
-		return
+		cf.Close()
+		return nil, err
 	}
-	return
+	return cf, nil
 }
 
 // Remove TODO: Document its behavior, inputs, and effects.
@@ -550,39 +741,33 @@ func (h *SSHRemote) Remove(name string) error {
 	}
 }
 
-// RemoveAll TODO: Document its behavior, inputs, and effects.
+// RemoveAll removes name and any children it contains, without following
+// symbolic links. Like [os.RemoveAll] it is not an error if name does
+// not exist.
 func (h *SSHRemote) RemoveAll(name string) (err error) {
-	var s *sftp.Client
-	if s, err = h.DialSFTP(); err != nil {
-		return
+	s, err := h.DialSFTP()
+	if err != nil {
+		return err
 	}
-
-	// walk, reverse order by prepending and remove
-	// we could also just reverse sort strings...
-	files := []string{}
-	w := s.Walk(name)
-	for w.Step() {
-		if w.Err() != nil {
-			continue
-		}
-		files = append([]string{w.Path()}, files...)
-	}
-	for _, file := range files {
-		if err = s.Remove(file); err != nil {
-			return
-		}
+	if err = s.RemoveAll(name); errors.Is(err, fs.ErrNotExist) {
+		err = nil
 	}
 	return
 }
 
-// Rename TODO: Document its behavior, inputs, and effects.
+// Rename moves oldpath to newpath, replacing newpath if it exists. This
+// uses the posix-rename SFTP extension and falls back to a plain rename,
+// which fails if newpath exists, for servers that do not support it.
 func (h *SSHRemote) Rename(oldpath, newpath string) error {
-	if s, err := h.DialSFTP(); err != nil {
+	s, err := h.DialSFTP()
+	if err != nil {
 		return err
-	} else {
-		// use PosixRename to overwrite oldpath
-		return s.PosixRename(oldpath, newpath)
 	}
+	err = s.PosixRename(oldpath, newpath)
+	if se, ok := errors.AsType[*sftp.StatusError](err); ok && se.FxCode() == sftp.ErrSSHFxOpUnsupported {
+		return s.Rename(oldpath, newpath)
+	}
+	return err
 }
 
 // Link TODO: Document its behavior, inputs, and effects.
@@ -621,27 +806,34 @@ func (h *SSHRemote) Glob(pattern string) ([]string, error) {
 	}
 }
 
-// WriteFile TODO: Document its behavior, inputs, and effects.
+// WriteFile writes data to name on the remote host, creating or
+// truncating it, and sets its permissions to perm.
 func (h *SSHRemote) WriteFile(name string, data []byte, perm os.FileMode) (err error) {
-	var s *sftp.Client
-	var f *sftp.File
-
-	if s, err = h.DialSFTP(); err != nil {
+	s, err := h.DialSFTP()
+	if err != nil {
 		return
 	}
-	if f, err = s.Create(name); err != nil {
+	f, err := s.Create(name)
+	if err != nil {
 		return
 	}
-	defer f.Close()
-	f.Chmod(perm)
+	defer func() {
+		// the data is only known to be written when the close succeeds
+		if cerr := f.Close(); err == nil {
+			err = cerr
+		}
+	}()
+	if err = f.Chmod(perm); err != nil {
+		return
+	}
 	_, err = f.Write(data)
 	return
 }
 
-// ReadFile TODO: Document its behavior, inputs, and effects.
+// ReadFile reads the complete contents of name on the remote host.
 func (h *SSHRemote) ReadFile(name string) (b []byte, err error) {
-	var s *sftp.Client
-	if s, err = h.DialSFTP(); err != nil {
+	s, err := h.DialSFTP()
+	if err != nil {
 		return
 	}
 	f, err := s.Open(name)
@@ -650,15 +842,7 @@ func (h *SSHRemote) ReadFile(name string) (b []byte, err error) {
 	}
 	defer f.Close()
 
-	st, err := f.Stat()
-	if err != nil {
-		return nil, err
-	}
-	// force a block read as /proc doesn't give sizes
-	sz := st.Size()
-	if sz == 0 {
-		sz = 8192
-	}
+	// do not rely on the size, as /proc doesn't give them
 	return io.ReadAll(f)
 }
 
@@ -706,14 +890,17 @@ func (h *SSHRemote) TempDir() string {
 	return "/tmp"
 }
 
-// LastError TODO: Document its behavior, inputs, and effects.
+// LastError returns the error from the last failed attempt to connect to
+// the remote host, if there has been one since it last succeeded, or the
+// error from invalid options passed to [NewSSHRemote]. It does not try
+// to connect.
 func (h *SSHRemote) LastError() error {
-	// if the failure was a while back, try again (XXX crude)
-	if h.failed != nil && !h.lastAttempt.IsZero() && time.Since(h.lastAttempt) > 5*time.Second {
-		_, err := h.DialSSH()
-		return err
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.failed != nil {
+		return h.failed
 	}
-	return h.failed
+	return h.optionsErr
 }
 
 // ServerVersion TODO: Document its behavior, inputs, and effects.
@@ -725,46 +912,92 @@ func (h *SSHRemote) ServerVersion() string {
 	return string(remote.ServerVersion())
 }
 
-// OS TODO: Document its behavior, inputs, and effects.
+// OS returns "windows" if the SSH server identifies itself as running on
+// Windows, and "linux" otherwise, including if the server cannot be
+// reached.
 func (h *SSHRemote) OS() string {
-	if strings.Contains(h.ServerVersion(), "windows") {
+	if strings.Contains(strings.ToLower(h.ServerVersion()), "windows") {
 		return "windows"
 	}
 	return "linux"
 }
 
-// GetFs TODO: Document its behavior, inputs, and effects.
+// GetFs returns an afero filesystem for the remote host. If the host
+// cannot be reached then the returned filesystem returns that error from
+// every operation, so the result is never nil.
 func (h *SSHRemote) GetFs() afero.Fs {
 	client, err := h.DialSFTP()
 	if err != nil {
-		return nil
+		return errFs{err}
 	}
 	return sftpfs.New(client)
 }
 
-// Signal sends a signal to the remote pid and returns nil on success or
-// os.ProcessDone if the process is not found.
+// errFs is an [afero.Fs] where every operation fails with err
+type errFs struct{ err error }
+
+func (e errFs) Create(name string) (afero.File, error) { return nil, e.err }
+func (e errFs) Mkdir(name string, perm os.FileMode) error {
+	return e.err
+}
+func (e errFs) MkdirAll(path string, perm os.FileMode) error { return e.err }
+func (e errFs) Open(name string) (afero.File, error)         { return nil, e.err }
+func (e errFs) OpenFile(name string, flag int, perm os.FileMode) (afero.File, error) {
+	return nil, e.err
+}
+func (e errFs) Remove(name string) error                          { return e.err }
+func (e errFs) RemoveAll(path string) error                       { return e.err }
+func (e errFs) Rename(oldname, newname string) error              { return e.err }
+func (e errFs) Stat(name string) (os.FileInfo, error)             { return nil, e.err }
+func (e errFs) Name() string                                      { return "errFs" }
+func (e errFs) Chmod(name string, mode os.FileMode) error         { return e.err }
+func (e errFs) Chown(name string, uid, gid int) error             { return e.err }
+func (e errFs) Chtimes(name string, atime, mtime time.Time) error { return e.err }
+
+// Signal sends a signal to the remote pid, which must be greater than
+// zero, and returns nil on success. If the process is not found then
+// an error matching [os.ErrProcessDone] is returned and if it cannot be
+// signalled for lack of permission then an error matching
+// [syscall.EPERM] is returned.
 func (h *SSHRemote) Signal(pid int, signal syscall.Signal) (err error) {
+	if pid <= 0 {
+		return fmt.Errorf("%w: invalid pid %d", ErrInvalidArgs, pid)
+	}
+
 	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
 	defer sess.Close()
 
-	err = sess.Run(fmt.Sprintf("kill -s %d %d", signal, pid))
+	// kill has the same exit status for all failures, so check what it
+	// says, in a locale we can match
+	var stderr bytes.Buffer
+	sess.Stderr = &stderr
+	err = sess.Run(fmt.Sprintf("LC_ALL=C kill -s %d %d", signal, pid))
 	if err != nil {
 		if exitErr, ok := errors.AsType[*ssh.ExitError](err); ok {
-			switch exitErr.Waitmsg.ExitStatus() {
-			case 0:
-				err = nil
-			case 1:
-				err = os.ErrProcessDone
-			default:
-				// leave as is for now, but could be a permission error or something else
-			}
+			return killError(pid, exitErr.ExitStatus(), stderr.String())
 		}
 	}
 	return
+}
+
+// killError converts the exit status and output of kill to an error
+func killError(pid, status int, output string) error {
+	if status == 0 {
+		return nil
+	}
+	output = strings.TrimSpace(output)
+	lower := strings.ToLower(output)
+	switch {
+	case strings.Contains(lower, "no such process"):
+		return os.ErrProcessDone
+	case strings.Contains(lower, "not permitted"):
+		return fmt.Errorf("signalling pid %d: %w", pid, syscall.EPERM)
+	default:
+		return fmt.Errorf("signalling pid %d failed with status %d: %s", pid, status, output)
+	}
 }
 
 // NewSession wraps ssh.NewSession but does some retries
@@ -784,6 +1017,9 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 			break
 		}
 		if _, ok := errors.AsType[*ssh.OpenChannelError](err); !ok {
+			// not a limit, so the connection is probably dead; forget
+			// it so that the next call connects again
+			h.forget(rem)
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
@@ -795,43 +1031,89 @@ func (h *SSHRemote) NewSession() (sess *ssh.Session, err error) {
 	return
 }
 
+// forget closes and drops the cached connection if it is still rem
+func (h *SSHRemote) forget(rem *ssh.Client) {
+	s := sessionFor(h.name)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.ssh == rem {
+		s.close()
+	}
+}
+
+// shellQuote quotes s for a POSIX shell, so that it is passed on as a
+// single word with no expansion of any kind. Single quotes protect
+// everything except a single quote, which is closed, escaped with a
+// backslash and reopened.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+var envNameRE = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+// remoteCommand builds the command to run cmd in a shell on a remote
+// host, with every argument and environment value quoted so that it
+// reaches the program exactly as given. Any cmd.Env entries are set,
+// in addition to the remote environment, using env(1). We cannot use
+// sess.Setenv() because the openssh daemon blocks non-whitelisted
+// variables from being set. Note that cmd.Args already has the command
+// as Args[0], so no Path is required. Entries in cmd.Env without an
+// `=` are ignored, as they are by [exec.Cmd].
+func remoteCommand(cmd *exec.Cmd) (string, error) {
+	if len(cmd.Args) == 0 {
+		return "", fmt.Errorf("%w: no command", ErrInvalidArgs)
+	}
+
+	var words []string
+	for _, e := range cmd.Env {
+		k, _, ok := strings.Cut(e, "=")
+		if !ok {
+			continue
+		}
+		if !envNameRE.MatchString(k) {
+			return "", fmt.Errorf("%w: invalid environment variable name %q", ErrInvalidArgs, k)
+		}
+		words = append(words, shellQuote(e))
+	}
+	if len(words) > 0 {
+		words = slices.Insert(words, 0, "env")
+	}
+	for _, a := range cmd.Args {
+		words = append(words, shellQuote(a))
+	}
+	return strings.Join(words, " "), nil
+}
+
 // Start starts a process on an SSH attached remote host h. It uses a
 // shell and backgrounds and redirects. May not work on all remotes and
-// for all processes. errfile has stdout/stderr appended to it, use
-// '/dev/null' if no errfile is wanted.
+// for all processes. errfile has stdout/stderr appended to it, and
+// defaults to '/dev/null'. Arguments and environment values are passed
+// to the program as given, they are not expanded by the remote shell.
 func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err error) {
 	if h.OS() == "windows" {
-		err = errors.New("cannot run remote commands on windows")
+		return 0, fmt.Errorf("%w: cannot run remote commands on windows", ErrNotSupported)
 	}
 
 	po := evalProcessOptions(options...)
 	errfile := po.errfile
+	if errfile == "" {
+		errfile = "/dev/null"
+	}
+
+	cmdstr, err := remoteCommand(cmd)
+	if err != nil {
+		return 0, err
+	}
+	if cmd.Dir != "" {
+		cmdstr = fmt.Sprintf("cd %s || exit 1; %s", shellQuote(cmd.Dir), cmdstr)
+	}
+	cmdstr = fmt.Sprintf("%s </dev/null >>%s 2>&1 & echo $!", cmdstr, shellQuote(errfile))
 
 	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
-
-	// we have to convert cmd to a string ourselves as we have to quote any args
-	// with spaces (like "Demo Gateway")
-	//
-	// given this is sent to a shell, we can quote everything blindly ?
-	//
-	// note that cmd.Args already has the command as Args[0], so no Path required
-	var cmdstr = ""
-	for _, a := range cmd.Args {
-		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
-	}
-
-	// we can't use sess.Setenv() because openssh daemon blocks
-	// non-whitelisted envs from being set
-	envs := []string{}
-	for _, e := range cmd.Env {
-		if k, v, ok := strings.Cut(e, "="); ok {
-			envs = append(envs, fmt.Sprintf("%s=%q", k, v))
-		}
-	}
-	cmdstr = fmt.Sprintf(`cd %q; %s %s </dev/null >%q 2>&1 & echo $!`, cmd.Dir, strings.Join(envs, " "), cmdstr, errfile)
+	defer sess.Close()
 
 	var output []byte
 	if output, err = sess.Output(cmdstr); err != nil {
@@ -848,52 +1130,46 @@ func (h *SSHRemote) Start(cmd *exec.Cmd, options ...ProcessOption) (pid int, err
 // Run starts a process on an SSH attached remote host h. It uses a
 // shell and waits for the process status before returning. It returns
 // the output and any error. errfile is an optional (remote) file for
-// stderr output
+// stderr output, which is replaced if it exists. Arguments and
+// environment values are passed to the program as given, they are not
+// expanded by the remote shell.
 func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte, err error) {
 	if h.OS() == "windows" {
-		err = errors.New("cannot run remote commands on windows")
+		return nil, fmt.Errorf("%w: cannot run remote commands on windows", ErrNotSupported)
 	}
 
 	po := evalProcessOptions(options...)
 	errfile := po.errfile
 
+	cmdstr, err := remoteCommand(cmd)
+	if err != nil {
+		return nil, err
+	}
+	if cmd.Dir != "" {
+		cmdstr = fmt.Sprintf("cd %s && %s", shellQuote(cmd.Dir), cmdstr)
+	}
+
 	sess, err := h.NewSession()
 	if err != nil {
 		return
 	}
-
-	// we have to convert cmd to a string ourselves as we have to quote any args
-	// with spaces (like "Demo Gateway")
-	//
-	// given this is sent to a shell, we can quote everything blindly ?
-	//
-	// note that cmd.Args hosts the command as Args[0], so no Path required
-	var cmdstr = ""
-	for _, a := range cmd.Args {
-		cmdstr = fmt.Sprintf("%s %q", cmdstr, a)
-	}
-	// pipe, err := sess.StdinPipe()
-	// if err != nil {
-	// 	return
-	// }
+	defer sess.Close()
 
 	if errfile != "" {
 		if !h.IsAbs(errfile) {
 			errfile = path.Join(cmd.Dir, errfile)
 		}
-		e, err := h.Create(errfile, 0664)
-		if err != nil {
-			return []byte{}, err
+		e, cerr := h.Create(errfile, 0664)
+		if cerr != nil {
+			return []byte{}, cerr
 		}
-		defer e.Close()
+		defer func() {
+			if cerr := e.Close(); err == nil {
+				err = cerr
+			}
+		}()
 		sess.Stderr = e
 	}
-
-	envs := []string{}
-	for _, e := range cmd.Env {
-		envs = append(envs, strconv.Quote(e))
-	}
-	cmdstr = fmt.Sprintf("cd %q && %s %s", cmd.Dir, strings.Join(cmd.Env, " "), cmdstr)
 
 	return sess.Output(cmdstr)
 }
@@ -901,7 +1177,8 @@ func (h *SSHRemote) Run(cmd *exec.Cmd, options ...ProcessOption) (output []byte,
 // Uname TODO: Document its behavior, inputs, and effects.
 func (h *SSHRemote) Uname() (os, arch string, err error) {
 	if h.OS() == "windows" {
-		err = errors.New("cannot run remote commands on windows")
+		err = fmt.Errorf("%w: cannot run remote commands on windows", ErrNotSupported)
+		return
 	}
 
 	sess, err := h.NewSession()
@@ -927,25 +1204,71 @@ func (h *SSHRemote) Uname() (os, arch string, err error) {
 	return
 }
 
-// WalkDir TODO: Document its behavior, inputs, and effects.
+// WalkDir walks the tree below dir on the remote host, calling fn with
+// paths relative to dir, exactly as [fs.WalkDir] does for a local
+// directory, including the handling of [fs.SkipDir] and [fs.SkipAll].
 func (h *SSHRemote) WalkDir(dir string, fn fs.WalkDirFunc) error {
 	s, err := h.DialSFTP()
 	if err != nil {
 		return err
 	}
+	return fs.WalkDir(sftpFS{c: s, root: dir}, ".", fn)
+}
 
-	w := s.Walk(dir)
-	for w.Step() {
-		if w.Err() != nil {
-			return w.Err()
-		}
-		p, _ := h.Rel(dir, w.Path())
-		if err = fn(p, fs.FileInfoToDirEntry(w.Stat()), err); err != nil {
-			if err == fs.SkipDir {
-				break
-			}
-			return err
-		}
+// sftpFS is a read-only [fs.FS] for the tree below root on an SFTP
+// server, which allows the standard library to do the work of walking it.
+type sftpFS struct {
+	c    *sftp.Client
+	root string
+}
+
+var (
+	_ fs.ReadDirFS = sftpFS{}
+	_ fs.StatFS    = sftpFS{}
+)
+
+func (f sftpFS) resolve(op, name string) (string, error) {
+	if !fs.ValidPath(name) {
+		return "", &fs.PathError{Op: op, Path: name, Err: fs.ErrInvalid}
 	}
-	return nil
+	return path.Join(f.root, name), nil
+}
+
+func (f sftpFS) Open(name string) (fs.File, error) {
+	p, err := f.resolve("open", name)
+	if err != nil {
+		return nil, err
+	}
+	file, err := f.c.Open(p)
+	if err != nil {
+		return nil, err
+	}
+	return file, nil
+}
+
+func (f sftpFS) Stat(name string) (fs.FileInfo, error) {
+	p, err := f.resolve("stat", name)
+	if err != nil {
+		return nil, err
+	}
+	return f.c.Stat(p)
+}
+
+func (f sftpFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	p, err := f.resolve("readdir", name)
+	if err != nil {
+		return nil, err
+	}
+	infos, err := f.c.ReadDir(p)
+	if err != nil {
+		return nil, err
+	}
+	entries := make([]fs.DirEntry, 0, len(infos))
+	for _, fi := range infos {
+		entries = append(entries, fs.FileInfoToDirEntry(fi))
+	}
+	slices.SortFunc(entries, func(a, b fs.DirEntry) int {
+		return strings.Compare(a.Name(), b.Name())
+	})
+	return entries, nil
 }
