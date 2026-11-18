@@ -40,21 +40,25 @@ func evalReporterOptions(options ...ReporterOption) (ro *reporterOptions) {
 	return
 }
 
-// Scramble TODO: Document its behavior, inputs, and effects.
+// Scramble enables scrambling of the values in the columns named in
+// the ScrambleColumns of each report, and any given to
+// [ScrambleColumns]. The caller's data is not modified.
 func Scramble(scramble bool) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleNames = scramble
 	}
 }
 
-// ScrambleFunc TODO: Document its behavior, inputs, and effects.
+// ScrambleFunc sets the function used to scramble values. The default
+// replaces each word with a truncated hash.
 func ScrambleFunc(fn func(in string) string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleFunc = fn
 	}
 }
 
-// ScrambleColumns TODO: Document its behavior, inputs, and effects.
+// ScrambleColumns sets column names to scramble in every report, in
+// addition to those in the ScrambleColumns of each report.
 func ScrambleColumns(columns []string) ReporterOption {
 	return func(ro *reporterOptions) {
 		ro.scrambleColumns = columns

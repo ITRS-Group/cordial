@@ -20,8 +20,11 @@ package reporter
 import (
 	"fmt"
 	"io"
+	"maps"
+	"net"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -33,12 +36,11 @@ import (
 // and publishes Dataview with optional Headlines
 type APIReporter struct {
 	reporterCommon
-	conn            *plugins.Connection
-	dv              *xmlrpc.Dataview
-	resetDV         bool
-	scrambleColumns []string
-	dvCreateDelay   time.Duration
-	maxrows         int
+	conn          *plugins.Connection
+	dv            *xmlrpc.Dataview
+	resetDV       bool
+	dvCreateDelay time.Duration
+	maxrows       int
 }
 
 // ensure that *APIReporter conforms to the Reporter interface
@@ -71,11 +73,10 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 	opts := evalAPIOptions(CollectOptions[APIReporterOption](options...)...)
 
 	a := &APIReporter{
-		format:        "api",
-		scrambleNames: ropts.scrambleNames,
-		resetDV:       opts.reset,
-		dvCreateDelay: opts.dvCreateDelay,
-		maxrows:       opts.maxrows,
+		reporterCommon: newReporterCommon("api", ropts),
+		resetDV:        opts.reset,
+		dvCreateDelay:  opts.dvCreateDelay,
+		maxrows:        opts.maxrows,
 	}
 
 	scheme := "http"
@@ -85,13 +86,12 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 
 	u := &url.URL{
 		Scheme: scheme,
-		Host:   fmt.Sprintf("%s:%d", opts.hostname, opts.port),
+		Host:   net.JoinHostPort(opts.hostname, strconv.Itoa(opts.port)),
 		Path:   "/xmlrpc",
 	}
 	a.conn, err = plugins.Open(u, opts.entity, opts.sampler)
-
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	if opts.skipVerify {
@@ -99,9 +99,9 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 	}
 
 	if !a.conn.Exists() {
-		err = fmt.Errorf(
-			"no such entity/sampler %s/%s on %s:%d (secure=%v, skip-verify=%v)",
-			opts.entity, opts.sampler, opts.hostname, opts.port, opts.secure, opts.skipVerify,
+		return nil, fmt.Errorf(
+			"no such entity/sampler %s/%s on %s (secure=%v, skip-verify=%v)",
+			opts.entity, opts.sampler, u.Host, opts.secure, opts.skipVerify,
 		)
 	}
 
@@ -115,7 +115,7 @@ func newAPIReporter(_ string, _ io.Writer, options ...any) (r Reporter, err erro
 func (a *APIReporter) Prepare(report Report) (err error) {
 	title := report.Title
 	group := report.Dataview.Group
-	a.scrambleColumns = report.ScrambleColumns
+	a.Report = report
 
 	a.dv = a.conn.Dataview(group, title)
 	if a.dv == nil {
@@ -144,12 +144,10 @@ func (a *APIReporter) Prepare(report Report) (err error) {
 // in the Dataview.
 func (a *APIReporter) UpdateTable(columns []string, rows [][]string) {
 	if a.maxrows > 0 && len(rows) > a.maxrows {
-		rows = rows[:a.maxrows+1]
+		rows = rows[:a.maxrows]
 	}
 
-	if a.scrambleNames {
-		scrambleColumns(columns, a.scrambleColumns, rows)
-	}
+	rows = a.scrambleTable(columns, rows)
 
 	// check if columns have changed
 	existing, err := a.dv.ColumnNames()
@@ -181,8 +179,8 @@ func (a *APIReporter) AddHeadline(name, value string) {
 // AddHeadlines TODO: Document its behavior, inputs, and effects.
 func (a *APIReporter) AddHeadlines(headlines map[string]string) {
 	if a.dv != nil {
-		for name, value := range headlines {
-			a.dv.Headline(name, value)
+		for _, name := range slices.Sorted(maps.Keys(headlines)) {
+			a.dv.Headline(name, headlines[name])
 		}
 	}
 }
