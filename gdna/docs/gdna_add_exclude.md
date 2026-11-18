@@ -13,7 +13,7 @@ gdna add exclude [FLAGS] CATEGORY NAME...
 ```text
       --comment string   comment for these items
   -f, --config FILE      Use configuration FILE
-  -l, --logfile file     Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file     Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
       --origin string    origin for these items
       --user string      user adding these items
 ```

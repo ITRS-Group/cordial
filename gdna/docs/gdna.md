@@ -10,12 +10,12 @@ The configuration file is normally located in `${HOME}/.config/geneos/gdna.yaml`
 
 The program logs various actions to a file in the working directory but this can be changed in the configuration `logging` section or with the `--logfile`/`-l` option, which is set to a dash (`-`) send logging output to STDERR, which is normally your terminal. Using this latter option with the `gdna start -D` is not possible and logging will then go nowhere. Other features of logging, such as auto-rolling log files as they grow and more, can be configured in the `gdna.yaml` file.
 
-| [`gdna add`](gdna_add.md)	 |  |
 
 ## Commands
 
 | Command / Aliases | Description |
 |-------|-------|
+| [`gdna add`](gdna_add.md)	 |  |
 | [`gdna email`](gdna_email.md)	 | Email reports |
 | [`gdna fetch`](gdna_fetch.md)	 | Fetch usage data |
 | [`gdna list`](gdna_list.md)	 | List commands |
@@ -33,7 +33,7 @@ The program logs various actions to a file in the working directory but this can
 
 ```text
   -f, --config FILE    Use configuration FILE
-  -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file   Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO

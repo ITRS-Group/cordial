@@ -266,6 +266,13 @@
   * `tools/gateway-reporter`: as the built-in defaults are now valid, reports are written to the default output directory (`/tmp/gateway-reporter`) in all the default formats, instead of silently not being written. The `--out`/`-o` option now sets the directory for all the formats, and a validation hook now also creates the Toolkit include file. A SQL Toolkit sampler with no valid queries now shows the configured `empty` message, which is no longer able to replace the valid queries of a sampler that has some.
 
   * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, having previously been ignored. The `geneos.sans.reverse-connections` setting is now read under its documented name, as well as the older key names that the program used to read, with the default unchanged (`false`). A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
+* `Build and release`
+
+  * Release builds now use `-trimpath`, so executables and libraries no longer contain the build machine's source paths. The only visible difference is that the source locations in `debug` level log messages are shown as module paths.
+
+  * The release directory now includes `libalert.so`, which was already in the `cordial-<version>.tar.gz` archive, alongside `libemail.so`, and a `SHA256SUMS` file for the two `.tar.gz` archives. `libalert.so` is now built with the `netgo` and `osusergo` tags, like `libemail.so`, so it no longer depends on the host's name service libraries.
+
+  * The release `Makefile` refuses to build if `VERSION` contains whitespace or a trailing newline, and a new `make check-cross` builds every package for Linux (`amd64` and `arm64`), Windows and macOS to find platform specific compile errors. `make check-examples` checks the programs in `_examples`, which are now a separate Go module with their own dependencies and build against the current packages.
 
 ## Version v1.31.0 Fixes
 
@@ -611,6 +618,17 @@
   * Fix two processes being able to hold the same PID file when one opens the file as another removes it on exit, and `LockPIDFile` failing while the status of the file was being checked.
 
   * Fix `Start` failing for any user that was not root, never finding the PID of the process, panicking for a user that is not in the user database, and returning no done channel from `Batch`. `RemoveArgs` and `Daemon` no longer change `os.Args`.
+* `Build and release`
+
+  * Fix the generated command documentation being named after the documentation program: `san-config` pages were `docs.md` and `docs_server.md`, and the `geneos`, `gdna` and `gateway-reporter` pages referred to files such as `docs.json` and `docs.log`. The documentation is regenerated.
+
+  * Fix the "Commands" table in generated documentation having no header, or a header part-way down the table, when the first sub-command has its own sub-commands, and a panic generating documentation for a link with a blank target.
+
+  * Fix the Dockerfile setting `DEBIANFRONTEND` instead of `DEBIAN_FRONTEND` for the `gdna` image, and use a signing key file instead of `apt-key`, which is removed from newer Debian releases, to add the Chrome package repository for building PDF documentation.
+
+  * Add a `.dockerignore` so local binaries, archives, release directories and `.git` are not sent to the Docker builds; remove the release `Makefile` steps for `servicenow`, `pagerduty` and `san-config`, which are not built, and the `clean` step that matched a label that was never set. Remove stale `.gitignore` entries, and stop tracking the generated `libalert.h`, which `make clean` deleted.
+
+  * Update `go-pretty` to v6.9.2, `echo` to v4.16.5 and `golang.org/x/net` to v0.63.0.
 
 ---
 

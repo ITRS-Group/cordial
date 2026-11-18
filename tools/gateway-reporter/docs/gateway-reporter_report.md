@@ -34,7 +34,7 @@ gateway-reporter report [flags] [SETUP...]
   -m, --merge[=true|false]   Create a merged config file. --install must be set
   -i, --install BINARY|DIR   Path to the gateway installation BINARY|DIR
   -p, --prefix name          Report prefix for configurations without a Gateway name
-  -f, --config string        config file (default is $HOME/.config/geneos/docs.yaml)
+  -f, --config string        config file (default is $HOME/.config/geneos/gateway-reporter.yaml)
   -d, --debug[=true|false]   enable extra debug output
 ```
 

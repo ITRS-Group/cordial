@@ -23,7 +23,7 @@ gdna fetch
                                      (Repeat as required)
   -S, --save-remote-sources string   Save data downloaded from remote sources to this directory (for testing only)
   -f, --config FILE                  Use configuration FILE
-  -l, --logfile file                 Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file                 Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO

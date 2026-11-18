@@ -36,7 +36,7 @@ gdna start
   -s, --sampler Sampler               Send reports to Sampler (default "GDNA")
   -R, --reset[=true|false]            Reset/Delete configured Dataviews on first run
   -f, --config FILE                   Use configuration FILE
-  -l, --logfile file                  Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file                  Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
 ```
 
 ## SEE ALSO

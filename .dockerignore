@@ -1,0 +1,41 @@
+# Keep local build output, releases and VCS data out of the build
+# context. The Dockerfile only needs the sources and documentation.
+.git
+.gitignore
+.vscode
+cordial.code-workspace
+
+# release output from the Makefile
+release-*
+
+# built binaries and libraries; the builds create their own
+**/*.exe
+**/*.so
+**/*.dll
+**/*.dylib
+**/*.test
+tools/geneos/geneos
+tools/geneos/utils/docs/docs
+tools/ims-gateway/ims-gateway
+tools/dv2email/dv2email
+tools/files2dv/files2dv
+tools/san-config/san-config
+tools/sso-diag/sso-diag
+tools/gateway-reporter/gateway-reporter
+integrations/servicenow2/servicenow2
+gdna/gdna
+utils/docs/docs
+libraries/*/libemail
+libraries/*/libalert
+
+# downloaded or created archives, such as Geneos release archives
+**/*.tar.gz
+**/*.zip
+
+# generated documentation and local state
+**/node_modules
+**/*.mermaid.md
+**/*.mermaid-*.svg
+**/*.history
+**/*.log
+**/gdna.sqlite*
