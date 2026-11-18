@@ -1,6 +1,8 @@
 package certs
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"crypto/x509"
 	"fmt"
 	"os"
@@ -15,29 +17,28 @@ import (
 // at the specified path on the given host. If the truststore does not
 // exist, it is created. If password is nil, "changeit" is used.
 //
-// Any existing entries with the same alias as a root certificate are
-// deleted before adding the new root certificates. Aliases are derived
-// from the Subject Common Name of each certificate.
+// Aliases are derived from the Subject Common Name of each certificate.
+// If a different certificate already has the same alias then the
+// certificate serial number, or failing that the SHA-1 fingerprint, is
+// added to the alias so that existing entries are not replaced. A
+// certificate that is already in the truststore is not added again.
+// Certificates without a Common Name use the SHA-1 fingerprint as the
+// alias.
 //
-// Any certificates that are not root CAs are ignored.
+// Any certificates that are not root CAs are ignored. If the truststore
+// exists but cannot be read, for example because the password is wrong,
+// an error is returned and the file is not changed.
 func AddRootsToTrustStore(h host.Host, path string, password config.Secret, roots ...*x509.Certificate) error {
-	k, err := ReadKeystore(h,
-		path,
-		password,
-	)
+	k, err := readOrNewKeystore(h, path, password)
 	if err != nil {
-		k = &KeyStore{
-			KeyStore: keystore.New(),
-		}
+		return err
 	}
 
 	for _, cert := range roots {
 		if !IsValidRootCA(cert) {
 			continue
 		}
-		alias := cert.Subject.CommonName
-		k.DeleteEntry(alias)
-		if err = k.AddTrustedCertificate(alias, cert); err != nil {
+		if err = k.addRoot(cert); err != nil {
 			return err
 		}
 	}
@@ -64,15 +65,9 @@ func WriteTrustStore(h host.Host, path string, password config.Secret, roots ...
 		if !IsValidRootCA(cert) {
 			continue
 		}
-		alias := cert.Subject.CommonName
-		k.DeleteEntry(alias)
-		if err := k.AddTrustedCertificate(alias, cert); err != nil {
+		if err := k.addRoot(cert); err != nil {
 			return err
 		}
-	}
-
-	if password == nil {
-		password = config.Secret("changeit")
 	}
 
 	// a truststore is just a keystore with trusted certs, permissions
@@ -106,6 +101,30 @@ func UpdateCACertsFileFromTrustStore(h host.Host, truststorePath string, trustst
 	}
 
 	return UpdateCACertsFiles(h, caBundlePath, roots...)
+}
+
+// addRoot adds the root certificate to the truststore using the Subject
+// Common Name as the alias, unless that is empty or already used by a
+// different certificate, in which case a unique alias is chosen.
+func (k *KeyStore) addRoot(cert *x509.Certificate) error {
+	cn := cert.Subject.CommonName
+	fingerprint := fmt.Sprintf("%X", sha1.Sum(cert.Raw))
+
+	candidates := []string{fingerprint}
+	if cn != "" {
+		candidates = []string{cn, fmt.Sprintf("%s (%X)", cn, cert.SerialNumber.Bytes()), fingerprint}
+	}
+
+	for _, alias := range candidates {
+		if !k.IsPrivateKeyEntry(alias) && !k.IsTrustedCertificateEntry(alias) {
+			return k.AddTrustedCertificate(alias, cert)
+		}
+		if e, err := k.GetTrustedCertificateEntry(alias); err == nil && bytes.Equal(e.Certificate.Content, cert.Raw) {
+			// already present
+			return nil
+		}
+	}
+	return fmt.Errorf("cannot find a unique truststore alias for certificate %q", cn)
 }
 
 // AddTrustedCertificate adds a trusted certificate to the keystore.
