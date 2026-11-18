@@ -198,7 +198,11 @@ func writeSharedKey(h *Host, ct *Component, kv *config.KeyValues) (p string, err
 		log.Error("cannot create keyfile", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))
 		return
 	}
-	defer w.Close()
+	defer func() {
+		if cerr := w.Close(); err == nil {
+			err = cerr
+		}
+	}()
 
 	if err = kv.Write(w); err != nil {
 		log.Error("cannot write keyfile", slog.Any("error", err), slog.String("host", h.String()), slog.String("component", ct.String()))

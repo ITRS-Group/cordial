@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
 	"strconv"
@@ -128,7 +129,6 @@ func ReadConfig(profilesFile string) (pf *config.Config, err error) {
 		config.FilePath(profilesFile),
 		config.Format("yaml"),
 		config.SkipWorkingDir(),
-		config.UseDefaults(false),
 		config.WithDefaults(profilesDefault, "yaml"),
 	}
 	if profilesFile != "" {
@@ -157,15 +157,15 @@ type Common struct {
 	Name               string            `yaml:"name"`
 	Env                values.NameValues `yaml:"env,omitempty"`
 	Params             []string          `yaml:"params,omitempty"`
-	CertBundle         string            `yaml:"cert-bundle,omitempty,omitemtpy"` // path or PEM
+	CertBundle         string            `yaml:"cert-bundle,omitempty"` // path or PEM
 	CertBundlePassword config.Secret     `yaml:"cert-bundle-password,omitempty"`
 	Imports            []string          `yaml:"imports,omitempty"`
 }
 
 // Apply applies the profile `name` to the local configuration. It
-// iterates over all the components defined in the profile and applies
-// their respective profile settings by calling the component's
-// ApplyProfile function if it is defined.
+// iterates, in sorted order, over all the components defined in the
+// profile and applies their respective profile settings by calling the
+// component's ApplyProfile function if it is defined.
 func Apply(h *geneos.Host, pf *config.Config, name string, forceRebuild bool) error {
 	components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 	if !found {
@@ -173,12 +173,15 @@ func Apply(h *geneos.Host, pf *config.Config, name string, forceRebuild bool) er
 		return fmt.Errorf("profile %q not found", name)
 	}
 
-	for component := range components {
+	for _, component := range slices.Sorted(maps.Keys(components)) {
 		if strings.HasPrefix(component, "_") {
 			// skip underscored items (like _short and _description)
 			continue
 		}
 		ct := geneos.ParseComponent(component)
+		if ct == nil {
+			return fmt.Errorf("profile %q contains an unknown component type %q", name, component)
+		}
 		if ct.ApplyProfile != nil {
 			log.Debug("applying profile for component", slog.String("profile", name), slog.String("component", ct.String()))
 			if err := ct.ApplyProfile(h, ct, pf, name, component, forceRebuild); err != nil {
@@ -196,43 +199,71 @@ type Instance struct {
 	Component string `yaml:"component"`
 	Package   string `yaml:"package"`
 	Host      string `yaml:"host"`
-	Config    *config.Config
+
+	// Config is the raw configuration of the profile entry for the
+	// instance, which can contain settings not in [Common] such as
+	// `template`
+	Config *config.Config
 }
 
 // ListComponents lists all components for the given host and profile.
 // The caller has to supply the profile config structure loaded from the
-// selected config file.
+// selected config file. The components are returned in sorted order of
+// component type, and in profile order for each type, so that instances
+// are always created in the same order.
 func ListComponents(h *geneos.Host, pf *config.Config, name string) (instances []Instance) {
-	var components map[string][]Common
-
-	if !pf.IsSet(pf.Join("profiles", name)) {
+	profileKey := pf.Join("profiles", name)
+	if !pf.IsSet(profileKey) {
 		return
 	}
 
 	lookup := CommonLookups(h)
 
-	pf.UnmarshalKey(pf.Join("profiles", name), &components,
-		config.NoDecode(true),
-		config.LookupTable(lookup),
-	)
+	profileComponents, _ := config.Lookup[map[string]any](pf, profileKey, config.NoExpand())
 
-	for key, value := range components {
-		for _, component := range value {
+	for _, key := range slices.Sorted(maps.Keys(profileComponents)) {
+		if strings.HasPrefix(key, "_") {
+			// skip underscored items (like _short and _description)
+			continue
+		}
+
+		var commons []Common
+		if err := pf.UnmarshalKey(pf.Join(profileKey, key), &commons,
+			config.NoDecode(true),
+			config.LookupTable(lookup),
+		); err != nil {
+			log.Error("cannot read profile components", slog.String("profile", name), slog.String("component", key), slog.Any("error", err))
+			continue
+		}
+
+		// the unprocessed entries, in the same order, for settings not
+		// in Common
+		var entries []map[string]any
+		if err := pf.UnmarshalKey(pf.Join(profileKey, key), &entries, config.NoExpand()); err != nil {
+			log.Debug("cannot read raw profile entries", slog.String("profile", name), slog.String("component", key), slog.Any("error", err))
+		}
+
+		ct := geneos.ParseComponent(key)
+
+		for idx, common := range commons {
+			instanceName := config.Expand[string](pf, common.Name)
+
+			cf := config.New()
+			if idx < len(entries) {
+				cf.MergeConfigMap(entries[idx])
+			}
+
 			p := key
-			name := config.Expand[string](pf, component.Name)
-			cf := pf.Sub(pf.Join("profiles", name, key, name))
-
-			ct := geneos.ParseComponent(key)
-			if ct.ParentType != nil {
+			if ct != nil && ct.ParentType != nil {
 				p = ct.ParentType.String()
 			}
-			if pkg, _, found := strings.Cut(name, ":"); found {
+			if pkg, _, found := strings.Cut(instanceName, ":"); found {
 				p = pkg
 			}
 			instances = append(instances, Instance{
 				Component: key,
 				Package:   p,
-				Name:      name,
+				Name:      instanceName,
 				Host:      h.String(),
 				Config:    cf,
 			})
@@ -249,6 +280,32 @@ func CommonLookups(h *geneos.Host) map[string]string {
 		"execpath": cordial.ExecutablePath(),
 		"site":     geneos.SiteName(),
 	}
+}
+
+// InstanceExpander returns a function that expands a string using the
+// expansion options of the profile configuration pf, but resolving
+// `${config:KEY}` references against the configuration of the instance
+// `name` of component type ct on host h. If the instance does not exist
+// yet then the default configuration it would be created with is used.
+//
+// The returned release function must be called when the expander is
+// no longer needed.
+func InstanceExpander(h *geneos.Host, ct *geneos.Component, pf *config.Config, name string) (expand func(string) string, release func()) {
+	i, _ := instance.GetWithHost(h, ct, name)
+	if i == nil || i.Config() == nil {
+		return func(s string) string { return config.Expand[string](pf, s) }, func() {}
+	}
+
+	cf := i.Config()
+	options := pf.DefaultExpandOptions()
+	return func(s string) string {
+			return config.Expand[string](cf, s, options...)
+		}, func() {
+			// do not leave a speculatively created instance cached
+			if i.Loaded().IsZero() {
+				_ = i.Unload()
+			}
+		}
 }
 
 // ApplyCommonParams applies the common parameters from the
@@ -273,6 +330,9 @@ func ApplyCommonParams(pf *config.Config, name string, common *Common, lookup ma
 // the instance configuration before applying new values. The
 // forceRebuild flag determines whether the instance should be rebuilt
 // after applying changes if it's config.rebuild is not set to always..
+//
+// An existing instance is also changed to match the `insecure` option
+// of the profile, see applyTLSState.
 func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name string, common Common, vals values.Values, clearKeys []string, forceRebuild bool) (err error) {
 	var i geneos.Instance
 
@@ -281,15 +341,16 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 	if len(instances) == 0 {
 		// create here
 		var port uint16
-		if len(vals.Params) > 0 {
-			pos := slices.IndexFunc(vals.Params, func(e string) bool {
-				return strings.HasPrefix(e, "port=")
-			})
-			if pos >= 0 {
-				p := strings.TrimPrefix(vals.Params[pos], "port=")
-				pv, _ := strconv.Atoi(p)
-				port = uint16(pv)
+		pos := slices.IndexFunc(vals.Params, func(e string) bool {
+			return strings.HasPrefix(e, "port=")
+		})
+		if pos >= 0 {
+			p := strings.TrimSpace(strings.TrimPrefix(vals.Params[pos], "port="))
+			pv, err := strconv.ParseUint(p, 10, 16)
+			if err != nil {
+				return fmt.Errorf("invalid port %q for instance %q: must be a number between 0 and 65535", p, name)
 			}
+			port = uint16(pv)
 		}
 		i, err = instance.Add(h, ct, name,
 			instance.WithValues(vals),
@@ -300,9 +361,10 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			instance.WithProfiles(pf),
 			instance.WithImports(common.Imports),
 		)
-		if err != nil {
+		if err != nil && !errors.Is(err, geneos.ErrExists) {
 			return err
 		}
+		err = nil
 	} else {
 		// update the first / only instance
 		i = instances[0]
@@ -332,6 +394,13 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 			}
 		}
 
+		// follow the profile's `insecure` option, the rebuild below
+		// then applies the component's port rules for the new state
+		tlsChange, err := applyTLSState(i, pf, common)
+		if err != nil {
+			return fmt.Errorf("update TLS of instance %q: %w", name, err)
+		}
+
 		if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
 			return fmt.Errorf("write failed for instance %q: %w", name, resp.Err)
 		}
@@ -349,6 +418,15 @@ func ApplyInstance(h *geneos.Host, pf *config.Config, ct *geneos.Component, name
 				return fmt.Errorf("reload instance %q: %w", name, err)
 			}
 		}
+
+		if tlsChange != tlsUnchanged {
+			state := "secure"
+			if tlsChange == tlsDisabled {
+				state = "insecure"
+			}
+			fmt.Printf("%s updated (now %s)\n", i, state)
+			i.AuditEvent("action/update", nil, slog.String("tls", state))
+		}
 	}
 
 	return nil
@@ -365,8 +443,9 @@ func ApplyCommonProfile(h *geneos.Host, ct *geneos.Component, pf *config.Config,
 
 	lookup := CommonLookups(h)
 
-	// build param key delete list
-	clearKeys := []string{}
+	// build param key delete list, so that values removed from the
+	// profile are also removed from existing instances
+	clearKeys := []string{values.ENVIRONMENT}
 
 	for _, common := range commons {
 		instanceName := config.Expand[string](pf, common.Name, config.LookupTable(lookup))

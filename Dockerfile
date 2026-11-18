@@ -11,7 +11,7 @@ ARG GOVERSION=1.27.4
 
 # Note: To build an executable for a modern Mac use something like:
 #
-# GOOS=darwin GOARCH=arm64 go build -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
+# GOOS=darwin GOARCH=arm64 go build -trimpath -o geneos.${GOOS}-${GOARCH} -tags netgo,osusergo --ldflags '-s -w'
 #
 # However without executable signing this will not run on a Mac unless built locally.
 
@@ -38,21 +38,21 @@ RUN --mount=type=cache,target=/go/pkg/mod/ \
     set -eux; \
     # build geneos (in Windows version)
     cd /app/cordial/tools/geneos; \
-    go build -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build -tags noxlsx --ldflags '-s -w'; \
+    go build -trimpath -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build -trimpath -tags noxlsx --ldflags '-s -w'; \
     cd /app/cordial/tools/ims-gateway; \
-    go build -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build -tags noxlsx --ldflags '-s -w'; \
+    go build -trimpath -tags netgo,osusergo,noxlsx --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build -trimpath -tags noxlsx --ldflags '-s -w'; \
     # dv2email
     cd /app/cordial/tools/dv2email; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -trimpath -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     # servicenow2
     cd /app/cordial/integrations/servicenow2; \
-    go build -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    go build -trimpath -tags netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
     # gdna (inc Windows version)
     cd /app/cordial/gdna; \
-    go build -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
-    GOOS=windows go build --ldflags '-s -w';
+    go build -trimpath -tags sqlite_omit_load_extension,netgo,osusergo --ldflags '-s -w -linkmode external -extldflags=-static'; \
+    GOOS=windows go build -trimpath --ldflags '-s -w';
 
 # build non-static binaries (shared libs) with UBI8 for GLIBC backward compatibility
 FROM redhat/ubi8 AS build-ubi8
@@ -60,6 +60,10 @@ RUN --mount=type=cache,id=ubi8-dnf,target=/var/cache/dnf,sharing=locked \
     set -eux; \
     yum -y --setopt=keepcache=True install gcc make golang
 ARG GOVERSION
+# the distro Go is too old for this module, and is only used to download
+# the toolchain named here (which needs network access) that does the
+# build; do not drop the pin as it keeps the same Go version as the
+# build stage
 ENV GOTOOLCHAIN=go${GOVERSION}
 ENV GOMODCACHE=/go/pkg/mod
 ENV GOCACHE=/root/.cache/go-build
@@ -106,8 +110,9 @@ RUN --mount=type=cache,id=docs-apt-cache,target=/var/cache/apt,sharing=locked \
     apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
         wget \
         gnupg; \
-    wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -; \
-    sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list'; \
+    install -d -m 0755 /etc/apt/keyrings; \
+    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /etc/apt/keyrings/google-chrome.gpg; \
+    echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-chrome.gpg] https://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list; \
     apt-get update; \
     apt-get -o APT::Keep-Downloaded-Packages=true install -y --no-install-recommends \
         fonts-noto-color-emoji \
@@ -401,7 +406,7 @@ CMD [ "bash" ]
 # create a runnable gdna test image using basic debian
 FROM debian:stable AS gdna
 
-ENV DEBIANFRONTEND=noninteractive
+ENV DEBIAN_FRONTEND=noninteractive
 ENV ITRS_DOWNLOAD_TIMEOUT=5m
 RUN --mount=type=cache,id=debian-apt-cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=debian-apt-lists,target=/var/lib/apt/lists,sharing=locked \

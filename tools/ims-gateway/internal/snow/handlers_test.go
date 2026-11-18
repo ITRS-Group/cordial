@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -426,5 +428,192 @@ func TestClientsAreCached(t *testing.T) {
 		if _, err := newClient(testConfig(u).Sub("snow")); err == nil {
 			t.Errorf("newClient(%q) succeeded, want an error", u)
 		}
+	}
+}
+
+// record returns a handler that records the path, query and body of
+// each request it receives and then replies
+type recorded struct{ path, query, body string }
+
+func record(into *[]recorded, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		*into = append(*into, recorded{r.URL.Path, r.URL.Query().Get("sysparm_query"), string(b)})
+		next(w, r)
+	}
+}
+
+// a ^ in a value must not end the condition and add others, which would
+// let a request choose which incident is found and updated
+func TestSendEscapesQuerySeparators(t *testing.T) {
+	for name, test := range map[string]struct{ search, want string }{
+		// an empty search uses the built-in query
+		"fallback search": {"", "active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false^ORDERBYDESCnumber"},
+		"configured search": {
+			"active=true^cmdb_ci=${cmdb_ci}^correlation_id=${correlation_id}",
+			"active=true^cmdb_ci=ci^^NQnumber=1^correlation_id=c^^ORactive=false",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), reply(201, newRecord), nil)
+			cf := testConfig(sn.URL, func(table map[string]any) {
+				table["search"] = test.search
+			})
+			body := `{"correlation_id":"c^ORactive=false","cmdb_ci":"ci^NQnumber=1","short_description":"x"}`
+			rec, response := call(send, cf, http.MethodPost, "/snow/incident", body)
+			if rec.Code != http.StatusCreated || len(gets) != 1 {
+				t.Fatalf("status = %d, response %+v", rec.Code, response)
+			}
+			if gets[0].query != test.want {
+				t.Errorf("search = %q, want %q", gets[0].query, test.want)
+			}
+		})
+	}
+}
+
+// the fields that start with double underscores are for the gateway, and
+// not for ServiceNow, but are available to the messages that are returned
+func TestSendRemovesInternalFields(t *testing.T) {
+	body := `{"correlation_id":"c1","cmdb_ci":"ci1","short_description":"sd","__itrs_gateway":"gw1","__snow_other":"x","__incident_subject":"subject"}`
+
+	tests := map[string][]tableOption{
+		"no transform": nil,
+		"transform":    {withState("-1", map[string]any{"remove": []string{"unwanted"}}), withState("0", map[string]any{"remove": []string{"unwanted"}})},
+	}
+	for name, options := range tests {
+		t.Run(name, func(t *testing.T) {
+			var posts []recorded
+			sn := newStub(t, reply(200, noRecords), record(&posts, reply(201, newRecord)), nil)
+			cf := testConfig(sn.URL, append(options, func(table map[string]any) {
+				table["response"] = map[string]any{"created": "created ${__number} from ${__itrs_gateway}: ${__incident_subject}"}
+			})...)
+
+			rec, response := call(send, cf, http.MethodPost, "/snow/incident", body)
+			if rec.Code != http.StatusCreated || len(posts) != 1 {
+				t.Fatalf("status = %d, response %+v", rec.Code, response)
+			}
+
+			var sent map[string]string
+			if err := json.Unmarshal([]byte(posts[0].body), &sent); err != nil {
+				t.Fatal(err)
+			}
+			for k := range sent {
+				if strings.HasPrefix(k, "__") {
+					t.Errorf("internal field %q was sent to ServiceNow", k)
+				}
+			}
+			if sent["short_description"] != "sd" || sent["correlation_id"] != "c1" {
+				t.Errorf("sent = %v", sent)
+			}
+			if want := "created INC0001 from gw1: subject"; response.ResultDetail != want {
+				t.Errorf("result detail = %q, want %q", response.ResultDetail, want)
+			}
+		})
+	}
+
+	t.Run("failure response has them", func(t *testing.T) {
+		sn := newStub(t, reply(200, noRecords), reply(500, `{}`), nil)
+		cf := testConfig(sn.URL, withState("0", map[string]any{"remove": []string{"x"}}), func(table map[string]any) {
+			table["response"] = map[string]any{"failed": "failed from ${__itrs_gateway}"}
+		})
+		rec, response := call(send, cf, http.MethodPost, "/snow/incident", body)
+		if rec.Code != http.StatusBadGateway || response.ResultDetail != "failed from gw1" {
+			t.Errorf("status = %d, result detail = %q", rec.Code, response.ResultDetail)
+		}
+	})
+}
+
+// the fields in a request are from the caller and must never be expanded
+func TestSendDoesNotExpandRequestValues(t *testing.T) {
+	secretFile := filepath.Join(t.TempDir(), "secret")
+	if err := os.WriteFile(secretFile, []byte("file-secret"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("IMS_TEST_SECRET", "env-secret")
+
+	for _, value := range []string{"${file:" + secretFile + "}", "${config:snow.password}", "${env:IMS_TEST_SECRET}", "${IMS_TEST_SECRET}"} {
+		t.Run(value, func(t *testing.T) {
+			var gets, posts []recorded
+			sn := newStub(t, record(&gets, reply(200, noRecords)), record(&posts, reply(201, newRecord)), nil)
+			cf := testConfig(sn.URL, func(table map[string]any) {
+				table["response"] = map[string]any{
+					"created": "created ${__number}: ${__incident_subject}",
+					"failed":  "failed: ${__incident_subject}",
+				}
+			})
+
+			b, _ := json.Marshal(map[string]string{"correlation_id": value, "cmdb_ci": value, "__incident_subject": value, "short_description": value})
+			rec, response := call(send, cf, http.MethodPost, "/snow/incident", string(b))
+			if rec.Code != http.StatusCreated || len(gets) != 1 || len(posts) != 1 {
+				t.Fatalf("status = %d, response %+v", rec.Code, response)
+			}
+			if want := "active=true^correlation_id=" + value; gets[0].query != want {
+				t.Errorf("search = %q, want %q", gets[0].query, want)
+			}
+			if want := "created INC0001: " + value; response.ResultDetail != want {
+				t.Errorf("result detail = %q, want %q", response.ResultDetail, want)
+			}
+			var sent map[string]string
+			if err := json.Unmarshal([]byte(posts[0].body), &sent); err != nil || sent["short_description"] != value {
+				t.Errorf("sent = %v (%v)", sent, err)
+			}
+		})
+	}
+
+	t.Run("default search", func(t *testing.T) {
+		var gets []recorded
+		sn := newStub(t, record(&gets, reply(200, noRecords)), reply(201, newRecord), nil)
+		cf := testConfig(sn.URL, func(table map[string]any) { delete(table, "search") })
+		rec, _ := call(send, cf, http.MethodPost, "/snow/incident", `{"correlation_id":"c1","cmdb_ci":"ci1"}`)
+		if rec.Code != http.StatusCreated || len(gets) != 1 || gets[0].query != "active=true^cmdb_ci=ci1^correlation_id=c1^ORDERBYDESCnumber" {
+			t.Errorf("status = %d, searches %+v", rec.Code, gets)
+		}
+	})
+}
+
+func TestSendCMDBTable(t *testing.T) {
+	tests := []struct {
+		name      string
+		table     string
+		want      int
+		wantTable string
+	}{
+		{"default", "", http.StatusCreated, "cmdb_ci"},
+		{"named", "cmdb_ci_server", http.StatusCreated, "cmdb_ci_server"},
+		{"parent path", "../sys_user", http.StatusBadRequest, ""},
+		{"nested", "cmdb_ci/../../x", http.StatusBadRequest, ""},
+		{"absolute", "/api/now/v2/table/sys_user", http.StatusBadRequest, ""},
+		{"query", "cmdb_ci?x=1", http.StatusBadRequest, ""},
+		{"spaces", "cmdb ci", http.StatusBadRequest, ""},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var gets []recorded
+			sn := newStub(t, record(&gets, func(w http.ResponseWriter, r *http.Request) {
+				if strings.HasSuffix(r.URL.Path, "/incident") {
+					reply(200, noRecords)(w, r)
+					return
+				}
+				reply(200, `{"result":[{"sys_id":"ci1"}]}`)(w, r)
+			}), reply(201, newRecord), nil)
+
+			fields := map[string]string{"correlation_id": "c1", "__snow_cmdb_search": "name=host"}
+			if test.table != "" {
+				fields[ims.SNOW_CMDB_TABLE] = test.table
+			}
+			b, _ := json.Marshal(fields)
+			rec, response := call(send, testConfig(sn.URL), http.MethodPost, "/snow/incident", string(b))
+			if rec.Code != test.want {
+				t.Fatalf("status = %d, want %d, response %+v", rec.Code, test.want, response)
+			}
+			if test.want == http.StatusCreated {
+				if want := "/api/now/v2/table/" + test.wantTable; gets[0].path != want {
+					t.Errorf("CI search path = %q, want %q", gets[0].path, want)
+				}
+			} else if len(gets) != 0 {
+				t.Errorf("a request was made to %q", gets[0].path)
+			}
+		})
 	}
 }

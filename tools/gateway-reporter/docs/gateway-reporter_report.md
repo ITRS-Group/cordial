@@ -17,7 +17,7 @@ For each Gateway setup file given one or more reports are written to the configu
 
 The `${gateway}` and `${datetime}` are replaced with the Gateway name (or prefix, see below) and the date and time of the start of the report creation (`YYYYMMDDhhmmss`).
 
-The output directory can be set with the `--output/-o DIR` option. Merging is controlled by the `--merge/-m` option, which requires an installed Gateway package given with the `--install` option - this can either be to the package directory or the Gateway binary - but in the other files from the installation must be present in the same location.
+The output directory can be set with the `--out/-o DIR` option. Merging is controlled by the `--merge/-m` option, which requires an installed Gateway package given with the `--install` option - this can either be to the package directory or the Gateway binary - but in the other files from the installation must be present in the same location.
 
 If the setup file being processed does not contain a Gateway name, either because the setup file is not bering fully merged or the Gateway name is set on the command line, then use the `--prefix/-p` option to set the `${gateway}` in the report paths above and in the reports themselves.
 
@@ -34,7 +34,7 @@ gateway-reporter report [flags] [SETUP...]
   -m, --merge[=true|false]   Create a merged config file. --install must be set
   -i, --install BINARY|DIR   Path to the gateway installation BINARY|DIR
   -p, --prefix name          Report prefix for configurations without a Gateway name
-  -f, --config string        config file (default is $HOME/.config/geneos/docs.yaml)
+  -f, --config string        config file (default is $HOME/.config/geneos/gateway-reporter.yaml)
   -d, --debug[=true|false]   enable extra debug output
 ```
 

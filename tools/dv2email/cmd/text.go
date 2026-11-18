@@ -20,8 +20,9 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,19 +61,9 @@ func createTextTables(cf *config.Config, data DV2EMailData) (out *bytes.Reader, 
 		lookup["date"] = t.Local().Format("20060102")
 		lookup["time"] = t.Local().Format("150405")
 		lookup["datetime"] = t.Local().Format(time.RFC3339)
-		lookup["serial"] = fmt.Sprintf("%0*d", digits, di)
+		lookup["serial"] = fmt.Sprintf("%0*d", digits, di+1)
 
-		info := []string{
-			"Geneos dv2email",
-			lookup["gateway"],
-			lookup["probe"],
-			lookup["entity"],
-			lookup["sampler"],
-			lookup["type"],
-			lookup["dataview"],
-			dv.SampleTime.Format(time.RFC3339),
-			dv.XPath.String(),
-		}
+		info := dataviewInfo(dv, lookup)
 
 		tab := table.NewWriter()
 		tab.SetOutputMirror(buf)
@@ -89,14 +80,8 @@ func createTextTables(cf *config.Config, data DV2EMailData) (out *bytes.Reader, 
 		tab.Render()
 		fmt.Fprintln(buf)
 
-		headlinesHeadings := []string{}
-		for h := range dv.Headlines {
-			headlinesHeadings = append(headlinesHeadings, h)
-		}
-		sort.Strings(headlinesHeadings)
-
 		headlines := []table.Row{}
-		for _, h := range headlinesHeadings {
+		for _, h := range slices.Sorted(maps.Keys(dv.Headlines)) {
 			headlines = append(headlines, table.Row{h, dv.Headlines[h].Value})
 		}
 
@@ -125,7 +110,7 @@ func createTextTables(cf *config.Config, data DV2EMailData) (out *bytes.Reader, 
 		tab.AppendHeader(headings)
 		for _, rn := range dv.RowOrder {
 			row := table.Row{rn}
-			for _, cn := range dv.ColumnOrder[1:] {
+			for _, cn := range dataColumns(dv) {
 				row = append(row, dv.Table[rn][cn].Value)
 			}
 			tab.AppendRow(row)
@@ -155,16 +140,9 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 	}
 	switch config.Get[string](cf, "texttable.split") {
 	case "entity":
-		entities := map[string][]*commands.Dataview{}
-		for _, d := range data.Dataviews {
-			if len(entities[d.XPath.Entity.Name]) == 0 {
-				entities[d.XPath.Entity.Name] = []*commands.Dataview{}
-			}
-			entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
-		}
-		for entity, e := range entities {
+		for _, group := range groupByEntity(data.Dataviews) {
 			many := DV2EMailData{
-				Dataviews: e,
+				Dataviews: group.dataviews,
 				Env:       data.Env,
 			}
 			text, err := createTextTables(cf, many)
@@ -173,7 +151,7 @@ func buildTextTableFiles(cf *config.Config, d any, timestamp time.Time) (files [
 			}
 			lookup := map[string]string{
 				"default":   "dataviews",
-				"entity":    entity,
+				"entity":    group.entity,
 				"sampler":   "",
 				"dataview":  "",
 				"timestamp": timestamp.Local().Format("20060102150405"),

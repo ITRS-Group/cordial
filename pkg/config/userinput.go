@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 
@@ -57,62 +56,50 @@ func ReadUserInputLine(format string, args ...any) (input string, err error) {
 //
 //   - If `from` is empty then an empty string is returned
 //   - If `from` is a dash (`-`) then data is read from STDIN the after
-//     the user is prompted with `Paste PEM formatted [PROMPT], end
-//     with newline + CTRL-D:` where `[PROMPT]` is taken from
-//     the prompt argument.
+//     the user is prompted, on STDERR, with `Paste PEM formatted
+//     [PROMPT], end with newline + CTRL-D:` where `[PROMPT]` is taken
+//     from the prompt argument.
 //   - If `from` has the prefix `pem:` then the data is taken from the
 //     remainder of the argument.
 //   - If `from` has the prefix `http://` or `https://` then the data
 //     is fetched from the URL pointed to by `from` using an HTTP GET
-//     request.
+//     request, which times out after 30 seconds.
 //   - Otherwise the file at the path pointed to by `from` is read and
 //     returned
 //
 // Any error when reading the input is returned.
 func ReadPEM(from, prompt string) (data []byte, err error) {
-	if from == "" {
-		return
-	}
 	switch {
 	case from == "":
-		break
+		return
 	case strings.HasPrefix(from, "pem:"):
 		data = []byte(strings.TrimPrefix(from, "pem:"))
 		return
 	case strings.HasPrefix(from, "http://"), strings.HasPrefix(from, "https://"):
-		resp, err2 := http.Get(from)
+		resp, err := fetchClient.Get(from)
 		if err != nil {
-			err = err2
-			return
+			return nil, err
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode > 299 {
-			err = fmt.Errorf("error fetching %s: %s", from, resp.Status)
-			return
+			return nil, fmt.Errorf("error fetching %s: %s", from, resp.Status)
 		}
-		data, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return
-		}
+		return io.ReadAll(resp.Body)
 	case from == "-":
 		isterm := term.IsTerminal(int(os.Stdin.Fd()))
 		if isterm {
 			// only prompt if STDIN is a terminal session
-			fmt.Printf("Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
+			fmt.Fprintf(os.Stderr, "Paste PEM formatted %s, end with newline + CTRL-D:\n", prompt)
 		}
 		data, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return data, err
 		}
 		if isterm {
-			fmt.Println()
+			fmt.Fprintln(os.Stderr)
 		}
 	default:
-		from = ResolveHome(from)
-		data, err = os.ReadFile(from)
-		if err != nil {
-			return data, err
-		}
+		return os.ReadFile(ResolveHome(from))
 	}
 
 	return
@@ -126,9 +113,11 @@ func ReadPEM(from, prompt string) (data []byte, err error) {
 //
 // If prompt is given then it must either be one or two strings,
 // depending on match set. The prompt(s) are suffixed with ": " in both
-// cases. The defaults are "Password" and "Re-enter Password".
+// cases. The defaults are "Password" and "Re-enter Password". The
+// prompts and any messages are written to STDERR, not STDOUT.
 //
-// On error the pw is empty and does not need to be Destroy()ed.
+// On error the pw is empty and does not need to be Destroy()ed. Any
+// other passwords read, such as ones that did not match, are cleared.
 //
 // If STDIN is not a terminal then config.ErrNotInteractive is returned.
 //
@@ -140,70 +129,62 @@ func ReadPasswordInput(match bool, maxtries int, prompt ...string) (secret Secre
 		err = ErrNotInteractive
 		return
 	}
-	if match {
-		var matched bool
-		if len(prompt) != 2 {
-			prompt = []string{}
-		}
 
-		if maxtries == 0 {
-			maxtries = 3
-		}
-
-		for i := 0; i < maxtries; i++ {
-			var pwt []byte
-			if len(prompt) == 0 {
-				fmt.Printf("Password: ")
-			} else {
-				fmt.Printf("%s: ", prompt[0])
-			}
-			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw1 := Secret(pwt)
-			fmt.Println() // always move to new line even on error
-			if err != nil {
-				return
-			}
-			if len(prompt) < 2 {
-				fmt.Printf("Re-enter Password: ")
-			} else {
-				fmt.Printf("%s: ", prompt[1])
-			}
-			pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-			pw2 := Secret(pwt)
-			fmt.Println() // always move to new line even on error
-			if err != nil {
-				return
-			}
-
-			if len(pw1) == 0 || len(pw2) == 0 {
-				fmt.Println("Invalid password(s)")
-				continue
-			}
-			if bytes.Equal(pw1, pw2) {
-				secret = pw1
-				matched = true
-				break
-			}
-			fmt.Println("Entries do not match")
-		}
-		if !matched {
-			err = fmt.Errorf("too many attempts, giving up")
-			return
-		}
-	} else {
-		var pwt []byte
-		if len(prompt) == 0 {
-			fmt.Printf("Password: ")
-		} else {
-			fmt.Printf("%s: ", strings.Join(prompt, " "))
-		}
-		pwt, err = term.ReadPassword(int(os.Stdin.Fd()))
-		secret = Secret(pwt)
-		fmt.Println() // always move to new line even on error
-		if err != nil {
-			return
-		}
+	// prompts and messages go to STDERR so that STDOUT can be used for
+	// the results
+	readOne := func(prompt string) (Secret, error) {
+		fmt.Fprintf(os.Stderr, "%s: ", prompt)
+		pw, err := term.ReadPassword(int(os.Stdin.Fd()))
+		fmt.Fprintln(os.Stderr) // always move to new line even on error
+		return Secret(pw), err
 	}
 
-	return
+	if !match {
+		p := "Password"
+		if len(prompt) > 0 {
+			p = strings.Join(prompt, " ")
+		}
+		secret, err = readOne(p)
+		if err != nil {
+			clear(secret)
+			return nil, err
+		}
+		return
+	}
+
+	if len(prompt) != 2 {
+		prompt = []string{"Password", "Re-enter Password"}
+	}
+
+	if maxtries == 0 {
+		maxtries = 3
+	}
+
+	for range maxtries {
+		pw1, err := readOne(prompt[0])
+		if err != nil {
+			clear(pw1)
+			return nil, err
+		}
+		pw2, err := readOne(prompt[1])
+		if err != nil {
+			clear(pw1)
+			clear(pw2)
+			return nil, err
+		}
+
+		switch {
+		case len(pw1) == 0 || len(pw2) == 0:
+			fmt.Fprintln(os.Stderr, "Invalid password(s)")
+		case bytes.Equal(pw1, pw2):
+			clear(pw2)
+			return pw1, nil
+		default:
+			fmt.Fprintln(os.Stderr, "Entries do not match")
+		}
+		clear(pw1)
+		clear(pw2)
+	}
+
+	return nil, fmt.Errorf("too many attempts, giving up")
 }

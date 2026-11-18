@@ -21,14 +21,18 @@ import "C"
 
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
+	"fmt"
 	htmltemplate "html/template"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -63,8 +67,11 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
-// DefaultWebhookURLValidationPattern TODO: Describe its purpose and intended use.
-const DefaultWebhookURLValidationPattern = `^https:\/\/(?:.*\.webhook|outlook)\.office(?:365)?\.com`
+
+// DefaultWebhookHostPattern is the pattern that the whole of the host of
+// a webhook URL must match
+const DefaultWebhookHostPattern = `^(?:.*\.webhook|outlook)\.office(?:365)?\.com$`
+
 // DefaultMsTeamsTimeout TODO: Describe its purpose and intended use.
 const DefaultMsTeamsTimeout = 2000
 
@@ -85,8 +92,25 @@ type msTeamsBasicTextNotifPostData struct {
 
 //export SendMail
 func SendMail(n C.int, args **C.char) C.int {
-	conf := parseArgs(n, args)
+	return C.int(protect("SendMail", func() int { return sendMail(parseArgs(goArgs(n, args))) }))
+}
 
+// protect runs f, which is the body of an exported function, and returns
+// its result, or 1 if it panics. Every exported function must use it, as
+// a panic that crosses into C ends the program that has loaded the
+// library, which is the Geneos Gateway. The panic is logged and the
+// failure code returned instead.
+func protect(name string, f func() int) (rc int) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("ERR: %s: unexpected failure: %v", name, r)
+			rc = 1
+		}
+	}()
+	return f()
+}
+
+func sendMail(conf *config.Config, values map[string]string) int {
 	d, err := email.Dial(conf)
 	if err != nil {
 		log.Println(err)
@@ -141,7 +165,7 @@ func SendMail(n C.int, args **C.char) C.int {
 		format = defaultFormat[_FORMAT]
 	}
 
-	body := replArgs(format, conf)
+	body := replArgs(format, values)
 	m.SetGenHeader("Subject", subject)
 	m.SetBodyString("text/plain", body)
 
@@ -155,12 +179,14 @@ func SendMail(n C.int, args **C.char) C.int {
 var replArgsRE = regexp.MustCompile(`%\([^\)]*\)`)
 
 // substitute placeholder of the form %(XXX) for the value of XXX or empty and
-// return the result as a new string
-func replArgs(format string, conf *config.Config) string {
+// return the result as a new string. The values are used exactly as they
+// were passed, as they can come from the data that triggered the alert
+// and must not be expanded.
+func replArgs(format string, values map[string]string) string {
 	result := replArgsRE.ReplaceAllStringFunc(format, func(key string) string {
 		// strip containing "%(...)" - as we are here, the regexp must have matched OK
 		// so no further check required. No match returns empty string.
-		return config.Get[string](conf, key[2:len(key)-1])
+		return values[key[2:len(key)-1]]
 	})
 
 	return result
@@ -168,8 +194,10 @@ func replArgs(format string, conf *config.Config) string {
 
 //export GoSendMail
 func GoSendMail(n C.int, args **C.char) C.int {
-	conf := parseArgs(n, args)
+	return C.int(protect("GoSendMail", func() int { return goSendMail(parseArgs(goArgs(n, args))) }))
+}
 
+func goSendMail(conf *config.Config, values map[string]string) int {
 	d, err := email.Dial(conf)
 	if err != nil {
 		log.Println(err)
@@ -210,7 +238,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	subjtmpl, err = subjtmpl.Parse(subject)
 	if err == nil {
 		var subjbuf bytes.Buffer
-		err = subjtmpl.Execute(&subjbuf, conf)
+		err = subjtmpl.Execute(&subjbuf, values)
 		if err == nil {
 			subject = subjbuf.String()
 		}
@@ -240,10 +268,8 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		var contents string
 
 		if conf.IsSet("_TEMPLATE_HTML_FILE") {
-			// TODO: update to fetch file directly rather than via config.Expand, which is really only for config values
-			contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_HTML_FILE")+"}")
-			if contents == "" {
-				log.Println("error reading", config.Get[string](conf, "_TEMPLATE_HTML_FILE"))
+			if contents, err = readTemplateFile(config.Get[string](conf, "_TEMPLATE_HTML_FILE")); err != nil {
+				log.Println(err)
 				return 1
 			}
 		} else if conf.IsSet("_TEMPLATE_HTML") {
@@ -258,10 +284,8 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		}
 
 		if conf.IsSet("_TEMPLATE_CSS_FILE") {
-			// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
-			contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_CSS_FILE")+"}")
-			if contents == "" {
-				log.Println("error reading", config.Get[string](conf, "_TEMPLATE_CSS_FILE"))
+			if contents, err = readTemplateFile(config.Get[string](conf, "_TEMPLATE_CSS_FILE")); err != nil {
+				log.Println(err)
 				return 1
 			}
 		} else if conf.IsSet("_TEMPLATE_CSS") {
@@ -279,8 +303,10 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		if logopath := config.Get[string](conf, "_TEMPLATE_LOGO_FILE"); logopath != "" {
 			logofile, err := os.Open(logopath)
 			if err != nil {
+				log.Println(err)
 				return 1
 			}
+			defer logofile.Close()
 			m.EmbedReader("logo.png", logofile)
 		} else {
 			// use var path and a default of the embedded logo
@@ -296,7 +322,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 	// the email
 
 	var output bytes.Buffer
-	err = tmpl.Execute(&output, conf)
+	err = tmpl.Execute(&output, values)
 	if err != nil {
 		log.Println(err)
 		return 1
@@ -305,7 +331,7 @@ func GoSendMail(n C.int, args **C.char) C.int {
 
 	if !config.Get[bool](conf, "_TEMPLATE_TEXT_ONLY") {
 		var htmlBody bytes.Buffer
-		err = html.ExecuteTemplate(&htmlBody, "html", conf)
+		err = html.ExecuteTemplate(&htmlBody, "html", values)
 		if err != nil {
 			log.Println(err)
 			return 1
@@ -323,41 +349,61 @@ func GoSendMail(n C.int, args **C.char) C.int {
 
 //export GoSendToMsTeamsChannel
 func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
-	var msTeamsWebhooksValidity = make(map[string]bool)
-	var clientTimeout time.Duration
+	return C.int(protect("GoSendToMsTeamsChannel", func() int { return goSendToMsTeamsChannel(parseArgs(goArgs(n, args))) }))
+}
 
+var webhookHostRE = regexp.MustCompile(DefaultWebhookHostPattern)
+
+// validWebhook returns true if s is the URL of a Microsoft Teams webhook,
+// which must be HTTPS, with a host that is entirely one of those that
+// Microsoft use, and without credentials in the URL that can be used to
+// make the host look like something else
+func validWebhook(s string) bool {
+	u, err := url.Parse(s)
+	if err != nil || u.Scheme != "https" || u.User != nil {
+		return false
+	}
+	if p := u.Port(); p != "" && p != "443" {
+		return false
+	}
+	return webhookHostRE.MatchString(strings.ToLower(u.Hostname()))
+}
+
+// webhookValid is the check of the URL of each webhook, which tests can
+// replace to send to a server of their own
+var webhookValid = validWebhook
+
+// webhookClient returns the client to send to webhooks, which tests can
+// replace
+var webhookClient = func(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout}
+}
+
+func goSendToMsTeamsChannel(conf *config.Config, values map[string]string) int {
 	// Parse arguments
 	// ---------------
-	conf := parseArgs(n, args)
 
 	// Check validity of msTeams incoming webhooks
 	// -------------------------------------------
 	// Error if no webhooks defined
-	if conf.IsSet("_TO") || len(config.Get[string](conf, "_TO")) == 0 {
+	if !conf.IsSet("_TO") || len(config.Get[string](conf, "_TO")) == 0 {
 		log.Println("ERR: No MsTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel().")
 		return 1
 	}
 	// Split webhooks, provided in _TO as a pipe ("|") separate list
-	msTeamsWebhooks := strings.Split(config.Get[string](conf, "_TO"), "|")
-	validityWebhooksCount := 0
-	// Browse through webhooks & check validity usng a regex match.
-	// Invalid webhooks are ignored.
-	regex, err := regexp.Compile(DefaultWebhookURLValidationPattern)
-	if err != nil {
-		log.Println("ERR: Cannot compile regex to validate msTeams webhooks. Abort GoSendToMsTeamsChannel().")
-		return 1
-	}
-	for i, s := range msTeamsWebhooks {
-		if match := regex.MatchString(s); !match {
+	// and browse through them to check validity. Invalid webhooks are
+	// ignored.
+	var webhooks []string
+	for i, s := range strings.Split(config.Get[string](conf, "_TO"), "|") {
+		s = strings.TrimSpace(s)
+		if !webhookValid(s) {
 			log.Printf("WARN: msTeams weekhook #%d (%s) is not valid. Ignoring it.\n", i+1, s)
-			msTeamsWebhooksValidity[strings.TrimSpace(s)] = false
-		} else {
-			msTeamsWebhooksValidity[strings.TrimSpace(s)] = true
-			validityWebhooksCount++
+			continue
 		}
+		webhooks = append(webhooks, s)
 	}
 	// Error if no valid webhooks defined
-	if validityWebhooksCount == 0 {
+	if len(webhooks) == 0 {
 		log.Println("ERR: No valid msTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel().")
 		return 1
 	}
@@ -389,16 +435,13 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	}
 
 	// Run to subject through text template to allow variable subject
-	subjtmpl := template.New("subject")
-	subjtmpl, err = subjtmpl.Parse(subject)
-	if err == nil {
+	if subjtmpl, err := template.New("subject").Parse(subject); err == nil {
 		var subjbuf bytes.Buffer
-		err = subjtmpl.Execute(&subjbuf, conf)
-		if err == nil {
+		if err = subjtmpl.Execute(&subjbuf, values); err == nil {
 			subject = subjbuf.String()
 		}
 	}
-	header = replArgs(subject, conf)
+	header = replArgs(subject, values)
 
 	// Define the notification text / body
 	// -----------------------------------
@@ -407,21 +450,21 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	var textOnly, useHtmlTmpl bool
 	var htmlOutput, textOutput bytes.Buffer
 	var contents string
+	var err error
 	textOnly = config.Get[bool](conf, "_TEMPLATE_TEXT_ONLY")
 	useHtmlTmpl = false
 	// Identify the template to use and parse it
 	if conf.IsSet("_TEMPLATE_HTML_FILE") {
 		// Use of HTML template file defined in _TEMPLATE_HTML_FILE
 		useHtmlTmpl = true
-		// TODO: update to fetch file directly rather than via config.Expand2, which is really only for config values
-		contents = config.Expand[string](conf, "${file:"+config.Get[string](conf, "_TEMPLATE_HTML_FILE")+"}")
-		if contents == "" {
+		contents, err = readTemplateFile(config.Get[string](conf, "_TEMPLATE_HTML_FILE"))
+		if err != nil {
 			log.Println("ERR: Error reading HTML Template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
 			return 1
 		}
 		htmltmpl, err = htmltemplate.New("html").Parse(contents)
 		if err != nil {
-			log.Panicln("ERR: Error parsing template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
+			log.Println("ERR: Error parsing template file defined in _TEMPLATE_HTML_FILE. Abort GoSendToMsTeamsChannel().", err)
 			return 1
 		}
 	} else if conf.IsSet("_TEMPLATE_HTML") {
@@ -486,20 +529,20 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 	// Execute the template & account for older/legacy inputs formats from Geneos
 	if useHtmlTmpl {
 		// Template used is HTML
-		err = htmltmpl.ExecuteTemplate(&htmlOutput, "html", conf)
+		err = htmltmpl.ExecuteTemplate(&htmlOutput, "html", values)
 		if err != nil {
 			log.Println("ERR: Error executing HTML template. Abort GoSendToMsTeamsChannel().", err)
 			return 1
 		}
-		body = replArgs(htmlOutput.String(), conf)
+		body = replArgs(htmlOutput.String(), values)
 	} else {
 		// Template used is text
-		err = texttmpl.Execute(&textOutput, conf)
+		err = texttmpl.Execute(&textOutput, values)
 		if err != nil {
 			log.Println("ERR: Error executing text template. Abort GoSendToMsTeamsChannel().", err)
 			return 1
 		}
-		body = replArgs(textOutput.String(), conf)
+		body = replArgs(textOutput.String(), values)
 	}
 
 	// Process MsTeams API call
@@ -517,46 +560,98 @@ func GoSendToMsTeamsChannel(n C.int, args **C.char) C.int {
 		log.Println("ERR: Cannot generate JSON data for msTeams API. Abort GoSendToMsTeamsChannel().", err)
 		return 1
 	}
-	jsonBody := bytes.NewReader(jsonValue)
 
 	// Define timeout for RST API call
-	clientTimeout = config.Get[time.Duration](conf, "_TIMEOUT", config.DefaultValue(DefaultMsTeamsTimeout*time.Millisecond))
+	clientTimeout := webhookTimeout(config.Get[string](conf, "_TIMEOUT"))
 
 	// Call REST API for each target msTeams Webhook
-	client := &http.Client{
-		Timeout: clientTimeout,
-	}
-	for k, v := range msTeamsWebhooksValidity {
-		if v {
-			// Webhook is valid, proceed with REST API call / HTTP POST command
-			request, err := http.NewRequest("POST", k, jsonBody)
-			if err != nil {
-				log.Printf("ERR: Cannot create HTTP POST request to msTeams on URL %s. Continue. %v", k, err)
-				continue
-			}
-			request.Header.Set("Content-Type", "application/json")
-			resp, err := client.Do(request)
-			if err != nil {
-				log.Printf("ERR: Cannot complete HTTP POST request to MsTeams (target %s). Continue. %v", k, err)
-			} else {
-				log.Printf("INFO: Message sent to %s, return code %d\n", k, resp.StatusCode)
-			}
-		}
+	if sent := postWebhooks(webhookClient(clientTimeout), webhooks, jsonValue); sent == 0 {
+		log.Println("ERR: GoSendToMsTeamsChannel() failed to send to any webhook.")
+		return 1
 	}
 	log.Println("INFO: GoSendToMsTeamsChannel() completed.")
 	return 0
 } // End of GoSendToMsTeamsChannel()
 
-// parse the C args - "n" of them - and return a config map
-// - a value of empty string where there is no "=" or value
-func parseArgs(n C.int, args **C.char) (conf *config.Config) {
-	for _, s := range unsafe.Slice(args, n) {
-		k, v, found := strings.Cut(C.GoString(s), "=")
-		if found {
-			config.Set(conf, k, v)
-		} else {
-			config.Set(conf, k, "")
-		}
+// webhookTimeout returns the timeout for requests to webhooks from the
+// value of `_TIMEOUT`, which is a number of milliseconds or a duration
+// such as `5s`. It is the default if there is no value, or it is not
+// valid, as a zero timeout is no timeout.
+func webhookTimeout(value string) time.Duration {
+	value = strings.TrimSpace(value)
+	if ms, err := strconv.Atoi(value); err == nil && ms > 0 {
+		return time.Duration(ms) * time.Millisecond
 	}
-	return conf
+	if d, err := time.ParseDuration(value); err == nil && d > 0 {
+		return d
+	}
+	return DefaultMsTeamsTimeout * time.Millisecond
+}
+
+// postWebhooks posts the JSON to each of the webhooks and returns how
+// many accepted it, which is the number that returned a successful
+// status
+func postWebhooks(client *http.Client, webhooks []string, jsonValue []byte) (sent int) {
+	for _, webhook := range webhooks {
+		// each request has its own body, as it is read to the end by the
+		// first one that is sent
+		request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, webhook, bytes.NewReader(jsonValue))
+		if err != nil {
+			log.Printf("ERR: Cannot create HTTP POST request to msTeams on URL %s. Continue. %v", webhook, err)
+			continue
+		}
+		request.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(request)
+		if err != nil {
+			log.Printf("ERR: Cannot complete HTTP POST request to MsTeams (target %s). Continue. %v", webhook, err)
+			continue
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			log.Printf("ERR: MsTeams (target %s) did not accept the message, return code %d\n", webhook, resp.StatusCode)
+			continue
+		}
+		log.Printf("INFO: Message sent to %s, return code %d\n", webhook, resp.StatusCode)
+		sent++
+	}
+	return
+}
+
+// readTemplateFile returns the contents of a template file, which is
+// an error if it cannot be read or is empty
+func readTemplateFile(path string) (contents string, err error) {
+	b, err := os.ReadFile(config.ResolveHome(path))
+	if err != nil {
+		return "", fmt.Errorf("error reading %s: %w", path, err)
+	}
+	if len(b) == 0 {
+		return "", fmt.Errorf("error reading %s: file is empty", path)
+	}
+	return string(b), nil
+}
+
+// goArgs returns the arguments passed by C as Go strings
+func goArgs(n C.int, args **C.char) (goargs []string) {
+	for _, s := range unsafe.Slice(args, n) {
+		goargs = append(goargs, C.GoString(s))
+	}
+	return
+}
+
+// parseArgs parses the arguments, which are of the form `NAME=VALUE`,
+// and returns the configuration for the arguments, with a value of empty
+// string where there is no "=" or value, and the arguments as they are
+// for the templates, as the configuration does not keep the case of the
+// names and expands values, and the values from the alert must be used
+// as they are.
+func parseArgs(args []string) (conf *config.Config, values map[string]string) {
+	conf = config.New()
+	values = make(map[string]string, len(args))
+	for _, s := range args {
+		k, v, _ := strings.Cut(s, "=")
+		config.Set(conf, k, v)
+		values[k] = v
+	}
+	return
 }

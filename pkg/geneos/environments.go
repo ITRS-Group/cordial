@@ -23,30 +23,38 @@ import "encoding/xml"
 type EnvironmentRef struct {
 	XMLName xml.Name `xml:"environment" json:"-" yaml:"-"`
 	Comment string   `xml:",comment"`
-	Name    string   `xml:"ref,attr" json:",omitempty" yaml:",omitempty"`
+	Name    string   `xml:"ref,attr,omitempty" json:",omitempty" yaml:",omitempty"`
+
+	OtherAttributes []xml.Attr `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // Environments TODO: Describe its purpose and intended use.
 type Environments struct {
-	XMLName      xml.Name           `xml:"environments" json:"-" yaml:"-"`
-	Comment      string             `xml:",comment"`
-	Groups       []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
-	Environments []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name           `xml:"environments" json:"-" yaml:"-"`
+	Comment         string             `xml:",comment"`
+	Groups          []EnvironmentGroup `xml:"environmentGroup,omitempty" json:",omitempty" yaml:",omitempty"`
+	Environments    []Environment      `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other           []RawXMLElement    `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr         `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // EnvironmentGroup TODO: Describe its purpose and intended use.
 type EnvironmentGroup struct {
-	XMLName      xml.Name      `xml:"environmentGroup" json:"-" yaml:"-"`
-	Comment      string        `xml:",comment"`
-	Name         string        `xml:"name,attr"`
-	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	XMLName         xml.Name        `xml:"environmentGroup" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Name            string          `xml:"name,attr"`
+	Environments    []Environment   `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 // Environment TODO: Describe its purpose and intended use.
 type Environment struct {
-	XMLName      xml.Name      `xml:"environment" json:"-" yaml:"-"`
-	Comment      string        `xml:",comment"`
-	Name         string        `xml:"name,attr"`
-	Environments []Environment `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
-	Vars         []Vars        `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	XMLName         xml.Name        `xml:"environment" json:"-" yaml:"-"`
+	Comment         string          `xml:",comment"`
+	Name            string          `xml:"name,attr"`
+	Environments    []Environment   `xml:"environment,omitempty" json:",omitempty" yaml:",omitempty"`
+	Vars            []Vars          `xml:"var,omitempty" json:",omitempty" yaml:",omitempty" mapstructure:"var"`
+	Other           []RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr      `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }

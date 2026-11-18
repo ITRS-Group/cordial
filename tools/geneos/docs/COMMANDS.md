@@ -12,9 +12,17 @@ Most commands work on "instances" of "components". As the names suggest, a "comp
 
 Instances can be created locally or on remote hosts over SSH connections without the need to install `geneos` on the remote Linux server.
 
-Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information.
+Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information. Using the `--host`/`-H` option with a name that is not a configured host is an error.
 
 For many commands you can also use wildcards for the `NAME` part. These wildcards are not complex regular expressions but instead follow more common file system patterns. (Note that the exact patterns support are the same as for the Go [`path.Match`](https://pkg.go.dev/path#Match) function.). These wildcards only work on `NAME` and not the `HOST` part and then only for those commands where they make sense, such as `geneos ls`, `geneos start` and so on.
+
+## Exit Status
+
+The exit status of `geneos` is `0` if everything that was asked for succeeded, and non-zero if at least one thing failed. This applies to every command that acts on one or more instances, hosts, files or other items: all of the items are still processed, and the result for each one is shown, but if any of them fail, for example an instance that does not exist or cannot be started, the exit status is non-zero. Each failure is reported once, on standard error, and the command does not then repeat it with a final error message or the usage.
+
+Some commands, such as `stop`, `restart`, `reload`, `delete` and `tls new`, check all of the instance names given before they do anything and fail, without changing any of the instances, if any of them does not match an instance.
+
+These are not failures: stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, and instances that are disabled when `geneos start` selects instances that are set to start automatically. A pattern or component type that does not match any instances, such as `geneos ls gateway` when there are no Gateways, is also not a failure, but a name that is not an instance is. For commands that list, e.g. `ls`, `ps` and `show`, the instances that do exist are still listed.
 
 The subsystems below group related functions together and have their own sub-commands, such as `geneos aes password` and `geneos init demo`. Use `geneos SUBSYSTEM help` to see more or, if you are reading this online you should be able to click through for further information.
 
@@ -119,9 +127,9 @@ The subsystems below group related functions together and have their own sub-com
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -153,9 +161,9 @@ geneos ac2
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -530,9 +538,9 @@ Additional limits:
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -592,7 +600,7 @@ For "gateway", "probe", "entity", "sampler", and "dataview" elements, the follow
 * `keep` - keep the name predicate for the element. This is the default for "sampler" and "dataview" elements.
 * `remove:NAME` - remove the matching name predicate from the element. NAME can be a glob (not regexp) pattern, e.g. "PROD*".
 * `set:NAME` - set the name predicates for the element.
-* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash.
+* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash. All replacement expressions are checked before any file is processed and an invalid one is an error.
 
 For "type" elements, the following additional modifications are available:
 
@@ -699,9 +707,9 @@ geneos adb clean [flags] [PATH...]
       --skip-links[=true|false]          Skip processing of link elements
       --keep-startup-data[=true|false]   Keep startup data (default is to remove)
       --allow-root[=true|false]          allow running as root (not recommended)
-  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                    config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string                  profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -734,9 +742,9 @@ geneos adb info [PATH...] [flags]
 
 ```text
       --allow-root[=true|false]    allow running as root (not recommended)
-  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string              config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string            profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
       --show-all[=true|false]      List both XPaths and URL targets
       --show-urls[=true|false]     List URL targets only
   -X, --show-xpaths[=true|false]   List XPaths only
@@ -752,7 +760,7 @@ geneos adb info [PATH...] [flags]
 
 <sub>[Up: geneos](#geneos)</sub>
 
-The `geneos add` command is used to create a new instance of a component. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
+The `geneos add` command is used to create a new instance of a component. It is an error, and the exit status is non-zero, to add an instance that already exists. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
 
 The options accepted vary by component `TYPE` and are the resulting parameters are stored in a metadata configuration file in the instance directory. The default configuration file format is in JSON format. There may also be support for YAML configuration files in future releases.
 	
@@ -830,9 +838,9 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
       --insecure[=true|false]         Do not create certificates for TLS support.
                                       Ignored if --certs-bundle is given.
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -876,9 +884,9 @@ In addition to the functionality built-in to Geneos as described in the Gateway 
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -914,16 +922,16 @@ geneos aes decode [flags] [TYPE] [NAME...]
 ### Options
 
 ```text
-  -k, --keyfile KEYFILE           Path to keyfile (default /home/peter/.config/docs/keyfile.aes)
-  -v, --previous KEYFILE          Path to previous keyfile (default /home/peter/.config/docs/prevkeyfile.aes)
+  -k, --keyfile KEYFILE           Path to keyfile (default ~/.config/geneos/keyfile.aes)
+  -v, --previous KEYFILE          Path to previous keyfile (default ~/.config/geneos/prevkeyfile.aes)
   -e, --expandable string         The keyfile and ciphertext in expandable format (including '${...}')
   -p, --password string           Geneos formatted AES256 password
   -s, --source string             Alternative source for password
   -r, --raw[=true|false]          Output raw decoded value for --expandable/-e and --keyfile/-k decoding only (no prefix and no newline if not part of the secret, for scripting)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1010,9 +1018,9 @@ geneos aes encode [flags] [TYPE] [NAME...]
   -S, --client-secret SECRET      Client Secret for --app-key, prompted if not set
   -a, --app-key-file string       App-key filename, if saving per instance, otherwise defaults to STDOUT
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1052,9 +1060,9 @@ geneos aes list [flags] [TYPE] [NAME...]
   -c, --csv[=true|false]          Output CSV
   -t, --toolkit[=true|false]      Output Toolkit formatted CSV
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1101,9 +1109,9 @@ geneos aes new [flags] [TYPE] [NAME...]
   -S, --shared[=true|false]       Write the keyfile to matching component shared directories
   -U, --update[=true|false]       Update keyfile settings on matching instances
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1141,10 +1149,10 @@ geneos aes password [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
   -p, --password SECRET           Password
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -s, --source PATH|URL|-         External source for password PATH|URL|-
 ```
 
@@ -1164,7 +1172,7 @@ To create a key file with new contents use the `aes new` command.
 
 If the `--shared`/`-s` flag is set then the provided key file is imported to matching component shared key file directories and matching instances have their key file parameters set to point to the new location.
 
-If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed.
+If neither `--keyfile`/`-k` or `--crc`/`-c` is given then the key file contents are read from STDIN. If `--crc CRC`/`-c CRC` is given then the 8 hex-digit CRC is used to look up an existing key file in the component's shared key file directory and if found then the matching instances are updated to use this. In this case no key files are changed and it is an error if the key file does not exist. The `--crc` option cannot be combined with `--keyfile` or `--shared`.
 
 Depending on the `--no-roll`/`-N` flag, any matching instances may have their `prevkeyfile` parameter updated to reference any original key file and, if a new key file is written in a non-shared location the previous file is also renamed using the suffix in the `--backup`/`-b` flag.
 
@@ -1180,15 +1188,16 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 ```text
   -k, --keyfile PATH|URL|-        Key file to use. PATH|URL|-
-                                  Path to a local file, a URL or a dash for STDIN. (default "-")
+                                  Path to a local file, a URL or a dash for STDIN.
+                                  The default, unless --crc is given, is to read from STDIN.
   -c, --crc CRC                   CRC of an existing shared keyfile to use
   -b, --backup string             Backup any existing keyfile with extension given (default "-prev")
   -N, --no-roll[=true|false]      Do not roll any existing keyfile to previous keyfile setting
   -s, --shared[=true|false]       Set as a shared keyfile, using the CRC as the file name prefix
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1203,11 +1212,11 @@ geneos aes set [flags] [TYPE] [NAME...]
 
 Backup instance data in an archive file, either for a safety backup or to be restored on another system using the `geneos restore` command.
 
-Each matching instance has its primary configuration files included in the archive. By default, no AES files, instance certificates, or instance private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below, then only files in the instance directory are included; files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-a` flag is given, in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
+Each matching instance has its primary configuration files included in the archive. By default, no AES files, instance certificates, or instance private keys are included in the archive (taken from the instance configuration and not by filename pattern). If saving any of these files is enabled using the flags below, then only files in the instance directory are included; files outside the instance directory are never saved. Files that match the clean or purge lists for that type are ignored unless the `--all/-A` flag is given, in which case those files are not skipped (but sensitive files like AES key files and private keys are still only included using the specific options below).
 
 The global `tls/` directory is always included in the backup. This is so that the trusted roots that may be used by instances are included. The directory should never contain anything other than certificates, which are public information.
 
-The default output format is a `tar.gz` file (gzipped tar). You can also select bzip2 or none using the `--compress/-c` option. Unless you set your own archive file name using the `--output/-o` flag, the file name will be automatically generated based on how many unique component types and instance names there are. The `--output/-o` flags will also accept `-` to mean output to stdout.
+The default output format is a `tar.gz` file (gzipped tar). You can also select bzip2 or none using the `--compress/-z` option. Unless you set your own archive file name using the `--output/-o` flag, the file name will be automatically generated based on how many unique component types and instance names there are. The `--output/-o` flags will also accept `-` to mean output to stdout.
 
 If a single instance is selected than the default destination archive is made up of `geneos`, the component type and the instance name, in the format `geneos-TYPE-NAME.tar.gz` in the current directory. Use the `--output`/`-o` option to override, including a `-` to indicate STDOUT for piping to another command. In this case any other messages are written to STDERR. If written to a file. any existing file with the same name is overwritten. If the program is invoked using another name then that is used instead of `geneos`. All spaces in instance names are replaced with underscores. So, a Gateway with the name "Demo Gateway" would be saved as `geneos-gateway-Demo_Gateway.tar.gz`.
 
@@ -1223,9 +1232,9 @@ To include AES files, use the `--aes` option. Without this option the files that
 
 To include certificate and private key files, use the `--tls` option. Without this option the files skipped are those referenced by the instance parameters `certificate`, `privatekey` and `certchain`. When using `--shared` all files with the extensions `.pem`, `.key` and `.crt` are skipped.
 
-File over 2MiB are not included in the archive unless the `--all/-a` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
+File over 2MiB are not included in the archive unless the `--all/-A` option is used, but this limit can be controlled using the `--size/-s` option which accepts all the common units, e.g. `50KB` or `10MiB`. Using a size of `0` (zero) removes the limit.
 
-The contents of the archive are relative to the root of the Geneos installation, and the `geneos load` command will refactor any changes to paths in the instance configuration JSON files.
+The contents of the archive are relative to the root of the Geneos installation, and the `geneos restore` command will refactor any changes to paths in the instance configuration JSON files.
 
 Note that instances are not stopped or restarted as part of the backup process. If files are locked or changed during the backup then the contents may be inconsistent. If you want to stop the instance before backup and restart it afterwards then you can use the `geneos stop` and `geneos start` commands in a script.
 
@@ -1254,9 +1263,9 @@ geneos backup [flags] [all] | [TYPE] [NAME...]
       --aes[=true|false]          Include AES key files.
       --tls[=true|false]          Include certificates, private keys and certificate chains.
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1279,17 +1288,18 @@ geneos backup all
 
 A `ca3` instance is an unmanaged Collection Agent. The instances uses the standard Netprobe installation package and needs Java 17 installed. Releases after 7.1 require Java 21.
 
-A new `ca3` instance is created using local package configuration files, therefore the same package version must be installed locally as on any remote host.
+A new `ca3` instance is created using the package configuration files from the installed package on the instance's host.
 
 Component specific parameters:
 
-| parameter         | default                       | description                                           |
-| ----------------- | ----------------------------- | ----------------------------------------------------- |
-| plugins           | HOME/collection_agent/plugins | Plugin directory, relative to instance home directory |
-| health-check-port | 9136                          |                                                       |
-| tcp-reporter-port | 7137                          |                                                       |
-| xms (was minheap) | 512M                          | Java minimum memory                                   |
-| xmx (was maxheap) | 512M                          | Java maximum memory                                   |
+| parameter         | default                       | description                                                                     |
+| ----------------- | ----------------------------- | ------------------------------------------------------------------------------- |
+| port              | next free from 9137           | The TCP reporter port, unless `tcp-reporter-port` is set                        |
+| plugins           | HOME/collection_agent/plugins | Plugin directory, relative to instance home directory                           |
+| health-check-port | 9136                          |                                                                                 |
+| tcp-reporter-port | port                          | Override the TCP reporter port, by default the instance `port` is used          |
+| xms (was minheap) | 512M                          | Java minimum memory                                                             |
+| xmx (was maxheap) | 512M                          | Java maximum memory                                                             |
 
 ## Usage
 
@@ -1301,9 +1311,9 @@ geneos ca3
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1334,9 +1344,9 @@ geneos clean [flags] [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1360,7 +1370,7 @@ geneos clean gateway Gateway1
 
 Show the command line and environment variables for matching instances.
 
-If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used.
+If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used. As for the default output, the values of arguments and environment variables that look like secrets are redacted.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the command constructors. This is primarily to match the `start` and `restart` commands and for diagnostics and debugging
 
@@ -1374,12 +1384,12 @@ geneos command [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
   -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
   -j, --json[=true|false]         JSON formatted output
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1444,9 +1454,9 @@ General options are loaded from the global file first, then the user file and an
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1471,9 +1481,9 @@ geneos config import [flags] [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1522,9 +1532,9 @@ geneos config set [KEY=VALUE...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1563,9 +1573,9 @@ geneos config show [KEY...] [flags]
 ```text
   -a, --all[=true|false]          Show all the parameters including all defaults
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1592,9 +1602,9 @@ geneos config unset [KEY...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1633,9 +1643,9 @@ geneos copy [TYPE] SOURCE DESTINATION [KEY=VALUE...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1670,9 +1680,9 @@ geneos delete [flags] [TYPE] [NAME...]
   -S, --stop[=true|false]         Stop instances first
   -F, --force[=true|false]        Force delete of protected instances
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1704,6 +1714,8 @@ Use `--archive`/`-A` to select a release archive or directory on the local machi
 > - Only one site name is supported per installation.
 > - Use the same site name on all Geneos servers for consistent paths.
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
+
+It is an error, and the exit status is non-zero, to deploy an instance that already exists, but a profile that already exists is applied again to update its instances.
 
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
@@ -1837,9 +1849,9 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -1874,9 +1886,9 @@ geneos disable [TYPE] [NAME...] [flags]
   -S, --stop[=true|false]         Stop instances
   -F, --force[=true|false]        Force disable instances
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1889,7 +1901,7 @@ geneos disable [TYPE] [NAME...] [flags]
 
 <sub>[Up: geneos](#geneos)</sub>
 
-Enable matching instances and, if the `--start`/`-S` options is set then start the instance. Only those instances that were disabled are started when the `--start`/`-S` flag is used.
+Enable matching instances and, if the `--start`/`-S` options is set then start the instance. The `--start`/`-S` flag also starts matching instances that were already enabled, but only if they are not already running.
 
 If called with no arguments `delete` will take no action. If you do want to match all instances then you must use the explicit instance wildcard `all`.
 
@@ -1904,9 +1916,9 @@ geneos enable [flags] [TYPE] [NAME...]
 ```text
   -S, --start[=true|false]        Start enabled instances
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1931,9 +1943,9 @@ geneos fa2
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1960,9 +1972,9 @@ geneos fileagent
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -1987,9 +1999,9 @@ geneos floating
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2126,9 +2138,9 @@ geneos gateway
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2163,9 +2175,9 @@ geneos home [TYPE] [NAME]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -2263,9 +2275,9 @@ The remote connections over SSH mean there are limitations to the features avail
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2308,12 +2320,12 @@ geneos host add [flags] [NAME] [SSHURL]
   -I, --init[=true|false]         Initialise the remote host directories and component files
   -p, --prompt[=true|false]       Prompt for password
   -P, --password SECRET           Password
-  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default /home/peter/.config/docs/keyfile.aes)
+  -k, --keyfile KEYFILE           Keyfile for encryption of stored password (default ~/.config/geneos/keyfile.aes)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -2350,9 +2362,9 @@ geneos host delete [flags] NAME...
   -R, --all[=true|false]          Recursively delete all instances on the host before removing the host config
   -S, --stop[=true|false]         Stop all instances on the host before deleting the local entry
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2382,9 +2394,9 @@ geneos host list [flags] [NAME...]
   -c, --csv[=true|false]          Output CSV
   -t, --toolkit[=true|false]      Output Toolkit formatted CSV
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2413,9 +2425,9 @@ geneos host set [flags] [NAME...] [KEY=VALUE...]
   -k, --keyfile KEYFILE           Keyfile
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2442,9 +2454,9 @@ geneos host show [flags] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2457,7 +2469,7 @@ geneos host show [flags] [NAME...]
 
 <sub>[Up: geneos host](#geneos-host) | [Top: geneos](#geneos)</sub>
 
-The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards.
+The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards. If no host names are given then all remote hosts are changed, otherwise only the named hosts.
 
 ## Usage
 
@@ -2472,9 +2484,9 @@ geneos host unset [flags] [TYPE] [NAME...]
                                   (Repeat as required)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -2519,9 +2531,9 @@ geneos import [flags] [TYPE] [NAME...] [DEST=]SOURCE...
 ```text
   -c, --common SUFFIX             Import files to a component directory named TYPE_SUFFIX
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -2583,9 +2595,9 @@ geneos incident
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2619,7 +2631,7 @@ geneos incident query [FLAGS] [flags]
   -f, --format string             output format: "csv" or "json" (default "csv")
       --allow-root[=true|false]   allow running as root (not recommended)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2651,7 +2663,7 @@ geneos incident raise [FLAGS] [field=value ...] [flags]
   -t, --snow-table incident       ServiceNow table, typically incident
       --allow-root[=true|false]   allow running as root (not recommended)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2830,9 +2842,9 @@ For a broken link, inspect its target with `readlink` and confirm there is exact
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2875,9 +2887,9 @@ geneos includes delete [VERSION_PATTERN...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -V, --version string            Select include versions using a shell-style pattern
 ```
 
@@ -2910,7 +2922,7 @@ geneos includes fix --dry-run 'prod-*'
 geneos includes fix gateway-a gateway-b
 ```
 
-Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+Existing XML setup files receive history backups. Only the text of the changed include `location` elements is edited in a setup file; comments, whitespace, element order, unknown elements, CDATA sections and the file's encoding and mode are otherwise left exactly as they are. If the file cannot be edited exactly, or does not agree with the parsed setup about the locations to change, the setup is not written and the gateway reports an error. Instance configuration files are replaced atomically without backups, and their formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
 
 ## Usage
 
@@ -2922,10 +2934,10 @@ geneos includes fix [NAMES...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -n, --dry-run[=true|false]      List repairs without changing files
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -2983,9 +2995,9 @@ geneos includes install [ARCHIVE.tar.gz] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -U, --update[=true|false]       Update version links for existing include files
 ```
 
@@ -3044,14 +3056,14 @@ geneos includes list [NAMES...] [flags]
 ```text
   -a, --all[=true|false]          List all include files, including those in versioned directories
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -f, --format string             Specify the output format for the include list. Supported formats are 'column', 'csv', 'json', 'pretty', 'table' and 'toolkit'. (default "column")
   -g, --gateway[=true|false]      List include files by gateway usage
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
   -i, --include[=true|false]      List include files by shared include files
   -l, --long[=true|false]         Long format with extra information
   -n, --no-remote[=true|false]    Exclude remote include files lookups
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -v, --version[=true|false]      List include files by version
 ```
 
@@ -3087,9 +3099,9 @@ geneos includes update [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -V, --version string            Specify version to update includes to
 ```
 
@@ -3106,6 +3118,8 @@ geneos includes update [flags]
 The `init` sub-system is used to initialise your Geneos environment ready to run Geneos instances. To deploy a single instance, for example a Netprobe on a remote endpoint, you should probably use the `geneos deploy` command instead.
 
 On it's own the `init` command will create a new directory structure (or use an existing one if it's considered empty) based on the options you supply. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path. Either specify a directory on the command line or you will be prompted for one. To specify a directory pass it as an argument without a flag. It must be an absolute path.
+
+It is an error, and the exit status is non-zero, if the directory is not empty and `--force`/`-F` is not given, and nothing is changed. If several profile names are given the directory is only initialised once. Any existing root and signing certificates are always kept and never replaced by `init`, and they are added to the trust chain of the installation.
 
 The installation directory is considered empty if it exists but only contains dot prefixed files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` it should work as expected.
 
@@ -3139,9 +3153,7 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 ## Restoring From Backup
 
-The `--restore/-R` option will restore a backup file created with the `geneos backup` command. This will create the directory structure if it does not exist but will not remove or change any existing files. If this directory is not empty then you can also use the `--force/-F` option to force the use of this directory. Unlike the `geneos restore` command, using `geneos init --restore FILE` restores the complete contents of the backup file while rebuilding the instance configuration files to match the new root directory. Just like the `geneos restore` command it does not alter the component configuration files, only the metadata created and managed by the `geneos` command, so you will need to manually check and edit paths in files like `gateway.setup.xml` etc.
-
-The `--restore/-R` option will also install Geneos software releases used by the instances being restored unless the `--no-install/-X` option is specified. You must either provide download credentials using the `--user/-u` option (or run `geneos login` first) or have the packages already downloaded and then pass the containing directory path using the `--archive/-A` flag.
+The `--restore/-R`, `--no-install/-X` and `--name/-n` options are no longer supported and now result in an error. To restore a backup file created with the `geneos backup` command use `geneos init` to create the directory structure and then the `geneos restore` command.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 
@@ -3185,8 +3197,6 @@ geneos init [PROFILE] [flags] [DIRECTORY]
 ### Options
 
 ```text
-  -R, --restore PATH                     Restore from backup file PATH
-  -X, --no-install[=true|false]          Don't install any releases after restore
   -M, --minimal[=true|false]             use a minimal Netprobe release
   -i, --include PRIORITY:[PATH|URL]      An include file in the format PRIORITY:[PATH|URL]
                                          (Repeat as required, gateway only)
@@ -3194,7 +3204,6 @@ geneos init [PROFILE] [flags] [DIRECTORY]
   -s, --site string                      Set the initial installation site name
   -l, --log[=true|false]                 Follow logs after starting instance(s)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
-  -n, --name string                      Use name for instances and configurations instead of the hostname
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -3212,9 +3221,9 @@ geneos init [PROFILE] [flags] [DIRECTORY]
       --header NAME=VALUE                HTTP header in the format NAME=VALUE
                                          (Repeat as required)
       --allow-root[=true|false]          allow running as root (not recommended)
-  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                    config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string                  profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -3254,7 +3263,7 @@ geneos init templates [TYPE] [flags]
       --allow-root[=true|false]          allow running as root (not recommended)
   -A, --archive string                   URL, file, or directory of releases for installation.
                                          Local paths use local archives only
-  -G, --config string                    config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                    config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE                   Environment variable for instance start-up in the format NAME=VALUE
                                          (Repeat as required)
   -F, --force[=true|false]               Ignore existing directories and files and overwrite
@@ -3263,9 +3272,8 @@ geneos init templates [TYPE] [flags]
   -H, --host HOSTNAME                    Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
       --insecure[=true|false]            Do not create internal certificates for TLS support
   -l, --log[=true|false]                 Follow logs after starting instance(s)
-  -n, --name string                      Use name for instances and configurations instead of the hostname
   -N, --nexus[=true|false]               Download from nexus.itrsgroup.com. Requires ITRS internal credentials
-      --profiles string                  profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string                  profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -C, --signing-bundle string            signing bundle in PEM or PFX/PKCS#12 format.
                                          Use a dash ('-') to be prompted for PEM from console.
                                          PFX/PKCS#12 must be files and are identified by the .pfx or .p12 file extension
@@ -3318,9 +3326,9 @@ geneos licd
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3363,9 +3371,9 @@ geneos list [flags] [TYPE] [NAME...]
   -i, --pretty[=true|false]       Output indented JSON
   -t, --toolkit[=true|false]      Output Toolkit formatted CSV
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3410,9 +3418,9 @@ geneos login [flags] [DOMAIN]
   -k, --keyfile KEYFILE           Key file to use
   -l, --list[=true|false]         List the names of the currently stored credentials
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3440,9 +3448,9 @@ geneos logout [flags] [DOMAIN...]
 ```text
   -A, --all[=true|false]          remove all credentials
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3491,9 +3499,9 @@ geneos logs [flags] [TYPE] [NAME...]
   -g, --match string              Match lines with STRING
   -v, --ignore string             Match lines without STRING
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3621,9 +3629,9 @@ geneos md-gateway
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3651,9 +3659,9 @@ geneos migrate [--executables|-X] | [TYPE] [NAME...]
 ```text
   -X, --executables[=true|false]   Migrate executables by symlinking to this binary
       --allow-root[=true|false]    allow running as root (not recommended)
-  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string              config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string            profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3680,9 +3688,9 @@ geneos minimal
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3721,9 +3729,9 @@ geneos move [TYPE] SOURCE DESTINATION [KEY=VALUE...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3780,9 +3788,9 @@ geneos netprobe
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3817,9 +3825,9 @@ Where X, Y, Z are each ordered in ascending numerical order. If a directory star
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3903,9 +3911,9 @@ geneos package install [flags] [TYPE] [FILE|URL...]
       --header NAME=VALUE         HTTP header in the format NAME=VALUE
                                   (Repeat as required)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -3949,9 +3957,9 @@ geneos package list [flags] [TYPE]
   -t, --toolkit[=true|false]      Output Toolkit formatted CSV
   -I, --instances[=true|false]    Show instances using each version in toolkit mode, using '#' as a separator
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -3966,7 +3974,7 @@ geneos package list [flags] [TYPE]
 
 The `package uninstall` commands removes installed Geneos releases and downloaded archive files. By default all releases that are not used by any enabled or running instance are removed with the exception of the "latest" release for each matching component.
 
-To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise **all** files in that directory are removed, including the latest release and those that are for other components.
+To keep the downloaded archives (in `${GENEOS}/packages/download`) use the `--keep`/`-k` flag, otherwise the downloaded archives for the releases that are removed are also removed. If `--all` is given then all the archives for the component type are removed. Archives for other components are never removed.
 
 If `TYPE` is given then only releases for that component are removed. Similarly, if `--version VERSION` is given then only that version is removed. `VERSION` must be an exact match and multiple versions or version wildcards are not yet supported.
 
@@ -3999,9 +4007,9 @@ geneos package uninstall [flags] [TYPE] [VERSION]
   -U, --update[=true|false]       Update base links for instances to latest before restarting and removing
   -F, --force[=true|false]        Force uninstall, stopping protected instances first. Also requires --update
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -4052,9 +4060,9 @@ geneos package update [flags] [TYPE] [VERSION]
   -R, --restart[=true|false]      Restart all instances that may have an update applied (default true)
   -F, --force[=true|false]        Will also update and restart protected instances
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -4327,7 +4335,7 @@ variables:
     value: ${config:home}/${config:logfile}
 ```
 
-The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` is an `init` option, not a `deploy` option.
+The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
 
 Additional command arguments in `NAME=VALUE` form can supply option values. For example, a profile can use `name: ${option:site}` and be deployed with:
 
@@ -4337,7 +4345,7 @@ geneos deploy profile application site=application-gateway
 
 These arguments are saved with the profile options. They are not automatically applied as parameters to every component. Likewise, use `${option:gateway}` or `${option:attribute}` in a definition when you want those command options to control its SAN configuration.
 
-Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. In the current code, `licence` is not in the included flag list, although the supplied `all` profile uses `${option:licence}`. Do not rely on `init --licence` alone to populate that import; set an explicit import source in your profile.
+Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. The `insecure` and `minimal` options are booleans, so use them as conditions, for example `${option:insecure?8080:8443}`; the options saved with a profile keep their types when it is rebuilt.
 
 External lookup expansion is disabled: `${file:...}` and `${https://...}` do not read external content. This does not prevent `imports` from using a path or URL. Expansion errors can produce empty values; inspect the applied configuration before start-up.
 
@@ -4381,7 +4389,16 @@ The variable types are `string`, `integer`, `double`, `boolean`, `activeTime`, `
 
 ### Gateway Name and Licensing
 
-Use `params` for these settings:
+Use the `gateway-name`, `licd-host`, `licd-port`, and `licd-secure` keys, or `params`, for these settings:
+
+```yaml
+gateway-name: Application Gateway
+licd-host: licence.example.com
+licd-port: 7041
+licd-secure: true
+```
+
+is the same as:
 
 ```yaml
 params:
@@ -4391,7 +4408,21 @@ params:
   - licdsecure=true
 ```
 
-The profile structure also declares `gateway-name`, `licd-host`, `licd-port`, and `licd-secure`. The current application handler does not apply those fields. They are not equivalent to the parameters above in this implementation.
+The licence daemon settings are cleared and set again whenever the profile is applied. Variable values in a Gateway entry can use `${config:KEY}` to refer to the instance's own settings, for example `${config:home}`.
+
+### Gateway Ports
+
+A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS port 7038, and a Gateway without TLS on 7038 is moved to 7039, but only if the other port is free. Any other port is never changed, and if the other port is in use then the Gateway keeps its configured port.
+
+## Changing TLS when a Profile Is Applied Again
+
+The `insecure` option is saved with the profile. When the profile is applied again, for example by `geneos deploy` with the profile name or by `geneos rebuild profile`, the TLS state of each existing instance is compared with the saved option and changed to match, and the instance is then rebuilt so that the port conventions above follow:
+
+* If the option is not `insecure` and the instance is not TLS capable, the certificate and key kept from an earlier secure state are used again if they are still valid, otherwise a new instance certificate is created as `geneos add` does. If a certificate bundle is given in the profile it is imported first and used. If no signing certificate is available the update fails with an error, rather than leaving the instance insecure; run `geneos tls init` or use `--insecure`.
+* If the option is `insecure` and the instance has TLS parameters, they are removed from the instance configuration only. The certificate and key files are never deleted. A certificate bundle given in the profile takes precedence over `insecure`, as it does when an instance is created.
+* If the state already matches, or the profile has no saved `insecure` option, nothing is changed.
+
+A Web Dashboard server is only started with HTTPS if its keystore exists, so when its TLS is removed the keystore is set aside by renaming it with a `.disabled` suffix, and it is built again when TLS is enabled. The keystore and truststore of an `sso-agent` are not changed, because it always has a keystore for its signing key and its use of TLS is set in `conf/sso-agent.conf`. Instances are reported as `updated` and an audit event is recorded.
 
 ## SAN Configuration
 
@@ -4594,9 +4625,9 @@ geneos profile
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4623,9 +4654,9 @@ geneos profile extract
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4650,10 +4681,10 @@ geneos profile list
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -f, --format string             Specify the output format: column, csv, json, pretty, table or toolkit (default "column")
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4680,9 +4711,9 @@ geneos protect [flags] [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -U, --unprotect[=true|false]    unprotect instances
 ```
 
@@ -4718,9 +4749,9 @@ geneos ps [flags] [TYPE] [NAMES...]
   -f, --files[=true|false]        Show open files
   -n, --network[=true|false]      Show TCP sockets
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -l, --long[=true|false]         Show more output (remote ports etc.)
   -j, --json[=true|false]         Output JSON
   -i, --pretty[=true|false]       Output indented JSON
@@ -4764,9 +4795,9 @@ geneos rebuild [flags] [TYPE] [NAME...]
   -F, --force[=true|false]        Force rebuild
   -r, --reload[=true|false]       Reload instances after rebuild
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4791,9 +4822,9 @@ geneos reload [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4823,9 +4854,9 @@ geneos reset [flags] [TYPE] [NAME...]
 ```text
   -F, --force[=true|false]        Force reset (require for proteced instances) even if instance is running
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -4857,7 +4888,7 @@ Protected instances will not be restarted unless the `--force`/`-F` option is gi
 
 Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a short period before trying again until the process is no longer running. If this fails to stop the process a `SIGKILL` is sent to terminate the process without further action. If the `--kill`/`-K` option is used then the terminate signal is sent immediately without waiting. Beware that this can leave instance files corrupted or in an indeterminate state.
 
-If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user.
+If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user. This also applies to instances selected using `--port`/`-p`.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos restart gateway Example -x -skip-cache`.
 
@@ -4878,9 +4909,9 @@ geneos restart [flags] [TYPE] [NAME...]
   -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
   -l, --log[=true|false]          Run 'logs -f' after starting instance(s)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -4903,7 +4934,7 @@ Those backup archives that contain a `tls/` directory will have the contents res
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
-Existing instances will not be overwritten, similarly for shared directories.
+Existing instances will not be overwritten, similarly for shared directories. It is an error if an instance named on the command line is not in the archive, but the other instances that are are still restored.
 
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 
@@ -4926,9 +4957,9 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
                                   MUST be supplied if the source is stdin (`-`)
   -l, --list[=true|false]         list the contents of the archive(s)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -4970,9 +5001,9 @@ geneos revert [--executables|-X] | [TYPE] [NAME...]
 ```text
   -X, --executables[=true|false]   Revert 'ctl' executables
       --allow-root[=true|false]    allow running as root (not recommended)
-  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string              config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string            profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5055,9 +5086,9 @@ geneos router
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5159,9 +5190,9 @@ geneos san
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5326,9 +5357,9 @@ geneos set [flags] [TYPE] [NAME...] [KEY=VALUE...]
   -v, --variable [TYPE:]NAME=VALUE    A variable in the format [TYPE:]NAME=VALUE
                                       (Repeat as required, san only)
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -5387,9 +5418,9 @@ geneos show [flags] [TYPE] [NAME...]
       --hooks string              Hooks directory
                                   (may clash with instance parameters if set for normal execution)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5438,9 +5469,9 @@ geneos snapshot [flags] [gateway] [NAME] XPATH...
   -l, --limit int                     limit matching items to display. default is unlimited. results unsorted.
   -x, --xpaths[=true|false]           just show matching xpaths
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5477,7 +5508,7 @@ The sso-agent trust store and key store files (normally the same file) are initi
 
 With `--insecure`, no TLS certificate is created or required during rebuilds. The `ssokey` used to sign authentication tokens is still maintained.
 
-If you change the `ssl_alias` or any of the passwords for the keystore or truststore, then any command that rebuilds the instance configuration will also rebuild the keystore and truststore files.
+If you change the `ssl_alias`, or the instance certificate or key, then any command that rebuilds the instance configuration will also update the keystore and truststore files, keeping any other entries they contain. An existing keystore or truststore that cannot be read, for example because the password in `conf/sso-agent.conf` does not match the file or the file is corrupt, is reported as an error and is never replaced; only a missing or empty file is created new. To change a password, change it in the files themselves (for example with `keytool -storepasswd`) as well as in `conf/sso-agent.conf`.
 
 As documented in the official SSO Agent documentation, you can use environment variables instead of clear-text passwords in the `conf/sso-agent.conf` file. The `geneos` program will use the `ITRS_SSO_KEYSTORE_PW` and `ITRS_SSO_TRUSTSTORE_PW` environment variables if they are set in the instance configuration when building the keystore and truststore files, respectively. You can set AES256 encoded values in the instance configuration using `geneos set sso-agent NAME --secureenv ITRS_SSO_KEYSTORE_PW` (or `ITRS_SSO_TRUSTSTORE_PW`) and be prompted for the password. In this case you must comment out the `password` fields in the `conf/sso-agent.conf` file. Other supported variables are passed to the sso-agent in it's starting environment, but are not specially interrpreted by `geneos`.
 
@@ -5491,9 +5522,9 @@ geneos sso-agent
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5510,9 +5541,9 @@ The `start` command starts the matching instances unless they are already runnin
 
 The start-up command and environment can be seen using the `geneos command` command.
 
-Any matching instances that are marked as `disabled` are not started. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
+Any matching instances that are marked as `disabled` are not started. This is an error, and the exit status is non-zero, if the instance was given by name, but not if it was selected because it is set to start automatically, as when starting all instances. If an instance has a parameter `autostart` set to `false` then this is only started if the name is given explicitly on the command line, e.g. `geneos start gateway Example` but not `geneos start gateway` or `geneos start all`. This allows you to have instances that are not started by default but can be started when needed without having to change the configuration.
 
-With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues.
+With the `--log`/`-l` option the command will follow the logs of all instances started, including the STDERR logs as these are good sources of start-up issues. This also applies to instances selected using `--port`/`-p`, which are started regardless of their `autostart` setting.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos start gateway Example -x -skip-cache`.
 
@@ -5530,9 +5561,9 @@ geneos start [flags] [TYPE] [NAME...]
   -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
   -l, --log[=true|false]          Follow logs after starting instance
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5566,9 +5597,9 @@ geneos stop [flags] [TYPE] [NAME...]
   -F, --force[=true|false]        Stop protected instances
   -K, --kill[=true|false]         Force immediate stop by sending an immediate SIGKILL
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5622,9 +5653,9 @@ Java based components, such as `webserver` and `sso-agent` will also support cus
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5641,7 +5672,7 @@ Creates a new TLS certificate bundle including a private key and trust chain. Th
 
 The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
 
-In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases.
+In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases. As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key.
 
 By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
@@ -5678,7 +5709,7 @@ geneos tls create [flags]
                                    and overwrite any existing file in the 'out' directory
   -K, --private-key[=true|false]   Create a private key without a certificate. Ignored for --signing.
   -k, --key-type KeyType           Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
-                                   or ecdh). Ignored for --signing. Defaults to the same type as
+                                   or ecdh, which is an ECDSA P-256 key). Ignored for --signing. Defaults to the same type as
                                    the signing certificate key or a default type if that cannot be determined.
   -s, --san-dns VALUE              Subject-Alternative-Name DNS Name (repeat as required).
                                    Ignored for --signing.
@@ -5689,9 +5720,9 @@ geneos tls create [flags]
   -u, --san-url VALUE              Subject-Alternative-Name URL (repeat as required).
                                    Ignored for --signing.
       --allow-root[=true|false]    allow running as root (not recommended)
-  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string              config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string            profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5706,7 +5737,7 @@ geneos tls create [flags]
 
 Exports either the local signer private key, certificate and root certificate suitable for importing into another cordial `geneos` installation or, if you specify either component TYPE or instance NAMEs then the private key, instance certificate and other certificates up to and including the trust root for matching instances is output instead.
 
-The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
+The default output is to the console but you can specify a file destination using the `--output`/`-o` option. For instance certificates a file destination can only be used if a single instance matches, as the certificates of every instance would otherwise be written to the same file.
 
 ## Usage
 
@@ -5719,9 +5750,9 @@ geneos tls export [flags] [TYPE] [NAME...]
 ```text
   -o, --output FILE               Output to FILE, default to stdout
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -5783,9 +5814,9 @@ geneos tls import [flags] [TYPE] [NAME...] [PATH]
                                   The local root CA and signing certificate are not changed.
                                   Also accepted as --root-only
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -5864,9 +5895,9 @@ geneos tls info [PATH...] [flags]
       --connect-file string       Path to file containing list of URLs or HOST[:PORT] to connect to (one per line) to get TLS certificates.
   -r, --roots roots               Path to additional root certificates to use when verifying TLS connections. Can be specified multiple times for multiple files. If not specified, the system root CAs and the Geneos ca-bundle files will be used (and are always included).
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5883,7 +5914,7 @@ Initialise the TLS environment by creating a self-signed root certificate to act
 
 To recreate the root and signing certificates and keys use the `--force`/`-F` option. If what you want to do is to update the signer certificate then use the `geneos tls renew --signer` command instead.
 
-All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25529" and "rsa". Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
+All certificates are created with corresponding private keys. These keys are in ECDH format by default but this can be overridden using the `--keytype`/`-K` option which supports the following formats: "ecdh", "ecdsa", "ed25519" and "rsa". As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key. Once set for the root CA, all subsequent certificates will be created using the same key type. You should avoid "ed25519" as this is not supported by normal web browsers and will make it impossible to use the ORB diagnostic interfaces of Geneos.
 
 ## Usage
 
@@ -5894,12 +5925,13 @@ geneos tls init
 ### Options
 
 ```text
-  -K, --keytype KeyType           Key type for root. One of ecdh, ecdsa, ed25519 or rsa
+  -K, --keytype KeyType           Key type for root. One of ecdh (an ECDSA P-256 key), ecdsa,
+                                  ed25519 or rsa (default ecdh)
   -F, --force[=true|false]        Overwrite any existing root and signing certificates
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5943,9 +5975,9 @@ geneos tls list [flags] [TYPE] [NAME...]
   -c, --csv[=true|false]          Output CSV
   -t, --toolkit[=true|false]      Output Toolkit formatted CSV
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -5997,9 +6029,9 @@ geneos tls migrate [TYPE] [NAME...] [flags]
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
   -c, --check[=true|false]        check if instance is already migrated
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -6038,10 +6070,10 @@ geneos tls new [TYPE] [NAME...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -E, --expiry int                Certificate expiry duration in days (default 365)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -6110,9 +6142,9 @@ geneos tls renew [TYPE] [NAME...] [flags]
   -R, --roll[=true|false]         Roll previously prepared certificates and backup existing ones
   -U, --unroll[=true|false]       Unroll previously rolled certificates to restore backups
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -6137,9 +6169,9 @@ geneos tls sync [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -6265,9 +6297,9 @@ geneos tr-gateway
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO
@@ -6314,9 +6346,9 @@ geneos unset [flags] [TYPE] [NAME...]
   -M, --entity NAME               Remove a managed entity NAME
                                   (Repeat as required, san only)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples
@@ -6351,9 +6383,9 @@ geneos version
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
   -t, --toolkit[=true|false]      toolkit formatted CSV output
 ```
 
@@ -6387,9 +6419,9 @@ geneos webserver
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

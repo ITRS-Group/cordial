@@ -30,6 +30,9 @@ type handlerOpts struct {
 	w          io.Writer
 	timeFormat string
 	json       bool
+
+	// colour is nil to follow the global color.NoColor setting
+	colour *bool
 }
 
 // HandlerOption TODO: Describe its purpose and intended use.
@@ -95,5 +98,14 @@ func Writer(w io.Writer) HandlerOption {
 func TimeFormat(format string) HandlerOption {
 	return func(opts *handlerOpts) {
 		opts.timeFormat = format
+	}
+}
+
+// Color sets whether the handler outputs ANSI colour escape sequences,
+// for this handler only. If not used then the global color.NoColor
+// setting of github.com/fatih/color is followed. It has no effect on JSON output.
+func Color(enable bool) HandlerOption {
+	return func(opts *handlerOpts) {
+		opts.colour = &enable
 	}
 }

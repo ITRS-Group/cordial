@@ -65,10 +65,23 @@ var (
 // LOCAL and ALL are the global Host values that represent LOCALHOST and
 // ALLHOSTS from above, and must always exist
 var (
-	LOCAL   *Host
-	ALL     *Host
-	UNKNOWN *Host
+	LOCAL *Host
+	ALL   *Host
 )
+
+// UNKNOWN is a non-nil sentinel returned by GetHost for a host name
+// that does not exist. It is never valid for use with instances or
+// files, it is not "all" hosts and OrList and Match yield nothing for
+// it. Use [Host.IsUnknown] to check for it, or a nil host.
+var UNKNOWN = &Host{
+	Host:   host.NewLocal(),
+	Config: config.New(config.KeyDelimiter("::")),
+	hidden: true,
+}
+
+func init() {
+	config.Set(UNKNOWN.Config, "name", "unknown")
+}
 
 // InitHosts initialises the host settings and is should only be called
 // from the root command to set the initial values of host.LOCAL and
@@ -88,9 +101,9 @@ func InitHosts(app string) {
 }
 
 // NewHost is a factory method for Host. It returns an initialised Host
-// and will store it in the global map. If name is "localhost", "all" or
-// "unknown" then it returns pseudo-hosts used for testing and ranges.
-// An empty name results in a nil pointer.
+// and will store it in the global map. If name is "localhost" (or the
+// local host name) or "all" then it returns the pseudo-hosts used for
+// the local host and ranges. An empty name results in a nil pointer.
 func NewHost(name string, options ...any) (h *Host) {
 	h = &Host{
 		Host:   host.NewLocal(),
@@ -102,13 +115,13 @@ func NewHost(name string, options ...any) (h *Host) {
 	switch name {
 	case "":
 		return nil
-	case LOCALHOST:
+	case LOCALHOST, "localhost":
 		if LOCAL != nil {
 			return LOCAL
 		}
 		config.Set(h.Config, "name", LOCALHOST)
 		config.Set(h.Config, "hostname", LOCALHOST)
-		h.SetOSReleaseEnv()
+		_ = h.SetOSReleaseEnv()
 	case ALLHOSTS:
 		if ALL != nil {
 			return ALL
@@ -158,12 +171,13 @@ func (h *Host) MarshalJSON() (b []byte, err error) {
 }
 
 // GetHost returns a pointer to a Host. If passed an empty name, returns
-// nil. If passed one of the special values LOCALHOST or ALLHOSTS then
-// it will return the respective special values LOCAL or ALL. Otherwise
-// it tries to lookup an existing host with the given name.
+// nil, meaning that no host was given. If passed one of the special
+// values LOCALHOST or ALLHOSTS then it will return the respective
+// special values LOCAL or ALL. Otherwise it tries to lookup an existing
+// host with the given name.
 //
-// It will return UNKNOWN if the named host is not found. Use NewHost()
-// to initialise a new host
+// It will return the non-nil sentinel UNKNOWN if the named host is not
+// found. Use NewHost() to initialise a new host
 func GetHost(name string) (h *Host) {
 	switch name {
 	case "":
@@ -182,6 +196,13 @@ func GetHost(name string) (h *Host) {
 		}
 		return UNKNOWN
 	}
+}
+
+// IsUnknown returns true if h is nil or the UNKNOWN sentinel, which
+// are not usable as the host for an instance or for any file
+// operations.
+func (h *Host) IsUnknown() bool {
+	return h == nil || h == UNKNOWN
 }
 
 // Delete host h from the internal list of hosts. Does not change the
@@ -227,7 +248,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			// if err == nil {
 			// 	log.Debug().Msg(string(output))
 			// }
-			l := bufio.NewScanner(bytes.NewBuffer(output))
+			l := bufio.NewScanner(bytes.NewReader(output))
 			for l.Scan() {
 				line := l.Text()
 				if strings.HasPrefix(line, " ") {
@@ -245,9 +266,10 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 					osinfo["pretty_name"] = val
 				case "OS Version":
 					osinfo["version"] = val
-					vers := strings.Fields(val)
-					osinfo["version_id"] = vers[0]
-					osinfo["build_id"] = vers[len(vers)-1]
+					if vers := strings.Fields(val); len(vers) > 0 {
+						osinfo["version_id"] = vers[0]
+						osinfo["build_id"] = vers[len(vers)-1]
+					}
 				}
 			}
 
@@ -270,8 +292,7 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 			}
 		}
 
-		releaseFile := bytes.NewBuffer(f)
-		scanner := bufio.NewScanner(releaseFile)
+		scanner := bufio.NewScanner(bytes.NewReader(f))
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			if len(line) == 0 || strings.HasPrefix(line, "#") {
@@ -299,17 +320,12 @@ func (h *Host) SetOSReleaseEnv() (err error) {
 
 // PlatformID returns the platform ID for the host h.
 func PlatformID(h *Host) (platformID string) {
-	p := config.Get[string](h.Config, h.Config.Join("osinfo", "platform_id"))
-	s := strings.Split(p, ":")
-	if len(s) > 1 {
-		platformID = s[1]
-	}
-	return
+	return getPlatformId(config.Get[string](h.Config, h.Config.Join("osinfo", "platform_id")))
 }
 
 // Match returns an iterator for all matching Hosts. Intended for use in
 // range loops where the host could be specific or 'all'. If passed an
-// empty string then yields nothing
+// empty string or the name of an unknown host then yields nothing
 func Match(h string) iter.Seq[*Host] {
 	return func(yield func(*Host) bool) {
 		switch h {
@@ -324,7 +340,9 @@ func Match(h string) iter.Seq[*Host] {
 				}
 			}
 		default:
-			yield(GetHost(h))
+			if h := GetHost(h); !h.IsUnknown() {
+				yield(h)
+			}
 			return
 		}
 	}
@@ -333,6 +351,8 @@ func Match(h string) iter.Seq[*Host] {
 // OrList returns an iterator for *Host based on either the method
 // receiver h (which can be ALL), or if it is nil then any hosts args.
 // If h is nil and there are no hosts args then all hosts are returned.
+// If h is the UNKNOWN host, or any of the hosts args is, then nothing
+// is yielded for it.
 func (h *Host) OrList(hosts ...*Host) iter.Seq[*Host] {
 	return func(yield func(*Host) bool) {
 		switch h {
@@ -342,6 +362,9 @@ func (h *Host) OrList(hosts ...*Host) iter.Seq[*Host] {
 				hosts = append(hosts, RemoteHosts(false)...)
 			}
 			for _, h := range hosts {
+				if h == UNKNOWN {
+					continue
+				}
 				if !yield(h) {
 					return
 				}

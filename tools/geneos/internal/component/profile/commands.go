@@ -72,12 +72,11 @@ func profileHelp(command *cobra.Command, _ []string) {
 	// the same markdown renderer
 
 	// pull out profile name from the command-line arguments
-	args := os.Args[3:]
+	args := profileHelpArgs(os.Args)
 
 	if pf := cmd.Profiles; pf != nil && len(args) > 0 {
 		// check if the profile exists and has a description
 		// display the description as help text
-		// (implementation would go here)
 		name := args[0]
 		components, found := config.Lookup[map[string]any](pf, pf.Join("profiles", name))
 		if found {
@@ -89,6 +88,26 @@ func profileHelp(command *cobra.Command, _ []string) {
 	}
 
 	cmd.Cmd.HelpFunc()(command, nil)
+}
+
+// profileHelpArgs returns the arguments that are not flags and that
+// follow the `profile` command word in the command line args, wherever
+// that is, as it differs with the way the help is requested, e.g.
+// `geneos help profile NAME` or `geneos profile NAME --help`.
+func profileHelpArgs(commandLine []string) (args []string) {
+	if len(commandLine) < 2 {
+		return
+	}
+	idx := slices.IndexFunc(commandLine[1:], func(a string) bool { return a == "profile" || a == "profiles" })
+	if idx < 0 {
+		return
+	}
+	for _, a := range commandLine[idx+2:] {
+		if !strings.HasPrefix(a, "-") {
+			args = append(args, a)
+		}
+	}
+	return
 }
 
 //go:embed _docs/list.md

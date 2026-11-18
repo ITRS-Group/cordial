@@ -45,6 +45,11 @@ type dirtime struct {
 	Modified time.Time
 }
 
+// errArchiveMismatch is returned when an archive is for a different
+// component to the one being installed. Callers that try several
+// component types in turn can skip it.
+var errArchiveMismatch = fmt.Errorf("component mismatch: %w", ErrInvalidArgs)
+
 var osMap = map[string]string{
 	"amd64":   "x64",
 	"x86_64":  "x64",
@@ -144,7 +149,9 @@ func OpenArchive(h *Host, ct *Component, options ...GeneosOption) (body io.ReadC
 		var s fs.FileInfo
 		s, err = LOCAL.Stat(fp)
 		if err != nil {
-			// Can this fail?
+			f.Close()
+			body = nil
+			return
 		}
 		filesize = s.Size()
 		return
@@ -237,10 +244,9 @@ func withDownloadTimeoutHint(err error) error {
 		return nil
 	}
 
-	var timeoutErr net.Error
-	if !errors.Is(err, context.DeadlineExceeded) &&
+	if timeoutErr, ok := errors.AsType[net.Error](err); !errors.Is(err, context.DeadlineExceeded) &&
 		!errors.Is(err, os.ErrDeadlineExceeded) &&
-		(!errors.As(err, &timeoutErr) || !timeoutErr.Timeout()) {
+		(!ok || !timeoutErr.Timeout()) {
 		return err
 	}
 
@@ -280,6 +286,7 @@ func unarchive(h *Host, ct *Component, archive io.Reader, filename string, files
 		default:
 			// mismatch
 			log.Debug("component type and archive mismatch", slog.String("filename", filename), slog.String("expected", ct.String()))
+			err = fmt.Errorf("archive %q is for %s, not %s: %w", filename, ctFromFile, ct, errArchiveMismatch)
 			return
 		}
 	} else {

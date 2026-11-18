@@ -114,9 +114,7 @@ geneos aes new -S gateway
 				if err != nil {
 					return err
 				}
-				for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-					instance.Do(command.CommandPath(), h, ct, names, aesNewSetInstanceShared, crc).Report(os.Stdout)
-				}
+				return instance.DoTypes(command.CommandPath(), h, ct, geneos.UsesKeyFiles(), names, aesNewSetInstanceShared, crc).Report(os.Stdout)
 			}
 		} else if newCmdUpdate {
 			ct, names, _, err := cmd.FetchArgs(command)
@@ -125,9 +123,7 @@ geneos aes new -S gateway
 			}
 			h := geneos.GetHost(cmd.Hostname)
 
-			for ct := range ct.OrList(geneos.UsesKeyFiles()...) {
-				instance.Do(command.CommandPath(), h, ct, names, aesNewSetInstance, kv).Report(os.Stdout)
-			}
+			return instance.DoTypes(command.CommandPath(), h, ct, geneos.UsesKeyFiles(), names, aesNewSetInstance, kv).Report(os.Stdout)
 		} else {
 			fmt.Print(kv.String())
 		}
@@ -145,7 +141,8 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 
 	kv, ok := params[0].(*config.KeyValues)
 	if !ok {
-		resp.Err = fmt.Errorf("wrong parameter type %T", kv)
+		resp.Err = fmt.Errorf("wrong parameter type %T", params[0])
+		return
 	}
 
 	keyfile, _, err := instance.RollAESKeyFile(i, kv, newCmdBackupSuffix)
@@ -155,7 +152,7 @@ func aesNewSetInstance(i geneos.Instance, params ...any) (resp *responses.Genera
 	}
 
 	resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile written to %q", keyfile))
-	return
+	return responses.MergeResponse(resp, instance.Write(i))
 }
 
 func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.General) {
@@ -168,7 +165,7 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.
 
 	crc, ok := params[0].(string)
 	if !ok {
-		resp.Err = fmt.Errorf("wrong parameter type %T", crc)
+		resp.Err = fmt.Errorf("wrong parameter type %T", params[0])
 		return
 	}
 	kp := instance.Shared(i, "keyfiles", crc+".aes")
@@ -180,12 +177,15 @@ func aesNewSetInstanceShared(i geneos.Instance, params ...any) (resp *responses.
 		return
 	}
 
-	instance.RollAESKeyFile(i, kv, "-prev")
+	if _, _, err = instance.RollAESKeyFile(i, kv, newCmdBackupSuffix); err != nil {
+		resp.Err = err
+		return
+	}
 	pkp := config.Get[string](i.Config(), "prevkeyfile")
 	if pkp != "" {
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %q written, existing keyfile renamed to %q and marked a previous keyfile", keyfile, pkp))
 	} else {
-		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %q written\n", keyfile))
+		resp.ResultText = append(resp.ResultText, fmt.Sprintf("keyfile %q written", keyfile))
 	}
-	return
+	return responses.MergeResponse(resp, instance.Write(i))
 }

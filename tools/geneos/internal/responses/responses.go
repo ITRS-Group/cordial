@@ -20,7 +20,9 @@ package responses
 import (
 	"errors"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/logger"
@@ -67,13 +69,35 @@ type Dataview struct {
 
 var log = logger.Logger
 
+// ErrReported is returned by [GeneralResponses.Report] and
+// [GeneralResponses.Formatted] if one or more of the responses failed.
+// The failures have already been reported to the user, per response, so
+// the command should return this error unchanged, to cause a non-zero
+// exit status, and it is not written again.
+var ErrReported = errors.New("one or more operations failed")
+
+// label returns the name to use for a response in messages. It is the
+// instance, or the key of the response if there is no instance, for
+// example for a name that did not match any instance.
+func (r *General) label(key string) string {
+	if r.Instance == nil {
+		return key
+	}
+	return r.Instance.String()
+}
+
+// NewFailed returns a response, not associated with an instance, for
+// something that failed with err, such as a name that did not match any
+// instance. The name should be used as the key for the response.
+func NewFailed(err error) *General {
+	return &General{Err: err, start: time.Now(), Dataview: &Dataview{}}
+}
+
 // Finished TODO: Document its behavior, inputs, and effects.
 func Finished[R Response](resp *R) {
-	switch any(*resp).(type) {
-	case General:
-		r := any(*resp).(General)
+	switch r := any(resp).(type) {
+	case *General:
 		r.Duration = time.Since(r.start)
-		*resp = any(r).(R)
 	default:
 		log.Error("unsupported response type", slog.Any("type", resp))
 		os.Exit(1)
@@ -108,11 +132,36 @@ func New[R Response](i geneos.Instance) *R {
 // This should only be used where a sequence of actions are being
 // performed and a single response per instance is expected. It should
 // not be used across different instances.
+//
+// Completed, ResultText, Values and the Dataview rows are concatenated,
+// the Dataview Columns are those of r1 or, if none, r2 and the
+// Headlines are merged with those of r2 taking precedence. Audited is
+// set if either response has been audited. Neither r1 nor r2 are
+// changed.
 func MergeResponse(r1, r2 *General) (resp *General) {
 	resp = New[General](r1.Instance)
-	resp.Completed = append(r1.Completed, r2.Completed...)
-	resp.Dataview.Table = append(r1.Dataview.Table, r2.Dataview.Table...)
+	resp.Completed = slices.Concat(r1.Completed, r2.Completed)
+	resp.ResultText = slices.Concat(r1.ResultText, r2.ResultText)
 	resp.Err = errors.Join(r1.Err, r2.Err)
+	resp.Audited = r1.Audited || r2.Audited
+
+	d1, d2 := r1.Dataview, r2.Dataview
+	if d1 == nil {
+		d1 = &Dataview{}
+	}
+	if d2 == nil {
+		d2 = &Dataview{}
+	}
+	resp.Dataview.Table = slices.Concat(d1.Table, d2.Table)
+	resp.Dataview.Columns = d1.Columns
+	if len(resp.Dataview.Columns) == 0 {
+		resp.Dataview.Columns = d2.Columns
+	}
+	if len(d1.Headlines) > 0 || len(d2.Headlines) > 0 {
+		resp.Dataview.Headlines = make(map[string]string, len(d1.Headlines)+len(d2.Headlines))
+		maps.Copy(resp.Dataview.Headlines, d1.Headlines)
+		maps.Copy(resp.Dataview.Headlines, d2.Headlines)
+	}
 
 	resp.start = r1.start
 	if resp.start.IsZero() {
@@ -130,8 +179,7 @@ func MergeResponse(r1, r2 *General) (resp *General) {
 		resp.Value = r1.Value
 	}
 
-	resp.Values = append(r1.Values, r2.Values...)
+	resp.Values = slices.Concat(r1.Values, r2.Values)
 
-	r1.ResultText = append(r1.ResultText, r2.ResultText...)
 	return
 }

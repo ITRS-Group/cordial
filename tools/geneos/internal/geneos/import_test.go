@@ -226,3 +226,35 @@ func TestImportSourceMissingReturnsError(t *testing.T) {
 		t.Fatalf("import error = %v, want missing source", err)
 	}
 }
+
+func TestImportSourceStdinOnLocalhost(t *testing.T) {
+	for _, item := range []string{"-", "named.lic=-"} {
+		t.Run(item, func(t *testing.T) {
+			stdin, err := os.CreateTemp(t.TempDir(), "stdin")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer stdin.Close()
+			if _, err := stdin.WriteString("from stdin"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := stdin.Seek(0, io.SeekStart); err != nil {
+				t.Fatal(err)
+			}
+			previous := os.Stdin
+			os.Stdin = stdin
+			t.Cleanup(func() { os.Stdin = previous })
+
+			h := newImportTestHost()
+			dir := filepath.Join(t.TempDir(), "destination")
+			filename, _, err := ImportSource(h, dir, item)
+			if err != nil {
+				t.Fatalf("ImportSource(%q) error = %v", item, err)
+			}
+			contents, err := os.ReadFile(filepath.Join(dir, filename))
+			if err != nil || string(contents) != "from stdin" {
+				t.Fatalf("imported %q = %q, %v", filename, contents, err)
+			}
+		})
+	}
+}

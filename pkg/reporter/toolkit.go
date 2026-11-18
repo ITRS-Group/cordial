@@ -18,21 +18,18 @@ limitations under the License.
 package reporter
 
 import (
-	"encoding/csv"
-	"fmt"
 	"io"
-	"maps"
 	"strings"
 )
 
-// ToolkitReporter TODO: Describe its purpose and intended use.
+// ToolkitReporter writes reports in the Geneos Toolkit plugin format.
+// Toolkit CSV does not support quoting, so no quoting is applied and
+// commas and newlines in values are replaced.
 type ToolkitReporter struct {
 	reporterCommon
-	w               io.Writer
-	c               *csv.Writer
-	table           [][]string
-	headlines       map[string]string
-	scrambleColumns []string
+	w         io.Writer
+	table     [][]string
+	headlines headlineSet
 }
 
 // ensure that *ToolkitReporter conforms to the Reporter interface
@@ -45,45 +42,57 @@ func init() {
 func newToolkitReporter(format string, w io.Writer, options ...any) (Reporter, error) {
 	opts := evalReporterOptions(CollectOptions[ReporterOption](options...)...)
 	return &ToolkitReporter{
-		format:        "toolkit",
-		scrambleNames: opts.scrambleNames,
-		w:             w,
-		c:             csv.NewWriter(w),
-		headlines:     make(map[string]string),
+		reporterCommon: newReporterCommon("toolkit", opts),
+		w:              w,
 	}, nil
 }
 
 // Prepare TODO: Document its behavior, inputs, and effects.
 func (t *ToolkitReporter) Prepare(report Report) error {
-	t.scrambleColumns = report.ScrambleColumns
+	t.Report = report
 	return nil
 }
 
-// AddHeadline adds a headline to the reporter.
+// AddHeadline adds a headline to the reporter. Headlines are output in
+// the order they were first added.
 func (t *ToolkitReporter) AddHeadline(name, value string) {
-	t.headlines[name] = value
+	t.headlines.add(name, value)
 }
 
-// AddHeadlines adds multiple headlines to the reporter.
+// AddHeadlines adds multiple headlines to the reporter, in sorted name
+// order.
 func (t *ToolkitReporter) AddHeadlines(headlines map[string]string) {
-	maps.Copy(t.headlines, headlines)
+	t.headlines.addAll(headlines)
+}
+
+// toolkitCell makes a value safe for Toolkit CSV, which does not
+// support quoting: commas are replaced with spaces and line breaks with
+// escaped newlines.
+func toolkitCell(cell string) string {
+	return toolkitText(strings.ReplaceAll(cell, ",", " "))
+}
+
+// toolkitText escapes line breaks only, for the value of a headline,
+// which may contain commas as it follows the first comma on the line
+func toolkitText(s string) string {
+	s = strings.ReplaceAll(s, "\r", "")
+	return strings.ReplaceAll(s, "\n", "\\n")
+}
+
+func toolkitRow(row []string) string {
+	cells := make([]string, len(row))
+	for i, cell := range row {
+		cells[i] = toolkitCell(cell)
+	}
+	return strings.Join(cells, ",") + "\n"
 }
 
 // UpdateTable sets the main data table to the rows given. The first row
-// must be the column names. It overwrites any existing table data.
+// must be the column names. It overwrites any existing table data. The
+// rows passed are not modified.
 func (t *ToolkitReporter) UpdateTable(columns []string, rows [][]string) {
-	if t.scrambleNames {
-		scrambleColumns(columns, t.scrambleColumns, rows)
-	}
-	// escape commas and newlines in the data, as Toolkit CSV format does not support quoting
-	for i, row := range rows {
-		for j, cell := range row {
-			// replace commas and newlines with spaces or escaped newlines
-			cell = strings.ReplaceAll(cell, ",", " ")
-			cell = strings.ReplaceAll(cell, "\n", "\\n")
-			rows[i][j] = cell
-		}
-	}
+	rows = t.scrambleTable(columns, rows)
+
 	t.table = append([][]string{columns}, rows...)
 }
 
@@ -93,20 +102,21 @@ func (t *ToolkitReporter) Reset(report Report) (err error) {
 	return
 }
 
-// Render TODO: Document its behavior, inputs, and effects.
+// Render writes the table and then the headlines, in the order they
+// were added, and clears them.
 func (t *ToolkitReporter) Render() error {
-	t.c.WriteAll(t.table)
-	t.c.Flush()
-	if err := t.c.Error(); err != nil {
-		return err
-	}
-	for name, value := range t.headlines {
-		if _, err := fmt.Fprintf(t.w, "<!>%s,%s\n", name, value); err != nil {
+	for _, row := range t.table {
+		if _, err := io.WriteString(t.w, toolkitRow(row)); err != nil {
 			return err
 		}
 	}
-	t.table = [][]string{}
-	t.headlines = map[string]string{}
+	for _, name := range t.headlines.order {
+		if _, err := io.WriteString(t.w, "<!>"+toolkitCell(name)+","+toolkitText(t.headlines.values[name])+"\n"); err != nil {
+			return err
+		}
+	}
+	t.table = nil
+	t.headlines = headlineSet{}
 	return nil
 }
 

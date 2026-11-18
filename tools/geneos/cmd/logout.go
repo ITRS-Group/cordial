@@ -19,6 +19,8 @@ package cmd
 
 import (
 	_ "embed"
+	"errors"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -47,21 +49,21 @@ var logoutCmd = &cobra.Command{
 		CmdGlobal:      "false",
 		CmdRequireHome: "false",
 	},
-	Run: func(cmd *cobra.Command, _ []string) {
+	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		_, args, params, err := FetchArgs(cmd)
 		if err != nil {
 			return
 		}
 		args = append(args, params...)
 		if logoutCmdAll {
-			config.DeleteAllCreds(config.AppName(cordial.ExecutableName()))
-			return
+			return config.DeleteAllCreds(config.AppName(cordial.ExecutableName()))
 		}
-		if len(args) != 0 {
-			for _, d := range args {
-				log.Debug("deleting credentials for domain", "domain", d)
-				config.DeleteCreds(d, config.AppName(cordial.ExecutableName()))
+		for _, d := range args {
+			log.Debug("deleting credentials for domain", "domain", d)
+			if derr := config.DeleteCreds(d, config.AppName(cordial.ExecutableName())); derr != nil {
+				err = errors.Join(err, fmt.Errorf("%s: %w", d, derr))
 			}
 		}
+		return
 	},
 }

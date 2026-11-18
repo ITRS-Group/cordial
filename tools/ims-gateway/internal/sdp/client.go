@@ -19,6 +19,7 @@ package sdp
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -53,11 +54,6 @@ type client struct {
 // Therefore, if no valid token is found, this function will return an
 // error rather than prompting for the authorization code.
 func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *client, err error) {
-	token, err := tokenLoader()
-	if err != nil {
-		return
-	}
-
 	clientID := config.Get[string](sdpCf, "client-id")
 	clientSecret := config.Get[config.Secret](sdpCf, "client-secret")
 
@@ -74,21 +70,19 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 	if err != nil {
 		return
 	}
-	if _, err = validURL("api", apiURL, datacentre); err != nil {
+	api, err := validURL("api", apiURL, datacentre)
+	if err != nil {
 		return
 	}
 
-	conf := &Config{
-		Config: oauth2.Config{
-			ClientID:     clientID,
-			ClientSecret: string(clientSecret),
-			Endpoint: oauth2.Endpoint{
-				TokenURL: auth.JoinPath("/oauth/v2/token").String(),
-			},
-			RedirectURL: "https://www.zoho.com",
-			Scopes:      scopes,
+	conf := &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: string(clientSecret),
+		Endpoint: oauth2.Endpoint{
+			TokenURL: auth.JoinPath("/oauth/v2/token").String(),
 		},
-		Code: nil,
+		RedirectURL: redirectURL,
+		Scopes:      scopes,
 	}
 
 	timeout := config.Get[time.Duration](sdpCf, "timeout")
@@ -96,19 +90,36 @@ func newClient(ctx context.Context, sdpCf *config.Config, scopes ...string) (c *
 		timeout = 10 * time.Second
 	}
 
-	var rt http.RoundTripper = sharedTransport(config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify")))
-	if config.Get[bool](sdpCf, "trace") {
+	skipVerify := config.Get[bool](sdpCf, sdpCf.Join("tls", "skip-verify"))
+	trace := config.Get[bool](sdpCf, "trace")
+
+	var rt http.RoundTripper = sharedTransport(skipVerify)
+	if trace {
 		rt = &ims.LogTransport{Transport: rt}
 	}
 
 	// token refreshes must use the same transport and timeout as the
 	// API requests
 	base := &http.Client{Transport: rt, Timeout: timeout}
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, base)
 
-	hc := oauth2.NewClient(ctx, NewSDPTokenSource(ctx, conf, token))
+	ts, err := sharedTokenSource(tokenKey{
+		clientID:   clientID,
+		tokenURL:   conf.Endpoint.TokenURL,
+		secret:     sha256.Sum256([]byte(clientSecret)),
+		timeout:    timeout,
+		skipVerify: skipVerify,
+		trace:      trace,
+	}, conf, base)
+	if err != nil {
+		return
+	}
+
+	hc := oauth2.NewClient(context.WithValue(ctx, oauth2.HTTPClient, base), ts)
 	// the OAuth client does not inherit the settings of the base client
 	hc.Timeout = timeout
+	// the token is only for the API, whatever the client is redirected
+	// to, but refreshes use base and so go to the token URL
+	hc.Transport = ims.OriginOnly(api, hc.Transport, rt)
 	// never follow redirects, as a redirected POST or PUT would be
 	// silently turned into a GET without the data
 	hc.CheckRedirect = func(*http.Request, []*http.Request) error {

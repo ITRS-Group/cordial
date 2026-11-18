@@ -20,6 +20,7 @@ package cmd
 import (
 	_ "embed"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 
@@ -57,6 +58,7 @@ var pubkeyCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		var w io.Writer = os.Stdout
 		if pubkeyCmdOutput != "" {
 			file, err := os.Create(pubkeyCmdOutput)
 			if err != nil {
@@ -64,44 +66,51 @@ var pubkeyCmd = &cobra.Command{
 				return err
 			}
 			defer file.Close()
-			os.Stdout = file
+			w = file
 		}
 
-		return printPublicKey()
+		return printPublicKey(w)
 	},
 }
 
-func printPublicKey() error {
+// printPublicKey writes the public key for the private key in
+// `gdna.licd-private-key` to w. The setting can be the key or the path
+// of a file with the key and if it is not set then the default key file
+// in the user configuration directory is used.
+func printPublicKey(w io.Writer) error {
 	defaultPubkey, err := config.UserConfigPath("geneos", "gdna-private-key.pem")
 	if err != nil {
 		return err
 	}
-	if privateKey, ok := config.Lookup[config.Secret](cf, cf.Join("gdna", "licd-private-key"), config.DefaultValue(defaultPubkey)); ok && len(privateKey) > 0 {
-		defer clear(privateKey)
-		pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
-		if err != nil {
-			// try reading from file path if the value is not a valid
-			// PEM-encoded private key
-			privateKeyPath := string(privateKey)
-			pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
-			if err != nil {
-				log.Error("parsing licd private key failed", slog.Any("error", err), slog.String("file", privateKeyPath))
-				return err
-			}
-		}
-		defer clear(pk)
-		pubKey, err := certs.PublicKey(pk)
-		if err != nil {
-			log.Error("getting public key from private key failed", slog.Any("error", err))
-			return err
-		}
-		_, err = certs.WritePublicKeyTo(os.Stdout, pubKey)
-		if err != nil {
-			log.Error("encoding public key to PEM failed", slog.Any("error", err))
-			return err
-		}
-		return nil
-	}
 
-	return fmt.Errorf("no private key found in configuration at %q or %q", cf.Join("gdna", "licd-private-key"), defaultPubkey)
+	// the setting is in the default configuration, as an empty string, so
+	// a default value would never be used
+	privateKey := config.Get[config.Secret](cf, cf.Join("gdna", "licd-private-key"))
+	if len(privateKey) == 0 {
+		privateKey = config.Secret(defaultPubkey)
+	}
+	defer clear(privateKey)
+
+	pk, err := certs.ReadPrivateKeyFromPEM(privateKey)
+	if err != nil {
+		// try reading from file path if the value is not a valid
+		// PEM-encoded private key
+		privateKeyPath := string(privateKey)
+		pk, err = certs.ReadPrivateKey(host.Localhost, privateKeyPath)
+		if err != nil {
+			log.Error("parsing licd private key failed", slog.Any("error", err), slog.String("file", privateKeyPath))
+			return fmt.Errorf("no private key found in configuration at %q or in %q: %w", cf.Join("gdna", "licd-private-key"), defaultPubkey, err)
+		}
+	}
+	defer clear(pk)
+	pubKey, err := certs.PublicKey(pk)
+	if err != nil {
+		log.Error("getting public key from private key failed", slog.Any("error", err))
+		return err
+	}
+	if _, err = certs.WritePublicKeyTo(w, pubKey); err != nil {
+		log.Error("encoding public key to PEM failed", slog.Any("error", err))
+		return err
+	}
+	return nil
 }

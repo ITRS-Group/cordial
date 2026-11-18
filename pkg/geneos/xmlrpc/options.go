@@ -1,7 +1,10 @@
 package xmlrpc
 
+import "time"
+
 type xmlrpcOptions struct {
 	insecureSkipVerify bool
+	timeout            time.Duration
 }
 
 // Option TODO: Describe its purpose and intended use.
@@ -27,5 +30,13 @@ func InsecureSkipVerify() Option {
 func Secure(secure bool) Option {
 	return func(xo *xmlrpcOptions) {
 		xo.insecureSkipVerify = !secure
+	}
+}
+
+// Timeout sets a limit on each request made by the Client, including
+// reading the response. A zero value, the default, means no limit.
+func Timeout(timeout time.Duration) Option {
+	return func(xo *xmlrpcOptions) {
+		xo.timeout = timeout
 	}
 }

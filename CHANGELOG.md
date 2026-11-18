@@ -53,6 +53,28 @@
 
 * `tools/geneos`
 
+  * Profiles, ports and TLS
+
+    * Gateway listening ports are only moved to match TLS between the conventional 7039 (no TLS) and 7038 (TLS) ports, and a Web Dashboard server between 8080 (HTTP) and 8443 (HTTPS), and between 80 and 443, and only when it is configured with one of the pair and the other is free. Any other port is never changed. Previously, if the other Gateway port was in use, the Gateway was moved to an arbitrary free port such as 7100; it now keeps its configured port and a warning is logged. A new Web Dashboard server is given port 8443 with TLS and 8080 without. The generated Gateway `instance.setup.xml` no longer lists a TLS listen port of 7038 for a TLS Gateway configured on 7039.
+
+    * **Behaviour change**: applying a profile again to an existing instance, with `geneos deploy`, `geneos rebuild profile` or `geneos set profile`, now follows the `insecure` option saved with the profile, which was previously only used when an instance was created. An instance that is not TLS capable gets a certificate (an unchanged one kept from earlier is reused) when the profile is secure, and one with TLS parameters has them removed from its configuration, but never the files, when the profile is `insecure`, and it is then rebuilt so that the conventional Gateway and Web Dashboard server ports follow. A user-defined port is never changed. A secure profile fails with an error if no signing certificate is available. A Web Dashboard server's keystore is renamed with a `.disabled` suffix when it becomes insecure. Profiles saved without the `insecure` option are not changed. If you have secured instances by hand that belong to a profile saved as `--insecure`, rebuilding the profile now removes their TLS parameters.
+
+    * SAN and floating Netprobe gateway connections (`gateways`) are now always stored as a list of `HOST:PORT` strings. A map of host to port saved by earlier versions is still read and is converted the next time the instance is rebuilt or set. Only connections to port 7039 or 7038 are changed to match whether the probe uses TLS; all other connections and ports are kept as they are.
+
+    * `geneos deploy profile --port` can now only be used with a profile that has a single component, and is an error otherwise instead of failing part way through. The port is applied to that component.
+
+    * The instances for a profile are now always created in the same, sorted by component type, order. `geneos deploy profile` and `geneos init` now create every component instance the same way whether or not its package was installed by the command, and stop with an error when a package cannot be installed or a directory cannot be created, rather than carrying on and creating the profile without them.
+
+    * Profiles are now applied to a member's environment (`env`) for all component types, as for Gateways, SANs and floating Netprobes, so environment variables that are no longer in the profile are removed from a member when the profile is applied again.
+
+    * Certificate creation errors are now shown when adding all component types, they were previously discarded for most.
+
+    * The `gateway-name`, `licd-host`, `licd-port` and `licd-secure` keys of a Gateway in a profile are now applied, as documented in the profile help. `licd-host` is also reset when the profile is applied again.
+
+    * The `tcp-reporter-port` of a `ca3` instance now defaults to the instance `port` instead of 9137, so that multiple instances no longer conflict.
+
+    * `geneos add` for `ca3`, `netprobe-router`, `sso-agent` and `webserver` instances now copies the initial files from the installed package on the instance's host, instead of from the working directory of the command, and returns an error if they cannot be copied. The directory `packages/ca3` is no longer created.
+
   * `geneos includes`
 
     * **Breaking Change** (minor): The `--force`/`-F` options have been removed from `geneos includes extract` and `geneos includes update`. Existing version directories can now be extracted or installed again without an additional option; changed files are backed up before replacement and unchanged files are left alone. Extraction now creates missing top-level links automatically. Existing top-level files and links are only replaced by `extract --update`, `install --update` or the `update` command. Existing configuration templates are never replaced.
@@ -91,6 +113,75 @@
 
   * Internal refactoring to reduce duplicated code, with no intended change to command behaviour: component types now share a generic instance factory and common Java-based Gateway helpers. Audit, restore, certificate, profile, process, output format and host listing code now use shared helpers. Code has also been updated to use current Go language features and the standard library `slices`, `maps` and `strings` packages.
 
+  * Instances, hosts and packages (changes in behaviour)
+
+    * `geneos init` and `geneos init --force` never regenerate the user-wide root and signing certificates in the user configuration directory. They are only created if they are missing (or only the signing certificate, if that is missing) and an existing root certificate that cannot be used is now an error. Use `geneos tls init --overwrite` to replace them. A root certificate file that is not a valid root CA, for example because it has expired, is now rejected by all the commands that read it, where before it was accepted.
+
+    * `geneos init` now only adds the Geneos directory to an existing user configuration file, and keeps all other settings, of any type and including nested values. It also creates `packages/downloads` and reports errors creating component directories.
+
+    * The audit log retention and compression settings are now enforced, using the documented defaults of 10 MiB, 30 days, 5 backups and `gzip` compression, taken from the instance `audit` settings and then the global ones. Previously rotated files were never removed or compressed. An audit log file is now opened once per instance and not for every event.
+
+    * A minimum TLS version is now always passed to instances using TLS, from the instance and then global `tls.minimumversion` settings, and then `1.2`, as documented. Previously it was only passed when set on the instance.
+
+    * A host name that is not known, such as with `-H`, or as `name@host`, is now never the same as all hosts, and instances of an unknown host are never found. An instance created that already exists is now an error and does not report success.
+
+    * Download timeouts (`download.timeout` or `ITRS_DOWNLOAD_TIMEOUT`) now apply to connecting and waiting for the server, and to waiting for more data while downloading (the transfer fails with a "download stalled" error if no data arrives for that long, 60 seconds by default), but no longer stop a download that is progressing but takes longer. This also applies to archives given as a URL with `--archive`, which previously had no timeouts.
+
+    * `geneos stop` now waits up to 5 seconds after `SIGKILL` and returns an error, with the PID, if the process is still running, where before it returned success. The error is also what is recorded in the audit log.
+
+    * A zip archive that is not already a file, such as one downloaded or read from STDIN, is now copied to a temporary file, next to the destination on the local host, to unpack it, and is no longer held in memory. The size of an archive that is copied is limited to 8 GiB, which can be changed with `download.max-archive-size` or `ITRS_DOWNLOAD_MAX_ARCHIVE_SIZE` (in bytes, with zero for no limit). Symbolic links in zip archives are no longer written out as plain files; one that points outside of the destination is an error and the others are skipped.
+
+    * The file name suggested by a download server is now reduced to a plain file name, so it can no longer contain a path.
+
+    * `geneos package update` now returns an error, and a non-zero exit code, if there is no matching release to update to. Updating all components or hosts still skips those without a release.
+
+    * Versions that cannot be parsed are now ordered before others, `GA` ahead of `RA` for the same version, and `geneos snapshot` now accepts a Gateway of exactly 5.14.
+
+    * `geneos clean` and `geneos purge` now return errors from paths that cannot be removed and restart a stopped instance even if some paths could not be removed. The clean and purge lists can be separated with either `:` or `;`.
+
+    * Processes started on a remote host no longer receive the `HOME` and `USERPROFILE` of the local user; they use the home directory of the remote host.
+
+    * `geneos restore` now fails, instead of doing nothing, if the compression cannot be determined from the file name and `--decompress` was not given for STDIN. `--list` no longer writes any shared files or rebuilds any instances.
+
+    * Instances and components are now always processed in name order, and `geneos` commands that process several instances at once do so for no more than 16 at a time.
+
+    * Commands that write JSON, with no data to write, now write `[]` and not `null`.
+  * Behaviour changes from the review of the `geneos` commands
+
+    * **Breaking Change** (minor): `geneos init` no longer accepts `--restore`/`-R`, `--no-install`/`-X` or `--name`/`-n`, which did nothing; they are hidden and deprecated and now fail with a "no longer supported" error. To restore a backup use `geneos init` followed by `geneos restore`. `geneos init tls` is now an alias for `geneos tls init`, instead of doing nothing.
+
+    * The `--host`/`-H` option now rejects a host name that is not configured, instead of acting on all hosts (or panicking), and `geneos add` and `geneos deploy` also reject an unknown `@HOST` in an instance name. `geneos add` now fails for an instance that already exists.
+
+    * `geneos tls info --leaf-only` now behaves as documented and only lists certificates with a matching private key in one of the files; `geneos tls info` connections time out after 10 seconds, with at most 16 made at a time. `geneos tls export --output` is refused for more than one instance.
+
+    * `geneos tls list` now reports `remaining` in JSON output for instance certificates as a duration, as it does for the root and signing certificates.
+
+    * `geneos aes set` reads the key file from STDIN only if neither `--keyfile` nor `--crc` is given, and `--crc` cannot be combined with `--keyfile` or `--shared`. `geneos aes new --update` now saves the instance configuration.
+
+    * `geneos package uninstall` only removes the cached downloads for the releases it removes (all of them for `--all`), instead of every download for the type.
+
+    * `geneos enable --start` now also starts instances that were already enabled, and `geneos start --port` and `geneos restart --port` now follow logs with `--log`.
+
+    * `geneos command --json` now redacts secrets in arguments and environment variables as the default output does, and the audited command line redacts the values of `-s`, `-E`, secret variables and password options.
+
+    * `geneos backup` removes a partly written archive after an error, and `geneos restore` refuses to read an archive from a terminal.
+
+    * `geneos adb clean` and `edit` now check all `replace:` options before changing any files.
+
+    * **Breaking Change** (minor): The exit status of `geneos` is now correct for every command. Previously, commands that act on several instances, hosts, files or other items reported the failure of an item but still exited with `0`. They now still process all of the items, and show the result of each, but exit with a non-zero status if any of them failed, without repeating the error or showing the usage. This applies to `start`, `stop`, `restart`, `reload`, `rebuild`, `clean`, `reset`, `set`, `unset`, `add`, `delete`, `copy`, `move`, `import`, `enable`, `disable`, `protect`, `revert`, `migrate`, `command`, `logs`, `snapshot`, `backup`, `restore`, `ls`, `ps`, `show`, `package`, `host`, `aes`, `tls`, `adb` and `init` and so on. A name that is not an instance is now a failure for all of them, where it used to be ignored by commands such as `start`, `set`, `ls`, `ps` and `show`. Scripts that relied on a zero exit status after a failure must now handle the failure.
+
+      Not failures are stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, a pattern or component type that matches no instances (such as `geneos ls gateway` when there are none) and, when starting all instances, disabled instances. Commands that check all the names given before they act, such as `stop`, `delete` and `tls new`, still fail before changing anything if a name does not match an instance. See the new "Exit Status" section in `geneos help`.
+
+    * `geneos add` and `geneos deploy` fail with an "already exists" error for an instance that exists. A profile that exists is still applied again by `deploy` and `init`.
+
+    * `geneos init` returns an error, instead of ending the program, if the directory cannot be used, and fails with a message that refers to `--force` if the directory is not empty and `--force`/`-F` is not given. If several profiles are given the directory is only initialised once. Existing root and signing certificates are no longer replaced by `init`, including with `--force`, and are added to the trust chain of the installation. `geneos init` with a profile that is not defined is now an error.
+
+    * Other failures that were previously only logged, ignored or printed with a zero exit status are now failures: `disable` of an instance that is running (without `--stop` or `--force`), `tls create` of a certificate or key that exists, `tls info` for files and connections that could not be read, `tls sync` for a host that could not be updated, `config import`, `aes import`, `package install`/`uninstall`/`update` for sources, releases, links, downloads and instances that could not be dealt with and when protected instances stop an update, `restore` of an instance that is not in the archive, `host set`, `host unset` and `host list` for names that are not hosts, `adb clean` and `adb info` for files that could not be processed, and `aes decode` and `aes encode` when no instance could be used.
+
+    * The legacy `ctl` commands now exit with a non-zero status for commands that are not supported.
+
+    * `geneos config set`, `unset` and `show` now use the file given with `--config`/`-G`. `geneos host show` and `geneos host delete` fail for unknown host names and `geneos host list` accepts host names.
+
 * `integrations/servicenow2`
 
   * **Breaking Change** (minor): The proxy now refuses to start without a `server.authentication.token` and a `server.listen` address.
@@ -109,19 +200,57 @@
 
   * Document that ServiceNow instances with the Basic Auth restriction enabled (`glide.authenticate.basic_auth.restriction.enforce`) reject the proxy, with `401 User is not authenticated`, unless its user has the `snc_basic_auth_api_access` role.
 
+  * **Breaking Change** (minor): The `_cmdb_table` of a request, which is the table searched for the configuration item, is now `cmdb_ci` if not given, as documented, and must be the name of a table (letters, digits and underscores). A value that could change the path of the request, such as `../sys_user`, is rejected with a `400` error.
+
+  * The name of the program, which is used for the name of the configuration file and the log, is now the name of the executable as for other programs, without a directory or `.exe`, instead of the first argument.
+
 * `tools/ims-gateway`
 
   * **Breaking Change** (minor): The gateway now refuses to start without a `server.authentication.token`. Previously an empty token allowed requests that had no `Authorization` header.
 
   * Correct the response messages in the example configuration to use the `__` prefixed names that the gateway supplies, such as `${__number}` and `${__error}`.
 
+  * The correlation value that is hashed by the ServiceDesk Plus support, and by `geneos incident raise`, is now a lower case hexadecimal string, like the one that the `servicenow` and `servicenow2` clients have always created, so that an incident is found by an update whichever of them raised it. `ims.CorrelationID` was upper case, and the `servicenow2` client now uses it. The IMS Gateway and `geneos incident` were not yet in use, but any request that was created with an upper case correlation value will no longer be found.
+
   * The ServiceNow connection is now cached between requests, instead of a new client being created for each one, and uses `snow.timeout`. HTTP redirects are no longer followed.
 
   * **Breaking Change** (minor): As for `servicenow2`, requests with no `correlation_id` are rejected with a `400` error, ServiceNow failures are returned as `502` or `504`, and a create or update that ServiceNow does not return a record for is a failure.
 
+  * **Breaking Change** (minor): The ServiceDesk Plus support now also rejects a request with an empty `correlation_id` (and no `__incident_correlation`) with a `400` error, as for ServiceNow.
+
+  * The values of the fields of a request are now always used exactly as they were received in the search, the requests that are sent and the response messages. They are never expanded, so a value such as `${env:HOME}` or `${file:/etc/hostname}` is just text and cannot be used to read the configuration, files or environment of the gateway. The same applies to the `query` parameter of a `GET` for ServiceDesk Plus, which is sent as it is received.
+
+  * The fields with a `__` prefix are now removed from the incident that is sent to ServiceNow whether or not a `current-state` transformation is configured, and are still available to the response messages after a transformation, as documented and as for `servicenow2`. Previously they were sent to ServiceNow if there was no transformation, and the response messages could not use them if there was one. For ServiceDesk Plus the `__` fields remain available to the request templates when a `transform` is configured, including those renamed from `__sdp_`.
+
+  * `__snow_cmdb_table` is now `cmdb_ci` if not given and must be the name of a table, as for `servicenow2`.
+
+  * The ServiceDesk Plus token is now shared by all requests and refreshed once when it expires, instead of by every request at the same time. It is only read from the user configuration directory, never the working directory, and is saved with permissions of `0600` in a directory of `0700`. A token saved by an earlier version is not changed until it is next refreshed.
+
+  * The `sdp.response` messages are now in the example configuration, and the unread `response.query` has been removed from the table examples.
+
 * `gdna`
 
   * **Breaking Change** (minor): `gdna` now exits with an error if the configuration file given with `--config`/`-f` cannot be read, instead of silently using the defaults. This applies to every command, including `start --daemon`, which no longer starts a background process in this case.
+
+  * Log files are now kept for the documented `gdna.log.max-age` days, which defaults to 14, instead of the hard-coded 30 days that was used because the setting was not read. The old and undocumented `gdna.log.stale-after` is still used if it is set. Set `gdna.log.max-age: 30` to keep the previous retention.
+
+  * The SMTP timeout for email reports is now set with the documented `email.timeout`, a duration which defaults to `10s`. The old and undocumented `_smtp_timeout`, in seconds, is still used if it is set.
+
+  * The defaults shown in the help of the Netprobe options of `gdna start` and `gdna report` (`--port`, `--secure`/`--tls` and `--skip-verify`) are now those of the configuration, which are port `8101` and TLS with verification skipped. The options override the configuration only if they are given, as before, so only the help has changed.
+
+  * The source name of a licence daemon fetched over HTTP or HTTPS now includes its port, if the URL has one, so that two licence daemons on the same host are different sources, for example `http:server:7041`. Existing source names in a database, and any `source` include, exclude or group patterns, that were for a URL with a port will no longer match; update them or the patterns. Names of sources without a port are unchanged.
+
+  * The `xlsx` attachment of an email report now has its columns scrambled, as the HTML and text parts already were, if `email.scramble` is set, which it is by default. Previously the setting was ignored for the attachment.
+
+  * The `gdna add`, `remove` and `list` commands now accept the plural forms of a category, such as `gateways`, as documented, and store the entries under the category, where previously they were never used. `gdna add group` requires a group name, and the `remove` commands require a category and either a name or `--all`; otherwise they exit with an error instead of a usage message or a panic.
+
+  * A filters file that cannot be read, other than not existing, is now an error for a run, where before the defaults were silently used instead of the filters in the file. A failure to prepare or insert filters, groups or allocations is also now an error for the run, instead of being logged and the run continuing with tables that were only partly loaded.
+
+  * An error in any report is now returned by the run, after all the other reports have been run, and an email report is not sent if any report in it fails, instead of being sent without it. A split report with no `split-values-query` is an error.
+
+  * Reports run in the order of their names, so `--reports` with a single report, as for `csv` and `toolkit` output, uses the first match by name. The `${report-name}` and `${report-group}` values that are available to the settings of a report are now the name of the report, which is the configuration key, and the group of its Dataview.
+
+  * `gdna start` handles `SIGHUP` in the same way as `SIGUSR1`, to reload the configuration; it was caught and ignored before. Not available on Windows.
 
 * Release contents
 
@@ -149,7 +278,25 @@
 
   * The code shared by the ServiceNow proxy, the `ims-gateway` and `geneos incident`, such as the HTTP server, ServiceNow client, retrying of gateways, action groups and the reloading server, is now in `pkg/ims` and the new `pkg/ims/snow`, so that behaviour and tests are in one place. `pkg/process` adds locked PID files and detached starts that can wait for a process to be ready.
 
+  * `ims.Literals` and `ims.ExpandLiteral` substitute values that are from a caller into templates without expanding them, `ims.Section` caches a section of the configuration for the life of the configuration, and `snow.CMDBTable` defaults and checks the name of a table for a configuration item. `snow.TableConfig` now reads the list of tables once for each configuration, which must not be changed once in use, and `ims.Transformation` compiles each regular expression once.
+
+  * In a `rename` of a transformation all the renames now apply to the fields as they were before any of them, so the result no longer depends on the order the renames are done in, and a field renamed to its own name is kept. For example `a: b` with `b: c` moves `b` to `c` and `a` to `b`. Previously the result was chosen at random.
+
+  * The `path` of a ServiceNow instance is the root of the Table API and the table name is added, so `/api/now/v2/table`, `/api/now/v2/table/` and `/api/now/v2` are all the same. Previously a path that did not end in `table` replaced its last element.
+
   * `pkg/rest` has had a code review and a much larger set of tests, covering error handling, redirects, timeouts and response decoding, and the `servicenow2`, `ims-gateway` and `geneos incident` commands were checked against a live ServiceNow instance.
+
+* `pkg/icp`, `pkg/reporter`, `pkg/email`, `pkg/logger`, `pkg/gwhub` and `pkg/rest`
+
+  * **Breaking Change** (minor): `gwhub.EntitiesMetricsRows` now takes an `EntitiesMetricsRowsRequest` and returns an `EntitiesMetricsRowsResponse`, as its filter could not be sent before. The previous form is kept as the deprecated `EntitiesMetricsRowsLegacy`. `gwhub.FormatDuration(0)` is now `PT0S`, and `gwhub.ParseDuration` returns an error for durations with years or months, such as `P1M`, and with no elements, such as `P`, instead of returning a zero duration.
+
+  * `icp.New` now defaults the base URL to `https://icp-api.itrsgroup.com/v2.0`, as documented, instead of `https://localhost`.
+
+  * `pkg/reporter`: the formatted reporters (`table`, `html`, `markdown`, `csv` and `tsv`) now order rows by the first column only, as documented for `OrderByColumns`, instead of by all columns; rows with the same first column are kept in the order given. `XLSXScramble`, `ScrambleFunc`, `ScrambleColumns` and `Writer` now take effect. The XLSX reporter keeps all rows, even those with the same first column, and an `UpdateTable` call replaces the table instead of adding to it. `MinColumnWidth` and `MaxColumnWidth` ignore zero or negative values, so an unset configuration value keeps the default widths. `AddHeadlines` headlines are now output, in sorted name order, for the formatted, toolkit and XLSX reporters.
+
+  * `pkg/email`: SMTP authentication now selects the strongest mechanism offered by the server unless the new `_smtp_auth` setting names one, instead of always using `LOGIN`, and so no longer works with `_smtp_tls=none` unless `plain-noenc` or `login-noenc` is given. Add `_smtp_tls=ssl` for implicit TLS, which is also used when `_smtp_port` is `465` unless `_smtp_tls=none`.
+
+  * `pkg/logger`: `Init` no longer sets the global `color.NoColor` when the output is not a terminal; colour is decided for the log handler only (see the new `Color` handler option). `RotateOnStart` is honoured when a log file is given. `RedactSlice` returns a new slice instead of changing its argument. `pkg/rest` debug logging only records the size of request bodies and the names of query parameters, never their values.
 
 * `pkg/geneos`
 
@@ -157,9 +304,75 @@
 
   * Geneos plugin support has been organized into focused packages, improving modularity and reuse while preserving compatibility for existing callers.
 
+* `pkg/certs`
+
+  * `GenerateKey` and `WithKeyType` now always produce a key that can sign certificates. As an ECDH key cannot sign, the `ecdh` key type (still the default, so stored configurations and flags are unchanged) is generated as an ECDSA P-256 key, which has the same curve and PKCS#8 encoding, and so parses as `ecdsa`. Previously `WithKeyType(ECDH)`, and so `geneos tls create --key-type ecdh`, failed with `unsupported public key type: <nil>`.
+
+  * `IsValidLeafCert` now accepts any certificate that is not a CA, is usable for TLS (no key usage extension, or one that includes digital signature, key encipherment or key agreement) and is within its validity dates; extended key usages are no longer required. `IsValidRootCA` now compares the raw subject and issuer, rather than only the common names, and requires the certificate signing key usage if there is a key usage extension.
+
+  * `DecodePEM`, `ReadPrivateKey`, `ReadPrivateKeyFromPEM` and `WritePrivateKeyTo` now always return or write PKCS#8 private keys, converting PKCS#1 and SEC1 keys. Malformed private keys and encrypted private keys (`ENCRYPTED PRIVATE KEY` or legacy encrypted PEM) are now errors, or skipped by `DecodePEM`, rather than returned as unusable data.
+
+  * `Template` with the `IsCA` option now also sets valid basic constraints and, unless a key usage is given, the certificate signing key usages, so that the result is a working CA. A new `NewTemplate` function returns an error for invalid IP address and URI options and for a failure to generate a serial number; `Template` now returns `nil` for these instead of silently dropping the invalid values, and `CreateCertificate` returns an error for a `nil` template.
+
+  * `WriteNewRootCert` now accepts an empty key type and uses the default. `CreateCertificate` accepts a `nil` signing key for a self-signed certificate.
+
+  * Truststore aliases are now unique: a root certificate with the same common name as a different certificate already in the truststore is added with the serial number added to the alias, and a root certificate without a common name uses its SHA-1 fingerprint, rather than replacing the other certificate or failing. Existing entries are no longer replaced by a different certificate with the same common name.
+  * `streams.RESTStream` now verifies the server certificate for HTTPS, which it previously never did, so streams to a Netprobe with a self-signed certificate must now pass the new `streams.SkipVerify(true)` option to `streams.NewRESTStream`. It also now has a 30 second timeout for each request (`streams.RESTTimeout`) and a `Close` method.
+
+  * `api.NewXMLRPCClient` now limits the wait for each response to `api.DefaultTimeout` (60 seconds), changed with the new `api.Timeout` option, and `xmlrpc.NewClient` has a new `xmlrpc.Timeout` option (default no limit).
+
+  * A few types changed to match the Geneos XML they model, so that they are no longer lost or truncated when read and written: `fkm.File.Alias` is now a `*SingleLineStringVar` (as in `<alias><var/><data/>...`) and `sqltoolkit.DBConnection.Password` is now a `*Value` (supporting `stdAES` and `extPwd`). `common.NewValue` joins the elements of a slice with a comma, where it used to keep only the last, and returns `nil` for `nil`. `StringList.UnmarshalText` and `NameValueList.UnmarshalText` now return an error for non-empty text, as a list cannot be set from it.
+
+  * `xpath.XPath.String` now writes `/headlines/cell` for a headline path with no name, instead of `/headlines`, and `/headlines` or `/rows` are kept as the end of a parsed path. `api.XMLRPCClient.UpdateRow` no longer repeats the row name as the first value, and `CreateDataview` and `DeleteDataview` return `ErrInvalidArgs` for a name that is not `group-view`. A column named `-` is now omitted in the same way as `OMIT`.
+
+  * New additions: `Gateway.Attributes` for other attributes of the Gateway element, `api.Dataview.SetColumns`, `xpath.XPath.Clone`, `common.RawXMLElement` and `common.MarshalOmitEmptyParents`, and an `Other` field in the model types that did not have one to hold elements that are not modelled.
+
 * `pkg/host`
 
   * Split host capabilities into exported information, path, filesystem, and process interfaces, recomposed by `Host`. This adds API options for callers that need only part of a host; the existing `Host` method set is unchanged, with no CLI-visible behavior change.
+
+* `pkg/config`
+
+  * **Behaviour change**: Expansion is nested, to a depth set by `Loop` (default 10), but values from lookup tables, the environment, files, URLs, expressions, and decoded `enc:` values are now inserted exactly as they are and are no longer expanded again, so request or user data in a `LookupTable` cannot inject `${file:...}`, `${env:...}` or `${config:...}`. Values from configuration items and from `Prefix` functions are still expanded in turn, as before. Use the new `PrefixVerbatim` for a function that returns untrusted data. A configuration value that refers to itself now stops with the reference left in the output.
+
+  * **Behaviour change**: `$${` is now an escape for a literal `${` (previously `$${name}` was `$` followed by the value of `name`). Lookup tables are now checked first for any name, so a table key can override a configuration key (containing the key delimiter) or a file path of the same name; names not found in any table still fall back to the environment, as before.
+
+  * **Behaviour change**: `UseDefaults(false)` now means that no defaults at all are used, including those given with `WithDefaults` and `DefaultsFrom`. The order of precedence of settings from `Read` is now documented: explicit `Set` and environment, the main file, defaults files, embedded defaults and last of all `DefaultsFrom`.
+
+  * **Behaviour change**: `SetKeyValuePairs` now sets `key==value` to `=value` rather than ignoring it.
+
+  * **Behaviour change**: Credentials files, and the directories created for them, are now written with permissions `0600` and `0700` and keyfile directories with `0700`. The new `FileMode` and `DirMode` options set these for `Write`, which otherwise still uses `0644` and `0775`. A `Config` written by `Write` still contains all of its settings, including defaults and values from the environment.
+
+  * `ReadOrCreate` for a keyfile now returns an error for a keyfile that exists but cannot be read, rather than success with no checksum.
+  * Commands run on a remote host over SSH, by `Start` and `Run`, now pass arguments, environment values and the working directory to the program exactly as given, using POSIX single-quote quoting, instead of Go-style quoting that the remote shell still expanded. Arguments containing `$`, backticks or `\` are no longer expanded by the remote shell, and environment values with spaces now work. Remote `Start` appends the output to the error file, as documented, and uses `/dev/null` if there is none.
+
+  * `NewSSHRemote` now uses the name as the hostname if no `Hostname` option is given, as documented, and accepts options as a slice (`[]SSHOption`) as well as individually. Options of any other type are no longer silently ignored but are reported by `LastError` and when connecting.
+
+  * `SSHRemote.LastError` no longer tries to connect again, it reports the error from the last failed attempt until a later connection succeeds. Connections that have closed are replaced when next used, and a handshake with a server that does not answer now times out after 15 seconds.
+
+  * `SSHRemote.RemoveAll` now returns errors, rather than ignoring them, and `Rename` falls back to a plain rename if the server does not support `posix-rename`. `CopyFile` returns an error, rather than truncating the file, when asked to copy a file onto itself.
+
+* `pkg/process`
+
+  * `PID` now returns the lowest matching PID rather than any one of them, and, as documented, only matches a process with all of the given arguments, not any one of them.
+
+  * `Start` now keeps any `HOME`, `SHELL`, `USER`, `LOGNAME` and `PATH` in `Env`, adding the defaults only for the ones that are missing, and returns the PID of a program started in the background (`0` for a program run in the foreground). It no longer starts a reaper of child processes for each program with `Restart` set, `Batch` does that, and returns the channel that stops it.
+
+  * `SignalProcess` returns an error for a PID that is zero or negative, rather than signalling a group of processes. `Daemonize` now also removes `-D=true`, `--daemon=true` and `-D` in a group of short flags, such as `-vD`, from the arguments of the new process.
+* `tools/dv2email`, `tools/files2dv`, `tools/gateway-reporter` and `tools/san-config`
+
+  * `tools/dv2email`: the `headline-filter`, `column-filter` and `row-filter` settings, and the `__HEADLINES`, `__COLUMNS` and `__ROWS` environment variables, now keep an item that matches **any** of the patterns, as documented, instead of only those that matched all of them. Filtered rows are also removed from the row order, the first (row name) column is never filtered, and the `--inline-css`/`-i` option, which never inlined anything, is deprecated, hidden and ignored. Output file names given explicitly are no longer suffixed with a timestamp, only `auto` names are. The text and XLSX `serial` value now starts from 1, as documented, and the sheet name, attachment and email order for `split: entity` is now by entity name.
+
+  * `tools/gateway-reporter`: as the built-in defaults are now valid, reports are written to the default output directory (`/tmp/gateway-reporter`) in all the default formats, instead of silently not being written. The `--out`/`-o` option now sets the directory for all the formats, and a validation hook now also creates the Toolkit include file. A SQL Toolkit sampler with no valid queries now shows the configured `empty` message, which is no longer able to replace the valid queries of a sampler that has some.
+
+  * `tools/san-config`: the rotation settings in `server.logs` (`size`, `backups`, `age` and `rotate-at-start`) are now applied, as documented, having previously been ignored. The `geneos.sans.reverse-connections` setting is now read under its documented name, as well as the older key names that the program used to read, with the default unchanged (`false`). A missing `-H` hostname is now an error, and when all inventories fail to load the hosts from the previous load are kept.
+* `Build and release`
+
+  * Release builds now use `-trimpath`, so executables and libraries no longer contain the build machine's source paths. The only visible difference is that the source locations in `debug` level log messages are shown as module paths.
+
+  * The release directory now includes `libalert.so`, which was already in the `cordial-<version>.tar.gz` archive, alongside `libemail.so`, and a `SHA256SUMS` file for the two `.tar.gz` archives. `libalert.so` is now built with the `netgo` and `osusergo` tags, like `libemail.so`, so it no longer depends on the host's name service libraries.
+
+  * The release `Makefile` refuses to build if `VERSION` contains whitespace or a trailing newline, and a new `make check-cross` builds every package for Linux (`amd64` and `arm64`), Windows and macOS to find platform specific compile errors. `make check-examples` checks the programs in `_examples`, which are now a separate Go module with their own dependencies and build against the current packages.
 
 ## Version v1.31.0 Fixes
 
@@ -170,6 +383,71 @@
   * Fix the sources in `gdna.licd-sources` being remembered after the first fetch of a `gdna start` process, so that a reloaded configuration takes effect. Sources given with `--source` still take precedence.
 
   * Fix report queries to associate licence data with the correct source, recognize fully covered gateways, and include all hosts with multiple OS versions.
+
+  * Fix the `--debug`/`-d` and `--trace`/`-t` options, which did nothing: they now set the log level, and the queries run are logged with `--trace`.
+
+  * Fix `--port` of `gdna start` and `gdna report` rejecting ports above 32767.
+
+  * Fix a panic, listing or reporting, for any filter, group or allocation in the filters file without a `timestamp`, and `gdna list includes` and `list excludes` without `--format` failing with a panic. Fix a panic in the `remove` commands with no arguments or with `--all` and only a category, a `list groups` ignoring `--format` and not being sorted, and `add` and `remove` exiting with success when the filters file could not be written.
+
+  * Fix a panic in a fetch for a summary report or detail report that is not valid, such as a row with too few columns, a CSV that cannot be parsed, or a licd report file with a summary section that cannot be parsed.
+
+  * Fix a source that fails part way through a fetch, such as a licence daemon whose detail report is cut short or has a bad row, leaving the rows read before the failure in the database. All the reports of a source are now loaded in a savepoint that is rolled back on failure, so none of its rows are kept and the other sources are unaffected, and the error is recorded in the status of the source. A file source with a bad detail report was also reported as a valid source, with its partial data, despite the error.
+
+  * Fix `gdna start` exiting, from a scheduled run, for an error loading filters or an `email.contents` that is not a list or string. The error is now logged and the run is marked as failed, and the process continues with its schedules.
+
+  * Fix a licence source with a name containing a quote, such as `o'brien.csv`, failing the run, and the status of a failed source containing `%!w(<nil>)`.
+
+  * Fix `gdna` leaking a file descriptor for every summary report file fetched, and a new HTTP transport and its connections for every fetch from a licence daemon. One client is now shared by all fetches and is closed on a reload.
+
+  * Fix a licence daemon fetch panicking when the system certificate pool cannot be read and `gdna.licd-chain` is set.
+
+  * Fix the file sources being read again by every fetch after a database schema update, and the summary report of a file source that was added after its detail report not being read.
+
+  * Fix a report with a NULL in any column of its query or headlines failing, where it is now empty.
+
+  * Fix the `${report-name}` and `${report-group}` lookups being swapped, and the dataviews of a split report with a value containing a quote, such as `o'brien`, being created with a doubled quote in the name and so never removed.
+
+  * Fix a split report using the previous report for the values after one that failed to be prepared, and `gdna` using the reports in random order.
+
+  * Fix the `gdna pubkey` command ignoring the default private key file when `gdna.licd-private-key` is not set, and the Excel column widths of a report being set to zero if `xlsx.formats.min-width` and `max-width` are not set.
+
+  * Fix the database not being limited to a single connection, as the temporary tables and an in-memory database for `gdna report --adhoc` require, and the `filters` expansion prefix in queries being bound to whichever configuration was loaded last instead of the one in use.
+* `tools/dv2email`
+
+  * Fix filters that used `!match` for any pattern in a list, removing everything when there was more than one, and fix `column-filter` and `column-order` treating the row name column as data, which could panic or lose the first column.
+
+  * Fix the Information table showing the sampler type and name the wrong way round in the text output, the heading style covering one column too many in XLSX output, and XLSX sheet names that could split a UTF-8 character, clash after truncation or contain invalid characters.
+
+  * Fix `images` entries whose names contain a dot, such as `logo.png`, being ignored because the configuration split them into nested keys, and remove the message-wide `X-Attachment-Id` header that was set for each image.
+
+  * Fix template errors being ignored, which sent an empty body, errors that exited the program from inside the code, environment variables named `GATEWAY`, `EMAIL`, `FILES`, `TEXT` or `HTML` replacing whole configuration sections, `export` using the main command description, and a typo in the `_VARIABLEPATH` help text. Output is no longer ordered randomly when splitting by entity, and file write errors from `export` are reported.
+
+* `tools/files2dv`
+
+  * Fix columns with a `match` only being found in the first file, because the match counter was never reset, and `skip` (for example `types` and `ignore-file-errors`) still outputting a row. Fix `row-limit` stopping before the headlines were output, values in the `columns` and `values` form being expanded when the configuration was loaded, a panic for regular expression groups that did not take part in a match, and lines longer than 64KB silently ending the scan.
+
+  * Add the `${owner}` variable on Linux and `${path}` and `${user}` on Windows, as used by the sample configuration, check the errors from the Windows APIs, and correct the help text. The `push` command, which did nothing, now returns an error until it is implemented.
+
+* `tools/gateway-reporter`
+
+  * Fix the built-in defaults containing repeated keys (`toolkit-include` and `csvdir`), which caused all the defaults to be discarded without an error, so that no reports were written but the program exited with success. Internal defaults errors are now fatal.
+
+  * Fix the first error being lost or a random one returned when writing several formats, a `csvdir` or toolkit include failure being reported as success, and an input parsing error with `--prefix` writing empty reports. Fix a panic when a merged Gateway produced no XML, and an invalid setup that exited without a validation response in a hook.
+
+  * Fix CSV and ZIP errors being ignored, CSV headers having an extra `rowname` column or a different number of columns to the rows, XLSX column widths and merged heading cells, and the SQL Toolkit empty message replacing valid queries. Add a timeout to fetching remote setup files, close the response, and use a path for the hook log file that works on Windows.
+
+* `tools/san-config`
+
+  * Fix panics for a malformed inventory, an invalid inventory URL, a `grouping` expression without a capture group, a component alias loop and non-list `entities`, and recover from panics in the background refresh instead of stopping the server. Do not exit the process from a request handler.
+
+  * Fix `server --logfile`/`-L` being ignored, the misspelt `inventory.timeeout` default, the `user` and `pass` authentication examples (`username` and `password` are used, with the old names accepted), host names with upper case letters not being found, entities sharing and overwriting each other's variables, variables of the wrong numeric type being empty and unsupported ones being output, and the check-modified state for file inventories never matching.
+
+  * Fix `HTTP_PROXY` being ignored for plain HTTP inventories and idle connections being leaked on every reload, unbounded response bodies, the shared gateway list being sorted without a lock, gateways with no name or primary being checked, and `inventory.cache` never being used.
+
+* `tools/sso-diag`
+
+  * Fix LDAP connections never being closed, the user name not being escaped in the LDAP filter, a missing return after an authentication failure, a panic for a non-RSA key, and key version numbers above 255 being truncated. Handlers no longer exit the process, and the `--conf` file is now read. The new `--ldap-verify` option, or `ldap-verify: true` in `sso-diag.yaml`, verifies the LDAP server certificate, which is still not verified by default.
 
 * `tools/geneos`
 
@@ -199,6 +477,62 @@
 
     * Fix updates to existing profile members to import files before rebuilding and reloading the instance, with only one rebuild and reload per update. Configuration, certificate import, file import and rebuild errors are now returned to the caller rather than being ignored.
 
+    * Fix profile options being saved as strings, so that after `geneos set profile`, `geneos unset profile` or a rebuild `${option:insecure?8080:8443}` was no longer evaluated correctly and, for example, an insecure Web Dashboard server moved from port 8080 to 8443. Options keep their types, and options saved as strings by earlier versions (`"1"`, `"0"`, `"true"` and `"false"` for `insecure` and `minimal`) are read as booleans.
+
+    * Fix `geneos set profile` with `--type` or `--param` removing all the existing values, and `geneos unset profile` matching types and parameters by prefix.
+
+    * Fix `geneos add profile NAME` panicking.
+
+    * Fix the profile `template` setting of a component never being used, `geneos deploy profile` silently ignoring errors writing templates, and an unknown component type in a profile causing a panic.
+
+    * Fix the `health-gateway` profile include priorities `00500`, `01010`, `00510`, `01020` and `00520` being read as octal numbers. They are now the decimal 500, 1010, 510, 1020 and 520, in the same relative order.
+
+    * Fix the `logFilePath` variable in the `health-gateway` profile expanding to `/` instead of the path of the Gateway log file.
+
+    * Fix the SAN `ignore` setting in profile managed entities never matching, and ignoring every instance selecting all of them, and managed entities using the local host rather than the profile's host. Managed entities that are not generated with `for-each` now have their names, types, attributes and variables expanded.
+
+    * Fix `geneos deploy profile` and `geneos init` ignoring errors installing packages, creating directories and reading a password, and passing `--port` to every component of a profile.
+
+    * Fix the `select`, `replace` and `joinpath` profile expansions: they now match numbers and booleans, `select` can use parameters that have `-` in their name, `joinpath` uses the path conventions of the host, and `replace` no longer panics on an empty value. `PflagSetToMap` handles more flag types, and an empty gateway list no longer expands to an empty gateway. An invalid port in a profile is now reported rather than truncated.
+
+  * SAN and floating Netprobes
+
+    * Fix `geneos unset --gateway HOST` removing all gateways of a SAN or floating Netprobe instead of only those for that host (or the `HOST:PORT` given).
+
+    * Fix `geneos set` of a managed entity (`--type`, `--attribute` and `--variable` with `ENTITY/`) replacing the existing entities when it is not the first set, and new entities taking the place of existing ones after another was removed.
+
+    * Fix the TLS port rewrite of gateway connections never running for SAN and floating Netprobes.
+
+    * Fix `geneos add san`, `floating`, `gateway` and `netprobe-router` panicking when the `--template` file cannot be imported, and the directory `netprobe/sans` not being created for SANs.
+
+    * Fix a floating Netprobe never passing its start-up checks because of the path of its setup file, and the `Reload` of Gateways, SANs and floating Netprobes on Windows returning an error that was not recognised as unsupported.
+
+  * Components
+
+    * Fix the default ports of `netprobe-router` (4317) and `minimal` Netprobes (7036), the default `binary` of `fa2` and `profile` instances, and the default `config` file name of `ac2`.
+
+    * Fix the `HOSTNAME` for `ca3` and `netprobe-router` instances being that of the local host rather than the instance's host, and `sso-agent` and `webserver` TLS keys using the local host name as the alias for remote instances.
+
+    * Fix `sso-agent` rebuilds ignoring errors writing the keystore and adding TLS keys, and `webserver` rebuilds failing when `security.properties` has no `keyStore` or the truststore file does not exist.
+
+    * Fix `sso-agent` and `webserver` rebuilds replacing, and so wiping, an existing keystore or truststore that could not be read, for example because the password was wrong or the file was corrupt or truncated. Only a missing or empty file is now created new; any other failure is returned, naming the file and the reason, from `geneos rebuild`, `add`, `tls renew`, `tls migrate` and other commands that rebuild, and the file is left untouched. The keystore, truststore, `ssokey.pem` and `security.properties` files are replaced together through temporary files and renames, with the original files restored if an update fails part way, and entries in an existing keystore or truststore are now preserved. Fixes the self-signature of a generated `ssokey` certificate, errors reading `sso-agent.conf` or `security.properties` being ignored by `geneos tls migrate`, and `geneos add` ignoring errors from the first rebuild of a new instance.
+
+    * Fix the default `home` of `minimal` Netprobes naming `netprobe/netprobes` while instances have always been created in `netprobe/minimals`, and `geneos init` creating the unused `netprobe/netprobes` for them. The location of instances is unchanged; only the registered default and the directories created now match it.
+
+    * Fix `geneos add` for `ca3`, `netprobe-router`, `sso-agent`, `webserver` and `ac2` instances changing the working directory of the process, which does not work for remote hosts.
+
+    * Fix `geneos set` returning an error only some of the time for invalid parameters (such as `NAME` without a value), and `geneos add` dropping settings silently when one was invalid.
+
+    * Fix `geneos set --variable` panicking, or ignoring, variables with an invalid type or hand-edited, incomplete entries, and `--include` treating a URL or Windows path without a priority as a priority and path.
+
+    * Fix the `ctl` command emulation with an unknown component name running a different command, and the dropping of privileges on Unix systems where the group is now dropped before the user.
+
+  * `geneos includes`
+
+    * Fix `geneos includes extract` and `install` rewriting or backing up unchanged files over SSH because short reads were treated as differences, and returning success when an archive contains no include files. Include archives now have limits on the size of the files they contain.
+
+    * Fix `geneos includes fix` rewriting the whole Gateway setup file from the parsed setup, which dropped comments and unknown elements, changed the order and formatting of the setup, and lost the file's encoding declaration. Only the text of the changed include `location` elements is now edited, with every other byte of the file unchanged, and nothing is written if the file and the parsed setup disagree about the locations to change. History backups and the file mode are as before.
+
   * Packages
 
     * Fix `geneos package list --toolkit` reporting incorrect instance counts for each release.
@@ -219,6 +553,89 @@
 
   * Fix failed file imports to preserve the original destination file and restore it if the final replacement fails. Import errors are now returned when adding instances, and directory import errors are no longer ignored.
 
+  * Instances, hosts, packages and logs
+
+    * Fix `-H` with a host name that does not exist, or an instance name with an unknown host, being treated as all hosts or causing a panic.
+
+    * Fix `geneos init` replacing the user-wide root and signing certificates every time it was run.
+
+    * Fix `geneos init` losing the settings in an existing user configuration file other than strings, such as `download` and `audit` settings, and saving values that only came from the environment.
+
+    * Fix `geneos package list` panicking if a directory in a package directory is not a version, and `geneos package update` hiding the failure to find a release.
+
+    * Fix `geneos package install` of an archive for a different component silently installing nothing.
+
+    * Fix the audit settings for the size, age, number of backups and compression of audit logs being ignored, instance settings not falling back to the global ones, and an audit log file and its goroutines being created for every audit event.
+
+    * Fix `geneos stop` always recording success in the audit log, even when it failed.
+
+    * Fix instances on remote hosts not reading their templates from the remote host, and rewriting the configuration and reloading every time it was written.
+
+    * Fix the clean and purge lists, the port range and other settings with legacy names using the name of the setting as the value, so that for components with no list `clean` and `purge` removed a file named after the setting.
+
+    * Fix a failed `geneos add` removing the directory of an instance that existed before it was run, and ignoring errors from loading and rebuilding the new instance and from the values given, which were not applied.
+
+    * Fix finding the next free port: ports above 65534 wrapped around, an invalid port range could allocate port 65535, and white space in a list of ports ignored the entry.
+
+    * Fix `geneos stop` and `geneos status` treating failures to look up processes on a host, such as one that cannot be reached, as a running instance, and signalling PID 0.
+
+    * Fix `geneos copy` and `geneos move` of renamed instances not updating the paths in the configuration to the new `geneos` directory, and moving instances in a custom home directory to the standard location when their configuration was written.
+
+    * Fix following logs with `--match`, `--ignore` or `--no-headers` only applying to the lines output at the start, and a crash if a followed log file cannot be opened again after being replaced.
+
+    * Fix `geneos set` and other commands losing the `ResultText` of earlier steps, and the output of a command that returns a list of values being invalid JSON.
+
+    * Fix an instance that already exists being reported as successfully added by `instance.Add`.
+
+    * Fix certificate errors, such as a missing signing certificate, not being shown when adding an instance, as the errors of a single response were never written to standard error.
+
+    * Fix `geneos restore` of `.tar.bz2` archives, of the files of an instance if the first entry has no size, of instances of different types with the same name, and of an unrelated error being returned from the summary. Restore no longer rebuilds instances that already existed.
+
+    * Fix rolling certificate files that had no original file, which could not be rolled back after a later failure.
+
+    * Fix downloads authenticated with a body, where the second request, for a platform with no release, had no body, and response bodies that were not closed.
+
+    * Fix `geneos import` of `-` (STDIN) to the local host.
+
+    * Fix `geneos snapshot` clearing a password shared by other instances, and returning only the last of the errors for invalid paths.
+
+    * Fix the cost of looking for an instance directory on every use of its path, which is a round trip to the host for each one on a remote host. The directory is now remembered for each instance until it is loaded, unloaded, written, moved, copied or its `home` setting is changed.
+
+    * Fix `geneos` commands that match many instance names listing the instance directories of each host again for every name. They are now listed once, in name order, and an instance that is in both a legacy and the current directory is only listed once.
+
+    * Fix the templates and directories of a component only being initialised for the first host when more than one host is initialised in a single run, such as with `geneos deploy` to several hosts.
+
+    * Fix a data race in commands that process several instances at once, such as `geneos set`, `protect` and `unset`, on the loaded time and the configuration of the instances, which are shared between the goroutines, and which could cause a crash or a configuration to be read or written incorrectly.
+
+    * Remove the unused global `privatekeys` default; the SSH private keys of a host are set for each host with `geneos host add` and `geneos host set`.
+  * Commands
+
+    * Fix legacy commands such as `geneos add remote`, `delete host`, `show host` and `set user` losing their arguments, panicking or doing nothing.
+
+    * Fix `geneos host unset` changing every remote host when hosts were named, `geneos host add` with a URL without a host name, and `geneos host delete` succeeding for unknown hosts or when the configuration could not be saved.
+
+    * Fix `geneos backup` failing to create new output directories, writing messages into an archive sent to standard output (`-o -`), ignoring tar and close errors and reading whole files into memory.
+
+    * Fix `geneos set` writing secret variable values to the audit log.
+
+    * Fix `geneos init` exiting without running deferred work, duplicating profile parameters and passing the root directory to profiles, and `geneos deploy` using the old local host after creating the installation.
+
+    * Fix errors being lost, with a success status or no message, in `geneos import`, `reload`, `disable`, `snapshot`, `unset`, `logout`, `ps`, `revert` and `migrate -X`, and `geneos show --output` writing to standard output and leaving an empty file. `geneos unset` now reports every instance with nothing to unset and `geneos revert` removes both of its files.
+
+    * Fix `geneos migrate -X` replacing the saved original `ctl` script with a link when run twice.
+
+    * Fix `geneos aes set --crc` never using the CRC, `aes list --shared --json` and `aes encode` and `aes list` for remote hosts.
+
+    * Fix `geneos tls init` and `tls create --force` failing without `--keytype`, `tls create` reporting success when files could not be written, `tls migrate` and `tls renew` panicking for a webserver without `security.properties`, and `tls info` not reporting file errors, clearing a shared password and hanging on unreachable hosts.
+
+    * Fix `geneos tls list` using the root certificate's expiry and fingerprint for the signing certificate, the instance `remaining` in JSON output, the 30 day toolkit headline (which used 210 days) and reading the CA bundle for each certificate.
+
+    * Fix `geneos package uninstall` stopping and restarting the wrong instances, `package install --download` with an archive URL, `--override` errors being ignored and `package list` being slow with many instances.
+
+    * Fix `geneos adb clean` adding an empty `/sampler` and printing "Managed Entitys", `adb info` adding up totals across files, and `adb` panics on short or malformed lines and failing on colour values over 127 or long lines.
+
+    * Fix `geneos deploy`, `snapshot` and `package install` carrying on with an empty password when prompting for it failed for a reason other than not being interactive.
+
 * `integrations/servicenow2`
 
   * Client
@@ -237,6 +654,10 @@
 
   * Fix the proxy not logging the error for most failed requests, a panic in a request leaving no log and no response, and failing to start without any log if the ServiceNow URL, a TLS certificate or the listening address were not valid.
 
+  * Fix the values of an incident from a client being expanded when they were used in the search and in the response messages, which meant that a client that could send an incident could read the configuration, environment and files of the proxy, with values such as `${env:HOME}` or `${file:/etc/hostname}`. The values are now used as they are.
+
+  * Fix a `_cmdb_table` that was not given searching the root of the Table API instead of `cmdb_ci`, and one with a path in it reaching other tables.
+
 * `tools/ims-gateway`
 
   * Fix `GET` requests for ServiceNow records returning no data, or no error message, so that `geneos incident query` showed no incidents without an error.
@@ -245,7 +666,27 @@
 
   * Fix rejected requests, panics and errors not being logged, and the log not including the result of a request.
 
+  * ServiceDesk Plus
+
+    * Fix `input_data` of a create, update, note and search not being form encoded, so that a value with a `%` or `+`, such as `CPU 95%` or `C++`, was corrupted or rejected, and values with a `"` or `\` changing the JSON of the search. Values are now escaped as JSON strings and the form is encoded.
+
+    * Fix a `search` in the configuration that is a string and not a map having its `${correlation_id}` expanded to nothing before the request was added, so that it matched requests with no correlation.
+
+    * Fix the correlation ID that is made from `__incident_correlation` not being available to the `create` request, so that new requests had an empty correlation field and every later alert created another one, and an empty `correlation_id` being accepted.
+
+    * Fix field names that only differ in case not being found to be duplicates, the `__` fields being blank in the `create`, `edit_request` and `add_note` templates when a `transform` is configured, and the access token being refreshed by every request that found it had expired, which Zoho rate limits.
+
+    * Fix a saved token in the working directory being used in preference to the one that was saved, and the token file being created with permissions that other users could read.
+
+  * Fix a `GET` of ServiceDesk Plus expanding the `query` that the caller sent.
+
+  * Fix the ServiceNow client not being replaced when the `password` or `client-secret` of the configuration is changed by a reload.
+
+  * The ServiceDesk Plus access token is now only sent to the origin (scheme, host and port) of the API and never to another that a redirect points to, even if redirects were followed. Refreshes still use the token URL, which can be on another host.
+
 * `pkg/ims`
+
+  * Fix a `^` in a value from a request, such as the correlation ID or the configuration item, ending the condition in the ServiceNow encoded query that finds the existing incident, so that the rest of the value was read as further conditions or operators (`^OR`, `^NQ`). Values are now escaped with the new `snow.EscapeQuery`, which doubles the `^` as ServiceNow requires, in the proxy, the IMS Gateway and the `servicenow` client. This was checked against a live instance, and `CORDIAL_SNOW_LIVE` can be set to the path of a configuration file to run that test.
 
   * Action groups and transformations
 
@@ -257,6 +698,46 @@
 
   * Fix HTTP trace logging including credentials, and responses being written with a successful status and no body if the response was missing.
 
+  * Fix `ims.ProcessActionGroup` copying the configuration for every call, and relying on expansion prefixes that were set by another configuration. The `field`, `match`, `nomatch`, `replace` and `select` prefixes are now passed to each expansion.
+
+  * Fix a `snow` client for a `path` that ended in `/` or did not end in `table` requesting the wrong URL, and `snow.Client.Record` changing the options of its caller.
+
+  * Fix a transformation `rename` of a field to its own name deleting the field, and the result of renames that depend on each other depending on a random order.
+
+  * Add `ims.OriginOnly` and `ims.SameOriginRedirects` to keep OAuth tokens and credentials with the origin (scheme, host and port) they are for when a client is redirected, which the `snow` client now uses for its OAuth token. A redirect from `https` to `http` is refused for clients that use them.
+
+* `integrations/servicenow`
+
+  * Fix the router never authenticating to ServiceNow with a username and password, since the client was changed to have a timeout, and requests with a body having no `Content-Type`.
+
+  * Fix `GET /api/v1/incident` returning `null` with a status of 200 when ServiceNow reported an error or the response could not be read, and an update continuing after its body could not be encoded. The router now returns `502` and the error, and `[]` if there are no incidents.
+
+  * Fix the `incident` command waiting for ever for the router, the key of the router being compared in a way that could be timed, the `--debug` flag doing nothing, a table from a search such as `../sys_user:name=x` changing the path of a request, `incident-query` expanding the values of the request, and the trace including the `Authorization` header.
+
+  * Fix the OAuth token, username and password, and the router's API key, being sent to another origin that ServiceNow, or the router, redirected the request to, including the same host on another port. This also applies to the `incident` command. A redirect from `https` to `http` is now refused for these clients, which is a change of behaviour.
+
+* `integrations/pagerduty`
+
+  * Fix `payload.component` and `event.images` in the default configuration never being used, the routing key, and the environment if `send-env` is set, being written to the log when an event failed, a crash if `send-env` is set with no `details`, and the `timestamp` of an alert, which is in local time, being read as UTC. There is now a `timeout`, default 30 seconds, for requests to Pagerduty.
+
+  * Fix a redirect from the events API being followed and the event, which includes the routing key, being sent to wherever it pointed. Redirects are no longer followed and are reported as an error.
+
+* `libraries/libalert`
+
+  * Fix every function crashing the Gateway as the configuration was never created, `GoSendToMsTeamsChannel` always failing as the `_TO` check was inverted, and the templates failing as they were given a configuration and not the values.
+
+  * Fix webhooks after the first one being sent an empty message, response bodies not being left open, a function panicking in C when a template was not valid, and success being returned when no webhook accepted the message. Webhook URLs must now be `https` with a host that is entirely a Microsoft host, and `_TIMEOUT` is in milliseconds, as for `libemail`.
+
+  * Fix values from the alert, which are used in the formats and templates, being expanded as configuration, so that they could be used to read files and the environment of the Gateway.
+
+* `libraries/libemail`
+
+  * Fix `_TEMPLATE_TEXT_ONLY` being ignored by `GoSendToMsTeamsWorkflow`, `_RESUME_SUBJECT` and `_SUMMARY_SUBJECT` not being removed from the values for `SendMail`, and `_SMTP_PASSWORD` and `_SMTP_TLS_INSECURE` not being removed when `_DEBUG` is not set.
+
+  * Fix a number that is not valid, such as in `_SMTP_TIMEOUT`, being zero, which is no timeout, instead of the default, and `_SMTP_TLS_INSECURE` only being used with a user name.
+
+  * Fix webhook URLs only being matched at the start, so that a host such as `x.azure.com.example.com` was accepted, success being returned when no webhook accepted the message, and a panic in C. Webhook URLs must now be `https` with a host that is entirely a Microsoft host.
+
 * `pkg/rest`
 
   * Fix decoding of `text/plain` responses into `*string` and `*[]byte`, which did not return the text.
@@ -265,13 +746,167 @@
 
   * Fix the text of a `HTTPError` growing without limit with the body of the response.
 
+  * Fix `Auth` using the context passed to it for all later token refreshes, so cancelling it broke the client, a custom authentication header being sent to a different host by a redirect, and debug logging including the values of request bodies and queries.
+
+  * Fix the OAuth2 bearer token set up by `Auth`, and any `Authorization` or `Proxy-Authorization` header, being sent to a different host, port or scheme after a redirect, including from `https` to `http`. The token is now only added to requests to the same scheme, host and port as the base URL, and a redirect to anywhere else, which previously could expose it, no longer carries it or a custom authentication header.
+
+  * Add `Client.Send` for requests that are built by the caller, such as those with a streamed body.
+
+* `pkg/icp`
+
+  * Fix `Upload` always panicking, `Login` not keeping the token for it to use and the `Content-Type` header being misspelt. `Upload` now checks the response status like the other requests.
+
+  * Fix a panic in 13 requests, such as the `DataMart` requests, when no response was received, for example for a connection error.
+
+  * Fix `EntityMetaDataExport` changing the `ProjectID` of the request passed to it.
+
+* `pkg/reporter`
+
+  * Fix the `api` reporter returning no error when the Entity/Sampler does not exist, `APIMaxRows` keeping one row too many and IPv6 host names.
+
+  * Fix the XLSX reporter exiting the program on a conditional format error (it is now returned from `Render`), unknown columns in freeze panes or conditional formats skipping the later sheets, panics for sheets without a table and for empty or over-long rows, a duplicate first column showing the last row twice, integers with leading zeros or beyond 64 bits being changed and sheet names being truncated in the middle of a character.
+
+  * Fix scrambling changing the rows passed by the caller. Fix the first `Prepare` of a formatted reporter writing an unnamed entry to a ZIP archive, formatted reporters panicking on rows shorter than the columns, the Toolkit reporter quoting values with a double quote and giving headlines in a random order, and the `column` reporter writing the previous table again.
+
+* `pkg/email`
+
+  * Fix a failure to connect to a custom `_smtp_port` falling back to port 25 without TLS, and port 25 being changed to 587 when set. An invalid `_from` address is now an error.
+
+* `pkg/logger`
+
+  * Fix `RotateOnStart` and the log file being ignored when a `timberjack.Logger` was given with `SetLogfile`, `ResetEventID` not changing the ID of existing audit loggers, data races in `groupPrefix` handling and the time format being shared by all handlers, and a log attribute named `level` being dropped.
+
+  * Fix redaction of the closing single quote of a value, of unterminated quoted values, of escaped quotes in JSON and, in audit logs, of lists and errors.
+
 * `pkg/gwhub`
 
   * Fix `MetricsAggregations` always returning an empty result.
 
+* `pkg/certs`
+
+  * Fix certificates created by `CreateCertificate` all having the same `SubjectKeyId` (the hash of no data), and the caller's template being modified.
+
+  * Fix self-signed root certificates, as created by `WriteNewRootCert`, being signed with a different key to the one they contain, so that `root.CheckSignatureFrom(root)` and OpenSSL `-check_ss_sig` failed. Existing roots are still accepted.
+
+  * Fix `Verify`, `ParseCertChain` and `ParsePEM` only accepting certificates valid for server authentication, rejecting for example client-only certificates, and a panic in `ParsePEM` when there is no system certificate pool. `Verify` and `ParseCertChain` also no longer panic on `nil` certificates.
+
+  * Fix `DecodePEM` and `ParsePEM` silently ignoring expired and invalid certificates; `ParsePEM` now says which certificates were skipped, rather than only "no certificates found".
+
+  * Fix `UpdateCACertsFiles` modifying the slice of certificates passed to it, and `WriteCertificatesTo` returning only the number of bytes written for the last certificate.
+
+  * Fix `ReadCertPool` returning an empty pool, rather than `nil`, if the file cannot be read.
+
+  * Fix `AddCertChainToKeyStore` and `AddRootsToTrustStore` replacing an existing keystore that could not be read, for example because of a wrong password, with an empty one. Only a missing or empty file is now created, other errors are returned. `AddCertChainToKeyStore` also no longer ignores a failure to add the key.
+
+  * Fix `ChangePassword` not using the default password for private keys and silently leaving keys unchanged when they could not be decrypted, resulting in a keystore that could not be used. It is now an error, and the existing file permissions are kept.
+
+  * Fix `WriteKeystore` truncating the existing file while writing. The keystore is now written to a temporary file and renamed over the original.
+  * Fix `ParseDuration` losing precision (it used 32-bit floats) and `EntityMetricsData` always sending `limit=0`.
+
 * `pkg/host`
 
   * Fix `CopyAll` silently ignoring directory walk errors when copying from a remote host.
+
+* `pkg/config`
+
+  * Fix `Prefix` and `ExternalLookups` options, and a `Prefix("file", ...)` replacing the built-in, leaking into every later expansion of every `Config`, along with unlocked writes to a shared map. Options now only apply to the `Config` or call they are given to; `DefaultExpandOptions` and `SetDefaultExpandOptions` now use the lock of the `Config`.
+
+  * Fix `${~/file}` never reading the file, the built-in `${expr:...}` never evaluating, `Loop` with a value less than 1 returning an empty string (it now means no nested expansion), `NoDecode` with `[]byte` and `Secret` returning an empty string, and `InitialValue` not being expanded when the key is not set.
+
+  * Fix the expansion of `${enc:keyfile:config:KEY}`, `${enc:keyfile:env:NAME}` and `${enc:keyfile:file:PATH}`, as documented, which used the wrong part of the string as the keyfile.
+
+  * Fix `DefaultsFrom` values taking precedence over embedded defaults and defaults files, and `UseDefaults(false)` still using embedded defaults. `Read` now always returns a `Config`, even with an error, and `Read(..., UseGlobal())` now sets the `ConfigType`. `WatchConfig` now works with `FilePath`. `Read` no longer fails to set the format when the user configuration directory cannot be found.
+
+  * Fix `ExpandOnSave` converting every value to a string, and sharing the same setting as `SetDefaultExpandOptions`. Fix `Write` failing for files with no extension, leaving a temporary file after a failed write, not using the key delimiter of the `Config` being written, and applying `WithDefaults` and `WithEnvs` options given to `Write` to the output. `IgnoreKeys` now matches ignoring case and also ignores everything below a key.
+
+  * Fix setting maps with mixed case keys losing values, `Set` with a list modifying the caller's slice, `Replace` panicking or replacing text in the wrong places, `Sub` of a missing key using the wrong key delimiter, `UnmarshalKey` modifying the caller's options, named string types causing a panic when decoding, the default expand options of a `Config` being ignored when decoding, `PromoteFrom` saving decoded secrets and changing the configuration while only holding a read lock, and deleted map keys being returned from `Get` of a map.
+
+  * Fix `WithEnvs` with an empty delimiter, `MigrateFile` never migrating to a new path that does not exist, `AbbreviateHome` matching a directory name that only starts with the home directory, and a data race on the global `Config` when using `Join`, `AppConfigDir` and `ResetConfig`.
+
+  * Fix `ReadOrCreate` for keyfiles reporting success for a keyfile that cannot be read or is corrupt, and `CreateWithBackup` with no backup not overwriting an existing file. Fix `Decode` ignoring invalid hexadecimal and only checking the last padding byte, which could return the wrong plaintext for a wrong key.
+
+  * Fix `ReadPEM` panicking when a URL cannot be fetched. Requests for URLs now time out after 30 seconds and error responses are closed.
+
+  * Fix `FindCreds` to match patterns as documented as well as plain domains, and the default key delimiter for credentials being impossible to override.
+
+  * Fix `MergeHOCONConfig` failing to load values containing a backslash.
+
+  * `ReadPasswordInput` now writes prompts to STDERR and clears all passwords not returned. `ReadPEM` prompts are also written to STDERR.
+  * Fix `pkg/host` not building for macOS, FreeBSD and 32-bit Linux, by moving the Linux-only CPU affinity, resource limit and `Lchtimes` code into Linux files, with stubs for other platforms where CPU affinity is ignored.
+
+  * Fix `CopyAll` doing nothing, with no error, when the source host was not a `*SSHRemote` or `*Local` itself, such as the wrapper in the `geneos` command, and `CopyFile` truncating a file that was copied onto itself.
+
+  * Fix `SSHRemote` opening a new connection for each of a number of concurrent callers and leaking all but one, returning a closed connection for ever, and data races on the failure state. The SSH agent connection is now closed once authenticated, IPv6 addresses work, `~/` in private key files is expanded, and `OS` detects Windows servers.
+
+  * Fix remote `Mkdir` and `MkdirAll` ignoring the permissions, `RemoveAll` ignoring errors and being slow for large trees, `GetFs` returning `nil` if the host could not be reached, `Create` returning a file with an error, and `WriteFile` and `CopyFile` ignoring errors from closing the file.
+
+  * Fix remote `Start`, `Run` and `Uname` carrying on when the remote is Windows, `Run` ignoring `cmd.Env` and `Signal` reporting a permission failure as a process that has already exited, and `Signal` with a PID of zero or less.
+
+  * Fix remote `WalkDir` stopping the whole walk for `fs.SkipDir`, not supporting `fs.SkipAll` and reporting errors differently from a local host.
+
+  * Fix local `Start` and `Run` leaving the thread pinned to the requested CPUs if the program failed to start, or for `Run`, discarding any `ExtraFiles`, overwriting the start of an existing error file and, if running as another user with no error file, changing the ownership of `/dev/null`. `Local.Signal` now checks for an error finding the process and `GetFileOwner` no longer panics if the file has no system details.
+
+* `pkg/process`
+
+  * Fix `OpenFiles`, `SocketToConn` and `AllTCPListenPorts` leaking a file for each call and reading the connection tables again for each socket, decoding IPv6 addresses wrongly (`::1` as `0:1::`), panicking on a short line and `AllTCPListenPorts` stopping at the first row that was not listening. `SocketToConn` returns no connection, rather than an empty one, if there is none, and `OpenFiles` sets `Lstat` for sockets and pipes.
+
+  * Fix the process information for a process whose executable cannot be read, such as that of another user, not including the command line, working directory, UID, GID, user name and group name, and the command name in `/proc/PID/stat` containing `) ` being split wrongly.
+
+  * Fix the process cache expiring all types of entry together, `ClearCache` and lazy fields being racy, `GetProcessInfo` returning a pointer to the cached entry and a panic setting a `*time.Time` `StartTime`.
+
+  * Fix two processes being able to hold the same PID file when one opens the file as another removes it on exit, and `LockPIDFile` failing while the status of the file was being checked.
+
+  * Fix `Start` failing for any user that was not root, never finding the PID of the process, panicking for a user that is not in the user database, and returning no done channel from `Batch`. `RemoveArgs` and `Daemon` no longer change `os.Args`.
+* `Build and release`
+
+  * Fix the generated command documentation being named after the documentation program: `san-config` pages were `docs.md` and `docs_server.md`, and the `geneos`, `gdna` and `gateway-reporter` pages referred to files such as `docs.json` and `docs.log`. The documentation is regenerated.
+
+  * Fix the "Commands" table in generated documentation having no header, or a header part-way down the table, when the first sub-command has its own sub-commands, and a panic generating documentation for a link with a blank target.
+
+  * Fix the Dockerfile setting `DEBIANFRONTEND` instead of `DEBIAN_FRONTEND` for the `gdna` image, and use a signing key file instead of `apt-key`, which is removed from newer Debian releases, to add the Chrome package repository for building PDF documentation.
+
+  * Add a `.dockerignore` so local binaries, archives, release directories and `.git` are not sent to the Docker builds; remove the release `Makefile` steps for `servicenow`, `pagerduty` and `san-config`, which are not built, and the `clean` step that matched a label that was never set. Remove stale `.gitignore` entries, and stop tracking the generated `libalert.h`, which `make clean` deleted.
+
+  * Update `go-pretty` to v6.9.2, `echo` to v4.16.5 and `golang.org/x/net` to v0.63.0.
+* `pkg/geneos`
+
+  * Gateway setup files
+
+    * Fix reading and then writing a Gateway setup, as `geneos includes fix` does, losing data and writing invalid XML. The `xmlns:xsi` and `xsi:noNamespaceSchemaLocation` attributes were written empty, and unknown attributes and any elements that are not modelled, at any level, including in plugins and process descriptors, were dropped; they are now kept. Empty elements for fields that were not set, such as the `contexts`, `activeTimes`, `pathVariables` and `pathAliases` of a rule, the `additions` of a dataview and the `var-columns` and `var-rows` in them, were written for every parent with an omitted field; these are no longer written. Empty elements in the input that the model leaves out, such as `<headlines/>`, are kept, see below.
+
+    * Fix reading and then writing a Gateway setup moving the elements that are not modelled to the end of their parent, as `encoding/xml` writes the `Other` fields last, which changes a document where the order of sibling elements matters. `ReadGateway` now remembers the order of the child elements of every element and `WriteGateway`, and the new `Gateway.MarshalOrdered`, write differently named siblings in that order again, including those whose order the model would change, with elements that were added placed after the sibling before them and siblings with the same name following the model. Use `Gateway.PreserveOrderOf` or `WithGatewayOrderFrom` to give a Gateway that was not read, such as a copy, the order of another, and `WithGatewayOrderWarning` to be told if the order could not be restored.
+
+    * Fix reading and then writing a Gateway setup still changing it, so that, for the real setup and include files that could be found, every element, attribute, text and comment is now written back in the same order. The model had no field for many older forms or wrote them differently: empty elements (`<gatewayName/>`, `<headlines/>`, `<groups/>`, `<history/>`, `<idAttributes/>`) and attributes (such as `disabled` on a group, now in the new `OtherAttributes` fields of nearly all types) were dropped, `<parameter>` in the process parameters of the `processes` and `top` plugins lost its text, elements inside the `data` of a value, such as the `keys` of an FKM key table, and text without a `data` element, were lost, the dataview additions `headlines`, `columns` and `rows`, numbers such as `1000000.0`, and the elements of the `hardware`, `fix-analyser2` and some Gateway plugins that have no field were changed or lost, and elements with no value were made up, such as `name=""` and `ref=""` attributes, an empty `connection` for `jmx-server` and `sql-toolkit`, and `parameters` for `api`. The model is fixed where that can be done. For everything else `ReadGateway` now also remembers the elements that the model does not write as it read them, the XML declaration and comments, and `WriteGateway` and `MarshalOrdered` write the original of such an element if the program has not changed it, put back empty elements, and write elements that the model has no place for at all, such as a section of the setup that the model does not write, and the comments, in their place. The `Parameter` type of the `processes` plugin has a `Name` that is the text of the element, and no `Value`. See Limitations in the `pkg/geneos` README for what is still not kept when an element that cannot be modelled is changed.
+
+    * Fix edits to `Gateway.ProcessDescriptors` being lost when writing a Gateway read from a file, and the `StaticVars` of the caller being modified by writing.
+
+    * Fix the rows in dataview additions, `<var-rows><data><row>`, being lost; the `sql-toolkit` password in `stdAES` or `extPwd` form being lost; the interface of a Sybase connection being lost; a `messageTimestamp` in a state tracker, and the `alias` of an FKM file with variables and text, being truncated; and `stringList` and `nameValueList` variables not being read from XML.
+
+    * Fix reading a Gateway from a Windows path such as `C:\gateway\setup.xml`, or any path that looks like a URL scheme, being rejected.
+
+  * Fix `UnrollProbes` and `UnrollEntities` panicking for any probe or entity in a group, and not inheriting integer and string settings such as `Port` from groups, `UnrollRules` using the wrong keys for rules in nested groups, and `GetPlugin` returning the comment instead of `nil`.
+
+  * Fix `fkm.Keys.Append` changing other Keys appended to the same value, the `Network` plugin having the YAML name of `Hardware`, `common.Host.String` for a variable, and `common.Value.String` for no data.
+
+  * `xpath`
+
+    * Fix `Match` for an entity filter with only attributes, a sampler filter with only a type, and for names containing `/`, such as the rows of a `DISK` dataview, where `*` and `?` now match `/`. A sampler with no type no longer matches a type filter other than a wildcard.
+
+    * Fix `Parse(x.String())` failing for names containing `/`, quotes and other special characters, and paths ending in `/rows` or `/headlines` losing that when formatted. Fix `UnmarshalJSON` failing for JSON `null` and for the empty XPath, and changing the value on error. `ResolveTo` now returns an XPath that shares nothing with the original.
+
+  * `api`, `xmlrpc` and `commands`
+
+    * Fix `api.XMLRPCClient` swapping the group and view names for `CreateDataview` and `DeleteDataview`, sending the two parameters of `createView`, `removeView`, `updateVariable`, `updateHeadline` and `updateTableCell` as a single array, sending the view name for `ColumnExists`, and accepting `SignOn` with 0 seconds. `NewDataview` now passes the separate group and view names, and no longer panics for not setting the client. `Dataview.UpdateTableFrom...` could not be used as the columns, column names and sort column were never set, so add `SetColumns` and return their errors. Columns marked `OMIT` no longer cause the wrong sort column or a panic, and `RESTClient` methods that are not implemented return `errors.ErrUnsupported` instead of `nil`.
+
+    * Fix `xmlrpc.Sampler.SignOff` calling `signOn`, `RowExists`, `ColumnExists` and `HeadlineExists` always returning false, `NewDataview` ignoring the error from updating the table, and a fault with a single member causing a panic. `xmlrpc.NewClient` no longer starts a goroutine and ticker that were never stopped.
+
+    * Fix `commands.Connection.RunCommandAll`, and so `SampleNow`, `SnoozeManual` and `Unsnooze`, reporting success when commands failed; the errors for all targets are now returned together. Fix all the `MimeType` entries but the last being lost, a new connection pool being left behind by every call, `DialGateways` reordering the slice passed to it and `Snapshot` ignoring `rowname` and panicking for a target that is not a dataview.
+
+  * Fix `samplers.Samplers.Start` panicking for a zero interval, and the same `OMIT` sort column and panics as in `api` for the rows built from structs.
+
+* `cordial`
+
+  * Fix `ExecutableName` returning `.` when symbolic links cannot be resolved, as `ExecutablePath` falls back, and the cached values not being safe for concurrent use.
 
 ---
 

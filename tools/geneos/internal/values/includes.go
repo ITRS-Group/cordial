@@ -19,6 +19,8 @@ package values
 
 import (
 	"log/slog"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -32,34 +34,40 @@ const IncludeValuesOptionsText = "An include file in the format `PRIORITY:[PATH|
 
 // String is the string method for the IncludeValues type
 func (i *Includes) String() string {
-	if *i == nil {
+	if i == nil || *i == nil {
 		return ""
 	}
 	var parts []string
-	for k, v := range *i {
-		parts = append(parts, k+":"+v)
+	for _, k := range slices.Sorted(maps.Keys(*i)) {
+		parts = append(parts, k+":"+(*i)[k])
 	}
 	return strings.Join(parts, ",")
 }
 
-// Set TODO: Document its behavior, inputs, and effects.
+// defaultIncludePriority is used when an include has no PRIORITY: prefix.
+const defaultIncludePriority = "100"
+
+// Set parses an include in the format [PRIORITY:]PATH|URL. The prefix
+// is only taken as a priority if it is a number, so that bare URLs
+// (`https://...`) and Windows paths (`C:\...`) use the default priority
+// and are kept whole.
 func (i *Includes) Set(value string) error {
 	if *i == nil {
 		*i = Includes{}
 	}
-	a, b, found := strings.Cut(value, ":")
-
-	priority := "100"
-	path := a
-	if found {
-		priority = a
-		path = b
+	priority, path := defaultIncludePriority, value
+	if a, b, found := strings.Cut(value, ":"); found && isPriority(a) {
+		priority, path = a, b
 	} else {
-		// XXX check two values and first is a number
-		log.Debug("second value missing after ':', using default", slog.String("priority", priority))
+		log.Debug("no numeric priority found, using default", slog.String("priority", priority), slog.String("include", value))
 	}
 	(*i)[priority] = path
 	return nil
+}
+
+// isPriority returns true if s is a non-empty string of decimal digits.
+func isPriority(s string) bool {
+	return s != "" && !strings.ContainsFunc(s, func(r rune) bool { return r < '0' || r > '9' })
 }
 
 // Type TODO: Document its behavior, inputs, and effects.

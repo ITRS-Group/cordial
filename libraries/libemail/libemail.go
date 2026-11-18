@@ -20,15 +20,17 @@ package main
 import "C"
 import (
 	"bytes"
+	"context"
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	htmltemplate "html/template"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -60,14 +62,58 @@ var logo []byte
 
 const msTeamsMessageCard = "MessageCard"
 const geneosThemecolor = "#46e1d7"
+
 // DefaultMsTeamsTimeout TODO: Describe its purpose and intended use.
 const DefaultMsTeamsTimeout = 2000
 
-var webhookValidators []string = []string{
-	`^https:\/\/(.+\.webhook|outlook)\.office(365)?\.com`,
-	`^https:\/\/.+\.azure\.com`,
+// webhookHostValidators are the patterns that the whole of the host of a
+// webhook URL must match, one of
+var webhookHostValidators = []*regexp.Regexp{
+	regexp.MustCompile(`^(.+\.webhook|outlook)\.office(365)?\.com$`),
+	regexp.MustCompile(`^.+\.azure\.com$`),
 	// New Power Platform / Power Automate Workflow
-	`^https:\/\/.+\.environment\.api\.powerplatform\.com(:443)?`,
+	regexp.MustCompile(`^.+\.environment\.api\.powerplatform\.com$`),
+}
+
+// validWebhook returns true if s is the URL of a Microsoft Teams webhook
+// or Workflow, which must be HTTPS, with a host that is entirely one of
+// those that Microsoft use, and without credentials in the URL that can
+// be used to make the host look like something else
+func validWebhook(s string) bool {
+	u, err := url.Parse(s)
+	if err != nil || u.Scheme != "https" || u.User != nil {
+		return false
+	}
+	if p := u.Port(); p != "" && p != "443" {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	return slices.ContainsFunc(webhookHostValidators, func(r *regexp.Regexp) bool { return r.MatchString(host) })
+}
+
+// webhookValid is the check of the URL of each webhook, which tests can
+// replace to send to a server of their own
+var webhookValid = validWebhook
+
+// webhookClient returns the client to send to webhooks, which tests can
+// replace
+var webhookClient = func(timeout time.Duration) *http.Client {
+	return &http.Client{Timeout: timeout}
+}
+
+// protect runs f, which is the body of an exported function, and returns
+// its result, or 1 if it panics. Every exported function must use it, as
+// a panic that crosses into C ends the program that has loaded the
+// library, which is the Geneos Gateway. The panic is logged and the
+// failure code returned instead.
+func protect(name string, f func() int) (rc int) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("ERR: %s: unexpected failure: %v", name, r)
+			rc = 1
+		}
+	}()
+	return f()
 }
 
 type msTeamsBasicTextNotifPostData struct {
@@ -87,8 +133,10 @@ type msTeamsBasicTextNotifPostData struct {
 
 //export SendMail
 func SendMail(n C.int, args **C.char) C.int {
-	conf := parseArgs(n, args)
+	return C.int(protect("SendMail", func() int { return sendMail(parseArgs(goArgs(n, args))) }))
+}
 
+func sendMail(conf EMailConfig) int {
 	d, err := dialServer(conf)
 	if err != nil {
 		log.Println(err)
@@ -145,7 +193,7 @@ func SendMail(n C.int, args **C.char) C.int {
 
 	if !debug(conf) {
 		keys := []string{"_FORMAT", "_ALERT_FORMAT", "_CLEAR_FORMAT", "_SUSPEND_FORMAT", "_RESUME_FORMAT", "_SUMMARY_FORMAT",
-			"_SUBJECT", "_ALERT_SUBJECT", "_CLEAR_SUBJECT", "_SUSPEND_SUBJECT", "_RESUME_TEMPLATE", "_SUMMARY_TEMPLATE",
+			"_SUBJECT", "_ALERT_SUBJECT", "_CLEAR_SUBJECT", "_SUSPEND_SUBJECT", "_RESUME_SUBJECT", "_SUMMARY_SUBJECT",
 		}
 		for _, key := range keys {
 			delete(conf, key)
@@ -179,8 +227,10 @@ func replArgs(format string, conf EMailConfig) string {
 
 //export GoSendMail
 func GoSendMail(n C.int, args **C.char) C.int {
-	conf := parseArgs(n, args)
+	return C.int(protect("GoSendMail", func() int { return goSendMail(parseArgs(goArgs(n, args))) }))
+}
 
+func goSendMail(conf EMailConfig) int {
 	d, err := dialServer(conf)
 	if err != nil {
 		log.Println(err)
@@ -292,8 +342,10 @@ func GoSendMail(n C.int, args **C.char) C.int {
 		if logopath, ok := conf["_TEMPLATE_LOGO_FILE"]; ok {
 			logofile, err := os.Open(logopath)
 			if err != nil {
+				log.Println(err)
 				return 1
 			}
+			defer logofile.Close()
 			m.EmbedReader("logo.png", logofile)
 		} else {
 			// use var path and a default of the embedded logo
@@ -357,40 +409,28 @@ type cardElement struct {
 
 //export GoSendToMsTeamsWorkflow
 func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
-	var msTeamsWebhooksValidity = make(map[string]bool)
-	var clientTimeout time.Duration
+	return C.int(protect("GoSendToMsTeamsWorkflow", func() int { return goSendToMsTeamsWorkflow(parseArgs(goArgs(n, args))) }))
+}
 
-	conf := parseArgs(n, args)
-
+func goSendToMsTeamsWorkflow(conf EMailConfig) int {
 	if _, ok := conf["_TO"]; !ok || len(conf["_TO"]) == 0 {
 		log.Println("ERR: No MsTeams Workflow URLs defined.")
 		return 1
 	}
 
-	msTeamsWebhooks := strings.Split(conf["_TO"], "|")
-	validityCount := 0
-
-	var regexes []*regexp.Regexp
-	for _, r := range webhookValidators {
-		regexes = append(regexes, regexp.MustCompile(r))
-	}
-
-	for _, s := range msTeamsWebhooks {
+	var webhooks []string
+	for s := range strings.SplitSeq(conf["_TO"], "|") {
 		trimmedAddr := strings.TrimSpace(s)
-		isValid := false
-		for _, r := range regexes {
-			if r.MatchString(trimmedAddr) {
-				isValid = true
-				break
+		if webhookValid(trimmedAddr) {
+			if !slices.Contains(webhooks, trimmedAddr) {
+				webhooks = append(webhooks, trimmedAddr)
 			}
-		}
-		msTeamsWebhooksValidity[trimmedAddr] = isValid
-		if isValid {
-			validityCount++
+		} else {
+			log.Printf("WARN: msTeams webhook (%s) is not valid. Ignoring it.", trimmedAddr)
 		}
 	}
 
-	if validityCount == 0 {
+	if len(webhooks) == 0 {
 		log.Println("ERR: No valid msTeams webhooks defined in _TO. Abort GoSendToMsTeamsChannel()")
 		return 1
 	}
@@ -433,7 +473,7 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 	var body string
 	var err error
 
-	_, textOnly = conf["TEMPLATE_TEXT_ONLY"]
+	_, textOnly = conf["_TEMPLATE_TEXT_ONLY"]
 
 	if val, ok := conf["_TEMPLATE_HTML_FILE"]; ok && len(val) != 0 {
 		useHtmlTmpl = true
@@ -489,10 +529,10 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 		Attachments []struct {
 			ContentType string `json:"contentType"`
 			Content     struct {
-				Schema  string                   `json:"$schema"`
-				Type    string                   `json:"type"`
-				Version string                   `json:"version"`
-				Body    []map[string]interface{} `json:"body"`
+				Schema  string           `json:"$schema"`
+				Type    string           `json:"type"`
+				Version string           `json:"version"`
+				Body    []map[string]any `json:"body"`
 			} `json:"content"`
 		} `json:"attachments"`
 	}
@@ -501,10 +541,10 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 	payload.Attachments = make([]struct {
 		ContentType string `json:"contentType"`
 		Content     struct {
-			Schema  string                   `json:"$schema"`
-			Type    string                   `json:"type"`
-			Version string                   `json:"version"`
-			Body    []map[string]interface{} `json:"body"`
+			Schema  string           `json:"$schema"`
+			Type    string           `json:"type"`
+			Version string           `json:"version"`
+			Body    []map[string]any `json:"body"`
 		} `json:"content"`
 	}, 1)
 
@@ -513,7 +553,7 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 	payload.Attachments[0].Content.Type = "AdaptiveCard"
 	payload.Attachments[0].Content.Version = "1.5"
 
-	headerBlock := map[string]interface{}{
+	headerBlock := map[string]any{
 		"type":   "TextBlock",
 		"text":   header,
 		"weight": "Bolder",
@@ -521,24 +561,24 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 		"wrap":   true,
 	}
 
-	var bodyBlocks []map[string]interface{}
+	var bodyBlocks []map[string]any
 	trimmedBody := strings.TrimSpace(body)
 
 	if strings.HasPrefix(trimmedBody, "[") && strings.HasSuffix(trimmedBody, "]") {
 		err := json.Unmarshal([]byte(trimmedBody), &bodyBlocks)
 		if err != nil {
 			log.Printf("WARN: Template looked like JSON but failed to parse: %v. Using as plain text.", err)
-			bodyBlocks = []map[string]interface{}{
+			bodyBlocks = []map[string]any{
 				{"type": "TextBlock", "text": body, "wrap": true},
 			}
 		}
 	} else {
-		bodyBlocks = []map[string]interface{}{
+		bodyBlocks = []map[string]any{
 			{"type": "TextBlock", "text": body, "wrap": true},
 		}
 	}
 
-	payload.Attachments[0].Content.Body = append([]map[string]interface{}{headerBlock}, bodyBlocks...)
+	payload.Attachments[0].Content.Body = append([]map[string]any{headerBlock}, bodyBlocks...)
 
 	jsonValue, err := json.Marshal(payload)
 	if err != nil {
@@ -546,31 +586,45 @@ func GoSendToMsTeamsWorkflow(n C.int, args **C.char) C.int {
 		return 1
 	}
 
-	timeoutStr := getWithDefault("_TIMEOUT", conf, fmt.Sprintf("%d", DefaultMsTeamsTimeout))
-	if timeout, err := strconv.Atoi(timeoutStr); err != nil {
-		clientTimeout = DefaultMsTeamsTimeout * time.Millisecond
-	} else {
-		clientTimeout = time.Duration(timeout) * time.Millisecond
+	timeoutStr := getWithDefault("_TIMEOUT", conf, strconv.Itoa(DefaultMsTeamsTimeout))
+	timeout, err := strconv.Atoi(timeoutStr)
+	if err != nil || timeout <= 0 {
+		timeout = DefaultMsTeamsTimeout
 	}
 
-	client := &http.Client{Timeout: clientTimeout}
-	for url, isValid := range msTeamsWebhooksValidity {
-		if isValid {
-			request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
-			if err != nil {
-				log.Printf("ERR: Request creation failed for %s: %v", url, err)
-				continue
-			}
-			request.Header.Set("Content-Type", "application/json")
-			resp, err := client.Do(request)
-			if err != nil {
-				log.Printf("ERR: HTTP POST to Workflow failed (target %s): %v", url, err)
-			} else {
-				log.Printf("INFO: Message sent to Workflow %s, status %d\n", url, resp.StatusCode)
-				resp.Body.Close()
-			}
-		}
+	if sent := postWebhooks(webhookClient(time.Duration(timeout)*time.Millisecond), webhooks, jsonValue); sent == 0 {
+		log.Println("ERR: GoSendToMsTeamsWorkflow() failed to send to any Workflow.")
+		return 1
 	}
 	log.Println("INFO: GoSendToMsTeamsChannel() (Workflow) completed.")
 	return 0
+}
+
+// postWebhooks posts the JSON to each of the webhooks and returns how
+// many accepted it, which is the number that returned a successful
+// status
+func postWebhooks(client *http.Client, webhooks []string, jsonValue []byte) (sent int) {
+	for _, webhook := range webhooks {
+		// each request has its own body
+		request, err := http.NewRequestWithContext(context.Background(), http.MethodPost, webhook, bytes.NewReader(jsonValue))
+		if err != nil {
+			log.Printf("ERR: Request creation failed for %s: %v", webhook, err)
+			continue
+		}
+		request.Header.Set("Content-Type", "application/json")
+		resp, err := client.Do(request)
+		if err != nil {
+			log.Printf("ERR: HTTP POST to Workflow failed (target %s): %v", webhook, err)
+			continue
+		}
+		_, _ = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode > 299 {
+			log.Printf("ERR: Workflow (target %s) did not accept the message, status %d", webhook, resp.StatusCode)
+			continue
+		}
+		log.Printf("INFO: Message sent to Workflow %s, status %d\n", webhook, resp.StatusCode)
+		sent++
+	}
+	return
 }

@@ -2,6 +2,7 @@ package icp
 
 import (
 	"errors"
+	"slices"
 
 	"github.com/itrs-group/cordial/pkg/rest"
 )
@@ -17,11 +18,16 @@ type ICP struct {
 // underlying HTTP response
 var ErrServerError = errors.New("error from server (HTTP status > 299)")
 
-// New returns a new ICP object. BaseURL defaults to
-// "https://icp-api.itrsgroup.com/v2.0" and client, if nil, to a default
-// http.Client
+// DefaultBaseURL is the base URL of the ICP API used by [New] unless it
+// is overridden by an option.
+const DefaultBaseURL = "https://icp-api.itrsgroup.com/v2.0"
+
+// New returns a new ICP object. BaseURL defaults to [DefaultBaseURL]
+// and client, if nil, to a default http.Client. Options are applied
+// after the default base URL, so a [rest.BaseURLString] or
+// [rest.BaseURL] option overrides it.
 func New(options ...rest.Option) (icp *ICP) {
 	return &ICP{
-		Client: rest.NewClient(options...),
+		Client: rest.NewClient(slices.Concat([]rest.Option{rest.BaseURLString(DefaultBaseURL)}, options)...),
 	}
 }

@@ -19,7 +19,6 @@ package minimal
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -50,7 +49,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "7036,7100-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"*.snooze",
 			"*.user_assignment",
@@ -82,12 +81,12 @@ var Component = geneos.Component{
 	},
 	Defaults: []string{
 		`binary=netprobe.{{ .os }}_64{{if eq .os "windows"}}.exe{{end}}`,
-		`home={{join .root "netprobe" "netprobes" .name}}`,
+		`home={{join .root "netprobe" "` + name + `s" .name}}`,
 		`install={{join .root "packages" "` + name + `"}}`,
 		`version=active_prod`,
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=` + name + `.log`,
-		`port=7030`,
+		`port=7036`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}:{{join "${config:install}" "${config:version}"}}`,
 		`autostart=true`,
 	},
@@ -95,7 +94,7 @@ var Component = geneos.Component{
 	Directories: []string{
 		path.Join("packages", name),
 		path.Join("netprobe", "shared"),
-		path.Join("netprobe", "netprobes"),
+		path.Join("netprobe", name+"s"),
 	},
 	SharedDirectories: []string{
 		path.Join("netprobe", "netprobes_shared"),
@@ -193,7 +192,8 @@ func (i *Minimal) Unload() (err error) {
 		return
 	}
 	minimals.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return
 }
 
@@ -202,7 +202,7 @@ func (i *Minimal) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -210,7 +210,7 @@ func (i *Minimal) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -218,7 +218,7 @@ func (i *Minimal) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -226,7 +226,7 @@ func (i *Minimal) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add TODO: Document its behavior, inputs, and effects.
@@ -252,7 +252,7 @@ func (i *Minimal) Add(options ...any) (err error) {
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
 	// default config XML etc.

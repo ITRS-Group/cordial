@@ -19,10 +19,10 @@ package cmd
 
 import (
 	"bytes"
+	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 
 	"github.com/itrs-group/cordial/pkg/host"
@@ -40,7 +40,7 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 		return
 	}
 	if st.IsDir() {
-		gatewayPath = path.Join(install, gatewayBinary)
+		gatewayPath = filepath.Join(install, gatewayBinary)
 	} else {
 		gatewayPath = install
 		install = filepath.Dir(install)
@@ -48,7 +48,7 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 	cmd := exec.Command(
 		gatewayPath,
 		"-resources-dir",
-		path.Join(install, "resources"),
+		filepath.Join(install, "resources"),
 		"-nolog",
 		"-skip-cache",
 		"-setup",
@@ -69,8 +69,11 @@ func mergeConfig(install, setup string) (output []byte, err error) {
 
 	i := bytes.Index(output, []byte("<?xml"))
 	if i == -1 {
-		err = err2
 		log.Error("failed to parse XML", slog.String("output", string(output)))
+		if err2 == nil {
+			err2 = errors.New("no XML found in gateway output")
+		}
+		return nil, err2
 	}
 	output = output[i:]
 	return

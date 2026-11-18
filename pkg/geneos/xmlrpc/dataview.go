@@ -99,7 +99,7 @@ func (d Dataview) RowExists(rowname string) bool {
 	if !d.Exists() {
 		return false
 	}
-	exists, _ := d.rowExists(d.entityName, d.samplerName, d.viewName, rowname)
+	exists, _ := d.rowExists(d.entityName, d.samplerName, d.String(), rowname)
 	return exists
 }
 
@@ -163,7 +163,7 @@ func (d Dataview) ColumnExists(column string) bool {
 	if !d.Exists() {
 		return false
 	}
-	exists, _ := d.columnExists(d.entityName, d.samplerName, d.viewName, column)
+	exists, _ := d.columnExists(d.entityName, d.samplerName, d.String(), column)
 	return exists
 }
 
@@ -227,7 +227,7 @@ func (d Dataview) HeadlineExists(headline string) bool {
 	if !d.Exists() {
 		return false
 	}
-	exists, _ := d.headlineExists(d.entityName, d.samplerName, d.viewName, headline)
+	exists, _ := d.headlineExists(d.entityName, d.samplerName, d.String(), headline)
 	return exists
 }
 

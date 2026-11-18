@@ -8,7 +8,7 @@ Those backup archives that contain a `tls/` directory will have the contents res
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
-Existing instances will not be overwritten, similarly for shared directories.
+Existing instances will not be overwritten, similarly for shared directories. It is an error if an instance named on the command line is not in the archive, but the other instances that are are still restored.
 
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 

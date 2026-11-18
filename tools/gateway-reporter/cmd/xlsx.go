@@ -20,7 +20,6 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -148,7 +147,7 @@ func outputXLSX(cf *config.Config, gateway string, entities []Entity, probes map
 
 	filename := config.Get[string](cf, "output.formats.xlsx", conftable)
 	if !filepath.IsAbs(filename) {
-		filename = path.Join(dir, filename)
+		filename = filepath.Join(dir, filename)
 	}
 	return xlsx.SaveAs(filename, excelize.Options{Password: config.Get[string](cf, "output.xlsx-password")})
 }
@@ -170,6 +169,10 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 		return
 	}
 	cols, attrs, plugins, err := outputEntityColumns(Entities, cf, conftable)
+	if err != nil {
+		return
+	}
+	nbase := len(entityColumns(cf))
 	if err = x.SetSheetRow(sheet, "A1", &cols); err != nil {
 		return
 	}
@@ -181,27 +184,13 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 
 	i := 2
 	for _, e := range Entities {
-		port := "7036"
-		hostname := e.Probe.Hostname
-		if hostname == "" {
-			hostname = "[Virtual Probe]"
-			port = ""
-		} else if e.Probe.Port != 0 {
-			port = fmt.Sprint(e.Probe.Port)
-		}
-		row := []any{
-			e.Name,
-			e.Probe.Name,
-			hostname,
-			port,
+		row := []any{}
+		for _, v := range entityRow(e, nbase) {
+			row = append(row, v)
 		}
 
 		for _, a := range attrs {
-			if attr, ok := e.Attributes[a]; ok {
-				row = append(row, attr)
-			} else {
-				row = append(row, "")
-			}
+			row = append(row, e.Attributes[a])
 		}
 		ptotals := make(map[string]int)
 		for _, s := range e.Samplers {
@@ -222,7 +211,7 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 			return
 		}
 
-		for j, c := range cols {
+		for j, c := range row {
 			colwidths[j] = colWidth(len(fmt.Sprint(c)), colwidths[j])
 		}
 
@@ -235,29 +224,29 @@ func outputXLSXEntities(x *excelize.File, Entities []Entity, cf *config.Config, 
 		x.SetColWidth(sheet, col, col, c)
 	}
 
-	// add header and merge cols
+	// add header and merge cols. Only merge non-empty groups, an empty
+	// group would produce an inverted range
 	if err = x.InsertRows(sheet, 1, 1); err != nil {
 		return
 	}
 
-	mecols := len(cols) - len(attrs) - len(plugins)
-	cell, _ := excelize.CoordinatesToCellName(1, 1)
-	x.SetCellStr(sheet, cell, "Managed Entity")
-	end, _ := excelize.CoordinatesToCellName(mecols, 1)
-	x.MergeCell(sheet, cell, end)
-	// x.SetCellStyle(sheet, cell, end, topHeading)
-
-	cell, _ = excelize.CoordinatesToCellName(mecols+1, 1)
-	x.SetCellStr(sheet, cell, "Attributes")
-	end, _ = excelize.CoordinatesToCellName(mecols+len(attrs), 1)
-	x.MergeCell(sheet, cell, end)
-	// x.SetCellStyle(sheet, cell, end, topHeading)
-
-	cell, err = excelize.CoordinatesToCellName(mecols+len(attrs)+1, 1)
-	x.SetCellStr(sheet, cell, "Sampler Totals")
-	end, _ = excelize.CoordinatesToCellName(mecols+len(attrs)+len(plugins), 1)
-	x.MergeCell(sheet, cell, end)
-	// x.SetCellStyle(sheet, cell, end, topHeading)
+	for _, group := range []struct {
+		title string
+		start int
+		count int
+	}{
+		{"Managed Entity", 1, nbase},
+		{"Attributes", nbase + 1, len(attrs)},
+		{"Sampler Totals", nbase + len(attrs) + 1, len(plugins)},
+	} {
+		if group.count == 0 {
+			continue
+		}
+		cell, _ := excelize.CoordinatesToCellName(group.start, 1)
+		x.SetCellStr(sheet, cell, group.title)
+		end, _ := excelize.CoordinatesToCellName(group.start+group.count-1, 1)
+		x.MergeCell(sheet, cell, end)
+	}
 
 	x.SetRowStyle(sheet, 1, 2, topHeading)
 	return x.SetPanes(sheet, &excelize.Panes{
@@ -296,14 +285,7 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 		return
 	}
 
-	columns := config.Get[[]string](cf,
-		config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data",
-		}))
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data"})
 
 	if err = x.SetSheetRow(sheet, "A1", &columns); err != nil {
 		return
@@ -320,17 +302,12 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 			if s.Plugin == plugin {
 				for _, data := range s.Column1 {
 					rownum++
-					row := []string{
-						e.Name,
-						s.Type,
-						s.Name,
-						data,
-					}
+					row := fitRow([]string{e.Name, s.Type, s.Name, data}, len(columns))
 					if err = x.SetSheetRow(sheet, fmt.Sprintf("A%d", rownum), &row); err != nil {
 						return
 					}
 					for j, c := range row {
-						colwidths[j] = colWidth(len(fmt.Sprint(c)), colwidths[j])
+						colwidths[j] = colWidth(len(c), colwidths[j])
 					}
 				}
 			}
@@ -343,7 +320,9 @@ func outputXLSXSingleColumn(x *excelize.File, Entities []Entity, cf *config.Conf
 		if err = x.SetSheetRow(sheet, "A2", &[]string{message}); err != nil {
 			return
 		}
-		colwidths[1] = colWidth(len(message)*2, colwidths[1])
+		if len(colwidths) > 0 {
+			colwidths[0] = colWidth(len(message), colwidths[0])
+		}
 	}
 
 	// set column widths
@@ -375,15 +354,7 @@ func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config,
 		return
 	}
 
-	columns := config.Get[[]string](cf,
-		config.Join("output", "reports", plugin, "columns"),
-		config.DefaultValue([]string{
-			"managedEntity",
-			"samplerType",
-			"samplerName",
-			"data1",
-			"data2",
-		}))
+	columns := pluginColumns(cf, plugin, []string{"managedEntity", "samplerType", "samplerName", "data1", "data2"})
 
 	if err = x.SetSheetRow(sheet, "A1", &columns); err != nil {
 		return
@@ -398,31 +369,13 @@ func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config,
 	for _, e := range Entities {
 		for _, s := range e.Samplers {
 			if s.Plugin == plugin {
-				items := max(len(s.Column2), len(s.Column1))
-
-				for i := 0; i < items; i++ {
+				for _, row := range twoColumnRows(e, s, len(columns)) {
 					rownum++
-					row := []string{
-						e.Name,
-						s.Type,
-						s.Name,
-					}
-					if len(s.Column1) > i {
-						row = append(row, s.Column1[i])
-					} else {
-						row = append(row, "")
-					}
-					if len(s.Column2) > i {
-						row = append(row, s.Column2[i])
-					} else {
-						row = append(row, "")
-					}
-
 					if err = x.SetSheetRow(sheet, fmt.Sprintf("A%d", rownum), &row); err != nil {
 						return
 					}
 					for j, c := range row {
-						colwidths[j] = colWidth(len(fmt.Sprint(c)), colwidths[j])
+						colwidths[j] = colWidth(len(c), colwidths[j])
 					}
 				}
 			}
@@ -439,7 +392,9 @@ func outputXLSXTwoColumn(x *excelize.File, Entities []Entity, cf *config.Config,
 		if err = x.SetSheetRow(sheet, "A2", &[]string{message}); err != nil {
 			return
 		}
-		colwidths[1] = colWidth(len(message)*2, colwidths[1])
+		if len(colwidths) > 0 {
+			colwidths[0] = colWidth(len(message), colwidths[0])
+		}
 	}
 
 	// set column widths

@@ -1,6 +1,7 @@
 package geneos
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/xml"
@@ -51,7 +52,45 @@ func WithGatewayTimeout(timeout time.Duration) GatewayReadOption {
 	}
 }
 
+// parseGatewaySource returns source as a URL if it is an HTTP(S) or file
+// URL, or has any other scheme followed by "//", and otherwise as a path
+// in the Path field of a URL without a scheme. This means that paths
+// such as `C:\gateway\setup.xml` or `gw:1.xml`, which url.Parse would
+// treat as having a scheme, can be used.
+func parseGatewaySource(source string) (*url.URL, error) {
+	lower := strings.ToLower(source)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "file:") {
+		return url.Parse(source)
+	}
+	if scheme, _, found := strings.Cut(source, "://"); found && isURLScheme(scheme) {
+		return url.Parse(source)
+	}
+	return &url.URL{Path: source}, nil
+}
+
+// isURLScheme returns true if s is a valid URL scheme of more than a
+// single letter, which is a Windows drive
+func isURLScheme(s string) bool {
+	if len(s) < 2 || !('a' <= s[0]|0x20 && s[0]|0x20 <= 'z') {
+		return false
+	}
+	for _, c := range s {
+		if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '+' || c == '-' || c == '.') {
+			return false
+		}
+	}
+	return true
+}
+
 // ReadGateway reads Gateway XML from a local path, a file URL, or an HTTP(S) URL.
+//
+// The order of the child elements of every element in the document is
+// remembered, not the document itself, so that when the Gateway is
+// written with WriteGateway or Gateway.MarshalOrdered the differently
+// named sibling elements, including those that are only kept in the
+// Other fields, are in the same order as they were read. See
+// Gateway.MarshalOrdered and the package README for what is and is not
+// preserved.
 func ReadGateway(source string, options ...GatewayReadOption) (*Gateway, error) {
 	return ReadGatewayContext(context.Background(), source, options...)
 }
@@ -79,7 +118,7 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 		return nil, errors.New("gateway read host is nil")
 	}
 
-	parsed, err := url.Parse(source)
+	parsed, err := parseGatewaySource(source)
 	if err != nil {
 		return nil, fmt.Errorf("parse gateway source %q: %w", source, err)
 	}
@@ -148,12 +187,29 @@ func ReadGatewayContext(ctx context.Context, source string, options ...GatewayRe
 		return nil, err
 	}
 
-	decoder := xml.NewDecoder(input)
+	data, err := io.ReadAll(input)
+	if err != nil {
+		return nil, fmt.Errorf("read gateway XML from %q: %w", source, err)
+	}
+	decoder := xml.NewDecoder(bytes.NewReader(data))
 	decoder.CharsetReader = charset.NewReaderLabel
 	var gateway Gateway
 	if err := decoder.Decode(&gateway); err != nil {
 		line, column := decoder.InputPos()
 		return nil, fmt.Errorf("decode gateway XML from %q at line %d, column %d: %w", source, line, column, err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	// the original bytes are not kept, only the order of the elements and the
+	// elements that the model does not write as they were, and if that cannot
+	// be built the Gateway is written as the model does
+	if utf8Data, err := utf8Document(data); err == nil {
+		if model, err := xml.MarshalIndent(&gateway, "", "  "); err == nil {
+			if order, err := buildXMLOrder(utf8Data, model); err == nil {
+				gateway.source = order
+			}
+		}
 	}
 	return &gateway, nil
 }
@@ -169,6 +225,8 @@ type gatewayWriteOptions struct {
 	backup       bool
 	overwrite    bool
 	historyLimit int
+	orderFrom    *Gateway
+	orderWarning func(error)
 }
 
 // GatewayWriteOption configures WriteGateway.
@@ -201,6 +259,21 @@ func WithGatewayHistoryLimit(limit int) GatewayWriteOption {
 	}
 }
 
+// WithGatewayOrderFrom writes the sibling elements in the order of the
+// document that src was read from, instead of that of the Gateway that
+// is written. See Gateway.PreserveOrderOf.
+func WithGatewayOrderFrom(src *Gateway) GatewayWriteOption {
+	return func(options *gatewayWriteOptions) { options.orderFrom = src }
+}
+
+// WithGatewayOrderWarning sets a function that is called with a
+// *GatewayOrderError if the order of the elements could not be restored
+// and the Gateway was written in the order encoding/xml uses instead.
+// Without it this is not reported.
+func WithGatewayOrderWarning(warn func(error)) GatewayWriteOption {
+	return func(options *gatewayWriteOptions) { options.orderWarning = warn }
+}
+
 func evalGatewayWriteOptions(options ...GatewayWriteOption) (*gatewayWriteOptions, error) {
 	result := &gatewayWriteOptions{host: host.Localhost}
 	for _, option := range options {
@@ -225,6 +298,9 @@ func evalGatewayWriteOptions(options ...GatewayWriteOption) (*gatewayWriteOption
 // file becomes destination_0001.history, with the oldest copy pruned at the
 // configured limit. WithGatewayOverwrite replaces an existing file without a
 // backup. It returns the new backup path, if created.
+//
+// Sibling elements are written in the order of the document that the
+// Gateway was read from, see Gateway.MarshalOrdered.
 func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteOption) (backupPath string, err error) {
 	if destination == "" {
 		return "", errors.New("gateway destination is empty")
@@ -232,17 +308,43 @@ func WriteGateway(destination string, gateway *Gateway, options ...GatewayWriteO
 	if gateway == nil {
 		return "", errors.New("gateway is nil")
 	}
+
+	writeOptions, err := evalGatewayWriteOptions(options...)
+	if err != nil {
+		return "", err
+	}
+
+	order := gateway.source
+	if writeOptions.orderFrom != nil {
+		order = writeOptions.orderFrom.source
+	}
+	data, err := marshalGatewayOrdered(gateway, order)
+	if err != nil {
+		var orderErr *GatewayOrderError
+		if !errors.As(err, &orderErr) {
+			return "", err
+		}
+		if writeOptions.orderWarning != nil {
+			writeOptions.orderWarning(orderErr)
+		}
+	}
+
+	return WriteGatewayData(destination, data, options...)
+}
+
+// WriteGatewayData writes the XML data, as it is, to destination in
+// the same way as WriteGateway, with the same locking, history backup,
+// host and file mode handling. It is for callers that have edited
+// a setup file as text and must not have it serialized again.
+func WriteGatewayData(destination string, data []byte, options ...GatewayWriteOption) (backupPath string, err error) {
+	if destination == "" {
+		return "", errors.New("gateway destination is empty")
+	}
 	writeOptions, err := evalGatewayWriteOptions(options...)
 	if err != nil {
 		return "", err
 	}
 	h := writeOptions.host
-
-	data, err := xml.MarshalIndent(gateway, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal gateway XML: %w", err)
-	}
-	data = append(data, '\n')
 
 	lockPath := destination + ".lck"
 	if err := h.Mkdir(lockPath, 0o700); err != nil {

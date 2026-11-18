@@ -63,7 +63,7 @@ func init() {
 	createCmd.Flags().BoolVarP(&createCmdForce, "force", "F", false, "Runs \"tls init\" (but do not replace existing root and signing)\nand overwrite any existing file in the 'out' directory")
 
 	createCmd.Flags().BoolVarP(&createCmdPrivateKey, "private-key", "K", false, "Create a private key without a certificate. Ignored for --signing.")
-	createCmd.Flags().VarP(&createCmdKeyType, "key-type", "k", "Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519\nor ecdh). Ignored for --signing. Defaults to the same type as\nthe signing certificate key or a default type if that cannot be determined.")
+	createCmd.Flags().VarP(&createCmdKeyType, "key-type", "k", "Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519\nor ecdh, which is an ECDSA P-256 key). Ignored for --signing. Defaults to the same type as\nthe signing certificate key or a default type if that cannot be determined.")
 
 	createCmd.Flags().VarP(&createCmdSANs.DNS, "san-dns", "s", "Subject-Alternative-Name DNS Name (repeat as required).\nIgnored for --signing.")
 	createCmd.Flags().VarP(&createCmdSANs.IP, "san-ip", "i", "Subject-Alternative-Name IP Address (repeat as required).\nIgnored for --signing.")
@@ -87,7 +87,7 @@ var createCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		if createCmdForce {
-			if err = geneos.TLSInit(geneos.LOCALHOST, false, initCmdKeyType); err != nil {
+			if err = geneos.TLSInit(geneos.LOCALHOST, false, keyTypeOrDefault(createCmdKeyType)); err != nil {
 				return
 			}
 		}
@@ -99,8 +99,7 @@ var createCmd = &cobra.Command{
 		if createCmdSigning != "" {
 			if err = CreateSigningCert(createCmdDestDir, createCmdForce, createCmdSigning); err != nil {
 				if errors.Is(err, os.ErrExist) && !createCmdForce {
-					fmt.Printf("Signing certificate already exists for %q, use --force to overwrite\n", createCmdSigning)
-					return nil
+					return fmt.Errorf("signing certificate already exists for %q, use --force to overwrite", createCmdSigning)
 				}
 				return
 			}
@@ -110,8 +109,7 @@ var createCmd = &cobra.Command{
 		if createCmdPrivateKey {
 			if _, _, err = CreateKey(createCmdDestDir, createCmdForce, createCmdKeyType); err != nil {
 				if errors.Is(err, os.ErrExist) && !createCmdForce {
-					fmt.Printf("Private key already exists for %q, use --force to overwrite\n", privateKeyBasename+certs.PEMExtension)
-					return nil
+					return fmt.Errorf("private key already exists for %q, use --force to overwrite", privateKeyBasename+certs.PEMExtension)
 				}
 			}
 			return
@@ -119,8 +117,7 @@ var createCmd = &cobra.Command{
 
 		if err = CreateCert(createCmdDestDir, createCmdForce, createCmdExpiry, createCmdCN, createCmdSANs); err != nil {
 			if errors.Is(err, os.ErrExist) && !createCmdForce {
-				fmt.Printf("Certificate already exists for CN=%q, use --force to overwrite\n", createCmdCN)
-				return nil
+				return fmt.Errorf("certificate already exists for CN=%q, use --force to overwrite", createCmdCN)
 			}
 			return
 		}
@@ -227,7 +224,9 @@ func CreateCert(destination string, overwrite bool, days int, commonName string,
 		return
 	}
 
-	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	if err = geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600); err != nil {
+		return
+	}
 
 	fmt.Printf("Certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	fmt.Print(string(certs.CertificateComments(cert)))
@@ -271,7 +270,9 @@ func CreateSigningCert(destination string, overwrite bool, hostname string) (err
 		fmt.Print(b.String())
 		return
 	}
-	geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600)
+	if err = geneos.LOCAL.WriteFile(basepath+certs.PEMExtension, b.Bytes(), 0600); err != nil {
+		return
+	}
 	fmt.Printf("Signing certificate and private key created in %q\n", basepath+certs.PEMExtension)
 	return
 }

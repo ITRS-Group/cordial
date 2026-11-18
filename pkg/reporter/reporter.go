@@ -24,11 +24,15 @@ package reporter
 import (
 	"fmt"
 	"io"
+	"maps"
+	"slices"
 
 	"github.com/itrs-group/cordial/pkg/logger"
 )
 
-// Reporter TODO: Describe its purpose and intended use.
+// Reporter is the interface implemented by all the report formats.
+// Methods are not safe for concurrent use. A Reporter never modifies
+// the tables passed to UpdateTable.
 type Reporter interface {
 	// Prepare initialises the current report and must be called before AddHeadline() or UpdateTable()
 	Prepare(report Report) error
@@ -100,8 +104,63 @@ type Report struct {
 
 type reporterCommon struct {
 	Report
-	format        string
-	scrambleNames bool
+	format          string
+	scrambleNames   bool
+	scrambleFunc    func(string) string
+	scrambleOptCols []string
+}
+
+// newReporterCommon returns the common reporter fields for format using
+// the evaluated reporter options
+func newReporterCommon(format string, ropts *reporterOptions) reporterCommon {
+	return reporterCommon{
+		format:          format,
+		scrambleNames:   ropts.scrambleNames,
+		scrambleFunc:    ropts.scrambleFunc,
+		scrambleOptCols: ropts.scrambleColumns,
+	}
+}
+
+// scrambleTable returns rows with the values in the columns to be
+// scrambled replaced, if scrambling is enabled, otherwise rows. The
+// columns to scramble are those given with the ScrambleColumns option
+// and those in the Report passed to Prepare. The caller's rows are
+// never modified.
+func (c *reporterCommon) scrambleTable(columns []string, rows [][]string) [][]string {
+	if !c.scrambleNames {
+		return rows
+	}
+	return scrambleColumns(columns, slices.Concat(c.scrambleOptCols, c.ScrambleColumns), rows, c.scrambleFunc)
+}
+
+// headlineSet holds headlines in the order they were first added
+type headlineSet struct {
+	order  []string
+	values map[string]string
+}
+
+// add sets a headline. A new name is added to the end of the order,
+// and an existing one keeps its place and has its value replaced.
+func (h *headlineSet) add(name, value string) {
+	if h.values == nil {
+		h.values = map[string]string{}
+	}
+	if _, ok := h.values[name]; !ok {
+		h.order = append(h.order, name)
+	}
+	h.values[name] = value
+}
+
+// addAll adds the headlines in sorted name order, so the result does
+// not depend on map iteration order
+func (h *headlineSet) addAll(headlines map[string]string) {
+	for _, name := range slices.Sorted(maps.Keys(headlines)) {
+		h.add(name, headlines[name])
+	}
+}
+
+func (h *headlineSet) len() int {
+	return len(h.order)
 }
 
 var log = logger.Logger

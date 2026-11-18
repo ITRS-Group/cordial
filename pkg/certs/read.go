@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/itrs-group/cordial/pkg/host"
 )
@@ -78,13 +77,16 @@ func parseCertificates(data []byte) (certs []*x509.Certificate) {
 }
 
 // ReadCertPool returns a certificate pool loaded from the file on host
-// h at path. If there is any error a nil pointer is returned.
+// h at path. If the file cannot be read or contains no certificates a
+// nil pointer is returned.
 func ReadCertPool(h host.Host, path string) (pool *x509.CertPool) {
+	data, err := h.ReadFile(path)
+	if err != nil {
+		return nil
+	}
 	pool = x509.NewCertPool()
-	if data, err := h.ReadFile(path); err == nil {
-		if ok := pool.AppendCertsFromPEM(data); !ok {
-			return nil
-		}
+	if ok := pool.AppendCertsFromPEM(data); !ok {
+		return nil
 	}
 	return
 }
@@ -108,39 +110,47 @@ func ReadCACertPool(h host.Host, path string) (pool *x509.CertPool, ok bool) {
 }
 
 // ReadPrivateKey reads file on host h as an unencrypted,
-// PEM-encoded private key and saves the der format key
+// PEM-encoded private key and returns the PKCS#8 DER format key. Keys
+// in PKCS#1 (RSA) or SEC1 (EC) format are converted to PKCS#8.
+// Encrypted private keys are not supported and result in an error.
 func ReadPrivateKey(h host.Host, file string) (key PrivateKey, err error) {
 	b, err := h.ReadFile(file)
 	if err != nil {
 		return
 	}
 
-	for {
-		p, rest := pem.Decode(b)
-		if p == nil {
-			return nil, fmt.Errorf("cannot locate private key")
-		}
-		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = PrivateKey(p.Bytes)
-			return
-		}
-		b = rest
-	}
+	return ReadPrivateKeyFromPEM(b)
 }
 
 // ReadPrivateKeyFromPEM reads a PEM-encoded private key from the given
-// byte slice and returns it as a PrivateKey. The input data
-// should contain an unencrypted private key in PEM format. If the key
-// cannot be found or parsed, an error is returned.
+// byte slice and returns it as a PKCS#8 DER format PrivateKey. The input
+// data should contain an unencrypted private key in PEM format, either
+// PKCS#8, PKCS#1 (RSA) or SEC1 (EC), the last two of which are
+// converted to PKCS#8. Encrypted private keys are not supported. If
+// the key cannot be found or parsed, an error is returned.
 func ReadPrivateKeyFromPEM(pemData []byte) (key PrivateKey, err error) {
+	encrypted := false
+
 	for {
 		p, rest := pem.Decode(pemData)
 		if p == nil {
+			if encrypted {
+				return nil, fmt.Errorf("cannot use private key: encrypted private keys are not supported")
+			}
 			return nil, fmt.Errorf("cannot locate private key")
 		}
-		if strings.HasSuffix(p.Type, "PRIVATE KEY") {
-			key = PrivateKey(p.Bytes)
-			return
+		switch p.Type {
+		case "PRIVATE KEY", "RSA PRIVATE KEY", "EC PRIVATE KEY":
+			if isEncryptedPEM(p) {
+				encrypted = true
+				break
+			}
+			if key, err = toPKCS8(p.Bytes); err != nil {
+				return nil, fmt.Errorf("invalid %s block: %w", p.Type, err)
+			}
+			return key, nil
+		case "ENCRYPTED PRIVATE KEY":
+			encrypted = true
 		}
 		pemData = rest
 	}

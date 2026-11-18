@@ -18,7 +18,7 @@ const redactedPlaceholder = "[REDACTED]"
 // and `key` is a common parameter name, this regular expression only
 // matches `apikey` and `_key` specifically, and will not match other
 // occurrences of `key` on its own.
-var redactRE = regexp.MustCompile(`(?i)([\w-]*(password|secret|token|apikey|_key|credential)(?:[ =>]+))([^\s"'<]+|"[^"]*"|'[^']*|<[^<]+>)`)
+var redactRE = regexp.MustCompile(`(?i)([\w-]*(password|secret|token|apikey|_key|credential)(?:[ =>]+))([^\s"'<]+|"[^"]*"?|'[^']*'?|<[^<]+>)`)
 
 // redactEncsRE is a regular expression used to identify Geneos specific
 // encoded strings
@@ -32,16 +32,21 @@ func Redact(s string) string {
 	return s
 }
 
-// RedactSlice redacts sensitive information from each string in the
-// given slice using the [Redact] function.
+// RedactSlice returns a new slice with sensitive information redacted
+// from each string in the given slice using the [Redact] function. The
+// slice passed is not modified.
 func RedactSlice(slice []string) []string {
-	for i, s := range slice {
-		slice[i] = Redact(s)
+	if slice == nil {
+		return nil
 	}
-	return slice
+	out := make([]string, len(slice))
+	for i, s := range slice {
+		out[i] = Redact(s)
+	}
+	return out
 }
 
-var redactJSONRE = regexp.MustCompile(`(?i)"?([\w-]*(password|secret|token|apikey|[_-]key|credential))"?\s*:\s*"([^"]*)"`)
+var redactJSONRE = regexp.MustCompile(`(?i)"?([\w-]*(password|secret|token|apikey|[_-]key|credential))"?\s*:\s*"(?:[^"\\]|\\.)*"`)
 
 // RedactJSON redacts sensitive information from the given JSON byte
 // slice using a regular expression. It also redacts the text in the

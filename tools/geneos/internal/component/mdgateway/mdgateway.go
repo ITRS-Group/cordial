@@ -19,12 +19,10 @@ package mdgateway
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -68,8 +66,8 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "18000-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
-		config.Join(name, "purge"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
+		config.Join(name, "purge"): "",
 	},
 	PortRange: config.Join(name, "ports"),
 	CleanList: config.Join(name, "clean"),
@@ -189,7 +187,8 @@ func (i *MDGateway) Unload() error {
 		return nil
 	}
 	mdgateways.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return nil
 }
 
@@ -198,7 +197,7 @@ func (i *MDGateway) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -206,7 +205,7 @@ func (i *MDGateway) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -214,7 +213,7 @@ func (i *MDGateway) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -222,7 +221,7 @@ func (i *MDGateway) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add TODO: Document its behavior, inputs, and effects.
@@ -242,7 +241,7 @@ func (i *MDGateway) Add(options ...any) error {
 	seedPackagedYAML(i)
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 	return nil
 }

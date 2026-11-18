@@ -61,7 +61,8 @@ func evalXLSXReportOptions(options ...XLSXReporterOption) (xo *xlsxReportOptions
 	return
 }
 
-// XLSXScramble TODO: Document its behavior, inputs, and effects.
+// XLSXScramble enables scrambling of the columns named in each report,
+// as for [Scramble].
 func XLSXScramble(scramble bool) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
 		xro.scramble = scramble
@@ -134,16 +135,23 @@ func SeverityColours(undefined, ok, warning, critical string) XLSXReporterOption
 	}
 }
 
-// MinColumnWidth TODO: Document its behavior, inputs, and effects.
+// MinColumnWidth sets the minimum column width. A value of zero or less
+// is ignored, leaving the default of 10, so an unset configuration
+// value cannot result in zero-width columns.
 func MinColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
-		xro.minColWidth = n
+		if n > 0 {
+			xro.minColWidth = n
+		}
 	}
 }
 
-// MaxColumnWidth TODO: Document its behavior, inputs, and effects.
+// MaxColumnWidth sets the maximum column width. A value of zero or less
+// is ignored, leaving the default of 60.
 func MaxColumnWidth(n float64) XLSXReporterOption {
 	return func(xro *xlsxReportOptions) {
-		xro.maxColWidth = n
+		if n > 0 {
+			xro.maxColWidth = n
+		}
 	}
 }

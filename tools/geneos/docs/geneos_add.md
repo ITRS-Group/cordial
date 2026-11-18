@@ -1,6 +1,6 @@
 # `geneos add`
 
-The `geneos add` command is used to create a new instance of a component. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
+The `geneos add` command is used to create a new instance of a component. It is an error, and the exit status is non-zero, to add an instance that already exists. To deploy a component on a new system, without an existing Geneos installation, use the `geneos deploy` or `geneos init` commands.
 
 The options accepted vary by component `TYPE` and are the resulting parameters are stored in a metadata configuration file in the instance directory. The default configuration file format is in JSON format. There may also be support for YAML configuration files in future releases.
 	
@@ -78,9 +78,9 @@ geneos add [flags] TYPE NAME [KEY=VALUE...]
       --insecure[=true|false]         Do not create certificates for TLS support.
                                       Ignored if --certs-bundle is given.
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

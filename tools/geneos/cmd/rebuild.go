@@ -60,7 +60,7 @@ var rebuildCmd = &cobra.Command{
 		if err != nil {
 			return
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			var changed bool
@@ -77,6 +77,5 @@ var rebuildCmd = &cobra.Command{
 			resp2 := ReloadInstance(i)
 			return responses.MergeResponse(resp, resp2)
 		}, instance.ProfileOnly).Report(os.Stdout)
-		return
 	},
 }

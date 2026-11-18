@@ -20,15 +20,14 @@ package host
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/pkg/sftp"
 	"github.com/spf13/afero"
 )
 
@@ -152,9 +151,19 @@ var (
 	ErrNotExist = errors.New("does not exist")
 )
 
+// sameHost reports whether a and b are the same host, which is true for
+// any two local hosts and for remote hosts of the same name.
+func sameHost(a, b Host) bool {
+	if a.IsLocalhost() || b.IsLocalhost() {
+		return a.IsLocalhost() && b.IsLocalhost()
+	}
+	return a.String() == b.String()
+}
+
 // CopyFile copies a file between two locations. Destination can be a
 // directory or a file. Parent directories will be created as required.
-// Any existing files will be overwritten.
+// Any existing files will be overwritten. It is an error to copy a file
+// onto itself.
 func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err error) {
 	ss, err := srcHost.Stat(srcPath)
 	if err != nil {
@@ -175,60 +184,55 @@ func CopyFile(srcHost Host, srcPath string, dstHost Host, dstPath string) (err e
 		if ds.IsDir() {
 			dstPath = dstHost.Join(dstPath, srcHost.Base(srcPath))
 		}
-	} else {
-		dstHost.MkdirAll(dstHost.Dir(dstPath), 0775)
+	} else if err = dstHost.MkdirAll(dstHost.Dir(dstPath), 0775); err != nil {
+		return err
 	}
 
-	df, err := dstHost.Create(dstPath, ss.Mode())
+	// creating the destination truncates it, so never do that to the source
+	if sameHost(srcHost, dstHost) {
+		same := srcHost.Clean(srcPath) == dstHost.Clean(dstPath)
+		if ds, serr := dstHost.Stat(dstPath); serr == nil && os.SameFile(ss, ds) {
+			same = true
+		}
+		if same {
+			return fmt.Errorf("%w: %s and %s are the same file", ErrInvalidArgs, srcPath, dstPath)
+		}
+	}
+
+	return copyContents(sf, dstHost, dstPath, ss.Mode())
+}
+
+// copyContents writes everything from src to a new file dstPath on
+// dstHost, returning any error from closing the destination as that is
+// when failures to write it are reported by some hosts.
+func copyContents(src io.Reader, dstHost Host, dstPath string, mode fs.FileMode) (err error) {
+	df, err := dstHost.Create(dstPath, mode)
 	if err != nil {
 		return err
 	}
-	defer df.Close()
-	if _, err = io.Copy(df, sf); err != nil {
-		return err
-	}
+	defer func() {
+		if cerr := df.Close(); err == nil {
+			err = cerr
+		}
+	}()
+	_, err = io.Copy(df, src)
 	return
 }
 
 // CopyAll copies a directory between any combination of local or remote locations
 func CopyAll(srcHost Host, srcDir string, dstHost Host, dstDir string) (err error) {
-	if srcHost.IsLocalhost() {
-		filesystem := os.DirFS(srcDir)
-		return fs.WalkDir(filesystem, ".", func(file string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			fi, err := d.Info()
-			if err != nil {
-				return err
-			}
-			dstPath := dstHost.Join(dstDir, file)
-			srcPath := srcHost.Join(srcDir, file)
-			return processDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
-		})
-	}
-
-	if sf, ok := srcHost.(*SSHRemote); ok {
-		var s *sftp.Client
-		s, err = sf.DialSFTP()
+	return srcHost.WalkDir(srcDir, func(file string, d fs.DirEntry, err error) error {
 		if err != nil {
-			return
+			return err
 		}
-		w := s.Walk(srcDir)
-		for w.Step() {
-			if err = w.Err(); err != nil {
-				return
-			}
-			fi := w.Stat()
-			srcPath := w.Path()
-			dstPath := dstHost.Join(dstDir, strings.TrimPrefix(w.Path(), srcDir))
-			if err = processDirEntry(fi, srcHost, srcPath, dstHost, dstPath); err != nil {
-				return
-			}
+		fi, err := d.Info()
+		if err != nil {
+			return err
 		}
-	}
-
-	return
+		dstPath := dstHost.Join(dstDir, file)
+		srcPath := srcHost.Join(srcDir, file)
+		return processDirEntry(fi, srcHost, srcPath, dstHost, dstPath)
+	})
 }
 
 func processDirEntry(fi fs.FileInfo, srcHost Host, srcPath string, dstHost Host, dstPath string) (err error) {
@@ -259,14 +263,7 @@ func processDirEntry(fi fs.FileInfo, srcHost Host, srcPath string, dstHost Host,
 			return err
 		}
 		defer sf.Close()
-		df, err := dstHost.Create(dstPath, ss.Mode())
-		if err != nil {
-			return err
-		}
-		defer df.Close()
-		if _, err = io.Copy(df, sf); err != nil {
-			return err
-		}
+		return copyContents(sf, dstHost, dstPath, ss.Mode())
 	}
 	return nil
 }

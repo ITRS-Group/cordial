@@ -40,8 +40,10 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"github.com/google/go-querystring/query"
@@ -157,7 +159,8 @@ func (c *Client) SetAuth(header, value string) {
 // Auth sets up a 2-legged OAUTH2 with client ID and Secret. If clientID
 // is empty just return, allowing callers to call when the value are not
 // set (or empty) not set. It should be called before the client is
-// used.
+// used. ctx is not retained, so it may be cancelled after Auth returns
+// without affecting later token refreshes.
 func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.Secret) {
 	if clientID == "" || c.BaseURL == nil {
 		return
@@ -171,8 +174,76 @@ func (c *Client) Auth(ctx context.Context, clientID string, clientSecret config.
 		EndpointParams: params,
 		TokenURL:       tokenauth.String(),
 	}
-	ctx = context.WithValue(ctx, oauth2.HTTPClient, c.httpClient())
-	c.HTTPClient = conf.Client(ctx)
+
+	// the token source keeps the context it is created with for later
+	// refreshes, so it must not be the caller's, which may be cancelled
+	// once Auth returns. Refreshes use the client in the context and
+	// not the one returned, so they do not depend on where requests are
+	// redirected to.
+	hc := c.httpClient()
+	tokenCtx := context.WithValue(context.Background(), oauth2.HTTPClient, hc)
+	base := hc.Transport
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	c.HTTPClient = &http.Client{
+		Transport: &originTransport{
+			origin: *c.BaseURL,
+			base:   base,
+			auth: &oauth2.Transport{
+				Base:   base,
+				Source: oauth2.ReuseTokenSource(nil, conf.TokenSource(tokenCtx)),
+			},
+		},
+		CheckRedirect: hc.CheckRedirect,
+		Jar:           hc.Jar,
+		Timeout:       hc.Timeout,
+	}
+}
+
+// originTransport adds the OAuth2 token only to requests for the same
+// origin (scheme, host and port) as the client base URL. A request to
+// any other origin, such as after a redirect to another host or from
+// https to http, is sent without it, and a redirected request has any
+// Authorization or Proxy-Authorization header removed.
+type originTransport struct {
+	origin url.URL
+	base   http.RoundTripper
+	auth   http.RoundTripper
+}
+
+func (t *originTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if sameOrigin(&t.origin, req.URL) {
+		return t.auth.RoundTrip(req)
+	}
+	if req.Response != nil && (req.Header.Get("Authorization") != "" || req.Header.Get("Proxy-Authorization") != "") {
+		// req.Response is only set for a redirected request
+		req = req.Clone(req.Context())
+		req.Header.Del("Authorization")
+		req.Header.Del("Proxy-Authorization")
+	}
+	return t.base.RoundTrip(req)
+}
+
+// sameOrigin returns true if a and b have the same scheme, host name
+// and port, using the default port for the scheme if there is none.
+func sameOrigin(a, b *url.URL) bool {
+	return strings.EqualFold(a.Scheme, b.Scheme) &&
+		strings.EqualFold(a.Hostname(), b.Hostname()) &&
+		originPort(a) == originPort(b)
+}
+
+func originPort(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+	switch strings.ToLower(u.Scheme) {
+	case "https":
+		return "443"
+	case "http":
+		return "80"
+	}
+	return ""
 }
 
 // Do executes the given method (GET, POST, PUT, DELETE) with the given
@@ -278,12 +349,44 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 	if hasBody {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	return c.send(req, body, hasBody, response)
+}
 
+// Send sends a request that was built by the caller, for the cases
+// where the request body cannot be encoded by the other methods, such
+// as a stream. The caller must set the URL, normally using BaseURL, and
+// any headers, but not the client's authentication header, which is
+// added. The client's SetupRequest function, logging, redirect and
+// status handling and response decoding are applied as for the other
+// methods, and as with them resp.Body is closed on return.
+func (c *Client) Send(req *http.Request, response any) (resp *http.Response, err error) {
+	if c.err != nil {
+		closeRequestBody(req)
+		return nil, c.err
+	}
+	if c.authHeader != "" {
+		req.Header.Set(c.authHeader, c.authValue)
+	}
+	return c.send(req, nil, req.Body != nil, response)
+}
+
+func closeRequestBody(req *http.Request) {
+	if req.Body != nil {
+		_ = req.Body.Close()
+	}
+}
+
+// send is the common part of do and Send. body is the encoded request
+// body, if known, and hasBody is true if there is one.
+func (c *Client) send(req *http.Request, body []byte, hasBody bool, response any) (resp *http.Response, err error) {
+	method := req.Method
 	if c.logger != nil {
+		// request bodies and query values may contain credentials, so
+		// only their size and names are logged
 		if hasBody {
-			c.logger.Debug(strings.ToLower(method)+" request", "url", req.URL.String(), "body", string(body))
+			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "body_bytes", req.ContentLength)
 		} else {
-			c.logger.Debug(strings.ToLower(method)+" request", "url", req.URL.String(), "query", req.URL.RawQuery)
+			c.logger.Debug(strings.ToLower(method)+" request", "url", logURL(req.URL), "query_keys", queryKeys(req.URL.RawQuery))
 		}
 	}
 
@@ -291,14 +394,14 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 		c.SetupRequest(req, c, body)
 	}
 
-	resp, err = c.httpClient().Do(req)
+	resp, err = c.clientFor(req).Do(req)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
 	if c.logger != nil {
-		c.logger.Debug(strings.ToLower(method)+" response", "url", req.URL.String(), "status", resp.Status)
+		c.logger.Debug(strings.ToLower(method)+" response", "url", logURL(req.URL), "status", resp.Status)
 	}
 
 	// a redirect that changed the method means the server never saw
@@ -331,6 +434,50 @@ func (c *Client) do(ctx context.Context, method string, endpoint, request, respo
 
 	err = decodeResponse(resp, response)
 	return
+}
+
+// clientFor returns the http client to use for req. A redirect to a
+// different origin (scheme, host and port) has the custom
+// authentication header, if set, and any Authorization or
+// Proxy-Authorization header removed, as Go itself only does this for a
+// fixed list of headers and not for a redirect to a sub-domain or
+// to a lower security scheme. The OAuth2 token is added by the
+// transport set up by [Client.Auth], which also only does this for the
+// base URL origin.
+func (c *Client) clientFor(req *http.Request) *http.Client {
+	hc := c.httpClient()
+	header, origin, check := c.authHeader, *req.URL, hc.CheckRedirect
+	cc := *hc
+	cc.CheckRedirect = func(next *http.Request, via []*http.Request) error {
+		if !sameOrigin(&origin, next.URL) {
+			if header != "" {
+				next.Header.Del(header)
+			}
+			next.Header.Del("Authorization")
+			next.Header.Del("Proxy-Authorization")
+		}
+		if check != nil {
+			return check(next, via)
+		}
+		if len(via) >= 10 {
+			return errors.New("stopped after 10 redirects")
+		}
+		return nil
+	}
+	return &cc
+}
+
+// logURL returns u as a string without any query or password
+func logURL(u *url.URL) string {
+	c := *u
+	c.RawQuery, c.ForceQuery, c.Fragment, c.RawFragment = "", false, "", ""
+	return c.Redacted()
+}
+
+// queryKeys returns a comma separated list of the names in a raw query
+func queryKeys(rawQuery string) string {
+	v, _ := url.ParseQuery(rawQuery)
+	return strings.Join(slices.Sorted(maps.Keys(v)), ",")
 }
 
 var errNoBaseURL = errors.New("rest: client has no base URL")

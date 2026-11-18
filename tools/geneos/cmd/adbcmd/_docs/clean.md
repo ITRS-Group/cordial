@@ -45,7 +45,7 @@ For "gateway", "probe", "entity", "sampler", and "dataview" elements, the follow
 * `keep` - keep the name predicate for the element. This is the default for "sampler" and "dataview" elements.
 * `remove:NAME` - remove the matching name predicate from the element. NAME can be a glob (not regexp) pattern, e.g. "PROD*".
 * `set:NAME` - set the name predicates for the element.
-* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash.
+* `replace:/pattern/replacement/` - replace the matching pattern, as many times as it appears, with the replacement string. The pattern must be a valid Go regular expression. The replacement can only be a fixed string at this time, and placeholders are not supported. The '/' delimiter can be any character you choose but must be provided at the start and end of the expression as well as a separator between `pattern` and `replacement`. The delimiter can be escaped in either the pattern or the replacement using a backslash. All replacement expressions are checked before any file is processed and an invalid one is an error.
 
 For "type" elements, the following additional modifications are available:
 

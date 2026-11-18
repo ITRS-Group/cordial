@@ -34,6 +34,7 @@ package cmd
 // "group"/"groups" and "gateway"/"gateways"
 
 import (
+	"cmp"
 	"context"
 	"database/sql"
 	_ "embed"
@@ -120,11 +121,11 @@ var addIncludeCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		return addFilter("include", args[0], args[1:])
+		return addFilter("include", category, args[1:])
 	},
 }
 
@@ -145,12 +146,78 @@ var addExcludeCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		return addFilter("exclude", args[0], args[1:])
+		return addFilter("exclude", category, args[1:])
 	},
+}
+
+// validateCategory returns the category that the argument, which is in
+// either the singular or plural form, is for, or an error if there is
+// none
+func validateCategory(arg string) (category string, err error) {
+	category, ok := categories[arg]
+	if !ok {
+		return "", fmt.Errorf("first argument must be a valid category, one of %s", strings.Join(slices.Sorted(maps.Keys(categories)), ", "))
+	}
+	return category, nil
+}
+
+// removeArgs checks the arguments of the remove commands, which are a
+// category and the names to remove or, with `--all`, only a category
+func removeArgs(cmd *cobra.Command, args []string) error {
+	if len(args) < 1 || (!removeCmdAll && len(args) < 2) {
+		return fmt.Errorf("requires a CATEGORY and at least one NAME, or a CATEGORY and --all\nUsage: %s", cmd.UseLine())
+	}
+	return nil
+}
+
+// filtersFile returns the options to read or write the filters file
+func filtersFile(cf *config.Config, options ...config.FileOption) []config.FileOption {
+	return append([]config.FileOption{
+		config.AppName("geneos"),
+		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
+	}, options...)
+}
+
+// readFilters reads the filters file, which is not an error if it does
+// not exist
+func readFilters(cf *config.Config) (ig *config.Config, err error) {
+	ig, err = config.Read(filterBase, filtersFile(cf)...)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, fmt.Errorf("reading filters file: %w", err)
+	}
+	return ig, nil
+}
+
+// nullTime returns the timestamp of an entry in the filters file for
+// the database, which is NULL if it has none
+func nullTime(t *time.Time) sql.NullTime {
+	if t == nil || t.IsZero() {
+		return sql.NullTime{}
+	}
+	return sql.NullTime{Time: *t, Valid: true}
+}
+
+// formatTime returns the timestamp of an entry in the filters file for
+// display, which is empty if it has none
+func formatTime(t *time.Time) string {
+	if t == nil || t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
+}
+
+// splitNames splits names, which can contain multiline strings, either
+// comma or newline separated, as passed from the AC2 commands. Spaces
+// are valid in names (e.g. `Demo Gateway`), so they are not split on.
+func splitNames(names []string) (split []string) {
+	for _, name := range names {
+		split = append(split, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
+	}
+	return
 }
 
 // add an include or exclude filter. names can contain multiline
@@ -160,49 +227,32 @@ var addExcludeCmd = &cobra.Command{
 func addFilter(filterType, category string, names []string) (err error) {
 	ts := time.Now()
 	// load existing
-	ig, err := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	ig, err := config.Read(filterBase, filtersFile(cf)...)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
-	igPath := config.Path(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	igPath := config.Path(filterBase, filtersFile(cf)...)
 	log.Debug("loaded any existing filters", slog.String("path", igPath))
 
-	// filters := ig.GetSliceStringMapString(config.Join("filters", filterType, category))
 	var filters []Filter
 	if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 		&filters,
 	); err != nil {
 		return err
 	}
-	var newnames []string
-	for _, name := range names {
-		newnames = append(newnames, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
-	}
 
-	for _, name := range newnames {
+	for _, name := range splitNames(names) {
 		f := Filter{
 			Name:      name,
 			Comment:   addCmdComment,
 			User:      addCmdUser,
 			Origin:    addCmdOrigin,
-			Timestamp: &ts,
+			Timestamp: new(ts),
 		}
-		if i := slices.IndexFunc(filters, func(e Filter) bool {
-			if e.Name == name {
-				return true
-			}
-			return false
-		}); i != -1 {
+		if i := slices.IndexFunc(filters, func(e Filter) bool { return e.Name == name }); i != -1 {
 			// ... replace
 			filters[i] = f
-			continue
 		} else {
 			filters = append(filters, f)
 		}
@@ -210,11 +260,7 @@ func addFilter(filterType, category string, names []string) (err error) {
 	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
-	ig.Write(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(igPath),
-	)
-	return
+	return ig.Write(filterBase, config.AppName("geneos"), config.FilePath(igPath))
 }
 
 var removeExcludeCmd = &cobra.Command{
@@ -222,7 +268,7 @@ var removeExcludeCmd = &cobra.Command{
 	Short:   "Delete an item from an exclude list",
 	Long:    removeExcludeCmdDescription,
 	Aliases: []string{"excludes"},
-	Args:    cobra.ArbitraryArgs,
+	Args:    removeArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -234,11 +280,11 @@ var removeExcludeCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		return removeFilter("exclude", args[0], args[1:])
+		return removeFilter("exclude", category, args[1:])
 	},
 }
 
@@ -247,7 +293,7 @@ var removeIncludeCmd = &cobra.Command{
 	Short:   "Delete an item from an include list",
 	Long:    removeIncludeCmdDescription,
 	Aliases: []string{"includes"},
-	Args:    cobra.ArbitraryArgs,
+	Args:    removeArgs,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
 	},
@@ -259,29 +305,23 @@ var removeIncludeCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// args[0] must contain a category
-		if _, ok := categories[args[0]]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		category, err := validateCategory(args[0])
+		if err != nil {
+			return err
 		}
-		return removeFilter("include", args[0], args[1:])
+		return removeFilter("include", category, args[1:])
 	},
 }
 
 // remove an include or exclude filter. names can be multiline strings,
 // from AC2 command
 func removeFilter(filterType, category string, names []string) (err error) {
-	ig, err := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	ig, err := config.Read(filterBase, filtersFile(cf)...)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return
 	}
 
-	igPath := config.Path(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	igPath := config.Path(filterBase, filtersFile(cf)...)
 	log.Debug("loaded any existing filters", slog.String("path", igPath))
 
 	var filters []*Filter
@@ -291,46 +331,37 @@ func removeFilter(filterType, category string, names []string) (err error) {
 		return err
 	}
 
-	var newnames []string
-	for _, name := range names {
-		newnames = append(newnames, strings.FieldsFunc(name, func(r rune) bool { return r == ',' || r == '\n' })...)
-	}
+	newnames := splitNames(names)
 
 	filters = slices.DeleteFunc(filters, func(f *Filter) bool {
-		if removeCmdAll {
-			return true
-		}
-		if slices.Contains(newnames, f.Name) {
-			return true
-		}
-		return false
+		return removeCmdAll || slices.Contains(newnames, f.Name)
 	})
 	config.Set(ig, ig.Join("filters", filterType, category), filters)
 
 	// always save the result back
-	ig.Write(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(igPath),
-	)
-	return
+	return ig.Write(filterBase, config.AppName("geneos"), config.FilePath(igPath))
 }
 
 func listFilters(filterType string, category string, listFormat string) (err error) {
-	ig, err := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-	)
+	ig, err := readFilters(cf)
+	if err != nil {
+		return
+	}
 
-	r, _ := reporter.NewReporter(listFormat,
+	r, err := reporter.NewReporter(cmp.Or(listFormat, defaultListFormat),
 		os.Stdout,
 		reporter.DataviewCSSClass("gdna-dataview"),
 		reporter.HeadlineCSSClass("gdna-headlines"),
 		reporter.XLSXHeadlines(config.Get[int](cf, cf.Join("xlsx", "headlines"))),
 	)
+	if err != nil {
+		return
+	}
+
 	if category != "" {
 		rows := [][]string{}
-		if _, ok := categories[category]; !ok {
-			return fmt.Errorf("first argument must be a valid category, one of %v", maps.Keys(categories))
+		if category, err = validateCategory(category); err != nil {
+			return
 		}
 
 		var filters []Filter
@@ -343,7 +374,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 		for _, filter := range filters {
 			rows = append(rows, []string{
 				filter.Name,
-				filter.Timestamp.Format(time.RFC3339),
+				formatTime(filter.Timestamp),
 				filter.User,
 				filter.Comment,
 				filter.Origin,
@@ -354,7 +385,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 	}
 
 	var rows [][]string
-	for category := range config.Get[map[string]any](cf, config.Join("filters", filterType)) {
+	for _, category := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, config.Join("filters", filterType)))) {
 		var filters []Filter
 		if err = ig.UnmarshalKey(config.Join("filters", filterType, category),
 			&filters,
@@ -366,7 +397,7 @@ func listFilters(filterType string, category string, listFormat string) (err err
 				category + ":" + filter.Name,
 				category,
 				filter.Name,
-				filter.Timestamp.Format(time.RFC3339),
+				formatTime(filter.Timestamp),
 				filter.User,
 				filter.Comment,
 				filter.Origin,
@@ -379,90 +410,85 @@ func listFilters(filterType string, category string, listFormat string) (err err
 }
 
 // process the filters from the on-disk file and recreate the reporting
-// filter table contents
+// filter table contents. Any error is returned, so that the caller does
+// not use tables that are only partly loaded.
 func processFilters(ctx context.Context, cf *config.Config, tx *sql.Tx, filterType string) error {
-	ig, err := config.Read(filterBase,
-		config.AppName("geneos"),
-		config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-		// config.MustExist(),
-	)
-
+	ig, err := readFilters(cf)
 	if err != nil {
-		log.Warn("loading filters failed", slog.Any("error", err))
+		return err
 	}
 
 	log.Debug("loaded filters", slog.String("type", filterType),
-		slog.String("path", config.Path(filterBase,
-			config.AppName("geneos"),
-			config.FilePath(config.Get[string](cf, config.Join("filters", "file"))),
-		)),
+		slog.String("path", config.Path(filterBase, filtersFile(cf)...)),
 	)
 
-OUTER:
-	for f := range config.Get[map[string]any](cf, cf.Join("filters", filterType)) {
-		table := config.Get[string](cf, cf.Join("filters", filterType, f, "table"))
-
-		// if we are called between reporting db rebuilds, delete existing contents
-		if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
-			log.Info("delete from table failed", slog.Any("error", err), slog.String("table", table))
-			// NOT an error in itself
-			err = nil
+	for _, f := range slices.Sorted(maps.Keys(config.Get[map[string]any](cf, cf.Join("filters", filterType)))) {
+		if err = processFilterCategory(ctx, cf, tx, ig, filterType, f); err != nil {
+			return fmt.Errorf("loading %s filters for %s: %w", filterType, f, err)
 		}
+	}
+	return nil
+}
 
-		insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", filterType, f, "insert")))
-		if err != nil {
-			log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
-			continue
-		}
-		defer insertStmt.Close()
+func processFilterCategory(ctx context.Context, cf *config.Config, tx *sql.Tx, ig *config.Config, filterType, f string) (err error) {
+	table := config.Get[string](cf, cf.Join("filters", filterType, f, "table"))
 
-		var x []*Filter
-		if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x); err != nil {
-			return err
-		}
-		// if nothing on-disk then load any defaults
-		if len(x) == 0 {
-			for _, entry := range config.Get[[]string](cf, config.Join("filters", filterType, f, "default")) {
-				if _, err = insertStmt.ExecContext(ctx,
-					sql.Named("name", entry),
-					sql.Named("user", nil),
-					sql.Named("origin", "default"),
-					sql.Named("comment", nil),
-					sql.Named("timestamp", nil),
-				); err != nil {
-					log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-					os.Exit(1)
-				}
-			}
-			continue OUTER
-		}
+	// if we are called between reporting db rebuilds, delete existing contents
+	if _, err := tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s", table)); err != nil {
+		log.Info("delete from table failed", slog.Any("error", err), slog.String("table", table))
+		// NOT an error in itself
+	}
 
-		for _, i := range x {
+	insertStmt, err := tx.PrepareContext(ctx, config.Get[string](cf, cf.Join("filters", filterType, f, "insert")))
+	if err != nil {
+		log.Error("prepare for table failed", slog.Any("error", err), slog.String("table", table))
+		return
+	}
+	defer insertStmt.Close()
+
+	var x []*Filter
+	if err = ig.UnmarshalKey(ig.Join("filters", filterType, f), &x); err != nil {
+		return
+	}
+	// if nothing on-disk then load any defaults
+	if len(x) == 0 {
+		for _, entry := range config.Get[[]string](cf, config.Join("filters", filterType, f, "default")) {
 			if _, err = insertStmt.ExecContext(ctx,
-				sql.Named("name", i.Name),
-				sql.Named("user", sql.NullString{
-					Valid:  i.User != "",
-					String: i.User,
-				}),
-				sql.Named("origin", sql.NullString{
-					Valid:  i.Origin != "",
-					String: i.Origin,
-				}),
-				sql.Named("comment", sql.NullString{
-					Valid:  i.Comment != "",
-					String: i.Comment,
-				}),
-				sql.Named("timestamp", sql.NullTime{
-					Valid: i.Timestamp == nil || !i.Timestamp.IsZero(),
-					Time:  *i.Timestamp,
-				}),
+				sql.Named("name", entry),
+				sql.Named("user", nil),
+				sql.Named("origin", "default"),
+				sql.Named("comment", nil),
+				sql.Named("timestamp", nil),
 			); err != nil {
 				log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
-				break
+				return
 			}
 		}
-		log.Debug("added entries to filters", slog.Int("count", len(x)), slog.String("type", filterType), slog.String("filter", f))
+		return nil
 	}
+
+	for _, i := range x {
+		if _, err = insertStmt.ExecContext(ctx,
+			sql.Named("name", i.Name),
+			sql.Named("user", sql.NullString{
+				Valid:  i.User != "",
+				String: i.User,
+			}),
+			sql.Named("origin", sql.NullString{
+				Valid:  i.Origin != "",
+				String: i.Origin,
+			}),
+			sql.Named("comment", sql.NullString{
+				Valid:  i.Comment != "",
+				String: i.Comment,
+			}),
+			sql.Named("timestamp", nullTime(i.Timestamp)),
+		); err != nil {
+			log.Error("insert for table failed", slog.Any("error", err), slog.String("table", table))
+			return
+		}
+	}
+	log.Debug("added entries to filters", slog.Int("count", len(x)), slog.String("type", filterType), slog.String("filter", f))
 	return nil
 }
 
@@ -475,9 +501,19 @@ OUTER:
 //	EXISTS (SELECT gateway FROM ${filters.include.gateway.table} WHERE gw.gateway GLOB gateway)
 //	   AND NOT EXISTS (SELECT gateway FROM ${filters.exclude.gateway.table} WHERE gw.gateway GLOB gateway)
 //
-// but we have to expand the table names before passing them back as
-// expand does not recurse.
+// The table names are read from cf when the option is built, as the
+// function for the prefix must not use the configuration, and the
+// option only uses those, so it is bound to cf and shares nothing with
+// any other configuration.
 func buildFilterSQL(cf *config.Config) config.ExpandOption {
+	tables := map[string]map[string]string{}
+	for _, filterType := range []string{"include", "exclude"} {
+		tables[filterType] = map[string]string{}
+		for category := range config.Get[map[string]any](cf, cf.Join("filters", filterType), config.NoExpand()) {
+			tables[filterType][category] = config.Get[string](cf, cf.Join("filters", filterType, category, "table"))
+		}
+	}
+
 	// build a prefix "filters" that takes a table name to test and a list of filter categories,
 	// e.g. "${filter:gw:gateway,source}"
 	return config.Prefix("filters", func(_ map[string]any, s string, b bool, _ ...any) (r string, err error) {
@@ -488,10 +524,14 @@ func buildFilterSQL(cf *config.Config) config.ExpandOption {
 			return "", os.ErrInvalid
 		}
 		for f := range strings.FieldsFuncSeq(s, func(r rune) bool { return r == ',' || unicode.IsSpace(r) }) {
-			clauses = append(clauses, config.Expand[string](cf, fmt.Sprintf(
-				"EXISTS (SELECT %[1]s FROM ${filters.include.%[1]s.table} WHERE %[2]s.%[1]s GLOB %[1]s) "+
-					"AND NOT EXISTS (SELECT %[1]s FROM ${filters.exclude.%[1]s.table} WHERE %[2]s.%[1]s GLOB %[1]s)",
-				f, table)),
+			include, exclude := tables["include"][f], tables["exclude"][f]
+			if include == "" || exclude == "" {
+				return "", fmt.Errorf("filters: no include and exclude tables for category %q", f)
+			}
+			clauses = append(clauses, fmt.Sprintf(
+				"EXISTS (SELECT %[1]s FROM %[3]s WHERE %[2]s.%[1]s GLOB %[1]s) "+
+					"AND NOT EXISTS (SELECT %[1]s FROM %[4]s WHERE %[2]s.%[1]s GLOB %[1]s)",
+				f, table, include, exclude),
 			)
 		}
 		r = strings.Join(clauses, " AND ")

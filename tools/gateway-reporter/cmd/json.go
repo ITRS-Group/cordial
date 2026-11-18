@@ -20,7 +20,6 @@ package cmd
 import (
 	"encoding/json"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -57,7 +56,7 @@ func outputJSON(cf *config.Config, gateway string, entities []Entity, probes map
 
 	filename := config.Get[string](cf, "output.formats.json", conftable)
 	if !filepath.IsAbs(filename) {
-		filename = path.Join(dir, filename)
+		filename = filepath.Join(dir, filename)
 	}
 
 	w, err := os.Create(filename)

@@ -2,7 +2,7 @@
 
 Show the command line and environment variables for matching instances.
 
-If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used.
+If given the `--json`/`-j` flag then the output is an array of objects with the details of each instance and the command environment used. As for the default output, the values of arguments and environment variables that look like secrets are redacted.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the command constructors. This is primarily to match the `start` and `restart` commands and for diagnostics and debugging
 
@@ -16,12 +16,12 @@ geneos command [TYPE] [NAME...]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
   -x, --extras string             Extra args passed to process, split on spaces and quoting ignored
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
   -j, --json[=true|false]         JSON formatted output
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

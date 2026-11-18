@@ -19,12 +19,14 @@ package config
 
 import (
 	"maps"
+	"slices"
 	"sync"
 )
 
 type fnmap struct {
 	fn   func(configItems map[string]any, name string, trim bool, data ...any) (string, error)
 	data []any
+	nest bool // the result of fn is itself expanded, subject to the Loop limit
 }
 
 type expandOptions struct {
@@ -37,15 +39,15 @@ type expandOptions struct {
 	funcMaps           map[string]fnmap    // the set of function maps available for expansion, keyed by function name
 	initialValue       any                 // the initial value to be used for expansion before any other processing
 	lookupTables       []map[string]string // a list of lookup tables to be used during expansion, in order of precedence
-	loop               int                 // the maximum number of iterations to perform during expansion to prevent infinite loops, default 10
+	loop               int                 // the maximum depth of nested expansion, to prevent infinite loops, default 10
 	noDecode           bool                // whether to skip decoding of values during expansion
 	noExpand           bool                // whether to skip expansion entirely
 	promoteFrom        []string            // if not set, look for the first legacy parameter and promote if found (i.e. save to new name and delete old name)
 	replacements       []string            // a list of string replacements to apply during expansion
-// TODO: Revisit unused field trimPrefix; restore it only when needed.
-// 	trimPrefix         bool                // whether to trim the prefix from the expanded value
-	trimSpace          bool                // whether to trim leading and trailing whitespace from the expanded value
-	useKeyFile         string              // the path to a key file to be used for decryption during expansion
+	// TODO: Revisit unused field trimPrefix; restore it only when needed.
+	// 	trimPrefix         bool                // whether to trim the prefix from the expanded value
+	trimSpace  bool   // whether to trim leading and trailing whitespace from the expanded value
+	useKeyFile string // the path to a key file to be used for decryption during expansion
 }
 
 // ExpandOption control the way configuration options undergo string
@@ -58,21 +60,27 @@ type expandOptions struct {
 //	s := config.GetString("config.value", ExternalLookups(false), LookupTable(configMap), Prefix("myconf", myFunc))
 type ExpandOption func(*expandOptions)
 
-// use a normal map, protected with mutex and not sync.Map as this is
-// copied into a normal map later on
-var defaultFuncMapsMutex sync.Mutex
+// builtinFuncMaps are the prefixes enabled by default, until disabled
+// with ExternalLookups(false). The values returned are never expanded
+// further. It is never modified and the mutex is only to protect against
+// future changes.
+var defaultFuncMapsMutex sync.RWMutex
 var defaultFuncMaps = map[string]fnmap{
 	"http":  {fn: fetchURL},
 	"https": {fn: fetchURL},
 	"file":  {fn: fetchFile},
 }
 
+// evalExpandOptions returns the expand options for c by applying, in
+// order, the default options set on c and then options. The returned
+// options, including the function map, belong to the caller and
+// nothing from them is ever shared with another Config or call.
 func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 	e = &expandOptions{
 		cf:               c, // default to config c if not included in options
 		externalFuncMaps: true,
-		funcMaps:         map[string]fnmap{},
-		loop:             10, // default maximum number of iterations during expansion
+		funcMaps:         map[string]fnmap{}, // only the prefixes added by options
+		loop:             10,                 // default maximum depth of nested expansion
 		replacements:     []string{},
 		trimSpace:        true,
 	}
@@ -85,16 +93,22 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 		opt(e)
 	}
 
+	// build the final set of functions: the built-in ones (unless
+	// disabled) overridden by any added by options
+	funcs := make(map[string]fnmap, len(e.funcMaps)+len(defaultFuncMaps)+1)
 	if e.externalFuncMaps {
-		defaultFuncMapsMutex.Lock()
-		maps.Copy(defaultFuncMaps, e.funcMaps)
-		e.funcMaps = defaultFuncMaps
-		defaultFuncMapsMutex.Unlock()
+		defaultFuncMapsMutex.RLock()
+		maps.Copy(funcs, defaultFuncMaps)
+		defaultFuncMapsMutex.RUnlock()
 	}
-
+	maps.Copy(funcs, e.funcMaps)
 	if e.expressions {
-		e.funcMaps["expr"] = fnmap{fn: expr}
+		funcs["expr"] = fnmap{fn: expr}
 	}
+	e.funcMaps = funcs
+
+	// a depth of less than one is meaningless, always do one pass
+	e.loop = max(e.loop, 1)
 
 	if e.defaultValue == nil {
 		e.defaultValue = ""
@@ -106,17 +120,21 @@ func evalExpandOptions(c *Config, options ...ExpandOption) (e *expandOptions) {
 // DefaultExpandOptions returns the default set of ExpandOptions. This
 // allows duplication to another Config object.
 func (c *Config) DefaultExpandOptions() (options []ExpandOption) {
-	defaultFuncMapsMutex.Lock()
-	defer defaultFuncMapsMutex.Unlock()
-	options = append(options, c.defaultExpandOptions...)
-	return
+	c.rwmutex.RLock()
+	defer c.rwmutex.RUnlock()
+	return slices.Clone(c.defaultExpandOptions)
 }
 
 // SetDefaultExpandOptions sets defaults to all subsequent calls to
 // functions that perform configuration expansion. These defaults can be
 // reset by calling SetDefaultExpandOptions with no arguments.
+//
+// The options only apply to c; any [Prefix] functions given are never
+// visible to any other Config.
 func (c *Config) SetDefaultExpandOptions(options ...ExpandOption) {
-	c.defaultExpandOptions = options
+	c.rwmutex.Lock()
+	defer c.rwmutex.Unlock()
+	c.defaultExpandOptions = slices.Clone(options)
 }
 
 // IncludeConfig copies a point to the Config object cf into the
@@ -151,13 +169,19 @@ func NoDecode(n bool) ExpandOption {
 }
 
 // LookupTable adds lookup maps, of name/value pairs, to the Expand
-// functions. If there are no lookup tables defined then `${item}` is
-// treated as an environment variable. When string expansion is done to
-// a plain word, ie. without a prefix, then `${item}` is looked up in
-// each map, in the order the LookupTable options are given, and first
-// match, if any, wins. If there is no match in any of the lookup maps
-// then a nil value is returned and environment variables are not
-// checked.
+// functions. When string expansion is done to a name, i.e. `${name}`,
+// then the name is first looked-up in each map, in the order the
+// LookupTable options are given, and the first match, if any, wins.
+// This applies to any name, including those that look like a
+// configuration key or a file path. If there is no match in any of the
+// lookup maps then a plain name, without a prefix, is treated as an
+// environment variable and any other name is handled as per the usual
+// rules.
+//
+// The values found in lookup tables are inserted exactly as they are,
+// after any trimming of white space, and are never themselves expanded.
+// This means that it is safe to use data from an untrusted source, such
+// as a network request, in a lookup table.
 func LookupTable(values ...map[string]string) ExpandOption {
 	return func(e *expandOptions) {
 		e.lookupTables = append(e.lookupTables, values...)
@@ -183,12 +207,33 @@ func LookupTables(values []map[string]string) ExpandOption {
 // stripped of the opening `${` and closing `}`. A boolean parameter
 // trims white space from the final result if true.
 //
-// The function MUST NOT call other configuration functions or lock the
-// configuration mutex as the calling function will have already done
-// so. The function should return an error if the prefix matches but the
-// value is invalid for any reason, such as a network error when
-// fetching a URL or a missing file when fetching from the file system.
+// The result of the function is itself expanded, as a configuration
+// value would be, subject to the limit set by [Loop]. This allows a
+// function to return a string that refers to other configuration items.
+// If the result may contain data that must not be expanded, such as
+// content from a network request, use [PrefixVerbatim] instead.
+//
+// The function MUST NOT call other configuration functions on the
+// Config being expanded or lock the configuration mutex as the calling
+// function will have already done so. The function should return an
+// error if the prefix matches but the value is invalid for any reason,
+// such as a network error when fetching a URL or a missing file when
+// fetching from the file system.
+//
+// A prefix, including one that replaces a built-in one such as `file`,
+// only applies to the single call or Config that the option is passed
+// to and is never visible to any other.
 func Prefix(prefix string, fn func(configItems map[string]any, name string, trim bool, data ...any) (string, error), data ...any) ExpandOption {
+	return func(e *expandOptions) {
+		e.funcMaps[prefix] = fnmap{fn: fn, data: data, nest: true}
+	}
+}
+
+// PrefixVerbatim is like [Prefix] except that the result of the
+// function is inserted exactly as returned and is never expanded
+// further. Use this for functions that return data that is not under
+// the control of the author of the configuration.
+func PrefixVerbatim(prefix string, fn func(configItems map[string]any, name string, trim bool, data ...any) (string, error), data ...any) ExpandOption {
 	return func(e *expandOptions) {
 		e.funcMaps[prefix] = fnmap{fn: fn, data: data}
 	}
@@ -230,6 +275,8 @@ func TrimSpace(trim bool) ExpandOption {
 // ignored. e.g.
 //
 //	config.Get[uint16]("config.value", config.DefaultValue(uint16(1234)))
+//
+// The default value is returned as-is and is never expanded.
 func DefaultValue(value any) ExpandOption {
 	return func(e *expandOptions) {
 		e.defaultValue = value
@@ -239,7 +286,8 @@ func DefaultValue(value any) ExpandOption {
 // InitialValue sets an initial value to be used if the configuration
 // item is empty (or nil) to start. This differs from DefaultValue() which
 // supplies a value to use if the value if empty after expansion. The
-// initial value, if used, is expanded as would any configuration value.
+// initial value, if used, is expanded as would any configuration value
+// (when it is a string or []string, unless NoExpand() is used).
 //
 // If config.NoExpand() is also used then this initial value is used as
 // a secondary default - i.e. if config.DefaultValue() is empty.
@@ -314,9 +362,16 @@ func PromoteFrom(names ...string) ExpandOption {
 	}
 }
 
-// Loop sets the maximum number of iterations to perform during expansion
-// to prevent infinite loops when expanding configuration values that
-// reference other configuration items. The default value is 10.
+// Loop sets the maximum depth of nested expansion, to prevent infinite
+// loops when configuration values refer to each other. The string
+// being expanded is level 1 and the value of each configuration item
+// (or [Prefix] function result) referred to in it is level 2, and so
+// on. References found at the last level are replaced by their values,
+// which are then not expanded further. A cycle of configuration items
+// is also stopped, without waiting for the limit. The default is 10.
+//
+// A value of 1, or any value less than 1, means that there is no
+// nested expansion at all.
 func Loop(max int) ExpandOption {
 	return func(eo *expandOptions) {
 		eo.loop = max

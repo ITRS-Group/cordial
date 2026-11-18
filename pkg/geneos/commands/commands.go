@@ -22,18 +22,21 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"maps"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -99,6 +102,26 @@ type Connection struct {
 	timeout            time.Duration
 	rrurls             []*url.URL
 	ping               *func(*Connection) error
+
+	// the HTTP client, and so its connection pool, is created on first
+	// use and shared by all calls on the connection
+	clientOnce sync.Once
+	client     *http.Client
+}
+
+// httpClient returns the shared HTTP client for the connection
+func (c *Connection) httpClient() *http.Client {
+	c.clientOnce.Do(func() {
+		c.client = &http.Client{
+			Transport: &http.Transport{
+				Proxy:           http.ProxyFromEnvironment,
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: c.insecureSkipVerify},
+				IdleConnTimeout: 90 * time.Second,
+			},
+			Timeout: c.timeout,
+		}
+	})
+	return c.client
 }
 
 // GeneosRESTError is the error returned from the REST API
@@ -134,7 +157,8 @@ func DialGateway(u *url.URL, options ...Option) (c *Connection, err error) {
 // Options are the same as for DialGateway()
 func DialGateways(urls []*url.URL, options ...Option) (c *Connection, err error) {
 	c = &Connection{
-		rrurls: urls,
+		// copy as Redial shuffles the order
+		rrurls: slices.Clone(urls),
 	}
 	evalOptions(c, options...)
 	err = c.Redial()
@@ -174,25 +198,19 @@ func (c *Connection) Redial() (err error) {
 
 	// loop through, pick the first valid endpoint
 	// save all the errors in case no gateway is valid
-	errs := []string{}
+	var errs []error
 	for _, u := range c.rrurls {
 		c.baseURL = u
 		if err = ping(c); err == nil {
 			return nil
 		}
-		errs = append(errs, fmt.Sprintf("gateway %q: %s", u, err))
+		errs = append(errs, fmt.Errorf("gateway %q: %w", u, err))
 	}
-	return errors.New(strings.Join(errs, "\n"))
+	return errors.Join(errs...)
 }
 
 // Do executes command on the REST endpoint, return the http response
 func (c *Connection) Do(endpoint string, command *Command) (response CommandResponse, err error) {
-	tr := &http.Transport{
-		Proxy:           http.ProxyFromEnvironment,
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: c.insecureSkipVerify},
-	}
-	client := &http.Client{Transport: tr, Timeout: c.timeout}
-
 	r, err := url.Parse(endpoint)
 	if err != nil {
 		return
@@ -204,7 +222,7 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 		return
 	}
 	query := bytes.NewBuffer(q)
-	req, err := http.NewRequest("POST", u.String(), query)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u.String(), query)
 	if err != nil {
 		return
 	}
@@ -217,12 +235,15 @@ func (c *Connection) Do(endpoint string, command *Command) (response CommandResp
 		// No auth
 	}
 
-	resp, err := client.Do(req)
+	resp, err := c.httpClient().Do(req)
 	if err != nil {
 		return
 	}
-	b, _ := io.ReadAll(resp.Body)
+	b, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if err != nil {
+		return
+	}
 
 	if resp.StatusCode > 299 {
 		var geneosError GeneosRESTError
@@ -263,25 +284,30 @@ func cookResponse(raw CommandResponseRaw) (cr CommandResponse, err error) {
 		Target:   raw.Target,
 	}
 
-	for _, m := range raw.MimeType {
+	// merge all the mimetype entries, not just the last
+	if len(raw.MimeType) > 0 {
 		cr.MimeType = make(map[string]string)
-		maps.Copy(cr.MimeType, m)
+		for _, m := range raw.MimeType {
+			maps.Copy(cr.MimeType, m)
+		}
 	}
 
+	var stdout, stderr, execLog strings.Builder
 	for _, s := range raw.StreamData {
 		for k, v := range s {
 			switch k {
 			case "stdout":
-				cr.Stdout += strings.TrimSpace(v) + "\n"
+				stdout.WriteString(strings.TrimSpace(v) + "\n")
 			case "stderr":
-				cr.Stderr += strings.TrimSpace(v) + "\n"
+				stderr.WriteString(strings.TrimSpace(v) + "\n")
 			case "execLog":
-				cr.ExecLog += strings.TrimSpace(v) + "\n"
+				execLog.WriteString(strings.TrimSpace(v) + "\n")
 			default:
 				return cr, fmt.Errorf("unknown response stream %q", k)
 			}
 		}
 	}
+	cr.Stdout, cr.Stderr, cr.ExecLog = stdout.String(), stderr.String(), execLog.String()
 	return
 }
 
@@ -307,7 +333,10 @@ func (c *Connection) RunCommand(command string, target *xpath.XPath, args ...Arg
 
 // RunCommandAll runs command against all matching data items,
 // returning separately concatenated stdout, stderr and execlog when
-// returned by the underlying command
+// returned by the underlying command. A response is returned for every
+// target run, including those that failed, and the errors for all the
+// failed targets are returned joined together, each identifying its
+// target.
 func (c *Connection) RunCommandAll(command string, target *xpath.XPath, args ...Args) (responses []CommandResponse, err error) {
 	arguments := &CommandArgs{}
 	evalArgOptions(arguments, args...)
@@ -317,20 +346,23 @@ func (c *Connection) RunCommandAll(command string, target *xpath.XPath, args ...
 	}
 	if len(targets) == 0 {
 		err = fmt.Errorf("no matches")
+		return
 	}
 	responses = []CommandResponse{}
 
+	var errs []error
 	for _, t := range targets {
-		cr, err := c.Do(endpoint, &Command{
+		cr, doErr := c.Do(endpoint, &Command{
 			Name:   command,
 			Target: t,
 			Args:   arguments,
 		})
 		responses = append(responses, cr)
-		if err != nil {
-			continue
+		if doErr != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", t, doErr))
 		}
 	}
+	err = errors.Join(errs...)
 	return
 }
 

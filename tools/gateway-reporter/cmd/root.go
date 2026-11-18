@@ -20,10 +20,13 @@ package cmd
 import (
 	"bytes"
 	_ "embed"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/DeRuina/timberjack"
@@ -77,6 +80,7 @@ func initConfig() {
 		config.MergeSources(),
 		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),
+		config.StopOnInternalDefaultsErrors(),
 		config.WithEnvs("GENEOS", "_"),
 	}
 
@@ -102,18 +106,6 @@ var Cmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		// no logging - XML output only
-		logger.Init(execname,
-			logger.SetWriter(&timberjack.Logger{
-				Filename:   "/tmp/reporter.log",
-				MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
-				MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),
-				MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "age")),
-				Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
-			}),
-		)
-		log.Debug("logging")
-
 		// check we are in a validate hook
 		setupFile := os.Getenv("_SETUP")
 		validateType := os.Getenv("_VALIDATE_TYPE")
@@ -122,105 +114,64 @@ var Cmd = &cobra.Command{
 			return nil
 		}
 
+		// no logging to the console - XML output only
+		logs := &timberjack.Logger{
+			Filename:   filepath.Join(os.TempDir(), "reporter.log"),
+			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "backups")),
+			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "size")),
+			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "age")),
+			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
+		}
+		defer logs.Close()
+		logger.Init(execname, logger.SetWriter(logs))
+		log.Debug("logging")
+
 		in, err := os.Open(setupFile)
 		if err != nil {
-			fmt.Print(`
-<validation>
-<issues>
-<issue>
-<severity>Error</severity>
-<path>/gateway</path>
-<message>Cannot open setup file ` + setupFile + `</message>
-</issue>
-</issues>
-</validation>
-`)
+			printValidation("Error", "Cannot open setup file "+setupFile)
 			return err
 		}
 		defer in.Close()
 
-		// save XML
+		// only keep a copy of the XML if it will be written out
+		var input io.Reader = in
 		savedXML := new(bytes.Buffer)
-		input := io.TeeReader(in, savedXML)
+		if xmlFormatEnabled(cf) {
+			input = io.TeeReader(in, savedXML)
+		}
 
-		// gateway, entities, err := processFile(config.GetConfig(), in)
 		gateway, entities, probes, err := processInputFile(input)
 		if err != nil {
-			fmt.Printf(`
-<validation>
-<issues>
-<issue>
-<severity>Error</severity>
-<path>/gateway</path>
-<message>Error reading setup: %s</message>
-</issue>
-</issues>
-</validation>
-`, err)
+			printValidation("Error", "Error reading setup: "+err.Error())
 			return err
 		}
 
-		dir := config.Get[string](cf, "output.directory")
-		_ = os.MkdirAll(dir, 0775)
-
-		for format, filename := range config.Get[map[string]any](cf, "output.formats") {
-			if filename == "" {
-				continue
-			}
-			switch format {
-			case "json":
-				if err = outputJSON(cf, gateway, entities, probes); err != nil {
-					break
-				}
-			case "csv":
-				if err = outputCSVZip(cf, gateway, entities, probes); err != nil {
-					break
-				}
-			case "csvdir":
-				if _, _, err = outputCSVDir(cf, gateway, entities, probes); err != nil {
-					break
-				}
-			case "xlsx":
-				if err = outputXLSX(cf, gateway, entities, probes); err != nil {
-					break
-				}
-			case "xml":
-				if err = outputXML(cf, gateway, savedXML); err != nil {
-					break
-				}
-			default:
-				//
-			}
-		}
-
-		if err != nil {
-			fmt.Printf(`
-<validation>
-<issues>
-<issue>
-<severity>Error</severity>
-<path>/gateway</path>
-<message>Error encoding report results: %s</message>
-</issue>
-</issues>
-</validation>
-`, err)
+		if err = writeReports(cf, gateway, entities, probes, savedXML); err != nil {
+			printValidation("Error", "Error encoding report results: "+err.Error())
 			return err
 		}
 
-		fmt.Printf(`
-<validation>
-<issues>
-<issue>
-<severity>None</severity>
-<path>/gateway</path>
-<message>Report file(s) written to %q</message>
-</issue>
-</issues>
-</validation>
-`, config.Get[string](cf, "output.directory"))
+		printValidation("None", fmt.Sprintf("Report file(s) written to %q", config.Get[string](cf, "output.directory")))
 		return nil
 	},
+}
+
+// printValidation writes a Geneos validation hook response with a
+// single issue to STDOUT
+func printValidation(severity, message string) {
+	var msg strings.Builder
+	xml.EscapeText(&msg, []byte(message))
+	fmt.Printf(`
+<validation>
+<issues>
+<issue>
+<severity>%s</severity>
+<path>/gateway</path>
+<message>%s</message>
+</issue>
+</issues>
+</validation>
+`, severity, msg.String())
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

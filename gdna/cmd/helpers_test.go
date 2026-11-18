@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -484,4 +485,56 @@ func TestReportLookupTableMasksIdentity(t *testing.T) {
 	if _, err := time.Parse(time.TimeOnly, lookup["time"]); err != nil {
 		t.Errorf("time value %q is not a time: %v", lookup["time"], err)
 	}
+}
+
+// quietLog discards the log of the program for the duration of a test
+func quietLog(t *testing.T) {
+	t.Helper()
+	old := log
+	log = slog.New(slog.DiscardHandler)
+	t.Cleanup(func() { log = old })
+}
+
+// testConfig loads a configuration, with the defaults, from a file with
+// the YAML given, which is always in the directory of the test
+func testConfig(t *testing.T, dir, yaml string) *config.Config {
+	t.Helper()
+	path := filepath.Join(dir, "gdna.yaml")
+	if err := os.WriteFile(path, []byte(yaml), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cf, err := loadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return cf
+}
+
+// testDB opens the database in the configuration, which the test closes
+func testDB(t *testing.T, cf *config.Config) *sql.DB {
+	t.Helper()
+	db, err := openDB(context.Background(), cf, cf.Join("db", "dsn"), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	return db
+}
+
+// setGlobals sets the package level variables that the commands use for
+// the test and restores them afterwards
+func setGlobals(t *testing.T, c *config.Config) {
+	t.Helper()
+	oldCf, oldPost, oldOnStart, oldOnStartEmail, oldTime := cf, postProcess, onStart, onStartEMail, overrideFiletime
+	oldNames, oldAll, oldScramble, oldZip := reportNames, removeCmdAll, scrambleNames, outputZip
+	t.Cleanup(func() {
+		cf, postProcess, onStart, onStartEMail, overrideFiletime = oldCf, oldPost, oldOnStart, oldOnStartEmail, oldTime
+		reportNames, removeCmdAll, scrambleNames, outputZip = oldNames, oldAll, oldScramble, oldZip
+		fetchCmdSources = nil
+		sourcesChanged.Store(false)
+		closeLicdClient()
+	})
+	cf = c
+	fetchCmdSources = nil
+	quietLog(t)
 }

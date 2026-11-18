@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/itrs-group/cordial/pkg/config"
 
@@ -32,8 +33,6 @@ import (
 	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/itrs-group/cordial/tools/geneos/internal/values"
 )
-
-var unsetCmdWarned bool
 
 var unsetCmdValues = values.UnsetConfigValues{}
 
@@ -75,16 +74,26 @@ geneos unset san -g Gateway1
 		CmdNonInstanceArgsError:  "true",
 		CmdAllInstancesMustMatch: "true",
 	},
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 && cmd.Flags().NFlag() == 0 {
-			cmd.Usage()
-			return
-		}
+	RunE: func(cmd *cobra.Command, args []string) (err error) {
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
+		// only the options of this command count, not global ones like
+		// the host
+		unsetFlags := 0
+		cmd.LocalFlags().VisitAll(func(f *pflag.Flag) {
+			if f.Changed {
+				unsetFlags++
+			}
+		})
+		if len(args) == 0 && unsetFlags == 0 {
+			return cmd.Usage()
+		}
+		if unsetFlags == 0 {
+			return fmt.Errorf("nothing to unset: perhaps you forgot to use -k KEY or one of the other options?")
+		}
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, _ ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 
 			cf := i.Config()
@@ -100,9 +109,8 @@ geneos unset san -g Gateway1
 				}
 			}
 
-			if !changed && !unsetCmdWarned {
-				resp.Err = fmt.Errorf("nothing unset. perhaps you forgot to use -k KEY or one of the other options?")
-				unsetCmdWarned = true
+			if !changed {
+				resp.Err = fmt.Errorf("nothing unset: no matching values found")
 				return
 			}
 

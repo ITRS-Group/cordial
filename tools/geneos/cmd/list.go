@@ -84,21 +84,27 @@ var listCmd = &cobra.Command{
 
 		switch {
 		case listCmdJSON, listCmdIndent:
-			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
+			return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceJSON).Formatted(os.Stdout, "json", nil, nil, responses.IndentJSON(listCmdIndent))
 		case listCmdToolkit:
 			resp := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
 			headlines := make(map[string]string)
-			headlines["totalInstances"] = fmt.Sprintf("%d", len(resp))
+			total := 0
+			for _, r := range resp {
+				if r.Instance != nil {
+					total++
+				}
+			}
+			headlines["totalInstances"] = fmt.Sprintf("%d", total)
 			for _, ct := range geneos.RealComponents() {
 				var count int
 				for _, r := range resp {
-					if r.Instance.Type() == ct {
+					if r.Instance != nil && r.Instance.Type() == ct {
 						count++
 					}
 				}
 				headlines[ct.String()] = fmt.Sprintf("%d", count)
 			}
-			resp.Formatted(os.Stdout, "toolkit", []string{
+			return resp.Formatted(os.Stdout, "toolkit", []string{
 				"ID",
 				"type",
 				"name",
@@ -116,7 +122,7 @@ var listCmd = &cobra.Command{
 			}, nil, responses.AddHeadlines(headlines))
 		case listCmdCSV:
 			resp := instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstanceCSV)
-			resp.Formatted(os.Stdout, "csv", []string{
+			return resp.Formatted(os.Stdout, "csv", []string{
 				"Type",
 				"Name",
 				"Host",
@@ -134,7 +140,7 @@ var listCmd = &cobra.Command{
 				nil,
 			)
 		default:
-			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
+			return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, listInstancePlain).Formatted(os.Stdout, "column", []string{
 				"Type",
 				"Name",
 				"Host",
@@ -145,10 +151,6 @@ var listCmd = &cobra.Command{
 				"Home",
 			}, nil)
 		}
-		if err == os.ErrNotExist {
-			err = nil
-		}
-		return
 	},
 }
 

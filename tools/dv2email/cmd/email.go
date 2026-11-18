@@ -18,10 +18,13 @@ limitations under the License.
 package cmd
 
 import (
+	"fmt"
 	htemplate "html/template"
 	"log/slog"
+	"maps"
 	"os"
 	"slices"
+	"strings"
 	"text/template"
 	"time"
 
@@ -31,54 +34,98 @@ import (
 	"github.com/itrs-group/cordial/pkg/email"
 )
 
-func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (err error) {
+func sendEmail(cf *config.Config, em *config.Config, data any) (err error) {
+	m, err := buildMessage(cf, em, data)
+	if err != nil {
+		return
+	}
+
+	d, err := email.Dial(em)
+	if err != nil {
+		return fmt.Errorf("failed to dial email server: %w", err)
+	}
+
+	return d.DialAndSend(m)
+}
+
+// embeddedImages returns the map of image names to file paths from the
+// `images` configuration section.
+//
+// Names normally include a file extension, e.g. `logo.png`, which the
+// configuration treats as a nested key, so the section has to be
+// flattened to get the names back. Names are lower-cased by the
+// configuration and so must be referenced in HTML as lower-case
+// `cid:` values.
+func embeddedImages(cf *config.Config) (images map[string]string) {
+	images = map[string]string{}
+	var flatten func(prefix string, v any)
+	flatten = func(prefix string, v any) {
+		switch v := v.(type) {
+		case map[string]any:
+			for k, v := range v {
+				flatten(prefix+"."+k, v)
+			}
+		case string:
+			images[strings.TrimPrefix(prefix, ".")] = v
+		}
+	}
+	flatten("", config.Get[map[string]any](cf, "images"))
+	return
+}
+
+// buildMessage builds the email message, with all body parts and
+// attachments, from the configuration and data
+func buildMessage(cf *config.Config, em *config.Config, data any) (m *mail.Msg, err error) {
 	run := time.Now()
 
-	m, err := email.UpdateEnvelope(em, inlineCSS)
+	m, err = email.UpdateEnvelope(em, false)
 	if err != nil {
-		log.Error("failed to update email envelope", slog.Any("error", err))
-		os.Exit(1)
+		return nil, fmt.Errorf("failed to update email envelope: %w", err)
 	}
 	m.Subject(config.Get[string](em, "_subject"))
 
-	// attachments here
+	contents := config.Get[[]string](cf, cf.Join("email", "contents"))
 
 	// if not a multipart/alternative then always attach a plain
 	// text part as the main body
 	tt, err := template.New("dataview").Parse(config.Get[string](cf, "text.template"))
 	if err != nil {
-		return
+		return nil, err
 	}
-	_ = m.SetBodyTextTemplate(tt, data)
+	if err = m.SetBodyTextTemplate(tt, data); err != nil {
+		return nil, fmt.Errorf("failed to build text body: %w", err)
+	}
 
-	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "text+html") {
+	if slices.Contains(contents, "text+html") {
 		ht, err := htemplate.New("dataview").Parse(config.Get[string](cf, "html.template"))
 		if err != nil {
-			return err
+			return nil, err
 		}
-		_ = m.AddAlternativeHTMLTemplate(ht, data)
+		if err = m.AddAlternativeHTMLTemplate(ht, data); err != nil {
+			return nil, fmt.Errorf("failed to build HTML body: %w", err)
+		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "texttable") {
+	if slices.Contains(contents, "texttable") {
 		files, err := buildTextTableFiles(cf, data, run)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		for _, file := range files {
 			m.AttachReadSeeker(file.name, file.content)
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "html") {
+	if slices.Contains(contents, "html") {
 		if err := buildHTMLAttachments(cf, m, data, run); err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "xlsx") {
+	if slices.Contains(contents, "xlsx") {
 		files, err := buildXLSXFiles(cf, data, run)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		for _, file := range files {
@@ -86,23 +133,18 @@ func sendEmail(cf *config.Config, em *config.Config, data any, inlineCSS bool) (
 		}
 	}
 
-	if slices.Contains(config.Get[[]string](cf, cf.Join("email", "contents")), "images") {
-		for name, path := range config.Get[map[string]string](cf, "images") {
+	if slices.Contains(contents, "images") {
+		images := embeddedImages(cf)
+		for _, name := range slices.Sorted(maps.Keys(images)) {
+			path := images[name]
 			if _, err := os.Stat(path); err != nil {
 				log.Error("skipping image", slog.Any("error", err), slog.String("path", path))
 				continue
 			}
+			// the Content-ID, used for `cid:` references, is taken from the file name
 			m.EmbedFile(path, mail.WithFileName(name))
-			m.SetGenHeader("X-Attachment-Id", name)
 		}
 	}
 
-	// send
-	d, err := email.Dial(em)
-	if err != nil {
-		log.Error("failed to dial email server", slog.Any("error", err))
-		os.Exit(1)
-	}
-
-	return d.DialAndSend(m)
+	return m, nil
 }

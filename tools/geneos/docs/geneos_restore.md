@@ -10,7 +10,7 @@ Those backup archives that contain a `tls/` directory will have the contents res
 
 If an instance name is given in the format `DEST=SRC` then instances in the archive called `SRC` will be restored but renamed `DEST`. In this case `SRC` cannot be a wildcard.
 
-Existing instances will not be overwritten, similarly for shared directories.
+Existing instances will not be overwritten, similarly for shared directories. It is an error if an instance named on the command line is not in the archive, but the other instances that are are still restored.
 
 The command accepts a combination of filenames and instance name patterns, with optional renaming, and distinguishes them by validating the arguments. Any arguments that are not valid instance names (or wildcard or rename patterns) are treated as archive files. In case your archive file matches a valid instance name you should either use an absolute path to the file or a `./` prefix.
 
@@ -33,9 +33,9 @@ geneos restore [flags] [TYPE] [[DEST=]NAME...]
                                   MUST be supplied if the source is stdin (`-`)
   -l, --list[=true|false]         list the contents of the archive(s)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

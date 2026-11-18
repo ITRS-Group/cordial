@@ -223,11 +223,15 @@ func WaitReady(cmd *exec.Cmd, path string, timeout time.Duration) error {
 	}
 }
 
-// SignalProcess sends the signal to the process with the PID. It returns
-// [os.ErrProcessDone] if there is no such process.
+// SignalProcess sends the signal to the process with the PID, which must
+// be greater than zero as anything else addresses a group of processes.
+// It returns [os.ErrProcessDone] if there is no such process.
 func SignalProcess(pid int, sig os.Signal) error {
 	if sig == nil {
 		return errors.ErrUnsupported
+	}
+	if pid <= 0 {
+		return fmt.Errorf("invalid pid %d: %w", pid, os.ErrInvalid)
 	}
 	p, err := os.FindProcess(pid)
 	if err != nil {

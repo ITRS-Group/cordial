@@ -10,7 +10,7 @@ Protected instances will not be restarted unless the `--force`/`-F` option is gi
 
 Normal behaviour is to send, on Linux, a `SIGTERM` to the process and wait for a short period before trying again until the process is no longer running. If this fails to stop the process a `SIGKILL` is sent to terminate the process without further action. If the `--kill`/`-K` option is used then the terminate signal is sent immediately without waiting. Beware that this can leave instance files corrupted or in an indeterminate state.
 
-If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user.
+If the `--log`/`-l` option is given then the logs of all instances that are started are followed until interrupted by the user. This also applies to instances selected using `--port`/`-p`.
 
 The options `--extras`/`-x` and `--env`/`-e` can be used to add one-off extra command line parameters and environment variables to the start-up of the process. This can be useful when you may need to run a Gateway with an option like `-skip-cache` after rotating key-files, e.g. `geneos restart gateway Example -x -skip-cache`.
 
@@ -31,9 +31,9 @@ geneos restart [flags] [TYPE] [NAME...]
   -e, --env NAME=VALUE            Extra environment variable (Repeat as required)
   -l, --log[=true|false]          Run 'logs -f' after starting instance(s)
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

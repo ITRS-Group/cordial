@@ -19,6 +19,7 @@ package hostcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -62,6 +63,7 @@ var setCmd = &cobra.Command{
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var password string
 		var hosts []*geneos.Host
+		var unknown error
 
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			return command.Usage()
@@ -76,15 +78,18 @@ var setCmd = &cobra.Command{
 		} else {
 			for _, a := range args {
 				h := geneos.GetHost(a)
-				if h.Exists() {
-					hosts = append(hosts, h)
+				if !h.Exists() {
+					// carry on with the other hosts
+					unknown = cmd.ReportFailure(a, errors.New("unknown host"))
+					continue
 				}
+				hosts = append(hosts, h)
 			}
 		}
 		if len(hosts) == 0 {
 			// nothing to do
 			fmt.Println("nothing to do")
-			return nil
+			return unknown
 		}
 
 		if setCmdKeyfile == "" {
@@ -118,6 +123,9 @@ var setCmd = &cobra.Command{
 			}
 		}
 
-		return geneos.SaveHostConfig()
+		if err = geneos.SaveHostConfig(); err != nil {
+			return err
+		}
+		return unknown
 	},
 }

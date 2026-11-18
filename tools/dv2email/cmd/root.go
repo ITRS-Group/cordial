@@ -18,11 +18,14 @@ limitations under the License.
 package cmd
 
 import (
+	"cmp"
 	_ "embed"
+	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -56,12 +59,15 @@ func init() {
 	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	Cmd.PersistentFlags().MarkHidden("help")
 
-	Cmd.PersistentFlags().StringVarP(&entityArg, "entity", "E", "", "entity name, ignored if _VARIBLEPATH set in environment")
-	Cmd.PersistentFlags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name, ignored if _VARIBLEPATH set in environment")
-	Cmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIBLEPATH set in environment\nTo explicitly select empty/no type use --type/-T \"\"")
-	Cmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIBLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&entityArg, "entity", "E", "", "entity name, ignored if _VARIABLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&samplerArg, "sampler", "S", "", "sampler name, ignored if _VARIABLEPATH set in environment")
+	Cmd.PersistentFlags().StringVarP(&typeArg, "type", "T", "", "type name, ignored if _VARIABLEPATH set in environment\nTo explicitly select empty/no type use --type/-T \"\"")
+	Cmd.PersistentFlags().StringVarP(&dataviewArg, "dataview", "D", "", "dataview name, ignored if _VARIABLEPATH set in environment")
 
-	Cmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", true, "inline CSS for better mail client support")
+	// CSS inlining is not implemented, the flag is only accepted so
+	// that existing command lines continue to work
+	Cmd.Flags().BoolVarP(&inlineCSS, "inline-css", "i", false, "no longer used")
+	Cmd.Flags().MarkDeprecated("inline-css", "CSS is not inlined, the flag has no effect")
 
 	Cmd.Flags().StringVarP(&toArg, "to", "t", "", "`\"TO, ...\"` recipients as a comma-separated list of email addresses")
 	Cmd.Flags().StringVarP(&ccArg, "cc", "c", "", "`\"CC, ...\"` recipients as a comma-separated list of email addresses")
@@ -96,6 +102,7 @@ func initConfig() {
 		config.MergeSources(),
 		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),
+		config.StopOnInternalDefaultsErrors(),
 		config.WithEnvs("DV2EMAIL", "_"),
 	}
 
@@ -144,8 +151,7 @@ var Cmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		gw, err := dialGateway(globalCf)
 		if err != nil {
-			log.Error("failed to dial gateway", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("failed to dial gateway: %w", err)
 		}
 
 		// we need to pass filters etc. to fetchDataviews
@@ -165,21 +171,13 @@ var Cmd = &cobra.Command{
 
 		switch config.Get[string](globalCf, globalCf.Join("email", "split")) {
 		case "entity":
-			entities := map[string][]*commands.Dataview{}
-			for _, d := range data.Dataviews {
-				if len(entities[d.XPath.Entity.Name]) == 0 {
-					entities[d.XPath.Entity.Name] = []*commands.Dataview{}
-				}
-				entities[d.XPath.Entity.Name] = append(entities[d.XPath.Entity.Name], d)
-			}
-			for _, e := range entities {
+			for _, group := range groupByEntity(data.Dataviews) {
 				many := DV2EMailData{
-					Dataviews: e,
+					Dataviews: group.dataviews,
 					Env:       data.Env,
 				}
-				if err = sendEmail(globalCf, em, many, inlineCSS); err != nil {
-					log.Error("failed to send email", slog.Any("error", err))
-					os.Exit(1)
+				if err = sendEmail(globalCf, em, many); err != nil {
+					return fmt.Errorf("failed to send email: %w", err)
 				}
 			}
 		case "dataview":
@@ -188,15 +186,13 @@ var Cmd = &cobra.Command{
 					Dataviews: []*commands.Dataview{d},
 					Env:       data.Env,
 				}
-				if err = sendEmail(globalCf, em, one, inlineCSS); err != nil {
-					log.Error("failed to send email", slog.Any("error", err))
-					os.Exit(1)
+				if err = sendEmail(globalCf, em, one); err != nil {
+					return fmt.Errorf("failed to send email: %w", err)
 				}
 			}
 		default:
-			if err = sendEmail(globalCf, em, data, inlineCSS); err != nil {
-				log.Error("failed to send email", slog.Any("error", err))
-				os.Exit(1)
+			if err = sendEmail(globalCf, em, data); err != nil {
+				return fmt.Errorf("failed to send email: %w", err)
 			}
 		}
 
@@ -221,7 +217,8 @@ func Execute() {
 // the values for the longest matching key (using globbing rules)
 //
 // match returns a the first slice of values of the member of
-// confkey that matches name using globbing rules, longest match wins.
+// confkey that matches name using globbing rules, longest match wins
+// (with keys of the same length tried in alphabetical order).
 // e.g. for
 //
 // confkey:
@@ -241,12 +238,9 @@ func match(name, confkey, override string) (matches []string) {
 	if len(checks) == 0 {
 		return
 	}
-	keys := []string{}
-	for k := range checks {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return len(keys[i]) > len(keys[j])
+	// longest key first, with a stable order for keys of the same length
+	keys := slices.SortedFunc(maps.Keys(checks), func(a, b string) int {
+		return cmp.Or(cmp.Compare(len(b), len(a)), strings.Compare(a, b))
 	})
 	for _, m := range keys {
 		if ok, _ := path.Match(m, name); ok {

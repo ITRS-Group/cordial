@@ -118,6 +118,10 @@ The default configuration sets the following:
 
   The Integration Key can be found under the Pagerduty Service -> Integrations tab (select the service under your instance: `https://XXX.pagerduty.com/service-directory`). You should either select the Geneos integration (if it exists in your list) or create a `Custom Event Transformer`. Click on the down arrow to reveal the Integration Key value.
 
+* `timeout` - default: `30s`
+
+  The longest to wait for Pagerduty to accept an event, after which the command fails.
+
 * `alert-type` - default: `${_ALERT_TYPE}`
 
   The `pagerduty.alert-type` is used (in the code above) to indicate a `clear` or `suspend`. Other values are ignored.
@@ -142,7 +146,7 @@ The default configuration sets the following:
         dedup-key: "${LOCATION}-${_MANAGED_ENTITY}-${_DATAVIEW}"
     ```
 
-  * `client` & `client-url` - defaults: `ITRS Geneos` and `https://www.itrsgroup.com`
+  * `client` & `client_url` - defaults: `ITRS Geneos` and `https://www.itrsgroup.com`
 
     The `client` and `client_url` values are shown in the Pagerduty incident as a link, the `client` being the displayed text (prefixed by `View in`) and the `client_url` the destination. These could be used, for example, to link to your internal knowledge base / wiki for a specific service. Remember that you can build these values in the configuration file from multiple environment variables and static text, e.g. if `COMPONENT` and `RUNBOOK` are Geneos Attributes set on a Managed Entity:
 
@@ -178,7 +182,14 @@ The default configuration sets the following:
 
   * `links` and `images` - defaults: `_KBA_URLS` and none.
 
-    A Pagerduty event payload can contain links and image references. While the default links are set to an Geneos Knowledge Base Articles defined on the data item, these values do not appear in the Pagerduty incident interface at this time.
+    A Pagerduty event payload can contain links and image references. `links` is a list of URLs, one per line, and `images` is a list of images, each with a `src` and, optionally, an `href` and `alt`. While the default links are set to an Geneos Knowledge Base Articles defined on the data item, these values do not appear in the Pagerduty incident interface at this time.
+
+    ```yaml
+      event:
+        images:
+          - src: https://example.com/graph.png
+            alt: Graph
+    ```
 
 * `send-env` - default: `false`
 

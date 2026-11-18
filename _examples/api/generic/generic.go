@@ -3,9 +3,9 @@ package generic
 import (
 	"log/slog"
 
-	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/pkg/geneos/plugins"
 	"github.com/itrs-group/cordial/pkg/geneos/samplers"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 // GenericData TODO: Describe its purpose and intended use.
@@ -21,7 +21,7 @@ type GenericSampler struct {
 	localdata string
 }
 
-var log = cordial.Logger
+var log = logger.Logger
 
 // New TODO: Document its behavior, inputs, and effects.
 func New(s *plugins.Connection, name string, group string) (*GenericSampler, error) {

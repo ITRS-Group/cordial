@@ -19,7 +19,7 @@ gdna restart
 ```text
   -f, --config FILE          Use configuration FILE
       --force[=true|false]   Kill the process if it has not stopped within the timeout
-  -l, --logfile file         Write logs to file. Use '-' for console or /dev/null for none (default "docs.log")
+  -l, --logfile file         Write logs to file. Use '-' for console or /dev/null for none (default "gdna.log")
       --pidfile file         Use the PID file, overriding `gdna.pidfile` in the configuration
       --timeout duration     Wait this long for the process to stop (default 30s)
 ```

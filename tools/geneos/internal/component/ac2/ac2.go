@@ -20,7 +20,6 @@ package ac2
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -51,7 +50,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "7040-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 		}, ":"),
@@ -74,7 +73,7 @@ var Component = geneos.Component{
 		`program={{join "${config:install}" "${config:version}" "${config:binary}"}}`,
 		`logfile=ActiveConsole.log`,
 		`libpaths={{join "${config:install}" "${config:version}" "lib64"}}`,
-		`config={{join .home "ActiveConsol.gci"}}`,
+		`config={{join .home "ActiveConsole.gci"}}`,
 		`options=-wsp {{.home}}`,
 		`autostart=false`,
 	},
@@ -83,12 +82,6 @@ var Component = geneos.Component{
 		path.Join(name, "ac2s"),
 	},
 	GetPID: pidCheckFn,
-}
-
-var initialFiles = []string{
-	// "ActiveConsole.gci",
-	// "log4j2.properties",
-	// "defaultws.dwx",
 }
 
 // AC2 TODO: Describe its purpose and intended use.
@@ -130,7 +123,7 @@ func (i *AC2) Type() *geneos.Component {
 
 // Name TODO: Document its behavior, inputs, and effects.
 func (i *AC2) Name() string {
-	if i == nil || i.Conf == nil {
+	if (*instance.Instance)(i).Config() == nil {
 		return ""
 	}
 	return config.Get[string](i.Config(), "name")
@@ -178,7 +171,8 @@ func (i *AC2) Unload() (err error) {
 		return
 	}
 	ac2s.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return
 }
 
@@ -187,7 +181,7 @@ func (i *AC2) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -195,7 +189,7 @@ func (i *AC2) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -203,7 +197,7 @@ func (i *AC2) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -211,7 +205,7 @@ func (i *AC2) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add create a new instance of AC2
@@ -231,20 +225,11 @@ func (i *AC2) Add(options ...any) (err error) {
 
 	config.Set(i.Config(), "port", opts.Port)
 
-	baseDir := instance.BaseVersion(i)
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-	if err = os.Chdir(baseDir); err != nil {
-		return
-	}
-
-	instance.ImportFiles(i, initialFiles...)
-
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
-	return
+	return nil
 }
 
 // Rebuild is not supported for AC2 instances. It always returns false

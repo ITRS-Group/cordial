@@ -19,7 +19,6 @@ package ca3
 
 import (
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 	"path"
@@ -82,7 +81,7 @@ var Component = geneos.Component{
 	},
 
 	Directories: []string{
-		path.Join("packages", name),
+		path.Join("packages", "netprobe"),
 		path.Join("netprobe", name+"s"),
 		path.Join("netprobe", "shared"),
 	},
@@ -196,7 +195,8 @@ func (i *CA3) Unload() (err error) {
 		return
 	}
 	ca3s.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return
 }
 
@@ -205,7 +205,7 @@ func (i *CA3) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -213,7 +213,7 @@ func (i *CA3) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -221,7 +221,7 @@ func (i *CA3) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -229,7 +229,7 @@ func (i *CA3) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add TODO: Document its behavior, inputs, and effects.
@@ -247,23 +247,18 @@ func (i *CA3) Add(options ...any) (err error) {
 		return fmt.Errorf("%w: no free port found", geneos.ErrNotExist)
 	}
 
-	baseDir := i.Host().Join(instance.BaseVersion(i), "collection_agent")
 	config.Set(i.Config(), "port", opts.Port)
 
-	// copy default configs
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-	if err = os.Chdir(baseDir); err != nil {
-		return
+	// copy default configs from the installed package
+	if err = instance.ImportPackageFiles(i, i.Host().Join(instance.BaseVersion(i), "collection_agent"), initialFiles...); err != nil {
+		return err
 	}
-
-	instance.ImportFiles(i, initialFiles...)
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
-		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(io.Discard))
+		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
-	return
+	return nil
 }
 
 // Rebuild is not supported for CA3 instances. It always returns false
@@ -301,16 +296,21 @@ func (i *CA3) Command(skipFileCheck bool) (args, env []string, home string, err 
 		config.Get[string](cf, "setup", config.PromoteFrom("config")),
 	}
 
-	hostname, err := os.Hostname()
-	if err != nil {
+	hostname := i.Host().Hostname()
+	if hostname == "" {
 		hostname = "localhost"
 	}
 
-	checks = append(checks, config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(classPath, "plugins"))))
+	// the instance port is the TCP reporter port, which can be
+	// overridden by the `tcp-reporter-port` parameter
+	port := config.Get[uint16](cf, "port", config.DefaultValue(uint16(9137)))
+	plugins := config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(classPath, "plugins")))
+
+	checks = append(checks, plugins)
 	env = []string{
-		fmt.Sprintf("CA_PLUGIN_DIR=%s", config.Get[string](cf, "plugins", config.DefaultValue(i.Host().Join(classPath, "plugins")))),
-		fmt.Sprintf("HEALTH_CHECK_PORT=%d", config.Get[uint16](cf, "health-check-port", config.DefaultValue(9136))),
-		fmt.Sprintf("TCP_REPORTER_PORT=%d", config.Get[uint16](cf, "tcp-reporter-port", config.DefaultValue(9137))),
+		fmt.Sprintf("CA_PLUGIN_DIR=%s", plugins),
+		fmt.Sprintf("HEALTH_CHECK_PORT=%d", config.Get[uint16](cf, "health-check-port", config.DefaultValue(uint16(9136)))),
+		fmt.Sprintf("TCP_REPORTER_PORT=%d", config.Get[uint16](cf, "tcp-reporter-port", config.DefaultValue(port))),
 		fmt.Sprintf("HOSTNAME=%s", config.Get[string](cf, "hostname", config.DefaultValue(hostname))),
 	}
 

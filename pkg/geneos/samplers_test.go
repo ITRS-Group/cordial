@@ -2,6 +2,7 @@ package geneos
 
 import (
 	"encoding/xml"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -101,5 +102,23 @@ func TestUnknownPluginAttributesRoundTrip(t *testing.T) {
 	}
 	if attributes["version"] != "2" || attributes["enabled"] != "true" || !strings.Contains(unknown.RawXML, `<setting key="mode">fast</setting>`) {
 		t.Fatalf("unknown plugin changed after re-encoding: %#v", unknown)
+	}
+}
+
+// every plugin must have its own yaml, json and xml name, catching copy/paste errors in tags
+func TestPluginTagsAreUnique(t *testing.T) {
+	seen := map[string]string{}
+	for field := range reflect.TypeFor[Plugin]().Fields() {
+		for _, key := range []string{"xml", "json", "yaml"} {
+			name, _, _ := strings.Cut(field.Tag.Get(key), ",")
+			if name == "" || name == "-" {
+				continue
+			}
+			id := key + ":" + strings.ToLower(name)
+			if other, ok := seen[id]; ok {
+				t.Errorf("%s tag %q used by both %s and %s", key, name, other, field.Name)
+			}
+			seen[id] = field.Name
+		}
 	}
 }

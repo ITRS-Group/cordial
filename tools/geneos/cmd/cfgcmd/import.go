@@ -19,7 +19,7 @@ package cfgcmd
 
 import (
 	_ "embed"
-	"fmt"
+	"errors"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -51,7 +51,6 @@ var importCmd = &cobra.Command{
 		cmd.CmdAuditActions:  "never",
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		fmt.Println("Please use the `restore` command instead")
-		return
+		return errors.New("`config import` is no longer supported, please use the `restore` command instead")
 	},
 }

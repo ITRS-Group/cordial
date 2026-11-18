@@ -18,8 +18,10 @@ limitations under the License.
 package instance
 
 import (
+	"errors"
 	"log/slog"
 	"os"
+	"syscall"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/process"
@@ -40,9 +42,22 @@ func IsProtected(i geneos.Instance) bool {
 	return config.Get[bool](i.Config(), "protected")
 }
 
-// IsRunning returns true if the instance is running
+// IsRunning returns true if the instance is running. If it is not
+// possible to tell, for example because the host cannot be reached,
+// then the instance is reported as not running.
 func IsRunning(i geneos.Instance) bool {
-	return Signal(i, 0) != os.ErrProcessDone
+	err := Signal(i, 0)
+	switch {
+	case err == nil:
+		return true
+	case errors.Is(err, os.ErrProcessDone):
+		return false
+	case errors.Is(err, os.ErrPermission), errors.Is(err, syscall.EPERM):
+		// the process exists but is owned by another user
+		return true
+	}
+	i.Log().Debug("cannot determine if instance is running", slog.Any("error", err))
+	return false
 }
 
 // IsAutoStart returns true is the instance is set to autostart

@@ -85,7 +85,9 @@ func untar(h *Host, dir string, tarfile io.Reader, filelen int64, stripPrefix fu
 			if n != hdr.Size {
 				log.Error("lengths different", slog.Int64("expected", hdr.Size), slog.Int64("actual", n))
 			}
-			out.Close()
+			if err = out.Close(); err != nil {
+				return
+			}
 			if err := h.Chtimes(fullpath, hdr.AccessTime, hdr.ModTime); err != nil {
 				log.Warn("cannot update mtime", slog.Any("error", err))
 			}

@@ -18,10 +18,12 @@ limitations under the License.
 package geneos
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
 	"mime"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -29,6 +31,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/pkg/host"
@@ -36,10 +40,113 @@ import (
 
 const defaultURL = "https://resources.itrsgroup.com/download/latest/"
 
+// downloadTimeout returns the timeout for downloads, which is the
+// `download.timeout` setting, or the environment variable
+// `ITRS_DOWNLOAD_TIMEOUT`, as a duration, or 60 seconds if not set. See
+// [newDownloadClient] for how it is used.
+func downloadTimeout(cf *config.Config) time.Duration {
+	if cf == nil {
+		cf = config.Global()
+	}
+	return config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second))
+}
+
+// newDownloadClient returns an HTTP client for downloads that limits
+// the time to connect and to receive the response headers to timeout,
+// but not the total time to read the response body so that large
+// archives can be downloaded on slow connections.
+//
+// Instead the time that a read of the response body waits for data is
+// limited to timeout, so that a transfer that stalls fails with an
+// error, while one that is progressing, however slowly, does not. A
+// timeout of zero or less disables all of these limits.
+func newDownloadClient(timeout time.Duration) *http.Client {
+	t := http.DefaultTransport.(*http.Transport).Clone()
+	t.DialContext = (&net.Dialer{Timeout: timeout, KeepAlive: 30 * time.Second}).DialContext
+	t.TLSHandshakeTimeout = timeout
+	t.ResponseHeaderTimeout = timeout
+	return &http.Client{Transport: &idleTimeoutTransport{base: t, idle: timeout}}
+}
+
+// idleTimeoutTransport is a [http.RoundTripper] that fails the reading
+// of a response body that does not receive any data for idle.
+type idleTimeoutTransport struct {
+	base http.RoundTripper
+	idle time.Duration
+}
+
+func (t *idleTimeoutTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	if t.idle <= 0 {
+		return t.base.RoundTrip(req)
+	}
+
+	// cancelling the context of the request is the only way to stop a
+	// read of the body that is blocked
+	ctx, cancel := context.WithCancel(req.Context())
+	if resp, err = t.base.RoundTrip(req.WithContext(ctx)); err != nil {
+		cancel()
+		return
+	}
+
+	body := &idleTimeoutBody{ReadCloser: resp.Body, idle: t.idle, cancel: cancel}
+	body.timer = time.AfterFunc(t.idle, func() {
+		body.stalled.Store(true)
+		cancel()
+	})
+	body.timer.Stop()
+	resp.Body = body
+	return
+}
+
+// idleTimeoutBody is a response body where each read has to receive
+// some data, or fail, within idle. The time spent outside of a read,
+// for example while the caller writes the data to disk, does not count.
+type idleTimeoutBody struct {
+	io.ReadCloser
+	idle    time.Duration
+	timer   *time.Timer
+	cancel  context.CancelFunc
+	stalled atomic.Bool
+}
+
+// errDownloadStalled is the error returned when no data is received for
+// the idle time. It matches [os.ErrDeadlineExceeded].
+type errDownloadStalled struct {
+	idle time.Duration
+}
+
+func (e errDownloadStalled) Error() string {
+	return fmt.Sprintf("download stalled: no data received for %s", e.idle)
+}
+
+func (e errDownloadStalled) Is(target error) bool {
+	return target == os.ErrDeadlineExceeded
+}
+
+func (e errDownloadStalled) Timeout() bool { return true }
+
+func (b *idleTimeoutBody) Read(p []byte) (n int, err error) {
+	b.timer.Reset(b.idle)
+	n, err = b.ReadCloser.Read(p)
+	b.timer.Stop()
+	if err != nil && err != io.EOF && b.stalled.Load() {
+		err = errDownloadStalled{b.idle}
+	}
+	return
+}
+
+func (b *idleTimeoutBody) Close() error {
+	b.timer.Stop()
+	err := b.ReadCloser.Close()
+	b.cancel()
+	return err
+}
+
 // FilenameFromHTTPResp decodes and returns the filename from the
 // HTTP(S) request. It tried to extract the filename from the
 // COntent-Disposition header and if that fails returns the basename of
-// the URL Path.
+// the URL Path. The filename from the server is untrusted and only the
+// final element of any path is used.
 func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err error) {
 	cd, ok := resp.Header[http.CanonicalHeaderKey("content-disposition")]
 	if !ok && resp.Request.Response != nil {
@@ -49,18 +156,30 @@ func FilenameFromHTTPResp(resp *http.Response, u *url.URL) (filename string, err
 		_, params, err := mime.ParseMediaType(cd[0])
 		if err == nil {
 			if f, ok := params["filename"]; ok {
-				filename = f
+				filename = safeFilename(f)
 			}
 		}
 	}
 
-	// if no content-disposition, then grab the path from the response URL
+	// if no content-disposition, or it is not usable, then grab the
+	// path from the response URL
 	if filename == "" {
 		if filename, err = CleanRelativePath(path.Base(u.Path)); err != nil {
 			return
 		}
 	}
 	return
+}
+
+// safeFilename returns the final element of name, treating both '/' and
+// '\' as separators, or an empty string if that is not a plain,
+// local file name.
+func safeFilename(name string) string {
+	name = name[strings.LastIndexAny(name, `/\`)+1:]
+	if name == "" || name == "." || name == ".." || !filepath.IsLocal(name) {
+		return ""
+	}
+	return name
 }
 
 // ReadAll opens and, if successful, reads the contents of the source
@@ -114,7 +233,7 @@ func openSource(source string, options ...GeneosOption) (from io.ReadCloser, fil
 			var req *http.Request
 			var resp *http.Response
 
-			client := &http.Client{}
+			client := newDownloadClient(downloadTimeout(nil))
 
 			req, err = http.NewRequest("GET", source, nil)
 			if err != nil {
@@ -137,6 +256,7 @@ func openSource(source string, options ...GeneosOption) (from io.ReadCloser, fil
 			// only use auth if required
 			if resp.StatusCode == 401 || resp.StatusCode == 403 {
 				if opts.username != "" {
+					resp.Body.Close()
 					req2 := req.Clone(req.Context())
 					pw := opts.password
 					req2.SetBasicAuth(opts.username, string(pw))
@@ -147,11 +267,16 @@ func openSource(source string, options ...GeneosOption) (from io.ReadCloser, fil
 			}
 
 			if resp.StatusCode > 299 {
+				resp.Body.Close()
 				return nil, "", -1, fmt.Errorf("server returned %s for %q", resp.Status, source)
 			}
 
-			from = resp.Body
 			filename, err = FilenameFromHTTPResp(resp, resp.Request.URL)
+			if err != nil {
+				resp.Body.Close()
+				return nil, "", -1, err
+			}
+			from = resp.Body
 			filesize = resp.ContentLength
 		case "sftp":
 			// use the SSHRemote implementation to open the source. If

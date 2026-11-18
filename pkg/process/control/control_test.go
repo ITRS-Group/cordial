@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -343,5 +344,41 @@ func TestPIDFileLocation(t *testing.T) {
 	flag = "/flag.pid"
 	if got := d.pidFile(); got != "/flag.pid" {
 		t.Errorf("flag = %q", got)
+	}
+}
+
+func TestRemoveDaemonFlags(t *testing.T) {
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{"none", []string{"start", "--config", "x.yaml"}, []string{"start", "--config", "x.yaml"}},
+		{"bare short", []string{"start", "-D", "-v"}, []string{"start", "-v"}},
+		{"bare long", []string{"start", "--daemon", "-v"}, []string{"start", "-v"}},
+		{"short with value", []string{"start", "-D=true", "-v"}, []string{"start", "-v"}},
+		{"long with value", []string{"start", "--daemon=true", "-v"}, []string{"start", "-v"}},
+		{"in a group", []string{"start", "-vD"}, []string{"start", "-v"}},
+		{"first in a group", []string{"start", "-Dv"}, []string{"start", "-v"}},
+		{"group with value for another flag", []string{"start", "-Dv=2"}, []string{"start", "-v=2"}},
+		{"group with value for it", []string{"start", "-vD=true"}, []string{"start", "-v"}},
+		{"repeated", []string{"-D", "start", "--daemon"}, []string{"start"}},
+		{"other flags that contain the name", []string{"--daemonize", "--daemon-mode=1", "-d", "-dx", "--Daemon"}, []string{"--daemonize", "--daemon-mode=1", "-d", "-dx", "--Daemon"}},
+		{"values are not flags", []string{"--name", "D", "-c", "daemon"}, []string{"--name", "D", "-c", "daemon"}},
+		{"not a group of letters", []string{"-1D", "-D1", "-", "--"}, []string{"-1D", "-D1", "-", "--"}},
+		{"after the end of flags", []string{"start", "-D", "--", "-D", "--daemon"}, []string{"start", "--", "-D", "--daemon"}},
+		{"empty", nil, []string{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := slices.Clone(tt.in)
+			got := removeDaemonFlags(tt.in)
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("removeDaemonFlags(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+			if !slices.Equal(tt.in, input) {
+				t.Errorf("input changed to %q", tt.in)
+			}
+		})
 	}
 }

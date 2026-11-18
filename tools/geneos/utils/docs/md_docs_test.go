@@ -74,3 +74,27 @@ func TestGenMarkdownCustomSeparatesGroupsWithoutHorizontalRules(t *testing.T) {
 		t.Fatalf("group sections are not separated by a blank line: %s", output.String())
 	}
 }
+
+func TestRewriteMarkdownPageLinksIgnoresEmptyDestination(t *testing.T) {
+	pages := map[string]struct{}{"geneos_start.md": {}}
+	content := "[blank]( ) and [start](geneos_start.md)"
+	want := "[blank]( ) and [start](#geneos-start)"
+	if got := rewriteMarkdownPageLinks(content, pages); got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestGenMarkdownCustomCommandsHeaderBeforeFirstChild(t *testing.T) {
+	command := &cobra.Command{Use: "geneos", Short: "Manage Geneos"}
+	parent := &cobra.Command{Use: "add", Short: "Add"}
+	parent.AddCommand(&cobra.Command{Use: "sub", Short: "Sub", Run: func(*cobra.Command, []string) {}})
+	command.AddCommand(parent, &cobra.Command{Use: "zed", Short: "Zed", Run: func(*cobra.Command, []string) {}})
+
+	var output strings.Builder
+	if err := GenMarkdownCustom(command, &output, func(link string) string { return link }); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(output.String(), "## Commands") != 1 || strings.Index(output.String(), "## Commands") > strings.Index(output.String(), "geneos add") {
+		t.Fatalf("commands table header is not before the first command: %s", output.String())
+	}
+}

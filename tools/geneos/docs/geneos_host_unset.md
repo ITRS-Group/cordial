@@ -1,6 +1,6 @@
 # `geneos host unset`
 
-The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards.
+The `geneos host unset` command allows you to remove parameters from host configurations. This can be used to remove items like encrypted passwords as well as private key file paths. Like the main `geneos unset` command parameters have to be named using the `--key/-k` command line flag and to remove private key files from the list use `--privatekey/-i PATH`. At this time the paths to private key files must be given exactly as in the configuration and you cannot use wildcards. If no host names are given then all remote hosts are changed, otherwise only the named hosts.
 
 ## Usage
 
@@ -15,9 +15,9 @@ geneos host unset [flags] [TYPE] [NAME...]
                                   (Repeat as required)
   -i, --privatekey PATH           Private key file
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

@@ -24,9 +24,19 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"regexp"
 
 	"github.com/labstack/echo/v4"
 )
+
+// authorizationRE matches the credentials in a dump of a request
+var authorizationRE = regexp.MustCompile(`(?im)^((?:Proxy-)?Authorization:).*$`)
+
+// redact removes credentials from a dump of a request, so that tracing
+// can be used without leaking them
+func redact(dump string) string {
+	return authorizationRE.ReplaceAllString(dump, "$1 [redacted]")
+}
 
 type resultDetail map[string]string
 type resultsArray []resultDetail
@@ -58,7 +68,7 @@ func (snow TransitiveConnection) QueryTable(table string) (i resultsArray, err e
 
 	if snow.Trace {
 		if reqdump, err := httputil.DumpRequest(req, snow.Method != "GET"); err == nil {
-			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
+			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", redact(string(reqdump)))
 		}
 	}
 
@@ -70,7 +80,7 @@ func (snow TransitiveConnection) QueryTable(table string) (i resultsArray, err e
 
 	if snow.Trace {
 		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
-			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
+			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", redact(string(respdump)))
 		}
 	}
 
@@ -108,7 +118,7 @@ func (snow TransitiveConnection) QueryTableSingle(table string) (i resultDetail,
 
 	if snow.Trace {
 		if reqdump, err := httputil.DumpRequest(req, snow.Method != "GET"); err == nil {
-			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", string(reqdump))
+			fmt.Fprintf(os.Stderr, "-- Request --\n\n%s\n\n", redact(string(reqdump)))
 		}
 	}
 
@@ -121,7 +131,7 @@ func (snow TransitiveConnection) QueryTableSingle(table string) (i resultDetail,
 
 	if snow.Trace {
 		if respdump, err := httputil.DumpResponse(resp, true); err == nil {
-			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", string(respdump))
+			fmt.Fprintf(os.Stderr, "-- Response --\n\n%s\n\n", redact(string(respdump)))
 		}
 	}
 

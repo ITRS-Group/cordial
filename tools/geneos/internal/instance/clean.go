@@ -24,8 +24,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/host"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
@@ -41,17 +39,15 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 	opts := evalCleanOptions(options...)
 
 	ct := i.Type()
-	h := i.Host()
-	listSeparator := host.ListSeparators[h.OS()]
 
-	cleanlist := splitPathList(config.Get[string](config.Global(), ct.CleanList, config.DefaultValue(ct.ConfigAliases[ct.CleanList])), listSeparator)
+	cleanlist := splitPathList(ct.GlobalSetting(ct.CleanList), pathListSeparators)
 	if geneos.RootComponent.CleanList != "" {
-		cleanlist = append(cleanlist, splitPathList(geneos.RootComponent.CleanList, listSeparator)...)
+		cleanlist = append(cleanlist, splitPathList(geneos.RootComponent.CleanList, pathListSeparators)...)
 	}
 
-	purgelist := splitPathList(config.Get[string](config.Global(), ct.PurgeList, config.DefaultValue(ct.ConfigAliases[ct.PurgeList])), listSeparator)
+	purgelist := splitPathList(ct.GlobalSetting(ct.PurgeList), pathListSeparators)
 	if geneos.RootComponent.PurgeList != "" {
-		purgelist = append(purgelist, splitPathList(geneos.RootComponent.PurgeList, listSeparator)...)
+		purgelist = append(purgelist, splitPathList(geneos.RootComponent.PurgeList, pathListSeparators)...)
 	}
 
 	if !opts.full {
@@ -72,34 +68,40 @@ func Clean(i geneos.Instance, options ...CleanOption) (err error) {
 		stopped = true
 	}
 
+	// an instance that was running is always restarted, even if some
+	// paths could not be removed
 	if len(cleanlist) > 0 {
-		if err = RemovePaths(i, cleanlist...); err != nil {
-			return
-		}
+		err = RemovePaths(i, cleanlist...)
 	}
-	if len(purgelist) > 0 {
-		if err = RemovePaths(i, purgelist...); err != nil {
-			return
-		}
+	if err == nil && len(purgelist) > 0 {
+		err = RemovePaths(i, purgelist...)
 	}
-	i.Log().Debug("created files removed")
+	if err == nil {
+		i.Log().Debug("created files removed")
+	}
 	if stopped {
-		err = Start(i)
+		err = errors.Join(err, Start(i))
 	}
 	return
 }
 
-func splitPathList(value, separator string) []string {
+// pathListSeparators are all the characters that can separate paths in
+// the clean and purge lists. The entries are relative paths, which
+// cannot contain either on any platform, and the defaults are always
+// separated with a ':'.
+const pathListSeparators = ":;"
+
+func splitPathList(value, separators string) []string {
 	if value == "" {
 		return nil
 	}
-	if separator == "" {
-		return []string{value}
-	}
-	return strings.Split(value, separator)
+	return strings.FieldsFunc(value, func(r rune) bool {
+		return strings.ContainsRune(separators, r)
+	})
 }
 
-// RemovePaths removes all files and directories in list
+// RemovePaths removes all files and directories in list. All paths are
+// tried and any errors are joined and returned.
 func RemovePaths(i geneos.Instance, list ...string) (err error) {
 	h := i.Host()
 
@@ -107,22 +109,24 @@ func RemovePaths(i geneos.Instance, list ...string) (err error) {
 	for _, p := range list {
 		// clean path, error on absolute or parent paths, like 'import'
 		// walk globbed directories, remove everything
-		if p, err = geneos.CleanRelativePath(p); err != nil {
-			return fmt.Errorf("%s %w", p, err)
+		clean, cerr := geneos.CleanRelativePath(p)
+		if cerr != nil {
+			return errors.Join(err, fmt.Errorf("%s %w", p, cerr))
 		}
-		i.Log().Debug("going to remove", slog.String("path", h.Join(i.Home(), p)))
+		i.Log().Debug("going to remove", slog.String("path", h.Join(i.Home(), clean)))
 		// glob here
-		m, err := i.Host().Glob(h.Join(i.Home(), p))
-		if err != nil {
-			return err
+		m, gerr := h.Glob(h.Join(i.Home(), clean))
+		if gerr != nil {
+			return errors.Join(err, gerr)
 		}
 		for _, f := range m {
 			i.Log().Debug("trying to RemoveAll", slog.String("path", f))
-			if err = i.Host().RemoveAll(f); err != nil {
-				i.Log().Error("failed to remove path", slog.String("path", f), slog.Any("error", err))
+			if rerr := h.RemoveAll(f); rerr != nil {
+				i.Log().Error("failed to remove path", slog.String("path", f), slog.Any("error", rerr))
+				err = errors.Join(err, rerr)
 				continue
 			}
-			fmt.Printf("removed %s\n", i.Host().HostPath(f))
+			fmt.Printf("removed %s\n", h.HostPath(f))
 		}
 	}
 	return

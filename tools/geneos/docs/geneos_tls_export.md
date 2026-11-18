@@ -2,7 +2,7 @@
 
 Exports either the local signer private key, certificate and root certificate suitable for importing into another cordial `geneos` installation or, if you specify either component TYPE or instance NAMEs then the private key, instance certificate and other certificates up to and including the trust root for matching instances is output instead.
 
-The default output is to the console but you can specify a file destination using the `--dest`/`-D` option.
+The default output is to the console but you can specify a file destination using the `--output`/`-o` option. For instance certificates a file destination can only be used if a single instance matches, as the certificates of every instance would otherwise be written to the same file.
 
 ## Usage
 
@@ -15,9 +15,9 @@ geneos tls export [flags] [TYPE] [NAME...]
 ```text
   -o, --output FILE               Output to FILE, default to stdout
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

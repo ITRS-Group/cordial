@@ -20,6 +20,8 @@ Use `--archive`/`-A` to select a release archive or directory on the local machi
 > - Use the same site name on all Geneos servers for consistent paths.
 > - Changing the site name later can have unforeseen effects: existing Gateway setups and user profile files are not rewritten. Review them and run `geneos includes install` to populate the new site directory.
 
+It is an error, and the exit status is non-zero, to deploy an instance that already exists, but a profile that already exists is applied again to update its instances.
+
 There are many options and which you use depends on any existing Geneos installation, whether you have Internet access and which component you are deploying.
 
 The stages that deploy goes through will help you choose the options you need:
@@ -152,9 +154,9 @@ geneos deploy [flags] TYPE [NAME] [KEY=VALUE...]
       --header NAME=VALUE             HTTP header in the format NAME=VALUE
                                       (Repeat as required)
       --allow-root[=true|false]       allow running as root (not recommended)
-  -G, --config string                 config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string                 config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME                 Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string               profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string               profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

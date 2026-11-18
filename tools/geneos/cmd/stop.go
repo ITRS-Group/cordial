@@ -71,10 +71,9 @@ var stopCmd = &cobra.Command{
 				instances = append(instances, i)
 			}
 			if len(instances) == 0 {
-				fmt.Printf("no instances using port %d found\n", stopCmdPort)
-				return
+				return fmt.Errorf("no instances using port %d found", stopCmdPort)
 			}
-			instance.DoInstances(cmd.CommandPath(), instances,
+			return instance.DoInstances(cmd.CommandPath(), instances,
 				func(i geneos.Instance, a ...any) (resp *responses.General) {
 					resp = responses.New[responses.General](i)
 					resp.Err = instance.Stop(i, instance.WithStopForce(stopCmdForce), instance.WithStopKill(stopCmdKill))
@@ -85,14 +84,13 @@ var stopCmd = &cobra.Command{
 				responses.ShowTimes(),
 				responses.TimingFormat("%s stopped in %.2fs\n"),
 			)
-			return
 		}
 
 		ct, names, _, err := FetchArgs(cmd)
 		if err != nil {
 			return
 		}
-		instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
+		return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, func(i geneos.Instance, a ...any) (resp *responses.General) {
 			resp = responses.New[responses.General](i)
 			resp.Err = instance.Stop(i, instance.WithStopForce(stopCmdForce), instance.WithStopKill(stopCmdKill))
 			resp.Audited = true
@@ -101,6 +99,5 @@ var stopCmd = &cobra.Command{
 			responses.ShowTimes(),
 			responses.TimingFormat("%s stopped in %.2fs\n"),
 		)
-		return
 	},
 }

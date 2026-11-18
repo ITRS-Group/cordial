@@ -196,15 +196,15 @@ func (kv *KeyValues) encode(secret Secret) (out []byte, err error) {
 	}
 
 	// always pad at least one byte (the length)
-	var pad []byte
 	padBytes := aes.BlockSize - len(secret)%aes.BlockSize
-	if padBytes == 0 {
-		padBytes = aes.BlockSize
-	}
-	pad = bytes.Repeat([]byte{byte(padBytes)}, padBytes)
+	padded := make([]byte, 0, len(secret)+padBytes)
+	padded = append(padded, secret...)
+	padded = append(padded, bytes.Repeat([]byte{byte(padBytes)}, padBytes)...)
+	defer clear(padded)
+
 	mode := cipher.NewCBCEncrypter(block, kv.iv[:])
-	out = make([]byte, len(secret)+len(pad))
-	mode.CryptBlocks(out, append(secret, pad...))
+	out = make([]byte, len(padded))
+	mode.CryptBlocks(out, padded)
 	return
 }
 
@@ -237,7 +237,9 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	in = bytes.TrimPrefix(in, []byte("+encs+"))
 
 	text := make([]byte, hex.DecodedLen(len(in)))
-	hex.Decode(text, in)
+	if _, err = hex.Decode(text, in); err != nil {
+		return nil, fmt.Errorf("invalid encoded value: %w", err)
+	}
 	block, err := aes.NewCipher(kv.key[:])
 	if err != nil {
 		err = fmt.Errorf("invalid key: %w", err)
@@ -249,17 +251,31 @@ func (kv *KeyValues) Decode(in []byte) (out []byte, err error) {
 	}
 	mode := cipher.NewCBCDecrypter(block, kv.iv[:])
 	mode.CryptBlocks(text, text)
+	defer func() {
+		if err != nil {
+			clear(text)
+			out = nil
+		}
+	}()
 
 	if len(text) == 0 {
 		err = fmt.Errorf("decode failed")
 		return
 	}
 
-	// remove padding as per RFC5246
+	// remove padding as per RFC5246, checking that every padding byte
+	// has the value of the padding length. this greatly reduces the
+	// chance that a wrong key results in apparently valid plaintext.
 	paddingLength := int(text[len(text)-1])
 	if paddingLength == 0 || paddingLength > aes.BlockSize {
 		err = fmt.Errorf("invalid padding size")
 		return
+	}
+	for _, b := range text[len(text)-paddingLength:] {
+		if int(b) != paddingLength {
+			err = fmt.Errorf("invalid padding")
+			return
+		}
 	}
 	text = text[0 : len(text)-paddingLength]
 	if !utf8.Valid(text) {
@@ -284,10 +300,9 @@ func (kv *KeyValues) DecodeString(in string) (out string, err error) {
 // caller on return. If there is an error reading from r then err is
 // returned with the reason.
 func Checksum(data io.Reader) (crc uint32, err error) {
-	b := bytes.Buffer{}
-	if _, err = b.ReadFrom(data); err != nil {
+	h := crc32.NewIEEE()
+	if _, err = io.Copy(h, data); err != nil {
 		return
 	}
-	crc = crc32.ChecksumIEEE(b.Bytes())
-	return
+	return h.Sum32(), nil
 }

@@ -21,8 +21,8 @@ import (
 	"context"
 	_ "embed"
 	"log/slog"
+	"net/http"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -76,7 +76,7 @@ func init() {
 	Cmd.PersistentFlags().BoolP("help", "h", false, "Print usage")
 	Cmd.PersistentFlags().MarkHidden("help")
 
-	execname = path.Base(os.Args[0])
+	execname = cordial.ExecutableName()
 	log = logger.Init(execname)
 }
 
@@ -125,28 +125,44 @@ func initConfig() {
 	}
 }
 
-func sendEvent(eventType eventType) (err error) {
-	var action string
+// clientOptions are the options for the Pagerduty client, which tests
+// use to send events somewhere else
+var clientOptions []pagerduty.ClientOptions
 
-	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"))
-	routing_key := config.Get[string](cf, "pagerduty.routingkey")
-	payload := cf.Sub("pagerduty.event.payload")
+// defaultTimeout is the longest a request to Pagerduty can take, if
+// `pagerduty.timeout` is not set
+const defaultTimeout = 30 * time.Second
 
-	// timestamp handling
-	timestamp := config.Get[string](payload, "timestamp")
+// geneosTimestamp returns timestamp, which is a Geneos time in the Go
+// ANSIC format in the local time zone, as an RFC3339 timestamp. If it is
+// empty or cannot be parsed then it is now.
+func geneosTimestamp(timestamp string, now time.Time) string {
 	if timestamp == "" {
-		timestamp = time.Now().Format(time.RFC3339)
-	} else {
-		// geneos timestamp format is Go ANSIC format
-		t, err := time.Parse(time.ANSIC, timestamp)
-		if err != nil {
-			timestamp = time.Now().Format(time.RFC3339)
-		} else {
-			timestamp = t.Format(time.RFC3339)
-		}
+		return now.Format(time.RFC3339)
 	}
 
+	// Geneos does not include a time zone, so the time is in the local
+	// one, which is not the case when it is parsed as UTC
+	t, err := time.ParseInLocation(time.ANSIC, timestamp, time.Local)
+	if err != nil {
+		return now.Format(time.RFC3339)
+	}
+	return t.Format(time.RFC3339)
+}
+
+// buildEvent returns the event from the configuration, for the type of
+// event and the Geneos environment
+func buildEvent(cf *config.Config, eventType eventType) pagerduty.V2Event {
+	var action string
+
+	payload := cf.Sub("pagerduty.event.payload")
+
+	timestamp := geneosTimestamp(config.Get[string](payload, "timestamp"), time.Now())
+
 	details := config.Get[map[string]string](payload, "details")
+	if details == nil {
+		details = make(map[string]string)
+	}
 	if config.Get[bool](cf, "pagerduty.send-env") {
 		for _, e := range os.Environ() {
 			if k, v, found := strings.Cut(e, "="); found {
@@ -178,14 +194,20 @@ func sendEvent(eventType eventType) (err error) {
 	}
 
 	images := []any{}
+	for _, i := range config.Get[[]map[string]string](cf, cf.Join("pagerduty", "event", "images")) {
+		if i["src"] != "" {
+			images = append(images, Image{Src: i["src"], Href: i["href"], Alt: i["alt"]})
+		}
+	}
 
-	v2event := pagerduty.V2Event{
-		RoutingKey: routing_key,
+	return pagerduty.V2Event{
+		RoutingKey: config.Get[string](cf, "pagerduty.routingkey"),
 		Payload: &pagerduty.V2Payload{
 			Summary:   config.Get[string](payload, "summary"),
 			Source:    config.Get[string](payload, "source"),
 			Severity:  severity,
 			Timestamp: timestamp,
+			Component: config.Get[string](payload, "component"),
 			Group:     config.Get[string](payload, "group"),
 			Class:     config.Get[string](payload, "class"),
 			Details:   details,
@@ -197,13 +219,50 @@ func sendEvent(eventType eventType) (err error) {
 		Links:     links,
 		Images:    images,
 	}
+}
 
-	_, err = client.ManageEventWithContext(context.Background(), &v2event)
-	if err != nil {
-		log.Error("error managing event", slog.Any("error", err), slog.Any("event", v2event), slog.Any("payload", v2event.Payload))
+// manageEvent sends the event, giving up after the configured timeout
+func manageEvent(cf *config.Config, event *pagerduty.V2Event) error {
+	timeout := config.Get[time.Duration](cf, "pagerduty.timeout")
+	if timeout <= 0 {
+		timeout = defaultTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	client := pagerduty.NewClient(config.Get[string](cf, "pagerduty.authtoken"), clientOptions...)
+	// the routing key is in the body, which a redirect would send on
+	// to wherever it points, so never follow one
+	client.HTTPClient = &http.Client{
+		Transport: http.DefaultTransport,
+		CheckRedirect: func(*http.Request, []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	_, err := client.ManageEventWithContext(ctx, event)
+	return err
+}
+
+// failureAttrs returns the details of an event to log when it could not
+// be sent, which are not the routing key, or the details of the payload
+// as they can be the whole environment
+func failureAttrs(event *pagerduty.V2Event) []any {
+	return []any{
+		slog.String("action", event.Action),
+		slog.String("dedup_key", event.DedupKey),
+		slog.String("summary", event.Payload.Summary),
+	}
+}
+
+func sendEvent(eventType eventType) (err error) {
+	v2event := buildEvent(cf, eventType)
+
+	if err = manageEvent(cf, &v2event); err != nil {
+		// the event is not logged as it has the routing key, and can have
+		// the environment
+		log.Error("error managing event", append([]any{slog.Any("error", err)}, failureAttrs(&v2event)...)...)
 		os.Exit(1)
 	}
-	// log.Info().Msgf("%s", v2resp)
 	os.Exit(0)
 	return // not reached
 }

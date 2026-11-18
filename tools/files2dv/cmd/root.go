@@ -49,7 +49,7 @@ func init() {
 
 	logger.Init(execname)
 
-	FILE2DVCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/dv2email.yaml)")
+	FILE2DVCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file (default is $HOME/.config/geneos/"+execname+".yaml)")
 
 	FILE2DVCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable extra debug output")
 	FILE2DVCmd.PersistentFlags().MarkHidden("debug")
@@ -88,9 +88,11 @@ type Dataview struct {
 
 // FILE2DVCmd represents the base command when called without any subcommands
 var FILE2DVCmd = &cobra.Command{
-	Use:          "file2dv",
-	Short:        "Extract and Transform from multiple files to CSV, for Geneos Toolkit input",
-	Long:         ``,
+	Use:   "files2dv",
+	Short: "Extract and Transform from multiple files to CSV, for Geneos Toolkit input",
+	Long: `Extract data from the metadata and contents of files and output a Dataview in
+Geneos Toolkit CSV format. The dataview to use is selected with --dataview/-D
+and defined in the configuration file.`,
 	SilenceUsage: true,
 	CompletionOptions: cobra.CompletionOptions{
 		DisableDefaultCmd: true,
@@ -100,12 +102,12 @@ var FILE2DVCmd = &cobra.Command{
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		d := config.Join("dataviews", strconv.Itoa(d))
-		if !cf.IsSet(d) {
+		dvkey := config.Join("dataviews", strconv.Itoa(d))
+		if !cf.IsSet(dvkey) {
 			return errors.New("no dataviews found in configuration")
 		}
 
-		dv := cf.Sub(d)
+		dv := cf.Sub(dvkey)
 
 		dataview, err := processFiles(dv)
 
@@ -143,6 +145,7 @@ func initConfig() {
 		config.MergeSources(),
 		config.Format("yaml"),
 		config.WithDefaults(defaults, "yaml"),
+		config.StopOnInternalDefaultsErrors(),
 	}
 
 	cf, err = config.Read(execname, opts...)

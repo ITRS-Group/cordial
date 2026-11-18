@@ -60,8 +60,9 @@ const DisableExtension = "disabled"
 // structure and then it calls the initialisation functions for each
 // component type registered.
 //
-// If the directory is not empty and the Force() option is not passed
-// then nothing is changed
+// If the directory is not empty and the Override() option is not passed
+// then nothing is changed and an error is returned. All failures are
+// returned as errors, the process is never ended from here.
 //
 // The options supported are:
 //
@@ -100,7 +101,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			}
 
 			if dir, err := opts.promptRootDir("Geneos Directory (default %q): ", opts.geneosdir); err != nil {
-				os.Exit(1)
+				return err
 			} else {
 				log.Debug("prompted for geneos directory", slog.String("directory", dir))
 				if dir != "" {
@@ -109,8 +110,7 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 			}
 		}
 		if opts.geneosdir == "" {
-			log.Error("homedir not set")
-			os.Exit(1)
+			return fmt.Errorf("%w: home directory not set", ErrRootNotSet)
 		}
 	}
 
@@ -123,25 +123,18 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 		// create and fail hard if it cannot be created. Permissions are
 		// fixed as 0755 plus umask
 		if err = h.MkdirAll(opts.geneosdir, 0775); err != nil {
-			log.Error("cannot create directory", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("cannot create directory: %w", err)
 		}
 	} else if !opts.override {
 		// if the directory exists and is not empty, handle according to
 		// override option
 		dirs, err := h.ReadDir(opts.geneosdir)
 		if err != nil {
-			log.Error("cannot read root directory", slog.Any("error", err))
-			os.Exit(1)
+			return fmt.Errorf("cannot read root directory: %w", err)
 		}
 		for _, entry := range dirs {
 			if !(strings.HasPrefix(entry.Name(), ".") || entry.Name() == "bin") {
-				if !h.IsLocalhost() {
-					log.Debug("remote directories exist, exiting init")
-					os.Exit(1)
-				}
-				log.Error("target directory exists and is not empty (ignoring .* and bin)", slog.String("directory", opts.geneosdir))
-				os.Exit(1)
+				return fmt.Errorf("%w: directory %q is not empty (ignoring .* and bin), use --force to use it anyway", ErrExists, opts.geneosdir)
 			}
 		}
 	}
@@ -151,13 +144,17 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 	if h.IsLocalhost() {
 		log.Debug("setting geneos directory", slog.String("executable", cordial.ExecutableName()), slog.String("directory", opts.geneosdir))
 		config.Set(config.Global(), cordial.ExecutableName(), opts.geneosdir)
-		if err = SaveGlobalConfig(cordial.ExecutableName()); err != nil {
+		if err = SaveGlobalConfig(cordial.ExecutableName(), cordial.ExecutableName()); err != nil {
 			return err
 		}
 
-		// recreate LOCAL host to force load of "geneos" and other parameters
-		LOCAL = nil
-		LOCAL = NewHost(LOCALHOST)
+		// update the Geneos directory of LOCAL, which keeps the pointer
+		// valid for anything that already has it, or create it
+		if LOCAL == nil {
+			LOCAL = NewHost(LOCALHOST)
+		} else {
+			config.Set(LOCAL.Config, cordial.ExecutableName(), opts.geneosdir)
+		}
 		h = LOCAL
 
 		// initialise the global audit logger and log the original command event
@@ -175,27 +172,38 @@ func Initialise(event string, h *Host, options ...GeneosOption) (err error) {
 				return err
 			}
 		} else {
-			err = TLSInit(LOCALHOST, true, certs.DefaultKeyType)
-			if err != nil {
+			// never overwrite the user-wide root and signing
+			// certificates from init, even when forced, so that the
+			// trust chain of an adopted installation is kept. Use `tls
+			// init --overwrite` to replace them.
+			_, _, rootErr := ReadRootCertificateAndKey()
+			_, signingErr := readSigningCertificate()
+			existing := rootErr == nil || signingErr == nil
+
+			if err = TLSInit(LOCALHOST, false, certs.DefaultKeyType); err != nil {
 				return err
+			}
+			// new certificates are synced by TLSInit, but this
+			// installation still needs the existing root certificate
+			if existing {
+				if err = TLSSync(); err != nil {
+					return err
+				}
 			}
 		}
 	}
 
 	// 5. initialise all registered components, includeing writing out templates and include files
+	if err = RootComponent.MakeDirs(h); err != nil {
+		return fmt.Errorf("creating directories: %w", err)
+	}
 	var ct *Component
 	for ct = range ct.OrList(opts.components...) {
 		if err := ct.MakeDirs(h); err != nil {
-			continue
+			return fmt.Errorf("creating directories for component %s: %w", ct.Name, err)
 		}
-		if ct.Initialise != nil {
-			var initialiseErr error
-			ct.InitialiseOnce.Do(func() {
-				initialiseErr = ct.Initialise(h, ct, opts.override)
-			})
-			if initialiseErr != nil {
-				return fmt.Errorf("initialising component %s: %w", ct.Name, initialiseErr)
-			}
+		if err := ct.InitialiseOnce(h, opts.override); err != nil {
+			return fmt.Errorf("initialising component %s: %w", ct.Name, err)
 		}
 	}
 
@@ -217,40 +225,31 @@ func LocalRoot() string {
 		config.DefaultValue(config.Get[string](config.Global(), "itrshome")))
 }
 
-// SaveGlobalConfig saves the global configuration (in config.Global)
-// but excludes any values that still have their defaults, by iterating
-// through registered components and checking. Any empty/zero values are
-// also excluded from the saved configuration.
-func SaveGlobalConfig(name string) error {
-	cf := config.New()
-	defaultSettings := make(map[string]string)
-	for _, ct := range AllComponents() {
-		for k, v := range ct.GlobalSettings {
-			// add main setting
-			defaultSettings[k] = v
-			// also add aliases
-			defaultSettings[ct.ConfigAliases[k]] = v
-
-		}
+// SaveGlobalConfig saves the user's global configuration file, called
+// name. The settings in the existing file are always kept, with their
+// original types and nested values, and the current value from the
+// global configuration (config.Global) of each of the top-level keys
+// given is added to or replaces it. Nothing else from the global
+// configuration is saved so that default values, and values that
+// only come from environment variables, are not persisted.
+func SaveGlobalConfig(name string, keys ...string) error {
+	oldConfDir, _ := config.UserConfigPath()
+	cf, err := config.Read(name,
+		config.SearchDirs(oldConfDir),
+		config.MergeSources(),
+		config.SkipWorkingDir(),
+		config.SkipSystemDir(),
+		config.UseDefaults(false),
+	)
+	if err != nil {
+		return fmt.Errorf("reading existing configuration: %w", err)
 	}
 
-	for k, v := range config.Global().AllSettings() {
+	for _, k := range keys {
 		if k == "" {
 			continue
 		}
-
-		// don't set key if value is the current default
-
-		if _, ok := v.(string); !ok {
-			// skip non-string values
-			continue
-		}
-
-		if v == defaultSettings[k] {
-			continue
-		}
-
-		config.Set(cf, k, v)
+		config.Set(cf, k, config.Get[any](config.Global(), k, config.NoExpand()))
 	}
 
 	return cf.Write(name)

@@ -34,9 +34,12 @@ func (c *CPUPlugin) SetInterval(i time.Duration) {
 
 // Start TODO: Document its behavior, inputs, and effects.
 func (c *CPUPlugin) Start() error { return nil }
+
 // Stop TODO: Document its behavior, inputs, and effects.
-func (c *CPUPlugin) Stop() error  { return nil }
+func (c *CPUPlugin) Stop() error { return nil }
+
 // Close TODO: Document its behavior, inputs, and effects.
 func (c *CPUPlugin) Close() error { return nil }
+
 // Pause TODO: Document its behavior, inputs, and effects.
 func (c *CPUPlugin) Pause() error { return nil }

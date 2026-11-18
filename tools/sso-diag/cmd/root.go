@@ -18,30 +18,40 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"errors"
+	"log/slog"
 	"os"
-	"path"
+	"path/filepath"
 
-	"github.com/itrs-group/cordial/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/itrs-group/cordial"
+	"github.com/itrs-group/cordial/pkg/logger"
 )
 
 var cfgFile, confDir string
 
+// ldapVerify enables the verification of the LDAP server certificate,
+// which is skipped by default
+var ldapVerify bool
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "sso-diag",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Short: "Diagnose a Geneos SSO Agent configuration",
+	Long: `sso-diag reads the configuration of a Geneos SSO Agent, from the conf/sso-agent.conf
+file in the SSO Agent directory, and runs a diagnostic server that uses the same
+Kerberos and LDAP settings. Use the run command to start the server, then
+browse to or use curl with SPNEGO against its /testuser endpoint to see the
+results of authenticating a user and looking them up in LDAP.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+Settings for sso-diag itself can be given as command line flags or in an
+optional YAML configuration file (see --conf), with the keys:
+
+  dir: SSO Agent directory
+  ldap-verify: true | false`,
+	Version: cordial.VERSION,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -55,36 +65,59 @@ func Execute() {
 
 var execname string
 
+// defaultConfigDirs returns the directories searched for the sso-diag
+// configuration file, `sso-diag.yaml`, if none is given on the command
+// line
+func defaultConfigDirs() (dirs []string) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	return []string{filepath.Join(home, ".config", "geneos")}
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "conf", "c", "", "config file (default is $HOME/.config/geneos/sso-diag.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution (default is ./)")
+	rootCmd.PersistentFlags().StringVarP(&confDir, "dir", "d", ".", "sso-agent directory for relative path resolution")
+	rootCmd.PersistentFlags().BoolVar(&ldapVerify, "ldap-verify", false, "verify the LDAP server certificate (not verified by default)")
 
-	execname = path.Base(os.Args[0])
+	execname = filepath.Base(os.Args[0])
 	logger.Init(execname)
 }
 
-// initConfig reads in config file and ENV variables if set.
+// initConfig reads in config file and ENV variables if set. Values from
+// the file are only used for settings not given on the command line.
 func initConfig() {
+	viper.SetConfigType("yaml")
 	if cfgFile != "" {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in home directory with name ".sso-diag" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(".sso-diag")
+		viper.SetConfigName("sso-diag")
+		for _, dir := range defaultConfigDirs() {
+			viper.AddConfigPath(dir)
+		}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	// If a config file is found, read it in. A file that was asked for
+	// but cannot be read is an error, but not finding the default is not.
+	if err := viper.ReadInConfig(); err != nil {
+		var notFound viper.ConfigFileNotFoundError
+		if cfgFile != "" || !errors.As(err, &notFound) {
+			cobra.CheckErr(err)
+		}
+		return
+	}
+	log.Info("using config file", slog.String("file", viper.ConfigFileUsed()))
+
+	if f := rootCmd.PersistentFlags().Lookup("dir"); f != nil && !f.Changed && viper.IsSet("dir") {
+		confDir = viper.GetString("dir")
+	}
+	if f := rootCmd.PersistentFlags().Lookup("ldap-verify"); f != nil && !f.Changed && viper.IsSet("ldap-verify") {
+		ldapVerify = viper.GetBool("ldap-verify")
 	}
 }

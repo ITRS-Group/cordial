@@ -20,11 +20,11 @@ package cmd
 import (
 	_ "embed"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	dbg "runtime/debug"
-	"time"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/fsnotify/fsnotify"
@@ -87,16 +87,19 @@ var Cmd = &cobra.Command{
 	DisableAutoGenTag:     true,
 	DisableSuggestions:    true,
 	DisableFlagsInUseLine: true,
-	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) (err error) {
 		initConfig(cmd)
 
-		uuidNS = uuid.MustParse(config.Get[string](cf, cf.Join("server", "namespace-uuid")))
+		uuidNS, err = uuid.Parse(config.Get[string](cf, cf.Join("server", "namespace-uuid")))
+		if err != nil {
+			return fmt.Errorf("invalid server.namespace-uuid: %w", err)
+		}
+		return
 	},
 	TraverseChildren: true,
 	RunE: func(cmd *cobra.Command, _ []string) (err error) {
 		if hostname == "" {
-			fmt.Println("no hostname given (use `-H hostname`)")
-			return
+			return errors.New("no hostname given (use `-H hostname`)")
 		}
 
 		liveGateways := CheckGateways(cf)
@@ -107,19 +110,29 @@ var Cmd = &cobra.Command{
 
 		cs := &ConfigServer{conf: cf, hosts: hosts, gateways: liveGateways}
 
+		np, finalHosttype := cs.NetprobeConfig(hostname, hosttype)
+		if np == nil {
+			return fmt.Errorf("no configuration could be generated for host %q (see log for details)", hostname)
+		}
+		log.Debug("generated config", slog.String("hostname", hostname), slog.String("type", finalHosttype))
+
+		b, err := xml.MarshalIndent(np, "", "    ")
+		if err != nil {
+			return
+		}
+
 		out := os.Stdout
 		if output != "" {
-			out, err = os.Create(output)
-			if err != nil {
+			if out, err = os.Create(output); err != nil {
 				return
 			}
 		}
-		var b []byte
-		np, _ := cs.NetprobeConfig(hostname, hosttype)
 		fmt.Fprint(out, xml.Header)
-		b, err = xml.MarshalIndent(np, "", "    ")
 		fmt.Fprintln(out, string(b))
 		fmt.Fprintln(out)
+		if output != "" {
+			return out.Close()
+		}
 		return
 	},
 }
@@ -153,15 +166,9 @@ func initConfig(cmd *cobra.Command) {
 			opts = append(opts,
 				config.WatchConfig(func(e fsnotify.Event) {
 					log.Info("configuration changed, reloading", slog.String("file", e.Name))
-					Inventories.Range(func(key, value any) bool {
-						// zero out modification check values
-						inv := value.(*Inventory)
-						inv.size = 0
-						inv.cksum = ""
-						inv.lastModified = time.Time{}
-						Inventories.Store(key, inv)
-						return true
-					})
+					// clear the previous state, so that all inventories are
+					// reloaded on the next check
+					Inventories.Clear()
 				}),
 			)
 		}
@@ -177,11 +184,13 @@ func initConfig(cmd *cobra.Command) {
 		deferredlog = fmt.Sprintf("configuration loaded from %s", config.Path(cordial.ExecutableName(), opts...))
 	}
 
-	// check if logfile is set on the command line, which overrides config
+	// the log file from the command line, if given, overrides the
+	// configuration. Both the root `--logfile/-l` and the `server
+	// --logfile/-L` flags are named `logfile`
+	logFile = config.Get[string](cf, "server.logs.path")
 	if cmd != nil {
-		f := cmd.Flag("logfile")
-		if f != nil && !f.Changed {
-			logFile = config.Get[string](cf, "server.logs.path")
+		if f := cmd.Flag("logfile"); f != nil && f.Changed {
+			logFile = f.Value.String()
 		}
 	}
 
@@ -189,12 +198,12 @@ func initConfig(cmd *cobra.Command) {
 		logger.SetLogfile(logFile),
 		logger.SetWriter(&timberjack.Logger{
 			Filename:   logFile,
-			MaxSize:    config.Get[int](cf, cf.Join("server", "logs", "max-size")),
-			MaxBackups: config.Get[int](cf, cf.Join("server", "logs", "max-backups")),
-			MaxAge:     config.Get[int](cf, cf.Join("server", "logs", "stale-after")),
+			MaxSize:    logSetting[int](cf, "size", "max-size"),
+			MaxBackups: logSetting[int](cf, "backups", "max-backups"),
+			MaxAge:     logSetting[int](cf, "age", "stale-after"),
 			Compress:   config.Get[bool](cf, cf.Join("server", "logs", "compress")),
 		}),
-		logger.RotateOnStart(config.Get[bool](cf, cf.Join("server", "logs", "rotate-on-start"))),
+		logger.RotateOnStart(logSetting[bool](cf, "rotate-at-start", "rotate-on-start")),
 	)
 
 	switch {
@@ -206,7 +215,24 @@ func initConfig(cmd *cobra.Command) {
 		logger.LogLevel.Set(slog.LevelInfo)
 	}
 
-	info, _ := dbg.ReadBuildInfo()
-	log.Info("command version", slog.String("command", cmd.Name()), slog.String("version", cordial.VERSION), slog.String("go_version", info.GoVersion))
+	goVersion := "unknown"
+	if info, ok := dbg.ReadBuildInfo(); ok {
+		goVersion = info.GoVersion
+	}
+	command := cordial.ExecutableName()
+	if cmd != nil {
+		command = cmd.Name()
+	}
+	log.Info("command version", slog.String("command", command), slog.String("version", cordial.VERSION), slog.String("go_version", goVersion))
 	log.Debug(deferredlog)
+}
+
+// logSetting returns the `server.logs` setting for the documented name
+// or, if that is not set, the older name that was previously read by the
+// program but never documented
+func logSetting[T any](cf *config.Config, name, legacy string) T {
+	if cf.IsSet(cf.Join("server", "logs", legacy)) {
+		return config.Get[T](cf, cf.Join("server", "logs", legacy))
+	}
+	return config.Get[T](cf, cf.Join("server", "logs", name))
 }

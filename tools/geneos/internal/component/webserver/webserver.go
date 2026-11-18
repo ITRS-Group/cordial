@@ -18,7 +18,11 @@ limitations under the License.
 package webserver
 
 import (
+	"bytes"
+	"crypto/x509"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path"
@@ -29,6 +33,7 @@ import (
 	"github.com/itrs-group/cordial/pkg/certs"
 	"github.com/itrs-group/cordial/pkg/config"
 
+	"github.com/itrs-group/cordial/tools/geneos/internal/component/tlsports"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
@@ -48,7 +53,7 @@ var Component = geneos.Component{
 
 	GlobalSettings: map[string]string{
 		config.Join(name, "ports"): "8443,8080-",
-		config.Join(name, "clean"): strings.Join([]string{}, ":"),
+		config.Join(name, "clean"): "",
 		config.Join(name, "purge"): strings.Join([]string{
 			"logs/",
 			"webapps/",
@@ -200,7 +205,8 @@ func (i *Webserver) Unload() (err error) {
 		return
 	}
 	webservers.Delete(i.Name() + "@" + i.Host().String())
-	i.ConfigLoaded = time.Time{}
+	(*instance.Instance)(i).SetLoaded(time.Time{})
+	instance.ResetHome(i)
 	return
 }
 
@@ -209,7 +215,7 @@ func (i *Webserver) Loaded() time.Time {
 	if i == nil {
 		return time.Time{}
 	}
-	return i.ConfigLoaded
+	return (*instance.Instance)(i).Loaded()
 }
 
 // SetLoaded TODO: Document its behavior, inputs, and effects.
@@ -217,7 +223,7 @@ func (i *Webserver) SetLoaded(t time.Time) {
 	if i == nil {
 		return
 	}
-	i.ConfigLoaded = t
+	(*instance.Instance)(i).SetLoaded(t)
 }
 
 // Config TODO: Document its behavior, inputs, and effects.
@@ -225,7 +231,7 @@ func (i *Webserver) Config() *config.Config {
 	if i == nil {
 		return nil
 	}
-	return i.Conf
+	return (*instance.Instance)(i).Config()
 }
 
 // SetConfig TODO: Document its behavior, inputs, and effects.
@@ -233,7 +239,7 @@ func (i *Webserver) SetConfig(cf *config.Config) {
 	if i == nil {
 		return
 	}
-	i.Conf = cf
+	(*instance.Instance)(i).SetConfig(cf)
 }
 
 // Add TODO: Document its behavior, inputs, and effects.
@@ -251,37 +257,32 @@ func (i *Webserver) Add(options ...any) (err error) {
 	}
 	config.Set(i.Config(), "port", opts.Port)
 
-	dir, err := os.Getwd()
-	defer os.Chdir(dir)
-
-	importFrom := instance.BaseVersion(i)
-	if err = os.Chdir(importFrom); err != nil {
-		i.Log().Debug("instance config", slog.Any("settings", i.Config().AllSettings()))
-		return
-	}
-
 	webappsdir := i.Host().Join(i.Home(), "webapps")
 	if err = i.Host().MkdirAll(webappsdir, 0775); err != nil {
 		return
 	}
 
-	instance.ImportFiles(i, initialFiles...)
+	// copy default configs from the installed package
+	if err = instance.ImportPackageFiles(i, instance.BaseVersion(i), initialFiles...); err != nil {
+		i.Log().Debug("instance config", slog.Any("settings", i.Config().AllSettings()))
+		return err
+	}
 
 	// create certs, report success only
 	if !(opts.Insecure || opts.CertBundle != "") {
 		instance.NewCertificate(i).Report(os.Stdout, responses.StderrWriter(os.Stderr))
 	}
 
-	return
+	return nil
 }
 
 // Rebuild updates the webserver configuration, including security
 // properties, truststore, and keystore. It returns a boolean indicating
 // if any changes were made and an error if the operation failed.
 //
-// To changes the keystore/truststore password, edit the
-// `security.properties` file and run rebuild. All the contents are
-// re-encrypted with the new password.
+// An existing keystore or truststore that cannot be read, for example
+// because the password in `security.properties` is wrong, is reported
+// as an error and is never replaced.
 func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	if i == nil {
 		return false, os.ErrInvalid
@@ -290,13 +291,33 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	cf := i.Config()
 	h := i.Host()
 
+	// the conventional ports are 8080 for HTTP and 8443 for HTTPS (and
+	// 80 and 443), only switch between those if the configured port is
+	// one of the pair, any other port is left as configured
+	//
+	// the new port is only saved once everything else has been
+	// written, and is put back if the rebuild fails
+	oldPort := config.Get[uint16](cf, "port")
+	if portChanged := tlsports.Apply(i, tlsports.Webserver); portChanged {
+		defer func() {
+			if err != nil {
+				config.Set(cf, "port", oldPort)
+				return
+			}
+			if resp := instance.Write(i, instance.NoRebuild()); resp.Err != nil {
+				i.Log().Error("Cannot save configuration", slog.Any("error", resp.Err))
+				changed, err = false, resp.Err
+			}
+		}()
+	}
+
 	spPath := instance.HomeRel(i, "config/security.properties")
 
 	// load the security.properties file, update the port and use the keystore values later
 	sp, err := instance.ReadKVConfig(h, spPath)
 	if err != nil {
 		i.Log().Error("reading security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return false, err
+		return changed, err
 	}
 
 	sp["port"] = config.Get[string](cf, "port")
@@ -305,56 +326,119 @@ func (i *Webserver) Rebuild(initial bool) (changed bool, err error) {
 	sp["trustStorePassword"] = config.Get[string](cf, cf.Join(instance.TLSBASE, instance.TRUSTSTORE_PASSWORD), config.DefaultValue("changeit"))
 	sp["trustStoreType"] = "JKS"
 
-	if err = instance.WriteKVConfig(h, spPath, sp); err != nil {
-		i.Log().Error("writing security.properties", slog.Any("path", spPath), slog.Any("error", err))
-		return false, err
-	}
-	changed = true
+	// security.properties holds the keystore and truststore settings so
+	// it is replaced together with the keystore and truststore, and on
+	// any failure the existing files are left as they were
+	updates := []instance.FileUpdate{{Path: spPath, Data: instance.MarshalKVConfig(sp), Perm: 0664}}
 
-	if !cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) && !cf.IsSet(instance.CERTIFICATE) {
-		return changed, nil
+	if cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
+		var more []instance.FileUpdate
+		if more, err = i.storeUpdates(sp, spPath); err != nil {
+			i.Log().Error("preparing keystore and truststore", slog.Any("error", err))
+			return changed, err
+		}
+		updates = append(updates, more...)
 	}
 
-	// create truststore from ca-bundle
+	if err = instance.WriteFilesAtomic(h, updates...); err != nil {
+		i.Log().Error("updating security.properties, keystore and truststore", slog.Any("error", err))
+		return changed, fmt.Errorf("webserver %s: %w", i, err)
+	}
+
+	return true, nil
+}
+
+// storeUpdates returns the updated truststore and keystore files for
+// the instance, using the settings in the security.properties sp. Only a
+// missing or empty existing file is created new, any other read
+// failure, such as a wrong password, is an error.
+func (i *Webserver) storeUpdates(sp map[string]string, spPath string) (updates []instance.FileUpdate, err error) {
+	cf := i.Config()
+	h := i.Host()
+
 	truststorePath := sp["trustStore"]
 	truststorePassword := cf.ExpandToPassword(sp["trustStorePassword"])
 	defer clear(truststorePassword)
+	keystorePath := sp["keyStore"]
+	keystorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
+	defer clear(keystorePassword)
 
-	roots, err := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
-	if len(roots) > 0 && truststorePath != "" {
+	if keystorePath != "" {
+		keystorePath = instance.HomeRel(i, keystorePath)
+	} else {
+		i.Log().Warn("no keyStore set in security.properties, not creating a keystore", slog.Any("path", spPath))
+	}
+	if truststorePath != "" {
 		truststorePath = instance.HomeRel(i, truststorePath)
-		if err = certs.AddRootsToTrustStore(h, truststorePath, truststorePassword, roots...); err != nil {
-			i.Log().Error("updating truststore", slog.Any("path", truststorePath), slog.Any("error", err))
-			return false, err
+	}
+	if keystorePath != "" && keystorePath == truststorePath && !bytes.Equal(keystorePassword, truststorePassword) {
+		return nil, fmt.Errorf("truststore and keystore are the same file %q but the passwords differ", keystorePath)
+	}
+
+	// truststore from the ca-bundle
+	var valid []*x509.Certificate
+	if truststorePath != "" {
+		roots, rerr := certs.ReadCertificates(h, geneos.PathToCABundlePEM(h))
+		if rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
+			return nil, fmt.Errorf("reading CA bundle %q: %w", geneos.PathToCABundlePEM(h), rerr)
 		}
-		changed = true
+		for _, cert := range roots {
+			if certs.IsValidRootCA(cert) {
+				valid = append(valid, cert)
+			}
+		}
 	}
 
-	// create keystore from certificate and private key
-	keyStore := sp["keyStore"]
-	keyStorePassword := cf.ExpandToPassword(sp["keyStorePassword"])
-	defer clear(keyStorePassword)
-	alias := geneos.ALL.Hostname()
+	var ks, ts *certs.KeyStore
+	if keystorePath != "" {
+		if ks, _, err = instance.LoadKeyStore(h, keystorePath, keystorePassword); err != nil {
+			return nil, err
+		}
+	}
+	if len(valid) > 0 {
+		if keystorePath == truststorePath {
+			ts = ks
+		} else if ts, _, err = instance.LoadKeyStore(h, truststorePath, truststorePassword); err != nil {
+			return nil, err
+		}
+		for _, cert := range valid {
+			if err = ts.AddTrustedCertificate(cert.Subject.CommonName, cert); err != nil {
+				return nil, fmt.Errorf("adding %q to truststore %q: %w", cert.Subject.CommonName, truststorePath, err)
+			}
+		}
+	}
 
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
-		i.Log().Error("reading certificate chain", slog.Any("error", err))
-		return false, err
+	// keystore from the certificate and private key
+	if ks != nil {
+		certChain, err := instance.ReadCertificates(i)
+		if err != nil {
+			return nil, fmt.Errorf("reading certificate chain for %s: %w", i, err)
+		}
+		if len(certChain) == 0 {
+			return nil, fmt.Errorf("no certificates found for %s", i)
+		}
+		key, err := instance.ReadPrivateKey(i)
+		if err != nil {
+			return nil, fmt.Errorf("reading private key for %s: %w", i, err)
+		}
+		if err = ks.AddKeystoreKey(h.Hostname(), key, keystorePassword, certChain...); err != nil {
+			return nil, fmt.Errorf("adding key to keystore %q: %w", keystorePath, err)
+		}
+
+		data, err := instance.MarshalKeyStore(ks, keystorePassword)
+		if err != nil {
+			return nil, fmt.Errorf("keystore %q: %w", keystorePath, err)
+		}
+		updates = append(updates, instance.FileUpdate{Path: keystorePath, Data: data, Perm: 0600})
 	}
-	if len(certChain) == 0 {
-		return false, err
+	if ts != nil && ts != ks {
+		data, err := instance.MarshalKeyStore(ts, truststorePassword)
+		if err != nil {
+			return nil, fmt.Errorf("truststore %q: %w", truststorePath, err)
+		}
+		updates = append(updates, instance.FileUpdate{Path: truststorePath, Data: data, Perm: 0644})
 	}
-	key, err := instance.ReadPrivateKey(i)
-	if err != nil {
-		i.Log().Error("reading private key", slog.Any("error", err))
-		return false, err
-	}
-	keyStore = instance.HomeRel(i, keyStore)
-	err = certs.AddCertChainToKeyStore(h, keyStore, keyStorePassword, alias, key, certChain...)
-	if err == nil {
-		changed = true
-	}
-	return changed, err
+	return updates, nil
 }
 
 // Command TODO: Document its behavior, inputs, and effects.
@@ -425,7 +509,7 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	if truststorePath, ok := sp["trustStore"]; ok && truststorePath != "" {
 		truststorePath = instance.HomeRel(i, truststorePath)
 		// check for file, as defaults in security.properties may point to non-existent file
-		if _, err = i.Host().Stat(truststorePath); err == nil {
+		if _, serr := i.Host().Stat(truststorePath); serr == nil {
 			args = append(args, "-Djavax.net.ssl.trustStore="+truststorePath)
 			if truststorePassword, ok := sp["trustStorePassword"]; ok && truststorePassword != "" {
 				args = append(args, "-Djavax.net.ssl.trustStorePassword="+truststorePassword)
@@ -446,13 +530,11 @@ func (i *Webserver) Command(skipFileCheck bool) (args, env []string, home string
 	// if keystore exists, enable SSL
 	if keystorePath, ok := sp["keyStore"]; ok && keystorePath != "" {
 		keystorePath = instance.HomeRel(i, keystorePath)
-		if _, err = i.Host().Stat(keystorePath); err == nil {
+		if _, serr := i.Host().Stat(keystorePath); serr == nil {
 			args = append(args, "-ssl", "true")
 			checks = append(checks, keystorePath)
-		} else if !os.IsNotExist(err) || cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
-			return
-		} else {
-			err = nil
+		} else if !errors.Is(serr, fs.ErrNotExist) || cf.IsSet(cf.Join(instance.TLSBASE, instance.CERTIFICATE)) || cf.IsSet(instance.CERTIFICATE) {
+			return args, env, home, serr
 		}
 	}
 

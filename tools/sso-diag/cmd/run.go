@@ -27,14 +27,20 @@ func init() {
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "Run the SSO diagnostic server",
+	Long: `Run the diagnostic server using the settings in the SSO Agent configuration
+file conf/sso-agent.conf, relative to the directory given by --dir.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		start()
+The server logs in to Kerberos using the configured account and then serves:
+
+  /status      a simple status page
+  /public_key  the public key from the SSO Agent key store (if enabled in the configuration)
+  /testuser    authenticates the caller with SPNEGO/Kerberos and shows the LDAP entry for them
+  /authorize   a placeholder for the SSO Agent token endpoint
+
+LDAP connections do not verify the server certificate unless --ldap-verify is given.`,
+	Args: cobra.NoArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return start()
 	},
 }

@@ -14,7 +14,6 @@ import (
 
 	"github.com/itrs-group/cordial/pkg/config"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
-	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 const (
@@ -28,7 +27,6 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	}
 	site := geneos.SiteName()
 	ct := geneos.ParseComponent("gateway")
-	resp := responses.New[responses.General](nil)
 	fmt.Println("Extracting include files for version", version)
 	dir := h.PathTo(ct, "includes", version)
 	st, statErr := h.Lstat(dir)
@@ -41,18 +39,15 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 	if st != nil && !override {
 		return fmt.Errorf("includes directory already exists at %s and replacement is disabled", dir)
 	}
-	if err = h.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
 	incs, err := fs.Glob(sourceFS, IncludePattern)
 	if err != nil {
-		resp.Err = err
 		return err
 	}
 	if len(incs) == 0 {
-		fmt.Println("No include files found matching:", IncludePattern)
-		resp.Err = fmt.Errorf("no include files found matching: %s", IncludePattern)
-		return nil
+		return fmt.Errorf("no include files found matching: %s", IncludePattern)
+	}
+	if err = h.MkdirAll(dir, 0755); err != nil {
+		return err
 	}
 	for _, inc := range incs {
 		efi, err := fs.Stat(sourceFS, inc)
@@ -86,7 +81,6 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 				return err
 			}
 			fmt.Println("Backed up existing include file to", backupPath)
-			resp.Completed = append(resp.Completed, fmt.Sprintf("backed up %s", p))
 		} else if !errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("failed to inspect include path %q: %w", p, err)
 		}
@@ -94,7 +88,6 @@ func extractIncludes(h *geneos.Host, sourceFS fs.FS, version string, override bo
 			return fmt.Errorf("failed to extract include %q: %w", inc, err)
 		}
 		fmt.Println("Extracted include file", p)
-		resp.Completed = append(resp.Completed, fmt.Sprintf("extracted %s", p))
 	}
 	dir = h.PathTo(ct, site)
 	st, statErr = h.Lstat(dir)
@@ -251,21 +244,25 @@ func copyIncludeFile(sourceFS fs.FS, source string, h *geneos.Host, destination 
 
 const chunkSize = 4096
 
+// compareContents returns true if both readers return the same bytes,
+// regardless of how many bytes each Read returns.
 func compareContents(f1h, f2h io.Reader) bool {
 	buf1 := make([]byte, chunkSize)
 	buf2 := make([]byte, chunkSize)
 	for {
-		n1, err1 := f1h.Read(buf1)
-		n2, err2 := f2h.Read(buf2)
-		if n1 != n2 || err1 != nil && err1 != io.EOF || err2 != nil && err2 != io.EOF {
+		n1, err1 := io.ReadFull(f1h, buf1)
+		n2, err2 := io.ReadFull(f2h, buf2)
+		// a short last chunk is reported as an unexpected EOF
+		end1 := errors.Is(err1, io.EOF) || errors.Is(err1, io.ErrUnexpectedEOF)
+		end2 := errors.Is(err2, io.EOF) || errors.Is(err2, io.ErrUnexpectedEOF)
+		if (err1 != nil && !end1) || (err2 != nil && !end2) {
 			return false
 		}
-		if n1 == 0 {
-			break
-		}
-		if !bytes.Equal(buf1[:n1], buf2[:n2]) {
+		if n1 != n2 || !bytes.Equal(buf1[:n1], buf2[:n2]) {
 			return false
+		}
+		if end1 || end2 {
+			return end1 == end2
 		}
 	}
-	return true
 }

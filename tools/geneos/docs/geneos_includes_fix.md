@@ -19,7 +19,7 @@ geneos includes fix --dry-run 'prod-*'
 geneos includes fix gateway-a gateway-b
 ```
 
-Existing XML setup files receive history backups. Instance configuration files are replaced atomically without backups. XML and instance configuration formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
+Existing XML setup files receive history backups. Only the text of the changed include `location` elements is edited in a setup file; comments, whitespace, element order, unknown elements, CDATA sections and the file's encoding and mode are otherwise left exactly as they are. If the file cannot be edited exactly, or does not agree with the parsed setup about the locations to change, the setup is not written and the gateway reports an error. Instance configuration files are replaced atomically without backups, and their formatting may change. Writes to separate files are not transactional; an error on a later write does not roll back an earlier one. The global `--host` (`-H`) option selects the installation.
 
 ## Usage
 
@@ -31,10 +31,10 @@ geneos includes fix [NAMES...] [flags]
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -n, --dry-run[=true|false]      List repairs without changing files
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

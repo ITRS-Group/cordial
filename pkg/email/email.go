@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -54,31 +55,108 @@ import (
 //
 // Additional parameters are (which are case insensitive):
 //
-// * _SMTP_TLS - default / force / none (case insensitive)
+// * _SMTP_TLS - default / force / none / ssl (case insensitive).
+// "default" tries STARTTLS and continues without it if not offered,
+// "force" requires STARTTLS, "none" never uses TLS and "ssl" uses
+// implicit TLS from the start of the connection (SMTPS). Implicit TLS
+// is also used when _SMTP_PORT is 465 and _SMTP_TLS is not "none"
 // * _SMTP_USERNAME - if defined authentication attempted
 // * _SMTP_PASSWORD - password in [ExpandString] format
+// * _SMTP_AUTH - the authentication mechanism to use, such as "plain",
+// "login", "cram-md5", "scram-sha-256" or "xoauth2", with "-noenc" added
+// for the plain text mechanisms to allow them without TLS. The default
+// is to select the strongest mechanism offered by the server
+//
+// If _SMTP_PORT is not set the port is selected by the TLS policy,
+// as 587 with "default" and "force" (with "default" falling back to 25
+// if 587 cannot be reached), 465 for "ssl" and 25 for "none". If it is
+// set then only that port is used.
 func Dial(conf *config.Config) (d *mail.Client, err error) {
+	server, mailOpts, err := dialOptions(conf)
+	if err != nil {
+		return nil, err
+	}
+
+	return mail.NewClient(server, mailOpts...)
+}
+
+// authTypes are the _smtp_auth names accepted, in upper case
+var authTypes = []mail.SMTPAuthType{
+	mail.SMTPAuthPlain,
+	mail.SMTPAuthPlainNoEnc,
+	mail.SMTPAuthLogin,
+	mail.SMTPAuthLoginNoEnc,
+	mail.SMTPAuthCramMD5,
+	mail.SMTPAuthXOAUTH2,
+	mail.SMTPAuthSCRAMSHA1,
+	mail.SMTPAuthSCRAMSHA1PLUS,
+	mail.SMTPAuthSCRAMSHA256,
+	mail.SMTPAuthSCRAMSHA256PLUS,
+	mail.SMTPAuthNTLM,
+	mail.SMTPAuthAutoDiscover,
+}
+
+// dialOptions returns the SMTP server name and the options for the
+// mail client built from conf
+func dialOptions(conf *config.Config) (server string, mailOpts []mail.Option, err error) {
+	server = config.Get[string](conf, "_smtp_server", config.DefaultValue("localhost"))
+	if server == "" {
+		server = "localhost"
+	}
+
 	var tlsPolicy mail.TLSPolicy
+	implicit := false
 
 	switch strings.ToLower(config.Get[string](conf, "_smtp_tls", config.DefaultValue("default"))) {
 	case "force":
 		tlsPolicy = mail.TLSMandatory
 	case "none":
 		tlsPolicy = mail.NoTLS
+	case "ssl", "implicit":
+		implicit = true
 	default:
 		tlsPolicy = mail.TLSOpportunistic
 	}
 
-	mailOpts := []mail.Option{
-		mail.WithTLSPortPolicy(tlsPolicy),
-		mail.WithTimeout(time.Duration(config.Get[int](conf, "_smtp_timeout", config.DefaultValue(10))) * time.Second),
+	// zero is not a valid port and is sometimes returned for unset
+	port, _ := config.Lookup[int](conf, "_smtp_port")
+	if port == 465 && tlsPolicy != mail.NoTLS {
+		implicit = true
 	}
 
+	// The port must be set before the TLS policy, as go-mail only
+	// selects a default port, and a fallback to plain text on port 25,
+	// when no other port has already been set. If a port is given then
+	// it is used alone: a failure to connect is an error and never
+	// falls back to port 25 without TLS.
+	switch {
+	case port != 0 && implicit:
+		mailOpts = append(mailOpts, mail.WithPort(port), mail.WithSSL())
+	case port != 0:
+		// the policy only, as the port policy would change port 25
+		mailOpts = append(mailOpts, mail.WithPort(port), mail.WithTLSPolicy(tlsPolicy))
+	case implicit:
+		mailOpts = append(mailOpts, mail.WithSSLPort(false))
+	default:
+		mailOpts = append(mailOpts, mail.WithTLSPortPolicy(tlsPolicy))
+	}
+
+	mailOpts = append(mailOpts,
+		mail.WithTimeout(time.Duration(config.Get[int](conf, "_smtp_timeout", config.DefaultValue(10)))*time.Second),
+	)
+
 	if config.Get[string](conf, "_smtp_username") != "" {
+		auth := mail.SMTPAuthAutoDiscover
+		if name := strings.ToUpper(strings.TrimSpace(config.Get[string](conf, "_smtp_auth"))); name != "" && name != "AUTO" {
+			auth = mail.SMTPAuthType(name)
+			if !slices.Contains(authTypes, auth) {
+				return "", nil, fmt.Errorf("unknown _smtp_auth mechanism %q", name)
+			}
+		}
 		mailOpts = append(mailOpts,
 			mail.WithUsername(config.Get[string](conf, "_smtp_username")),
 			mail.WithPassword(config.Get[string](conf, "_smtp_password")),
-			mail.WithSMTPAuth(mail.SMTPAuthLogin),
+			mail.WithSMTPAuth(auth),
 		)
 	} else {
 		mailOpts = append(mailOpts,
@@ -86,26 +164,15 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 		)
 	}
 
-	// override port policy if we are told to, but zero skips through
-	// sometimes, so check that too
-	if p, ok := config.Lookup[int](conf, "_smtp_port"); ok && p != 0 {
-		mailOpts = append(mailOpts, mail.WithPort(p))
-	}
-
 	if config.Get[bool](conf, "_smtp_tls_insecure") {
 		mailOpts = append(mailOpts, mail.WithTLSConfig(&tls.Config{
+			ServerName:         server,
+			MinVersion:         tls.VersionTLS12,
 			InsecureSkipVerify: true,
 		}))
 	}
 
-	d, err = mail.NewClient(config.Get[string](conf, "_smtp_server", config.DefaultValue("localhost")), mailOpts...)
-	if err != nil {
-		return
-	}
-
-	d.SetTLSPolicy(tlsPolicy)
-
-	return d, nil
+	return server, mailOpts, nil
 }
 
 // UpdateEnvelope processes the Geneos libemail parameters for _FROM, _TO, _CC
@@ -114,10 +181,15 @@ func Dial(conf *config.Config) (d *mail.Client, err error) {
 func UpdateEnvelope(conf *config.Config, inlineCSS bool) (m *mail.Msg, err error) {
 	m = mail.NewMsg()
 
-	var from = config.Get[string](conf, "_from", config.DefaultValue("geneos@localhost"))
-	var fromName = config.Get[string](conf, "_from_name", config.DefaultValue("Geneos"))
+	from := config.Get[string](conf, "_from", config.DefaultValue("geneos@localhost"))
+	if from == "" {
+		from = "geneos@localhost"
+	}
+	fromName := config.Get[string](conf, "_from_name", config.DefaultValue("Geneos"))
 
-	m.FromFormat(fromName, from)
+	if err = m.FromFormat(fromName, from); err != nil {
+		return nil, fmt.Errorf("invalid _from address %q: %w", from, err)
+	}
 
 	err = addAddresses(m, conf, "to")
 	if err != nil {
@@ -223,14 +295,22 @@ func NewEmailConfig(cf *config.Config, toArg, ccArg, bccArg, subjectArg string) 
 		}
 	}
 
+	// do not set empty defaults for the settings that have their own
+	// defaults, as an empty default would hide them
+	setDefault := func(key, value string) {
+		if value != "" {
+			em.Default(key, value)
+		}
+	}
+
 	em.Default("_smtp_username", eusername)
 	em.Default("_smtp_password", string(epassword))
-	em.Default("_smtp_server", smtpserver)
+	setDefault("_smtp_server", smtpserver)
 	if cf != nil {
-		em.Default("_smtp_tls", config.Get[string](cf, cf.Join("email", "use-tls")))
+		setDefault("_smtp_tls", config.Get[string](cf, cf.Join("email", "use-tls")))
 		em.Default("_smtp_tls_insecure", config.Get[bool](cf, cf.Join("email", "tls-skip-verify")))
 		em.Default("_smtp_port", config.Get[int](cf, cf.Join("email", "port")))
-		em.Default("_from", config.Get[string](cf, cf.Join("email", "from")))
+		setDefault("_from", config.Get[string](cf, cf.Join("email", "from")))
 		em.Default("_to", config.Get[string](cf, cf.Join("email", "to")))
 		em.Default("_cc", config.Get[string](cf, cf.Join("email", "cc")))
 		em.Default("_bcc", config.Get[string](cf, cf.Join("email", "bcc")))

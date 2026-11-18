@@ -19,6 +19,7 @@ package hostcmd
 
 import (
 	_ "embed"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -62,6 +63,7 @@ geneos host unset rem2 -i /path/to/id_rsa
 	},
 	RunE: func(command *cobra.Command, origargs []string) (err error) {
 		var hosts []*geneos.Host
+		var unknown error
 
 		if len(origargs) == 0 && command.Flags().NFlag() == 0 {
 			command.Usage()
@@ -72,17 +74,24 @@ geneos host unset rem2 -i /path/to/id_rsa
 			return
 		}
 
-		hosts = geneos.RemoteHosts(false)
-		for _, a := range args {
-			h := geneos.GetHost(a)
-			if h.Exists() {
+		// only the named hosts, if any, otherwise all remote hosts
+		if len(args) == 0 {
+			hosts = geneos.RemoteHosts(false)
+		} else {
+			for _, a := range args {
+				h := geneos.GetHost(a)
+				if !h.Exists() {
+					// carry on with the other hosts
+					unknown = cmd.ReportFailure(a, errors.New("unknown host"))
+					continue
+				}
 				hosts = append(hosts, h)
 			}
 		}
 		if len(hosts) == 0 {
 			// nothing to do
 			fmt.Println("nothing to do")
-			return
+			return unknown
 		}
 
 		log.Debug("hosts", slog.Int("count", len(hosts)), slog.Any("hosts", hosts))
@@ -102,15 +111,15 @@ geneos host unset rem2 -i /path/to/id_rsa
 					continue
 				}
 				keys = slices.DeleteFunc(keys, func(key string) bool {
-					if slices.Contains(unsetCmdPrivateKeyfiles, key) {
-						return true
-					}
-					return false
+					return slices.Contains(unsetCmdPrivateKeyfiles, key)
 				})
 				config.Set(h.Config, "privatekeys", keys)
 			}
 		}
 
-		return geneos.SaveHostConfig()
+		if err = geneos.SaveHostConfig(); err != nil {
+			return err
+		}
+		return unknown
 	},
 }

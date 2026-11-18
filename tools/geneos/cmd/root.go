@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -36,7 +37,9 @@ import (
 	"github.com/itrs-group/cordial/pkg/logger"
 
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
+	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
 	"github.com/itrs-group/cordial/tools/geneos/internal/profile"
+	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 )
 
 const (
@@ -216,18 +219,69 @@ type CmdValType struct {
 	variant string
 }
 
-// cmddata is a helper to get the command data struct from the command
-// context. It returns nil if not found or of the wrong type.
 // profileExpandHost returns the host used for profile expansion
 // lookups such as `${hostname}`. Commands without a host flag (e.g.
 // `init`) have no host, which would otherwise expand to an empty name.
+//
+// The fallback to the local host must not be used to hide an invalid
+// `-H` value, which is rejected by [validateHostFlag] first.
 func profileExpandHost(name string) *geneos.Host {
-	if h := geneos.GetHost(name); h != nil && h != geneos.ALL {
+	if h := geneos.GetHost(name); h != nil && h != geneos.ALL && h != geneos.UNKNOWN {
 		return h
 	}
 	return geneos.LOCAL
 }
 
+// validateHostFlag returns an error if name, the value of the `-H`
+// flag, is not empty or one of the known hosts. An empty name means no
+// host was selected, which is "all hosts" for commands that document it.
+func validateHostFlag(name string) error {
+	if name == "" {
+		return nil
+	}
+	if h := geneos.GetHost(name); h == nil || h == geneos.UNKNOWN {
+		return fmt.Errorf("unknown host %q", name)
+	}
+	return nil
+}
+
+// defaultHost returns the host selected by the `-H` flag for commands
+// that work on a single host, which is the local host if none or all
+// hosts are selected.
+func defaultHost() *geneos.Host {
+	if h := geneos.GetHost(Hostname); h != nil && h != geneos.ALL && h != geneos.UNKNOWN {
+		return h
+	}
+	return geneos.LOCAL
+}
+
+// checkNameHost returns an error if the host part of an instance name
+// in the format [TYPE:]NAME[@HOST], or the default host if there is
+// none, is not a known host.
+func checkNameHost(name string, h *geneos.Host) error {
+	if eh, _, _ := instance.ParseName(name, h); eh == nil || eh == geneos.UNKNOWN {
+		return fmt.Errorf("unknown host in %q", name)
+	}
+	return nil
+}
+
+// ConfigFile returns the path given with the global `--config`/`-G`
+// flag, which is empty if the flag was not used.
+func ConfigFile() string {
+	return cfgFile
+}
+
+// cmdContext returns the context of the command, or the background
+// context if it has none.
+func cmdContext(command *cobra.Command) context.Context {
+	if ctx := command.Context(); ctx != nil {
+		return ctx
+	}
+	return context.Background()
+}
+
+// cmddata is a helper to get the command data struct from the command
+// context. It returns nil if not found or of the wrong type.
 func cmddata(command *cobra.Command) *CmdValType {
 	ctx := command.Context()
 	if ctx == nil {
@@ -239,6 +293,74 @@ func cmddata(command *cobra.Command) *CmdValType {
 		}
 	}
 	return nil
+}
+
+// ErrReported is returned by commands that have already written an
+// error for each item that failed, for example for each instance. It
+// causes a non-zero exit status without a further error message and
+// without the usage, as the details are already known to the user.
+var ErrReported = responses.ErrReported
+
+// ReportFailure writes the failure err of the item called name, for
+// example an instance, to standard error and returns ErrReported. It is
+// for commands that carry on with the remaining items after a failure
+// and are not using [responses.GeneralResponses.Report], which does
+// the same, to return when they have finished. The name is not written
+// if it is empty.
+func ReportFailure(name string, err error) error {
+	if errors.Is(err, ErrReported) {
+		// already reported, for example for each of the items in err
+		return ErrReported
+	}
+	if name == "" {
+		fmt.Fprintln(os.Stderr, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "%s: %s\n", name, err)
+	}
+	return ErrReported
+}
+
+// silenced records the original silence settings of commands that were
+// changed because they returned ErrReported.
+var silenced = map[*cobra.Command][2]bool{}
+
+// silenceReportedRunE is the function that wraps the RunE of a command.
+func silenceReportedRunE(run func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
+	return func(c *cobra.Command, args []string) error {
+		err := run(c, args)
+		if errors.Is(err, ErrReported) {
+			if _, ok := silenced[c]; !ok {
+				silenced[c] = [2]bool{c.SilenceErrors, c.SilenceUsage}
+			}
+			c.SilenceErrors = true
+			c.SilenceUsage = true
+		}
+		return err
+	}
+}
+
+// reportedRunEPC is the code address of silenceReportedRunE closures,
+// used to avoid wrapping a RunE more than once.
+var reportedRunEPC = reflect.ValueOf(silenceReportedRunE(nil)).Pointer()
+
+// silenceReported wraps the RunE function of command so that if it
+// returns ErrReported then neither cobra's error message nor the usage
+// are written. The change is undone by restoreSilence before the
+// command is run again, as can happen in tests.
+func silenceReported(command *cobra.Command) {
+	if command.RunE == nil || reflect.ValueOf(command.RunE).Pointer() == reportedRunEPC {
+		return
+	}
+	command.RunE = silenceReportedRunE(command.RunE)
+}
+
+// restoreSilence undoes the changes made when command last returned
+// ErrReported.
+func restoreSilence(command *cobra.Command) {
+	if orig, ok := silenced[command]; ok {
+		command.SilenceErrors, command.SilenceUsage = orig[0], orig[1]
+		delete(silenced, command)
+	}
 }
 
 // Cmd represents the base command when called without any subcommands
@@ -267,6 +389,8 @@ geneos restart
 	DisableFlagsInUseLine: true,
 	// SilenceErrors:      true, - this blocks all child errors too, don't uncomment it
 	PersistentPreRunE: func(command *cobra.Command, args []string) (err error) {
+		restoreSilence(command)
+
 		if profilesErr != nil {
 			return fmt.Errorf("failed to initialize profiles config: %w", profilesErr)
 		}
@@ -276,13 +400,44 @@ geneos restart
 			}
 		}
 
-		ctx := context.WithValue(context.Background(), CmdKey, &CmdValType{})
+		ctx := context.WithValue(cmdContext(command), CmdKey, &CmdValType{})
 		command.SetContext(ctx)
+
+		// check for CmdReplacedBy annotation, warn the user, run the new
+		// command later (after prerun) but if the help flag is set
+		// output the help for the new command and cleanly exit. The
+		// flags and arguments of the legacy command are parsed using the
+		// replacement command, as they were not parsed for the legacy
+		// command (DisableFlagParsing).
+		var realcmd *cobra.Command
+		flagCmd, flagArgs := command, args
+
+		if r, ok := command.Annotations[CmdReplacedBy]; ok {
+			var newargs []string
+			realcmd, newargs, err = command.Root().Find(append(strings.Fields(r), args...))
+			if err != nil {
+				log.Error("error finding replacement command", slog.Any("error", err))
+				return err
+			}
+			if realcmd != nil {
+				realcmd.SetContext(ctx)
+				if err = realcmd.ParseFlags(newargs); err != nil {
+					return err
+				}
+				flagCmd, flagArgs = realcmd, realcmd.Flags().Args()
+			}
+		}
+
+		// validate the host before it is used for anything, including
+		// the profile expansion defaults below
+		if err = validateHostFlag(Hostname); err != nil {
+			return err
+		}
 
 		// boot-strap profile function map, no that flags are parsed
 		// set defaults for all profile expansion
 
-		profile.SetExpandOptions(profileExpandHost(Hostname), Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
+		profile.SetExpandOptions(profileExpandHost(Hostname), Profiles, profile.PflagSetToMap(flagCmd.Flags(), profile.IncludeFlags...), flagArgs)
 
 		// check if user is root, and only proceed if conditions are met:
 		// * the command has the `allow-root` annotation set to "true", or
@@ -294,53 +449,24 @@ geneos restart
 			return fmt.Errorf("running as root is not allowed, use --allow-root to override")
 		}
 
-		// check for AnnotationReplacedBy annotation, warn the user, run the new
-		// command later (after prerun) but if the help flag is set
-		// output the help for the new command and cleanly exit.
-		var realcmd *cobra.Command
-
-		if r, ok := command.Annotations[CmdReplacedBy]; ok {
-			var newargs []string
-			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
-			if err != nil {
-				log.Error("error finding replacement command", slog.Any("error", err))
-				return err
-			}
-			if realcmd != nil {
-				fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), realcmd.CommandPath())
-				command.RunE = func(cmd *cobra.Command, args []string) error {
-					realcmd.ParseFlags(newargs)
-					ParseArgs(realcmd, newargs)
-					return realcmd.RunE(realcmd, realcmd.Flags().Args())
-				}
-			}
-		}
-
-		// same as above, but no warning message (TODO - can't recall why, indirection?)
-		if r, ok := command.Annotations[CmdReplacedBy]; ok {
-			var newargs []string
-			realcmd, newargs, err = command.Root().Find(append(strings.Split(r, " "), args...))
-			if err != nil {
-				log.Error("error finding replacement command", slog.Any("error", err))
-				return err
-			}
-			if realcmd != nil {
-				command.RunE = func(cmd *cobra.Command, args []string) error {
-					realcmd.ParseFlags(newargs)
-					ParseArgs(realcmd, newargs)
-					return realcmd.RunE(realcmd, realcmd.Flags().Args())
-				}
-			}
-		}
-
 		if realcmd != nil {
-			if t, _ := command.Flags().GetBool("help"); t {
+			fmt.Printf("*** Please note that the %q command has been replaced by %q\n\n", command.CommandPath(), realcmd.CommandPath())
+			if t, _ := realcmd.Flags().GetBool("help"); t {
 				command.RunE = nil
 				// Run cannot be nil
 				command.Run = func(cmd *cobra.Command, args []string) {
 					realcmd.Usage()
 				}
 				return nil
+			}
+			command.RunE = func(cmd *cobra.Command, args []string) error {
+				if realcmd.RunE == nil {
+					if realcmd.Run != nil {
+						realcmd.Run(realcmd, realcmd.Flags().Args())
+					}
+					return nil
+				}
+				return realcmd.RunE(realcmd, realcmd.Flags().Args())
 			}
 		}
 
@@ -353,6 +479,10 @@ geneos restart
 			return nil
 		}
 
+		// the failures of the items acted on are reported by the
+		// command, so do not repeat them in the error or usage
+		silenceReported(command)
+
 		// check initialisation
 		if command.Annotations[CmdRequireHome] == "true" && geneos.LocalRoot() == "" && len(geneos.RemoteHosts(false)) == 0 {
 			command.SetUsageTemplate(" ")
@@ -362,6 +492,10 @@ geneos restart
 		if command.Name() == "help" {
 			// don't parse args if the command is a help
 			return nil
+		}
+
+		if realcmd != nil {
+			return ParseArgs(realcmd, flagArgs)
 		}
 
 		return ParseArgs(command, args)

@@ -36,6 +36,11 @@ type Connection struct {
 	Username string
 	Password string
 	Trace    bool
+
+	// BasicAuth is true if requests are authenticated with the Username
+	// and Password, which is not needed if the Client does so, as it
+	// does for OAuth
+	BasicAuth bool
 }
 
 // TransitiveConnection TODO: Describe its purpose and intended use.

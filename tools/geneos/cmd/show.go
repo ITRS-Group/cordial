@@ -90,14 +90,6 @@ var showCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		output := os.Stdout
-		if showCmdOutput != "" {
-			output, err = os.Create(showCmdOutput)
-			if err != nil {
-				return
-			}
-		}
-
 		if showCmdMerge && showCmdValidate {
 			return errors.New("cannot validate and merge at the same time")
 		}
@@ -106,25 +98,31 @@ var showCmd = &cobra.Command{
 			showCmdSetup = true
 		}
 
+		output := os.Stdout
+		if showCmdOutput != "" {
+			output, err = os.Create(showCmdOutput)
+			if err != nil {
+				return
+			}
+			defer func() { err = errors.Join(err, output.Close()) }()
+		}
+
 		if showCmdValidate {
-			instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
+			return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showValidateInstance, showCmdHooksDir).Report(output,
 				responses.Prefix("### validation results for %s\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
 			)
-			return
 		}
 
 		if showCmdSetup {
-			instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
+			return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstanceConfig, showCmdMerge).Report(output,
 				responses.Prefix("<!-- configuration for %s -->\n\n"),
 				responses.Suffix("\n\n"),
 				responses.PlainValue(),
 			)
-			return
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstance).Report(os.Stdout, responses.IndentJSON(true))
-		return
+		return instance.Do(command.CommandPath(), geneos.GetHost(Hostname), ct, names, showInstance).Report(output, responses.IndentJSON(true))
 	},
 }
 

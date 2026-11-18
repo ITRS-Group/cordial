@@ -122,23 +122,24 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 		// the password can be empty at this point. this is valid, even if a bit dumb.
 
 		d = mail.NewDialer(server, port, username, password)
-		t, err := strconv.ParseBool(tlsInsecure)
-		if err == nil && t {
-			d.TLSConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-		}
 	} else {
 		// no auth - initialise Dialer directly
 		d = &mail.Dialer{Host: server, Port: port}
+	}
+	// this is independent of authentication, as the connection can be
+	// encrypted without it
+	if t, err := strconv.ParseBool(tlsInsecure); err == nil && t {
+		d.TLSConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
 	}
 	d.Timeout = time.Duration(timeout) * time.Second
 	d.StartTLSPolicy = tlsPolicy
 
 	if !debug(conf) {
 		keys := []string{"_SMTP_SERVER", "_SMTP_PORT", "_SMTP_TIMEOUT",
-			"_SMTP_USERNAME", "_SMTP_PASSWORD_FILE",
-			"_SMTP_TLS",
+			"_SMTP_USERNAME", "_SMTP_PASSWORD", "_SMTP_PASSWORD_FILE",
+			"_SMTP_TLS", "_SMTP_TLS_INSECURE",
 		}
 		for _, key := range keys {
 			delete(conf, key)
@@ -148,18 +149,22 @@ func dialServer(conf EMailConfig) (d *mail.Dialer, err error) {
 	return d, nil
 }
 
-// parse the C args - "n" of them - and return a map
+// goArgs returns the arguments passed by C as Go strings
+func goArgs(n C.int, args **C.char) (goargs []string) {
+	for _, s := range unsafe.Slice(args, n) {
+		goargs = append(goargs, C.GoString(s))
+	}
+	return
+}
+
+// parse the arguments and return a map
 // a value of empty string where there is no "=" or value
-func parseArgs(n C.int, args **C.char) EMailConfig {
+func parseArgs(args []string) EMailConfig {
 	conf := make(EMailConfig)
 
-	for _, s := range unsafe.Slice(args, n) {
-		k, v, found := strings.Cut(C.GoString(s), "=")
-		if found {
-			conf[k] = v
-		} else {
-			conf[k] = ""
-		}
+	for _, s := range args {
+		k, v, _ := strings.Cut(s, "=")
+		conf[k] = v
 	}
 	return conf
 }
@@ -175,9 +180,11 @@ func getWithDefault(key string, conf EMailConfig, def string) string {
 // return the value of the key from conf or a default
 func getWithDefaultInt(key string, conf EMailConfig, def int) int {
 	if val, ok := conf[key]; ok {
+		// a value that is not a number is not used, as zero for a
+		// timeout is no timeout
 		num, err := strconv.Atoi(val)
 		if err != nil {
-			return 0
+			return def
 		}
 		return num
 	}

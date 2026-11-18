@@ -23,30 +23,30 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"runtime"
+	"slices"
 	"strconv"
 	"syscall"
-	"time"
 
 	"github.com/pkg/sftp"
-	"golang.org/x/sys/unix"
 )
 
-// GetFileOwner TODO: Document its behavior, inputs, and effects.
+// GetFileOwner returns the numeric owner and group of the file described
+// by info, which can be from a local or remote (SFTP) host. If the
+// owner cannot be determined, for example because info has no system
+// details, then both are -1.
 func GetFileOwner(h Host, info fs.FileInfo) (uid, gid int) {
-	if h.IsLocalhost() {
-		uid = int(info.Sys().(*syscall.Stat_t).Uid)
-		gid = int(info.Sys().(*syscall.Stat_t).Gid)
-	} else {
-		uid = int(info.Sys().(*sftp.FileStat).UID)
-		gid = int(info.Sys().(*sftp.FileStat).GID)
+	uid, gid = -1, -1
+	if info == nil {
+		return
+	}
+	switch sys := info.Sys().(type) {
+	case *syscall.Stat_t:
+		uid, gid = int(sys.Uid), int(sys.Gid)
+	case *sftp.FileStat:
+		uid, gid = int(sys.UID), int(sys.GID)
 	}
 	return
 }
-
-// originalMask is used to store the original CPU affinity mask of the
-// process, so that it can be restored after the process has started.
-var originalMask unix.CPUSet
 
 // procSetupOS is called before the process is started, and can be used
 // to perform any OS-specific setup, such as setting process attributes
@@ -58,8 +58,9 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 	}
 
-	// if we've set-up privs at all, set the redirection output file to the same
-	if cmd.SysProcAttr.Credential != nil {
+	// if we've set-up privs at all, set the redirection output file to
+	// the same, but never change the ownership of the null device
+	if cmd.SysProcAttr.Credential != nil && out.Name() != os.DevNull {
 		if err = out.Chown(int(cmd.SysProcAttr.Credential.Uid), int(cmd.SysProcAttr.Credential.Gid)); err != nil {
 			return
 		}
@@ -70,10 +71,17 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 		cmd.SysProcAttr.Setsid = true
 	}
 
-	// mark all non-std fds unshared
-	cmd.ExtraFiles = []*os.File{}
+	closeInheritedFDs(cmd)
 
-	// un-inherit all FDs explicitly, leaving Extrafiles nil doesn't work
+	return
+}
+
+// closeInheritedFDs un-inherits all FDs explicitly, as leaving
+// ExtraFiles nil doesn't work. Any files the caller has set are kept and
+// the remainder, up to the highest open descriptor, are marked as closed
+// in the child. If the open descriptors cannot be listed (there is no
+// /proc) then only the close-on-exec flags set by Go apply.
+func closeInheritedFDs(cmd *exec.Cmd) {
 	fds, err := os.ReadDir("/proc/self/fd")
 	if err != nil {
 		return
@@ -81,115 +89,17 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 	var maxfd int
 	for _, f := range fds {
 		if i, err := strconv.Atoi(f.Name()); err == nil {
-			if i > maxfd {
-				maxfd = i
-			}
+			maxfd = max(maxfd, i)
 		}
 	}
 
-	for i := 0; i < maxfd-3; i++ {
-		cmd.ExtraFiles = append(cmd.ExtraFiles, nil)
+	// ExtraFiles[i] is file descriptor 3+i
+	if pad := maxfd - 2 - len(cmd.ExtraFiles); pad > 0 {
+		cmd.ExtraFiles = slices.Concat(cmd.ExtraFiles, make([]*os.File, pad))
 	}
-
-	if po.cpuAffinity != nil {
-		err = setProcAffinity(po.cpuAffinity...)
-	}
-
-	return
 }
 
-// postStart is called after the process has started, and can be used to
-// perform any additional setup that requires the process to be running,
-// such as setting resource limits or signal handlers.
-func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
-	po := evalProcessOptions(options...)
-
-	if po.allowCoreDumps {
-		// wait a bit to ensure process has started
-		time.Sleep(100 * time.Millisecond)
-		// enable core dumps for the process
-		var rlim unix.Rlimit
-
-		// first, my limits
-		if err = unix.Getrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
-			err = nil
-		}
-
-		if rlim.Cur == 0 {
-			rlim.Cur = unix.RLIM_INFINITY
-			// rlim.Max = unix.RLIM_INFINITY
-			if err = unix.Setrlimit(unix.RLIMIT_CORE, &rlim); err != nil {
-				err = nil
-			}
-		}
-
-		// first get current limits
-		if err = unix.Prlimit(cmd.Process.Pid, unix.RLIMIT_CORE, nil, &rlim); err != nil {
-			err = nil
-		}
-
-		switch rlim.Max {
-		case 0:
-			// core dumps disabled
-		default:
-			rlim.Cur = rlim.Max
-			if err = unix.Prlimit(cmd.Process.Pid, unix.RLIMIT_CORE, &rlim, nil); err != nil {
-				err = nil
-			} else {
-			}
-		}
-	}
-
-	if po.cpuAffinity != nil {
-		err = restoreProcAffinity()
-	}
-
-	return
-}
-
-func setProcAffinity(cpus ...int) (err error) {
-	runtime.LockOSThread()
-
-	if err = unix.SchedGetaffinity(0, &originalMask); err != nil {
-		return
-	}
-
-	var newMask unix.CPUSet
-	for _, cpu := range cpus {
-		newMask.Set(cpu)
-	}
-
-	return unix.SchedSetaffinity(0, &newMask)
-}
-
-func restoreProcAffinity() (err error) {
-	if originalMask.Count() == 0 {
-		return
-	}
-	// reset affinity to original mask
-	defer runtime.UnlockOSThread()
-	err = unix.SchedSetaffinity(0, &originalMask)
-	originalMask.Fill()
-	return
-}
-
-// Lchtimes TODO: Document its behavior, inputs, and effects.
-func (h *Local) Lchtimes(path string, atime time.Time, mtime time.Time) (err error) {
-	var ua, um int64
-	if !atime.IsZero() {
-		ua = atime.UnixMicro()
-	}
-	if !mtime.IsZero() {
-		um = mtime.UnixMicro()
-	}
-	tv := []unix.Timeval{
-		{Sec: ua / 1000000, Usec: ua % 1000000},
-		{Sec: um / 1000000, Usec: um % 1000000},
-	}
-	return unix.Lutimes(path, tv)
-}
-
-// Symlink TODO: Document its behavior, inputs, and effects.
+// Symlink creates newname as a symbolic link to oldname.
 func (h *Local) Symlink(oldname, newname string) (err error) {
 	return os.Symlink(oldname, newname)
 }

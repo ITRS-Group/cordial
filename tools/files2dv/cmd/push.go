@@ -19,44 +19,18 @@ package cmd
 
 import (
 	"errors"
-	"net/url"
-	"strconv"
 
 	"github.com/spf13/cobra"
-
-	"github.com/itrs-group/cordial/pkg/config"
-	"github.com/itrs-group/cordial/pkg/geneos/xmlrpc"
 )
 
 // pushCmd represents the push command
 var pushCmd = &cobra.Command{
 	Use:   "push",
-	Short: "Push file data using either XML or REST APIs",
-	Long:  ``,
+	Short: "Push file data using either XML or REST APIs (not yet implemented)",
+	Long: `Push mode is not yet implemented. The command is reserved for a future release,
+and currently returns an error. Use the default toolkit mode to output a Dataview.`,
 	RunE: func(cmd *cobra.Command, args []string) (err error) {
-		dataviews := []*config.Config{}
-		for i := 0; ; i++ {
-			pi := config.Join("dataviews", strconv.Itoa(i))
-			if !cf.IsSet(pi) {
-				break
-			}
-			dataviews = append(dataviews, cf.Sub(pi))
-		}
-
-		if len(dataviews) == 0 {
-			return
-		}
-
-		gurl, err := url.Parse(config.Get[string](cf, "push.netprobe"))
-		if err != nil {
-			return err
-		}
-		client := xmlrpc.NewClient(gurl, xmlrpc.Secure(config.Get[bool](cf, cf.Join("push", "secure"))))
-		if !client.Connected() {
-			return errors.New("gateway not connected to netprobe")
-		}
-
-		return
+		return errors.New("push mode is not yet implemented")
 	},
 }
 

@@ -77,7 +77,7 @@ type ResultsResponse struct {
 // parameter is a comma separated list of fields to return and `raw`
 // turns off display values.
 func getRecords(cf *config.Config, w http.ResponseWriter, r *http.Request) {
-	tc, err := snow.TableConfig(cf.Sub("servicenow"), r.PathValue("table"))
+	tc, err := snow.TableConfig(ims.Section(cf, "servicenow"), r.PathValue("table"))
 	if err != nil {
 		if errors.Is(err, snow.ErrTableNotFound) {
 			writeError(w, r, &ims.HTTPError{Code: http.StatusNotFound, Err: err})
@@ -118,7 +118,7 @@ func getRecords(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := snow.New(cf.Sub("servicenow"))
+	c, err := snow.New(ims.Section(cf, "servicenow"))
 	if err != nil {
 		writeError(w, r, err)
 		return
@@ -174,7 +174,7 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 		Action:    Failed,
 	}
 
-	table, err := snow.TableConfig(cf.Sub("servicenow"), tableName)
+	table, err := snow.TableConfig(ims.Section(cf, "servicenow"), tableName)
 	if err != nil {
 		code := http.StatusInternalServerError
 		if errors.Is(err, snow.ErrTableNotFound) {
@@ -187,21 +187,18 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 	}
 
 	// fail sets the error and expands the configured failure response
-	// using the current incident fields
+	// using the current incident fields. The values from the request
+	// are substituted as they are, and are never expanded.
 	fail := func(code int, msg string) {
 		response.Error = msg
-		response.Result = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(map[string]string{
-				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
-			}, incident),
-			config.TrimSpace(false),
-		)
+		response.Result = ims.ExpandLiteral(cf, table.Response.Failed, false, map[string]string{
+			"_error":     response.Error,
+			"_timestamp": response.Timestamp,
+		}, incident)
 		respond(w, r, code, response)
 	}
 
-	c, err := snow.New(cf.Sub("servicenow"))
+	c, err := snow.New(ims.Section(cf, "servicenow"))
 	if err != nil {
 		fail(http.StatusInternalServerError, err.Error())
 		return
@@ -239,7 +236,12 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 			if _, ok = incident[CMDB_CI_DEFAULT]; !ok {
 				incident[CMDB_CI_DEFAULT] = table.Defaults[CMDB_CI_DEFAULT]
 			}
-			if incident[SNOW_CMDB_CI], err = c.LookupCmdbCI(r.Context(), incident[CMDB_TABLE], query, incident[CMDB_CI_DEFAULT]); err != nil {
+			cmdbTable, err := snow.CMDBTable(incident[CMDB_TABLE])
+			if err != nil {
+				fail(ims.StatusFor(err, http.StatusBadRequest), "invalid "+CMDB_TABLE+": "+err.Error())
+				return
+			}
+			if incident[SNOW_CMDB_CI], err = c.LookupCmdbCI(r.Context(), cmdbTable, query, incident[CMDB_CI_DEFAULT]); err != nil {
 				fail(ims.StatusFor(err, http.StatusBadRequest), "failed to look up cmdb_ci: "+err.Error())
 				return
 			}
@@ -259,14 +261,19 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lookup_map := map[string]string{
-		SNOW_CMDB_CI:        incident[SNOW_CMDB_CI],
-		SNOW_CORRELATION_ID: incident[SNOW_CORRELATION_ID],
+	// the search is expanded with the values from the request
+	// substituted as they are, and not expanded themselves
+	//
+	// the values are escaped for an encoded query, so that a `^` in a
+	// value cannot end the condition and add others
+	cmdbCI, correlationID := snow.EscapeQuery(incident[SNOW_CMDB_CI]), snow.EscapeQuery(incident[SNOW_CORRELATION_ID])
+	search := ims.ExpandLiteral(cf, table.Search, true, map[string]string{
+		SNOW_CMDB_CI:        cmdbCI,
+		SNOW_CORRELATION_ID: correlationID,
+	})
+	if search == "" {
+		search = fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", cmdbCI, correlationID)
 	}
-	search := config.Expand[string](cf, table.Search,
-		config.LookupTable(lookup_map),
-		config.DefaultValue(fmt.Sprintf("active=true^cmdb_ci=%s^correlation_id=%s^ORDERBYDESCnumber", incident[SNOW_CMDB_CI], incident[SNOW_CORRELATION_ID])),
-	)
 	incident_id, state, err := c.LookupRecord(r.Context(), tableName, search)
 	if err != nil {
 		fail(ims.StatusFor(err, http.StatusInternalServerError), "error looking up incident: "+err.Error())
@@ -302,14 +309,10 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 	// the internal ones
 	fail = func(code int, msg string) {
 		response.Error = msg
-		response.Result = config.Expand[string](cf,
-			table.Response.Failed,
-			config.LookupTable(map[string]string{
-				"_error":     response.Error,
-				"_timestamp": response.Timestamp,
-			}, incidentFields),
-			config.TrimSpace(false),
-		)
+		response.Result = ims.ExpandLiteral(cf, table.Response.Failed, false, map[string]string{
+			"_error":     response.Error,
+			"_timestamp": response.Timestamp,
+		}, incidentFields)
 		respond(w, r, code, response)
 	}
 
@@ -321,14 +324,10 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 		}
 		response.Action = Updated
 		response.Number = number
-		response.Result = config.Expand[string](cf,
-			table.Response.Updated,
-			config.LookupTable(incidentFields, map[string]string{
-				"_number":    number,
-				"_timestamp": response.Timestamp,
-			}),
-			config.TrimSpace(false),
-		)
+		response.Result = ims.ExpandLiteral(cf, table.Response.Updated, false, incidentFields, map[string]string{
+			"_number":    number,
+			"_timestamp": response.Timestamp,
+		})
 		respond(w, r, http.StatusOK, response)
 		return
 	}
@@ -347,13 +346,9 @@ func acceptRecord(cf *config.Config, w http.ResponseWriter, r *http.Request) {
 	}
 	response.Action = Created
 	response.Number = number
-	response.Result = config.Expand[string](cf,
-		table.Response.Created,
-		config.LookupTable(incidentFields, map[string]string{
-			"_number":    number,
-			"_timestamp": response.Timestamp,
-		}),
-		config.TrimSpace(false),
-	)
+	response.Result = ims.ExpandLiteral(cf, table.Response.Created, false, incidentFields, map[string]string{
+		"_number":    number,
+		"_timestamp": response.Timestamp,
+	})
 	respond(w, r, http.StatusCreated, response)
 }

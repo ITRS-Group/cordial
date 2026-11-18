@@ -26,6 +26,7 @@ import (
 	"os/exec"
 	"os/user"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,12 +49,12 @@ func GetUsername(uid int) (username string) {
 	if u, ok := usernames.Load(uid); ok {
 		username = u.(string)
 		if username == notfound {
-			username = fmt.Sprint(uid)
+			username = strconv.Itoa(uid)
 		}
 		return
 	}
 
-	username = fmt.Sprint(uid)
+	username = strconv.Itoa(uid)
 	u, err := user.LookupId(username)
 	if err != nil || u.Username == "" {
 		usernames.Store(uid, notfound)
@@ -70,12 +71,12 @@ func GetGroupname(gid int) (groupname string) {
 	if g, ok := groupnames.Load(gid); ok {
 		groupname = g.(string)
 		if groupname == notfound {
-			groupname = fmt.Sprint(gid)
+			groupname = strconv.Itoa(gid)
 		}
 		return
 	}
 
-	groupname = fmt.Sprint(gid)
+	groupname = strconv.Itoa(gid)
 	g, err := user.LookupGroupId(groupname)
 	if err != nil || g.Name == "" {
 		groupnames.Store(gid, notfound)
@@ -90,7 +91,7 @@ func GetGroupname(gid int) (groupname string) {
 // GetLoginName returns the original login username associated with
 // process pid. If the loginuid is -1 then the current user is returned.
 func GetLoginName(pid int) (name string, err error) {
-	pidStr := fmt.Sprint(pid)
+	pidStr := strconv.Itoa(pid)
 	if pid < 0 {
 		pidStr = "self"
 	}
@@ -117,16 +118,33 @@ func GetCurrentUsername() (name string, err error) {
 	return currentUser.Username, nil
 }
 
+// parseProcStat splits the content of /proc/PID/stat into fields, where
+// field 0 is the PID and field 1 is the command name, which is in
+// parentheses to protect embedded spaces and can itself contain spaces
+// and parentheses, so it is found using the last closing parenthesis.
+func parseProcStat(stat string) []string {
+	stat = strings.TrimSpace(stat)
+	open := strings.Index(stat, " (")
+	closing := strings.LastIndex(stat, ")")
+	if open < 0 || closing < open+2 {
+		return strings.Fields(stat)
+	}
+	fields := []string{stat[:open], stat[open+2 : closing]}
+	return slices.AppendSeq(fields, strings.FieldsSeq(stat[closing+1:]))
+}
+
 func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats T, err error) {
 	var scClkTck int64
 
-	if reflect.TypeOf(pstats).Kind() != reflect.Pointer || reflect.TypeOf(pstats).Elem().Kind() != reflect.Struct {
+	pt := reflect.TypeFor[T]()
+	if pt.Kind() != reflect.Pointer || pt.Elem().Kind() != reflect.Struct {
 		return pstats, fmt.Errorf("pstats must be a pointer to a struct")
 	}
 
 	if h.IsLocalhost() {
 		scClkTck, _ = sysconf.Sysconf(sysconf.SC_CLK_TCK)
-	} else {
+	}
+	if scClkTck <= 0 {
 		scClkTck = 100
 	}
 
@@ -139,15 +157,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 			return pstats, err
 		}
 
-		// field[1] is surrounds by parenthesis to protect embedded spaces,
-		// so this has to be split more carefully
-		pidStat, rest, _ := strings.Cut(string(stat), " (")
-		execStat, rest, _ := strings.Cut(rest, ") ")
-
-		statFields = []string{pidStat, execStat}
-		for field := range strings.SplitSeq(rest, " ") {
-			statFields = append(statFields, field)
-		}
+		statFields = parseProcStat(string(stat))
 	}
 
 	var statusFields map[string]string
@@ -171,17 +181,12 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		}
 	}
 
-	st := reflect.TypeOf(pstats).Elem()
-
 	if reflect.ValueOf(pstats).IsNil() {
-		pstats = reflect.New(st).Interface().(T)
+		pstats = reflect.New(pt.Elem()).Interface().(T)
 	}
 
 	sv := reflect.ValueOf(pstats).Elem()
-	for i := 0; i < st.NumField(); i++ {
-		ft := st.Field(i)
-		fv := sv.Field(i)
-
+	for ft, fv := range sv.Fields() {
 		if lookup, ok := ft.Tag.Lookup("cache"); ok && lookup == "lazy" {
 			// skip filling this field for now, it will be filled on demand when requested
 			continue
@@ -204,11 +209,12 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 		case "Exe":
 			if fv.CanSet() && fv.Type().Kind() == reflect.String {
 				exe := fmt.Sprintf("/proc/%d/exe", pid)
-				exeVal, err := h.Readlink(exe)
-				if err != nil {
-					return pstats, nil
+				// the link is not readable for processes of other users
+				// and kernel threads, which must not stop other fields
+				// being filled
+				if exeVal, err := h.Readlink(exe); err == nil {
+					fv.SetString(strings.TrimSuffix(exeVal, " (deleted)"))
 				}
-				fv.SetString(strings.TrimSuffix(exeVal, " (deleted)"))
 			}
 
 		case "Cmdline":
@@ -278,7 +284,7 @@ func processStatus[T any](h host.Host, pid int, getStat, getStatus bool) (pstats
 							fv.SetString(statFields[idx])
 						case reflect.Int64, reflect.Int, reflect.Int32, reflect.Int16, reflect.Int8:
 							if iv, err := strconv.ParseInt(statFields[idx], 10, 64); err == nil {
-								if fv.Type().String() == "time.Duration" {
+								if fv.Type() == reflect.TypeFor[time.Duration]() {
 									fv.SetInt(iv * int64(time.Second) / scClkTck)
 								} else {
 									fv.SetInt(iv)
@@ -358,7 +364,7 @@ func ProcessStatusOpenFiles(h host.Host, pid int, fv reflect.Value) {
 
 // ProcessStatusOpenSockets TODO: Document its behavior, inputs, and effects.
 func ProcessStatusOpenSockets(h host.Host, pid int, fv reflect.Value) {
-	if fv.CanSet() {
+	if fv.CanSet() && fv.CanInt() {
 		var opensockets int64 = 0
 		of := OpenFiles(h, pid)
 		for _, f := range of {
@@ -386,14 +392,14 @@ func ProcessStatusListeningPorts(h host.Host, pid int, fv reflect.Value) {
 			case reflect.String:
 				var portlist []string
 				for _, p := range ports {
-					portlist = append(portlist, fmt.Sprint(p))
+					portlist = append(portlist, strconv.Itoa(p))
 				}
 				fv.Set(reflect.ValueOf(portlist))
 			}
 		case reflect.String:
 			var portlist []string
 			for _, p := range ports {
-				portlist = append(portlist, fmt.Sprint(p))
+				portlist = append(portlist, strconv.Itoa(p))
 			}
 			if len(portlist) > 0 {
 				fv.SetString(strings.Join(portlist, ","))

@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"path"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -70,127 +70,170 @@ type SocketConnection struct {
 	Status     string
 }
 
-var sockRE = regexp.MustCompile(`socket:\[(\d+)\]`)
-
-// SocketToConn takes the name of a socket from destination of a
-// `/proc/.../fd` link and locates the corresponding connection in one
-// of `/proc/net/tcp[6]` or `/proc/net/ucp[6]`. socket should be of the
-// form `socket:[17126174]`
-func SocketToConn(h host.Host, socket string) (sc *SocketConnection, err error) {
-	lx := sockRE.FindStringSubmatch(socket)
-	if len(lx) < 2 {
-		return
+// socketInode returns the inode from the destination of a
+// `/proc/.../fd` link of the form `socket:[17126174]`
+func socketInode(link string) (inode string, ok bool) {
+	inode, ok = strings.CutPrefix(link, "socket:[")
+	if !ok {
+		return "", false
 	}
-	sockInode := lx[1]
+	inode, ok = strings.CutSuffix(inode, "]")
+	if !ok || inode == "" {
+		return "", false
+	}
+	return inode, true
+}
 
-	sc = &SocketConnection{}
+// procNetEntry is one row of a `/proc/net/tcp[6]` file
+type procNetEntry struct {
+	SocketConnection
+	State int
+	Inode string
+}
 
-	for _, source := range tcpfiles {
-		tcp, err := h.Open(source)
+// decodeProcNetAddr decodes the `ADDRESS:PORT` columns of
+// `/proc/net/tcp[6]`. The kernel prints each 32-bit word of an address
+// in host byte order, so each word is reversed separately, for IPv4 and
+// IPv6, which is for the little-endian hosts that are supported.
+func decodeProcNetAddr(s string) (ip net.IP, port uint16, err error) {
+	addr, p, found := strings.Cut(s, ":")
+	if !found {
+		return nil, 0, fmt.Errorf("invalid address %q", s)
+	}
+	b, err := hex.DecodeString(addr)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(b) != net.IPv4len && len(b) != net.IPv6len {
+		return nil, 0, fmt.Errorf("invalid address length in %q", s)
+	}
+	for word := range slices.Chunk(b, 4) {
+		slices.Reverse(word)
+	}
+	pv, err := strconv.ParseUint(p, 16, 16)
+	if err != nil {
+		return nil, 0, err
+	}
+	return net.IP(b), uint16(pv), nil
+}
+
+// parseProcNet reads the rows of a `/proc/net/tcp[6]` file, skipping the
+// header and any row that cannot be understood. protocol is the name
+// given to each entry.
+func parseProcNet(r io.Reader, protocol string) (entries []procNetEntry, err error) {
+	scanner := bufio.NewScanner(r)
+	scanner.Scan() // skip headers
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		// sl, local, remote, st, tx:rx, tr:tm, retrnsmt, uid, timeout, inode
+		if len(fields) < 10 {
+			continue
+		}
+
+		e := procNetEntry{Inode: fields[9]}
+		e.Protocol = protocol
+		var err error
+		if e.LocalAddr, e.LocalPort, err = decodeProcNetAddr(fields[1]); err != nil {
+			continue
+		}
+		if e.RemoteAddr, e.RemotePort, err = decodeProcNetAddr(fields[2]); err != nil {
+			continue
+		}
+		state, err := strconv.ParseUint(fields[3], 16, 8)
 		if err != nil {
 			continue
 		}
+		e.State = int(state)
+		e.Status = stateNames[e.State]
+		tx, rx, _ := strings.Cut(fields[4], ":")
+		e.TxQueue, _ = strconv.ParseInt(tx, 16, 64)
+		e.RxQueue, _ = strconv.ParseInt(rx, 16, 64)
 
-		var found bool
-		var fields []string
+		entries = append(entries, e)
+	}
+	return entries, scanner.Err()
+}
 
-		scanner := bufio.NewScanner(tcp)
-		if scanner.Scan() {
-			// skip headers
-			_ = scanner.Text()
-			for scanner.Scan() {
-				line := scanner.Text()
-				fields = strings.Fields(line)
-				if len(fields) > 8 && fields[9] == sockInode {
-					// found
-					found = true
-					break
-				}
-			}
-		}
+// readProcNet reads and parses source on host h and always closes it
+func readProcNet(h host.Host, source string) (entries []procNetEntry, err error) {
+	f, err := h.Open(source)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return parseProcNet(f, path.Base(source))
+}
 
-		if !found {
+// socketTable returns the connections of all TCP sockets on host h, by
+// socket inode. If none of the files could be read then the error is
+// returned.
+func socketTable(h host.Host) (table map[string]*SocketConnection, err error) {
+	table = make(map[string]*SocketConnection)
+	var errs []error
+	var read int
+	for _, source := range tcpfiles {
+		entries, err := readProcNet(h, source)
+		if err != nil && entries == nil {
+			errs = append(errs, err)
 			continue
 		}
-
-		sc.Protocol = path.Base(source)
-
-		l, r, st, q := fields[1], fields[2], fields[3], fields[4]
-
-		laddr, lport, _ := strings.Cut(l, ":")
-		raddr, rport, _ := strings.Cut(r, ":")
-
-		lx, err2 := hex.DecodeString(laddr)
-		for i, j := 0, len(lx)-1; i < j; i, j = i+1, j-1 {
-			lx[i], lx[j] = lx[j], lx[i]
+		read++
+		for _, e := range entries {
+			table[e.Inode] = &e.SocketConnection
 		}
-
-		if err2 != nil {
-			return sc, err2
-		}
-		sc.LocalAddr = net.IP(lx)
-		fmt.Sscanf(lport, "%X", &sc.LocalPort)
-
-		rx, err2 := hex.DecodeString(raddr)
-		for i, j := 0, len(rx)-1; i < j; i, j = i+1, j-1 {
-			rx[i], rx[j] = rx[j], rx[i]
-		}
-
-		if err2 != nil {
-			return sc, err2
-		}
-		sc.RemoteAddr = net.IP(rx)
-		fmt.Sscanf(rport, "%X", &sc.RemotePort)
-
-		fmt.Sscanf(q, "%X:%X", &sc.TxQueue, &sc.RxQueue)
-		var state int
-		fmt.Sscanf(st, "%X", &state)
-		sc.Status = stateNames[state]
-
-		return sc, nil
 	}
+	if read == 0 {
+		return table, errors.Join(errs...)
+	}
+	return table, nil
+}
 
-	return
+// SocketToConn takes the name of a socket from destination of a
+// `/proc/.../fd` link and locates the corresponding connection in one
+// of `/proc/net/tcp[6]`. socket should be of the form
+// `socket:[17126174]`. If socket is not of that form or there is no TCP
+// connection for it then the returned connection is nil and the error
+// is nil, unless the connection tables could not be read at all.
+func SocketToConn(h host.Host, socket string) (sc *SocketConnection, err error) {
+	inode, ok := socketInode(socket)
+	if !ok {
+		return nil, nil
+	}
+	table, err := socketTable(h)
+	return table[inode], err
 }
 
 // AllTCPListenPorts returns a map of inodes to ports for all listening
-// TCP ports from the source (typically /proc/net/tcp or /proc/net/tcp6)
-// on host h. Will only work on Linux hosts.
+// TCP ports from `/proc/net/tcp` and `/proc/net/tcp6` on host h. Will
+// only work on Linux hosts. A host without IPv6 does not have the
+// second of these, which is not an error.
 func AllTCPListenPorts(h host.Host, ports map[int]int) (err error) {
 	if h.OS() == "windows" {
 		return errors.ErrUnsupported
 	}
 
+	var errs []error
+	var read int
 	for _, source := range tcpfiles {
-		tcp, err := h.Open(source)
-		if err != nil {
-			return err
+		entries, err := readProcNet(h, source)
+		if err != nil && entries == nil {
+			errs = append(errs, err)
+			continue
 		}
-
-		scanner := bufio.NewScanner(tcp)
-		if scanner.Scan() {
-			// skip headers
-			_ = scanner.Text()
-			for scanner.Scan() {
-				line := scanner.Text()
-				fields := strings.Fields(line)
-				if len(fields) < 10 || fields[3] != "0A" { // TCP_LISTEN
-					break
-				}
-				_, p, found := strings.Cut(fields[1], ":")
-				if !found {
-					continue
-				}
-				port, err := strconv.ParseInt(p, 16, 32)
-				if err != nil {
-					continue
-				}
-				inode, _ := strconv.Atoi(fields[9])
-				ports[inode] = int(port)
+		read++
+		for _, e := range entries {
+			if e.State != TCP_LISTEN {
+				continue
+			}
+			if inode, err := strconv.Atoi(e.Inode); err == nil {
+				ports[inode] = int(e.LocalPort)
 			}
 		}
 	}
-	return
+	if read == 0 {
+		return errors.Join(errs...)
+	}
+	return nil
 }
 
 // ListeningPorts returns all TCP ports currently open for the process
@@ -222,7 +265,6 @@ func ListeningPorts(h host.Host, pid int) (ports []int) {
 // all open files for the process pid on host h. An empty map is
 // returned if the process cannot be found.
 func sockets(h host.Host, pid int) (links map[int]int) {
-	var inode int
 	links = make(map[int]int)
 	if pid == 0 {
 		return
@@ -238,9 +280,11 @@ func sockets(h host.Host, pid int) (links map[int]int) {
 		if err != nil {
 			continue
 		}
-		if n, err := fmt.Sscanf(dest, "socket:[%d]", &inode); err == nil && n == 1 {
-			f, _ := strconv.Atoi(fd)
-			links[f] = inode
+		if inode, ok := socketInode(dest); ok {
+			if n, err := strconv.Atoi(inode); err == nil {
+				f, _ := strconv.Atoi(fd)
+				links[f] = n
+			}
 		}
 	}
 	return

@@ -69,6 +69,9 @@ func Read(i geneos.Instance) (err error) {
 		return os.ErrInvalid
 	}
 
+	// loading always checks the host again for the instance directory
+	ResetHome(i)
+
 	h := i.Host()
 	home := Home(i)
 
@@ -220,7 +223,7 @@ func ReadKVConfig(r host.Host, p string) (kvs map[string]string, err error) {
 
 	kvs = make(map[string]string)
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(data))
+	scanner := bufio.NewScanner(bytes.NewReader(data))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if len(line) == 0 || strings.HasPrefix(line, "#") {
@@ -247,15 +250,18 @@ func WriteKVConfig(r host.Host, p string, kvs map[string]string) (err error) {
 		return
 	}
 	defer f.Close()
-	var keys []string
-	for k := range kvs {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	for _, k := range keys {
-		fmt.Fprintf(f, "%s=%s\n", k, kvs[k])
-	}
+	_, err = f.Write(MarshalKVConfig(kvs))
 	return
+}
+
+// MarshalKVConfig returns the contents of a file as written by
+// WriteKVConfig for the map kvs.
+func MarshalKVConfig(kvs map[string]string) []byte {
+	var b strings.Builder
+	for _, k := range slices.Sorted(maps.Keys(kvs)) {
+		fmt.Fprintf(&b, "%s=%s\n", k, kvs[k])
+	}
+	return []byte(b.String())
 }
 
 // write is the internal function that writes the instance configuration
@@ -315,6 +321,9 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 	opts := evalConfigOptions(options...)
 
 	resp = responses.New[responses.General](i)
+
+	// writing the configuration can create or move the instance directory
+	defer ResetHome(i)
 
 	i.Log().Debug("writing config", slog.Bool("noRebuild", opts.noRebuild), slog.Bool("noReload", opts.noReload))
 
@@ -444,16 +453,11 @@ func SecureArgs(i geneos.Instance) (args []string, env []string, fileChecks []st
 	}
 
 	// minimum TLS version - from instance, global or 1.2 as a default
-	if minTLS, found := config.Lookup[string](cf,
-		cf.Join(TLSBASE, MINVERSION),
-		config.DefaultValue(
-			config.Get[string](
-				config.Global(),
-				config.Join(TLSBASE, MINVERSION),
-				config.DefaultValue("1.2"),
-			),
-		),
-	); found {
+	minTLS, found := config.Lookup[string](cf, cf.Join(TLSBASE, MINVERSION))
+	if !found {
+		minTLS = config.Get[string](config.Global(), config.Join(TLSBASE, MINVERSION), config.DefaultValue("1.2"))
+	}
+	if minTLS != "" {
 		if IsA(i, "minimal", "netprobe", "fa2", "san", "floating") {
 			env = append(env, fmt.Sprintf("MIN_TLS_VERSION=%s", minTLS))
 		} else {
@@ -513,17 +517,25 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 
 	cf := i.Config()
 
-	// check if instance directory is up-to date
+	// the instance directory may be renamed
+	defer ResetHome(i)
+
+	// check if instance directory is up-to date. Only instances in a
+	// legacy location, which is one of the standard instance
+	// directories for the component, are moved. A custom home directory
+	// is never moved.
 	h := i.Host()
 	current := h.Dir(i.Home())
 	shouldbe := i.Type().InstancesDir(h)
-	if current != shouldbe {
+	if current != shouldbe && slices.Contains(i.Type().InstancesBaseDirs(h), current) {
 		if resp.Err = h.MkdirAll(shouldbe, 0775); resp.Err != nil {
 			return
 		}
 		if resp.Err = h.Rename(i.Home(), h.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
+		ResetHome(i)
+		config.Set(cf, "home", h.Join(shouldbe, i.Name()))
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe))
 	}
 
@@ -643,10 +655,17 @@ func SetDefaults(i geneos.Instance, name string) (err error) {
 func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, options ...ConfigOption) (err error) {
 	opts := evalConfigOptions(options...)
 
+	// the old name is needed to find the old geneos directory below
+	oldName := config.Get[string](cf, "name")
+
+	// the home directory of the instance is changed below
+	defer func() {
+		resetHome(h, ct, oldName)
+		resetHome(h, ct, config.Get[string](cf, "name"))
+	}()
 	if opts.newName != "" {
 		config.Set(cf, "name", opts.newName)
 	}
-	name := config.Get[string](cf, "name")
 
 	oldHome := config.Get[string](cf, "home")
 	if opts.newDir != "" {
@@ -657,8 +676,8 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	// the root component name, from pkgtype or the component type
 	nct := config.Get[string](cf, "pkgtype", config.DefaultValue(ct.String()))
 
-	newGeneosDir := config.Get[string](h.Config, "geneos")
-	oldGeneosDir := strings.TrimSuffix(oldHome, h.Join("/", nct, ct.String()+"s", name))
+	newGeneosDir := config.Get[string](h.Config, cordial.ExecutableName())
+	oldGeneosDir := strings.TrimSuffix(oldHome, h.Join("/", nct, ct.String()+"s", oldName))
 
 	oldInstall := config.Get[string](cf, "install")
 	newInstall := h.PathTo("packages", nct)
@@ -686,12 +705,12 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 			// update path components
 			if vs, ok := v.(string); ok {
 				// replace home (unanchored)
-				if opts.newDir != "" {
+				if opts.newDir != "" && oldHome != "" {
 					vs = strings.Replace(vs, oldHome, newHome, 1)
 				}
 
 				// replace install (unanchored)
-				if oldInstall != newInstall {
+				if oldInstall != "" && oldInstall != newInstall {
 					vs = strings.Replace(vs, oldInstall, newInstall, 1)
 				}
 
@@ -701,7 +720,7 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 				}
 
 				// finally replace any remaining top-level paths (e.g. shared or tls)
-				if oldGeneosDir != newGeneosDir {
+				if oldGeneosDir != "" && oldGeneosDir != newGeneosDir {
 					vs = strings.Replace(vs, oldGeneosDir, newGeneosDir, 1)
 				}
 
@@ -715,22 +734,20 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 	nv := "${config:version}"
 
 	libpathList := config.Get[string](cf, "libpaths", config.NoExpand())
-	var libpathValues []string
-	if libpathList != "" {
-		libpathValues = strings.Split(libpathList, host.ListSeparators[h.OS()])
-	}
 	libpathPrefix := strings.TrimSuffix(h.ToSlash(oldInstall), "/") + "/"
-	for _, p := range libpathValues {
-		p = h.ToSlash(p)
-		if after, ok := strings.CutPrefix(p, libpathPrefix); ok {
-			subpath := after
-			if after, ok := strings.CutPrefix(subpath, version); ok {
-				libpaths = append(libpaths, h.Join(np, nv, after))
+	if libpathList != "" {
+		for p := range strings.SplitSeq(libpathList, host.ListSeparators[h.OS()]) {
+			p = h.ToSlash(p)
+			if after, ok := strings.CutPrefix(p, libpathPrefix); ok {
+				subpath := after
+				if after, ok := strings.CutPrefix(subpath, version); ok {
+					libpaths = append(libpaths, h.Join(np, nv, after))
+				} else {
+					libpaths = append(libpaths, h.Join(np, subpath))
+				}
 			} else {
-				libpaths = append(libpaths, h.Join(np, subpath))
+				libpaths = append(libpaths, p)
 			}
-		} else {
-			libpaths = append(libpaths, p)
 		}
 	}
 	config.Set(cf, "libpaths", strings.Join(libpaths, host.ListSeparators[h.OS()]))

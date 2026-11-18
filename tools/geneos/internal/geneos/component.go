@@ -18,8 +18,9 @@ limitations under the License.
 package geneos
 
 import (
+	"fmt"
 	"iter"
-	"os"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -56,8 +57,6 @@ var RootComponent = Component{
 		// Path List separated additions to the reserved names list, over and above
 		// any words matched by FindComponent()
 		"reservednames": "all",
-
-		"privatekeys": "id_rsa,id_ecdsa,id_ecdsa_sk,id_ed25519,id_ed25519_sk,id_dsa",
 	},
 	Directories: []string{
 		"packages/downloads",
@@ -200,10 +199,9 @@ type Component struct {
 	// the caller otherwise there is a reference loop.
 	Initialise func(h *Host, ct *Component, override bool) error
 
-	// InitialiseOnce ensures that the Initialise function is only
-	// called once per component, even if multiple initialisation
-	// attempts are made.
-	InitialiseOnce sync.Once
+	// initialised records the hosts on which Initialise has succeeded,
+	// see [Component.InitialiseOnce]
+	initialised sync.Map
 
 	// New is the factory method for the component. It has to be added
 	// during registration to avoid loops
@@ -243,25 +241,20 @@ func (ct *Component) IsA(names ...string) bool {
 	if ct == nil {
 		return false
 	}
-	for _, a := range append([]string{ct.Name}, ct.Aliases...) {
-		for _, b := range names {
-			if strings.EqualFold(a, b) {
-				return true
-			}
-		}
-	}
-	return false
+	return slices.ContainsFunc(names, func(b string) bool {
+		return strings.EqualFold(ct.Name, b) || slices.ContainsFunc(ct.Aliases, func(a string) bool { return strings.EqualFold(a, b) })
+	})
 }
 
 // MakeDirs creates the directory structure for the component ct.
 // If ct is nil then the Root component type is used. If there is an
 // error creating the directory then the error is immediately returned
-// and the list of directories may only be partially created.
+// and the list of directories may only be partially created. It is an
+// error if h is nil, ALL or UNKNOWN.
 func (ct *Component) MakeDirs(h *Host) (err error) {
 	name := RootComponentName
-	if h == ALL {
-		log.Error("called with all hosts")
-		os.Exit(1)
+	if h.IsUnknown() || h == ALL {
+		return fmt.Errorf("cannot create directories for host %q: %w", h, ErrInvalidArgs)
 	}
 	if ct != nil {
 		name = ct.Name
@@ -274,6 +267,64 @@ func (ct *Component) MakeDirs(h *Host) (err error) {
 		}
 	}
 	return
+}
+
+// GlobalSetting returns the value of the global (user) setting key for
+// the component, e.g. the PortRange, CleanList or PurgeList keys, as a
+// string. The default is the value registered in the component's
+// GlobalSettings, if any, otherwise an empty string.
+//
+// An explicitly set value for the legacy name of key, from
+// ConfigAliases, is honoured when the key itself is not set or is still
+// at its registered default.
+func (ct *Component) GlobalSetting(key string) string {
+	if ct == nil || key == "" {
+		return ""
+	}
+	cf := config.Global()
+	alias := ct.ConfigAliases[key]
+	if alias == "" || alias == key {
+		return config.Get[string](cf, key)
+	}
+
+	value := config.Get[string](cf, key, config.PromoteFrom(alias))
+	if value == ct.GlobalSettings[key] {
+		if legacy, ok := config.Lookup[string](cf, alias); ok {
+			return legacy
+		}
+	}
+	return value
+}
+
+// initState is the state of the initialisation of a component on one
+// host. The mutex serialises attempts, so that concurrent callers wait
+// for the first to finish.
+type initState struct {
+	mutex sync.Mutex
+	done  bool
+}
+
+// InitialiseOnce calls the Initialise function of the component for the
+// host h, unless there is none or it has already succeeded for that
+// host. Each host is initialised separately, so that, for example,
+// templates are also written on a second host. If Initialise fails then
+// the error is returned and the next call tries again.
+func (ct *Component) InitialiseOnce(h *Host, override bool) error {
+	if ct == nil || ct.Initialise == nil {
+		return nil
+	}
+	v, _ := ct.initialised.LoadOrStore(h.String(), &initState{})
+	state := v.(*initState)
+	state.mutex.Lock()
+	defer state.mutex.Unlock()
+	if state.done {
+		return nil
+	}
+	if err := ct.Initialise(h, ct, override); err != nil {
+		return err
+	}
+	state.done = true
+	return nil
 }
 
 // InstancesDir return the parent directory for the instances of a
@@ -315,10 +366,18 @@ func (ct *Component) Shared(h *Host, subs ...any) string {
 	return h.PathTo(parts...)
 }
 
+// sortedComponents returns all registered components, including the
+// root, sorted by name so that iteration order is deterministic.
+func sortedComponents() []*Component {
+	return slices.SortedFunc(maps.Values(registeredComponents), func(a, b *Component) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+}
+
 // OrList returns and iterator for component types for the first non-nil
 // value of: the method receiver or the list of component types passed as
 // args. If no arguments are passed then all non-root components are
-// returned.
+// returned, sorted by name.
 func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
 	return func(yield func(*Component) bool) {
 		if ct != nil {
@@ -327,7 +386,7 @@ func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
 		}
 
 		if len(cts) == 0 {
-			for _, c := range registeredComponents {
+			for _, c := range sortedComponents() {
 				if c == &RootComponent || c.IsA("profile") {
 					continue
 				}
@@ -350,31 +409,26 @@ func (ct *Component) OrList(cts ...*Component) iter.Seq[*Component] {
 }
 
 // AllComponents returns a slice of all registered components, include
-// the Root component type
+// the Root component type, sorted by name
 func AllComponents() (cts []*Component) {
-	for _, c := range registeredComponents {
-		cts = append(cts, c)
-	}
-	return
+	return sortedComponents()
 }
 
 // RealComponents returns a slice of all registered components that are
 // not the root or profile, sorted by name
 func RealComponents() (cts []*Component) {
-	for _, ct := range registeredComponents {
+	for _, ct := range sortedComponents() {
 		if ct != &RootComponent && !ct.IsA("profile") {
 			cts = append(cts, ct)
 		}
 	}
-	slices.SortFunc(cts, func(i, j *Component) int { return strings.Compare(i.Name, j.Name) })
-
 	return
 }
 
 // UsesKeyFiles returns a slice of registered components that use key
-// files
+// files, sorted by name
 func UsesKeyFiles() (cts []*Component) {
-	for _, c := range registeredComponents {
+	for _, c := range sortedComponents() {
 		if c.UsesKeyfiles {
 			cts = append(cts, c)
 		}
@@ -391,14 +445,10 @@ func ParseComponent(component string) *Component {
 		return nil
 	}
 	for _, ct := range registeredComponents {
-		names := []string{ct.Name}
-		if ct.DownloadInfix != "" {
-			names = append(names, ct.DownloadInfix)
-		}
-		for _, m := range append(names, ct.Aliases...) {
-			if strings.EqualFold(m, component) {
-				return ct
-			}
+		if strings.EqualFold(ct.Name, component) ||
+			(ct.DownloadInfix != "" && strings.EqualFold(ct.DownloadInfix, component)) ||
+			slices.ContainsFunc(ct.Aliases, func(a string) bool { return strings.EqualFold(a, component) }) {
+			return ct
 		}
 	}
 	return nil

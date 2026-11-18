@@ -134,7 +134,6 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 
 	// source = slices.Max(matches)
 	for _, source := range matches {
-		var err error
 		st, err := os.Stat(source)
 		if err != nil {
 			log.Error("cannot stat file", slog.Any("error", err), slog.String("src", source))
@@ -150,20 +149,10 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 		}
 
 		// pull out symbolic source name from summary
-		var expiry, licenceName, sourceName string
-		for {
-			r, err := s.Read()
-			if err != nil && errors.Is(err, io.EOF) {
-				break
-			}
-			switch r[0] {
-			case "expiry":
-				expiry = r[1]
-			case "licenceName":
-				licenceName = r[1]
-			default:
-				continue
-			}
+		expiry, licenceName, err := readLicdSummary(s)
+		if err != nil {
+			log.Error("cannot read licd report summary", slog.Any("error", err), slog.String("src", source))
+			continue
 		}
 
 		// need both
@@ -176,30 +165,57 @@ func readLicdReportFile(ctx context.Context, cf *config.Config, tx *sql.Tx, sour
 			log.Error("cannot parse expiry date", slog.Any("error", err), slog.String("expiry", expiry))
 		}
 
-		sourceName = "licd:" + licenceName + "_" + t.Format(time.DateOnly)
-		sources = append(sources, sourceName)
+		sourceName := "licd:" + licenceName + "_" + t.Format(time.DateOnly)
 
 		log.Debug("processing licd report file", slog.String("src", source), slog.String("label", sourceName))
-		if err = detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp); err != nil {
-			updateSources(ctx, cf, tx, sourceName, "licd", source, false, sourceTimestamp, err)
+		err = runSource(ctx, cf, tx, sourceName, "licd", source, sourceTimestamp, func() error {
+			return detailReportToDB(ctx, cf, tx, c, sourceName, "licd", source, sourceTimestamp)
+		})
+		if err != nil {
 			log.Error("cannot process licd report file", slog.Any("error", err), slog.String("src", source))
+			if errors.Is(err, errSavepoint) || ctx.Err() != nil {
+				return sources, err
+			}
+			// the failed source is not valid and is not reported as one
+			continue
 		}
+		sources = append(sources, sourceName)
 	}
 	return
 }
 
-func readLicdReport(source string) (summary, tokenUsage, details *csv.Reader, err error) {
-	r, err := os.Open(source)
-	if err != nil {
-		return
-	}
+// readLicdSummary reads the name/value pairs of the summary section of
+// a licd report and returns the expiry date and the name of the licence,
+// which are empty if not found
+func readLicdSummary(summary *csv.Reader) (expiry, licenceName string, err error) {
+	for {
+		r, err := summary.Read()
+		if errors.Is(err, io.EOF) {
+			return expiry, licenceName, nil
+		}
+		// a row with a different number of fields is not an error
+		if err != nil && !errors.Is(err, csv.ErrFieldCount) {
+			return "", "", err
+		}
+		if len(r) < 2 {
+			continue
+		}
 
+		switch r[0] {
+		case "expiry":
+			expiry = r[1]
+		case "licenceName":
+			licenceName = r[1]
+		}
+	}
+}
+
+func readLicdReport(source string) (summary, tokenUsage, details *csv.Reader, err error) {
 	// first identify sections and create SectionReaders, then create new CSV readers
-	b, err := io.ReadAll(r)
+	b, err := os.ReadFile(source)
 	if err != nil {
 		return
 	}
-	r.Close()
 
 	var sections []*csv.Reader
 

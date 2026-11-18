@@ -28,8 +28,10 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -72,6 +74,12 @@ type listCertLongType struct {
 	FingerprintSHA256 string        `json:"fingerprint_sha256,omitempty"`
 }
 
+// limits for the toolkit headlines
+const (
+	expiringWeekLimit  = 7 * 24 * time.Hour
+	expiringMonthLimit = 30 * 24 * time.Hour
+)
+
 var listCmdAll, listCmdCSV, listCmdJSON, listCmdIndent, listCmdLong, listCmdToolkit bool
 var listJSONEncoder *json.Encoder
 
@@ -110,6 +118,7 @@ var listCmd = &cobra.Command{
 	},
 	RunE: func(command *cobra.Command, _ []string) (err error) {
 		log = log.With("command", "tls list")
+		localCAs = sync.OnceValue(readLocalCAs)
 		ct, names, params, err := cmd.FetchArgs(command)
 		if err != nil {
 			return
@@ -157,7 +166,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 						cordial.ExecutableName(),
 						geneos.RootCABasename,
 						geneos.LOCALHOST,
-						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
+						time.Until(rootCert.NotAfter).Truncate(time.Second),
 						rootCert.NotAfter,
 						rootCert.Subject.CommonName,
 						verifyCertWithKey(rootKey, rootCert),
@@ -169,14 +178,14 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 						cordial.ExecutableName(),
 						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
-						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
+						time.Until(signingCert.NotAfter).Truncate(time.Second),
 						signingCert.NotAfter,
 						signingCert.Subject.CommonName,
 						verifyCertWithKey(signingKey, signingCert),
 					}}
 			}
 		}
-		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
+		err = results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -217,7 +226,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Report(listCSVWriter)
+		err = resp.Report(listCSVWriter)
 
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
@@ -225,18 +234,17 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 
 		// TODO do this with more structured data (use responses.Value?)
 		for _, c := range resp {
-			var t time.Duration
 			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
-				err = nil
+			t, parseErr := time.ParseDuration(c.Dataview.Table[0][4] + "s")
+			if parseErr != nil {
 				continue
 			}
-			if t < time.Hour*24*7*30 {
+			if t < expiringMonthLimit {
 				expiringMonth++
 			}
-			if t < time.Hour*24*7 {
+			if t < expiringWeekLimit {
 				expiringWeek++
 			}
 			if c.Dataview.Table[0][7] != "OK" {
@@ -274,7 +282,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Formatted(
 			os.Stdout,
 			"csv",
 			[]string{
@@ -316,7 +324,7 @@ func listCertsCommand(command *cobra.Command, ct *geneos.Component, names []stri
 			}
 		}
 
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -349,7 +357,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 						cordial.ExecutableName(),
 						geneos.RootCABasename,
 						geneos.LOCALHOST,
-						time.Duration(time.Until(rootCert.NotAfter)).Truncate(time.Second),
+						time.Until(rootCert.NotAfter).Truncate(time.Second),
 						rootCert.NotAfter,
 						rootCert.Subject.CommonName,
 						verifyCertWithKey(rootKey, rootCert),
@@ -369,7 +377,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 						cordial.ExecutableName(),
 						geneos.SigningCertBasename,
 						geneos.LOCALHOST,
-						time.Duration(time.Until(signingCert.NotAfter)).Truncate(time.Second),
+						time.Until(signingCert.NotAfter).Truncate(time.Second),
 						signingCert.NotAfter,
 						signingCert.Subject.CommonName,
 						verifyCertWithKey(signingKey, signingCert),
@@ -379,12 +387,12 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 						signingCert.Issuer.CommonName,
 						nil,
 						nil,
-						fmt.Sprintf("%X", sha1.Sum(rootCert.Raw)),
-						fmt.Sprintf("%X", sha256.Sum256(rootCert.Raw)),
+						fmt.Sprintf("%X", sha1.Sum(signingCert.Raw)),
+						fmt.Sprintf("%X", sha256.Sum256(signingCert.Raw)),
 					}}
 			}
 		}
-		results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
+		err = results.Report(os.Stdout, responses.IndentJSON(listCmdIndent))
 
 	case listCmdToolkit:
 		listCSVWriter := csv.NewWriter(os.Stdout)
@@ -449,25 +457,23 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 			}
 		}
 		resp := instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertToolkit)
-		resp.Report(listCSVWriter)
+		err = resp.Report(listCSVWriter)
 
-		// add headlines
 		// add headlines
 		fmt.Printf("<!>totalCerts,%d\n", len(resp))
 		var expiringWeek, expiringMonth, invalid int
 		for _, c := range resp {
-			var t time.Duration
 			if len(c.Dataview.Table) == 0 {
 				continue
 			}
-			if t, err = time.ParseDuration(c.Dataview.Table[0][4] + "s"); err != nil {
-				err = nil
+			t, parseErr := time.ParseDuration(c.Dataview.Table[0][4] + "s")
+			if parseErr != nil {
 				continue
 			}
-			if t < time.Hour*24*7*30 {
+			if t < expiringMonthLimit {
 				expiringMonth++
 			}
-			if t < time.Hour*24*7 {
+			if t < expiringWeekLimit {
 				expiringWeek++
 			}
 			if c.Dataview.Table[0][7] != "OK" {
@@ -536,7 +542,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
+		err = instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCertCSV).Report(listCSVWriter)
 
 	default:
 		var prequel [][]string
@@ -551,8 +557,8 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 					rootCert.Subject.CommonName,
 					verifyCertWithKey(rootKey, rootCert),
 					rootCertFile,
-					rootCertFile,
 					"",
+					rootCertFile,
 					rootCert.Issuer.CommonName,
 					"",
 					"",
@@ -570,8 +576,8 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 					signingCert.Subject.CommonName,
 					verifyCertWithKey(signingKey, signingCert),
 					signingCertFile,
-					rootCertFile,
 					"",
+					rootCertFile,
 					signingCert.Issuer.CommonName,
 					"",
 					"",
@@ -580,7 +586,7 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 				})
 			}
 		}
-		instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
+		return instance.Do(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, listCmdInstanceCert).Formatted(
 			os.Stdout,
 			"column",
 			[]string{
@@ -606,108 +612,85 @@ func listCertsLongCommand(command *cobra.Command, ct *geneos.Component, names []
 	return
 }
 
-func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
+// instanceCertInfo holds the details of an instance certificate used
+// for the listings
+type instanceCertInfo struct {
+	cf         *config.Config
+	cert       *x509.Certificate
+	valid      string
+	trustchain string
+}
+
+// readInstanceCertInfo returns the details of the instance certificate
+// or false if the instance has no (readable) certificate, which is not
+// an error for the listing.
+func readInstanceCertInfo(i geneos.Instance) (info instanceCertInfo, ok bool) {
+	certChain, err := instance.ReadCertificates(i)
+	if err != nil || len(certChain) == 0 {
+		return
+	}
 	cf := i.Config()
+	key, _ := instance.ReadPrivateKey(i)
+	return instanceCertInfo{
+		cf:         cf,
+		cert:       certChain[0],
+		valid:      verifyCertWithKey(key, certChain...),
+		trustchain: config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN)),
+	}, true
+}
+
+// certFile returns the instance certificate file path
+func (info instanceCertInfo) certFile() string {
+	return config.Get[string](info.cf, info.cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE))
+}
+
+// keyFile returns the instance private key file path
+func (info instanceCertInfo) keyFile() string {
+	return config.Get[string](info.cf, info.cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY))
+}
+
+func listCmdInstanceCert(i geneos.Instance, _ ...any) (resp *responses.General) {
 	resp = responses.New[responses.General](i)
 
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
+	info, ok := readInstanceCertInfo(i)
+	if !ok {
 		return
 	}
-	cert := certChain[0]
-	key, _ := instance.ReadPrivateKey(i)
-	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
-
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		// this is OK - instance.ReadCert() reports no configured cert this way
-		return
-	}
-
-	if cert == nil && err != nil {
-		return
-	}
+	cert := info.cert
 
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
-	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
+	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, info.valid}
 	if listCmdLong {
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)))
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)))
-		cols = append(cols, trustchain)
-		cols = append(cols, cert.Issuer.CommonName)
-		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
-		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
-		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
-		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
+		cols = append(cols,
+			info.certFile(),
+			info.keyFile(),
+			info.trustchain,
+			cert.Issuer.CommonName,
+			fmt.Sprintf("%v", cert.DNSNames),
+			fmt.Sprintf("%v", cert.IPAddresses),
+			fmt.Sprintf("%X", sha1.Sum(cert.Raw)),
+			fmt.Sprintf("%X", sha256.Sum256(cert.Raw)),
+		)
 	}
 
 	resp.Dataview.Table = append(resp.Dataview.Table, cols)
 	return
 }
 
-func listCmdInstanceCertCSV(i geneos.Instance, _ ...any) (resp *responses.General) {
-	cf := i.Config()
-	resp = responses.New[responses.General](i)
-
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
-		return
-	}
-	cert := certChain[0]
-	key, _ := instance.ReadPrivateKey(i)
-	if err != nil {
-		return
-	}
-	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		// this is OK - instance.ReadCert() reports no configured cert this way
-		return
-	}
-
-	if cert == nil && err != nil {
-		return
-	}
-
-	expires := cert.NotAfter
-	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
-	cols := []string{i.Type().String(), i.Name(), i.Host().String(), until, expires.Format(time.RFC3339), cert.Subject.CommonName, fmt.Sprint(valid)}
-	if listCmdLong {
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)))
-		cols = append(cols, config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)))
-		cols = append(cols, trustchain)
-		cols = append(cols, cert.Issuer.CommonName)
-		cols = append(cols, fmt.Sprintf("%v", cert.DNSNames))
-		cols = append(cols, fmt.Sprintf("%v", cert.IPAddresses))
-		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
-		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
-	}
-
-	resp.Dataview.Table = append(resp.Dataview.Table, cols)
-	return
+func listCmdInstanceCertCSV(i geneos.Instance, params ...any) (resp *responses.General) {
+	// the CSV rows are the same as the plain table rows
+	return listCmdInstanceCert(i, params...)
 }
 
 func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.General) {
-	cf := i.Config()
 	resp = responses.New[responses.General](i)
 
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
+	info, ok := readInstanceCertInfo(i)
+	if !ok {
 		return
 	}
-	cert := certChain[0]
-	key, _ := instance.ReadPrivateKey(i)
-	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		// this is OK - instance.ReadCert() reports no configured cert this way
-		return
-	}
-
-	if cert == nil && err != nil {
-		return
-	}
+	cert := info.cert
 
 	expires := cert.NotAfter
 	until := fmt.Sprintf("%.f", time.Until(expires).Seconds())
@@ -720,27 +703,25 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Ge
 		until,
 		expires.Format(time.RFC3339),
 		cert.Subject.CommonName,
-		fmt.Sprint(valid),
+		info.valid,
 	}
 	if listCmdLong {
 		cols = append(cols,
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)),
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)),
-			trustchain,
+			info.certFile(),
+			info.keyFile(),
+			info.trustchain,
 			cert.Issuer.CommonName,
 			strings.Join(cert.DNSNames, " "),
 		)
-		if len(cert.IPAddresses) > 0 {
-			ips := []string{}
-			for _, ip := range cert.IPAddresses {
-				ips = append(ips, ip.String())
-			}
-			cols = append(cols, strings.Join(ips, " "))
-		} else {
-			cols = append(cols, "")
+		ips := []string{}
+		for _, ip := range cert.IPAddresses {
+			ips = append(ips, ip.String())
 		}
-		cols = append(cols, fmt.Sprintf("%X", sha1.Sum(cert.Raw)))
-		cols = append(cols, fmt.Sprintf("%X", sha256.Sum256(cert.Raw)))
+		cols = append(cols,
+			strings.Join(ips, " "),
+			fmt.Sprintf("%X", sha1.Sum(cert.Raw)),
+			fmt.Sprintf("%X", sha256.Sum256(cert.Raw)),
+		)
 	}
 
 	resp.Dataview.Table = append(resp.Dataview.Table, cols)
@@ -748,38 +729,28 @@ func listCmdInstanceCertToolkit(i geneos.Instance, _ ...any) (resp *responses.Ge
 }
 
 func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.General) {
-	cf := i.Config()
 	resp = responses.New[responses.General](i)
 
-	certChain, err := instance.ReadCertificates(i)
-	if err != nil {
+	info, ok := readInstanceCertInfo(i)
+	if !ok {
 		return
 	}
-	cert := certChain[0]
-	key, _ := instance.ReadPrivateKey(i)
-	valid := verifyCertWithKey(key, certChain...)
-	trustchain := config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CABUNDLE), config.PromoteFrom(instance.CERTCHAIN))
-	if err != nil && errors.Is(err, os.ErrNotExist) {
-		// this is OK - instance.ReadCert() reports no configured cert this way
-		return
-	}
+	cert := info.cert
 
-	if cert == nil && err != nil {
-		return
-	}
+	remaining := time.Until(cert.NotAfter).Truncate(time.Second)
 
 	if listCmdLong {
 		resp.Value = listCertLongType{
 			i.Type().String(),
 			i.Name(),
 			i.Host().String(),
-			time.Duration(time.Until(cert.NotAfter).Seconds()),
+			remaining,
 			cert.NotAfter,
 			cert.Subject.CommonName,
-			valid,
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.CERTIFICATE), config.PromoteFrom(instance.CERTIFICATE)),
-			config.Get[string](cf, cf.Join(instance.TLSBASE, instance.PRIVATEKEY), config.PromoteFrom(instance.PRIVATEKEY)),
-			trustchain,
+			info.valid,
+			info.certFile(),
+			info.keyFile(),
+			info.trustchain,
 			cert.Issuer.CommonName,
 			cert.DNSNames,
 			cert.IPAddresses,
@@ -792,12 +763,21 @@ func listCmdInstanceCertJSON(i geneos.Instance, _ ...any) (resp *responses.Gener
 		i.Type().String(),
 		i.Name(),
 		i.Host().String(),
-		time.Duration(time.Until(cert.NotAfter).Seconds()),
+		remaining,
 		cert.NotAfter,
 		cert.Subject.CommonName,
-		valid,
+		info.valid,
 	}
 	return
+}
+
+// localCAs returns the certificates in the local CA bundle, which is
+// only read once for each run of the command
+var localCAs = sync.OnceValue(readLocalCAs)
+
+func readLocalCAs() []*x509.Certificate {
+	roots, _ := certs.ReadCertificates(geneos.LOCAL, geneos.PathToCABundlePEM(geneos.LOCAL))
+	return roots
 }
 
 // verifyCertWithKey checks the certChain after appending the local CA
@@ -811,8 +791,7 @@ func verifyCertWithKey(key certs.PrivateKey, certChain ...*x509.Certificate) str
 	if len(certChain) == 0 {
 		return "NoCert"
 	}
-	roots, _ := certs.ReadCertificates(geneos.LOCAL, geneos.PathToCABundlePEM(geneos.LOCAL))
-	certChain = append(certChain, roots...)
+	certChain = slices.Concat(certChain, localCAs())
 	if !certs.Verify(certChain...) {
 		return "NotVerified"
 	}

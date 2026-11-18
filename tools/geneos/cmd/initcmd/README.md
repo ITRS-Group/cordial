@@ -2,6 +2,8 @@ The `init` sub-system is used to initialise your Geneos environment ready to run
 
 On it's own the `init` command will create a new directory structure (or use an existing one if it's considered empty) based on the options you supply. By default it will create a directory named `geneos` in your user's home directory, unless your home directory ends in `geneos` (e.g. `/home/geneos`) in which case it tries that to avoid stuttering in the path. Either specify a directory on the command line or you will be prompted for one. To specify a directory pass it as an argument without a flag. It must be an absolute path.
 
+It is an error, and the exit status is non-zero, if the directory is not empty and `--force`/`-F` is not given, and nothing is changed. If several profile names are given the directory is only initialised once. Any existing root and signing certificates are always kept and never replaced by `init`, and they are added to the trust chain of the installation.
+
 The installation directory is considered empty if it exists but only contains dot prefixed files and directories - so if you are running the `geneos init` command as a newly created user called `geneos` it should work as expected.
 
 If you want to use an existing directory, including adopting an existing installation, then use the `--force`/`-F` option. The `init` command will create any missing directories but will not remove or change existing files. If you adopt an existing installation then see the `init templates` command for how to add default template files to the installation for use by new instances.
@@ -34,9 +36,7 @@ PFX/PKCS#12 (file with `.pfx` or `.p12` extensions only) bundles are always prot
 
 ## Restoring From Backup
 
-The `--restore/-R` option will restore a backup file created with the `geneos backup` command. This will create the directory structure if it does not exist but will not remove or change any existing files. If this directory is not empty then you can also use the `--force/-F` option to force the use of this directory. Unlike the `geneos restore` command, using `geneos init --restore FILE` restores the complete contents of the backup file while rebuilding the instance configuration files to match the new root directory. Just like the `geneos restore` command it does not alter the component configuration files, only the metadata created and managed by the `geneos` command, so you will need to manually check and edit paths in files like `gateway.setup.xml` etc.
-
-The `--restore/-R` option will also install Geneos software releases used by the instances being restored unless the `--no-install/-X` option is specified. You must either provide download credentials using the `--user/-u` option (or run `geneos login` first) or have the packages already downloaded and then pass the containing directory path using the `--archive/-A` flag.
+The `--restore/-R`, `--no-install/-X` and `--name/-n` options are no longer supported and now result in an error. To restore a backup file created with the `geneos backup` command use `geneos init` to create the directory structure and then the `geneos restore` command.
 
 A backup file will not contain a TLS root or signing certificate and private keys. These must be supplied explicitly using the `--signing-bundle` option (and `--signing-bundle-password` if applicable). Use the `geneos tls export` command to export the necessary certificates and keys when creating a backup.
 

@@ -172,15 +172,11 @@ func psNetworkCSV(i geneos.Instance, pid int, resp *responses.General) (err erro
 	return
 }
 
-func psNetworkTable(i geneos.Instance, pid int, resp *responses.General) (err error) {
+func psNetworkTable(i geneos.Instance, pid int, pi *instance.ProcessInfo, resp *responses.General) (err error) {
 	ct := i.Type()
 	h := i.Host()
 	name := i.Name()
 
-	pi, _, _, _, err := psInstanceCommon(i)
-	if err != nil {
-		return
-	}
 	for _, fd := range pi.OpenFiles {
 		if fd.Conn == nil {
 			continue

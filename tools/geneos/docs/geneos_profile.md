@@ -249,7 +249,7 @@ variables:
     value: ${config:home}/${config:logfile}
 ```
 
-The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` is an `init` option, not a `deploy` option.
+The option names supplied from flags are `attribute`, `base`, `env`, `gateway`, `include`, `insecure`, `licence`, `minimal`, `type`, and `variable`, where the command defines them. Flag defaults are included. This is not a list of flags accepted by every command. In particular, `--minimal` and `--licence` are `init` options, not `deploy` options.
 
 Additional command arguments in `NAME=VALUE` form can supply option values. For example, a profile can use `name: ${option:site}` and be deployed with:
 
@@ -259,7 +259,7 @@ geneos deploy profile application site=application-gateway
 
 These arguments are saved with the profile options. They are not automatically applied as parameters to every component. Likewise, use `${option:gateway}` or `${option:attribute}` in a definition when you want those command options to control its SAN configuration.
 
-Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. In the current code, `licence` is not in the included flag list, although the supplied `all` profile uses `${option:licence}`. Do not rely on `init --licence` alone to populate that import; set an explicit import source in your profile.
+Use `${option:...}`, not `${flag:...}`. Arbitrary flags are not available to option expressions. The `insecure` and `minimal` options are booleans, so use them as conditions, for example `${option:insecure?8080:8443}`; the options saved with a profile keep their types when it is rebuilt.
 
 External lookup expansion is disabled: `${file:...}` and `${https://...}` do not read external content. This does not prevent `imports` from using a path or URL. Expansion errors can produce empty values; inspect the applied configuration before start-up.
 
@@ -303,7 +303,16 @@ The variable types are `string`, `integer`, `double`, `boolean`, `activeTime`, `
 
 ### Gateway Name and Licensing
 
-Use `params` for these settings:
+Use the `gateway-name`, `licd-host`, `licd-port`, and `licd-secure` keys, or `params`, for these settings:
+
+```yaml
+gateway-name: Application Gateway
+licd-host: licence.example.com
+licd-port: 7041
+licd-secure: true
+```
+
+is the same as:
 
 ```yaml
 params:
@@ -313,7 +322,21 @@ params:
   - licdsecure=true
 ```
 
-The profile structure also declares `gateway-name`, `licd-host`, `licd-port`, and `licd-secure`. The current application handler does not apply those fields. They are not equivalent to the parameters above in this implementation.
+The licence daemon settings are cleared and set again whenever the profile is applied. Variable values in a Gateway entry can use `${config:KEY}` to refer to the instance's own settings, for example `${config:home}`.
+
+### Gateway Ports
+
+A TLS capable Gateway on the conventional insecure port 7039 is moved to the TLS port 7038, and a Gateway without TLS on 7038 is moved to 7039, but only if the other port is free. Any other port is never changed, and if the other port is in use then the Gateway keeps its configured port.
+
+## Changing TLS when a Profile Is Applied Again
+
+The `insecure` option is saved with the profile. When the profile is applied again, for example by `geneos deploy` with the profile name or by `geneos rebuild profile`, the TLS state of each existing instance is compared with the saved option and changed to match, and the instance is then rebuilt so that the port conventions above follow:
+
+* If the option is not `insecure` and the instance is not TLS capable, the certificate and key kept from an earlier secure state are used again if they are still valid, otherwise a new instance certificate is created as `geneos add` does. If a certificate bundle is given in the profile it is imported first and used. If no signing certificate is available the update fails with an error, rather than leaving the instance insecure; run `geneos tls init` or use `--insecure`.
+* If the option is `insecure` and the instance has TLS parameters, they are removed from the instance configuration only. The certificate and key files are never deleted. A certificate bundle given in the profile takes precedence over `insecure`, as it does when an instance is created.
+* If the state already matches, or the profile has no saved `insecure` option, nothing is changed.
+
+A Web Dashboard server is only started with HTTPS if its keystore exists, so when its TLS is removed the keystore is set aside by renaming it with a `.disabled` suffix, and it is built again when TLS is enabled. The keystore and truststore of an `sso-agent` are not changed, because it always has a keystore for its signing key and its use of TLS is set in `conf/sso-agent.conf`. Instances are reported as `updated` and an audit event is recorded.
 
 ## SAN Configuration
 
@@ -516,9 +539,9 @@ geneos profile
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

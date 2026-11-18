@@ -12,26 +12,38 @@ type SingleLineStringVar = common.SingleLineStringVar
 type Value = common.Value
 
 type Plugin struct {
-	XMLName    xml.Name     `xml:"sql-toolkit" json:"-" yaml:"-"`
-	Queries    []Query      `xml:"queries>query"`
-	Connection DBConnection `xml:"connection"`
+	XMLName         xml.Name               `xml:"sql-toolkit" json:"-" yaml:"-"`
+	Queries         []Query                `xml:"queries>query,omitempty"`
+	Connection      DBConnection           `xml:"connection,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
+}
+
+// MarshalXML encodes the Plugin without the empty elements encoding/xml
+// writes for omitted fields such as `parent>child,omitempty`.
+func (v Plugin) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	return common.MarshalOmitEmptyParents(e, start, v)
 }
 
 func (p *Plugin) String() string { return p.XMLName.Local }
 
 type Query struct {
-	Name *SingleLineStringVar `xml:"name"`
-	SQL  *SingleLineStringVar `xml:"sql"`
+	Name            *SingleLineStringVar   `xml:"name"`
+	SQL             *SingleLineStringVar   `xml:"sql"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 type DBConnection struct {
-	MySQL                     *MySQL               `xml:"database>mysql,omitempty"`
-	SQLServer                 *SQLServer           `xml:"database>sqlServer,omitempty"`
-	Sybase                    *Sybase              `xml:"database>sybase,omitempty"`
-	Oracle                    *Oracle              `xml:"database>oracle,omitempty"`
-	Username                  *SingleLineStringVar `xml:"var-userName"`
-	Password                  *SingleLineStringVar `xml:"password"`
-	CloseConnectionAfterQuery *Value               `xml:"closeConnectionAfterQuery,omitempty"`
+	MySQL                     *MySQL                 `xml:"database>mysql,omitempty"`
+	SQLServer                 *SQLServer             `xml:"database>sqlServer,omitempty"`
+	Sybase                    *Sybase                `xml:"database>sybase,omitempty"`
+	Oracle                    *Oracle                `xml:"database>oracle,omitempty"`
+	Username                  *SingleLineStringVar   `xml:"var-userName"`
+	Password                  *Value                 `xml:"password"`
+	CloseConnectionAfterQuery *Value                 `xml:"closeConnectionAfterQuery,omitempty"`
+	Other                     []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
+	OtherAttributes           []xml.Attr             `xml:",any,attr" json:",omitempty" yaml:",omitempty"`
 }
 
 func (d *DBConnection) String() string {
@@ -59,9 +71,10 @@ func (d *DBConnection) String() string {
 }
 
 type MySQL struct {
-	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
-	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
-	Port       *SingleLineStringVar `xml:"var-port,omitempty"`
+	ServerName *SingleLineStringVar   `xml:"var-serverName,omitempty"`
+	DBName     *SingleLineStringVar   `xml:"var-databaseName,omitempty"`
+	Port       *SingleLineStringVar   `xml:"var-port,omitempty"`
+	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 var _ xml.Unmarshaler = (*MySQL)(nil)
@@ -101,14 +114,21 @@ func (v *MySQL) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				return err
 			}
 			v.Port = value
+		default:
+			var other common.RawXMLElement
+			if err := d.DecodeElement(&other, &element); err != nil {
+				return err
+			}
+			v.Other = append(v.Other, other)
 		}
 	}
 }
 
 type SQLServer struct {
-	ServerName *SingleLineStringVar `xml:"var-serverName,omitempty"`
-	DBName     *SingleLineStringVar `xml:"var-databaseName,omitempty"`
-	Port       *SingleLineStringVar `xml:"var-port,omitempty"`
+	ServerName *SingleLineStringVar   `xml:"var-serverName,omitempty"`
+	DBName     *SingleLineStringVar   `xml:"var-databaseName,omitempty"`
+	Port       *SingleLineStringVar   `xml:"var-port,omitempty"`
+	Other      []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 var _ xml.Unmarshaler = (*SQLServer)(nil)
@@ -148,13 +168,20 @@ func (v *SQLServer) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				return err
 			}
 			v.Port = value
+		default:
+			var other common.RawXMLElement
+			if err := d.DecodeElement(&other, &element); err != nil {
+				return err
+			}
+			v.Other = append(v.Other, other)
 		}
 	}
 }
 
 type Oracle struct {
-	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`
-	ApplicationName *SingleLineStringVar `xml:"var-applicationName,omitempty"`
+	DBName          *SingleLineStringVar   `xml:"var-databaseName,omitempty"`
+	ApplicationName *SingleLineStringVar   `xml:"var-applicationName,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 var _ xml.Unmarshaler = (*Oracle)(nil)
@@ -188,14 +215,21 @@ func (v *Oracle) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				return err
 			}
 			v.DBName = value
+		default:
+			var other common.RawXMLElement
+			if err := d.DecodeElement(&other, &element); err != nil {
+				return err
+			}
+			v.Other = append(v.Other, other)
 		}
 	}
 }
 
 type Sybase struct {
-	InterfaceEntry  *SingleLineStringVar `xml:"var-interfaceEntry,omitempty"`
-	DBName          *SingleLineStringVar `xml:"var-databaseName,omitempty"`
-	ApplicationName *SingleLineStringVar `xml:"var-applicationName,omitempty"`
+	InterfaceEntry  *SingleLineStringVar   `xml:"var-interfaceEntry,omitempty"`
+	DBName          *SingleLineStringVar   `xml:"var-databaseName,omitempty"`
+	ApplicationName *SingleLineStringVar   `xml:"var-applicationName,omitempty"`
+	Other           []common.RawXMLElement `xml:",any" json:",omitempty" yaml:",omitempty"`
 }
 
 var _ xml.Unmarshaler = (*Sybase)(nil)
@@ -217,6 +251,12 @@ func (v *Sybase) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			continue
 		}
 		switch element.Name.Local {
+		case "var-interfaceEntry", "interfaceEntry":
+			value := &SingleLineStringVar{}
+			if err := d.DecodeElement(value, &element); err != nil {
+				return err
+			}
+			v.InterfaceEntry = value
 		case "var-applicationName", "applicationName":
 			value := &SingleLineStringVar{}
 			if err := d.DecodeElement(value, &element); err != nil {
@@ -229,6 +269,12 @@ func (v *Sybase) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 				return err
 			}
 			v.DBName = value
+		default:
+			var other common.RawXMLElement
+			if err := d.DecodeElement(&other, &element); err != nil {
+				return err
+			}
+			v.Other = append(v.Other, other)
 		}
 	}
 }

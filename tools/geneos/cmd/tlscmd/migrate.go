@@ -69,8 +69,7 @@ var migrateCmd = &cobra.Command{
 		// run them serially to avoid concurrent writes to the file. If
 		// this becomes a bottleneck we can look at locking the file or
 		// batching the updates.
-		instance.DoSerial(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
-		return
+		return instance.DoSerial(command.CommandPath(), geneos.GetHost(cmd.Hostname), ct, names, migrateInstanceTLS).Report(os.Stdout)
 	},
 }
 
@@ -123,6 +122,7 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	case i.Type().IsA("sso-agent"):
 		ssoConf := config.New()
 		if err := ssoConf.MergeHOCONFile(instance.HomeRel(i, "conf/sso-agent.conf")); err != nil {
+			resp.Err = fmt.Errorf("reading %s: %w", instance.HomeRel(i, "conf/sso-agent.conf"), err)
 			return
 		}
 
@@ -138,7 +138,8 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 		// load the security.properties file, update the port and use the keystore values later
 		sp, err := instance.ReadKVConfig(h, spPath)
 		if err != nil {
-			return nil
+			resp.Err = fmt.Errorf("reading %s: %w", spPath, err)
+			return
 		}
 
 		truststorePath = sp["trustStore"]
@@ -154,60 +155,75 @@ func migrateInstanceTLS(i geneos.Instance, _ ...any) (resp *responses.General) {
 	}
 
 	// extract trusted certs from truststore and update the global
-	// ca-bundle files. if this fails, continue with the migration
-	// as we may just need to rebuild the trust chain
+	// ca-bundle files. Any failure, such as an unreadable truststore or
+	// a wrong password, stops the migration before anything is
+	// changed
 	if truststorePath != "" {
-		updated, err := certs.UpdateCACertsFileFromTrustStore(h, instance.HomeRel(i, truststorePath), truststorePassword, geneos.PathToCABundle(h))
+		truststorePath = instance.HomeRel(i, truststorePath)
+		if _, err := instance.ReadKeyStore(h, truststorePath, truststorePassword); err != nil {
+			resp.Err = fmt.Errorf("truststore: %w", err)
+			return
+		}
+		updated, err := certs.UpdateCACertsFileFromTrustStore(h, truststorePath, truststorePassword, geneos.PathToCABundle(h))
 		if err != nil {
-			resp.Err = fmt.Errorf("updating ca-bundle from truststore: %w", err)
-		} else if updated {
+			resp.Err = fmt.Errorf("updating ca-bundle from truststore %q: %w", truststorePath, err)
+			return
+		}
+		if updated {
 			resp.Completed = append(resp.Completed, "updated ca-bundle from truststore")
 		}
 	}
 
 	// extract first private key entry and its cert chain from
-	// keystore and write to instance cert and key files. If this
-	// fails, continue with the migration as we may just need to
-	// rebuild the keystore later (in instance Rebuild())
+	// keystore and write to instance cert and key files. Any failure
+	// stops the migration. The keystore itself is not changed here, it
+	// is rebuilt later (in instance Rebuild())
 	if keystorePath != "" {
-		k, err := certs.ReadKeystore(h, instance.HomeRel(i, keystorePath), keystorePassword)
+		keystorePath = instance.HomeRel(i, keystorePath)
+		k, err := instance.ReadKeyStore(h, keystorePath, keystorePassword)
 		if err != nil {
-			resp.Err = fmt.Errorf("reading keystore: %w", err)
+			resp.Err = fmt.Errorf("keystore: %w", err)
 			return
-		} else {
-			for _, alias := range k.Aliases() {
-				var certChain []*x509.Certificate
+		}
+		for _, alias := range k.Aliases() {
+			var certChain []*x509.Certificate
 
-				// leave the private key alone
-				if i.Type().IsA("sso-agent") && alias == "ssokey" {
-					continue
-				}
-
-				key, err := k.GetPrivateKeyEntry(alias, keystorePassword)
-				if err != nil {
-					continue
-				}
-
-				for _, certData := range key.CertificateChain {
-					cert, err := x509.ParseCertificate(certData.Content)
-					if err != nil {
-						continue
-					}
-					certChain = append(certChain, cert)
-				}
-
-				if len(certChain) == 0 {
-					continue
-				}
-
-				if err = instance.WriteCertificateAndKey(i, key.PrivateKey, certChain...); err != nil {
-					resp.Err = fmt.Errorf("writing certificate chain and private key from keystore: %w", err)
-					break
-				}
-
-				resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
-				break // only first key entry
+			// leave the private key alone
+			if i.Type().IsA("sso-agent") && alias == "ssokey" {
+				continue
 			}
+
+			// trusted certificate entries are not private keys
+			if !k.IsPrivateKeyEntry(alias) {
+				continue
+			}
+
+			key, err := k.GetPrivateKeyEntry(alias, keystorePassword)
+			if err != nil {
+				resp.Err = fmt.Errorf("keystore %q: cannot decrypt private key entry %q (incorrect password?): %w", keystorePath, alias, err)
+				return
+			}
+
+			for _, certData := range key.CertificateChain {
+				cert, err := x509.ParseCertificate(certData.Content)
+				if err != nil {
+					resp.Err = fmt.Errorf("keystore %q: invalid certificate in entry %q: %w", keystorePath, alias, err)
+					return
+				}
+				certChain = append(certChain, cert)
+			}
+
+			if len(certChain) == 0 {
+				continue
+			}
+
+			if err = instance.WriteCertificateAndKey(i, key.PrivateKey, certChain...); err != nil {
+				resp.Err = fmt.Errorf("writing certificate chain and private key from keystore %q: %w", keystorePath, err)
+				return
+			}
+
+			resp.Completed = append(resp.Completed, "extracted first certificate chain and private key from keystore")
+			break // only first key entry
 		}
 	}
 

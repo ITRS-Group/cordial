@@ -107,13 +107,12 @@ type ClientConfig struct {
 }
 
 // NewClient creates a new rest.Client for the given URL and
-// configuration. The client is NOT cached as each execution is a single
-// request to the first remote proxy that responds, however the
-// underlying http.Client is cached and shared across all rest.Client
-// instances created by this function, so TLS configuration is shared
-// across all clients created by this function. The caller should ensure
-// that the TLS configuration is compatible with all URLs that may be
-// used.
+// configuration. Nothing is cached or shared: each client has its own
+// http.Client and transport, with the TLS settings from the
+// configuration, as each execution of a client program is a single
+// request to the first remote proxy that responds. A long running
+// caller that needs connections to be reused should keep the client it
+// is given.
 func NewClient(clientConfig *ClientConfig) *rest.Client {
 	var tcc *tls.Config
 
@@ -221,9 +220,12 @@ func Connect(imsCf *config.Config, imsType string) iter.Seq[*rest.Client] {
 // but should produce a reasonably unique ID for the given data. The
 // same data should produce the same correlation ID, and different data
 // should produce different correlation IDs with a very high
-// probability. The correlation ID is returned as a hexadecimal string.
+// probability. The correlation ID is returned as a lower case
+// hexadecimal string, which is the same as the one that the
+// servicenow and servicenow2 clients have always created, so that an
+// incident is found by an update whichever of them raised it.
 func CorrelationID(data string) string {
-	return fmt.Sprintf("%X", sha1.Sum([]byte(data)))
+	return fmt.Sprintf("%x", sha1.Sum([]byte(data)))
 }
 
 var redactions = []struct {

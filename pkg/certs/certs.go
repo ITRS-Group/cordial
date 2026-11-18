@@ -19,16 +19,19 @@ limitations under the License.
 package certs
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/itrs-group/cordial/pkg/config"
@@ -48,92 +51,143 @@ const (
 // signing cert and key. Returns a certificate and private key. Keys are
 // usually PKCS#8 encoded and so need parsing after unsealing.
 //
+// If template and parent are the same pointer then a self-signed
+// certificate is created and is signed with the newly generated key.
+// In this case signingKey is only used to select the key type and may
+// be nil. The template is never modified.
+//
 // To create a private key of a specific type, use the WithKeyType
 // option. If the signing key is not nil and the WithKeyType option is
 // not used then the new key will be of the same type as the signing
 // key. If there is no signing key and the WithKeyType option is not
-// used then a default key type will be used.
+// used then the default key type will be used. See [KeyType] for how
+// the "ecdh" key type is handled.
+//
+// If the template has no SubjectKeyId then one is derived from the new
+// public key.
 func CreateCertificate(template, parent *x509.Certificate, signingKey PrivateKey, options ...CreateCertOption) (cert *x509.Certificate, key PrivateKey, err error) {
-	var certBytes []byte
-	var pub crypto.PublicKey
-	var keytype KeyType
-
 	opts, err := evalCreateCertOptions(options...)
 	if err != nil {
 		return
 	}
-	if opts.keytype != "" {
-		keytype = KeyType(opts.keytype)
+	if template == nil || parent == nil {
+		err = fmt.Errorf("%w: no certificate template or parent (see NewTemplate for details of template errors)", os.ErrInvalid)
+		return
 	}
 
-	if template != parent && signingKey == nil {
+	selfSigned := template == parent
+	if !selfSigned && signingKey == nil {
 		err = errors.New("parent key empty but not self-signing")
 		return
 	}
 
-	priv, privKeyType, err := ParsePrivateKey(signingKey)
-	if err != nil {
-		return
+	keytype := opts.keytype
+	var signer crypto.Signer
+	if signingKey != nil {
+		priv, privKeyType, perr := ParsePrivateKey(signingKey)
+		if perr != nil {
+			err = perr
+			return
+		}
+		if keytype == "" {
+			keytype = privKeyType
+		}
+		if !selfSigned {
+			var ok bool
+			if signer, ok = priv.(crypto.Signer); !ok {
+				err = fmt.Errorf("signing key of type %T cannot sign certificates", priv)
+				return
+			}
+		}
 	}
-
 	if keytype == "" {
-		keytype = privKeyType
+		keytype = DefaultKeyType
 	}
 
-	key, pub, err = GenerateKey(keytype)
+	newKeyDER, pub, err := GenerateKey(keytype)
 	if err != nil {
 		return nil, nil, fmt.Errorf("generate private key: %w", err)
 	}
+	defer func() {
+		if err != nil {
+			clear(newKeyDER)
+		}
+	}()
 
-	// add a subject key identifier if missing. this is optional but
-	// considered good practise for leaf certs
-	// (https://www.rfc-editor.org/rfc/rfc5280.html#section-4.2.1.2)
-	if !template.IsCA && template.SubjectKeyId == nil {
-		var skid struct {
-			Identifier []byte `asn1:"ia5"`
+	if selfSigned {
+		newKey, _, perr := ParsePrivateKey(newKeyDER)
+		if perr != nil {
+			return nil, nil, perr
 		}
-		pubBytes, err := x509.MarshalPKIXPublicKey(pub)
-		if err != nil {
-			// handle error
-		}
-		_, err = asn1.Unmarshal(pubBytes, &skid)
-		if err != nil {
-			// handle error
-		}
-		hash := sha1.Sum(skid.Identifier)
-		template.SubjectKeyId = hash[:]
+		signer = newKey.(crypto.Signer)
 	}
 
-	if certBytes, err = x509.CreateCertificate(rand.Reader, template, parent, pub, priv); err != nil {
-		clear(key)
-		key = nil
-		return
+	// work on a copy so that the caller's template can be reused
+	tmpl := *template
+	if len(tmpl.SubjectKeyId) == 0 {
+		if tmpl.SubjectKeyId, err = subjectKeyID(pub); err != nil {
+			return nil, nil, err
+		}
+	}
+	if selfSigned {
+		parent = &tmpl
+	}
+
+	certBytes, err := x509.CreateCertificate(rand.Reader, &tmpl, parent, pub, signer)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	if cert, err = x509.ParseCertificate(certBytes); err != nil {
-		clear(key)
-		key = nil
-		return
+		return nil, nil, err
 	}
 
-	return
+	return cert, newKeyDER, nil
+}
+
+// subjectKeyID returns the SHA-1 hash of the subjectPublicKey bit
+// string of pub, as described in RFC 5280, section 4.2.1.2 (1).
+func subjectKeyID(pub crypto.PublicKey) ([]byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		return nil, err
+	}
+	var spki struct {
+		Algorithm        pkix.AlgorithmIdentifier
+		SubjectPublicKey asn1.BitString
+	}
+	if _, err = asn1.Unmarshal(der, &spki); err != nil {
+		return nil, err
+	}
+	hash := sha1.Sum(spki.SubjectPublicKey.Bytes)
+	return hash[:], nil
+}
+
+func validAt(cert *x509.Certificate, now time.Time) bool {
+	return !now.Before(cert.NotBefore) && !now.After(cert.NotAfter)
 }
 
 // IsValidRootCA returns true if the provided certificate is a valid root
-// CA certificate. A valid root CA is self-signed and has appropriate
-// basic constraints as well as either an empty AuthorityKeyId or one
-// that matches the SubjectKeyId. It must also be between its NotBefore
-// and NotAfter dates.
+// CA certificate. A valid root CA is self-signed (the raw subject and
+// issuer are identical) and has appropriate basic constraints as well
+// as either an empty AuthorityKeyId or one that matches the
+// SubjectKeyId. If the certificate has a key usage extension then it
+// must include certificate signing. It must also be between its
+// NotBefore and NotAfter dates.
+//
+// The signature of the certificate is not checked, as root certificates
+// created by earlier versions of this package are not validly
+// self-signed.
 func IsValidRootCA(cert *x509.Certificate) bool {
 	if cert == nil {
 		return false
 	}
 	return cert.IsCA &&
 		cert.BasicConstraintsValid &&
-		cert.Subject.CommonName == cert.Issuer.CommonName &&
+		bytes.Equal(cert.RawSubject, cert.RawIssuer) &&
+		(cert.KeyUsage == 0 || cert.KeyUsage&x509.KeyUsageCertSign != 0) &&
 		(cert.AuthorityKeyId == nil || slices.Equal(cert.AuthorityKeyId, cert.SubjectKeyId)) &&
-		cert.NotBefore.Before(time.Now()) &&
-		cert.NotAfter.After(time.Now())
+		validAt(cert, time.Now())
 }
 
 // IsValidSigningCA returns true if the provided certificate is a valid
@@ -147,23 +201,23 @@ func IsValidSigningCA(cert *x509.Certificate) bool {
 	return cert.IsCA &&
 		cert.BasicConstraintsValid &&
 		(cert.MaxPathLen != 0 || (cert.MaxPathLen == 0 && cert.MaxPathLenZero)) &&
-		cert.NotBefore.Before(time.Now()) &&
-		cert.NotAfter.After(time.Now())
+		validAt(cert, time.Now())
 }
 
 // IsValidLeafCert returns true if the provided certificate is a valid
-// leaf certificate. A valid leaf certificate is not a CA, has the
-// DigitalSignature key usage, has at least one extended key usage,
-// and is between its NotBefore and NotAfter dates.
+// leaf certificate. A valid leaf certificate is not a CA, is usable
+// for TLS (it either has no key usage extension or one that includes
+// DigitalSignature, KeyEncipherment or KeyAgreement) and is between its
+// NotBefore and NotAfter dates. Extended key usages are not checked, as
+// a certificate without any is valid for all purposes.
 func IsValidLeafCert(cert *x509.Certificate) bool {
 	if cert == nil {
 		return false
 	}
+	const tlsUsages = x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement
 	return !cert.IsCA &&
-		cert.KeyUsage&x509.KeyUsageDigitalSignature != 0 &&
-		cert.ExtKeyUsage != nil &&
-		cert.NotBefore.Before(time.Now()) &&
-		cert.NotAfter.After(time.Now())
+		(cert.KeyUsage == 0 || cert.KeyUsage&tlsUsages != 0) &&
+		validAt(cert, time.Now())
 }
 
 // CertificateBundle holds a leaf certificate and a certificate chain
@@ -198,7 +252,6 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 	var leaf *x509.Certificate
 	var intermediates []*x509.Certificate
 	var roots []*x509.Certificate
-	var err error
 
 	if len(certs) == 0 {
 		return
@@ -208,8 +261,7 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 		switch {
 		case IsValidLeafCert(c):
 			if leaf != nil && !leaf.Equal(c) {
-				err = errors.New("multiple leaf certificates found")
-				return
+				return false
 			}
 			leaf = c
 		case IsValidRootCA(c):
@@ -217,8 +269,7 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 		case IsValidSigningCA(c):
 			intermediates = append(intermediates, c)
 		default:
-			err = fmt.Errorf("certificate %q is not valid", c.Subject.CommonName)
-			return
+			return false
 		}
 	}
 
@@ -228,10 +279,23 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 			intermediates = intermediates[1:]
 		} else if len(roots) > 0 {
 			return true
+		} else {
+			return false
 		}
 	}
 
-	opts := x509.VerifyOptions{}
+	_, err := leaf.Verify(verifyOptions(roots, intermediates))
+	return err == nil
+}
+
+// verifyOptions returns options to verify a chain using the given roots
+// and intermediates. If there are no roots then the system roots are
+// used. Any extended key usage is accepted as the purpose of the
+// certificates is not known here.
+func verifyOptions(roots, intermediates []*x509.Certificate) x509.VerifyOptions {
+	opts := x509.VerifyOptions{
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+	}
 	if len(roots) > 0 {
 		opts.Roots = x509.NewCertPool()
 		for _, rc := range roots {
@@ -244,13 +308,7 @@ func Verify(certs ...*x509.Certificate) (ok bool) {
 			opts.Intermediates.AddCert(ic)
 		}
 	}
-
-	_, err = leaf.Verify(opts)
-	if err != nil {
-		return
-	}
-
-	return true
+	return opts
 }
 
 // ParseCertChain tries to verify the provided certificates into a
@@ -264,6 +322,9 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 
 	for _, c := range cert {
 		switch {
+		case c == nil:
+			err = errors.New("nil certificate")
+			return
 		case IsValidLeafCert(c):
 			if leaf != nil && !leaf.Equal(c) {
 				err = errors.New("multiple leaf certificates found")
@@ -285,21 +346,7 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 		return
 	}
 
-	opts := x509.VerifyOptions{}
-	if len(roots) > 0 {
-		opts.Roots = x509.NewCertPool()
-		for _, rc := range roots {
-			opts.Roots.AddCert(rc)
-		}
-	}
-	if len(intermediates) > 0 {
-		opts.Intermediates = x509.NewCertPool()
-		for _, ic := range intermediates {
-			opts.Intermediates.AddCert(ic)
-		}
-	}
-
-	chains, err := leaf.Verify(opts)
+	chains, err := leaf.Verify(verifyOptions(roots, intermediates))
 	if err != nil {
 		return
 	}
@@ -323,13 +370,24 @@ func ParseCertChain(cert ...*x509.Certificate) (leaf *x509.Certificate, intermed
 
 // DecodePEM decodes PEM formatted data and returns the first leaf
 // certificate and slices of certificates (intermediates, roots) and
-// private keys found. Encrypted private keys and other types of blocks
-// are not supported and will be skipped. If there are no certificates
-// or private keys found then empty values are returned without error.
-//
-// Unknown PEM blocks are skipped.
+// private keys found. Private keys are always returned as PKCS#8,
+// converted from PKCS#1 or SEC1 if necessary. Encrypted private keys
+// and other types of blocks are not supported and will be skipped, as
+// will any certificates that are expired, not yet valid or that are
+// neither a valid root, signing CA or leaf certificate. If there are
+// no certificates or private keys found then empty values are returned
+// without error. An error is returned if a certificate or an
+// unencrypted private key block cannot be parsed.
 func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []PrivateKey, err error) {
+	leaf, intermediates, roots, keys, _, err = decodePEM(data...)
+	return
+}
+
+// decodePEM is DecodePEM that also returns a description of each of
+// the certificates and private keys that were skipped.
+func decodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*x509.Certificate, keys []PrivateKey, skipped []string, err error) {
 	var block *pem.Block
+	now := time.Now()
 
 	for _, d := range data {
 		for {
@@ -345,27 +403,49 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 				if err != nil {
 					return
 				}
-				if IsValidRootCA(c) {
+				switch {
+				case IsValidRootCA(c):
 					roots = append(roots, c)
-				} else if IsValidSigningCA(c) {
+				case IsValidSigningCA(c):
 					intermediates = append(intermediates, c)
-				} else if IsValidLeafCert(c) {
+				case IsValidLeafCert(c):
 					// save first leaf, ignore others
 					if leaf == nil {
 						leaf = c
 					}
-				} else {
-					// log.Warn().Msgf("certificate %q is not valid, skipping", c.Subject.CommonName)
+				case now.After(c.NotAfter):
+					skipped = append(skipped, fmt.Sprintf("certificate %q is expired", c.Subject.CommonName))
+				case now.Before(c.NotBefore):
+					skipped = append(skipped, fmt.Sprintf("certificate %q is not yet valid", c.Subject.CommonName))
+				default:
+					skipped = append(skipped, fmt.Sprintf("certificate %q is not a valid root, signing or leaf certificate", c.Subject.CommonName))
 				}
 			case "RSA PRIVATE KEY", "EC PRIVATE KEY", "PRIVATE KEY":
-				keys = append(keys, PrivateKey(block.Bytes))
+				if isEncryptedPEM(block) {
+					skipped = append(skipped, "encrypted private key")
+					continue
+				}
+				var key PrivateKey
+				if key, err = toPKCS8(block.Bytes); err != nil {
+					err = fmt.Errorf("invalid %s block: %w", block.Type, err)
+					return
+				}
+				keys = append(keys, key)
+			case "ENCRYPTED PRIVATE KEY":
+				skipped = append(skipped, "encrypted private key")
 			default:
-				// log.Warn().Msgf("unsupported PEM type found: %s, skipping", block.Type)
+				// unknown PEM blocks are skipped
 			}
 		}
 	}
 
 	return
+}
+
+// isEncryptedPEM returns true if the block is an encrypted private key,
+// either PKCS#8 or using the legacy encrypted PEM headers.
+func isEncryptedPEM(block *pem.Block) bool {
+	return block.Type == "ENCRYPTED PRIVATE KEY" || strings.Contains(block.Headers["Proc-Type"], "ENCRYPTED")
 }
 
 // ParsePEM parses PEM formatted data blocks and returns a
@@ -374,11 +454,15 @@ func DecodePEM(data ...[]byte) (leaf *x509.Certificate, intermediates, roots []*
 // Only if Valid is true can the order of the certificates be relied
 // upon.
 //
-// Encrypted private keys are not supported and will be skipped.
+// Encrypted private keys are not supported and will be skipped. If
+// there are no usable certificates then the error describes any
+// certificates that were skipped, for example because they have
+// expired.
 func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	var roots []*x509.Certificate
 	var chains [][]*x509.Certificate
 	var keys []PrivateKey
+	var skipped []string
 
 	if len(data) == 0 {
 		err = fmt.Errorf("no data to process")
@@ -387,7 +471,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 
 	bundle = &CertificateBundle{}
 
-	bundle.Leaf, bundle.FullChain, roots, keys, err = DecodePEM(data...)
+	bundle.Leaf, bundle.FullChain, roots, keys, skipped, err = decodePEM(data...)
 	if err != nil {
 		return
 	}
@@ -396,7 +480,11 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	}
 
 	if bundle.Leaf == nil && len(bundle.FullChain) == 0 && len(roots) == 0 {
-		err = fmt.Errorf("no certificates found")
+		if len(skipped) > 0 {
+			err = fmt.Errorf("no valid certificates found (%s)", strings.Join(skipped, "; "))
+		} else {
+			err = fmt.Errorf("no certificates found")
+		}
 		return
 	}
 	if bundle.Leaf == nil {
@@ -421,7 +509,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	for _, c := range bundle.FullChain {
 		ip.AddCert(c)
 	}
-	rp, _ := x509.SystemCertPool()
+	rp := systemCertPool()
 	for _, c := range roots {
 		rp.AddCert(c)
 	}
@@ -429,6 +517,7 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	verifyOpts := x509.VerifyOptions{
 		Intermediates: ip,
 		Roots:         rp,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 	}
 
 	if chains, err = bundle.Leaf.Verify(verifyOpts); err != nil || len(chains) == 0 || len(chains[0]) == 0 || bundle.Key == nil {
@@ -444,9 +533,9 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	bundle.FullChain = append([]*x509.Certificate{}, chains[0][0:len(chains[0])-1]...)
 
 	if bundle.Root != nil {
-		rp, _ := x509.SystemCertPool()
 		verifyOpts := x509.VerifyOptions{
-			Roots: rp,
+			Roots:     systemCertPool(),
+			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		}
 		if chain, err := bundle.Root.Verify(verifyOpts); err == nil {
 			for _, c := range chain {
@@ -462,6 +551,15 @@ func ParsePEM(data ...[]byte) (bundle *CertificateBundle, err error) {
 	}
 
 	return
+}
+
+// systemCertPool returns a copy of the system certificate pool or an
+// empty pool if there is none or it cannot be loaded.
+func systemCertPool() *x509.CertPool {
+	if pool, err := x509.SystemCertPool(); err == nil && pool != nil {
+		return pool
+	}
+	return x509.NewCertPool()
 }
 
 // P12ToRootCerts reads a PKCS#12 (PFX) file and returns the valid root

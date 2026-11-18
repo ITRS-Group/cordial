@@ -54,7 +54,7 @@ func Start(i geneos.Instance, options ...any) error {
 
 	if i.Type().IsA("profile") {
 		// start all the instances labelled with the profile
-		DoInstances("start",
+		return DoInstances("start",
 			Instances(i.Host(), nil, MatchParameters(cf.Join("config", "profile")+"="+i.Name())),
 			func(i geneos.Instance, _ ...any) (resp *responses.General) {
 				resp = responses.New[responses.General](i)
@@ -65,7 +65,6 @@ func Start(i geneos.Instance, options ...any) error {
 				return
 			},
 		).Report(os.Stdout, responses.IgnoreErr(geneos.ErrRunning))
-		return nil
 	}
 
 	// filter out only StartOption types from the options slice
@@ -202,13 +201,41 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *ex
 
 	env = append(env, so.envs...)
 
-	var userprofile = os.Getenv("USERPROFILE")
+	// the local user's profile and home directory are never passed on to
+	// processes on remote hosts, those use the values for the remote
+	// host, if known
+	env = withDefaultEnv(env, h.OS() == "windows", h.IsLocalhost(), config.Get[string](h.Config, "homedir"))
+
+	// finally, set `GENEOS_HOME` if it is not already defined
+	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "GENEOS_HOME=") }) {
+		env = append(env, "GENEOS_HOME="+h.PathTo())
+	}
+
+	cmd = exec.Command(binary, args...)
+	cmd.Env = env
+	cmd.Dir = home
+
+	return
+}
+
+// withDefaultEnv adds a default PATH, and USERPROFILE for Windows, and
+// HOME to env if they are not already set. For the local host the
+// values come from the environment of this process, otherwise the
+// remote home directory, if not empty, is used and the local user's
+// values are never passed through.
+func withDefaultEnv(env []string, windows, local bool, remoteHome string) []string {
+	var userprofile string
+	if local {
+		userprofile = os.Getenv("USERPROFILE")
+	} else if windows {
+		userprofile = remoteHome
+	}
 
 	// check for a PATH setting, else use a very plain one.
 	// this can be overridden by the user using the `-e PATH=...` option
 	// to start and restart commands
 	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "PATH=") }) {
-		if h.OS() == "windows" {
+		if windows {
 			p := "C:\\Windows\\System32;C:\\Windows;C:\\Windows\\System32\\Wbem"
 			if userprofile != "" {
 				env = append(env, "USERPROFILE="+userprofile)
@@ -222,23 +249,18 @@ func BuildCmd(i geneos.Instance, noDecode bool, options ...StartOption) (cmd *ex
 
 	// pass through the user's home directory unless there is one specifically defined
 	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "HOME=") }) {
-		if home, ok := os.LookupEnv("HOME"); ok {
-			env = append(env, "HOME="+home)
+		if !local {
+			if remoteHome != "" {
+				env = append(env, "HOME="+remoteHome)
+			}
+		} else if userhome, ok := os.LookupEnv("HOME"); ok {
+			env = append(env, "HOME="+userhome)
 		} else {
 			env = append(env, "HOME="+userprofile)
 		}
 	}
 
-	// finally, set `GENEOS_HOME` if it is not already defined
-	if !slices.ContainsFunc(env, func(e string) bool { return strings.HasPrefix(e, "GENEOS_HOME=") }) {
-		env = append(env, "GENEOS_HOME="+h.PathTo())
-	}
-
-	cmd = exec.Command(binary, args...)
-	cmd.Env = env
-	cmd.Dir = home
-
-	return
+	return env
 }
 
 type startOptions struct {

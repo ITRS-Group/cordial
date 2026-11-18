@@ -4,7 +4,7 @@ Creates a new TLS certificate bundle including a private key and trust chain. Th
 
 The command can also be used to just create a private key without a certificate using the `--private-key`/`-K` option. In this case the file will be created with the name "private-key.pem" instead of being derived from the Common Name.
 
-In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases.
+In both cases the key type can be specified using the `--key-type`/`-k` option. If not specified then the key type of the signing certificate will be used or a default if that cannot be determined. The default key type is currently ECDH but this may change in future releases. As certificates need a key that can sign, an "ecdh" key is created as an ECDSA key on the P-256 curve, which has the same format as an ECDH P-256 key.
 
 By default the command will create a file containing a private key, certificate and trust chain in the current working directory using the local hostname as the Common Name (`CN`). You can specify a different Common Name using the `--cname`/`-c` option. If you want to include spaces please remember to quote the name. The resulting file has spaces in the Common Name replaced with dashes.
 
@@ -41,7 +41,7 @@ geneos tls create [flags]
                                    and overwrite any existing file in the 'out' directory
   -K, --private-key[=true|false]   Create a private key without a certificate. Ignored for --signing.
   -k, --key-type KeyType           Key type to use for new certificate and/or private key (rsa, ecdsa, ed25519
-                                   or ecdh). Ignored for --signing. Defaults to the same type as
+                                   or ecdh, which is an ECDSA P-256 key). Ignored for --signing. Defaults to the same type as
                                    the signing certificate key or a default type if that cannot be determined.
   -s, --san-dns VALUE              Subject-Alternative-Name DNS Name (repeat as required).
                                    Ignored for --signing.
@@ -52,9 +52,9 @@ geneos tls create [flags]
   -u, --san-url VALUE              Subject-Alternative-Name URL (repeat as required).
                                    Ignored for --signing.
       --allow-root[=true|false]    allow running as root (not recommended)
-  -G, --config string              config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string              config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME              Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string            profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string            profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## SEE ALSO

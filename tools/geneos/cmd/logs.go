@@ -19,13 +19,11 @@ package cmd
 
 import (
 	_ "embed"
-	"io/fs"
 	"os"
 
 	"github.com/fatih/color"
 	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 	"github.com/itrs-group/cordial/tools/geneos/internal/instance"
-	"github.com/itrs-group/cordial/tools/geneos/internal/responses"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/term"
@@ -117,7 +115,7 @@ var logsCmd = &cobra.Command{
 
 		switch {
 		case logCmdCat:
-			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, instance.CatInstance,
+			return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, instance.CatInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
@@ -125,7 +123,7 @@ var logsCmd = &cobra.Command{
 				instance.Matching(logCmdMatch),
 				instance.IgnoreMatches(logCmdIgnore),
 				instance.ShowAuditLogs(logCmdAudit),
-			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
+			).Report(os.Stdout)
 		case logCmdFollow:
 			instance.FollowLogs(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names,
 				instance.WithStderr(logCmdStderr),
@@ -137,7 +135,7 @@ var logsCmd = &cobra.Command{
 				instance.ShowAuditLogs(logCmdAudit),
 			) // never returns
 		default:
-			instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, instance.TailInstance,
+			return instance.Do(cmd.CommandPath(), geneos.GetHost(Hostname), ct, names, instance.TailInstance,
 				instance.WithStderr(logCmdStderr),
 				instance.WithoutNormal(logCmdNoNormal),
 				instance.WithCALog(logCmdCALog),
@@ -145,7 +143,7 @@ var logsCmd = &cobra.Command{
 				instance.Matching(logCmdMatch),
 				instance.IgnoreMatches(logCmdIgnore),
 				instance.ShowAuditLogs(logCmdAudit),
-			).Report(os.Stdout, responses.SkipOnErr(false), responses.IgnoreErrs(fs.ErrNotExist))
+			).Report(os.Stdout)
 		}
 
 		return

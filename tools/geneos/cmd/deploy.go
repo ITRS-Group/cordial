@@ -149,15 +149,17 @@ var deployCmd = &cobra.Command{
 		}
 
 		if ct == nil {
-			fmt.Println("component type must be given for a deployment")
-			return nil
+			return fmt.Errorf("%w: component type must be given for a deployment", geneos.ErrInvalidArgs)
 		}
 
 		if len(names) > 0 {
 			name = names[0]
 		}
 
-		h, pkgct, local := instance.ParseName(name, geneos.GetHost(Hostname))
+		if err = checkNameHost(name, defaultHost()); err != nil {
+			return err
+		}
+		h, pkgct, local := instance.ParseName(name, defaultHost())
 
 		if h == geneos.ALL {
 			h = geneos.LOCAL
@@ -221,6 +223,11 @@ var deployCmd = &cobra.Command{
 			if profile.Initialise(cordial.ExecutableName()) {
 				log.Debug("profiles configuration written")
 			}
+
+			// Initialise replaces the local host, so do not carry on
+			// with the old one which does not have the new root directory
+			h = geneos.LOCAL
+			profile.SetExpandOptions(h, profile.Profiles, profile.PflagSetToMap(command.Flags(), profile.IncludeFlags...), args)
 		}
 
 		if ct.IsA("profile") {
@@ -247,14 +254,24 @@ var deployCmd = &cobra.Command{
 			)
 		}
 
+		// deploying an instance that exists is an error, unlike a
+		// profile, which is applied again to update its members. This is
+		// checked before anything is installed, now that there is a
+		// root directory to look in
+		if err = checkNotExisting(h, ct, name); err != nil {
+			return err
+		}
+
 		// Package installation
 		version, _ := geneos.CurrentVersion(h, pkgct, deployCmdBase)
 		log.Debug("version", slog.String("version", version))
 		if version == "unknown" || (deployCmdVersion != "latest" && deployCmdVersion != version) {
 			if !deployCmdLocal && deployCmdUsername != "" && deployCmdPassword == nil {
 				deployCmdPassword, err = config.ReadPasswordInput(false, 0)
-				if err == config.ErrNotInteractive {
-					err = fmt.Errorf("%w and password required", err)
+				if err != nil {
+					if errors.Is(err, config.ErrNotInteractive) {
+						err = fmt.Errorf("%w and password required", err)
+					}
 					return
 				}
 				// ok to defer clear here as the options are used before returning to caller
@@ -307,6 +324,9 @@ var deployCmd = &cobra.Command{
 			instance.StartAfterAdd(deployCmdStart),
 		)
 		if err != nil {
+			if errors.Is(err, geneos.ErrExists) {
+				return existsError(name)
+			}
 			return err
 		}
 

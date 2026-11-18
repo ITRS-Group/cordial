@@ -50,10 +50,12 @@ func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) 
 	}
 
 	// check is newPath already exists
-	if st, err := h.Stat(newPath); err == nil && st.Mode().IsRegular() {
+	newInfo, newErr := h.Stat(newPath)
+	if newErr == nil && newInfo.Mode().IsRegular() {
 		// newPath is a existing regular file, just return it
 		return newPath
 	}
+	newIsDir := newErr == nil && newInfo.IsDir()
 
 	for _, oldPath := range oldPaths {
 		if oldPath == "" {
@@ -61,45 +63,54 @@ func MigrateFile(h host.Host, newPath string, oldPaths ...string) (dest string) 
 			continue
 		}
 
-		if st, err := h.Stat(newPath); err == nil {
-			switch {
-			case st.IsDir():
-				// if newPath is a directory, move the file oldPath into it
-				dest = path.Join(newPath, path.Base(oldPath))
-
-				// if destination already exists and is a regular file, return
-				if st, err := h.Stat(dest); err == nil && st.Mode().IsRegular() {
-					return
-				}
-
-				// else rename the oldPath to the new destination
-				if err := h.Rename(oldPath, dest); err != nil {
-					return ""
-				}
-
+		if newIsDir {
+			// if newPath is a directory, the file oldPath is moved into
+			// it. if destination already exists and is a regular file,
+			// return it
+			dest = path.Join(newPath, path.Base(oldPath))
+			if st, err := h.Stat(dest); err == nil && st.Mode().IsRegular() {
 				return
-			case st.Mode().IsRegular():
-				if err := h.Rename(oldPath, newPath); err == nil {
-					return newPath
-				}
 			}
+		}
+
+		if st, err := h.Stat(oldPath); err != nil || !st.Mode().IsRegular() {
+			continue
+		}
+
+		if newIsDir {
+			// rename the oldPath to the new destination
+			if err := h.Rename(oldPath, dest); err != nil {
+				return ""
+			}
+			return
+		}
+
+		// newPath does not exist, so make sure the directory does
+		// and rename the file
+		if err := h.MkdirAll(path.Dir(newPath), 0775); err != nil {
+			continue
+		}
+		if err := h.Rename(oldPath, newPath); err == nil {
+			return newPath
 		}
 	}
 
-	return
+	return ""
 }
 
 // AbbreviateHome replaces the user's home directory prefix on path p
 // with `~/` and cleans the result. If the home directory is not
 // present, or there is an error resolving it, then a cleaned copy of
-// the original string is returned. If the result is am empty string,
-// return "."
+// the original string is returned. Only a whole leading path element is
+// replaced, so `/home/user2/file` is not abbreviated for the home
+// directory `/home/user`. If the result is am empty string, return "."
 func AbbreviateHome(p string) string {
 	home, err := UserHomeDir()
 	if err != nil {
 		return path.Clean(p)
 	}
-	if after, ok := strings.CutPrefix(p, home); ok {
+	home = strings.TrimRight(home, `/\`)
+	if after, ok := strings.CutPrefix(p, home); ok && home != "" && (after == "" || after[0] == '/' || after[0] == '\\') {
 		return filepath.ToSlash("~" + after)
 	}
 	return path.Clean(p)

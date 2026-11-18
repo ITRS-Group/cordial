@@ -19,9 +19,11 @@ package snow
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/itrs-group/cordial/pkg/config"
+	snowcore "github.com/itrs-group/cordial/pkg/ims/snow"
 	"github.com/labstack/echo/v4"
 )
 
@@ -48,9 +50,16 @@ func GetAllIncidents(c echo.Context) (err error) {
 		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("user %q not found in sys_user (and needed for lookup)", user))
 	}
 
-	q := fmt.Sprintf(`active=true^opened_by=%s`, u["sys_id"])
+	q := fmt.Sprintf(`active=true^opened_by=%s`, snowcore.EscapeQuery(u["sys_id"]))
 
-	l, _ := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
+	l, err := s.GET(Fields(config.Get[string](vc, "servicenow.queryresponsefields")), Query(q)).QueryTable(config.Get[string](vc, "servicenow.incidenttable"))
+	if err != nil {
+		log.Error("error getting incidents", slog.Any("error", err), slog.String("user", user))
+		return echo.NewHTTPError(http.StatusBadGateway, fmt.Sprintf("error getting incidents from ServiceNow: %s", err))
+	}
+	if l == nil {
+		l = resultsArray{}
+	}
 
-	return c.JSON(200, l)
+	return c.JSON(http.StatusOK, l)
 }

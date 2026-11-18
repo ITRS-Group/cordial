@@ -10,9 +10,17 @@ Most commands work on "instances" of "components". As the names suggest, a "comp
 
 Instances can be created locally or on remote hosts over SSH connections without the need to install `geneos` on the remote Linux server.
 
-Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information.
+Instance names are in the form `[TYPE]:NAME[@HOST]`, where the `[...]` mean that part is optional. The `TYPE` is only used to select the underlying type of Netprobe, e.g. Fix Analyser or plain, for Self-Announcing and Floating Netprobe components during deployment. The `HOST` part is the name of a configured remote host (which may not be the hostname); see the `host` sub-system help with `geneos host help` for more information. Using the `--host`/`-H` option with a name that is not a configured host is an error.
 
 For many commands you can also use wildcards for the `NAME` part. These wildcards are not complex regular expressions but instead follow more common file system patterns. (Note that the exact patterns support are the same as for the Go [`path.Match`](https://pkg.go.dev/path#Match) function.). These wildcards only work on `NAME` and not the `HOST` part and then only for those commands where they make sense, such as `geneos ls`, `geneos start` and so on.
+
+## Exit Status
+
+The exit status of `geneos` is `0` if everything that was asked for succeeded, and non-zero if at least one thing failed. This applies to every command that acts on one or more instances, hosts, files or other items: all of the items are still processed, and the result for each one is shown, but if any of them fail, for example an instance that does not exist or cannot be started, the exit status is non-zero. Each failure is reported once, on standard error, and the command does not then repeat it with a final error message or the usage.
+
+Some commands, such as `stop`, `restart`, `reload`, `delete` and `tls new`, check all of the instance names given before they do anything and fail, without changing any of the instances, if any of them does not match an instance.
+
+These are not failures: stopping, restarting or reloading an instance that is not running, starting an instance that is already running, an action that is not supported by the component, and instances that are disabled when `geneos start` selects instances that are set to start automatically. A pattern or component type that does not match any instances, such as `geneos ls gateway` when there are no Gateways, is also not a failure, but a name that is not an instance is. For commands that list, e.g. `ls`, `ps` and `show`, the instances that do exist are still listed.
 
 The subsystems below group related functions together and have their own sub-commands, such as `geneos aes password` and `geneos init demo`. Use `geneos SUBSYSTEM help` to see more or, if you are reading this online you should be able to click through for further information.
 
@@ -117,9 +125,9 @@ The subsystems below group related functions together and have their own sub-com
 
 ```text
       --allow-root[=true|false]   allow running as root (not recommended)
-  -G, --config string             config file (defaults are ~/.config/docs/docs.json, /etc/docs/docs.json)
+  -G, --config string             config file (defaults are ~/.config/geneos/geneos.json, /etc/geneos/geneos.json)
   -H, --host HOSTNAME             Limit actions to HOSTNAME (not for commands given instance@host parameters) (default "all")
-      --profiles string           profiles configuration (defaults are ~/.config/docs/profiles.yaml, /etc/docs/profiles.yaml)
+      --profiles string           profiles configuration (defaults are ~/.config/geneos/profiles.yaml, /etc/geneos/profiles.yaml)
 ```
 
 ## Examples

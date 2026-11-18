@@ -19,20 +19,18 @@ package aescmd
 
 import (
 	_ "embed"
+	"errors"
 
 	"github.com/spf13/cobra"
 
 	"github.com/itrs-group/cordial"
 	"github.com/itrs-group/cordial/tools/geneos/cmd"
-	"github.com/itrs-group/cordial/tools/geneos/internal/geneos"
 )
 
 var importCmdKeyfileSource string
 
 func init() {
 	aesCmd.AddCommand(importCmd)
-
-	importCmdKeyfileSource = string(geneos.DefaultUserKeyfile)
 
 	importCmd.Flags().StringVarP(&importCmdKeyfileSource, "keyfile", "k", "", "`PATH` to key file. Use a dash (`-`) to be prompted for the contents of the key file on the console")
 
@@ -54,6 +52,6 @@ var importCmd = &cobra.Command{
 	},
 	Deprecated: "Please use `" + cordial.ExecutableName() + " aes set` instead",
 	RunE: func(command *cobra.Command, _ []string) (err error) {
-		return
+		return errors.New("`aes import` is no longer supported, please use `aes set` instead")
 	},
 }

@@ -61,6 +61,12 @@ func procSetupOS(cmd *exec.Cmd, out *os.File, options ...ProcessOption) (err err
 	return
 }
 
+// setCPUAffinity does nothing on Windows, where the affinity of the
+// process is set after it has started in [postStart].
+func setCPUAffinity(cpus []int) (restore func() error, err error) {
+	return func() error { return nil }, nil
+}
+
 func postStart(cmd *exec.Cmd, options ...ProcessOption) (err error) {
 	po := evalProcessOptions(options...)
 	if len(po.cpuAffinity) == 0 {
@@ -81,7 +87,7 @@ func setProcAffinity(pid int, cpus ...int) error {
 		if cpu < 0 || cpu >= runtime.NumCPU() || cpu >= 8*int(unsafe.Sizeof(mask)) {
 			return fmt.Errorf("CPU index %d is outside the process affinity mask", cpu)
 		}
-		mask |= uintptr(1) << uint(cpu)
+		mask |= uintptr(1) << cpu
 	}
 	process, err := windows.OpenProcess(windows.PROCESS_SET_INFORMATION, false, uint32(pid))
 	if err != nil {

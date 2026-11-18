@@ -17,22 +17,38 @@ limitations under the License.
 
 package api
 
+import "time"
+
+// DefaultTimeout is how long an [XMLRPCClient] waits for a Netprobe to
+// respond to a call unless changed with [Timeout].
+const DefaultTimeout = 60 * time.Second
+
 type apiOptions struct {
 	insecureSkipVerify bool
+	timeout            time.Duration
 }
 
 // Option TODO: Describe its purpose and intended use.
 type Option func(*apiOptions)
 
 func evalOptions(options ...Option) *apiOptions {
-	opts := &apiOptions{}
+	opts := &apiOptions{timeout: DefaultTimeout}
 	for _, opt := range options {
 		opt(opts)
 	}
 	return opts
 }
 
-// InsecureSkipVerify
+// Timeout sets how long the client waits for the response headers of
+// each call. A zero value means no limit.
+func Timeout(timeout time.Duration) Option {
+	return func(c *apiOptions) {
+		c.timeout = timeout
+	}
+}
+
+// InsecureSkipVerify disables verification of the Netprobe certificate
+// for HTTPS endpoints.
 func InsecureSkipVerify() Option {
 	return func(c *apiOptions) {
 		c.insecureSkipVerify = true

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"slices"
 	"strconv"
 	"time"
 
@@ -32,70 +33,50 @@ func (hub *Hub) Ping(ctx context.Context) (resp *http.Response, err error) {
 	return hub.Get(ctx, PingEndpoint, nil, nil)
 }
 
+// durationRE matches the ISO 8601 durations understood by
+// [ParseDuration]
+var durationRE = regexp.MustCompile(`^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$`)
+
 // ParseDuration parses an ISO 8601 string representing a duration, and
 // returns the resultant golang time.Duration instance.
 //
 // From https://github.com/spatialtime/iso8601 but "fixed" to allow
 // durations without 'T'
+//
+// Years and months have no fixed length, so a duration that includes
+// them, such as "P1Y" or "P1M", is an error, as is a duration with no
+// elements such as "P" or "PT". Note that "PT1M" is one minute.
 func ParseDuration(isoDuration string) (time.Duration, error) {
-	re := regexp.MustCompile(`^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?$`)
-	matches := re.FindStringSubmatch(isoDuration)
+	matches := durationRE.FindStringSubmatch(isoDuration)
 	if matches == nil {
 		return 0, errors.New("duration string is of incorrect format")
 	}
 
+	if matches[1] != "" || matches[2] != "" {
+		return 0, errors.New("duration with years or months is not supported")
+	}
+
+	if !slices.ContainsFunc(matches[3:], func(s string) bool { return s != "" }) {
+		return 0, errors.New("duration string has no elements")
+	}
+
+	// the seconds in a week, day, hour and minute, and one second for
+	// the last element, which can have a fraction
+	scales := [...]float64{7 * 24 * 60 * 60, 24 * 60 * 60, 60 * 60, 60, 1}
+
 	seconds := 0.0
-
-	//skipping years and months
-
-	// weeks
-	if matches[3] != "" {
-		f, err := strconv.ParseFloat(matches[3], 32)
+	for i, scale := range scales {
+		if matches[3+i] == "" {
+			continue
+		}
+		f, err := strconv.ParseFloat(matches[3+i], 64)
 		if err != nil {
 			return 0, err
 		}
-
-		seconds += f * 7 * 24 * 60 * 60
-	}
-	// days
-	if matches[4] != "" {
-		f, err := strconv.ParseFloat(matches[4], 32)
-		if err != nil {
-			return 0, err
-		}
-
-		seconds += f * 24 * 60 * 60
-	}
-	//hours
-	if matches[5] != "" {
-		f, err := strconv.ParseFloat(matches[5], 32)
-		if err != nil {
-			return 0, err
-		}
-
-		seconds += (f * 60 * 60)
-	}
-	//minutes
-	if matches[6] != "" {
-		f, err := strconv.ParseFloat(matches[6], 32)
-		if err != nil {
-			return 0, err
-		}
-
-		seconds += (f * 60)
-	}
-	//seconds & milliseconds
-	if matches[7] != "" {
-		f, err := strconv.ParseFloat(matches[7], 32)
-		if err != nil {
-			return 0, err
-		}
-
-		seconds += f
+		seconds += f * scale
 	}
 
-	goDuration := strconv.FormatFloat(seconds, 'f', -1, 32) + "s"
-	return time.ParseDuration(goDuration)
+	return time.ParseDuration(strconv.FormatFloat(seconds, 'f', -1, 64) + "s")
 }
 
 const (
@@ -107,7 +88,12 @@ const (
 
 // FormatDuration converts a time.Duration to an ISO8601 duration up to
 // weeks. Months and years are not supported.
+//
+// A zero duration is "PT0S". d should not be negative.
 func FormatDuration(d time.Duration) (iso string) {
+	if d == 0 {
+		return "PT0S"
+	}
 	iso = "P"
 
 	weeks := d.Truncate(Week)

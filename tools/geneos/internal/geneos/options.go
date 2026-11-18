@@ -70,6 +70,7 @@ func evalOptions(options ...GeneosOption) (d *geneosOptions) {
 	d = &geneosOptions{
 		downloadbase: "releases",
 		downloadtype: "resources",
+		basename:     "active_prod",
 		source:       filepath.Join(LocalRoot(), "packages", "downloads"),
 		host:         LOCAL,
 	}
