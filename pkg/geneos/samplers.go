@@ -107,7 +107,7 @@ type Plugin struct {
 	Disk     *DiskPlugin     `xml:"disk,omitempty" json:"disk,omitempty" yaml:"disk,omitempty"`
 	DeviceIO *DeviceIOPlugin `xml:"deviceio,omitempty" json:"deviceio,omitempty" yaml:"deviceio,omitempty"`
 	Hardware *HardwarePlugin `xml:"hardware,omitempty" json:"hardware,omitempty" yaml:"hardware,omitempty"`
-	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"hardware,omitempty"`
+	Network  *NetworkPlugin  `xml:"network,omitempty" json:"network,omitempty" yaml:"network,omitempty"`
 
 	// jmx-server.go
 	JMXServer *JMXServerPlugin `xml:"jmx-server,omitempty" json:"jmx-server,omitempty" yaml:"jmx-server,omitempty"`

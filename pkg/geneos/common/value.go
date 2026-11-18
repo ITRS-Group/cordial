@@ -145,35 +145,45 @@ type Value struct {
 	StdAES string `xml:"stdAES,omitempty" json:",omitempty" yaml:",omitempty"`
 }
 
-// NewValue converts primitive input into a Geneos value.
-func NewValue(in any) (value *Value) {
-	value = &Value{}
-	switch item := in.(type) {
-	case string:
-		item = strings.TrimSpace(item)
-		if item == "" {
+// NewValue converts primitive input into a Geneos value. Input that is
+// nil, an empty string (after trimming white space) or an empty slice
+// results in a nil Value. A string of the form "$(name)" is a variable
+// reference and anything else is literal data. The elements of a slice
+// are joined with a comma. Pointers are followed.
+func NewValue(in any) *Value {
+	if in == nil {
+		return nil
+	}
+	rv := reflect.ValueOf(in)
+	for rv.Kind() == reflect.Pointer || rv.Kind() == reflect.Interface {
+		if rv.IsNil() {
 			return nil
 		}
-		if strings.HasPrefix(item, "$(") && strings.HasSuffix(item, ")") {
-			value.Var = &Var{Var: item[2 : len(item)-1]}
-		} else {
-			value.Data = &Data{Data: item}
-		}
-	case []string:
-		for _, str := range item {
-			value.Data = &Data{Data: str}
-		}
-	default:
-		if reflect.TypeOf(item).Kind() == reflect.Slice {
-			slice := reflect.ValueOf(item)
-			for i := 0; i < slice.Len(); i++ {
-				value.Data = &Data{Data: fmt.Sprint(slice.Index(i))}
-			}
-		} else {
-			value.Data = &Data{Data: fmt.Sprint(item)}
-		}
+		rv = rv.Elem()
 	}
-	return
+
+	var text string
+	switch rv.Kind() {
+	case reflect.String:
+		text = strings.TrimSpace(rv.String())
+	case reflect.Slice, reflect.Array:
+		items := make([]string, 0, rv.Len())
+		for i := range rv.Len() {
+			items = append(items, fmt.Sprint(rv.Index(i).Interface()))
+		}
+		text = strings.Join(items, ",")
+	default:
+		text = fmt.Sprint(rv.Interface())
+	}
+	if text == "" {
+		return nil
+	}
+
+	// a variable reference is a single "$(name)" and nothing else
+	if len(text) > 3 && strings.HasPrefix(text, "$(") && strings.IndexByte(text, ')') == len(text)-1 {
+		return &Value{Var: &Var{Var: text[2 : len(text)-1]}}
+	}
+	return &Value{Data: &Data{Data: text}}
 }
 
 var _ xml.Unmarshaler = (*Value)(nil)
@@ -236,7 +246,10 @@ func (s *Value) String() string {
 	if s.StdAES != "" {
 		return "[encoded-password]"
 	}
-	return fmt.Sprint(s.Data)
+	if s.Data != nil {
+		return s.Data.Data
+	}
+	return ""
 }
 
 // Host identifies a host by name, address, or variable.
@@ -254,7 +267,7 @@ func (t *Host) String() string {
 		return t.IPAddress.String()
 	}
 	if t.Var != nil {
-		return "$(" + t.Name + ")"
+		return "$(" + t.Var.Name + ")"
 	}
 	return t.Name
 }

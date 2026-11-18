@@ -2,6 +2,7 @@ package geneos
 
 import (
 	"encoding/xml"
+	"fmt"
 )
 
 // Vars is a container for specific variable types.
@@ -38,10 +39,21 @@ type StringList struct {
 	Comment string   `xml:",comment"`
 }
 
+// UnmarshalXML decodes the list from its child elements. Without this
+// encoding/xml would use UnmarshalText and ignore the elements.
+func (s *StringList) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	type plain StringList
+	return d.DecodeElement((*plain)(s), &start)
+}
+
+// UnmarshalText resets the list when text is empty, which is how an
+// empty value in a configuration is decoded. A list cannot be set from
+// non-empty text.
 func (s *StringList) UnmarshalText(text []byte) error {
-	if len(text) == 0 {
-		s = &StringList{}
+	if len(text) != 0 {
+		return fmt.Errorf("cannot decode %q as a string list", text)
 	}
+	*s = StringList{}
 	return nil
 }
 
@@ -50,10 +62,21 @@ type NameValueList struct {
 	Comment    string      `xml:",comment"`
 }
 
+// UnmarshalXML decodes the list from its child elements. Without this
+// encoding/xml would use UnmarshalText and ignore the elements.
+func (s *NameValueList) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	type plain NameValueList
+	return d.DecodeElement((*plain)(s), &start)
+}
+
+// UnmarshalText resets the list when text is empty, which is how an
+// empty value in a configuration is decoded. A list cannot be set from
+// non-empty text.
 func (s *NameValueList) UnmarshalText(text []byte) error {
-	if len(text) == 0 {
-		s = &NameValueList{}
+	if len(text) != 0 {
+		return fmt.Errorf("cannot decode %q as a name value list", text)
 	}
+	*s = NameValueList{}
 	return nil
 }
 
