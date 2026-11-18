@@ -15,6 +15,10 @@ func TestRedact(t *testing.T) {
 		{input: "-ssl-private-key=/etc/geneos/client.pem", want: "-ssl-private-key=/etc/geneos/client.pem"},
 		{input: "encoded +encs+secretvalue", want: "encoded [REDACTED]"},
 		{input: "ordinary message", want: "ordinary message"},
+		{input: "password='two words' next", want: "password=[REDACTED] next"},
+		{input: `password="two words" next`, want: "password=[REDACTED] next"},
+		{input: "password='unterminated words", want: "password=[REDACTED]"},
+		{input: `password="unterminated words`, want: "password=[REDACTED]"},
 	}
 	for _, test := range tests {
 		if got := Redact(test.input); got != test.want {
@@ -24,16 +28,31 @@ func TestRedact(t *testing.T) {
 }
 
 func TestRedactSlice(t *testing.T) {
-	got := RedactSlice([]string{"token=abc", "safe"})
+	in := []string{"token=abc", "safe"}
+	got := RedactSlice(in)
 	want := []string{"token=[REDACTED]", "safe"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("RedactSlice() = %#v, want %#v", got, want)
+	}
+	if in[0] != "token=abc" {
+		t.Errorf("RedactSlice() modified its argument: %v", in)
+	}
+	if RedactSlice(nil) != nil {
+		t.Error("RedactSlice(nil) != nil")
 	}
 }
 
 func TestRedactJSON(t *testing.T) {
 	input := []byte(`{"password":"secret","apiKey":"abc123","note":"safe"}`)
 	want := []byte(`{"password":"[REDACTED]","apiKey":"[REDACTED]","note":"safe"}`)
+	if got := RedactJSON(input); !reflect.DeepEqual(got, want) {
+		t.Errorf("RedactJSON() = %s, want %s", got, want)
+	}
+}
+
+func TestRedactJSONEscapedQuote(t *testing.T) {
+	input := []byte(`{"password":"se\"cret","note":"safe"}`)
+	want := []byte(`{"password":"[REDACTED]","note":"safe"}`)
 	if got := RedactJSON(input); !reflect.DeepEqual(got, want) {
 		t.Errorf("RedactJSON() = %s, want %s", got, want)
 	}

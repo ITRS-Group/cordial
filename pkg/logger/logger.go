@@ -21,6 +21,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync"
 
 	"github.com/DeRuina/timberjack"
 	"github.com/fatih/color"
@@ -57,27 +58,31 @@ func (discardCloser) Close() error { return nil }
 // log format. If `CORDIAL_LOG_FORMAT` is set to "json", then the log
 // format is JSON, otherwise the format is a human readable format, with
 // colouring enabled if the output is a termial according to
-// `term.IsTerminal()`.
+// `term.IsTerminal()`. The global setting in [color.NoColor] is not
+// changed.
+//
+// Init replaces the contents of the [Logger] pointer so that packages
+// that have copied it, or that use [slog.Default], log through the new
+// handler, which is not safe while other goroutines are logging. Call
+// Init once, early in the program and before starting any, and do not
+// call it again while they are running. Concurrent calls to Init are
+// serialised.
 func Init(prefix string, options ...LoggerOption) *slog.Logger {
-	// var out io.WriteCloser
-	// out = os.Stderr
-
 	opts := evalLoggerOptions(options...)
 
 	if os.Getenv("CORDIAL_LOG_OUTPUT") != "" {
 		opts.logfile = os.Getenv("CORDIAL_LOG_OUTPUT")
 	}
 
+	// rotate is true if the rotator, if there is one, is to be rotated
+	// before use
+	rotate := opts.rotateOnStart
+
 	switch opts.logfile {
 	case "":
 		if opts.rotator != nil {
-			if w, ok := opts.rotator.(interface{ io.Writer }); ok {
+			if w, ok := opts.rotator.(io.Writer); ok {
 				opts.w = w
-				if opts.rotateOnStart {
-					if r, ok := opts.rotator.(interface{ Rotate() error }); ok {
-						r.Rotate()
-					}
-				}
 			}
 		} else {
 			opts.w = os.Stderr
@@ -89,13 +94,23 @@ func Init(prefix string, options ...LoggerOption) *slog.Logger {
 	default:
 		// if given a filename, use the provided or default
 		// lumberjack/timeberjack but override the filename
-		if opts.rotator == nil {
+		switch r := opts.rotator.(type) {
+		case nil:
 			opts.rotator = &timberjack.Logger{
 				Filename: opts.logfile,
 			}
+			rotate = opts.rotateOnStartSet && opts.rotateOnStart
+		case *timberjack.Logger:
+			r.Filename = opts.logfile
 		}
-		if w, ok := opts.rotator.(interface{ io.Writer }); ok {
+		if w, ok := opts.rotator.(io.Writer); ok {
 			opts.w = w
+		}
+	}
+
+	if rotate && opts.rotator != nil && opts.logfile != "-" && opts.logfile != os.DevNull {
+		if r, ok := opts.rotator.(interface{ Rotate() error }); ok {
+			_ = r.Rotate()
 		}
 	}
 
@@ -104,11 +119,17 @@ func Init(prefix string, options ...LoggerOption) *slog.Logger {
 		TrimSourcePathTo(prefix),
 		Delimiter("."),
 		Writer(opts.w),
+		// decide on colour here, for this writer only, instead of
+		// changing the global setting for all other output
+		Color(writerIsColour(opts.w)),
 	}
 
 	if opts.format == "json" || os.Getenv("CORDIAL_LOG_FORMAT") == "json" {
 		handlerOptions = append(handlerOptions, JSON())
 	}
+
+	initMutex.Lock()
+	defer initMutex.Unlock()
 
 	LogHandler = NewHandler(handlerOptions...)
 
@@ -118,15 +139,17 @@ func Init(prefix string, options ...LoggerOption) *slog.Logger {
 	// update the pointer
 	*Logger = *slog.New(LogHandler)
 
-	switch o := opts.w.(type) {
-	case *os.File:
-		if !term.IsTerminal(int(o.Fd())) {
-			color.NoColor = true
-		}
-	default:
-		// for all other types of writers, disable color
-		color.NoColor = true
-	}
-
 	return Logger
+}
+
+// initMutex serialises calls to [Init]
+var initMutex sync.Mutex
+
+// writerIsColour returns true if w is a terminal and colour has not
+// been disabled globally, e.g. using NO_COLOR
+func writerIsColour(w io.Writer) bool {
+	if f, ok := w.(*os.File); ok {
+		return !color.NoColor && term.IsTerminal(int(f.Fd()))
+	}
+	return false
 }
