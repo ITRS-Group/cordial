@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 	"unicode"
 
 	"github.com/itrs-group/cordial"
@@ -125,7 +124,7 @@ func openRemoteDefaultArchive(ct *Component, opts *geneosOptions) (source string
 		}
 	}
 
-	client := newDownloadClient(config.Get[time.Duration](cf, cf.Join("download", "timeout"), config.DefaultValue(60*time.Second)))
+	client := newDownloadClient(downloadTimeout(cf))
 
 	for bp := range strings.FieldsFuncSeq(ct.DownloadBase.Default, func(r rune) bool {
 		return unicode.IsSpace(r) || r == ','
@@ -350,7 +349,7 @@ func openRemoteNexusArchive(ct *Component, opts *geneosOptions) (source string, 
 		}
 	}
 
-	client := newDownloadClient(config.Get[time.Duration](config.Global(), config.Join("download", "timeout"), config.DefaultValue(60*time.Second)))
+	client := newDownloadClient(downloadTimeout(nil))
 
 	var req *http.Request
 
