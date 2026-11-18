@@ -1,5 +1,7 @@
 pagerduty:
   authtoken: ""
+  # the longest to wait for a response from Pagerduty
+  timeout: 30s
   routingkey: ${PAGERDUTY_INTEGRATION_KEY}
   alert-type: ${_ALERT_TYPE}
   severity-map:
@@ -35,6 +37,8 @@ pagerduty:
       #   variable: ${_VARIABLE}
       #   value: ${_VALUE}
     links: ${_KBA_URLS}
+    # images is a list of images to show with the event, each with a
+    # `src` and optionally `href` and `alt`
     images:
   # should we send the entire environment in the details/custom_fields?
   # this is primarily for debug and testing. environment variables will
