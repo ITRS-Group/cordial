@@ -2,9 +2,11 @@ package instance
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -166,6 +168,68 @@ func TestStopAuditsTheResult(t *testing.T) {
 		}
 		if len(i.events) != 1 || i.events[0].event != "action/stop" || !errors.Is(i.events[0].result, os.ErrPermission) {
 			t.Errorf("audit events = %v, want one action/stop with the permission error", i.events)
+		}
+	})
+}
+
+// ignoreSignalHost is a local host where signals are accepted but have no
+// effect, like a process that cannot be killed
+type ignoreSignalHost struct{ host.Host }
+
+func (ignoreSignalHost) Signal(int, syscall.Signal) error { return nil }
+
+func TestStopReportsProcessThatSurvivesKill(t *testing.T) {
+	requireProc(t)
+
+	previousWait, previousPoll := killWait, killPoll
+	killWait, killPoll = 300*time.Millisecond, 20*time.Millisecond
+	t.Cleanup(func() { killWait, killPoll = previousWait, previousPoll })
+
+	t.Run("still running", func(t *testing.T) {
+		const name = "31340"
+		cmd := startSleep(t, name)
+		i := newProcTestInstance(t, "sleep", name)
+		i.host = &geneos.Host{Host: ignoreSignalHost{host.NewLocal()}, Config: i.host.Config}
+
+		start := time.Now()
+		err := Stop(i, WithStopKill(true))
+		if !errors.Is(err, ErrStillRunning) {
+			t.Fatalf("Stop() error = %v, want ErrStillRunning", err)
+		}
+		if want := fmt.Sprintf("pid %d", cmd.Process.Pid); !strings.Contains(err.Error(), want) {
+			t.Errorf("Stop() error = %q, want it to include %q", err, want)
+		}
+		if elapsed := time.Since(start); elapsed < killWait || elapsed > 10*killWait {
+			t.Errorf("Stop() took %s, want it to wait for about %s", elapsed, killWait)
+		}
+		if len(i.events) != 1 || i.events[0].event != "action/stop" || !errors.Is(i.events[0].result, ErrStillRunning) {
+			t.Errorf("audit events = %v, want one action/stop with the error", i.events)
+		}
+	})
+
+	t.Run("signal error", func(t *testing.T) {
+		const name = "31341"
+		startSleep(t, name)
+		i := newProcTestInstance(t, "sleep", name)
+		i.host = &geneos.Host{Host: epermHost{host.NewLocal()}, Config: i.host.Config}
+
+		err := Stop(i, WithStopKill(true))
+		if !errors.Is(err, ErrStillRunning) || !errors.Is(err, syscall.EPERM) {
+			t.Fatalf("Stop() error = %v, want both ErrStillRunning and the signal error", err)
+		}
+	})
+
+	t.Run("killed", func(t *testing.T) {
+		const name = "31342"
+		cmd := startSleep(t, name)
+		i := newProcTestInstance(t, "sleep", name)
+
+		if err := Stop(i, WithStopKill(true)); err != nil {
+			t.Fatalf("Stop() error = %v", err)
+		}
+		_ = cmd.Process.Signal(syscall.Signal(0))
+		if len(i.events) != 1 || i.events[0].result != nil {
+			t.Errorf("audit events = %v, want one successful action/stop", i.events)
 		}
 	})
 }
