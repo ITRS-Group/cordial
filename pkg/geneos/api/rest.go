@@ -44,13 +44,13 @@ type RESTClient struct {
 // check we implement all methods
 var _ APIClient = (*RESTClient)(nil)
 
-// NewRESTClient TODO: Document its behavior, inputs, and effects.
+// NewRESTClient returns a new client for the REST API at endpoint.
 func NewRESTClient(endpoint string, options ...rest.Option) (c APIClient, err error) {
 	options = append(options, rest.BaseURLString(endpoint))
 	return &RESTClient{Client: rest.NewClient(options...)}, nil
 }
 
-// Healthy TODO: Document its behavior, inputs, and effects.
+// Healthy returns true if the REST API healthcheck endpoint responds with HTTP 200.
 func (c *RESTClient) Healthy() bool {
 	resp, err := c.Get(context.Background(), "/healthcheck", nil, nil)
 	if err != nil || resp.StatusCode != 200 {
@@ -59,96 +59,96 @@ func (c *RESTClient) Healthy() bool {
 	return true
 }
 
-// CreateDataview TODO: Document its behavior, inputs, and effects.
+// CreateDataview is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) CreateDataview(entity, sampler, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// UpdateDataview TODO: Document its behavior, inputs, and effects.
+// UpdateDataview is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) UpdateDataview(entity, sampler, name string, values [][]string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// DeleteDataview TODO: Document its behavior, inputs, and effects.
+// DeleteDataview is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) DeleteDataview(entity, sampler, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// CreateRow TODO: Document its behavior, inputs, and effects.
+// CreateRow is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) CreateRow(entity, sampler, view, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// UpdateRow TODO: Document its behavior, inputs, and effects.
+// UpdateRow is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) UpdateRow(entity, sampler, view, name string, values []string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// DeleteRow TODO: Document its behavior, inputs, and effects.
+// DeleteRow is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) DeleteRow(entity, sampler, view, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// CreateColumn TODO: Document its behavior, inputs, and effects.
+// CreateColumn is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) CreateColumn(entity, sampler, view, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// CreateHeadline TODO: Document its behavior, inputs, and effects.
+// CreateHeadline is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) CreateHeadline(entity, sampler, view, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// UpdateHeadline TODO: Document its behavior, inputs, and effects.
+// UpdateHeadline is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) UpdateHeadline(entity, sampler, view, name, value string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// DeleteHeadline TODO: Document its behavior, inputs, and effects.
+// DeleteHeadline is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) DeleteHeadline(entity, sampler, view, name string) (err error) {
-	return
+	return errors.ErrUnsupported
 }
 
-// CreateStream TODO: Document its behavior, inputs, and effects.
+// CreateStream creates the named stream.
 func (c *RESTClient) CreateStream(entity, sampler, name string) (err error) {
 	endpoint, _ := url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", name)
 	_, err = c.Put(context.Background(), endpoint, nil, nil)
 	return
 }
 
-// UpdateStream TODO: Document its behavior, inputs, and effects.
+// UpdateStream sends message to the named stream.
 func (c *RESTClient) UpdateStream(entity, sampler, name string, message any) (err error) {
 	endpoint, _ := url.JoinPath("managedEntity", entity, "sampler", sampler, "stream", name)
 	_, err = c.Put(context.Background(), endpoint, message, nil)
 	return
 }
 
-// ManagedEntityExists TODO: Document its behavior, inputs, and effects.
+// ManagedEntityExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) ManagedEntityExists(entity string) (bool, error) {
 	return false, errors.ErrUnsupported
 }
 
-// SamplerExists TODO: Document its behavior, inputs, and effects.
+// SamplerExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) SamplerExists(entity, sampler string) (bool, error) {
 	return false, errors.ErrUnsupported
 }
 
-// DataviewExists TODO: Document its behavior, inputs, and effects.
+// DataviewExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) DataviewExists(entity, sampler, name string) (bool, error) {
 	return false, errors.ErrUnsupported
 }
 
-// RowExists TODO: Document its behavior, inputs, and effects.
+// RowExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) RowExists(entity, sampler, view, name string) (bool, error) {
 	return false, errors.ErrUnsupported
 }
 
-// ColumnExists TODO: Document its behavior, inputs, and effects.
+// ColumnExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) ColumnExists(entity, sampler, view, name string) (bool, error) {
 	return false, errors.ErrUnsupported
 }
 
-// HeadlineExists TODO: Document its behavior, inputs, and effects.
+// HeadlineExists is not supported by the REST API client and returns [errors.ErrUnsupported].
 func (c *RESTClient) HeadlineExists(entity, sampler, view, name string) (bool, error) {
 	return false, errors.ErrUnsupported
 }

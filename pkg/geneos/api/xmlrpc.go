@@ -42,8 +42,10 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/kolo/xmlrpc"
 )
@@ -58,16 +60,28 @@ type XMLRPCClient struct {
 // check we implement all methods
 var _ APIClient = (*XMLRPCClient)(nil)
 
+// dialTimeout limits connecting and the TLS handshake to the Netprobe.
+const dialTimeout = 10 * time.Second
+
 // NewXMLRPCClient returns a new client that uses endpoint and with the
-// features set by options. The endpoint would normally end in `/xmlrpc`
+// features set by options. The endpoint would normally end in `/xmlrpc`.
+// Unless overridden with the [Timeout] option the Netprobe has
+// [DefaultTimeout] to respond to each call.
 func NewXMLRPCClient(endpoint string, options ...Option) (c APIClient, err error) {
 	opts := evalOptions(options...)
 	roundtripper := &roundTripper{
 		transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   dialTimeout,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: opts.insecureSkipVerify,
 			},
+			TLSHandshakeTimeout:   dialTimeout,
+			ResponseHeaderTimeout: opts.timeout,
+			IdleConnTimeout:       90 * time.Second,
 		},
 	}
 	client, err := xmlrpc.NewClient(endpoint, roundtripper)
@@ -92,9 +106,25 @@ func (c *XMLRPCClient) Healthy() bool {
 }
 
 // CreateDataview TODO: Document its behavior, inputs, and effects.
+// CreateDataview creates a dataview given its full name in the form
+// "group-view". The name is split at the first hyphen, so a group
+// heading containing a hyphen cannot be expressed this way; use
+// [XMLRPCClient.CreateView] with separate arguments instead. Names that
+// are not in the form "group-view" return [ErrInvalidArgs].
 func (c *XMLRPCClient) CreateDataview(entity, sampler, name string) error {
-	viewName, groupHeading, _ := strings.Cut(name, "-")
+	groupHeading, viewName, ok := splitViewName(name)
+	if !ok {
+		return ErrInvalidArgs
+	}
 	return c.CreateView(entity, sampler, viewName, groupHeading)
+}
+
+// splitViewName splits a dataview name of the form "group-view", as
+// used in the Netprobe API and by xmlrpc.Dataview.String(), into the
+// group heading and view name at the first hyphen.
+func splitViewName(name string) (groupHeading, viewName string, ok bool) {
+	groupHeading, viewName, ok = strings.Cut(name, "-")
+	return groupHeading, viewName, ok && groupHeading != "" && viewName != ""
 }
 
 // UpdateDataview TODO: Document its behavior, inputs, and effects.
@@ -103,8 +133,13 @@ func (c *XMLRPCClient) UpdateDataview(entity, sampler, name string, values [][]s
 }
 
 // DeleteDataview TODO: Document its behavior, inputs, and effects.
+// DeleteDataview removes a dataview given its full name in the form
+// "group-view", split in the same way as for [XMLRPCClient.CreateDataview].
 func (c *XMLRPCClient) DeleteDataview(entity, sampler, name string) error {
-	viewName, groupHeading, _ := strings.Cut(name, "-")
+	groupHeading, viewName, ok := splitViewName(name)
+	if !ok {
+		return ErrInvalidArgs
+	}
 	return c.RemoveView(entity, sampler, viewName, groupHeading)
 }
 
@@ -113,9 +148,11 @@ func (c *XMLRPCClient) CreateRow(entity, sampler, view, name string) (err error)
 	return c.AddTableRow(entity, sampler, view, name)
 }
 
-// UpdateRow TODO: Document its behavior, inputs, and effects.
+// UpdateRow updates the cells of an existing row. The values do not
+// include the row name, which is passed separately, as for the
+// xmlrpc package.
 func (c *XMLRPCClient) UpdateRow(entity, sampler, view, name string, values []string) (err error) {
-	return c.UpdateTableRow(entity, sampler, view, name, append([]string{name}, values...))
+	return c.UpdateTableRow(entity, sampler, view, name, values)
 }
 
 // DeleteRow TODO: Document its behavior, inputs, and effects.
@@ -155,6 +192,10 @@ func (c *XMLRPCClient) DataviewExists(entity, sampler, name string) (bool, error
 
 // Low-level methods - these map onto the underlying XML-RPC calls and
 // names and args should be left alone
+//
+// Calls with more than one XML-RPC parameter pass them to the
+// underlying client as a []any, one element per parameter. A []string
+// would be sent as a single array parameter.
 
 // CreateView creates a new, empty view in the specified sampler under
 // the specified groupHeading. This view will appear in Active Console
@@ -165,7 +206,7 @@ func (c *XMLRPCClient) CreateView(entity, sampler, viewName, groupHeading string
 	if entity == "" || sampler == "" || viewName == "" || viewName == groupHeading {
 		return ErrInvalidArgs
 	}
-	return c.Call(strings.Join([]string{entity, sampler, "createView"}, "."), []string{viewName, groupHeading}, nil)
+	return c.Call(strings.Join([]string{entity, sampler, "createView"}, "."), []any{viewName, groupHeading}, nil)
 
 }
 
@@ -184,7 +225,7 @@ func (c *XMLRPCClient) RemoveView(entity, sampler, viewName, groupHeading string
 	if entity == "" || sampler == "" || viewName == "" || viewName == groupHeading {
 		return ErrInvalidArgs
 	}
-	return c.Call(strings.Join([]string{entity, sampler, "removeView"}, "."), []string{viewName, groupHeading}, nil)
+	return c.Call(strings.Join([]string{entity, sampler, "removeView"}, "."), []any{viewName, groupHeading}, nil)
 }
 
 // GetParameter retrieves the value of a sampler parameter that has been
@@ -239,7 +280,7 @@ func (c *XMLRPCClient) UpdateVariable(entity, sampler, view, variable, value str
 	if entity == "" || sampler == "" || view == "" || variable == "" {
 		return ErrInvalidArgs
 	}
-	return c.Call(strings.Join([]string{entity, sampler, view, "updateVariable"}, "."), []string{variable, value}, nil)
+	return c.Call(strings.Join([]string{entity, sampler, view, "updateVariable"}, "."), []any{variable, value}, nil)
 }
 
 // UpdateHeadline updates a headline variable. This performs the same
@@ -249,7 +290,7 @@ func (c *XMLRPCClient) UpdateHeadline(entity, sampler, view, headline, value str
 	if entity == "" || sampler == "" || view == "" || headline == "" {
 		return ErrInvalidArgs
 	}
-	return c.Call(strings.Join([]string{entity, sampler, view, "updateHeadline"}, "."), []string{headline, value}, nil)
+	return c.Call(strings.Join([]string{entity, sampler, view, "updateHeadline"}, "."), []any{headline, value}, nil)
 }
 
 // UpdateTableCell updates a single cell in a table. The standard
@@ -260,7 +301,7 @@ func (c *XMLRPCClient) UpdateTableCell(entity, sampler, view, cell, value string
 	if entity == "" || sampler == "" || view == "" || cell == "" {
 		return ErrInvalidArgs
 	}
-	return c.Call(strings.Join([]string{entity, sampler, view, "updateTableCell"}, "."), []string{cell, value}, nil)
+	return c.Call(strings.Join([]string{entity, sampler, view, "updateTableCell"}, "."), []any{cell, value}, nil)
 }
 
 // UpdateTableRow updates an existing row from the specified view with
@@ -301,7 +342,7 @@ func (c *XMLRPCClient) ColumnExists(entity, sampler, view, column string) (exist
 		err = ErrInvalidArgs
 		return
 	}
-	err = c.Call(strings.Join([]string{entity, sampler, view, "columnExists"}, "."), view, &exists)
+	err = c.Call(strings.Join([]string{entity, sampler, view, "columnExists"}, "."), column, &exists)
 	return
 }
 
@@ -403,7 +444,7 @@ func (c *XMLRPCClient) GetRowNamesOlderThan(entity, sampler, view string, unixti
 // be at least 1 and no more than 86400 (24 hours). SignOn may be called
 // again to change the time period without the need to sign off first.
 func (c *XMLRPCClient) SignOn(entity, sampler string, seconds int) (err error) {
-	if entity == "" || sampler == "" || seconds < 0 || seconds > 86400 {
+	if entity == "" || sampler == "" || seconds < 1 || seconds > 86400 {
 		return ErrInvalidArgs
 	}
 	return c.Call(strings.Join([]string{entity, sampler, "signOn"}, "."), seconds, nil)
@@ -444,7 +485,7 @@ func (c *XMLRPCClient) AddMessage(entity, sampler, stream, message string) error
 // SignOnStream may be called again to change the time period without
 // the need to sign off first.
 func (c *XMLRPCClient) SignOnStream(entity, sampler, stream string, seconds int) (err error) {
-	if entity == "" || sampler == "" || stream == "" || seconds < 0 || seconds > 86400 {
+	if entity == "" || sampler == "" || stream == "" || seconds < 1 || seconds > 86400 {
 		return ErrInvalidArgs
 	}
 	return c.Call(strings.Join([]string{entity, sampler, stream, "signOn"}, "."), seconds, nil)
