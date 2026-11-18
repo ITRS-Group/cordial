@@ -138,7 +138,12 @@ func TestSplitCommaTrimSpaceAndDefaults(t *testing.T) {
 	if got := getWithDefault("missing", EMailConfig{}, "default"); got != "default" {
 		t.Errorf("getWithDefault() = %q, want default", got)
 	}
-	if got := getWithDefaultInt("invalid", EMailConfig{"invalid": "not-a-number"}, 25); got != 0 {
-		t.Errorf("getWithDefaultInt(invalid) = %d, want 0", got)
+	// a value that is not a number is the default, and not zero, which for a
+	// timeout is no timeout
+	if got := getWithDefaultInt("invalid", EMailConfig{"invalid": "not-a-number"}, 25); got != 25 {
+		t.Errorf("getWithDefaultInt(invalid) = %d, want 25", got)
+	}
+	if got := getWithDefaultInt("n", EMailConfig{"n": "7"}, 25); got != 7 {
+		t.Errorf("getWithDefaultInt(7) = %d, want 7", got)
 	}
 }
