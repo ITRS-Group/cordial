@@ -33,9 +33,10 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
+	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/spf13/cobra"
 
@@ -138,8 +139,59 @@ func ConfiguredPIDFileKey(cf *config.Config, flag, key string) string {
 	return ""
 }
 
+// removeDaemonFlags returns a copy of args without the flags that ask the
+// program to daemonise itself, which would otherwise make the new process
+// do the same again. These are `--daemon` and `-D`, with or without a
+// value (`--daemon=true`, `-D=true`) and `-D` in a group of short flags
+// (`-vD`, which is taken to be only flags that have no value). Anything
+// after `--` is left as it is.
+func removeDaemonFlags(args []string) []string {
+	out := make([]string, 0, len(args))
+	for i, a := range args {
+		if a == "--" {
+			return append(out, args[i:]...)
+		}
+		switch {
+		case a == "--daemon" || strings.HasPrefix(a, "--daemon="):
+		case strings.HasPrefix(a, "--") || len(a) < 2 || a[0] != '-':
+			out = append(out, a)
+		default:
+			if rest, keep := removeShortD(a); keep {
+				out = append(out, rest)
+			}
+		}
+	}
+	return out
+}
+
+// removeShortD removes `D` from the group of short flags in a, which is
+// one dash followed by flags and optionally `=value` for the last. keep
+// is false if nothing is left.
+func removeShortD(a string) (rest string, keep bool) {
+	group, value, hasValue := strings.Cut(a[1:], "=")
+	if !strings.Contains(group, "D") || strings.IndexFunc(group, func(r rune) bool {
+		return !unicode.IsLetter(r)
+	}) >= 0 {
+		return a, true
+	}
+	// a value belongs to the last flag, so goes if that is D
+	if strings.HasSuffix(group, "D") {
+		hasValue = false
+	}
+	group = strings.ReplaceAll(group, "D", "")
+	if group == "" {
+		return "", false
+	}
+	rest = "-" + group
+	if hasValue {
+		rest += "=" + value
+	}
+	return rest, true
+}
+
 // Daemonize starts the program again, in the background, with the same
-// arguments less the `-D` and `--daemon` flags, plus extraArgs and the
+// arguments less the `-D` and `--daemon` flags, in any of the forms that
+// flags can be given, plus extraArgs and the
 // PID file, and waits for it to be ready, which is when it has started
 // listening and holds the PID file. It returns the PID of the new
 // process, or an error if it could not be started or did not become
@@ -151,7 +203,7 @@ func Daemonize(pidFile string, extraArgs ...string) (pid int, err error) {
 	}
 	dir, _ := os.Getwd()
 
-	args := process.RemoveArgs(slices.Clone(os.Args[1:]), "-D", "--daemon")
+	args := removeDaemonFlags(os.Args[1:])
 	args = append(args, extraArgs...)
 	args = append(args, "--pidfile", pidFile)
 

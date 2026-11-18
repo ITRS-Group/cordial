@@ -3,7 +3,6 @@
 package process
 
 import (
-	"errors"
 	"os"
 )
 
@@ -31,5 +30,3 @@ func pidFileHeld(path string, info PIDInfo) (bool, error) {
 	}
 	return processAlive(info.PID), nil
 }
-
-var _ = errors.ErrUnsupported

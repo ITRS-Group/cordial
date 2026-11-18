@@ -20,6 +20,9 @@ var (
 
 // processAlive reports if there is a process with the PID
 func processAlive(pid int) bool {
+	if pid <= 0 {
+		return false
+	}
 	p, err := os.FindProcess(pid)
 	if err != nil {
 		return false

@@ -1,13 +1,16 @@
 package process
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-reap"
@@ -40,18 +43,61 @@ func retErrIfFalse(ret bool, err error) error {
 	return nil
 }
 
-func newCommand(program Program) (*exec.Cmd, error) {
+// newCommand builds the command for program, which is run as another
+// user if setCreds is true
+func newCommand(program Program, setCreds bool) (*exec.Cmd, error) {
 	cmd := exec.Command(program.Executable, program.Args...)
-	if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
-		return nil, err
+	if setCreds {
+		if err := setCredentialsFromUsername(cmd, program.Username); err != nil {
+			return nil, err
+		}
 	}
 	cmd.Env = program.Env
 	cmd.Dir = program.WorkingDir
 	return cmd, nil
 }
 
+// homeDir returns the home directory of the user
+func homeDir(username string) (dir string, err error) {
+	u, err := user.Lookup(username)
+	if err == nil {
+		return u.HomeDir, nil
+	}
+	// a user that is not in the user database, which is the case for
+	// containers run with an arbitrary UID, can still have a HOME
+	if home, herr := os.UserHomeDir(); herr == nil {
+		if cu, cerr := user.Current(); cerr != nil || cu.Username == username {
+			return home, nil
+		}
+	}
+	return "", err
+}
+
+// withDefaultEnv returns env, which is not changed, with each of the
+// defaults, which are in the form KEY=VALUE, added at the end only if
+// there is no entry for the key already, so that values from the caller
+// are used in preference.
+func withDefaultEnv(env []string, defaults ...string) []string {
+	out := slices.Clone(env)
+	for _, d := range defaults {
+		key, _, _ := strings.Cut(d, "=")
+		if !slices.ContainsFunc(env, func(e string) bool {
+			k, _, found := strings.Cut(e, "=")
+			return found && k == key
+		}) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
 // Start runs a process on host h. It is run detached in the background
-// unless Foreground is true.
+// unless Foreground is true. The PID of a process started in the
+// background is returned, but not for one run in the foreground, which
+// has completed.
+//
+// Values in Env are used in preference to the defaults for HOME, SHELL,
+// USER, LOGNAME and PATH, which are added only if not set.
 //
 // TODO: return error windows
 // TODO: look at remote processes
@@ -61,6 +107,9 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 	if h == nil {
 		return 0, fmt.Errorf("host cannot be nil")
 	}
+
+	// run as another user, which has to be set using credentials
+	var setCreds bool
 
 	if program.Username != "" && program.Username != h.Username() {
 		// if username is set and is not current user for host h
@@ -81,6 +130,7 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		if program.WorkingDir == "" {
 			program.WorkingDir = u.HomeDir
 		}
+		setCreds = true
 	} else {
 		if program.Username == "" {
 			if u, err := user.Current(); err == nil {
@@ -91,13 +141,15 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 		}
 
 		if program.WorkingDir == "" {
-			u, _ := user.Lookup(program.Username)
-			program.WorkingDir = u.HomeDir
+			if program.WorkingDir, err = homeDir(program.Username); err != nil {
+				return 0, err
+			}
 		}
 	}
 
-	// build basic env after any caller values set, keep PATH
-	program.Env = append(program.Env,
+	// build basic env, keeping PATH, but only for anything the caller
+	// has not set
+	program.Env = withDefaultEnv(program.Env,
 		"HOME="+program.WorkingDir,
 		"SHELL=/bin/bash",
 		"USER="+program.Username,
@@ -122,23 +174,24 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 
 	p, err := exec.LookPath(program.Executable)
 	if err != nil {
-		return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("%q %w", p, err))
+		return 0, retErrIfFalse(program.IgnoreErr, fmt.Errorf("%q %w", program.Executable, err))
 	}
 
 	switch {
 	case program.Foreground:
-		cmd, err := newCommand(program)
+		cmd, err := newCommand(program, setCreds)
 		if err != nil {
 			return 0, err
 		}
 		if _, err := h.Run(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
+		return 0, nil
+
 	case program.Restart:
-		go reap.ReapChildren(nil, nil, nil, nil)
 		go func() {
 			for {
-				cmd, err := newCommand(program)
+				cmd, err := newCommand(program, setCreds)
 				if err != nil {
 					return
 				}
@@ -150,47 +203,52 @@ func Start(h host.Host, program Program, options ...ProgramOption) (pid int, err
 				}
 			}
 		}()
+
+		if program.Wait != 0 {
+			time.Sleep(program.Wait)
+		}
+
+		// only valid if long running, and finds a process, not necessarily this one
+		pid, err = PID(h, filepath.Base(p), nil, RefreshCache())
+		return pid, retErrIfFalse(program.IgnoreErr, err)
+
 	default:
-		cmd, err := newCommand(program)
+		cmd, err := newCommand(program, setCreds)
 		if err != nil {
 			return 0, err
 		}
-		if _, err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
+		if pid, err = h.Start(cmd, host.ProcessErrfile(program.ErrLog)); err != nil {
 			return 0, retErrIfFalse(program.IgnoreErr, err)
 		}
+		if program.Wait != 0 {
+			time.Sleep(program.Wait)
+		}
+		return pid, nil
 	}
-
-	if program.Wait != 0 {
-		time.Sleep(program.Wait)
-	}
-
-	// only valid if long running
-	pid, err = PID(h, p, []string{}, RefreshCache())
-	err = retErrIfFalse(program.IgnoreErr, err)
-	return
 }
 
 // Batch executes the slice of Program entries using Start. If any stage
 // returns err then Batch returns immediately. Set IgnoreErr in Program
 // to not return errors for each stage. If any stage has Restart set and
-// it is supported then a reaper is run and the done channel returned.
+// it is supported then a reaper of child processes is run, and the done
+// channel is returned, which stops the reaper when closed.
 func Batch(h host.Host, batch []Program, options ...ProgramOption) (done chan struct{}, err error) {
-	r := false
+	restart := false
 	for _, program := range batch {
 		if program.Restart {
-			r = true
+			restart = true
 		}
 		_, err = Start(h, program, options...)
-		if err != nil && err != os.ErrProcessDone {
+		if err != nil && !errors.Is(err, os.ErrProcessDone) {
 			return
 		}
 	}
-	if r && reap.IsSupported() {
-		go reap.ReapChildren(nil, nil, done, nil)
-	}
-
-	if err == os.ErrProcessDone {
+	if errors.Is(err, os.ErrProcessDone) {
 		err = nil
+	}
+	if restart && reap.IsSupported() {
+		done = make(chan struct{})
+		go reap.ReapChildren(nil, nil, done, nil)
 	}
 	return
 }
@@ -214,7 +272,7 @@ func Batch(h host.Host, batch []Program, options ...ProgramOption) (done chan st
 //
 // On failure the function does return with an error.
 //
-//	process.Daemon(os.Stdout, process.RemoveArgs, "-D", "--daemon")
+//	process.Daemon(os.Stdout, nil, process.RemoveArgs, "-D", "--daemon")
 func Daemon(writepid io.WriteCloser, extraArgs []string, processArgs func([]string, ...string) []string, args ...string) (err error) {
 	var newargs []string
 	bin, err := os.Executable()
@@ -224,7 +282,7 @@ func Daemon(writepid io.WriteCloser, extraArgs []string, processArgs func([]stri
 	if processArgs == nil {
 		processArgs = RemoveArgs
 	}
-	newargs = processArgs(os.Args[1:], args...)
+	newargs = processArgs(slices.Clone(os.Args[1:]), args...)
 	newargs = append(newargs, extraArgs...)
 	cmd := exec.Command(bin, newargs...)
 	cmd.Stdin = nil
@@ -251,17 +309,13 @@ func Daemon(writepid io.WriteCloser, extraArgs []string, processArgs func([]stri
 }
 
 // RemoveArgs is a helper function for Daemon(). Daemon calls the
-// function with os.Args[1:] and removes any arguments matching members
-// of the slice `remove` and returns the result. Only bare arguments are
-// removed and no pattern matching or adjacent values are removed. If
-// more complex tests are required then pass Daemon() your own function.
+// function with a copy of os.Args[1:] and removes any arguments matching
+// members of the slice `remove` and returns the result. Only bare
+// arguments are removed and no pattern matching or adjacent values are
+// removed. If more complex tests are required then pass Daemon() your
+// own function. The slice passed in is not changed.
 func RemoveArgs(in []string, remove ...string) (out []string) {
-	out = slices.DeleteFunc(in, func(a string) bool {
-		if slices.Contains(remove, a) {
-			return true
-		}
-		return false
+	return slices.DeleteFunc(slices.Clone(in), func(a string) bool {
+		return slices.Contains(remove, a)
 	})
-
-	return
 }
