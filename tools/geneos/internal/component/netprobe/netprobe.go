@@ -205,6 +205,7 @@ func (i *Netprobe) Unload() (err error) {
 	}
 	netprobes.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

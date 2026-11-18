@@ -221,6 +221,7 @@ func (i *San) Unload() (err error) {
 	}
 	sans.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

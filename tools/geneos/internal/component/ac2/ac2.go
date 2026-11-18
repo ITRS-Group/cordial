@@ -179,6 +179,7 @@ func (i *AC2) Unload() (err error) {
 	}
 	ac2s.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

@@ -190,6 +190,7 @@ func (i *MDGateway) Unload() error {
 	}
 	mdgateways.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return nil
 }
 

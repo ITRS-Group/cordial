@@ -195,6 +195,7 @@ func (i *Floating) Load() (err error) {
 func (i *Floating) Unload() (err error) {
 	floatings.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

@@ -147,6 +147,7 @@ func (i *Profile) Load() (err error) {
 func (i *Profile) Unload() (err error) {
 	profiles.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

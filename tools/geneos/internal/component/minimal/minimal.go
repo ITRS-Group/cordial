@@ -194,6 +194,7 @@ func (i *Minimal) Unload() (err error) {
 	}
 	minimals.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

@@ -201,6 +201,7 @@ func (i *SSOAgent) Unload() (err error) {
 	}
 	ssoagents.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

@@ -69,6 +69,9 @@ func Read(i geneos.Instance) (err error) {
 		return os.ErrInvalid
 	}
 
+	// loading always checks the host again for the instance directory
+	ResetHome(i)
+
 	h := i.Host()
 	home := Home(i)
 
@@ -316,6 +319,9 @@ func Write(i geneos.Instance, options ...ConfigOption) (resp *responses.General)
 
 	resp = responses.New[responses.General](i)
 
+	// writing the configuration can create or move the instance directory
+	defer ResetHome(i)
+
 	i.Log().Debug("writing config", slog.Bool("noRebuild", opts.noRebuild), slog.Bool("noReload", opts.noReload))
 
 	if err := write(i); err != nil {
@@ -508,6 +514,9 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 
 	cf := i.Config()
 
+	// the instance directory may be renamed
+	defer ResetHome(i)
+
 	// check if instance directory is up-to date. Only instances in a
 	// legacy location, which is one of the standard instance
 	// directories for the component, are moved. A custom home directory
@@ -522,6 +531,7 @@ func Migrate(i geneos.Instance) (resp *responses.General) {
 		if resp.Err = h.Rename(i.Home(), h.Join(shouldbe, i.Name())); resp.Err != nil {
 			return
 		}
+		ResetHome(i)
 		config.Set(cf, "home", h.Join(shouldbe, i.Name()))
 		resp.ResultText = append(resp.ResultText, fmt.Sprintf("%s moved from %s to %s\n", i, current, shouldbe))
 	}
@@ -644,6 +654,12 @@ func RefactorConfig(h *geneos.Host, ct *geneos.Component, cf *config.Config, opt
 
 	// the old name is needed to find the old geneos directory below
 	oldName := config.Get[string](cf, "name")
+
+	// the home directory of the instance is changed below
+	defer func() {
+		resetHome(h, ct, oldName)
+		resetHome(h, ct, config.Get[string](cf, "name"))
+	}()
 	if opts.newName != "" {
 		config.Set(cf, "name", opts.newName)
 	}

@@ -68,6 +68,10 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 	}
 	cf := i.Config()
 
+	// the instance directory is created and may be removed below, and
+	// the configuration may be replaced
+	defer func() { ResetHome(i) }()
+
 	// check if instance already exists
 	if !i.Loaded().IsZero() {
 		i.Log().Error("already exists")
@@ -108,6 +112,7 @@ func Add(h *geneos.Host, ct *geneos.Component, name string, options ...AddOption
 				newInstance.Log().Debug("removing partially created instance")
 				h.RemoveAll(instanceDir)
 			}
+			ResetHome(newInstance)
 		}
 		newInstance.Unload()
 	}()

@@ -197,6 +197,7 @@ func (i *CA3) Unload() (err error) {
 	}
 	ca3s.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

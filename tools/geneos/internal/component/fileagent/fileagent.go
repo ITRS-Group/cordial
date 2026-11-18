@@ -176,6 +176,7 @@ func (i *FileAgent) Load() (err error) {
 func (i *FileAgent) Unload() (err error) {
 	fileagents.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 

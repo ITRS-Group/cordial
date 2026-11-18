@@ -190,6 +190,7 @@ func (i *FA2) Unload() (err error) {
 	}
 	fa2s.Delete(i.Name() + "@" + i.Host().String())
 	i.ConfigLoaded = time.Time{}
+	instance.ResetHome(i)
 	return
 }
 
